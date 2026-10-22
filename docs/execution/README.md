@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-22 (23:40–23:55) — EX-2026-10-22-12 — Wider note page, Paper as the default look (A16), commit and rebuild
+
+- Report: [2026-10-22-page-width-and-paper-default.md](2026-10-22-page-width-and-paper-default.md)
+- Task / Goal: the owner's messages "make the page bigger it's too tight", "the paper theme make it as default and you can refine a bit" and "Commit and rebuild the portable build and ZIP"; amendment [A16](../plan/A16-page-width-and-paper-default.md)
+- Executor: Claude (Sonnet 5.5)
+- Outcome: wider editor widths plus a Full option; Home and notebook pages follow the width setting; Paper is the default and slightly refined; committed (`3a22c56`); the portable exe and ZIP rebuilt, the owner's `data\` folder in the portable folder left untouched, the ZIP made without it
+- Integration / review: not applicable
+- Acceptance: pending (the owner's look at the real window)
+- Open dependency / next action: the owner tries the build and says what to change
+
 ### 2026-10-22 (23:24–23:40) — EX-2026-10-22-11 — Calculator border fix, Cipherleaf app icon (A15), rebuilt portable build
 
 - Report: [2026-10-22-icon-border-fix-and-rebuild.md](2026-10-22-icon-border-fix-and-rebuild.md)

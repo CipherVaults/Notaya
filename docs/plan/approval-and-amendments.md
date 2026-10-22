@@ -39,6 +39,9 @@ Newest first. Later instructions narrow or pause the approved plan; they don't e
 
 | When (UTC) | Owner instruction | Effect |
 |---|---|---|
+| 2026-10-22, after 23:45 UTC (time not recorded; the system clock read 23:46 UTC when the commit began) | "Commit and rebuild the portable build and ZIP" | Committed the A16 code (`3a22c56`) and rebuilt the portable exe and ZIP. Done: [EX-12](../execution/2026-10-22-page-width-and-paper-default.md). |
+| 2026-10-22, after 23:39 UTC (time not recorded; the system clock read 23:45 UTC at the end) | "And also the paper theme make it as default and you can refine a bit" | Applied as part of [A16](A16-page-width-and-paper-default.md): Paper is the default look for a new vault; its colors refined slightly. |
+| 2026-10-22, after 23:39 UTC (time not recorded) | "make the page bigger it's too tight" (with a screenshot) | Applied as part of [A16](A16-page-width-and-paper-default.md): wider note pages and a new Full width. |
 | 2026-10-22, after 23:26:19 (mid-turn message; time not recorded) | "rebuild and commit" | Rebuild the portable build with the icon and the calculator fix, and commit. Done: [EX-11](../execution/2026-10-22-icon-border-fix-and-rebuild.md). |
 | 2026-10-22 23:26:19 | "Make the app icon cipherleaf everywhere cause i saw in the taskbar its tauri" | Applied as [A15](A15-app-icon.md): the Cipherleaf icon replaces the default Tauri icon in the exe, the window and taskbar, and the icon files. |
 | 2026-10-22 23:24:31 | "Sorry before this. See this white border remove it in the calculator" (with a screenshot) | Fixed: the focus outline around the calculator display was removed in both calculators ([EX-11](../execution/2026-10-22-icon-border-fix-and-rebuild.md), A14 follow-up). |
@@ -97,6 +100,7 @@ Status words mean different things here. **Approved** is the owner's decision to
 | A13 | A calculator under Sticky notes (basic and scientific); the editor reworded and trimmed (columns, toggle headings, heading 4, "Page in", comments, emoji button, covers and page icons can no longer be created; older pages still show them); the name stays Cipherleaf. Partly supersedes A11 and A12. A scope change the owner requested. | The plan's Notes (editor) and Sticky notes | The owner's hands-on review; checks in [A13](A13-calculator-and-wording.md) | **Applied** on the owner's request (22:26:02 UTC); awaiting review |
 | A14 | A small calculator inside each sticky note (button in the note's top bar; basic; no history). Adds to A13. A scope change the owner requested. | The plan's Sticky notes | The owner's hands-on review; checks in [A14](A14-calculator-in-sticky-notes.md) | **Applied** on the owner's request (22:40:13 UTC); awaiting review |
 | A15 | The Cipherleaf app icon replaces the default Tauri icon (exe, window, taskbar, icon files). A scope change the owner requested. | The plan's polish (app identity) | The owner's check of the taskbar icon; [A15](A15-app-icon.md) | **Applied** on the owner's request (23:26:19 UTC); awaiting review |
+| A16 | Wider note pages (new Full width) and Paper as the default look, slightly refined. A scope change the owner requested. | The plan's customization (page width, themes) | The owner's look at the real window; [A16](A16-page-width-and-paper-default.md) | **Applied and committed** (`3a22c56`) on the owner's request (after 23:39 UTC); awaiting review |
 
 ## Changing this record
 
