@@ -1,7 +1,55 @@
-# Tauri + React + Typescript
+# Cipherleaf
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+A portable Windows desktop app for encrypted notes and sticky notes, with passwords kept in the official KeePassXC shown inside the same window. It is built to run from a folder or a USB stick and to keep everything in one `data` folder.
 
-## Recommended IDE Setup
+> **Status: in development, not released, not yet accepted by its owner.** There is no release build. The current work is uncommitted on branch `feat/a9-keepassxc`. The authoritative state is [`docs/STATUS.md`](docs/STATUS.md); what is and isn't proven is in [`docs/acceptance.md`](docs/acceptance.md).
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## What it does
+
+- **Notes** in notebooks, sections and pages (pages can sit inside pages). A block editor: press `/` to insert headings, lists, checklists, collapsible sections, quotes, highlight boxes, code, tables, pictures, equations and sub-pages; select text for a formatting bar (including font and size). Pictures are encrypted too.
+- **Sticky notes** on the desktop; they hide when the vault locks. Under them, a **calculator** (basic and scientific), and a small one inside each note; nothing they calculate is saved.
+- **Passwords** in KeePassXC 2.8.0 (bundled, unmodified, checked by hash before it starts, set up to stay offline). Cipherleaf never sees its master password.
+- **Looks:** Black, Graphite, White, Paper, or follow Windows; accent colors; optional Mica/Acrylic.
+- **Security:** a master password (and an optional keyfile) unlocks an encrypted vault; auto-lock; no network code. See [`docs/security-design.md`](docs/security-design.md) for what is promised, what is tested and what isn't.
+
+## Run it (development)
+
+Windows 10 or 11, Node.js, Rust (stable, MSVC) and the WebView2 runtime. In PowerShell, from this folder:
+
+```powershell
+npm install
+npm run tauri dev
+```
+
+The development vault lives in `.devdata\` (ignored by Git). Set `CIPHERLEAF_HOME` to use another folder.
+
+Checks (what each shows and doesn't show is in [`CLAUDE.md`](CLAUDE.md)):
+
+```powershell
+cd src-tauri; cargo test --lib
+npx tsc --noEmit -p tsconfig.json
+npm run build
+```
+
+`npm run mock` serves the UI with fake data in a plain browser, for looking at screens. It is development-only and not part of the app.
+
+## The KeePassXC files
+
+The KeePassXC binaries live in `vendor\` and are **not** in Git. To recreate them, follow [`vendor/keepassxc-manifest.md`](vendor/keepassxc-manifest.md) (download, then check the SHA-256 and signature). A distributed copy of Cipherleaf must include KeePassXC's license files and a link to its source (see the open licensing question in `docs/STATUS.md`).
+
+## Layout of a portable folder (planned)
+
+```text
+Cipherleaf\
+  Cipherleaf.exe
+  KeePassXC\            (from vendor\)
+  data\                 (vault, backups, settings, KeePassXC database and settings)
+```
+
+## Project records
+
+Work is governed by the records in [`docs/`](docs/): [STATUS](docs/STATUS.md) (accepted state and where to resume), [approved plan and amendments](docs/plan/approval-and-amendments.md), [acceptance ledger](docs/acceptance.md), [session history](docs/sessions.md), [Execution Summaries and their index](docs/execution/README.md), [failure intelligence](docs/failure-intelligence.md), [security design](docs/security-design.md). Rules for AI agents are in [`CLAUDE.md`](CLAUDE.md).
+
+## Third-party software
+
+KeePassXC (GPL 2 or 3), KaTeX 0.19.0 (MIT), the EFF large wordlist (CC BY 3.0 US, © Electronic Frontier Foundation), TipTap, React, Tauri, and the other packages listed in `package.json` and `src-tauri/Cargo.toml`.

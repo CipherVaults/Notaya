@@ -1,0 +1,73 @@
+# Acceptance ledger: Cipherleaf
+
+This record answers one question: **which approved requirements are satisfied by applicable evidence, and who decided that.** It doesn't hold raw results (those live in the Execution Summaries in [`execution/`](execution/)), the current state ([STATUS.md](STATUS.md)) or the authority history ([approval-and-amendments.md](plan/approval-and-amendments.md)). Created 2026-10-22 (reconciliation, [EX-06](execution/2026-10-23-pbs-reconciliation.md)).
+
+## How to read it
+
+Three independent columns, never merged:
+
+| Column | Values |
+|---|---|
+| **Outcome** | pass, fail, inconclusive, not-run (what a check found) |
+| **Applicability** | current (applies to the source named below), historical (an earlier source; not asserted as current), partly invalidated, unavailable |
+| **Owner decision** | pending, accepted, rejected. Only the owner decides. A result in "Outcome" is not acceptance. |
+
+**Target assessed:** the working tree on branch `feat/a9-keepassxc` after commit `2105a57` (amendments A10–A14; only documentation changed afterwards). Last checks on this code: `cargo test --lib` 33 passed (22:50 UTC); `npx tsc --noEmit` 0 errors; `npm run build` passed; `npm audit` 0 vulnerabilities; the calculator engine 66 checks (22:50 UTC); the release build at 23:04 UTC. Any later source change makes these historical.
+
+**Owner decisions recorded so far:** none formal. The owner has not accepted any requirement. One informal signal: at 2026-10-22 18:06:46 UTC the owner sent a screenshot of the running app (Paper theme, the sidebar and a page titled "Hello Cipherleaf") with the single word "happy". It shows the app runs in their vault and that they like what they saw. It is **not** recorded as acceptance, because it didn't name a requirement. Ask the owner to confirm what it covers.
+
+## Effective scope: the plan plus its amendments
+
+The approved plan ([snapshot](plan/approved-plan-2026-10-22.md)) is the contract. Amendments change it as follows (details in [the amendments record](plan/approval-and-amendments.md)):
+
+- **A9** replaced Cipherleaf's own password vault, generator, TOTP, CSV import, breach check and clipboard code with the bundled KeePassXC 2.8.0. So plan criteria about those features now apply to KeePassXC, not to Cipherleaf's code.
+- **A10–A12** changed the look (themes, layout), the notes editor (blocks, images, sub-pages, equations), and show KeePassXC inside the window. They add features; they don't remove a plan criterion.
+- A1–A8 are unreviewed differences between the plan and the code (see the amendments record).
+
+## Ledger: the plan's Verification section
+
+| ID | Requirement (plan wording, shortened) | Effective under A9–A12 | Evidence | Outcome | Applicability | Owner decision |
+|---|---|---|---|---|---|---|
+| V1a | Rust tests: encrypt and decrypt round trip | Applies | `crypto::tests::seal_open_round_trip`, `vault::tests::create_reopen_and_read` | pass | current (33/33, 21:49 UTC) | pending |
+| V1b | A wrong password or keyfile fails | Applies | `vault::header::tests::create_and_unlock`, `keyfile_is_required_when_set` | pass | current | pending |
+| V1c | A tampered header byte or row fails | Applies | `every_header_byte_is_protected`, `tampered_row_is_rejected`, `crypto::tests::tampering_is_detected` | pass | current | pending |
+| V1d | A swapped row is rejected (authenticated data) | Applies | `vault::tests::swapped_rows_are_rejected` | pass | current | pending |
+| V1e | Changing the password keeps the data | Applies | `vault::tests::change_password_keeps_data`, `header::tests::rewrap_keeps_data_key_and_vault_id` | pass | current | pending |
+| V1f | The generator meets character-class rules and a loose uniformity test | **Superseded by A9** for passwords (KeePassXC's generator). Cipherleaf keeps only the passphrase suggestion. | `generator::tests::passphrase_*`, `crypto::tests::random_below_stays_in_range` | pass for what remains | current | pending (the owner should confirm the criterion is retired) |
+| V2 | Plaintext scan: no known note phrase or password in `vault.clf` or backups | Applies to notes (passwords are now in `passwords.kdbx`, KeePassXC's format) | `vault::tests::no_plaintext_on_disk` on a library-made vault. The scan the plan describes (`Select-String` on a real vault and its backups) was **not run**. | partial: test pass, scan not-run | current for the test | pending |
+| V3a | Portability: copy the exe to a new folder and run it | Applies, plus the KeePassXC folder | A release exe was built (commit `2105a57`) and started from a temporary copy: it created `data\` next to itself and showed its window ([EX-09](execution/2026-10-22-release-build-and-commit.md)). A vault was not created and the Passwords view not opened. | pass (limited) | current for that exe | pending |
+| V3b | Nothing new in `%APPDATA%` or `%LOCALAPPDATA%` | Applies | The same smoke test: no folder named like the app, its WebView2 profile or KeePassXC before or after; also seen on the first dev launch. Names only; one run. | pass (limited) | current for the release exe | pending |
+| V3c | Pull the USB stick while unlocked: it locks | Applies | Implemented; never tested | not-run | unavailable | pending |
+| V4 | Network: no connections with the breach check off | Applies; the breach check was removed (A9), so Cipherleaf has no network code | Release-exe smoke test: 0 non-listening TCP connections over 12 seconds, no debug port. Dev build and KeePassXC alone (8 s) earlier. Not tested through Cipherleaf with KeePassXC open. | pass (limited) | current for the release exe; historical for the rest | pending |
+| V5a | Auto-lock on idle, Win+L, sleep; sticky notes vanish on lock | Applies | Locking through the app was observed in a throwaway vault: the UI returned to the lock screen and KeePassXC was hidden. Idle, Win+L, sleep never exercised. | partial | historical | pending |
+| V5b | Clipboard clears and never appears in Win+V history | **Superseded by A9** (KeePassXC does the copying and clearing) | none | not-run | unavailable | pending |
+| V5c | Windows show black in a screenshot | Applies to Cipherleaf windows; KeePassXC blocks capture on its own | The owner turned the setting off and captured the app (so "off" works); at 22:58:30 UTC they said they left it off for now and "it's working". The "on = black" state was not observed in this record. | inconclusive | historical | pending |
+| V6a | `cargo audit` | Applies | Not run | not-run | unavailable | pending |
+| V6b | `npm audit` | Applies | 0 vulnerabilities at 21:49 UTC, 199 packages | pass | current | pending |
+| V6c | `/security-review` on the code | Applies | Not run | not-run | unavailable | pending |
+
+## Ledger: things the amendments added (checks that exist, no plan wording)
+
+| ID | Claim | Evidence | Outcome | Applicability | Owner decision |
+|---|---|---|---|---|---|
+| X1 | The bundled KeePassXC is the verified 2.8.0 release and starts only if its hash matches (A9) | SHA-256 and PGP checks (EX-02); `keepassxc::tests::refuses_missing_or_unverified_keepassxc` | pass | current | pending |
+| X2 | KeePassXC is shown inside the Cipherleaf window and follows it (A10) | Script checks in a throwaway vault: rectangle match, move, resize, minimize/restore, lock hides, detach, and again after the A11 layout change (EX-03, EX-04). Typing and mouse use inside it were not tested. | pass (limited) | historical (before A12 edits; no related change since) | pending |
+| X3 | New look and layout (A11) | Screenshots with mock data; the owner's own screenshot of the Paper theme (informal, see above) | pass (visual) | current for what the owner showed | **pending: informal "happy" only** |
+| X4 | Block editor, pictures, covers, icons (A11) | Mock-data scripts; real-backend check in a throwaway vault: pasted picture and cover stored, shown, and kept after lock and unlock; `vault::tests::a_page_cover_keeps_its_image_alive` | pass (limited) | historical for the real-backend part | pending |
+| X5 | Block-type list, selection toolbar, sub-pages, comments, equations (A12), as reworded and trimmed by A13 | Mock scripts and screenshots; `commands::notes::subpage_tests::pages_nest_and_follow_their_parent`. After A13 the list and toolbar were checked again in the mock; columns, comments, toggle headings and heading 4 are no longer creatable but still display. | pass (limited) | current for the unit test and the A13 mock checks; historical for the earlier UI scripts | pending |
+| X6 | Older vault records still open after the format additions (icon, cover, parent) | `vault::tests::pages_saved_before_icons_and_covers_still_load` | pass | current | pending |
+| X7 | Equations run with KaTeX 0.19.0 locally with no network (A12) | Dependency pinned; `npm audit` clean; renders in the mock. Not checked in the real app. | partial | current for the audit | pending |
+| X8 | The calculator under Sticky notes (basic and scientific) gives correct results and clear errors (A13) | `dev-mock/calc-check.cjs`: 66 cases, all pass. Mock-UI scripts: typing, Enter, history, scientific keys, divide-by-zero message. Not checked: Copy and history-clears-on-lock in the real app. | pass (engine); partial (UI) | current for the engine; mock only for the UI | pending |
+| X9 | Reword and trim: the editor no longer offers the trimmed features and uses new wording, without dropping content from older pages (A13) | Mock-UI scripts and screenshots; an older mock page with columns, a toggle heading, a comment and a heading 4 still displays. Not checked in the real app or with a real older vault. | pass (limited) | current for the mock | pending: the owner decides whether the new wording is different enough |
+| X10 | A small calculator inside each sticky note opens from a button, calculates, and returns to the note (A14) | Mock UI as a sticky window (330×350 and 320×320): open, type, live preview, Enter, Esc to clear and to close. Not checked in a real sticky window or with real clicks. | pass (limited) | current for the mock | pending |
+| X11 | A release build exists and runs (first build) | Commit `2105a57`; `npm run tauri build` 4 m 32 s; exe SHA-256 `5D7661051537FD30ECFC2D8FCD4C7F24456C9FB5626E9B317895E4058A865AAD`; the portable folder holds the verified KeePassXC (hash equal) with its licenses and source; smoke test as for V3a/V3b. Not tested: vault creation, Passwords view, lock, USB. | pass (limited) | current for that exe; a source change makes it historical | pending |
+
+## Open decisions that block acceptance
+
+- **A2** (replay of a single older record isn't detected) and **A8** (Cargo.toml uses ranges, Cargo.lock pins) need the owner's decision; A1 and A3–A7 need evidence. See the amendments record.
+- Retire or keep criteria V1f and V5b (superseded by A9).
+- Which requirements the owner's hands-on review covers.
+
+## Updating this ledger
+
+Add or change a row only when new evidence arrives, a source it applies to changes, or the owner decides. When the source changes, mark affected rows historical and re-run only the checks that apply. Never write "accepted" without the owner's actual decision and its date.

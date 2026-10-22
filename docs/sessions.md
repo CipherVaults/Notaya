@@ -1,0 +1,787 @@
+# Cipherleaf: session history
+
+Dated project memory, newest first. Each entry preserves what happened, why, how understanding changed and where to resume. It owns chronology and reasoning, not the live state ([STATUS.md](STATUS.md)), permission ([approval-and-amendments.md](plan/approval-and-amendments.md)), concrete work and checks ([`execution/`](execution/)) or acceptance ([acceptance.md](acceptance.md)). Older entries are not rewritten; a later correction is added as a dated note.
+
+The three older entries below were written on 2026-10-22 (UTC), after the work, as a **reconstruction** from the session transcript (timestamps of the owner's messages), the repository, the Execution Summaries and the records. They were the first entries in this file; nothing earlier existed. The three newest entries (A13, A14, the commit and build) were written at the end of their own work. Details the reconstruction could not recover are marked.
+
+---
+
+# 📘 Session: 2026-10-22 (22:58 UTC onward) — Cipherleaf — Commit of A10–A14 and the first release build
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and documentation editor | Sonnet 5.5 (owner-selected; the session's own configuration names it) | Not recorded | Not independently verified |
+
+**Record basis:** written at the end of the work it describes, from the transcript timestamps, the repository and the build output.
+
+## 🕒 Time
+
+- Date: 2026-10-22 (UTC).
+- Start: 22:58:30 (the owner's message: commit; build the exe for release; screenshot left off).
+- End / stopping point: about 23:15, after the records were updated and committed.
+- Session type: version control, build and documentation.
+- Main focus: save the work in Git and produce the first release exe.
+- Contributors: the owner and Claude.
+- Active working time: not measured (the build itself took 4 m 32 s).
+- Reason for summary: a bounded request was finished and the work stops for the owner's use of the exe.
+
+## 🎯 Session Goal
+
+Commit A10–A14, build the exe for release, and note that screenshot protection stays off. Stop with a built exe the owner can try.
+
+## 🛠️ Actions Taken
+
+### 1. Checked what was about to be committed
+
+Looked for vault data and secrets among the 67 changed and new paths (none; `.devdata`, `vendor`, `target`, `node_modules` and `dist` are ignored) and confirmed the plan snapshot was unchanged.
+
+### 2. Committed the code
+
+`2105a57`, 51 files. The first attempt failed because PowerShell split the message at its quotes and treated the pieces as file paths; nothing was committed by it. The message was put in a file and committed with `-F`. The records were left for a second commit so the build's source was exactly the code commit.
+
+### 3. Built the release exe
+
+`npm run tauri build` (bundling is off in the config, so only the exe), 4 m 32 s. Assembled `E:\Project\Cipherleaf-portable\` outside the repository: the exe, the verified KeePassXC (hash equal), its licenses and full source, and a README.txt.
+
+### 4. Smoke-tested the exe
+
+The dev app was found not running, so a temporary copy of the portable folder was started: it opened, created `data` next to itself, wrote nothing to AppData, made no network connections, closed politely, and was deleted. No vault was created and the Passwords view was not opened.
+
+### 5. Recorded it
+
+EX-09, the amendments authority row, STATUS, the acceptance ledger (V3a, V3b, V4, V5c, X11), the execution index, and this entry.
+
+## 🧠 Key Insights
+
+### The first release build is cheap to check, and the checks that matter are the ones still open
+
+Launching from a new folder, the AppData check and the network check passed in seconds. The meaningful remaining ones (a vault in the release exe, the Passwords view, the USB-removal lock) need real use.
+
+## 📌 Decisions Made
+
+- Confirmed (owner): commit; build the exe for release; leave screenshot protection off for now.
+- Provisional (mine): build only the exe and assemble the portable folder by hand; keep the folder outside the repository; include the KeePassXC licenses and source; commit the records separately from the code.
+- Deferred (owner): move the dev vault into the portable folder or start fresh; the GPL approach before sharing the build.
+
+## ⚠️ Difficulties / Friction
+
+The commit message quoting problem (see Mistakes). A scripted record edit lost its backslashes in the tool again, so the edits were redone from script files using a placeholder for the backslash character.
+
+## 🔧 Adjustments Made
+
+- Shifted from: building scripts inline in the command text.
+  - To: writing the script to a file first.
+  - Because: backslashes and quotes were being altered on the way (FI-02, FI-03).
+  - Consequence: the record updates applied correctly.
+
+## ❌ Mistakes / Risks Noted
+
+### A first commit attempt failed on quoting
+
+- What happened: the quoted multi-line message was split by PowerShell and parsed as file names.
+- Actual impact: none; Git refused it and committed nothing.
+- Correction / current status: committed with a message file; verified by `git log`.
+- Failure Intelligence: not warranted (no effect; same family as FI-02/FI-03).
+
+### The release exe is only lightly tested
+
+- What could happen: a problem that appears only with a real vault, the Passwords view, a lock, or a USB stick.
+- Actual impact: none established.
+- Correction / current status: listed as not tested in EX-09 and the acceptance ledger.
+
+## 📍 Current Position
+
+**As of:** 2026-10-22, about 23:15 UTC.
+
+**Before this session:** A10–A14 uncommitted; no release build.
+
+**After this session:** A10–A14 committed (`2105a57`, then a documentation commit); a release exe and a portable folder exist; nothing is accepted; the dev app is not running.
+
+**Current standing:** waiting for the owner to try the exe and the dev app.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. The owner runs `E:\Project\Cipherleaf-portable\Cipherleaf.exe` and tries it.
+2. They decide whether to bring their dev vault into the portable folder, and the GPL approach before sharing.
+3. Fix what they report; any source change makes this exe historical and needs a rebuild.
+
+**Do not reopen / repeat:** the build, unless the source changes.
+
+**Continuation boundary:** fixes on the owner's report; a push, signing, sharing the build and security-behavior changes wait for the owner.
+
+## ❓ Open Questions
+
+- Move the dev vault into the portable folder, or start fresh? — Needed from: owner.
+- The GPL approach if the build leaves the owner's own PCs (A9 Q5). — Needed from: owner.
+
+## 🧾 Session Outcome
+
+The work is saved in Git and there is a first portable build that starts, keeps its files beside itself, touches nothing in AppData and makes no network connections. Whether it holds up under real use is what the owner's trial will show.
+
+## 🔍 Confidence Level
+
+**The exe starts and stays portable:** Medium-High. One run, first screen, checks of folders and connections.
+
+**The exe works as a whole:** Low-Medium. No vault, no Passwords view, no lock and no USB test.
+
+---
+
+# 📘 Session: 2026-10-22 (22:40 UTC onward) — Cipherleaf — A14: a small calculator inside each sticky note
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and documentation editor | Sonnet 5.5 (owner-selected; the session's own configuration names it) | Not recorded | Not independently verified |
+
+**Record basis:** written at the end of the work it describes, from the transcript timestamps and the repository.
+
+## 🕒 Time
+
+- Date: 2026-10-22 (UTC).
+- Start: 22:40:13 (the owner's request).
+- End / stopping point: about 22:55, after the records were updated.
+- Session type: implementation and documentation.
+- Main focus: a small calculator the owner can click inside a sticky note.
+- Contributors: the owner and Claude.
+- Active working time: not measured.
+- Reason for summary: a bounded request was finished and the work stops for the owner's review.
+
+## 🎯 Session Goal
+
+Add a small calculator in the sticky note itself, or a small floating one, that the owner can click. Stop with nothing committed.
+
+## 🛠️ Actions Taken
+
+### 1. Chose the reading
+
+A sticky note already is a small floating window, so the calculator was put inside the note's window, opened by a button. A separate calculator-only window was left as the alternative reading.
+
+### 2. Shared the logic
+
+Moved the calculator's state and actions into a hook (`useCalc.ts`), so the big calculator and the small one use the same code.
+
+### 3. Built the small calculator and wired it into the note
+
+`MiniCalculator.tsx` in the note's colors; a calculator button in the note's top bar replaces the note body while open (the editor stays mounted, hidden); removed the strikethrough button to fit the bar.
+
+### 4. Checked and recorded
+
+Type check, build, audit, Rust tests and the 66 engine checks on the final tree; the mock UI opened as a sticky window at two sizes; then A14, EX-08 and the other records.
+
+## 🧠 Key Insights
+
+### The sticky window already is the "floating" calculator
+
+Putting the calculator inside the note avoided new window code and a Rust change, and matches the owner's first wording.
+
+## 📌 Decisions Made
+
+- Provisional (mine): the in-note reading; basic only, no history and no Copy in the small one; strikethrough button removed.
+- Deferred (owner): confirm the reading; commit.
+
+## ⚠️ Difficulties / Friction
+
+Two of my own test checks misreported (a selector matched the button, and two key presses in one tick saw old state); both were test artifacts and were corrected.
+
+## 🔧 Adjustments Made
+
+No material adjustment was made.
+
+## ❌ Mistakes / Risks Noted
+
+### The big calculator was refactored without a real-app test
+
+- What could happen: the refactor to the shared hook could change the big calculator's behavior in the real app.
+- Actual impact: none established; the type check, build and the mock behavior hold.
+- Correction / current status: noted as unverified in EX-08; the owner's hands-on review will show it.
+- Failure Intelligence: not warranted.
+
+## 📍 Current Position
+
+**As of:** 2026-10-22, about 22:55 UTC.
+
+**Before this session:** A13 finished; the calculator existed only under the Sticky notes list.
+
+**After this session:** each sticky note has a calculator button and a small calculator; the tree builds and passes the checks; nothing is committed or accepted; the dev app was running when last checked.
+
+**Current standing:** waiting for the owner's hands-on review of A10–A14.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. The owner opens a sticky note and clicks the calculator button.
+2. They say whether the in-note reading is right, and what to change.
+3. Then decide the commit and the portable build.
+
+**Do not reopen / repeat:** the calculator engine.
+
+**Continuation boundary:** fixes within A14 on the owner's report; anything else waits.
+
+## ❓ Open Questions
+
+- Was "in the sticky note" the intended reading, or is a separate small floating window wanted? — Needed from: owner.
+
+## 🧾 Session Outcome
+
+A small calculator is one click away inside every sticky note, sharing the same engine as the bigger one and storing nothing. The only open point is whether that is the form the owner wanted.
+
+## 🔍 Confidence Level
+
+**Behavior in the mock UI:** Medium-High. Checked at two note sizes.
+
+**Not higher because:** a real sticky window and real clicks were not tried, and the owner hasn't reviewed it.
+
+---
+
+# 📘 Session: 2026-10-22 (22:26 UTC onward) — Cipherleaf — A13: calculator under Sticky notes, reworded and trimmed block editor, name kept
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and documentation editor | Sonnet 5.5 (owner-selected; the session's own configuration names it) | Not recorded | Not independently verified |
+
+**Record basis:** written at the end of the work it describes, from the transcript timestamps and the repository (not a later reconstruction).
+
+## 🕒 Time
+
+- Date: 2026-10-22 (UTC).
+- Start: 22:26:02 (the owner's instruction); their answers to Claude's two questions came at 22:27:00.
+- End / stopping point: after the records were updated, before the owner's next message at 22:40:13 (the clock read about 22:35 during the final checks; the exact end was not noted).
+- Session type: implementation and documentation.
+- Main focus: build the calculator; reword and trim the Notion-like features; keep the name.
+- Contributors: the owner and Claude.
+- Active working time: not measured.
+- Reason for summary: a bounded Goal was finished (A13) and the work stops for the owner's review.
+
+## 🎯 Session Goal
+
+Resume development, paused since the reconciliation, for three items the owner named: a calculator, keeping the name Cipherleaf, and rewording (or rewording and trimming) the features closest to Notion. Stop at the end of those, with nothing committed.
+
+## 🧭 Starting State
+
+Between 22:03 and 22:26 the owner had approved the CLAUDE.md additions, the execution index and the failure-intelligence record (done), then asked where the session summaries are and whether the template was used. The answer admitted deviations (an intro paragraph and dividers in `docs/sessions.md`; two reconstructed entries). The owner did not ask to change them. The tree was as checked at 21:49 UTC with A10–A12 uncommitted, and the dev app was not running.
+
+## 🛠️ Actions Taken
+
+### 1. Asked one decision question (22:26–22:27)
+
+The owner's list said "Reword, or reword and trim" without choosing, and left the calculator size open. Claude asked both; the owner chose **reword and trim** and **basic and scientific**.
+
+### 2. Calculator
+
+Wrote a parser-based engine (`calc.ts`, no `eval`) and a panel (`Calculator.tsx`) shown under the sticky notes. Ran 66 checks on the engine; two edge cases failed (`1..2` and a long integer) and were fixed. Checked the panel in the mock UI: typing, Enter, history, scientific keys, the divide-by-zero message.
+
+### 3. Reword and trim
+
+New block names, a new `/` menu text and a new horizontal selection bar; removed the creation paths for columns, toggle headings, heading 4, "Page in", comments, the emoji button, covers and icons. Kept the schema so older pages still show those blocks. Removed "Notion" from code comments.
+
+### 4. Checks and records
+
+Type check, build, audit and Rust tests on the final tree. Wrote A13 and EX-07 and updated the amendments record, STATUS, the acceptance ledger (X8, X9), the execution index, the security design (P15) and the README.
+
+## 🧠 Key Insights
+
+### Trimming a feature must not drop existing content
+
+The editor's schema decides which content survives loading and saving. Removing the block types from the schema would have silently deleted them from any page that had them. Removing only the ways to create them gives the trimming without the risk.
+
+### A simple evaluator is safer and enough
+
+Parsing the text by hand covers the needed operations, gives clear error messages and avoids running typed text as code.
+
+## 📌 Decisions Made
+
+- Confirmed (owner): reword and trim; basic and scientific calculator; keep Cipherleaf.
+- Provisional (mine): keep the schema for removed block types; history in memory only; percent works like a handheld calculator; the calculator sits under the notes rather than in a floating window.
+- Deferred (owner): commit; portable build; any icon change.
+
+## ⚠️ Difficulties / Friction
+
+The owner's list was ambiguous in two places, so two questions were needed. A scripted import edit deleted three lines and was caught before the type check. The first mock run was blank because the server was still starting.
+
+## 🔧 Adjustments Made
+
+- Shifted from: the stacked toolbar layout copied from the owner's reference screenshots.
+  - To: a horizontal bar of our own design with its own wording.
+  - Because: the owner's resemblance concern.
+  - Consequence: the toolbar and menus read differently; the features that remain are the common ones.
+
+## ❌ Mistakes / Risks Noted
+
+### Import lines removed by a scripted edit
+
+- What happened: a regular expression matched from the first import instead of the lucide import and deleted three lines of `SlashMenu.tsx`.
+- Actual impact: none; restored before the type check.
+- Correction / current status: fixed and verified by the type check. It is the same family of tool risk as FI-02 and FI-03; no new entry because it was caught immediately and had no effect.
+- Failure Intelligence: not warranted.
+
+### Real-app behavior untested
+
+- What could happen: the clipboard Copy or the lock-clears-history behavior may not work in the real window.
+- Actual impact: none established; not yet tried in the real app.
+- Correction / current status: listed as unverified in A13, EX-07 and the acceptance ledger.
+
+## 📍 Current Position
+
+**As of:** 2026-10-22, about 22:38 UTC.
+
+**Before this session:** development paused after the reconciliation; the calculator, the wording change and the name decision open.
+
+**After this session:** the calculator exists under Sticky notes; the editor is reworded and trimmed; the name is unchanged; the tree builds, type-checks and passes 33 Rust tests and 66 engine checks; nothing is committed or accepted; the dev app is not running.
+
+**Current standing:** waiting for the owner to run the app and review A10–A13, and to decide the commit and the portable build.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. The owner starts the dev app and tries the calculator and the notes editor.
+2. They tell Claude what to change, and answer the commit (question 1) and portable build (question 4) questions.
+3. Fix what they report, re-run the checks, add an Execution Summary.
+
+**Do not reopen / repeat:** the calculator engine design; the reconciliation; the choice to keep the schema.
+
+**Continuation boundary:** fixes within A13 are fine on the owner's report; a commit, a release build, a new dependency and any security-behavior change wait for the owner.
+
+## ❓ Open Questions
+
+- Do the new wording and toolbar feel different enough? — Needed from: owner. Blocks: nothing immediate.
+- Is the calculator's percent behavior what the owner expects? — Needed from: owner.
+
+## 🧾 Session Outcome
+
+The three named items are done to the extent they can be checked without the real window. The most important choice was removing the trimmed features' creation paths without removing their support, so no existing page can lose content. The project now waits on the owner's hands-on review.
+
+## 🔍 Confidence Level
+
+**Calculator engine:** High. 66 checks pass, including error cases.
+
+**Editor wording and trimming:** Medium-High. Checked in the mock UI, including older content; the real window was not used.
+
+**Not higher because:** the real app, the clipboard and real mouse use were not tried, and the owner hasn't reviewed it.
+
+## 🧪 Validation / Testing
+
+See [EX-07](execution/2026-10-22-a13-calculator-and-wording.md) and [acceptance.md](acceptance.md) (X8, X9).
+
+---
+
+# 📘 Session: 2026-10-22 (21:32 UTC onward) — Cipherleaf — PBS reconciliation before continuing development
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and documentation editor | Sonnet 5.5 (owner-selected; the session's own configuration names it) | Not recorded | Not independently verified |
+
+**Record basis:** written during the work it describes, from the transcript and the repository, as the third entry of a reconstruction. The skill used is "PBS Start, Resume & Handoff" (a local adaptation of the Notion skill; v1.0 candidate material).
+
+## 🕒 Time
+
+- Date: 2026-10-22 (UTC). The owner's local time is UTC+3, so this was after midnight locally on 2026-10-23.
+- Start: 21:32:25 UTC ("coninito"), followed at 21:32:47 by "stop". The reconciliation request arrived at 21:47:32.
+- End / stopping point: after the records were reconciled and the next decisions listed (see Current Position). Exact end not recorded.
+- Session type: documentation and re-entry.
+- Main focus: reconcile what was built against the records before any more development.
+- Contributors: the owner and Claude.
+- Active working time: not measured.
+- Reason for summary: the owner asked for a reconciliation using the PBS skill before development continues.
+
+## 🎯 Session Goal
+
+The owner asked: before continuing development, use the PBS skill to reconcile what has been done, what documentation is missing, and how to keep documenting from here. The stopping point is a reconciled set of records and a clear list of what needs the owner. No development, no commit.
+
+## 🧭 Starting State
+
+Development stood at amendments A9–A12 (implemented, uncommitted). The records had been written at the end of each step, but they hadn't been checked against each other or against the live tree since. The owner's last two instructions were "continue" and "stop" two seconds apart; "stop" was taken as the later one.
+
+## 🛠️ Actions Taken
+
+### 1. Stopped, then read the new request
+
+At 21:32 the "stop" was honored with no action. At 21:47 the reconciliation request replaced it as the live instruction.
+
+### 2. Loaded the skill and its guides
+
+Read the skill's recovery, documentation-update and session-summary prompts and guides (govern/execute/recover, maintain without drift, write session summaries) and the session template.
+
+### 3. Gathered live evidence
+
+Checked `git status` and the log (HEAD `9a40a3c`; 29 modified, 1 deleted, 20 new paths; no stash), running processes and ports (the dev app was no longer running; nothing listening on 9222, 9333, 1420 or 1421), the data folder, and about 88 `cipherleaf-*` folders in `%TEMP%` left by tests. Re-ran every check on the current tree: `cargo test --lib` 33 passed, `tsc` 0 errors, `npm run build` passed, `npm audit` 0 vulnerabilities. Read the clock: 21:49 UTC (matches the earlier records, so the "about 17:45" times are consistent).
+
+### 4. Recovered exact times from the transcript
+
+The authority table had several "time not recorded" entries. The transcript holds the timestamp of every owner message, so those were looked up and recorded (see the amendments record). The three Notion pages created earlier were also located (IDs and URLs now in STATUS).
+
+### 5. Compared records with reality and with the skill's record shelf
+
+Found stale or missing items (listed in the reconciliation summary, [EX-06](execution/2026-10-23-pbs-reconciliation.md)): wrong Git row in STATUS, no record of the owner's later requests and questions, no acceptance ledger, no session history, a README still showing the scaffold text, an amendments table headed "none accepted" that holds approved and applied items, ordering and wording slips in the security design.
+
+### 6. Updated only the owners whose facts changed
+
+Added `docs/acceptance.md` and this file, rewrote the README, and corrected STATUS, the amendments record and the security design. Left `CLAUDE.md`, the plan snapshot and the earlier Execution Summaries alone (the reasons are in EX-06).
+
+## 🧠 Key Insights
+
+### The records had drifted in one specific way
+
+Each step recorded itself well, but the pieces that connect steps were missing: no ledger tying the plan's own success criteria to evidence, no chronology, and no home for the owner's open questions. That's why the plan's Verification section showed nothing about what is still unchecked, even though most of it is.
+
+### The transcript is a better clock than my own estimates
+
+Several "after HH:MM" entries were guesses. The transcript has exact UTC timestamps, so future entries can quote them instead of estimating.
+
+### "Applied" and "accepted" were being blurred
+
+A10–A12 were implemented on the owner's instruction, which is permission and not acceptance. The amendments table's heading ("none accepted") was right about acceptance but wrong as a title for a table that also lists approved items.
+
+## 📌 Decisions Made
+
+- Provisional (mine, to be confirmed): create `docs/acceptance.md` and `docs/sessions.md`, and rewrite the README. Basis: the owner asked what documentation is lacking and how to keep documenting; these answer questions with no other owner. The owner can remove them.
+- Deferred (owner's decision needed): edits to `CLAUDE.md` (agent rules), and new decision, incident and index records. Proposed in EX-06; not created.
+- Rejected: rewriting the earlier Execution Summaries to fix their approximate times. They are dated history; the corrected times live in the authority table.
+
+## ⚠️ Difficulties / Friction
+
+The owner's messages arrived as "continue" and "stop" together, which can't both be followed. The later one was honored and the real request followed within minutes. The skill is large; only the parts that applied were read.
+
+## 🔧 Adjustments Made
+
+- Shifted from: continuing development as the next step.
+  - To: reconcile first.
+  - Because: the owner asked for it, and the records had drifted.
+  - Consequence: no code changed in this block.
+
+## ❌ Mistakes / Risks Noted
+
+### A record-editing script damaged two documents (earlier, found and fixed)
+
+- What happened: in the A12 step, a replacement string containing a dollar sign inserted extra text into the A12 record and its Execution Summary.
+- Actual impact: none lasting; both files were rewritten and checked.
+- Correction / status: fixed and verified before the end of that step. Noted again here because the same kind of tool use can recur.
+- Failure Intelligence: not warranted as a separate record; recorded in EX-05.
+
+### Stale claims that would have misled a fresh reader
+
+- What happened: STATUS said the A10 commit existed (it doesn't) and described the UI evidence as the "A11 tree".
+- Actual impact: none established; a reader starting from STATUS could have believed work was committed.
+- Correction / status: corrected in this block.
+
+## 📍 Current Position
+
+**As of:** 2026-10-22, after the reconciliation edits.
+
+**Before this session:** records current to the end of A12 but unreconciled; no acceptance ledger or session history; the owner's later questions unrecorded.
+
+**After this session:** the records agree with the live tree as checked at 21:49 UTC; the owner's open questions are listed in STATUS; the missing owners exist. Nothing was committed. The dev app is not running.
+
+**Current standing:** development is paused for the owner's decisions; the records are ready for the owner's review.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. The owner reads [EX-06](execution/2026-10-23-pbs-reconciliation.md) and answers its proposals (CLAUDE.md edit; decision, incident and index records).
+2. The owner decides the pending product questions in STATUS (commit, trimming Notion-like features, calculator, portable build, name).
+3. Only then: continue development, using the documentation routine in EX-06 after each step.
+
+**Do not reopen / repeat:** the toolchain, the KeePassXC verification, or the A10–A12 builds. Do not rewrite the earlier Execution Summaries.
+
+**Continuation boundary:** documentation upkeep is authorized; code changes, commits and any release build wait for the owner.
+
+## ❓ Open Questions
+
+- Which of the proposed new records does the owner want? — Needed from: owner. Blocks: nothing immediate.
+- What does the owner's "happy" (18:06 UTC) cover? — Needed from: owner. Blocks: recording any acceptance.
+- Is the owner's screenshot protection still off? — Needed from: owner (Settings → Security). Blocks: nothing; it's a security setting worth knowing.
+
+## 🧾 Session Outcome
+
+The project now has what the PBS framework asks for at this size: a ledger of what is and isn't proven against the plan, a chronology, accurate current state, and a short routine for keeping them true. The corrections were small, but they remove claims that were wrong. The decisions that need the owner are collected in one place.
+
+## 🔍 Confidence Level
+
+**Records agree with the working tree:** Medium-High. Checks were re-run at 21:49 UTC and the records were compared to the live state.
+
+**Not higher because:** the earlier sessions' details were reconstructed from the records and transcript, not re-observed; nobody but the owner can confirm the unlogged real-vault state.
+
+## 🗂️ Documentation Updates Needed
+
+- `CLAUDE.md` — add the documentation routine and the testing cautions. Basis: EX-06. Status: **done 22:03–22:10 UTC** after the owner's approval at 22:03:12 (see the follow-up in EX-06); the execution index and `docs/failure-intelligence.md` were created at the same time.
+- Decision Records — not adopted. Compact-set confirmation for `acceptance.md` and `sessions.md` — awaiting the owner (STATUS question 8).
+
+---
+
+# 📘 Session: 2026-10-22 (15:49–18:10 UTC) — Cipherleaf — First hands-on run, KeePassXC inside the window, redesign, Notion-style notes, equations, and portability questions
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and documentation editor | Sonnet 5.5 (owner-selected through the model switch before this block) | Not recorded | Owner's switch reported in the conversation; not independently verified |
+
+**Record basis:** reconstruction after the fact. Sources: the transcript's message timestamps, the conversation summary kept after the context ran out at about 16:41 UTC, the repository, and the Execution Summaries EX-02 to EX-05. Not every minor action is reconstructed.
+
+## 🕒 Time
+
+- Date: 2026-10-22 (UTC).
+- Start: 15:49:57 ("continue", after the owner's usage-limit break).
+- End / stopping point: 18:10:53 ("Okay see ya").
+- Session type: implementation, review and documentation.
+- Main focus: finish A9 D1 verification, then act on the owner's redesign and editor requests.
+- Contributors: the owner and Claude.
+- Active working time: not measured (a context compaction occurred at about 16:41).
+- Reason for summary: a long block with several owner decisions and a natural stop.
+
+## 🎯 Session Goal
+
+At the start: resume after the pause, finish the first launch and checks for A9, and stop for the owner's hands-on review. The goal then changed three times at the owner's direction: (1) restart without the debug port and quiet the file-watcher noise; (2) make the look black and white with optional colors, add font size, and show KeePassXC inside the window (A10); (3) redesign the whole app and make notes work like a block editor with pictures (A11), then add a list of block types, a selection toolbar, sub-pages, fonts and equations (A12).
+
+## 🧭 Starting State
+
+A9 D0 and D1 were committed (`0d57ad2`, `b7c8626`, `2743021`). The app had never been launched. The owner had been away about two hours.
+
+## 🛠️ Actions Taken
+
+### 1. First launch and the debug-port incident (15:49–16:09)
+
+Built the UI and launched `tauri dev`. To read the first screen, the dev app was restarted with WebView2's debug port (15:58:50). The owner was using that window and created a vault in it (file evidence, about 16:03–16:07). At 16:06:41 the owner asked for a restart without the port; done by 16:06:58. At 16:08:55 the owner asked to ignore `.devdata` in the Vite watcher; done. Records were written and corrected, including the exposure window (commits `44b15c2`, `14016fb`, `0bc0309`, `9a40a3c`).
+
+### 2. A10 (16:12 onward)
+
+Black-and-white tokens and accent colors; editor font family and size; KeePassXC shown inside the main window. `SetParent` on KeePassXC was refused and WebView2 draws over child windows, so the final design is an owned borderless overlay that follows the window, hides on lock and closes with the app. Verified by script in a throwaway vault (rectangle, move, resize, minimize/restore, lock, detach). Context ran out at about 16:41 and was continued from a summary. A commit attempt was blocked by the permission system; the owner said at 16:50:37 not to commit, and to restart the dev app without the port, which was done.
+
+### 3. A11 (16:55 onward)
+
+Four themes (Black, Graphite, White, Paper) plus "match Windows"; a sidebar layout; a block editor (slash menu, drag handles, selection toolbar, resizable pictures with captions, covers and icons). Added `icon` and `cover` to the page record (older records still load; tested). Verified with mock-data screenshots and, for pictures, a throwaway real vault. Found and fixed: a render loop in the slash menu, a hover bug on the block handle, and KeePassXC's first-run "check for updates?" prompt (now preset as answered).
+
+### 4. A12 (17:29 onward), then equations (17:44 onward)
+
+After two reference screenshots from the owner, built the "Turn into" list, toggle headings, columns, comments, an emoji button, "Page" and "Page in", pages inside pages (a `parent` field; trash, restore, delete and move follow it), font and size controls. After a question about a new dependency, the owner approved KaTeX at 17:44:21; block and inline equations were built with it. Verified with scripts and unit tests; one editing-box bug (a selection across two columns became an equation) was fixed.
+
+### 5. Owner questions at the end (17:56–18:10)
+
+The owner asked for a calculator under the sticky notes and said the design and features are very similar to Notion and they don't want copyright trouble. They asked for the reference screenshots to be shown (that tool use was declined), then for screenshot protection to be turned off so they could take screenshots; I explained how to do it themselves in Settings. At 18:06:46 they sent a screenshot of the running app and wrote "happy". Then: can it be portable; name and icon ideas; "see you in 3 hours".
+
+## 🧠 Key Insights
+
+### A script reading the UI over a debug port is a real exposure
+
+A debug port on a window the owner is using exposes it to any local program, and the owner's input shows the window is live. From then on, UI tests used a throwaway vault and a stopped real app, with the port closed afterwards.
+
+### An overlay is the practical way to embed another program's window
+
+Windows denied the child-window route, and the WebView draws on top of child windows. An owned, borderless window placed over a panel gives the visual result with only handles and rectangles crossing the boundary.
+
+### Pop-ups outside the toolbar make the toolbar close
+
+Clicking into a pop-up (typing a link or a comment) moved focus out of the editor, so the floating toolbar hid. Drawing pop-ups inside the toolbar keeps it open.
+
+### Features that match another product need deliberate wording
+
+The owner raised the Notion resemblance. Ideas and features are common to many editors, but the menu names and order that came from the owner's screenshots are the part worth changing. This is general guidance, not legal advice.
+
+## 📌 Decisions Made
+
+- Confirmed (owner): A10, A11, A12 requests as recorded in the authority table; restart without the debug port; ignore `.devdata` in Vite; do not commit yet; add KaTeX at 0.19.0.
+- Provisional (mine, within the requests): overlay instead of a true child window; keep Mica/Acrylic as options; keep notebook → section → page and make pages nestable (sub-pages stay in their parent's section); write editor pieces by hand so KaTeX is the only new dependency; leave out the reaction and AI-style buttons from the screenshot.
+- Deferred (owner): commit, trimming Notion-like features, calculator scope, portable build, name and icon.
+
+## ⚠️ Difficulties / Friction
+
+The owner said at 16:12 the UI "doesn't look good" and again at 16:55 "i don't like the whole design", so the first redesign pass did not land. A context compaction at about 16:41 meant continuing from a summary. The permission system blocked one commit. The owner's usage limit ended the block at the end.
+
+## 🔧 Adjustments Made
+
+- Shifted from: a violet accent default and a three-column layout.
+  - To: Black as the default look, a one-sidebar layout, and a block editor.
+  - Because: the owner rejected the look twice.
+  - Consequence: A11 replaced most of the UI; A12 extended the editor.
+- Shifted from: scripted checks against the owner's running window.
+  - To: a throwaway vault in a separate process.
+  - Because: the debug-port exposure.
+  - Consequence: slower but safe testing.
+
+## ❌ Mistakes / Risks Noted
+
+### Debug-port exposure (15:58:50–16:06:58)
+
+- What happened: the real dev window ran with an open local debug port for about 8 minutes while the owner created a vault in it.
+- Actual impact: none established. Claude connected only twice, read-only, at about 15:59.
+- Potential impact: another local program could have driven the window or read the vault while unlocked.
+- Correction / current status: the port was closed; the owner was told to change the vault's password if it will hold real data. Whether to open a Failure Intelligence record is an open proposal in EX-06.
+
+### Other near-misses
+
+- A test copy of KeePassXC could not be force-stopped (it protects itself) and was left open, blocked by a dialog; closed by answering the dialog.
+- A script edit corrupted two documents (fixed, see the first entry above).
+- One equation test replaced a whole columns block (fixed).
+- About 88 test folders remain in `%TEMP%` (not deleted: the owner's rule is to ask before deleting).
+
+## 📍 Current Position
+
+**As of:** 2026-10-22, 18:10:53 UTC.
+
+**Before this block:** A9 D0 and D1 committed; app never launched.
+
+**After this block:** the app launches and the owner has used it; A10–A12 are implemented and uncommitted; 33 unit tests pass, `tsc` and the build pass, `npm audit` is clean; nothing is accepted.
+
+**Current standing:** waiting for the owner's hands-on review and decisions.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. Read STATUS and the acceptance ledger.
+2. Owner decisions: commit; trim or reword Notion-like features; calculator scope; portable build; name.
+3. Then continue with the owner's choice.
+
+**Do not reopen / repeat:** the overlay design, the KaTeX choice, the verified KeePassXC bundle.
+
+**Continuation boundary:** nothing proceeds on the owner's list without their answer.
+
+## ❓ Open Questions
+
+- What exactly did "happy" accept? — Needed from: owner.
+- Is the screenshot protection back on? — Needed from: owner.
+
+## 🧾 Session Outcome
+
+The project went from "never launched" to a working, restyled app with a block editor, pictures, equations and KeePassXC inside the window, all uncommitted and unaccepted. The owner raised three important concerns at the end: resemblance to Notion, whether it can be portable, and the name.
+
+## 🔍 Confidence Level
+
+**Features implemented as described:** Medium-High. Unit tests and scripted checks passed.
+
+**Not higher because:** real mouse use, the sub-page flow against the real backend, and typing inside the embedded KeePassXC were not tested, and the owner hasn't reviewed it.
+
+## 🧪 Validation / Testing
+
+See [acceptance.md](acceptance.md) and EX-02 to EX-05 for the individual checks and their limits.
+
+---
+
+# 📘 Session: 2026-10-22 (10:53–13:30 UTC) — Cipherleaf — Plan, first build, PBS adoption, and the KeePassXC amendment
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Planning, toolchain, scaffold | Sonnet 5.5 | Not recorded | EX-01 section 1; owner-reported |
+| App code | Opus 5.5 (the owner switched model at about 11:19) | Not recorded | EX-01; owner-reported; not independently verified |
+| PBS reading, records, A9 | Mixed (see EX-01 and EX-02) | Not recorded | Not independently verified |
+
+**Record basis:** reconstruction after the fact from the transcript timestamps, EX-01, EX-02, the amendments record and the conversation summary. The Notion work log written at 13:26 UTC covers the same period.
+
+## 🕒 Time
+
+- Date: 2026-10-22 (UTC).
+- Start: 10:53:38 (the owner's first message). The app request came at 11:01:10.
+- End / stopping point: 13:29:43 ("I'll be back in 2 hours").
+- Session type: planning, implementation, documentation.
+- Main focus: plan and build Cipherleaf; adopt the PBS records; decide the password approach.
+- Contributors: the owner and Claude.
+- Active working time: not measured.
+- Reason for summary: a long block ended by the owner's usage-limit break.
+
+## 🎯 Session Goal
+
+The owner wanted a portable, very secure vault for notes (OneNote-like), sticky notes and passwords, with customization and a striking UI, using only stable software. The stopping points moved as the owner added direction: plan approval, then implementation, then a pause to adopt PBS records, then a scope change to use KeePassXC.
+
+## 🛠️ Actions Taken
+
+### 1. Setup and plan (10:53–11:08)
+
+Installed the Claude Code extension, discussed extensions, then asked clarifying questions (desktop app, beginner owner, master password with optional keyfile, sticky notes that hide on lock, offline with an opt-in breach check, name Cipherleaf). Wrote the plan. The owner amended it to include installing the toolchain ("Install Them") and approved it at 11:08:21.
+
+### 2. First implementation (11:08–11:51)
+
+Installed Rust, Node and Git; scaffolded Tauri 2 with React and TypeScript; pinned dependencies exactly; wrote the Rust core (crypto, vault, notes, stickies, settings, auto-lock) with 27 passing unit tests and the whole UI (type-checked, never run). The owner asked for a short pause to switch model (about 11:19) and then paused work at 11:51:27 (EX-01).
+
+### 3. PBS adoption (11:53–12:32)
+
+The owner asked for a read-only understanding review of the AI Project Bootstrap System (11:53:21), retried it with the Notion hub page link (12:03:22), asked for the response to be written in separate Notion pages (12:11, 12:17), asked for changes and paused (12:21), and pasted a review recommending five amendments (12:21–12:23). At 12:32:12 they decided: keep records in the repo's `docs/`, use the compact set, set up a local Git repository, show the file list before the first commit, development paused. The compact set became `STATUS.md`, the plan snapshot, the amendments record, Execution Summaries, `security-design.md` and `CLAUDE.md`.
+
+### 4. KeePassXC amendment A9 (12:46–13:07)
+
+The owner asked whether the newer KeePassXC was used (12:46), then wanted to import/export KDBX files and use all KeePassXC features (12:50), then asked about embedding the real app (13:00). At 13:03:51 they chose option D (bundle the official KeePassXC 2.8.0 portable); a proposal was written ([A9](plan/A9-bundle-keepassxc.md)) and approved at 13:07:49, lifting the pause and allowing downloads. D0 (download and verify hashes and signatures) and D1 (replace Cipherleaf's own password code with a KeePassXC panel) followed, committed as `0d57ad2`, `b7c8626`, `2743021`, after the baseline commit `f26c1f7`.
+
+### 5. Notion work log (13:26)
+
+At 13:26:13 the owner asked for the work so far to be written to a separate Notion page; it was created at 13:26:37 (private draft). At 13:29:43 the owner left.
+
+## 🧠 Key Insights
+
+### Passwords are a bigger job than the plan assumed
+
+The plan listed a full password manager. Matching a mature program's features and file format in a new app is a long road; bundling the real one met the owner's "use all KeePassXC features" request with less risk. The cost: two programs, two master passwords, and a GPL licensing duty at distribution.
+
+### Records first, then code, is faster to recover
+
+The owner's PBS instruction (records in the repo, compact set) produced the pieces that made later recovery possible.
+
+## 📌 Decisions Made
+
+- Confirmed (owner): the plan with the toolchain amendment (11:08:21); the compact PBS set and a local Git repository (12:32:12); A9 option D (13:03:51) and its approval (13:07:49).
+- Provisional (mine, recorded as A1–A8): fixed Argon2 settings; native TLS; `getrandom`; the EFF wordlist crate; TypeScript 6.0.3; a single-instance guard; no per-record version counter; Cargo ranges with a lockfile. A2 (replay of one old record) and A8 need the owner's decision.
+
+## ⚠️ Difficulties / Friction
+
+Newer crate versions changed their APIs, so sources were read before coding. The owner paused twice (model switch, PBS discussion) and left because of a usage limit.
+
+## 🔧 Adjustments Made
+
+- Shifted from: building the whole password manager.
+  - To: bundling KeePassXC 2.8.0.
+  - Because: the owner wanted all KeePassXC features and KDBX import/export.
+  - Consequence: A9; Cipherleaf's own password code was removed.
+
+## ❌ Mistakes / Risks Noted
+
+### Eight unreviewed differences from the plan
+
+- What happened: implementation choices departed from the plan in eight places (A1–A8).
+- Actual impact: none established; they were recorded rather than hidden.
+- Potential impact: A2 contradicts the plan's replay-protection wording until decided.
+- Correction / current status: recorded; A2 and A8 await the owner; A1 and A3–A7 await evidence.
+
+## 📍 Current Position
+
+**As of:** 2026-10-22, 13:29:43 UTC.
+
+**Before this block:** nothing existed.
+
+**After this block:** a full implementation that had been compiled and unit-tested (27 tests) and, after D1, built; the KeePassXC bundle verified; records in `docs/`; a local repository with four commits. The app had not yet been launched.
+
+**Current standing:** paused by the owner's break; next was the first launch.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md) (as of the end of that block; it has been updated since).
+
+## 🔜 Next Steps
+
+1. Launch the app and check the first screen.
+2. Stop for the owner's hands-on review.
+
+**Do not repeat:** the toolchain install, scaffold and dependency choices.
+
+## ❓ Open Questions
+
+- A2 (replay of one old record): build detection or accept the limit? — Needed from: owner.
+- A8 (exact versions in `Cargo.toml`?) — Needed from: owner.
+
+## 🧾 Session Outcome
+
+From an idea to a verified-by-unit-test implementation plus a way of working. The password approach changed to the bundled KeePassXC. The owner left with a clear checkpoint and an app that had not yet been launched.
+
+## 🔍 Confidence Level
+
+**Unit-tested core:** Medium-High. 27 then 33 passing tests on the vault and crypto.
+
+**Not higher because:** at this point the app had never been run, and the plan's other checks were not done.

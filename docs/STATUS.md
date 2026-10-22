@@ -2,16 +2,33 @@
 
 This file answers two questions: what is accepted right now, and exactly where work resumes. The two parts stay separate. Update it at meaningful checkpoints, and link to other records rather than copying them.
 
-- **As of:** 2026-10-22, 16:10 UTC, after the owner's first hands-on run and a restart of the dev app without the debug port
+- **As of:** 2026-10-22, about 23:15 UTC, after the commit of A10–A14 (`2105a57`), the first release build and its smoke test. Checks last run at 22:35–22:50 UTC; nothing in the code changed since the commit.
 - **Owner and decision-maker:** Mohamed Sayed
 - **Maintained by:** Claude (Claude Code), for the owner
 
 ## Current state (accepted present)
 
-- **Mission state:** **awaiting the owner's hands-on review.** A9 D0 and D1 are done and the dev app launches; work stops here until the owner has tried it. Work happens on branch `feat/a9-keepassxc`.
-- **Accepted baseline:** none. The owner hasn't accepted any result yet.
-- **Active authority:** the approved plan ([snapshot](plan/approved-plan-2026-10-22.md)) with amendment A9 approved at 13:07:49 UTC, as listed in [approval-and-amendments.md](plan/approval-and-amendments.md).
-- **Waiting on the owner:** the hands-on review; decisions on A2 (single-record rollback) and A8 (version pinning); the GPL approach (A9 Q5) before any distribution.
+- **Mission state:** **waiting for the owner to try the release exe and the dev app and review A10–A14.** A10–A14 are committed on branch `feat/a9-keepassxc` (`2105a57`) and unaccepted. A release exe was built and assembled in `E:\Project\Cipherleaf-portable\` and smoke-tested from a temporary copy. The dev app is not running.
+- **Accepted baseline:** none. The owner has not accepted any result. One informal signal is recorded in [acceptance.md](acceptance.md) (the owner's "happy" with a screenshot, 18:06:46 UTC); it is not an acceptance.
+- **Active authority:** the approved plan ([snapshot](plan/approved-plan-2026-10-22.md)), amendment A9 (approved 13:07:49 UTC), and the owner's later instructions applied as A10 ([record](plan/A10-embed-and-appearance.md)), A11 ([record](plan/A11-redesign-and-block-notes.md)) and A12 ([record](plan/A12-notion-menus-subpages.md)) and A13 ([record](plan/A13-calculator-and-wording.md)) and A14 ([record](plan/A14-calculator-in-sticky-notes.md)), as listed with exact times in [approval-and-amendments.md](plan/approval-and-amendments.md). Standing rules: nothing is committed until the owner says; no release build without their go-ahead.
+- **Waiting on the owner:** see "Open questions for the owner" below.
+
+## Open questions for the owner
+
+Raised by the owner or by Claude since A12; none has been answered yet.
+
+| # | Question | Raised | What it blocks |
+|---|---|---|---|
+| 1 | ~~Commit A10–A12?~~ **Answered 22:58:30 UTC: commit.** Done: code commit `2105a57`, then a documentation commit (see `git log`). No push, no remote. | 16:50 UTC | Nothing |
+| 2 | ~~Reword, or reword and trim, the Notion-like features?~~ **Answered 22:27 UTC: reword and trim.** Done as [A13](plan/A13-calculator-and-wording.md); awaiting the owner's review of how it reads. | 17:56 UTC | Nothing |
+| 3 | ~~A calculator under Sticky notes: basic or scientific?~~ **Answered 22:27 UTC: basic and scientific.** Built (A13); awaiting review. | 17:56 UTC | Nothing |
+| 4 | Portable build: **go-ahead given 22:58:30 UTC ("Start build exe for release"); built** (see [EX-09](execution/2026-10-22-release-build-and-commit.md)). Still open: copy the current dev vault (`.devdata\data\`) into the portable folder, or start fresh? And the GPL approach (question 9) before the build leaves the owner's own PCs. | 18:08 UTC | Using the build with existing notes; sharing it |
+| 5 | ~~Name and icon~~ **Answered 22:26 UTC: keep Cipherleaf.** No rename and no change of the app identifier. An icon change was not asked for. | 18:09 UTC | Nothing |
+| 5b | ~~Is a calculator inside each sticky note what the owner wanted (A14)?~~ **Answered 22:55:26 UTC: yes.** | 22:55 UTC | Nothing |
+| 6 | ~~Is screenshot blocking turned back on in the dev vault?~~ **Answered 22:58:30 UTC: left off for now, and "it's working, no worries".** Recorded as the owner's choice; the setting is off in their dev vault. | 17:59 UTC | Nothing |
+| 7 | What did "happy" accept? | 18:06 UTC | Recording any acceptance |
+| 8 | Confirm that [acceptance.md](acceptance.md) and [sessions.md](sessions.md) join the compact record set, and say whether Decision Records are wanted (Claude recommends not unless asked). The CLAUDE.md additions, the execution index and the failure-intelligence record were approved at 22:03:12 UTC and are done. | 22:00 UTC | Nothing immediate |
+| 9 | Still open from before: A2 (single-record rollback) and A8 (version pinning); the GPL approach (A9 Q5) before any distribution. | 11:08–13:07 UTC | Acceptance; distribution |
 
 ## Continuation (unaccepted work and how to resume)
 
@@ -20,20 +37,23 @@ This file answers two questions: what is accepted right now, and exactly where w
 | Item | Where | State | Evidence and its limits |
 |---|---|---|---|
 | Toolchain | Node 24.20.0, npm 11.19.0, Rust 1.99.1 (MSVC), Git 2.55.0, VS Build Tools 2022 | Complete | `--version` checks, 2026-10-22 |
-| Rust backend | `src-tauri/src/` | Implemented; unit-tested | `cargo test --lib`: 27/27 on commit `2743021` (2026-10-22). Unit level only. |
-| UI | `src/` | Implemented; type-checked, bundled, launches | `tsc`: 0 errors; `npm run build`: passed; `npm run tauri dev`: the first screen ("Create your vault") renders. Nothing beyond the first screen has been exercised. |
-| KeePassXC bundle (A9) | `vendor/` (ignored by Git), `vendor/keepassxc-manifest.md` (committed) | D0 and D1 done | SHA-256 and PGP verified; offline launch test passed; see [`execution/2026-10-22-a9-keepassxc-d0-d1.md`](execution/2026-10-22-a9-keepassxc-d0-d1.md). After a fresh clone the binaries must be downloaded again. |
-| Records | `docs/`, `CLAUDE.md` | Current | — |
-| Git | Local repository, no remote; branch `feat/a9-keepassxc`; `main` untouched | Commits `f26c1f7`, `0d57ad2`, `b7c8626`, `2743021`, plus the documentation commit that follows | `git log` |
-| README | `README.md` | Stale: still the Tauri template text | — |
+| Rust backend | `src-tauri/src/` | Implemented; unit-tested | `cargo test --lib`: 33/33 on the working tree at 22:35 UTC, uncommitted (no Rust changed in A13). Unit level only. |
+| UI | `src/` | Implemented; type-checked, bundled | `tsc`: 0 errors; `npm run build`: passed; `npm audit`: 0 vulnerabilities, all at 22:35 UTC. The calculator engine passes 66 checks (`dev-mock/calc-check.cjs`); the small calculator inside a sticky note (A14) was checked in the mock UI only. Screens, the editor and the calculator were checked with mock data and scripts; pictures, covers and icons against the real backend in a throwaway vault (before A13); KeePassXC placement by script. Not checked by hand or in the real app: the calculator (including Copy), the reworded menus and toolbar, real mouse dragging, the picture file chooser, the sub-page flow, typing inside KeePassXC. |
+| KeePassXC bundle (A9) | `vendor/` (ignored by Git), `vendor/keepassxc-manifest.md` (committed) | D0 and D1 done | SHA-256 and PGP verified; offline launch test passed; see [EX-02](execution/2026-10-22-a9-keepassxc-d0-d1.md). After a fresh clone the binaries must be downloaded again. |
+| Mock UI harness | `dev-mock/`, `vite.mock.config.ts`, `npm run mock` | Dev only (uncommitted) | Fakes the Tauri commands so screens can be viewed in a browser; not part of the app build. |
+| Records | `docs/`, `CLAUDE.md`, `README.md` | Reconciled at 21:49–22:10 UTC; also new: [execution index](execution/README.md), [failure-intelligence.md](failure-intelligence.md) | [EX-06](execution/2026-10-23-pbs-reconciliation.md). New: [acceptance.md](acceptance.md), [sessions.md](sessions.md). |
+| Git | Local repository, no remote; branch `feat/a9-keepassxc`; `main` untouched | HEAD is the documentation commit after `2105a57` (code, A10–A14); see `git log`. No push. | `git log`, `git status` |
+| Release build (first) | `E:\Project\Cipherleaf-portable\` (outside the repository): `Cipherleaf.exe` (SHA-256 `5D766105…5AAD`), `KeePassXC\`, `Licenses\KeePassXC\` (licenses and the complete source), `README.txt` | Built from commit `2105a57`; smoke-tested from a temporary copy | [EX-09](execution/2026-10-22-release-build-and-commit.md): it starts, creates `data\` next to the exe, writes nothing to AppData, makes no network connections, closes cleanly. Not tested: creating a vault, the Passwords view, lock, a USB stick (V3c). Unsigned. |
+| Owner's dev vault | `.devdata\data\` (ignored by Git) | Real use began 16:03 UTC; contents not inspected by Claude (the owner's screenshot at 18:06 shows a page "Hello Cipherleaf" and two "Untitled" pages) | File timestamps only |
+| Test leftovers | About 88 `cipherleaf-*` folders in `%TEMP%` (cargo test vaults, KeePassXC test copies) | Not deleted (the project rule is to ask before deleting) | Folder listing |
 
 ### Not done
 
-- Everything past the first screen of the running app: creating and unlocking a vault, notes, sticky notes, the KeePassXC panel, auto-lock, screenshot blocking.
-- Portable release build with KeePassXC copied in, plus KeePassXC's license files and source link.
-- `cargo audit`, `npm audit` and a security review.
-- A1 and A3–A7 evidence; README rewrite.
-- (Done 16:09 UTC) `**/.devdata/**` is now in `server.watch.ignored` in `vite.config.ts`; the dev log showed 0 watcher errors afterwards. Note: editing `vite.config.ts` while `tauri dev` runs ends the whole dev session, so restart it after such an edit.
+- Hands-on use of the running app by the owner: the new look, the calculator under Sticky notes, the reworded block editor (drag, "/" menu, toolbar, pictures, equations), sticky notes, auto-lock, screenshot blocking, typing in the embedded KeePassXC, quitting closing KeePassXC, the command palette hiding the overlay, the real vault's migration from the old theme names, scaling other than 100%.
+- Release build checks not yet run: creating a vault and the Passwords view in the release exe, V3c (pulling the USB drive locks the app), a real USB stick, running it on a PC without the VC++ runtime, code signing and SmartScreen.
+- `cargo audit` and a security review (`npm audit` is done).
+- A1 and A3–A7 evidence.
+- Items listed in the [acceptance ledger](acceptance.md) as not-run.
 
 ### Observed in the owner's first hands-on run (from files only, ~16:03–16:07 UTC)
 
@@ -41,11 +61,11 @@ The owner ran the app and created things before the restart. Claude didn't watch
 
 - `keepassxc\keepassxc.ini` (16:03) and `Passwords.kdbx` (16:04, valid KeePass signature `03 D9 A2 9A`): the KeePassXC panel started the bundled KeePassXC, which created a database in Cipherleaf's data folder.
 - `vault.clf` (16:05, a valid SQLite file) and `backups\vault-….clf` (16:06): a Cipherleaf vault was created, and a lock wrote its encrypted backup.
-- The owner has not yet reported what looked right or wrong.
+- Later owner evidence: a screenshot at 18:06:46 UTC showing the running app with the Paper theme (so the redesign runs in their vault, and screenshot blocking was off at that moment).
 
 ### Blockers and decisions
 
-- **Debug-port exposure (closed at 16:07 UTC).** From 15:58:50 until the restart at 16:06:58 UTC (about 8 minutes) the dev app ran with WebView2's local debug port open (127.0.0.1:9222, any origin). The vault was created during that window. Claude connected only at about 15:59 UTC (two read-only scripts: one read the first screen, one read an input's length), and never afterwards. Whether another local program connected is unknown. The dev app now runs without the port (checked: nothing listening on 9222, no WebView2 process with remote debugging). If that vault will hold real data, change its master password (Settings → Master password & keyfile) or create a fresh vault.
+- **Debug-port exposure (closed at 16:07 UTC): see [FI-01](failure-intelligence.md#fi-01--debug-port-left-open-on-the-owners-live-window).** The one action still open is the owner's: if the dev vault will hold real data, change its master password (Settings → Master password & keyfile) or create a fresh vault. Later UI testing used a throwaway vault with the port closed afterwards.
 - A2 and A8 need the owner's decision. A1 and A3–A7 need evidence. See [the amendments record](plan/approval-and-amendments.md).
 
 ### Do not repeat
@@ -53,25 +73,32 @@ The owner ran the app and created things before the restart. Claude didn't watch
 - The toolchain install, scaffolding, dependency selection, or the D0 download and verification.
 - Rewriting backend or UI modules from scratch. Inspect and fix instead.
 - Editing the plan snapshot. Record changes as amendments instead.
-- Driving the running dev window by script while the owner may be using it.
+- Driving the running dev window by script while the owner may be using it (FI-01). Use a throwaway vault in a separate process, and close its debug port afterwards.
+- Editing `vite.config.ts` while `tauri dev` runs (it ends the session). The `.devdata` watcher ignore is already done.
+- Force-stopping KeePassXC (it protects itself); close it politely.
 
 ### Exact next permitted action
 
-1. The owner tries the dev app (restart it first without the debug port, or keep using it knowing the port is open) and reports what works and what doesn't.
-2. Fix the defects found, re-run `cargo test --lib`, `npx tsc --noEmit -p tsconfig.json` and `npm run build`, and add a new Execution Summary.
-3. Only after the owner's go-ahead: the portable release build (copy KeePassXC in unmodified with its license files and source link), `cargo audit`, `npm audit`, and a security review.
+1. The owner tries the release exe (`E:\Project\Cipherleaf-portable\Cipherleaf.exe`) and the dev app, and says what to change. Then: move the dev vault into the portable folder or start fresh (question 4), and decide the GPL approach before sharing the build.
+2. Documentation upkeep is authorized now: after any meaningful step, follow the routine in [EX-06 Appendix A](execution/2026-10-23-pbs-reconciliation.md#appendix-a-documentation-routine-going-forward).
+3. Code changes, a commit, a release build, any change to security behavior or a new dependency wait for the owner's instruction on the matching question.
+4. When the owner says to continue: start the dev app without the debug port, let them test, fix what they report, re-run `cargo test --lib`, `npx tsc --noEmit -p tsconfig.json` and `npm run build`, and add an Execution Summary.
 
 ## Where things live
 
 | Question | Where the answer lives |
 |---|---|
-| What is authorized now? | The owner's latest instruction, recorded in [approval-and-amendments.md](plan/approval-and-amendments.md) |
+| What is authorized now? | The owner's latest instruction, recorded with exact times in [approval-and-amendments.md](plan/approval-and-amendments.md) |
 | What was approved, and its success criteria? | [approved-plan-2026-10-22.md](plan/approved-plan-2026-10-22.md), the unchanged snapshot |
+| Which criteria are met by which evidence, and who accepted? | [acceptance.md](acceptance.md) |
 | What's accepted, and where does work resume? | This file |
+| What happened, in order, and why did choices change? | [sessions.md](sessions.md); the amendments record; the Claude Code transcripts (outside the project) |
+| What did a piece of work do, and what was checked? | [`execution/`](execution/); the [index](execution/README.md) lists every report, newest first |
+| What went wrong or nearly did, and what rule prevents it? | [failure-intelligence.md](failure-intelligence.md) |
 | What does the code actually do? | The working tree and its Git history |
-| Did checks pass? | Re-running the checks; dated results in [`execution/`](execution/) |
+| Did checks pass? | Re-running the checks; dated results in [`execution/`](execution/) and [acceptance.md](acceptance.md) |
 | What does Cipherleaf promise about security? | [security-design.md](security-design.md) |
 | How should an AI agent work here? | [`CLAUDE.md`](../CLAUDE.md) |
-| Why did choices change? | The amendments record, and the Claude Code conversation transcripts (stored outside the project) |
+| Notion pages (private drafts in the owner's workspace, written earlier the same day; historical, not kept current) | [PBS Understanding Review — Cipherleaf](https://app.notion.com/p/40190e048b6081f3b301ee6f3a8c4145), [Chat Response (22 Oct 2026)](https://app.notion.com/p/40190e048b6081c4beb9d195082ace61), [Work Log & Checkpoint (22 Oct 2026)](https://app.notion.com/p/40190e048b608176b1a8ff4fcb7afec7) (the work log stops at 13:26 UTC, before A10) |
 
-**Reading order to resume:** `CLAUDE.md` → this file → the amendments record → the live repository (`git status`, `git log`) → the latest Execution Summary → the security design or plan snapshot, as needed.
+**Reading order to resume:** `CLAUDE.md` → this file → the amendments record → the live repository (`git status`, `git log`) → the acceptance ledger → the [execution index](execution/README.md) and the latest Execution Summary → the newest session entry, the security design or the plan snapshot, as needed.
