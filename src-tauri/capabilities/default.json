@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimal permissions: window controls and events only. No file system, shell, dialog, opener or HTTP access is given to the UI; those run in Rust behind Cipherleaf's own checked commands.",
+  "windows": ["main", "sticky-*"],
+  "permissions": [
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
+    "core:window:allow-start-resize-dragging",
+    "core:window:allow-set-focus"
+  ]
+}
