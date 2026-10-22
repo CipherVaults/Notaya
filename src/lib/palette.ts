@@ -1,14 +1,15 @@
 // Color choices offered in the UI.
 
 export const ACCENTS = [
-  { name: "Violet", value: "#8b5cf6" },
-  { name: "Indigo", value: "#6366f1" },
+  { name: "Black & white", value: "mono" },
+  { name: "Blue", value: "#3b82f6" },
   { name: "Sky", value: "#0ea5e9" },
   { name: "Teal", value: "#14b8a6" },
-  { name: "Emerald", value: "#10b981" },
+  { name: "Green", value: "#22c55e" },
   { name: "Amber", value: "#f59e0b" },
+  { name: "Orange", value: "#f97316" },
   { name: "Rose", value: "#f43f5e" },
-  { name: "Fuchsia", value: "#d946ef" },
+  { name: "Violet", value: "#8b5cf6" },
 ];
 
 export const TAG_COLORS = [
@@ -42,20 +43,45 @@ export function stickyColor(name: string) {
 
 export const NOTEBOOK_ICONS = ["📓", "📘", "📗", "📕", "📙", "🗂️", "💼", "🏠", "✈️", "💡", "🎓", "🧪", "🎨", "💰", "❤️", "🔒"];
 
+/** Highlight colors are translucent, so they read well on every theme. */
 export const HIGHLIGHTS = [
-  { name: "Yellow", value: "#fde68a" },
-  { name: "Green", value: "#bbf7d0" },
-  { name: "Blue", value: "#bfdbfe" },
-  { name: "Pink", value: "#fbcfe8" },
-  { name: "Purple", value: "#ddd6fe" },
+  { name: "Gray", value: "rgba(155, 154, 151, 0.35)" },
+  { name: "Brown", value: "rgba(160, 115, 90, 0.38)" },
+  { name: "Orange", value: "rgba(224, 123, 57, 0.36)" },
+  { name: "Yellow", value: "rgba(236, 189, 40, 0.38)" },
+  { name: "Green", value: "rgba(79, 157, 105, 0.36)" },
+  { name: "Blue", value: "rgba(59, 130, 196, 0.36)" },
+  { name: "Purple", value: "rgba(144, 101, 176, 0.38)" },
+  { name: "Pink", value: "rgba(193, 76, 138, 0.36)" },
+  { name: "Red", value: "rgba(229, 72, 77, 0.36)" },
 ];
 
 export const TEXT_COLORS = [
   { name: "Default", value: "" },
-  { name: "Violet", value: "#a78bfa" },
-  { name: "Blue", value: "#60a5fa" },
-  { name: "Green", value: "#34d399" },
-  { name: "Amber", value: "#fbbf24" },
-  { name: "Red", value: "#f87171" },
-  { name: "Gray", value: "#9ca3af" },
+  { name: "Gray", value: "#9b9a97" },
+  { name: "Brown", value: "#b0805f" },
+  { name: "Orange", value: "#e07b39" },
+  { name: "Yellow", value: "#d9a21b" },
+  { name: "Green", value: "#4f9d69" },
+  { name: "Blue", value: "#3b82c4" },
+  { name: "Purple", value: "#9065b0" },
+  { name: "Pink", value: "#c14c8a" },
+  { name: "Red", value: "#e5484d" },
+];
+
+export const COVER_GRADIENTS = [
+  { name: "Ink", value: "ink" },
+  { name: "Snow", value: "snow" },
+  { name: "Dusk", value: "dusk" },
+  { name: "Ocean", value: "ocean" },
+  { name: "Forest", value: "forest" },
+  { name: "Ember", value: "ember" },
+  { name: "Rose", value: "rose" },
+  { name: "Sand", value: "sand" },
+];
+
+export const PAGE_EMOJIS = [
+  "📄", "📝", "📓", "📚", "💡", "✅", "📌", "⭐", "🎯", "🚀", "🧠", "🔒",
+  "🗂️", "📅", "🏠", "✈️", "🎓", "🧪", "🎨", "🎵", "💼", "💰", "🛒", "🍽️",
+  "❤️", "🌱", "☀️", "🌙", "🔥", "⚙️", "🔧", "📷", "🎮", "📖", "🧾", "🗒️",
 ];

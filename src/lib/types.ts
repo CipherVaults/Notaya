@@ -8,7 +8,7 @@ export interface VaultStatus {
   version: string;
 }
 
-export type ThemeMode = "dark" | "light" | "system";
+export type ThemeMode = "black" | "graphite" | "white" | "paper" | "system";
 export type Backdrop = "mica" | "acrylic" | "none";
 
 export interface Settings {
@@ -54,6 +54,9 @@ export interface PageMeta {
   words: number;
   order: number;
   favorite: boolean;
+  icon: string;
+  /** Id of the page this one sits inside, or empty. */
+  parent: string;
   trashedAt: number | null;
   created: number;
   updated: number;
@@ -67,6 +70,10 @@ export interface Page {
   text: string;
   order: number;
   favorite: boolean;
+  icon: string;
+  /** "gradient:<name>", an image URL, or empty. */
+  cover: string;
+  parent: string;
   trashedAt: number | null;
   created: number;
   updated: number;
@@ -134,4 +141,6 @@ export interface KeePassXCStatus {
   dataDir: string;
   /** KeePassXC was started by Cipherleaf and is still running. */
   running: boolean;
+  /** Its window is shown inside Cipherleaf's window. */
+  embedded: boolean;
 }

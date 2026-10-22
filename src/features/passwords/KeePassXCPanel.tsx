@@ -1,175 +1,206 @@
-import { useCallback, useEffect, useState } from "react";
-import { motion } from "motion/react";
-import { AlertTriangle, CheckCircle2, FolderOpen, KeyRound, Loader2, ShieldCheck, WifiOff } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ExternalLink, KeyRound, Loader2, RefreshCw, ShieldCheck, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { KeePassXCStatus } from "@/lib/types";
-import { Button } from "@/components/ui";
+import { useApp } from "@/store/app";
+import { Button, IconButton } from "@/components/ui";
+
+type Phase = "starting" | "embedded" | "closed" | "failed";
 
 /**
- * Passwords live in the bundled, unmodified KeePassXC (amendment A9). This panel
- * only starts it and shows its state. Cipherleaf never sees KeePassXC's master
- * password or any entry.
+ * Passwords live in the bundled, unmodified KeePassXC (amendments A9 and A10). Its
+ * window is shown right here, over the host area below. Cipherleaf never sees the
+ * master password or any entry; it only tells Windows where to put the window.
  */
 export default function KeePassXCPanel() {
   const [status, setStatus] = useState<KeePassXCStatus | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<Phase>("starting");
+  const [error, setError] = useState<string | null>(null);
+  const host = useRef<HTMLDivElement>(null);
+  const paletteOpen = useApp((s) => s.paletteOpen);
+
+  /** The host area in physical pixels, relative to the window. */
+  const rect = useCallback(() => {
+    const r = host.current?.getBoundingClientRect();
+    if (!r) return null;
+    const d = window.devicePixelRatio || 1;
+    return {
+      x: Math.round(r.left * d),
+      y: Math.round(r.top * d),
+      w: Math.max(1, Math.round(r.width * d)),
+      h: Math.max(1, Math.round(r.height * d)),
+    };
+  }, []);
 
   const refresh = useCallback(() => api.keepassxcStatus().then(setStatus).catch(() => {}), []);
 
-  useEffect(() => {
+  const start = useCallback(async () => {
+    const r = rect();
+    if (!r) return;
+    setPhase("starting");
+    setError(null);
+    try {
+      await api.keepassxcEmbed(r.x, r.y, r.w, r.h);
+      setPhase("embedded");
+    } catch (e) {
+      setError(errorText(e));
+      setPhase("failed");
+    }
     refresh();
-    const t = setInterval(refresh, 2000);
-    return () => clearInterval(t);
-  }, [refresh]);
+  }, [rect, refresh]);
 
-  const open = async () => {
-    setBusy(true);
+  // Show KeePassXC when this panel appears; hide it when the panel goes away.
+  useEffect(() => {
+    let cancelled = false;
+    api.keepassxcStatus().then((s) => {
+      if (cancelled) return;
+      setStatus(s);
+      if (s.installed && s.verified) start();
+      else setPhase("failed");
+    });
+    return () => {
+      cancelled = true;
+      api.keepassxcHide().catch(() => {});
+    };
+  }, [start]);
+
+  // Keep the window glued to the host area while the app is resized.
+  useEffect(() => {
+    if (phase !== "embedded" || paletteOpen) return;
+    let frame = 0;
+    const move = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const r = rect();
+        if (r) api.keepassxcPlace(r.x, r.y, r.w, r.h).catch(() => {});
+      });
+    };
+    move();
+    const ro = new ResizeObserver(move);
+    if (host.current) ro.observe(host.current);
+    window.addEventListener("resize", move);
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+      window.removeEventListener("resize", move);
+    };
+  }, [phase, paletteOpen, rect]);
+
+  // The command palette is drawn by the web page, so KeePassXC must step aside for it.
+  useEffect(() => {
+    if (phase === "embedded" && paletteOpen) api.keepassxcHide().catch(() => {});
+  }, [phase, paletteOpen]);
+
+  // If KeePassXC is closed from inside (File → Quit), offer to open it again.
+  useEffect(() => {
+    if (phase !== "embedded") return;
+    const t = setInterval(async () => {
+      const s = await api.keepassxcStatus().catch(() => null);
+      if (s) {
+        setStatus(s);
+        if (!s.embedded) setPhase("closed");
+      }
+    }, 2000);
+    return () => clearInterval(t);
+  }, [phase]);
+
+  const separateWindow = async () => {
     try {
       await api.keepassxcOpen();
-      await refresh();
+      setPhase("closed");
+      refresh();
     } catch (e) {
       toast.error(errorText(e));
-    } finally {
-      setBusy(false);
     }
   };
 
-  if (!status) {
-    return (
-      <div className="grid h-full place-items-center text-muted">
-        <Loader2 className="animate-spin" size={20} />
-      </div>
-    );
-  }
-
-  const ready = status.installed && status.verified;
-  const hasDb = status.database !== null;
+  const version = status?.version ?? "2.8.0";
+  const unavailable = status && (!status.installed || !status.verified);
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-2xl px-10 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl border border-line bg-elevated p-8 shadow-float"
-        >
-          <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-25 blur-3xl" style={{ background: "var(--accent)" }} />
-          <div className="relative flex items-start gap-5">
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
-              <KeyRound size={28} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-2xl font-semibold tracking-tight">Passwords</h2>
-              <p className="mt-1 text-sm leading-relaxed text-muted">
-                Your passwords are kept in <strong className="text-fg">KeePassXC {status.version}</strong>, the well-known open-source
-                password manager, bundled with Cipherleaf. It opens in its own window and uses the standard <code className="font-mono text-xs">.kdbx</code> format, so you
-                can import, export and use all of its features.
-              </p>
+    <div className="flex h-full flex-col">
+      <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-5">
+        <KeyRound size={17} className="text-muted" />
+        <span className="text-sm font-semibold">Passwords</span>
+        <span className="text-xs text-faint">KeePassXC {version}</span>
+        <div className="flex-1" />
+        {phase === "embedded" && (
+          <IconButton label="Open in a separate window" size="sm" onClick={separateWindow}>
+            <ExternalLink size={15} />
+          </IconButton>
+        )}
+      </div>
+
+      <div ref={host} data-kpxc-host="" className="relative min-h-0 flex-1">
+        {/* KeePassXC's own window is drawn over this area by Windows. */}
+        {phase === "starting" && !unavailable && (
+          <div className="grid h-full place-items-center text-muted">
+            <div className="flex items-center gap-2 text-sm">
+              <Loader2 size={16} className="animate-spin" /> Starting KeePassXC…
             </div>
           </div>
+        )}
 
-          <div className="relative mt-7">
-            {!status.installed && (
-              <Notice tone="warn" icon={<AlertTriangle size={17} />}>
-                KeePassXC isn't included with this copy of Cipherleaf. Put the KeePassXC folder next to <code className="font-mono text-xs">Cipherleaf.exe</code>.
-              </Notice>
-            )}
-            {status.installed && !status.verified && (
-              <Notice tone="danger" icon={<AlertTriangle size={17} />}>
-                The KeePassXC found here doesn't match the verified {status.version} release, so Cipherleaf won't start it. Replace it with the original files.
-              </Notice>
-            )}
-            {ready && (
-              <div className="space-y-4">
-                <Button variant="primary" size="lg" className="w-full" onClick={open} disabled={busy}>
-                  {busy ? (
-                    <>
-                      <Loader2 size={17} className="animate-spin" /> Starting KeePassXC…
-                    </>
-                  ) : hasDb ? (
-                    <>
-                      <KeyRound size={17} /> {status.running ? "Bring KeePassXC to the front" : "Open passwords in KeePassXC"}
-                    </>
-                  ) : (
-                    <>
-                      <KeyRound size={17} /> Create a password database
-                    </>
-                  )}
-                </Button>
+        {unavailable && (
+          <Message tone={status && !status.installed ? "warn" : "danger"} title={status && !status.installed ? "KeePassXC isn't included" : "KeePassXC doesn't match the verified release"}>
+            {status && !status.installed
+              ? "Put the KeePassXC folder next to Cipherleaf.exe."
+              : `The KeePassXC found here isn't the verified ${version} release, so Cipherleaf won't start it. Replace it with the original files.`}
+          </Message>
+        )}
 
-                {!hasDb && (
-                  <ol className="list-decimal space-y-1.5 rounded-2xl border border-line bg-surface p-4 pl-9 text-sm leading-relaxed text-muted">
-                    <li>
-                      In KeePassXC choose <strong className="text-fg">Database → New Database</strong>.
-                    </li>
-                    <li>
-                      Pick a strong master password. In the encryption settings, <strong className="text-fg">Argon2id</strong> is the safest key derivation.
-                    </li>
-                    <li>
-                      Save it as <code className="font-mono text-xs">passwords.kdbx</code> in the folder KeePassXC suggests (Cipherleaf's <code className="font-mono text-xs">data</code> folder).
-                    </li>
-                  </ol>
-                )}
-
-                <div className="flex items-center gap-2 text-sm">
-                  {status.running ? (
-                    <>
-                      <CheckCircle2 size={16} className="text-ok" /> <span className="text-muted">KeePassXC is open. It locks when Cipherleaf locks.</span>
-                    </>
-                  ) : (
-                    <span className="text-faint">KeePassXC isn't running.</span>
-                  )}
-                </div>
+        {!unavailable && (phase === "failed" || phase === "closed") && (
+          <div className="grid h-full place-items-center overflow-y-auto p-8">
+            <div className="w-full max-w-md space-y-5 text-center">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
+                {phase === "failed" ? <AlertTriangle size={26} /> : <KeyRound size={26} />}
               </div>
-            )}
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">{phase === "failed" ? "Couldn't show KeePassXC here" : "KeePassXC is closed"}</h2>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                  {phase === "failed" ? (error ?? "KeePassXC didn't open in time.") : "Open it again to keep working with your passwords."}
+                </p>
+              </div>
+              <div className="flex justify-center gap-2">
+                <Button variant="primary" onClick={start}>
+                  <RefreshCw size={15} /> {phase === "failed" ? "Try again" : "Open KeePassXC"}
+                </Button>
+                <Button variant="outline" onClick={separateWindow}>
+                  <ExternalLink size={15} /> Separate window
+                </Button>
+              </div>
+              <div className="grid gap-2 pt-2 text-left text-xs text-muted sm:grid-cols-2">
+                <Hint icon={<ShieldCheck size={14} />}>Only a verified {version} copy is started.</Hint>
+                <Hint icon={<WifiOff size={14} />}>Offline by default; your database stays in the data folder.</Hint>
+              </div>
+            </div>
           </div>
-        </motion.div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <Fact icon={<ShieldCheck size={17} />} title="Verified copy">
-            Cipherleaf starts KeePassXC only if the program file matches the official {status.version} release.
-          </Fact>
-          <Fact icon={<WifiOff size={17} />} title="Offline by default">
-            Update checks, browser integration, the SSH agent and icon downloads are off until you turn them on in KeePassXC.
-          </Fact>
-          <Fact icon={<FolderOpen size={17} />} title="Stays in the portable folder">
-            Your database and KeePassXC's settings live in Cipherleaf's <code className="font-mono text-xs">data</code> folder, not on the PC.
-          </Fact>
-          <Fact icon={<KeyRound size={17} />} title="Separate master password">
-            KeePassXC has its own master password (and optional keyfile). Cipherleaf never sees it.
-          </Fact>
-        </div>
-
-        {status.database && (
-          <p className="selectable mt-5 break-all text-xs text-faint">Database: {status.database}</p>
         )}
       </div>
     </div>
   );
 }
 
-function Notice({ tone, icon, children }: { tone: "warn" | "danger"; icon: React.ReactNode; children: React.ReactNode }) {
+function Message({ tone, title, children }: { tone: "warn" | "danger"; title: string; children: React.ReactNode }) {
   return (
-    <div
-      className={`flex items-start gap-3 rounded-2xl border p-4 text-sm leading-relaxed ${
-        tone === "danger" ? "border-danger/40 bg-danger/10" : "border-warn/40 bg-warn/10"
-      }`}
-    >
-      <span className={tone === "danger" ? "text-danger" : "text-warn"}>{icon}</span>
-      <span>{children}</span>
+    <div className="grid h-full place-items-center p-8">
+      <div className={`max-w-md rounded-2xl border p-5 text-sm leading-relaxed ${tone === "danger" ? "border-danger/40 bg-danger/10" : "border-warn/40 bg-warn/10"}`}>
+        <div className="mb-1 flex items-center gap-2 font-medium">
+          <AlertTriangle size={16} className={tone === "danger" ? "text-danger" : "text-warn"} />
+          {title}
+        </div>
+        <p className="text-muted">{children}</p>
+      </div>
     </div>
   );
 }
 
-function Fact({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Hint({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4">
-      <div className="mb-1.5 flex items-center gap-2 text-sm font-medium">
-        <span className="text-accent">{icon}</span>
-        {title}
-      </div>
-      <p className="text-xs leading-relaxed text-muted">{children}</p>
+    <div className="flex items-start gap-2 rounded-xl border border-line bg-surface p-3">
+      <span className="mt-0.5 text-accent">{icon}</span>
+      <span>{children}</span>
     </div>
   );
 }

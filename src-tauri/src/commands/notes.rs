@@ -188,6 +188,9 @@ pub fn create_page(state: State<'_, AppState>, section_id: String, title: String
             text: String::new(),
             order,
             favorite: false,
+            icon: String::new(),
+            cover: String::new(),
+            parent: String::new(),
             trashed_at: None,
             created: now,
             updated: now,
@@ -219,6 +222,57 @@ pub fn save_page(state: State<'_, AppState>, id: String, title: String, content:
     })
 }
 
+/// The page itself plus every page nested inside it, at any depth.
+fn with_descendants(s: &crate::vault::Session, id: &str) -> Vec<String> {
+    let mut out = vec![id.to_string()];
+    let mut i = 0;
+    while i < out.len() {
+        let current = out[i].clone();
+        for item in s.items() {
+            if let Item::Page(p) = item {
+                if p.parent == current && !out.contains(&p.id) {
+                    out.push(p.id.clone());
+                }
+            }
+        }
+        i += 1;
+    }
+    out
+}
+
+/// Creates a page inside another page. It lives in the same section.
+fn add_subpage(s: &mut Session, parent_id: &str, title: String) -> Result<Page> {
+    let parent = page(s, parent_id)?;
+    let now = now_ms();
+    let order = next_order(s.items().filter_map(|i| match i {
+        Item::Page(p) if p.parent == parent_id => Some(p.order),
+        _ => None,
+    }));
+    let p = Page {
+        id: new_id(),
+        section_id: parent.section_id.clone(),
+        title,
+        content: String::new(),
+        text: String::new(),
+        order,
+        favorite: false,
+        icon: String::new(),
+        cover: String::new(),
+        parent: parent_id.to_string(),
+        trashed_at: parent.trashed_at,
+        created: now,
+        updated: now,
+    };
+    s.put(Item::Page(p.clone()))?;
+    Ok(p)
+}
+
+#[tauri::command]
+pub fn create_subpage(state: State<'_, AppState>, parent_id: String, title: String) -> Result<Page> {
+    limit("Title", &title, 300)?;
+    state.with_mut(|s| add_subpage(s, &parent_id, title))
+}
+
 #[tauri::command]
 pub fn set_page_favorite(state: State<'_, AppState>, id: String, favorite: bool) -> Result<NotesTree> {
     state.with_mut(|s| {
@@ -229,17 +283,30 @@ pub fn set_page_favorite(state: State<'_, AppState>, id: String, favorite: bool)
     })
 }
 
+/// Moves a page, and the pages inside it, to another section. The page leaves its old parent.
+fn move_subtree(s: &mut Session, id: &str, section_id: &str) -> Result<()> {
+    section(s, section_id)?;
+    let mut p = page(s, id)?;
+    p.order = next_order(s.items().filter_map(|i| match i {
+        Item::Page(x) if x.section_id == section_id => Some(x.order),
+        _ => None,
+    }));
+    p.section_id = section_id.to_string();
+    p.parent = String::new();
+    let mut changed = vec![];
+    for child in with_descendants(s, id).into_iter().filter(|c| c != id) {
+        let mut c = page(s, &child)?;
+        c.section_id = section_id.to_string();
+        changed.push(Item::Page(c));
+    }
+    changed.push(Item::Page(p));
+    s.put_many(changed)
+}
+
 #[tauri::command]
 pub fn move_page(state: State<'_, AppState>, id: String, section_id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
-        section(s, &section_id)?;
-        let mut p = page(s, &id)?;
-        p.order = next_order(s.items().filter_map(|i| match i {
-            Item::Page(x) if x.section_id == section_id => Some(x.order),
-            _ => None,
-        }));
-        p.section_id = section_id;
-        s.put(Item::Page(p))?;
+        move_subtree(s, &id, &section_id)?;
         Ok(tree(s))
     })
 }
@@ -272,13 +339,42 @@ pub fn reorder(state: State<'_, AppState>, ids: Vec<String>) -> Result<NotesTree
     })
 }
 
+/// Puts a page, and every page inside it, in the trash.
+fn trash_subtree(s: &mut Session, id: &str) -> Result<()> {
+    page(s, id)?;
+    let now = now_ms();
+    let mut changed = vec![];
+    for pid in with_descendants(s, id) {
+        let mut p = page(s, &pid)?;
+        if p.trashed_at.is_none() {
+            p.trashed_at = Some(now);
+        }
+        p.favorite = false;
+        changed.push(Item::Page(p));
+    }
+    s.put_many(changed)
+}
+
+/// Brings a page back with the pages inside it. If its parent is still in the trash, it returns to the top of its section.
+fn restore_subtree(s: &mut Session, id: &str) -> Result<()> {
+    let first = page(s, id)?;
+    let parent_trashed = !first.parent.is_empty() && matches!(s.get(&first.parent), Some(Item::Page(pp)) if pp.trashed_at.is_some());
+    let mut changed = vec![];
+    for pid in with_descendants(s, id) {
+        let mut p = page(s, &pid)?;
+        p.trashed_at = None;
+        if pid == id && parent_trashed {
+            p.parent = String::new();
+        }
+        changed.push(Item::Page(p));
+    }
+    s.put_many(changed)
+}
+
 #[tauri::command]
 pub fn trash_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
-        let mut p = page(s, &id)?;
-        p.trashed_at = Some(now_ms());
-        p.favorite = false;
-        s.put(Item::Page(p))?;
+        trash_subtree(s, &id)?;
         Ok(tree(s))
     })
 }
@@ -286,9 +382,7 @@ pub fn trash_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
 #[tauri::command]
 pub fn restore_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
-        let mut p = page(s, &id)?;
-        p.trashed_at = None;
-        s.put(Item::Page(p))?;
+        restore_subtree(s, &id)?;
         Ok(tree(s))
     })
 }
@@ -297,7 +391,8 @@ pub fn restore_page(state: State<'_, AppState>, id: String) -> Result<NotesTree>
 pub fn delete_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
         page(s, &id)?;
-        s.remove_many(&[id])?;
+        let doomed = with_descendants(s, &id);
+        s.remove_many(&doomed)?;
         s.collect_garbage()?;
         Ok(tree(s))
     })
@@ -356,5 +451,87 @@ mod tests {
         assert_eq!(sniff_image(b"\xff\xd8\xff\xe0"), Some("image/jpeg"));
         assert_eq!(sniff_image(b"<svg onload=alert(1)>"), None);
         assert_eq!(sniff_image(b"RIFF\0\0\0\0WEBPVP8 "), Some("image/webp"));
+    }
+}
+
+/// Sets the emoji and cover shown on a page. The cover is `gradient:<name>` or one
+/// of this vault's attachment URLs (so a cover image is encrypted like any other).
+#[tauri::command]
+pub fn set_page_look(state: State<'_, AppState>, id: String, icon: String, cover: String) -> Result<PageMeta> {
+    limit("Icon", &icon, 40)?;
+    limit("Cover", &cover, 200)?;
+    state.with_mut(|s| {
+        let mut p = page(s, &id)?;
+        p.icon = icon;
+        p.cover = cover;
+        p.updated = now_ms();
+        let meta = PageMeta::from(&p);
+        s.put(Item::Page(p))?;
+        Ok(meta)
+    })
+}
+
+#[cfg(test)]
+mod subpage_tests {
+    use super::*;
+    use crate::crypto::KdfParams;
+
+    fn vault() -> Session {
+        let dir = std::env::temp_dir().join(format!("cipherleaf-test-{}", new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        Session::create(&dir.join("vault.clf"), "pw", None, KdfParams { m_kib: 64, t: 1, p: 1 }).unwrap()
+    }
+
+    fn page_in(s: &mut Session, section_id: &str, title: &str) -> Page {
+        let p = Page {
+            id: new_id(),
+            section_id: section_id.into(),
+            title: title.into(),
+            content: String::new(),
+            text: String::new(),
+            order: 0,
+            favorite: false,
+            icon: String::new(),
+            cover: String::new(),
+            parent: String::new(),
+            trashed_at: None,
+            created: 1,
+            updated: 1,
+        };
+        s.put(Item::Page(p.clone())).unwrap();
+        p
+    }
+
+    fn get(s: &Session, id: &str) -> Page {
+        page(s, id).unwrap()
+    }
+
+    #[test]
+    fn pages_nest_and_follow_their_parent() {
+        let mut s = vault();
+        let sec_a = new_id();
+        let sec_b = new_id();
+        s.put(Item::Section(Section { id: sec_a.clone(), notebook_id: new_id(), name: "A".into(), color: String::new(), order: 0, created: 1, updated: 1 })).unwrap();
+        s.put(Item::Section(Section { id: sec_b.clone(), notebook_id: new_id(), name: "B".into(), color: String::new(), order: 0, created: 1, updated: 1 })).unwrap();
+        let top = page_in(&mut s, &sec_a, "top");
+        let child = add_subpage(&mut s, &top.id, "child".into()).unwrap();
+        let grandchild = add_subpage(&mut s, &child.id, "grandchild".into()).unwrap();
+        assert_eq!(get(&s, &grandchild.id).section_id, sec_a);
+        assert_eq!(with_descendants(&s, &top.id).len(), 3);
+
+        // Trashing the top page trashes everything inside it; restoring the child alone moves it out.
+        trash_subtree(&mut s, &top.id).unwrap();
+        assert!(get(&s, &grandchild.id).trashed_at.is_some());
+        restore_subtree(&mut s, &child.id).unwrap();
+        assert!(get(&s, &child.id).trashed_at.is_none());
+        assert!(get(&s, &grandchild.id).trashed_at.is_none());
+        assert_eq!(get(&s, &child.id).parent, "");
+        assert!(get(&s, &top.id).trashed_at.is_some());
+
+        // Moving a page takes the pages inside it along.
+        move_subtree(&mut s, &child.id, &sec_b).unwrap();
+        assert_eq!(get(&s, &child.id).section_id, sec_b);
+        assert_eq!(get(&s, &grandchild.id).section_id, sec_b);
+        assert_eq!(get(&s, &grandchild.id).parent, child.id);
     }
 }

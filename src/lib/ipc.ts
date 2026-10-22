@@ -56,6 +56,8 @@ export const api = {
   getPage: (id: string) => invoke<Page>("get_page", { id }),
   savePage: (id: string, title: string, content: string, text: string) =>
     invoke<PageMeta>("save_page", { id, title, content, text }),
+  createSubpage: (parentId: string, title: string) => invoke<Page>("create_subpage", { parentId, title }),
+  setPageLook: (id: string, icon: string, cover: string) => invoke<PageMeta>("set_page_look", { id, icon, cover }),
   setPageFavorite: (id: string, favorite: boolean) =>
     invoke<NotesTree>("set_page_favorite", { id, favorite }),
   movePage: (id: string, sectionId: string) => invoke<NotesTree>("move_page", { id, sectionId }),
@@ -84,6 +86,11 @@ export const api = {
   keepassxcStatus: () => invoke<KeePassXCStatus>("keepassxc_status"),
   keepassxcOpen: () => invoke<void>("keepassxc_open"),
   keepassxcLock: () => invoke<void>("keepassxc_lock"),
+  // Shows KeePassXC inside this window; rectangles are in physical pixels (A10)
+  keepassxcEmbed: (x: number, y: number, w: number, h: number) => invoke<void>("keepassxc_embed", { x, y, w, h }),
+  keepassxcPlace: (x: number, y: number, w: number, h: number) => invoke<void>("keepassxc_place", { x, y, w, h }),
+  keepassxcHide: () => invoke<void>("keepassxc_hide"),
+  keepassxcDetach: () => invoke<void>("keepassxc_detach"),
 
   // Tools
   openUrl: (url: string) => invoke<void>("open_url", { url }),

@@ -12,14 +12,14 @@ export type Appearance = Pick<
 const KEY = "cipherleaf.appearance";
 
 export const DEFAULT_APPEARANCE: Appearance = {
-  theme: "dark",
-  accent: "#8b5cf6",
-  backdrop: "mica",
+  theme: "black",
+  accent: "mono",
+  backdrop: "none",
   font: "inter",
   fontSize: 15,
   editorWidth: "normal",
   density: "comfortable",
-  unlockBackground: "aurora",
+  unlockBackground: "midnight",
 };
 
 const FONTS: Record<Appearance["font"], string> = {
@@ -38,25 +38,55 @@ const WIDTHS: Record<Appearance["editorWidth"], string> = {
 export function cachedAppearance(): Appearance {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULT_APPEARANCE, ...JSON.parse(raw) };
+    if (raw) {
+      const a = { ...DEFAULT_APPEARANCE, ...JSON.parse(raw) };
+      // Earlier versions called the first two looks "dark" and "light".
+      if ((a.theme as string) === "dark") a.theme = "black";
+      if ((a.theme as string) === "light") a.theme = "white";
+      return a;
+    }
   } catch {
     // Storage unavailable: fall back to defaults.
   }
   return DEFAULT_APPEARANCE;
 }
 
+/** The look that is actually shown ("system" follows Windows). */
+export function resolveTheme(theme: Appearance["theme"]): "black" | "graphite" | "white" | "paper" {
+  if (theme === "system") return window.matchMedia("(prefers-color-scheme: dark)").matches ? "black" : "white";
+  return theme === "graphite" || theme === "white" || theme === "paper" ? theme : "black";
+}
+
 export function isDark(theme: Appearance["theme"]): boolean {
-  if (theme === "system") return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  return theme === "dark";
+  const t = resolveTheme(theme);
+  return t === "black" || t === "graphite";
+}
+
+/**
+ * "mono" is the default black-and-white look: white accents on dark, black on light.
+ * Any other value is a color, and the text on it is chosen for contrast.
+ */
+export function resolveAccent(value: string, dark: boolean): { accent: string; onAccent: string } {
+  if (value === "mono" || !/^#[0-9a-f]{6}$/i.test(value)) {
+    return dark ? { accent: "#ffffff", onAccent: "#000000" } : { accent: "#0a0a0a", onAccent: "#ffffff" };
+  }
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const lum = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return { accent: value, onAccent: lum > 0.4 ? "#000000" : "#ffffff" };
 }
 
 /** Sets CSS variables and, for the main window, the Windows backdrop material. */
 export async function applyAppearance(a: Appearance, applyBackdrop: boolean) {
   const root = document.documentElement;
   const dark = isDark(a.theme);
-  root.dataset.theme = dark ? "dark" : "light";
+  root.dataset.theme = resolveTheme(a.theme);
+  root.dataset.mode = dark ? "dark" : "light";
   root.dataset.density = a.density;
-  root.style.setProperty("--accent", a.accent);
+  root.dataset.accent = a.accent === "mono" ? "mono" : "color";
+  const { accent, onAccent } = resolveAccent(a.accent, dark);
+  root.style.setProperty("--accent", accent);
+  root.style.setProperty("--accent-fg", onAccent);
   root.style.setProperty("--app-font", FONTS[a.font] ?? FONTS.inter);
   root.style.setProperty("--app-font-size", `${a.fontSize}px`);
   root.style.setProperty("--editor-width", WIDTHS[a.editorWidth] ?? WIDTHS.normal);

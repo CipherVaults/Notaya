@@ -7,7 +7,7 @@ import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
 export type View = "notes" | "passwords" | "stickies" | "settings";
 
 /** A one-shot request for a view to do something once it is shown (e.g. from the command palette). */
-export type Intent = "new-page" | null;
+export type Intent = "new-page" | "new-notebook" | null;
 
 interface AppState {
   status: VaultStatus | null;
@@ -21,6 +21,8 @@ interface AppState {
   showTrash: boolean;
   paletteOpen: boolean;
   intent: Intent;
+  sidebarOpen: boolean;
+  sidebarWidth: number;
 
   setIntent: (i: Intent) => void;
   setView: (v: View) => void;
@@ -34,6 +36,26 @@ interface AppState {
   openPage: (id: string | null) => void;
   setShowTrash: (v: boolean) => void;
   setPaletteOpen: (v: boolean) => void;
+  setSidebarOpen: (v: boolean) => void;
+  setSidebarWidth: (w: number) => void;
+}
+
+/** Small, non-secret layout choices kept in the browser storage. */
+const LAYOUT_KEY = "cipherleaf.layout";
+function layout(): { open: boolean; width: number } {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "{}");
+    return { open: v.open !== false, width: Math.min(420, Math.max(200, Number(v.width) || 264)) };
+  } catch {
+    return { open: true, width: 264 };
+  }
+}
+function saveLayout(open: boolean, width: number) {
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify({ open, width }));
+  } catch {
+    // Not critical.
+  }
 }
 
 const EMPTY_TREE: NotesTree = { notebooks: [], sections: [], pages: [] };
@@ -50,6 +72,8 @@ export const useApp = create<AppState>((set, get) => ({
   showTrash: false,
   paletteOpen: false,
   intent: null,
+  sidebarOpen: layout().open,
+  sidebarWidth: layout().width,
 
   setIntent: (intent) => set({ intent }),
   setView: (view) => set({ view }),
@@ -86,7 +110,15 @@ export const useApp = create<AppState>((set, get) => ({
     set({ activeNotebookId: id, activeSectionId: first, activePageId: null, showTrash: false });
   },
   openSection: (id) => set({ activeSectionId: id, activePageId: null, showTrash: false }),
-  openPage: (id) => set({ activePageId: id }),
+  openPage: (id) => set(id ? { activePageId: id, showTrash: false, view: "notes" } : { activePageId: null }),
   setShowTrash: (showTrash) => set({ showTrash, activePageId: null }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setSidebarOpen: (sidebarOpen) => {
+    set({ sidebarOpen });
+    saveLayout(sidebarOpen, get().sidebarWidth);
+  },
+  setSidebarWidth: (sidebarWidth) => {
+    set({ sidebarWidth });
+    saveLayout(get().sidebarOpen, sidebarWidth);
+  },
 }));

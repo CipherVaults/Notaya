@@ -1,12 +1,20 @@
 import { useMemo, useState } from "react";
-import { Archive, FolderOpen, KeyRound, Lock, Palette, ShieldCheck, Info, FileKey2 } from "lucide-react";
+import { Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, Palette, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { ACCENTS, STICKY_COLORS } from "@/lib/palette";
-import type { Settings } from "@/lib/types";
+import type { Settings, ThemeMode } from "@/lib/types";
 import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
+
+const THEMES: { value: ThemeMode; label: string; bg: string; side: string; fg: string; line: string }[] = [
+  { value: "black", label: "Black", bg: "#000000", side: "#0b0b0b", fg: "#f4f4f4", line: "rgba(255,255,255,0.14)" },
+  { value: "graphite", label: "Graphite", bg: "#191919", side: "#202020", fg: "#ececec", line: "rgba(255,255,255,0.12)" },
+  { value: "white", label: "White", bg: "#ffffff", side: "#f7f7f5", fg: "#1f1f1f", line: "rgba(0,0,0,0.12)" },
+  { value: "paper", label: "Paper", bg: "#fbf7ef", side: "#f3ede0", fg: "#2b2620", line: "rgba(70,45,10,0.16)" },
+  { value: "system", label: "Match Windows", bg: "linear-gradient(90deg,#000 50%,#fff 50%)", side: "transparent", fg: "#888", line: "rgba(128,128,128,0.4)" },
+];
 
 export default function SettingsView() {
   const settings = useApp((s) => s.settings);
@@ -32,55 +40,63 @@ export default function SettingsView() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl space-y-8 px-10 py-10">
-        <h2 className="text-2xl font-semibold tracking-tight">Settings</h2>
+      <div className="mx-auto max-w-3xl px-10 pb-20 pt-14">
+        <h1 className="mb-10 text-[2rem] font-bold tracking-tight">Settings</h1>
 
-        <Section icon={<Palette size={17} />} title="Appearance">
-          <Row label="Theme">
-            <Segmented
-              value={settings.theme}
-              onChange={(v) => update({ theme: v })}
-              options={[
-                { value: "dark", label: "Dark" },
-                { value: "light", label: "Light" },
-                { value: "system", label: "System" },
-              ]}
-            />
-          </Row>
-          <Row label="Accent color">
-            <div className="flex items-center gap-2">
+        <Section icon={<Palette size={16} />} title="Appearance">
+          <div className="pb-5">
+            <div className="mb-3 text-sm">Theme</div>
+            <div className="grid grid-cols-5 gap-3">
+              {THEMES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => update({ theme: t.value })}
+                  className={cn(
+                    "group rounded-xl border p-1.5 text-left transition-colors hover:bg-surface",
+                    settings.theme === t.value ? "border-fg" : "border-line",
+                  )}
+                >
+                  <div className="flex h-16 overflow-hidden rounded-lg border" style={{ background: t.bg, borderColor: t.line }}>
+                    {t.value !== "system" && (
+                      <>
+                        <div className="w-1/4" style={{ background: t.side, borderRight: `1px solid ${t.line}` }} />
+                        <div className="flex-1 space-y-1.5 p-2">
+                          <div className="h-1.5 w-2/3 rounded-full" style={{ background: t.fg, opacity: 0.85 }} />
+                          <div className="h-1 w-full rounded-full" style={{ background: t.fg, opacity: 0.25 }} />
+                          <div className="h-1 w-4/5 rounded-full" style={{ background: t.fg, opacity: 0.25 }} />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="px-1 pb-0.5 pt-1.5 text-xs">{t.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <Row label="Accent color" hint="Used for buttons, checkboxes and highlights. Black & white follows the theme.">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {ACCENTS.map((a) => (
                 <button
                   key={a.value}
                   title={a.name}
+                  aria-label={a.name}
                   onClick={() => update({ accent: a.value })}
                   className={cn(
-                    "h-7 w-7 rounded-full transition-transform hover:scale-110",
-                    settings.accent.toLowerCase() === a.value && "ring-2 ring-offset-2 ring-offset-[var(--bg)]",
+                    "h-6 w-6 rounded-full border border-line transition-transform hover:scale-110",
+                    settings.accent.toLowerCase() === a.value && "ring-2 ring-fg ring-offset-2 ring-offset-[var(--bg)]",
                   )}
-                  style={{ background: a.value, ["--tw-ring-color" as string]: a.value }}
+                  style={{ background: a.value === "mono" ? "linear-gradient(135deg, #000 50%, #fff 50%)" : a.value }}
                 />
               ))}
-              <label className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-full border border-line" title="Custom color">
+              <label className="relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-line" title="Custom color">
                 <input
                   type="color"
-                  value={settings.accent}
+                  value={/^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : "#888888"}
                   onChange={(e) => update({ accent: e.target.value })}
                   className="absolute -inset-2 h-12 w-12 cursor-pointer"
                 />
               </label>
             </div>
-          </Row>
-          <Row label="Window material" hint="Mica and Acrylic need Windows 11. Otherwise a solid background is used.">
-            <Segmented
-              value={settings.backdrop}
-              onChange={(v) => update({ backdrop: v })}
-              options={[
-                { value: "mica", label: "Mica" },
-                { value: "acrylic", label: "Acrylic" },
-                { value: "none", label: "Solid" },
-              ]}
-            />
           </Row>
           <Row label="Font">
             <Segmented
@@ -94,7 +110,7 @@ export default function SettingsView() {
               ]}
             />
           </Row>
-          <Row label={`Text size · ${settings.fontSize}px`}>
+          <Row label={`Text size · ${settings.fontSize}px`} hint="Scales the whole app. Change one piece of text inside a note by selecting it.">
             <div className="w-56">
               <Slider label="Text size" value={settings.fontSize} min={12} max={20} onChange={(v) => update({ fontSize: v })} />
             </div>
@@ -120,15 +136,26 @@ export default function SettingsView() {
               ]}
             />
           </Row>
+          <Row label="Window material" hint="Mica and Acrylic need Windows 11. Otherwise a solid background is used.">
+            <Segmented
+              value={settings.backdrop}
+              onChange={(v) => update({ backdrop: v })}
+              options={[
+                { value: "none", label: "Solid" },
+                { value: "mica", label: "Mica" },
+                { value: "acrylic", label: "Acrylic" },
+              ]}
+            />
+          </Row>
           <Row label="Lock screen">
             <Segmented
               value={settings.unlockBackground}
               onChange={(v) => update({ unlockBackground: v })}
               options={[
-                { value: "aurora", label: "Aurora" },
-                { value: "mesh", label: "Mesh" },
-                { value: "midnight", label: "Midnight" },
+                { value: "midnight", label: "Glow" },
                 { value: "plain", label: "Plain" },
+                { value: "mesh", label: "Mesh" },
+                { value: "aurora", label: "Aurora" },
               ]}
             />
           </Row>
@@ -138,10 +165,11 @@ export default function SettingsView() {
                 <button
                   key={key}
                   title={c.label}
+                  aria-label={c.label}
                   onClick={() => update({ stickyDefaultColor: key })}
                   className={cn(
                     "h-6 w-6 rounded-md ring-1 ring-black/10 transition-transform hover:scale-110",
-                    settings.stickyDefaultColor === key && "ring-2 ring-accent",
+                    settings.stickyDefaultColor === key && "ring-2 ring-fg ring-offset-2 ring-offset-[var(--bg)]",
                   )}
                   style={{ background: c.paper }}
                 />
@@ -150,7 +178,7 @@ export default function SettingsView() {
           </Row>
         </Section>
 
-        <Section icon={<ShieldCheck size={17} />} title="Security">
+        <Section icon={<ShieldCheck size={16} />} title="Security">
           <Row label={`Auto-lock after ${settings.idleLockMinutes} min of inactivity`} hint="Also locks on Win+L, sleep, hibernate, and when the USB drive is removed.">
             <div className="w-56">
               <Slider label="Auto-lock minutes" value={settings.idleLockMinutes} min={1} max={60} onChange={(v) => update({ idleLockMinutes: v })} />
@@ -169,12 +197,12 @@ export default function SettingsView() {
           </Row>
         </Section>
 
-        <Section icon={<Archive size={17} />} title="Backups">
-          <p className="text-sm leading-relaxed text-muted">
-            Each time the vault locks after changes, an encrypted backup is saved to <code className="font-mono text-xs">data\backups</code>{" "}
-            (the last 10 are kept). Backups open with the same password and keyfile.
+        <Section icon={<Archive size={16} />} title="Backups">
+          <p className="pb-3 text-sm leading-relaxed text-muted">
+            Each time the vault locks after changes, an encrypted backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
+            Backups open with the same password and keyfile.
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 pb-2">
             <Button
               variant="outline"
               size="sm"
@@ -195,8 +223,8 @@ export default function SettingsView() {
           </div>
         </Section>
 
-        <Section icon={<Info size={17} />} title="About">
-          <dl className="grid grid-cols-[160px_1fr] gap-y-2 text-sm">
+        <Section icon={<Info size={16} />} title="About">
+          <dl className="grid grid-cols-[160px_1fr] gap-y-2.5 pb-4 text-sm">
             <dt className="text-faint">Version</dt>
             <dd>{status?.version}</dd>
             <dt className="text-faint">Vault location</dt>
@@ -210,13 +238,14 @@ export default function SettingsView() {
             <dt className="text-faint">Passwords</dt>
             <dd>Kept in the bundled KeePassXC 2.8.0 (GPL), which has its own master password and settings</dd>
           </dl>
-          <div className="rounded-2xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
+          <div className="rounded-xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
             <div className="mb-1 font-medium text-fg">Good to know</div>
             <ul className="list-disc space-y-1 pl-5">
               <li>There is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
               <li>Cipherleaf's screenshot blocking and lock-when-unplugged don't cover KeePassXC's window. KeePassXC has its own protections.</li>
               <li>Passphrase words: EFF large wordlist, © Electronic Frontier Foundation, CC BY 3.0 US.</li>
+              <li>Equations are drawn by KaTeX 0.19.0 (MIT licence), running on this device only.</li>
             </ul>
           </div>
         </Section>
@@ -229,19 +258,19 @@ export default function SettingsView() {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-5 rounded-3xl border border-line bg-surface p-7">
-      <h3 className="flex items-center gap-2 text-base font-semibold">
-        <span className="text-accent">{icon}</span>
+    <section className="mb-10">
+      <h2 className="mb-1 flex items-center gap-2 border-b border-line pb-3 text-sm font-semibold">
+        <span className="text-muted">{icon}</span>
         {title}
-      </h3>
-      {children}
+      </h2>
+      <div className="divide-y divide-line/60 [&>*]:py-3.5">{children}</div>
     </section>
   );
 }
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-6">
+    <div className="flex items-center justify-between gap-8">
       <div className="min-w-0">
         <div className="text-sm">{label}</div>
         {hint && <div className="mt-0.5 text-xs leading-relaxed text-faint">{hint}</div>}

@@ -17,17 +17,17 @@ export const Button = React.forwardRef<
   <button
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-150 select-none",
+      "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 select-none",
       "disabled:opacity-45 disabled:pointer-events-none active:scale-[0.98]",
       size === "sm" && "h-8 px-3 text-[0.8rem]",
       size === "md" && "h-9 px-4 text-sm",
       size === "lg" && "h-11 px-5 text-[0.95rem]",
       variant === "primary" &&
-        "bg-accent text-white shadow-[0_6px_20px_-6px_var(--accent)] hover:brightness-110",
+        "bg-accent text-accent-fg hover:opacity-90",
       variant === "secondary" && "bg-surface-2 text-fg hover:bg-line",
       variant === "ghost" && "text-muted hover:text-fg hover:bg-surface-2",
       variant === "outline" && "border border-line text-fg hover:bg-surface-2",
-      variant === "danger" && "bg-danger/90 text-white hover:bg-danger",
+      variant === "danger" && "bg-danger text-white hover:opacity-90",
       className,
     )}
     {...props}
@@ -67,8 +67,8 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       spellCheck={false}
       autoComplete="off"
       className={cn(
-        "h-10 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-fg placeholder:text-faint",
-        "outline-none transition-all focus:border-accent focus:bg-surface-2 focus:ring-4 focus:ring-accent-soft",
+        "h-9 w-full rounded-lg border border-line bg-surface px-3.5 text-sm text-fg placeholder:text-faint",
+        "outline-none transition-all focus:border-accent focus:bg-surface-2 focus:ring-2 focus:ring-accent-soft",
         className,
       )}
       {...props}
@@ -82,8 +82,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       className={cn(
-        "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-faint",
-        "outline-none transition-all focus:border-accent focus:bg-surface-2 focus:ring-4 focus:ring-accent-soft resize-none",
+        "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-faint",
+        "outline-none transition-all focus:border-accent focus:bg-surface-2 focus:ring-2 focus:ring-accent-soft resize-none",
         className,
       )}
       {...props}
@@ -115,8 +115,8 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
     >
       <RSwitch.Thumb
         className={cn(
-          "block h-[18px] w-[18px] rounded-full bg-white shadow transition-transform duration-200",
-          checked ? "translate-x-[23px]" : "translate-x-[3px]",
+          "block h-[18px] w-[18px] rounded-full shadow transition-transform duration-200",
+          checked ? "translate-x-[23px] bg-accent-fg" : "translate-x-[3px] bg-muted",
         )}
       />
     </RSwitch.Root>
@@ -151,7 +151,7 @@ export function Slider({
       <RSlider.Track className="relative h-1.5 grow rounded-full bg-surface-2">
         <RSlider.Range className="absolute h-full rounded-full bg-accent" />
       </RSlider.Track>
-      <RSlider.Thumb className="block h-4.5 w-4.5 rounded-full border-2 border-accent bg-white shadow-md transition-transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-accent-soft" />
+      <RSlider.Thumb className="block h-4.5 w-4.5 rounded-full border-2 border-accent bg-bg shadow-md transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-accent-soft" />
     </RSlider.Root>
   );
 }
@@ -167,20 +167,20 @@ export function Segmented<T extends string>({
 }) {
   const id = React.useId();
   return (
-    <div className="inline-flex rounded-xl bg-surface-2 p-1">
+    <div className="inline-flex rounded-lg bg-surface-2 p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "relative rounded-lg px-3 py-1.5 text-sm transition-colors",
+            "relative rounded-md px-3 py-1 text-sm transition-colors",
             value === o.value ? "text-fg" : "text-muted hover:text-fg",
           )}
         >
           {value === o.value && (
             <motion.span
               layoutId={`seg-${id}`}
-              className="absolute inset-0 rounded-lg bg-elevated shadow-sm"
+              className="absolute inset-0 rounded-md bg-elevated shadow-sm"
               transition={{ type: "spring", stiffness: 500, damping: 38 }}
             />
           )}
@@ -243,7 +243,7 @@ export function Modal({
         <RDialog.Overlay className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" />
         <RDialog.Content
           style={{ width }}
-          className="fixed left-1/2 top-1/2 z-50 max-h-[85vh] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-line bg-elevated p-6 shadow-float outline-none"
+          className="fixed left-1/2 top-1/2 z-50 max-h-[85vh] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-line bg-elevated p-6 shadow-float outline-none"
         >
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
@@ -294,7 +294,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       <AlertDialog.Root open={!!state} onOpenChange={(o) => !o && close(false)}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="fixed inset-0 z-[60] bg-black/45 backdrop-blur-sm" />
-          <AlertDialog.Content className="fixed left-1/2 top-1/2 z-[60] w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-elevated p-6 shadow-float">
+          <AlertDialog.Content className="fixed left-1/2 top-1/2 z-[60] w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-elevated p-6 shadow-float">
             <AlertDialog.Title className="text-lg font-semibold">{state?.title}</AlertDialog.Title>
             <AlertDialog.Description className="mt-2 text-sm leading-relaxed text-muted">
               {state?.body}
@@ -329,7 +329,7 @@ export function MenuContent({ children, align = "end" }: { children: React.React
       <DropdownMenu.Content
         align={align}
         sideOffset={6}
-        className="z-[70] min-w-[190px] rounded-xl border border-line bg-elevated p-1.5 shadow-float"
+        className="z-[70] min-w-[190px] rounded-lg border border-line bg-elevated p-1.5 shadow-float"
       >
         {children}
       </DropdownMenu.Content>
@@ -352,7 +352,7 @@ export function MenuItem({
     <DropdownMenu.Item
       onSelect={onSelect}
       className={cn(
-        "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm outline-none",
+        "flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm outline-none",
         danger ? "text-danger data-[highlighted]:bg-danger/10" : "text-fg data-[highlighted]:bg-surface-2",
       )}
     >

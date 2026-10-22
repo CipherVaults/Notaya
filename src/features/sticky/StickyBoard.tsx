@@ -6,7 +6,8 @@ import { api, errorText } from "@/lib/ipc";
 import { stickyColor } from "@/lib/palette";
 import { timeAgo } from "@/lib/utils";
 import { useApp } from "@/store/app";
-import { Button, EmptyState, useConfirm } from "@/components/ui";
+import { Button, useConfirm } from "@/components/ui";
+import Calculator from "./Calculator";
 
 export default function StickyBoard() {
   const stickies = useApp((s) => s.stickies);
@@ -38,21 +39,6 @@ export default function StickyBoard() {
     await refresh();
   };
 
-  if (stickies.length === 0) {
-    return (
-      <EmptyState
-        icon={<StickyNote size={28} />}
-        title="Sticky notes for your desktop"
-        body="Quick notes that float on your desktop while the vault is unlocked, and vanish the instant it locks."
-        action={
-          <Button variant="primary" onClick={create}>
-            <Plus size={16} /> New sticky note
-          </Button>
-        }
-      />
-    );
-  }
-
   return (
     <div className="h-full overflow-y-auto">
       <div className="px-8 py-8">
@@ -71,6 +57,14 @@ export default function StickyBoard() {
           </div>
         </div>
 
+        {stickies.length === 0 && (
+          <div className="mb-2 flex items-center gap-4 rounded-2xl border border-dashed border-line px-6 py-8">
+            <StickyNote size={26} className="shrink-0 text-faint" />
+            <p className="text-sm leading-relaxed text-muted">
+              Sticky notes float on your desktop while the vault is unlocked, and vanish the instant it locks. Make one with "New note".
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-5">
           {stickies.map((s, i) => {
             const c = stickyColor(s.color);
@@ -112,6 +106,10 @@ export default function StickyBoard() {
               </motion.div>
             );
           })}
+        </div>
+
+        <div className="mt-10">
+          <Calculator />
         </div>
       </div>
     </div>

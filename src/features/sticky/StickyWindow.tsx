@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import { Popover } from "radix-ui";
-import { Bold, Italic, ListChecks, Pin, PinOff, Strikethrough, Trash2, X } from "lucide-react";
+import { Bold, Calculator, Italic, ListChecks, Pin, PinOff, Trash2, X } from "lucide-react";
 import { api } from "@/lib/ipc";
 import { STICKY_COLORS, stickyColor } from "@/lib/palette";
 import { applyAppearance, cachedAppearance } from "@/lib/theme";
 import type { Sticky } from "@/lib/types";
 import { cn, debounce } from "@/lib/utils";
 import { editorProps, parseContent, stickyExtensions } from "@/features/notes/editor/extensions";
+import MiniCalculator from "./MiniCalculator";
 
 const win = getCurrentWindow();
 
@@ -29,6 +30,7 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
   const color = stickyColor(sticky.color);
   const editorRef = useRef<Editor | null>(null);
   const [focused, setFocused] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   const save = useMemo(
     () =>
@@ -107,11 +109,21 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
           <BarButton label="Italic" onClick={() => editor?.chain().focus().toggleItalic().run()}>
             <Italic size={13} />
           </BarButton>
-          <BarButton label="Strikethrough" onClick={() => editor?.chain().focus().toggleStrike().run()}>
-            <Strikethrough size={13} />
-          </BarButton>
           <BarButton label="Checklist" onClick={() => editor?.chain().focus().toggleTaskList().run()}>
             <ListChecks size={13} />
+          </BarButton>
+          <BarButton
+            label={calcOpen ? "Back to the note" : "Calculator"}
+            active={calcOpen}
+            onClick={() => {
+              setCalcOpen((open) => {
+                // Closing returns the cursor to the note.
+                if (open) requestAnimationFrame(() => editorRef.current?.commands.focus());
+                return !open;
+              });
+            }}
+          >
+            <Calculator size={13} />
           </BarButton>
           <BarButton label={sticky.onTop ? "Unpin from top" : "Keep on top"} onClick={() => style({ onTop: !sticky.onTop })}>
             {sticky.onTop ? <Pin size={13} /> : <PinOff size={13} />}
@@ -131,9 +143,24 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
             <X size={14} />
           </BarButton>
         </div>
-        <div className="sticky-editor min-h-0 flex-1 cursor-text overflow-y-auto px-4 py-3" onClick={() => editor?.commands.focus()}>
+        <div
+          className={cn("sticky-editor min-h-0 flex-1 cursor-text overflow-y-auto px-4 py-3", calcOpen && "hidden")}
+          onClick={() => editor?.commands.focus()}
+        >
           <EditorContent editor={editor} className="h-full" />
         </div>
+        {calcOpen && (
+          <div className="min-h-0 flex-1">
+            <MiniCalculator
+              ink={color.ink}
+              paper={color.paper}
+              onClose={() => {
+                setCalcOpen(false);
+                requestAnimationFrame(() => editorRef.current?.commands.focus());
+              }}
+            />
+          </div>
+        )}
         <div
           className="absolute bottom-3 right-3 h-3 w-3 cursor-se-resize opacity-40"
           onMouseDown={(e) => {
@@ -150,14 +177,14 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
   );
 }
 
-function BarButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function BarButton({ label, onClick, children, active }: { label: string; onClick: () => void; children: React.ReactNode; active?: boolean }) {
   return (
     <button
       title={label}
       aria-label={label}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="grid h-6 w-6 place-items-center rounded-md opacity-70 transition hover:bg-black/10 hover:opacity-100"
+      className={cn("grid h-6 w-6 place-items-center rounded-md transition hover:bg-black/10 hover:opacity-100", active ? "bg-black/15 opacity-100" : "opacity-70")}
     >
       {children}
     </button>

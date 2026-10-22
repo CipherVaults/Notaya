@@ -141,7 +141,7 @@ impl Session {
 
     pub fn settings(&self) -> Settings {
         match self.items.get(SETTINGS_ID) {
-            Some(Item::Settings(s)) => s.clone(),
+            Some(Item::Settings(s)) => s.clone().sanitized(),
             _ => Settings::default(),
         }
     }
@@ -179,7 +179,10 @@ impl Session {
         let mut referenced = String::new();
         for item in self.items.values() {
             match item {
-                Item::Page(p) => referenced.push_str(&p.content),
+                Item::Page(p) => {
+                    referenced.push_str(&p.content);
+                    referenced.push_str(&p.cover);
+                }
                 Item::Sticky(s) => referenced.push_str(&s.content),
                 _ => {}
             }
@@ -246,6 +249,9 @@ mod tests {
             text: text.into(),
             order: 0,
             favorite: false,
+            icon: String::new(),
+            cover: String::new(),
+            parent: String::new(),
             trashed_at: None,
             created: now_ms(),
             updated: now_ms(),
@@ -375,6 +381,20 @@ mod tests {
     }
 
     #[test]
+    fn a_page_cover_keeps_its_image_alive() {
+        let path = temp_vault();
+        let mut s = Session::create(&path, "pw", None, FAST).unwrap();
+        let cover = s.put_attachment("image/png", b"cover").unwrap();
+        let mut pg = page("with cover");
+        if let Item::Page(p) = &mut pg {
+            p.cover = format!("http://clatt.localhost/{cover}");
+        }
+        s.put(pg).unwrap();
+        assert_eq!(s.collect_garbage().unwrap(), 0);
+        assert!(s.get_attachment(&cover).is_ok());
+    }
+
+    #[test]
     fn backup_is_a_valid_encrypted_vault() {
         let path = temp_vault();
         let backup = path.with_file_name("backup.clf");
@@ -387,5 +407,15 @@ mod tests {
         }
         let s = Session::unlock(&backup, "pw", None).unwrap();
         assert!(s.get(&pid).is_some());
+    }
+
+    #[test]
+    fn pages_saved_before_icons_and_covers_still_load() {
+        let old = r#"{"kind":"page","id":"p","sectionId":"s","title":"t","content":"","text":"","order":0,"favorite":false,"trashedAt":null,"created":1,"updated":1}"#;
+        let item: Item = serde_json::from_str(old).expect("old page record should load");
+        match item {
+            Item::Page(p) => assert!(p.icon.is_empty() && p.cover.is_empty()),
+            _ => panic!("expected a page"),
+        }
     }
 }

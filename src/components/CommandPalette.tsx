@@ -77,13 +77,13 @@ export default function CommandPalette() {
     })[kind];
 
   const itemClass =
-    "flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-fg data-[selected=true]:bg-accent-soft data-[selected=true]:text-fg";
+    "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-fg data-[selected=true]:bg-surface-2 data-[selected=true]:text-fg";
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-[2px]" />
-        <Dialog.Content className="fixed left-1/2 top-[14vh] z-[80] w-[640px] max-w-[92vw] -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-elevated shadow-float outline-none">
+        <Dialog.Content className="fixed left-1/2 top-[14vh] z-[80] w-[640px] max-w-[92vw] -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-elevated shadow-float outline-none">
           <Dialog.Title className="sr-only">Command palette</Dialog.Title>
           <Dialog.Description className="sr-only">Search everything or run an action</Dialog.Description>
           <Command shouldFilter={false} loop>
@@ -91,7 +91,7 @@ export default function CommandPalette() {
               value={query}
               onValueChange={setQuery}
               autoFocus
-              placeholder="Search notes, passwords, sticky notes… or type a command"
+              placeholder="Search notes and sticky notes, or type a command"
               className="h-14 w-full border-b border-line bg-transparent px-5 text-[0.95rem] text-fg outline-none placeholder:text-faint"
             />
             <Command.List className="max-h-[52vh] overflow-y-auto p-2">

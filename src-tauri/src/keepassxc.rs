@@ -26,6 +26,7 @@ RememberLastDatabases=false
 RememberLastKeyFiles=false
 OpenPreviousDatabasesOnStartup=false
 BackupBeforeSave=true
+UpdateCheckMessageShown=true
 
 [GUI]
 CheckForUpdates=false
@@ -66,6 +67,8 @@ pub struct Status {
     data_dir: String,
     /// KeePassXC was started by Cipherleaf and is still running.
     running: bool,
+    /// Its window is shown inside Cipherleaf's window (amendment A10).
+    embedded: bool,
 }
 
 fn exe(paths: &Paths) -> PathBuf {
@@ -119,6 +122,7 @@ pub fn status(paths: &Paths, child: &Mutex<Option<Child>>) -> Status {
         database: find_database(paths).map(|p| p.display().to_string()),
         data_dir: paths.data.display().to_string(),
         running: is_running(&mut guard),
+        embedded: crate::embed::embedded().is_some(),
     }
 }
 
@@ -166,9 +170,56 @@ pub fn open(paths: &Paths, child: &Mutex<Option<Child>>) -> Result<()> {
     Ok(())
 }
 
+/// Starts KeePassXC if needed, waits for its window, and shows it inside Cipherleaf's
+/// window at `rect` (physical pixels, relative to that window). Returns an error if
+/// the window doesn't appear; the caller can then offer a separate window instead.
+pub fn embed(paths: &Paths, child: &Mutex<Option<Child>>, parent: isize, rect: crate::embed::Rect) -> Result<()> {
+    if crate::embed::embedded().is_some() {
+        return crate::embed::place(rect);
+    }
+    let exe = exe(paths);
+    let wait_for_window = || {
+        for _ in 0..150 {
+            if let Some(w) = crate::embed::find_main_window(&exe) {
+                return Some(w);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        None
+    };
+    let mut window = crate::embed::find_main_window(&exe);
+    if window.is_none() {
+        open(paths, child)?;
+        window = wait_for_window();
+    }
+    let window = window.ok_or_else(|| Error::Other("KeePassXC didn't open a window in time.".into()))?;
+    crate::embed::attach(parent, window, rect)
+}
+
+/// Gives KeePassXC back its own window.
+pub fn detach() -> Result<()> {
+    crate::embed::detach()
+}
+
+/// Closes KeePassXC when Cipherleaf quits: asks it politely, then ends it if it lingers.
+pub fn shutdown(child: &Mutex<Option<Child>>) {
+    crate::embed::close();
+    let mut guard = child.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(c) = guard.as_mut() {
+        for _ in 0..30 {
+            if matches!(c.try_wait(), Ok(Some(_))) {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        let _ = c.kill();
+    }
+}
+
 /// Asks a KeePassXC started by Cipherleaf to lock all its databases.
 /// Does nothing if it isn't running, so it never starts KeePassXC.
 pub fn lock_if_running(paths: &Paths, child: &Mutex<Option<Child>>) {
+    crate::embed::hide();
     let mut guard = child.lock().unwrap_or_else(|e| e.into_inner());
     if !is_running(&mut guard) {
         return;
@@ -222,7 +273,7 @@ mod tests {
 
     #[test]
     fn preset_config_keeps_keepassxc_offline() {
-        for line in ["CheckForUpdates=false", "[Browser]\nEnabled=false", "[SSHAgent]\nEnabled=false", "RememberLastKeyFiles=false"] {
+        for line in ["CheckForUpdates=false", "UpdateCheckMessageShown=true", "[Browser]\nEnabled=false", "[SSHAgent]\nEnabled=false", "RememberLastKeyFiles=false"] {
             assert!(PRESET_CONFIG.contains(line), "missing {line}");
         }
     }

@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
-import { Bold, Check, Code, Highlighter, Italic, Loader2, MoreHorizontal, Star, Strikethrough, Trash2, Underline } from "lucide-react";
+import { Check, ChevronRight, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { Page } from "@/lib/types";
 import { cn, debounce, formatDate } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui";
-import Toolbar from "./editor/Toolbar";
+import BlockHandle from "./editor/BlockHandle";
+import BubbleToolbar from "./editor/BubbleToolbar";
+import SlashMenu, { type SlashController } from "./editor/SlashMenu";
+import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
+import { PageCover, PageIconAndActions } from "./PageHeader";
 
 type SaveState = "saved" | "saving" | "error";
 
@@ -41,12 +44,17 @@ export default function PageEditor({ pageId }: { pageId: string }) {
 
 function LoadedEditor({ page }: { page: Page }) {
   const [title, setTitle] = useState(page.title);
+  const [icon, setIcon] = useState(page.icon ?? "");
+  const [cover, setCover] = useState(page.cover ?? "");
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [updated, setUpdated] = useState(page.updated);
   const [words, setWords] = useState(page.text.split(/\s+/).filter(Boolean).length);
+  const [slash, setSlash] = useState<SlashState | null>(null);
   const titleRef = useRef(page.title);
   const editorRef = useRef<Editor | null>(null);
   const dirtyRef = useRef(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const slashController = useRef<SlashController>({ state: null, onKey: () => false });
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
   const readOnly = page.trashedAt !== null;
@@ -78,8 +86,13 @@ function LoadedEditor({ page }: { page: Page }) {
     save();
   }, [save]);
 
+  const extensions = useMemo(
+    () => pageExtensions({ onState: setSlash, onKey: (e) => slashController.current.onKey(e) }),
+    [],
+  );
+
   const editor = useEditor({
-    extensions: pageExtensions("Start writing… use the toolbar, Markdown shortcuts like # or -, or paste an image."),
+    extensions,
     content: parseContent(page.content),
     editable: !readOnly,
     editorProps: {
@@ -99,12 +112,33 @@ function LoadedEditor({ page }: { page: Page }) {
         api.savePage(page.id, titleRef.current, JSON.stringify(e.getJSON()), e.getText()).catch(() => {});
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
-  const sectionName = tree.sections.find((s) => s.id === page.sectionId)?.name ?? "";
+  const section = tree.sections.find((s) => s.id === page.sectionId);
+  const notebook = tree.notebooks.find((n) => n.id === section?.notebookId);
   const meta = tree.pages.find((p) => p.id === page.id);
+  // The pages this one sits inside, outermost first.
+  const parents: typeof tree.pages = [];
+  for (let id = meta?.parent; id && parents.length < 8; ) {
+    const pp = tree.pages.find((x) => x.id === id);
+    if (!pp) break;
+    parents.unshift(pp);
+    id = pp.parent;
+  }
 
+  const setLook = async (nextIcon: string, nextCover: string) => {
+    setIcon(nextIcon);
+    setCover(nextCover);
+    try {
+      const m = await api.setPageLook(page.id, nextIcon, nextCover);
+      const t = useApp.getState().tree;
+      setTree({ ...t, pages: t.pages.map((p) => (p.id === m.id ? m : p)) });
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+  };
   const toggleFavorite = async () => {
     setTree(await api.setPageFavorite(page.id, !meta?.favorite));
   };
@@ -125,128 +159,37 @@ function LoadedEditor({ page }: { page: Page }) {
 
   return (
     <div className="flex h-full flex-col">
-      {!readOnly && (
-        <div className="flex justify-center px-6 pt-4">
-          <Toolbar editor={editor} />
-        </div>
-      )}
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto px-10 pb-32 pt-10" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
-          {readOnly && (
-            <div className="mb-6 flex items-center justify-between rounded-xl border border-warn/30 bg-warn/10 px-4 py-3 text-sm">
-              <span>This page is in the trash.</span>
-              <button
-                className="font-medium text-accent hover:underline"
-                onClick={async () => setTree(await api.restorePage(page.id))}
-              >
-                Restore
-              </button>
-            </div>
+      <div className="flex h-11 shrink-0 items-center gap-3 px-4">
+        <nav className="flex min-w-0 items-center gap-1 text-[0.8rem] text-muted">
+          {notebook && (
+            <>
+              <span className="emoji-mono shrink-0">{notebook.icon}</span>
+              <span className="max-w-[10rem] truncate">{notebook.name}</span>
+              <ChevronRight size={12} className="shrink-0 text-faint" />
+            </>
           )}
-          <div className="mb-2 flex items-center gap-2 text-xs text-faint">
-            <span>{sectionName}</span>
-            <span>·</span>
-            <span>Edited {formatDate(updated)}</span>
-          </div>
-          <div className="flex items-start gap-3">
-            <input
-              value={title}
-              readOnly={readOnly}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                titleRef.current = e.target.value;
-                markDirty();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === "ArrowDown") {
-                  e.preventDefault();
-                  editor.commands.focus("start");
-                }
-              }}
-              placeholder="Untitled page"
-              className="min-w-0 flex-1 bg-transparent text-[2.2rem] font-bold leading-tight tracking-tight text-fg outline-none placeholder:text-faint"
-            />
-            {!readOnly && (
-              <div className="flex items-center gap-1 pt-3">
-                <button
-                  onClick={toggleFavorite}
-                  className={cn(
-                    "rounded-lg p-2 transition-colors hover:bg-surface-2",
-                    meta?.favorite ? "text-warn" : "text-faint hover:text-fg",
-                  )}
-                  aria-label="Favorite"
-                  title="Favorite"
-                >
-                  <Star size={17} fill={meta?.favorite ? "currentColor" : "none"} />
-                </button>
-                <Menu>
-                  <MenuTrigger asChild>
-                    <button className="rounded-lg p-2 text-faint hover:bg-surface-2 hover:text-fg" aria-label="Page options">
-                      <MoreHorizontal size={17} />
-                    </button>
-                  </MenuTrigger>
-                  <MenuContent>
-                    <div className="px-2.5 py-1.5 text-xs text-faint">Move to section</div>
-                    {tree.sections
-                      .filter((s) => s.id !== page.sectionId)
-                      .map((s) => {
-                        const nb = tree.notebooks.find((n) => n.id === s.notebookId);
-                        return (
-                          <MenuItem key={s.id} onSelect={() => moveTo(s.id)}>
-                            <span className="truncate">
-                              {nb?.icon} {nb?.name} / {s.name}
-                            </span>
-                          </MenuItem>
-                        );
-                      })}
-                    <MenuSeparator />
-                    <MenuItem danger icon={<Trash2 size={15} />} onSelect={trash}>
-                      Move to trash
-                    </MenuItem>
-                  </MenuContent>
-                </Menu>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <BubbleMenu
-              editor={editor}
-              className="flex items-center gap-0.5 rounded-xl border border-line bg-elevated p-1 shadow-float"
-            >
-              <BubbleButton active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
-                <Bold size={14} />
-              </BubbleButton>
-              <BubbleButton active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
-                <Italic size={14} />
-              </BubbleButton>
-              <BubbleButton active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-                <Underline size={14} />
-              </BubbleButton>
-              <BubbleButton active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
-                <Strikethrough size={14} />
-              </BubbleButton>
-              <BubbleButton active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
-                <Code size={14} />
-              </BubbleButton>
-              <BubbleButton
-                active={editor.isActive("highlight")}
-                onClick={() => editor.chain().focus().toggleHighlight({ color: "#fde68a" }).run()}
-              >
-                <Highlighter size={14} />
-              </BubbleButton>
-            </BubbleMenu>
-            <EditorContent editor={editor} />
-          </div>
-        </div>
-      </div>
-
-      <footer className="flex h-9 shrink-0 items-center justify-between border-t border-line px-5 text-xs text-faint">
-        <span>
-          {words} {words === 1 ? "word" : "words"}
-        </span>
-        <span className="flex items-center gap-1.5">
+          {section && (
+            <>
+              <span className="max-w-[10rem] truncate">{section.name}</span>
+              <ChevronRight size={12} className="shrink-0 text-faint" />
+            </>
+          )}
+          {parents.map((pp) => (
+            <span key={pp.id} className="flex items-center gap-1">
+              <button onClick={() => useApp.getState().openPage(pp.id)} className="max-w-[10rem] truncate hover:text-fg hover:underline">
+                {pp.icon && <span className="mr-1">{pp.icon}</span>}
+                {pp.title || "Untitled"}
+              </button>
+              <ChevronRight size={12} className="shrink-0 text-faint" />
+            </span>
+          ))}
+          <span className="max-w-[16rem] truncate text-fg">
+            {icon && <span className="emoji-mono mr-1">{icon}</span>}
+            {title || "Untitled"}
+          </span>
+        </nav>
+        <div className="flex-1" />
+        <span className="flex items-center gap-1.5 text-xs text-faint" title={`Edited ${formatDate(updated)} · ${words} words`}>
           {saveState === "saving" && (
             <>
               <Loader2 size={12} className="animate-spin" /> Encrypting…
@@ -254,27 +197,108 @@ function LoadedEditor({ page }: { page: Page }) {
           )}
           {saveState === "saved" && (
             <>
-              <Check size={12} className="text-ok" /> Saved & encrypted
+              <Check size={12} /> Saved &amp; encrypted
             </>
           )}
           {saveState === "error" && <span className="text-danger">Not saved</span>}
         </span>
-      </footer>
-    </div>
-  );
-}
+        {!readOnly && (
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={toggleFavorite}
+              className={cn("rounded-lg p-1.5 transition-colors hover:bg-surface-2", meta?.favorite ? "text-fg" : "text-faint hover:text-fg")}
+              aria-label="Favorite"
+              title="Favorite"
+            >
+              <Star size={16} fill={meta?.favorite ? "currentColor" : "none"} />
+            </button>
+            <Menu>
+              <MenuTrigger asChild>
+                <button className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-fg" aria-label="Page options">
+                  <MoreHorizontal size={16} />
+                </button>
+              </MenuTrigger>
+              <MenuContent>
+                <div className="px-2.5 py-1.5 text-xs text-faint">
+                  {words} {words === 1 ? "word" : "words"} · edited {formatDate(updated)}
+                </div>
+                <MenuSeparator />
+                <div className="px-2.5 py-1.5 text-xs text-faint">Move to section</div>
+                {tree.sections
+                  .filter((s) => s.id !== page.sectionId)
+                  .map((s) => {
+                    const nb = tree.notebooks.find((n) => n.id === s.notebookId);
+                    return (
+                      <MenuItem key={s.id} onSelect={() => moveTo(s.id)}>
+                        <span className="truncate">
+                          {nb?.icon} {nb?.name} / {s.name}
+                        </span>
+                      </MenuItem>
+                    );
+                  })}
+                <MenuSeparator />
+                <MenuItem danger icon={<Trash2 size={15} />} onSelect={trash}>
+                  Move to trash
+                </MenuItem>
+              </MenuContent>
+            </Menu>
+          </div>
+        )}
+      </div>
 
-function BubbleButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
-      className={cn(
-        "grid h-7 w-7 place-items-center rounded-lg transition-colors",
-        active ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-2 hover:text-fg",
-      )}
-    >
-      {children}
-    </button>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <PageCover cover={cover} readOnly={readOnly} onChange={(c) => setLook(icon, c)} />
+        <div className={cn("mx-auto px-16 pb-10", cover ? "pt-0" : "pt-10")} style={{ maxWidth: "calc(var(--editor-width) + 128px)" }}>
+          {readOnly && (
+            <div className="mb-6 flex items-center justify-between rounded-lg border border-warn/30 bg-warn/10 px-4 py-3 text-sm">
+              <span>This page is in the trash.</span>
+              <button className="font-medium underline-offset-2 hover:underline" onClick={async () => setTree(await api.restorePage(page.id))}>
+                Restore
+              </button>
+            </div>
+          )}
+          <PageIconAndActions icon={icon} cover={cover} readOnly={readOnly} onChange={setLook} />
+          <input
+            value={title}
+            readOnly={readOnly}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              titleRef.current = e.target.value;
+              markDirty();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === "ArrowDown") {
+                e.preventDefault();
+                editor.commands.focus("start");
+              }
+            }}
+            placeholder="Untitled"
+            className="mb-4 w-full min-w-0 bg-transparent text-[2.6rem] font-bold leading-tight tracking-tight text-fg outline-none placeholder:text-faint/70"
+          />
+
+          <div ref={wrapRef} className="relative -ml-16 pl-16">
+            <BlockHandle editor={editor} container={wrapRef} />
+            <EditorContent editor={editor} />
+          </div>
+          {/* Clicking the empty space under the text puts the cursor at the end. */}
+          <div
+            className="h-[32vh] cursor-text"
+            onClick={() => {
+              if (readOnly) return;
+              // Clicking below the last block starts a new line, unless the last line is already empty.
+              const last = editor.state.doc.lastChild;
+              if (last && !(last.type.name === "paragraph" && last.content.size === 0)) {
+                editor.chain().insertContentAt(editor.state.doc.content.size, { type: "paragraph" }).focus("end").run();
+              } else {
+                editor.chain().focus("end").run();
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      <BubbleToolbar editor={editor} />
+      <SlashMenu editor={editor} slash={slash} controller={slashController} />
+    </div>
   );
 }

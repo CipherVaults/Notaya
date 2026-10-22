@@ -76,6 +76,15 @@ pub struct Page {
     pub text: String,
     pub order: i64,
     pub favorite: bool,
+    /// Emoji shown beside the title (empty = none).
+    #[serde(default)]
+    pub icon: String,
+    /// "gradient:<name>" or an attachment URL (empty = no cover).
+    #[serde(default)]
+    pub cover: String,
+    /// Id of the page this one sits inside (empty = directly in its section).
+    #[serde(default)]
+    pub parent: String,
     pub trashed_at: Option<i64>,
     pub created: i64,
     pub updated: i64,
@@ -85,6 +94,7 @@ pub struct Page {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PageMeta {
+    pub parent: String,
     pub id: String,
     pub section_id: String,
     pub title: String,
@@ -92,6 +102,7 @@ pub struct PageMeta {
     pub words: usize,
     pub order: i64,
     pub favorite: bool,
+    pub icon: String,
     pub trashed_at: Option<i64>,
     pub created: i64,
     pub updated: i64,
@@ -107,6 +118,8 @@ impl From<&Page> for PageMeta {
             words: p.text.split_whitespace().count(),
             order: p.order,
             favorite: p.favorite,
+            icon: p.icon.clone(),
+            parent: p.parent.clone(),
             trashed_at: p.trashed_at,
             created: p.created,
             updated: p.updated,
@@ -134,7 +147,7 @@ pub struct Sticky {
 #[derive(Clone, Serialize, Deserialize, Zeroize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
-    /// "dark" | "light" | "system"
+    /// "black" | "graphite" | "white" | "paper" | "system"
     pub theme: String,
     pub accent: String,
     /// "mica" | "acrylic" | "none"
@@ -157,14 +170,14 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            theme: "dark".into(),
-            accent: "#8b5cf6".into(),
-            backdrop: "mica".into(),
+            theme: "black".into(),
+            accent: "mono".into(),
+            backdrop: "none".into(),
             font: "inter".into(),
             font_size: 15,
             editor_width: "normal".into(),
             density: "comfortable".into(),
-            unlock_background: "aurora".into(),
+            unlock_background: "midnight".into(),
             idle_lock_minutes: 5,
             lock_on_minimize: false,
             screen_capture_protection: true,
@@ -176,6 +189,18 @@ impl Default for Settings {
 impl Settings {
     /// Clamps values coming from the UI into safe ranges.
     pub fn sanitized(mut self) -> Settings {
+        // Vaults created before the black-and-white redesign stored violet as their
+        // default accent; show them the new default unless a color was chosen since.
+        if self.accent.eq_ignore_ascii_case("#8b5cf6") {
+            self.accent = "mono".into();
+        }
+        // The first two looks were called "dark" and "light".
+        self.theme = match self.theme.as_str() {
+            "dark" => "black".into(),
+            "light" => "white".into(),
+            "black" | "graphite" | "white" | "paper" | "system" => self.theme.clone(),
+            _ => "black".into(),
+        };
         self.font_size = self.font_size.clamp(12, 22);
         self.idle_lock_minutes = self.idle_lock_minutes.clamp(1, 240);
         self

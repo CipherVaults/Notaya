@@ -1,9 +1,14 @@
 import StarterKit from "@tiptap/starter-kit";
-import { Color, TextStyle } from "@tiptap/extension-text-style";
+import { Color, FontFamily, FontSize, TextStyle } from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { TableKit } from "@tiptap/extension-table";
 import Image from "@tiptap/extension-image";
+import { Callout, Toggle } from "./blocks";
+import { Column, Columns, Comment, PageLink } from "./more-blocks";
+import { MathBlock, MathInline } from "./math";
+import { ImageBlock } from "./ImageBlock";
+import { SlashCommand, type SlashOptions } from "./slash";
 import { Placeholder } from "@tiptap/extensions";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import TextAlign from "@tiptap/extension-text-align";
@@ -22,22 +27,40 @@ const link = {
   HTMLAttributes: { rel: "noopener noreferrer nofollow", target: null },
 } as const;
 
-/** Full editor for notebook pages. */
-export function pageExtensions(placeholder: string) {
+/** Full editor for notebook pages: block types, the "/" menu and pictures. */
+export function pageExtensions(slash: SlashOptions) {
   return [
-    StarterKit.configure({ codeBlock: false, link }),
+    StarterKit.configure({ codeBlock: false, heading: { levels: [1, 2, 3, 4] }, link }),
     TextStyle,
     Color,
+    FontSize,
+    FontFamily,
     Highlight.configure({ multicolor: true }),
     TaskList,
     TaskItem.configure({ nested: true }),
     TableKit.configure({ table: { resizable: true } }),
     // Only images stored in the vault (or pasted files) are allowed; remote
     // images are also blocked by the Content Security Policy.
-    Image.configure({ allowBase64: false }),
-    Placeholder.configure({ placeholder }),
+    ImageBlock.configure({ allowBase64: false }),
+    Callout,
+    Toggle,
+    Columns,
+    Column,
+    PageLink,
+    Comment,
+    MathBlock,
+    MathInline,
+    Placeholder.configure({
+      showOnlyCurrent: true,
+      includeChildren: true,
+      placeholder: ({ node }) => {
+        if (node.type.name === "heading") return `Heading ${node.attrs.level}`;
+        return "Press / to insert something, or just start typing";
+      },
+    }),
     CodeBlockLowlight.configure({ lowlight }),
     TextAlign.configure({ types: ["heading", "paragraph"] }),
+    SlashCommand.configure(slash),
   ];
 }
 
@@ -69,6 +92,19 @@ export async function uploadImage(file: File): Promise<string | null> {
     toast.error(errorText(e));
     return null;
   }
+}
+
+/** Opens the file chooser and inserts the chosen pictures at the cursor. */
+export function pickImages(editor: Editor) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = IMAGE_TYPES.join(",");
+  input.multiple = true;
+  input.onchange = () => {
+    const files = Array.from(input.files ?? []);
+    if (files.length) insertImages(editor, files);
+  };
+  input.click();
 }
 
 export async function insertImages(editor: Editor, files: File[], pos?: number) {

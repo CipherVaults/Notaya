@@ -248,8 +248,9 @@ pub fn window_ready(window: WebviewWindow) {
 }
 
 #[tauri::command]
-pub fn quit_app(app: AppHandle) {
+pub fn quit_app(app: AppHandle, state: State<'_, AppState>) {
     state::lock(&app, "quit");
+    crate::keepassxc::shutdown(&state.keepassxc);
     app.exit(0);
 }
 

@@ -1,5 +1,6 @@
 mod commands;
 mod crypto;
+mod embed;
 mod error;
 mod generator;
 mod keepassxc;
@@ -56,8 +57,13 @@ pub fn run() {
         .on_window_event(|window, event| {
             // Closing the main window locks the vault and quits, sticky notes included.
             if window.label() == "main" {
+                // Keep the embedded KeePassXC glued to the Passwords area (amendment A10).
+                if matches!(event, tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_)) {
+                    embed::follow();
+                }
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
                     state::lock(window.app_handle(), "quit");
+                    keepassxc::shutdown(&window.app_handle().state::<state::AppState>().keepassxc);
                     window.app_handle().exit(0);
                 }
             }
@@ -88,6 +94,8 @@ pub fn run() {
             notes::get_page,
             notes::save_page,
             notes::set_page_favorite,
+            notes::set_page_look,
+            notes::create_subpage,
             notes::move_page,
             notes::reorder,
             notes::trash_page,
@@ -106,6 +114,10 @@ pub fn run() {
             stickies::delete_sticky,
             keepassxc_cmd::keepassxc_status,
             keepassxc_cmd::keepassxc_open,
+            keepassxc_cmd::keepassxc_embed,
+            keepassxc_cmd::keepassxc_place,
+            keepassxc_cmd::keepassxc_hide,
+            keepassxc_cmd::keepassxc_detach,
             keepassxc_cmd::keepassxc_lock,
             tools::generate_passphrase,
             tools::password_strength,
