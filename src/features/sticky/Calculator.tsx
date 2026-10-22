@@ -159,6 +159,7 @@ export default function Calculator() {
               spellCheck={false}
               autoComplete="off"
               className="w-full bg-transparent text-right font-mono text-lg tabular-nums text-fg outline-none placeholder:text-faint"
+              style={{ outline: "none", boxShadow: "none" }}
             />
             <div className="mt-1 flex h-6 items-center justify-between gap-2">
               <button

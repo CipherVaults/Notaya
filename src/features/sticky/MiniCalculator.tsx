@@ -70,7 +70,7 @@ export default function MiniCalculator({ ink, paper, onClose }: { ink: string; p
           spellCheck={false}
           autoComplete="off"
           className="w-full bg-transparent text-right font-mono text-base tabular-nums outline-none placeholder:opacity-40"
-          style={{ color: ink }}
+          style={{ color: ink, outline: "none", boxShadow: "none" }}
         />
         <div
           className="h-4 truncate text-right font-mono text-xs tabular-nums"
