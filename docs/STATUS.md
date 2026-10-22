@@ -45,7 +45,7 @@ The owner ran the app and created things before the restart. Claude didn't watch
 
 ### Blockers and decisions
 
-- **Debug-port exposure (closed at 16:07 UTC).** From about 14:15 until the restart at 16:07 UTC the dev app ran with WebView2's local debug port open (127.0.0.1:9222, any origin). The vault was created during that window. Claude made no connection after reading the first screen. Whether another local program connected is unknown. The dev app now runs without the port (checked: nothing listening on 9222, no WebView2 process with remote debugging). If that vault will hold real data, change its master password (Settings → Master password & keyfile) or create a fresh vault.
+- **Debug-port exposure (closed at 16:07 UTC).** From 15:58:50 until the restart at 16:06:58 UTC (about 8 minutes) the dev app ran with WebView2's local debug port open (127.0.0.1:9222, any origin). The vault was created during that window. Claude connected only at about 15:59 UTC (two read-only scripts: one read the first screen, one read an input's length), and never afterwards. Whether another local program connected is unknown. The dev app now runs without the port (checked: nothing listening on 9222, no WebView2 process with remote debugging). If that vault will hold real data, change its master password (Settings → Master password & keyfile) or create a fresh vault.
 - A2 and A8 need the owner's decision. A1 and A3–A7 need evidence. See [the amendments record](plan/approval-and-amendments.md).
 
 ### Do not repeat
