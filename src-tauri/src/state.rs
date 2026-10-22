@@ -1,5 +1,6 @@
 //! Shared app state, locking, and the background auto-lock monitor.
 
+use std::process::Child;
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime};
 
@@ -8,7 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::error::{Error, Result};
 use crate::portable::Paths;
 use crate::vault::Session;
-use crate::{clipboard, system, ui};
+use crate::{keepassxc, system, ui};
 
 const MAX_BACKUPS: usize = 10;
 
@@ -17,16 +18,12 @@ struct Attempts {
     wait_until: Option<Instant>,
 }
 
-struct ClipGuard {
-    sequence: u32,
-    clear_at: Instant,
-}
-
 pub struct AppState {
     pub paths: Paths,
     session: Mutex<Option<Session>>,
     attempts: Mutex<Attempts>,
-    clip: Mutex<Option<ClipGuard>>,
+    /// The KeePassXC process Cipherleaf started, if any (amendment A9).
+    pub keepassxc: Mutex<Option<Child>>,
 }
 
 fn guard<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -40,7 +37,7 @@ impl AppState {
             paths,
             session: Mutex::new(None),
             attempts: Mutex::new(Attempts { failures: 0, wait_until: None }),
-            clip: Mutex::new(None),
+            keepassxc: Mutex::new(None),
         }
     }
 
@@ -96,30 +93,10 @@ impl AppState {
         a.failures = 0;
         a.wait_until = None;
     }
-
-    /// Copies a secret and schedules it to be cleared.
-    pub fn copy_secret(&self, text: &str, clear_after_secs: u32) -> Result<()> {
-        let sequence = clipboard::set_secret(text)?;
-        *guard(&self.clip) = Some(ClipGuard {
-            sequence,
-            clear_at: Instant::now() + Duration::from_secs(clear_after_secs as u64),
-        });
-        Ok(())
-    }
-
-    fn clear_clipboard(&self, only_if_due: bool) {
-        let mut clip = guard(&self.clip);
-        if let Some(g) = clip.as_ref() {
-            if !only_if_due || Instant::now() >= g.clear_at {
-                clipboard::clear_if_unchanged(g.sequence);
-                *clip = None;
-            }
-        }
-    }
 }
 
 /// Locks the vault: wipes keys and decrypted data from memory, closes sticky
-/// notes, clears a copied secret, and tells the UI to reset itself.
+/// notes, asks KeePassXC to lock, and tells the UI to reset itself.
 pub fn lock(app: &AppHandle, reason: &str) {
     let state = app.state::<AppState>();
     if let Some(session) = state.take_session() {
@@ -130,7 +107,7 @@ pub fn lock(app: &AppHandle, reason: &str) {
         }
         drop(session); // zeroizes the data key and all items
     }
-    state.clear_clipboard(false);
+    keepassxc::lock_if_running(&state.paths, &state.keepassxc);
     ui::close_stickies(app);
     let _ = app.emit("vault-locked", reason.to_string());
 }
@@ -164,7 +141,6 @@ pub fn spawn_monitor(app: AppHandle) {
         loop {
             std::thread::sleep(Duration::from_secs(1));
             let state = app.state::<AppState>();
-            state.clear_clipboard(true);
 
             // A big jump in wall-clock time means the PC was asleep or hibernating.
             let now = SystemTime::now();

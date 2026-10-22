@@ -1,14 +1,14 @@
 ﻿//! Commands the UI can call. Each one checks its inputs, and none of them gives
 //! the UI general file-system or network access.
 
-pub mod logins;
+pub mod keepassxc;
 pub mod notes;
 pub mod stickies;
 pub mod tools;
 pub mod vault;
 
 use crate::error::{Error, Result};
-use crate::model::{Item, Login, Notebook, Page, Section, Sticky};
+use crate::model::{Item, Notebook, Page, Section, Sticky};
 use crate::vault::Session;
 
 macro_rules! typed_getter {
@@ -26,7 +26,6 @@ typed_getter!(notebook, Notebook, Notebook);
 typed_getter!(section, Section, Section);
 typed_getter!(page, Page, Page);
 typed_getter!(sticky, Sticky, Sticky);
-typed_getter!(login, Login, Login);
 
 /// Rejects oversized text fields from the UI.
 pub fn limit(field: &str, value: &str, max_chars: usize) -> Result<()> {

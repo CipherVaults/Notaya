@@ -226,7 +226,7 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{new_id, now_ms, Login, Page};
+    use crate::model::{new_id, now_ms, Page, Sticky};
     use rusqlite::{params, Connection};
 
     const FAST: KdfParams = KdfParams { m_kib: 64, t: 1, p: 1 };
@@ -252,24 +252,20 @@ mod tests {
         })
     }
 
-    fn login(password: &str) -> Item {
-        Item::Login(Login {
+    fn sticky(text: &str) -> Item {
+        Item::Sticky(Sticky {
             id: new_id(),
-            title: "Bank".into(),
-            username: "me@example.com".into(),
-            password: password.into(),
-            urls: vec!["https://bank.example".into()],
-            notes: String::new(),
-            totp: String::new(),
-            fields: vec![],
-            tags: vec![],
-            folder: String::new(),
-            favorite: false,
-            color: String::new(),
+            content: format!("{{\"type\":\"doc\",\"text\":\"{text}\"}}"),
+            text: text.into(),
+            color: "yellow".into(),
+            x: 100.0,
+            y: 100.0,
+            w: 320.0,
+            h: 320.0,
+            on_top: true,
+            open: false,
             created: now_ms(),
             updated: now_ms(),
-            password_changed: now_ms(),
-            history: vec![],
         })
     }
 
@@ -294,11 +290,11 @@ mod tests {
         {
             let mut s = Session::create(&path, "pw", None, FAST).unwrap();
             s.put(page("TopSecretDiaryPhrase")).unwrap();
-            s.put(login("Hunter2-Correct-Horse")).unwrap();
+            s.put(sticky("Bank PIN Hunter2-Correct-Horse")).unwrap();
             s.put_attachment("image/png", b"PNGSECRETPIXELS").unwrap();
         }
         let raw = std::fs::read(&path).unwrap();
-        for needle in [&b"TopSecretDiaryPhrase"[..], b"Hunter2-Correct-Horse", b"me@example.com", b"Diary", b"PNGSECRETPIXELS", b"Bank"] {
+        for needle in [&b"TopSecretDiaryPhrase"[..], b"Hunter2-Correct-Horse", b"Bank PIN", b"Diary", b"PNGSECRETPIXELS", b"yellow"] {
             assert!(
                 !raw.windows(needle.len()).any(|w| w == needle),
                 "found plaintext {:?} in the vault file",

@@ -1,8 +1,8 @@
-mod clipboard;
 mod commands;
 mod crypto;
 mod error;
 mod generator;
+mod keepassxc;
 mod model;
 mod portable;
 mod state;
@@ -12,7 +12,7 @@ mod vault;
 
 use tauri::{http, Manager};
 
-use commands::{logins, notes, stickies, tools, vault as vault_cmd};
+use commands::{keepassxc as keepassxc_cmd, notes, stickies, tools, vault as vault_cmd};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -104,23 +104,12 @@ pub fn run() {
             stickies::open_sticky,
             stickies::close_sticky,
             stickies::delete_sticky,
-            logins::list_logins,
-            logins::get_login,
-            logins::save_login,
-            logins::delete_login,
-            logins::set_login_favorite,
-            logins::copy_login_field,
-            logins::copy_secret_text,
-            logins::totp_code,
-            logins::totp_preview,
-            logins::password_health,
-            logins::import_csv,
-            logins::check_breach,
-            logins::check_breach_text,
-            logins::open_url,
-            tools::generate_password,
+            keepassxc_cmd::keepassxc_status,
+            keepassxc_cmd::keepassxc_open,
+            keepassxc_cmd::keepassxc_lock,
             tools::generate_passphrase,
             tools::password_strength,
+            tools::open_url,
             tools::search,
         ])
         .run(tauri::generate_context!())

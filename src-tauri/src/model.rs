@@ -25,7 +25,6 @@ pub enum Item {
     Section(Section),
     Page(Page),
     Sticky(Sticky),
-    Login(Login),
     Settings(Settings),
 }
 
@@ -36,7 +35,6 @@ impl Item {
             Item::Section(x) => &x.id,
             Item::Page(x) => &x.id,
             Item::Sticky(x) => &x.id,
-            Item::Login(x) => &x.id,
             Item::Settings(_) => SETTINGS_ID,
         }
     }
@@ -133,78 +131,6 @@ pub struct Sticky {
     pub updated: i64,
 }
 
-#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
-#[serde(rename_all = "camelCase")]
-pub struct CustomField {
-    pub name: String,
-    pub value: String,
-    pub secret: bool,
-}
-
-#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
-#[serde(rename_all = "camelCase")]
-pub struct PasswordHistory {
-    pub password: String,
-    pub changed: i64,
-}
-
-#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
-#[serde(rename_all = "camelCase")]
-pub struct Login {
-    pub id: String,
-    pub title: String,
-    pub username: String,
-    pub password: String,
-    pub urls: Vec<String>,
-    pub notes: String,
-    /// Base32 secret or `otpauth://` URI; empty when unused.
-    pub totp: String,
-    pub fields: Vec<CustomField>,
-    pub tags: Vec<String>,
-    pub folder: String,
-    pub favorite: bool,
-    pub color: String,
-    pub created: i64,
-    pub updated: i64,
-    pub password_changed: i64,
-    pub history: Vec<PasswordHistory>,
-}
-
-/// What the list view needs. Contains no secrets.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginSummary {
-    pub id: String,
-    pub title: String,
-    pub username: String,
-    pub url: String,
-    pub folder: String,
-    pub tags: Vec<String>,
-    pub favorite: bool,
-    pub color: String,
-    pub has_totp: bool,
-    pub updated: i64,
-    pub password_changed: i64,
-}
-
-impl From<&Login> for LoginSummary {
-    fn from(l: &Login) -> Self {
-        LoginSummary {
-            id: l.id.clone(),
-            title: l.title.clone(),
-            username: l.username.clone(),
-            url: l.urls.first().cloned().unwrap_or_default(),
-            folder: l.folder.clone(),
-            tags: l.tags.clone(),
-            favorite: l.favorite,
-            color: l.color.clone(),
-            has_totp: !l.totp.trim().is_empty(),
-            updated: l.updated,
-            password_changed: l.password_changed,
-        }
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize, Zeroize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
@@ -224,9 +150,7 @@ pub struct Settings {
     pub unlock_background: String,
     pub idle_lock_minutes: u32,
     pub lock_on_minimize: bool,
-    pub clipboard_clear_seconds: u32,
     pub screen_capture_protection: bool,
-    pub breach_check_enabled: bool,
     pub sticky_default_color: String,
 }
 
@@ -243,9 +167,7 @@ impl Default for Settings {
             unlock_background: "aurora".into(),
             idle_lock_minutes: 5,
             lock_on_minimize: false,
-            clipboard_clear_seconds: 20,
             screen_capture_protection: true,
-            breach_check_enabled: false,
             sticky_default_color: "yellow".into(),
         }
     }
@@ -256,7 +178,6 @@ impl Settings {
     pub fn sanitized(mut self) -> Settings {
         self.font_size = self.font_size.clamp(12, 22);
         self.idle_lock_minutes = self.idle_lock_minutes.clamp(1, 240);
-        self.clipboard_clear_seconds = self.clipboard_clear_seconds.clamp(5, 300);
         self
     }
 }

@@ -8,7 +8,7 @@ This file answers two questions: what is accepted right now, and exactly where w
 
 ## Current state (accepted present)
 
-- **Mission state:** **active**. Basis: the owner's instruction at 13:07:49 UTC on 2026-10-22, which approved A9, lifted the pause and allowed downloads. Work happens on branch `feat/a9-keepassxc`.
+- **Mission state:** **paused at a checkpoint.** The owner asked to stop because the usage limit is near and will continue after it resets. A9 is still approved and development is authorized; resume with the next steps below. Work happens on branch `feat/a9-keepassxc`.
 - **Accepted baseline:** none. The owner hasn't accepted any result yet.
 - **Active authority:** the approved plan ([snapshot](plan/approved-plan-2026-10-22.md)), narrowed by the later instructions listed in [approval-and-amendments.md](plan/approval-and-amendments.md).
 - **Waiting on the owner:** decisions on amendments A2 (single-record rollback) and A8 (version pinning).
@@ -51,11 +51,34 @@ This file answers two questions: what is accepted right now, and exactly where w
 
 ### Exact next permitted action
 
-1. Re-run `cargo test --lib` (in `src-tauri`) and `npx tsc --noEmit -p tsconfig.json` to re-establish current evidence.
-2. A9 phase D0: download, verify and test KeePassXC 2.8.0.
-3. A9 phase D1: retire the password section and add the KeePassXC panel.
-4. Run `npm run build`, then `npm run tauri dev` for the first launch.
-5. Record the results in a new Execution Summary in `docs/execution/`, update this file, and stop for the owner's hands-on review.
+**Checkpoint 2026-10-22 (~13:45 UTC): paused for the owner's usage limit, mid-D1.**
+
+Done since the baseline:
+
+- **Checks re-run** on commit `f26c1f7`: 27/27 Rust tests passed and the type check was clean (13:11–13:13 UTC).
+- **D0 complete** (commit `0d57ad2`): KeePassXC 2.8.0 downloaded and verified. Evidence is in `vendor/keepassxc-manifest.md`. The binaries are in the ignored `vendor/` folder, so after a fresh clone they must be downloaded again.
+- **D1 backend done** (this checkpoint commit):
+  - added `keepassxc.rs`, which verifies the exe hash, launches KeePassXC with its config kept in `data/keepassxc/`, and locks it with `--lock`;
+  - added `commands/keepassxc.rs`;
+  - removed `logins.rs`, `clipboard.rs`, the login model and two settings (`clipboardClearSeconds`, `breachCheckEnabled`);
+  - `open_url` moved to `tools.rs`;
+  - removed the `sha1`, `csv`, `totp-rs` and `reqwest` dependencies and three `windows` features.
+  - Rust test result for this state: see the commit message.
+
+**Next, in order:**
+
+1. **D1 UI.** Until this is done the frontend doesn't compile against the new backend.
+   - Remove `src/features/passwords/*` and `src/features/generator/*`.
+   - Add `src/features/passwords/KeePassXCPanel.tsx`, which calls `keepassxc_status`, `keepassxc_open` and `keepassxc_lock`.
+   - Update `Shell.tsx`: remove the Generator item and renumber the shortcuts.
+   - Update `store/app.ts`: remove logins and the `new-login` intent.
+   - Update `CommandPalette.tsx`: remove the login actions and the login hits.
+   - Update `lib/ipc.ts` and `lib/types.ts`: remove the login, health, TOTP and password-generation APIs and the two settings; add the KeePassXC status type.
+   - Update `SettingsView.tsx`: remove the clipboard and breach rows; add KeePassXC to About.
+2. Run `npx tsc --noEmit -p tsconfig.json` and `cargo test --lib`.
+3. Update `docs/security-design.md` for A9: KeePassXC holds the passwords, there's a new trust boundary, P5 and P6 change, and A3 no longer applies.
+4. Run `npm run build`, then `npm run tauri dev` for the first launch, and fix any defects.
+5. Write an Execution Summary for this cycle, update this file, commit, and stop for the owner's hands-on review.
 
 ## Where things live
 

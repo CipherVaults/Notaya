@@ -1,16 +1,11 @@
 use serde::Serialize;
-use tauri::State;
+use tauri::{AppHandle, State};
 use zeroize::Zeroizing;
 
-use crate::error::Result;
-use crate::generator::{self, Generated, PassphraseOptions, PasswordOptions, Strength};
+use crate::error::{Error, Result};
+use crate::generator::{self, Generated, PassphraseOptions, Strength};
 use crate::model::Item;
 use crate::state::AppState;
-
-#[tauri::command]
-pub fn generate_password(options: PasswordOptions) -> Result<Generated> {
-    generator::password(&options)
-}
 
 #[tauri::command]
 pub fn generate_passphrase(options: PassphraseOptions) -> Result<Generated> {
@@ -24,6 +19,18 @@ pub fn password_strength(password: String, hints: Vec<String>) -> Strength {
     generator::strength(&password, &hints)
 }
 
+/// Opens a web link from a note in the default browser. Only http(s) links.
+#[tauri::command]
+pub fn open_url(app: AppHandle, url: String) -> Result<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let u = url.trim();
+    let u = if u.contains("://") { u.to_string() } else { format!("https://{u}") };
+    if !(u.starts_with("https://") || u.starts_with("http://")) {
+        return Err(Error::invalid("Only web links can be opened."));
+    }
+    app.opener().open_url(u, None::<&str>).map_err(|e| Error::Other(e.to_string()))
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchHit {
@@ -35,7 +42,7 @@ pub struct SearchHit {
     score: u32,
 }
 
-/// Returns ~70 characters around the first match, for the result list.
+/// Returns ~90 characters around the first match, for the result list.
 fn snippet(text: &str, needle: &str) -> String {
     let lower = text.to_lowercase();
     let Some(byte_pos) = lower.find(needle) else {
@@ -47,7 +54,8 @@ fn snippet(text: &str, needle: &str) -> String {
     if start > 0 { format!("…{}", s.trim_start()) } else { s }
 }
 
-/// Searches everything in memory. The index is never written to disk.
+/// Searches notes, notebooks and sticky notes in memory. The index is never
+/// written to disk. Passwords live in KeePassXC and are searched there.
 #[tauri::command]
 pub fn search(state: State<'_, AppState>, query: String) -> Result<Vec<SearchHit>> {
     let q = query.trim().to_lowercase();
@@ -71,20 +79,6 @@ pub fn search(state: State<'_, AppState>, query: String) -> Result<Vec<SearchHit
                             subtitle: String::new(),
                             snippet: snippet(&p.text, terms[0]),
                             score: if matches_all(&title) { 3 } else { 1 },
-                        });
-                    }
-                }
-                Item::Login(l) => {
-                    let hay = format!("{} {} {} {} {}", l.title, l.username, l.urls.join(" "), l.tags.join(" "), l.folder)
-                        .to_lowercase();
-                    if matches_all(&hay) {
-                        hits.push(SearchHit {
-                            kind: "login",
-                            id: l.id.clone(),
-                            title: l.title.clone(),
-                            subtitle: l.username.clone(),
-                            snippet: l.urls.first().cloned().unwrap_or_default(),
-                            score: if matches_all(&l.title.to_lowercase()) { 3 } else { 2 },
                         });
                     }
                 }
