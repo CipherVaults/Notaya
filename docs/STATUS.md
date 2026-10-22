@@ -2,16 +2,16 @@
 
 This file answers two questions: what is accepted right now, and exactly where work resumes. The two parts stay separate. Update it at meaningful checkpoints, and link to other records rather than copying them.
 
-- **As of:** 2026-10-22, 13:10 UTC, after writing up amendment A9
+- **As of:** 2026-10-22, about 14:30 UTC, after A9 D0 and D1 and the first launch
 - **Owner and decision-maker:** Mohamed Sayed
 - **Maintained by:** Claude (Claude Code), for the owner
 
 ## Current state (accepted present)
 
-- **Mission state:** **paused at a checkpoint.** The owner asked to stop because the usage limit is near and will continue after it resets. A9 is still approved and development is authorized; resume with the next steps below. Work happens on branch `feat/a9-keepassxc`.
+- **Mission state:** **awaiting the owner's hands-on review.** A9 D0 and D1 are done and the dev app launches; work stops here until the owner has tried it. Work happens on branch `feat/a9-keepassxc`.
 - **Accepted baseline:** none. The owner hasn't accepted any result yet.
-- **Active authority:** the approved plan ([snapshot](plan/approved-plan-2026-10-22.md)), narrowed by the later instructions listed in [approval-and-amendments.md](plan/approval-and-amendments.md).
-- **Waiting on the owner:** decisions on amendments A2 (single-record rollback) and A8 (version pinning).
+- **Active authority:** the approved plan ([snapshot](plan/approved-plan-2026-10-22.md)) with amendment A9 approved at 13:07:49 UTC, as listed in [approval-and-amendments.md](plan/approval-and-amendments.md).
+- **Waiting on the owner:** the hands-on review; decisions on A2 (single-record rollback) and A8 (version pinning); the GPL approach (A9 Q5) before any distribution.
 
 ## Continuation (unaccepted work and how to resume)
 
@@ -19,66 +19,39 @@ This file answers two questions: what is accepted right now, and exactly where w
 
 | Item | Where | State | Evidence and its limits |
 |---|---|---|---|
-| Toolchain | Node 24.20.0 and npm 11.19.0; Rust 1.99.1 (stable, MSVC); Git 2.55.0; VS Build Tools 2022 with Windows SDK 10.0.26100 | Complete | `--version` checks on 2026-10-22, shortly after 11:08 UTC |
-| Project scaffold | Tauri 2, React and TypeScript with Vite (`create-tauri-app` 4.7.5) | Complete | — |
-| Rust backend | `src-tauri/src/` (20 files) | Implemented; current state unverified | `cargo test --lib`: 27 of 27 passed at 11:37:17 UTC. Since then, one unused import was removed from `commands/vault.rs` (11:37:47 UTC); file timestamps show no other Rust change. Not re-run. |
-| UI | `src/` (29 files) | Implemented; type-checked only | `npx tsc --noEmit -p tsconfig.json`: 0 errors at about 11:51 UTC, and `src/` hasn't changed since. It doesn't cover `vite.config.ts`. Never built or run. |
-| App configuration | `src-tauri/tauri.conf.json`, `src-tauri/capabilities/default.json` | Implemented; unverified at runtime | Compiled by the 11:37 test build only |
-| Dependencies | `package.json` (exact versions), `src-tauri/Cargo.toml` with `Cargo.lock` | Selected and locked; see A8 | npm reported 0 vulnerabilities for the first installs; the final set wasn't audited; `cargo audit` not run |
-| PBS records | `docs/`, `CLAUDE.md` | Written 2026-10-22 | — |
-| Git | Local repository, no remote; branch `feat/a9-keepassxc` (`main` untouched) | First commit made after the owner's approval | `git log` |
-| README | `README.md` | Stale: still the Tauri template text | Not part of this adoption |
+| Toolchain | Node 24.20.0, npm 11.19.0, Rust 1.99.1 (MSVC), Git 2.55.0, VS Build Tools 2022 | Complete | `--version` checks, 2026-10-22 |
+| Rust backend | `src-tauri/src/` | Implemented; unit-tested | `cargo test --lib`: 27/27 on commit `2743021` (2026-10-22). Unit level only. |
+| UI | `src/` | Implemented; type-checked, bundled, launches | `tsc`: 0 errors; `npm run build`: passed; `npm run tauri dev`: the first screen ("Create your vault") renders. Nothing beyond the first screen has been exercised. |
+| KeePassXC bundle (A9) | `vendor/` (ignored by Git), `vendor/keepassxc-manifest.md` (committed) | D0 and D1 done | SHA-256 and PGP verified; offline launch test passed; see [`execution/2026-10-22-a9-keepassxc-d0-d1.md`](execution/2026-10-22-a9-keepassxc-d0-d1.md). After a fresh clone the binaries must be downloaded again. |
+| Records | `docs/`, `CLAUDE.md` | Current | — |
+| Git | Local repository, no remote; branch `feat/a9-keepassxc`; `main` untouched | Commits `f26c1f7`, `0d57ad2`, `b7c8626`, `2743021`, plus the documentation commit that follows | `git log` |
+| README | `README.md` | Stale: still the Tauri template text | — |
 
-### Not started
+### Not done
 
-- Production build (`npm run build`).
-- First launch (`npm run tauri dev`) and any runtime checks.
-- Portable release build.
+- Everything past the first screen of the running app: creating and unlocking a vault, notes, sticky notes, the KeePassXC panel, auto-lock, screenshot blocking.
+- Portable release build with KeePassXC copied in, plus KeePassXC's license files and source link.
 - `cargo audit`, `npm audit` and a security review.
-- README rewrite.
+- A1 and A3–A7 evidence; README rewrite.
+- Add `**/.devdata/**` to `server.watch.ignored` in `vite.config.ts` to stop harmless watcher errors in the dev log (not done, because a restart of Vite reloads the open dev window).
 
 ### Blockers and decisions
 
+- **The dev app may still be running with WebView2's local debug port open** (`--remote-debugging-port=9222`, bound to 127.0.0.1) because it was restarted that way to read the first screen. Restart it without the port (`npm run tauri dev` in a fresh shell, with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` unset) before putting any real data in it. Its dev vault is in the ignored `.devdata` folder.
 - A2 and A8 need the owner's decision. A1 and A3–A7 need evidence. See [the amendments record](plan/approval-and-amendments.md).
-- A9 is approved. If D0 shows a problem (failed verification, a missing runtime), stop and ask before D1.
 
 ### Do not repeat
 
-- Installing the toolchain; it's installed and checked.
-- Scaffolding the project or re-selecting dependencies.
+- The toolchain install, scaffolding, dependency selection, or the D0 download and verification.
 - Rewriting backend or UI modules from scratch. Inspect and fix instead.
 - Editing the plan snapshot. Record changes as amendments instead.
+- Driving the running dev window by script while the owner may be using it.
 
 ### Exact next permitted action
 
-**Checkpoint 2026-10-22 (~13:45 UTC): paused for the owner's usage limit, mid-D1.**
-
-Done since the baseline:
-
-- **Checks re-run** on commit `f26c1f7`: 27/27 Rust tests passed and the type check was clean (13:11–13:13 UTC).
-- **D0 complete** (commit `0d57ad2`): KeePassXC 2.8.0 downloaded and verified. Evidence is in `vendor/keepassxc-manifest.md`. The binaries are in the ignored `vendor/` folder, so after a fresh clone they must be downloaded again.
-- **D1 backend done** (this checkpoint commit):
-  - added `keepassxc.rs`, which verifies the exe hash, launches KeePassXC with its config kept in `data/keepassxc/`, and locks it with `--lock`;
-  - added `commands/keepassxc.rs`;
-  - removed `logins.rs`, `clipboard.rs`, the login model and two settings (`clipboardClearSeconds`, `breachCheckEnabled`);
-  - `open_url` moved to `tools.rs`;
-  - removed the `sha1`, `csv`, `totp-rs` and `reqwest` dependencies and three `windows` features.
-  - Rust test result for this state: see the commit message.
-
-**Next, in order:**
-
-1. **D1 UI.** Until this is done the frontend doesn't compile against the new backend.
-   - Remove `src/features/passwords/*` and `src/features/generator/*`.
-   - Add `src/features/passwords/KeePassXCPanel.tsx`, which calls `keepassxc_status`, `keepassxc_open` and `keepassxc_lock`.
-   - Update `Shell.tsx`: remove the Generator item and renumber the shortcuts.
-   - Update `store/app.ts`: remove logins and the `new-login` intent.
-   - Update `CommandPalette.tsx`: remove the login actions and the login hits.
-   - Update `lib/ipc.ts` and `lib/types.ts`: remove the login, health, TOTP and password-generation APIs and the two settings; add the KeePassXC status type.
-   - Update `SettingsView.tsx`: remove the clipboard and breach rows; add KeePassXC to About.
-2. Run `npx tsc --noEmit -p tsconfig.json` and `cargo test --lib`.
-3. Update `docs/security-design.md` for A9: KeePassXC holds the passwords, there's a new trust boundary, P5 and P6 change, and A3 no longer applies.
-4. Run `npm run build`, then `npm run tauri dev` for the first launch, and fix any defects.
-5. Write an Execution Summary for this cycle, update this file, commit, and stop for the owner's hands-on review.
+1. The owner tries the dev app (restart it first without the debug port, or keep using it knowing the port is open) and reports what works and what doesn't.
+2. Fix the defects found, re-run `cargo test --lib`, `npx tsc --noEmit -p tsconfig.json` and `npm run build`, and add a new Execution Summary.
+3. Only after the owner's go-ahead: the portable release build (copy KeePassXC in unmodified with its license files and source link), `cargo audit`, `npm audit`, and a security review.
 
 ## Where things live
 

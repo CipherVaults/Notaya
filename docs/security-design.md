@@ -1,23 +1,25 @@
 # Security design: Cipherleaf
 
-This record states what Cipherleaf protects, where its trust boundaries are, what it promises, and its known limitations. It describes the code as written on 2026-10-22, before the app was ever built or run. Each promise is a claim to verify, not a guarantee. Update this file when a promise, boundary or limitation changes.
+This record states what Cipherleaf protects, where its trust boundaries are, what it promises, and its known limitations. It describes the code as of amendment A9 (2026-10-22): passwords are kept in the bundled KeePassXC 2.8.0, and Cipherleaf's own vault holds notes, sticky notes and settings. Each promise is a claim to verify, not a guarantee. Update this file when a promise, boundary or limitation changes.
 
 A dependency scan, a plaintext search or a passing test can support one specific claim. None of them shows on its own that the app is secure.
 
 ## What it protects
 
-- **Vault contents:** notes and pages, sticky notes, logins (usernames, passwords, TOTP secrets, custom fields, password history), pasted images and settings.
-- **Keys and credentials:** the master password, the optional keyfile, and the 256-bit data key that encrypts everything.
+- **Cipherleaf vault contents:** notes and pages, sticky notes, pasted images and settings.
+- **Cipherleaf keys and credentials:** the master password, the optional keyfile, and the 256-bit data key that encrypts everything.
+- **Passwords (A9):** usernames, passwords, TOTP secrets and attachments live in `data/passwords.kdbx`, protected by KeePassXC's own master password (and optional keyfile). Cipherleaf never reads or stores them.
 
 ## Trust boundaries
 
 | Zone | Trust | What crosses the boundary |
 |---|---|---|
-| Disk / USB stick (`data/vault.clf`, `data/backups/`) | **Untrusted.** Anyone may copy or modify these files. | Only ciphertext plus an authenticated header |
-| Rust core (in-process) | Trusted. The only holder of keys. | — |
-| UI (WebView2, same process) | Trusted to display data; never receives keys. | Decrypted items it shows (note content, a login when opened); the master password while typing it |
-| Windows (clipboard, screen capture, other processes) | Partly trusted | Copied secrets (flagged and auto-cleared); window pixels (capture-protected) |
-| Network | Untrusted; unused by default | Only the opt-in breach check: 5 hex characters of a SHA-1 hash, sent to `api.pwnedpasswords.com` |
+| Disk / USB stick (`data/vault.clf`, `data/backups/`, `data/passwords.kdbx`) | **Untrusted.** Anyone may copy or modify these files. | Only ciphertext (an authenticated header and records for Cipherleaf's vault; KeePassXC's own encrypted format for passwords) |
+| Rust core (in-process) | Trusted. The only holder of Cipherleaf's keys. | — |
+| UI (WebView2, same process) | Trusted to display data; never receives keys. | Decrypted note and sticky-note content it shows; the Cipherleaf master password while typing it |
+| **Bundled KeePassXC (separate process, A9)** | **Trusted** as a mature, separately maintained program. Cipherleaf starts it only if its executable matches the verified 2.8.0 hash. | Cipherleaf passes only file paths and the options `--config`, `--localconfig` and `--lock`. It never sees KeePassXC's master password or entries. |
+| Windows (clipboard, screen capture, other processes) | Partly trusted | Window pixels of Cipherleaf (capture-protected). Passwords copied from KeePassXC are handled by KeePassXC. |
+| Network | Untrusted; **unused by Cipherleaf** | Nothing. Cipherleaf has no network code. KeePassXC is preset to make no connections; the owner can turn features on in KeePassXC. |
 
 Every app command is callable by any Cipherleaf window. So a script injected into the UI could read the vault while it's unlocked. The mitigations are a strict Content Security Policy (no remote scripts, styles, images or connections), no remote content, image sniffing, and rejecting SVG.
 
@@ -26,18 +28,20 @@ Every app command is callable by any Cipherleaf window. So a script injected int
 1. **Stolen or copied vault or backup (offline guessing):** Argon2id with high memory cost, an optional keyfile, and a master-password rule (at least 10 characters and a zxcvbn score of 3 or more).
 2. **Tampering with the vault file:** every record and the header are authenticated. Changed bytes, swapped records, records moved between tables or vaults, and edited key-derivation settings are all detected.
 3. **Metadata leaks from the file:** titles, item types and timestamps are encrypted, row IDs are random, and payloads are padded to size buckets.
-4. **Someone seeing the screen:** windows are excluded from screenshots and screen sharing, and passwords are masked until revealed.
-5. **Clipboard leaks:** copied secrets are kept out of Windows clipboard history and cloud clipboard, and cleared after a delay (default 20 s).
-6. **An unattended unlocked PC:** auto-lock on idle (default 5 min), Win+L, sleep or hibernate, removal of the drive, optionally on minimize, and on closing the app.
+4. **Someone seeing the screen:** Cipherleaf's windows are excluded from screenshots and screen sharing. KeePassXC blocks screen capture by default too, and masks passwords until revealed.
+5. **Clipboard leaks:** handled by KeePassXC, which clears copied passwords after a delay (preset to 20 s).
+6. **An unattended unlocked PC:** Cipherleaf auto-locks on idle (default 5 min), Win+L, sleep or hibernate, removal of the drive, optionally on minimize, and on closing the app. When Cipherleaf locks, it also asks a running KeePassXC to lock (`--lock`). KeePassXC has its own idle and screen-lock timers (preset: 5 min and on).
 7. **Password guessing in the app:** each attempt costs a full Argon2id run, and after 3 failures waits grow from 2 s up to 60 s.
 8. **Malicious pasted content:** only PNG, JPEG, GIF and WebP images (checked by their bytes), at most 25 MB; no remote loads; links open only as http(s), with Ctrl+click.
-9. **Network privacy:** no connections by default.
-10. **Traces on the host PC:** everything, including the WebView2 profile, lives in the app's `data` folder.
+9. **Network privacy:** Cipherleaf makes no connections. KeePassXC's update checks, icon downloads, browser integration, SSH agent and Secret Service are preset off.
+10. **Traces on the host PC:** everything, including the WebView2 profile and KeePassXC's settings (`data/keepassxc/`), lives in the app's `data` folder.
+11. **A swapped or tampered KeePassXC:** Cipherleaf refuses to start an executable whose SHA-256 doesn't match the verified 2.8.0 release.
 
 ## Out of scope (not defended)
 
 - Malware, keyloggers, screen scrapers, or an administrator-level compromise on the PC, while unlocked or while the password is typed.
-- A tampered `Cipherleaf.exe`, for example one replaced on the USB stick. The app doesn't verify itself, and the exe is unsigned.
+- A tampered `Cipherleaf.exe`, for example one replaced on the USB stick. The app doesn't verify itself, and the exe is unsigned. A tampered KeePassXC is caught only if its `KeePassXC.exe` changes; its DLLs aren't hash-checked.
+- The security of KeePassXC itself, including its file format, its handling of memory and its update cadence. KeePassXC isn't part of Cipherleaf's code or review.
 - Reading memory while unlocked. Hibernation can also write unlocked data to `hiberfil.sys` before the app locks on resume, and memory isn't protected from the page file.
 - Restoring an entire older copy of the vault, which can't be detected offline.
 - A forgotten master password or a lost required keyfile. Recovery is impossible by design.
@@ -50,14 +54,14 @@ Every app command is callable by any Cipherleaf window. So a script injected int
 | P2 | Any change to the header or a record, or a swapped record, is detected | Implemented; unit-tested on the 11:37 UTC state (historical) |
 | P3 | Changing the password keeps all data and doesn't re-encrypt it | Implemented; unit-tested on the 11:37 UTC state (historical) |
 | P4 | Keys never leave the Rust core | By design; not independently reviewed |
-| P5 | No network traffic unless the breach check is turned on; the check sends only a 5-character hash prefix | Implemented; not yet tested |
-| P6 | Copied secrets stay out of clipboard history and are cleared after the set delay | Implemented; not yet tested |
+| P5 | Cipherleaf makes no network connections, and the bundled KeePassXC is started with offline presets | Cipherleaf has no network code (the HTTP library was removed). KeePassXC alone, with the presets, made no connections in an 8-second launch test on 2026-10-22; not yet tested through Cipherleaf. |
+| P6 | KeePassXC starts only if its executable matches the verified 2.8.0 hash, and its settings stay in `data/keepassxc/` | Implemented; unit-tested (refusal of an unverified file). Not yet tested through the running app. |
 | P7 | Cipherleaf windows appear black in screenshots and screen shares | Implemented; not yet tested |
 | P8 | The vault locks on idle, Win+L, sleep, drive removal and app close | Implemented; not yet tested |
 | P9 | Nothing is written outside the app's `data` folder | Implemented; not yet tested |
 | P10 | Locking removes decrypted data from memory | Best effort. The Rust side wipes on drop; the UI is reloaded, but JavaScript memory can't be wiped with certainty. |
 
-The unit tests ran at 11:37 UTC on 2026-10-22, on the source as it was before one later one-line edit, and haven't been re-run. Nothing has been verified through the running app.
+P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite (27 tests) passed again after the A9 backend and UI changes, on the source at commit `2743021`. Nothing has been verified through the running app yet.
 
 ## Known limitations
 
@@ -67,7 +71,13 @@ The unit tests ran at 11:37 UTC on 2026-10-22, on the source as it was before on
 - The failed-attempt delay is in memory, so it **resets when the app restarts**.
 - **Visible metadata:** the file is recognizably SQLite. Record and attachment counts, approximate sizes, the Argon2 settings, the vault ID and whether a keyfile is required are all visible.
 - **Appearance settings in plaintext:** theme, accent, font and similar, in the WebView2 storage inside `data/webview/`.
-- TOTP secrets are stored in the same vault as the passwords they protect.
+- **Two master passwords:** Cipherleaf and KeePassXC are unlocked separately.
+- **KeePassXC needs the Microsoft Visual C++ 2015–2022 x64 runtime** installed on the PC; the portable ZIP doesn't include it.
+- **Cipherleaf's lock-when-unplugged and screenshot blocking don't cover KeePassXC's window.** KeePassXC has its own protections.
+- **KeePassXC may remember recent file paths** in its settings (the preset turns that off; the owner can change it).
+- **Bundled copy must be kept updated:** 2.8.0 fixed several security issues, and later releases may too. 2.7.12 is the fallback if 2.8.0 shows problems.
+- **Databases made with `keepassxc-cli` default to AES-KDF**, which is weaker than Argon2. Create the database in KeePassXC's own wizard and choose Argon2id.
+- **Licensing (A9 Q5):** KeePassXC is GPL v2 or v3. The release must include its license files and source link; the owner confirms this before distributing Cipherleaf.
 
 ## Cryptography (as implemented)
 
