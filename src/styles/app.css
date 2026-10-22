@@ -72,18 +72,18 @@
 /* ----- Paper: warm off-white ----- */
 [data-theme="paper"] {
   color-scheme: light;
-  --bg: #fbf7ef;
-  --bg-glass: rgba(251, 247, 239, 0.76);
-  --sidebar: #f3ede0;
-  --surface: rgba(70, 45, 10, 0.045);
-  --surface-2: rgba(70, 45, 10, 0.085);
-  --elevated: #fffdf8;
-  --border: rgba(70, 45, 10, 0.13);
-  --text: #2b2620;
-  --muted: #6b6254;
-  --faint: #9c9382;
-  --shadow: 0 14px 44px -14px rgba(60, 40, 10, 0.3), 0 0 0 1px rgba(70, 45, 10, 0.07);
-  --code-bg: #f4eee2;
+  --bg: #faf6ee;
+  --bg-glass: rgba(250, 246, 238, 0.76);
+  --sidebar: #f1e9da;
+  --surface: rgba(70, 45, 10, 0.05);
+  --surface-2: rgba(70, 45, 10, 0.095);
+  --elevated: #fffefa;
+  --border: rgba(70, 45, 10, 0.15);
+  --text: #28231c;
+  --muted: #65594a;
+  --faint: #85796a;
+  --shadow: 0 14px 44px -14px rgba(60, 40, 10, 0.3), 0 0 0 1px rgba(70, 45, 10, 0.08);
+  --code-bg: #f3ecdd;
 }
 
 [data-density="compact"] {

@@ -155,7 +155,7 @@ pub struct Settings {
     /// "inter" | "system" | "serif" | "mono"
     pub font: String,
     pub font_size: u32,
-    /// "narrow" | "normal" | "wide"
+    /// "narrow" | "normal" | "wide" | "full"
     pub editor_width: String,
     /// "comfortable" | "compact"
     pub density: String,
@@ -170,7 +170,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            theme: "black".into(),
+            theme: "paper".into(),
             accent: "mono".into(),
             backdrop: "none".into(),
             font: "inter".into(),

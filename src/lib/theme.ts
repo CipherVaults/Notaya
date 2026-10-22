@@ -12,7 +12,7 @@ export type Appearance = Pick<
 const KEY = "cipherleaf.appearance";
 
 export const DEFAULT_APPEARANCE: Appearance = {
-  theme: "black",
+  theme: "paper",
   accent: "mono",
   backdrop: "none",
   font: "inter",
@@ -30,9 +30,10 @@ const FONTS: Record<Appearance["font"], string> = {
 };
 
 const WIDTHS: Record<Appearance["editorWidth"], string> = {
-  narrow: "640px",
-  normal: "780px",
-  wide: "1040px",
+  narrow: "760px",
+  normal: "1040px",
+  wide: "1320px",
+  full: "1680px",
 };
 
 export function cachedAppearance(): Appearance {

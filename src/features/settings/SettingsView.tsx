@@ -12,7 +12,7 @@ const THEMES: { value: ThemeMode; label: string; bg: string; side: string; fg: s
   { value: "black", label: "Black", bg: "#000000", side: "#0b0b0b", fg: "#f4f4f4", line: "rgba(255,255,255,0.14)" },
   { value: "graphite", label: "Graphite", bg: "#191919", side: "#202020", fg: "#ececec", line: "rgba(255,255,255,0.12)" },
   { value: "white", label: "White", bg: "#ffffff", side: "#f7f7f5", fg: "#1f1f1f", line: "rgba(0,0,0,0.12)" },
-  { value: "paper", label: "Paper", bg: "#fbf7ef", side: "#f3ede0", fg: "#2b2620", line: "rgba(70,45,10,0.16)" },
+  { value: "paper", label: "Paper", bg: "#faf6ee", side: "#f1e9da", fg: "#28231c", line: "rgba(70,45,10,0.18)" },
   { value: "system", label: "Match Windows", bg: "linear-gradient(90deg,#000 50%,#fff 50%)", side: "transparent", fg: "#888", line: "rgba(128,128,128,0.4)" },
 ];
 
@@ -123,6 +123,7 @@ export default function SettingsView() {
                 { value: "narrow", label: "Narrow" },
                 { value: "normal", label: "Normal" },
                 { value: "wide", label: "Wide" },
+                { value: "full", label: "Full" },
               ]}
             />
           </Row>

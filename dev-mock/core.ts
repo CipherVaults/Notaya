@@ -10,7 +10,7 @@ const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
 
 const settings: Record<string, unknown> = {
-  theme: params.get("theme") ?? "black",
+  theme: params.get("theme") ?? "paper",
   accent: params.get("accent") ?? "mono",
   backdrop: "none",
   font: "inter",

@@ -58,7 +58,7 @@ function Home() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-10 pb-16 pt-16">
+      <div className="mx-auto px-10 pb-16 pt-16" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
         <h1 className="text-[2rem] font-bold tracking-tight">{greeting}</h1>
         <p className="mt-1 text-muted">Everything here is encrypted. Pick a page from the sidebar, or start a new one.</p>
 
@@ -122,7 +122,7 @@ function TrashView() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-10 pb-16 pt-14">
+      <div className="mx-auto px-10 pb-16 pt-14" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
         <div className="flex items-end justify-between">
           <div>
             <h1 className="text-[2rem] font-bold tracking-tight">Trash</h1>

@@ -17,7 +17,7 @@ export interface Settings {
   backdrop: Backdrop;
   font: "inter" | "system" | "serif" | "mono";
   fontSize: number;
-  editorWidth: "narrow" | "normal" | "wide";
+  editorWidth: "narrow" | "normal" | "wide" | "full";
   density: "comfortable" | "compact";
   unlockBackground: "aurora" | "mesh" | "midnight" | "plain";
   idleLockMinutes: number;
