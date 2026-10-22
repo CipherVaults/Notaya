@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-22 (23:14–23:25) — EX-2026-10-22-10 — Fresh portable build; KeePassXC kept for private use
+
+- Report: [2026-10-22-fresh-portable-build.md](2026-10-22-fresh-portable-build.md)
+- Task / Goal: the owner's instruction at 23:14:05 (fresh vault, fresh portable build, keep KeePassXC for private use)
+- Executor: Claude (Sonnet 5.5)
+- Outcome: the exe was rebuilt from the committed code and the portable folder refreshed with no `data` folder (a fresh vault on first run); smoke-tested again (starts, `data` next to the exe, nothing in AppData, no network, closes cleanly). The dev vault was not copied.
+- Integration / review: not applicable
+- Acceptance: pending (owner's hands-on use)
+- Open dependency / next action: the owner tries the exe; A2 and A8 decisions
+
 ### 2026-10-22 (22:58–23:15) — EX-2026-10-22-09 — Commit of A10–A14 and the first release build
 
 - Report: [2026-10-22-release-build-and-commit.md](2026-10-22-release-build-and-commit.md)

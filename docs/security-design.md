@@ -84,7 +84,7 @@ P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite passed agai
 - **Databases made with `keepassxc-cli` default to AES-KDF**, which is weaker than Argon2. Create the database in KeePassXC's own wizard and choose Argon2id.
 - **The embedded KeePassXC is an overlay, not a true child window (A10).** Windows refused to make it a child, and WebView2 draws over child windows. Web content drawn by Cipherleaf (such as the command palette) can't appear on top of it, so it hides while the palette is open. If Cipherleaf crashes, KeePassXC keeps running as its own window (with its own idle lock).
 - **Window-style changes to KeePassXC.** Cipherleaf removes its title bar and borders while embedded and restores them on detach. This changes only how the window looks and is positioned; KeePassXC's code and settings are untouched.
-- **Licensing (A9 Q5):** KeePassXC is GPL v2 or v3. The release must include its license files and source link; the owner confirms this before distributing Cipherleaf.
+- **Licensing (A9 Q5):** KeePassXC is GPL v2 or v3. The release must include its license files and source link; the owner confirms this before distributing Cipherleaf. The owner decided on 2026-10-22 23:14 UTC that the build stays private (owner, close people and friends); each copy carries the license files, the source and the README.
 
 ## Cryptography (as implemented)
 

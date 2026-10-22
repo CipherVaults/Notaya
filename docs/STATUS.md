@@ -2,13 +2,13 @@
 
 This file answers two questions: what is accepted right now, and exactly where work resumes. The two parts stay separate. Update it at meaningful checkpoints, and link to other records rather than copying them.
 
-- **As of:** 2026-10-22, about 23:15 UTC, after the commit of A10–A14 (`2105a57`), the first release build and its smoke test. Checks last run at 22:35–22:50 UTC; nothing in the code changed since the commit.
+- **As of:** 2026-10-22, about 23:25 UTC, after the fresh release build ([EX-10](execution/2026-10-22-fresh-portable-build.md)). Code unchanged since commit `2105a57`.
 - **Owner and decision-maker:** Mohamed Sayed
 - **Maintained by:** Claude (Claude Code), for the owner
 
 ## Current state (accepted present)
 
-- **Mission state:** **waiting for the owner to try the release exe and the dev app and review A10–A14.** A10–A14 are committed on branch `feat/a9-keepassxc` (`2105a57`) and unaccepted. A release exe was built and assembled in `E:\Project\Cipherleaf-portable\` and smoke-tested from a temporary copy. The dev app is not running.
+- **Mission state:** **waiting for the owner to try the portable build and the dev app and review A10–A14.** A10–A14 are committed on branch `feat/a9-keepassxc` and unaccepted. A fresh release exe (rebuilt from the committed code) sits in `E:\Project\Cipherleaf-portable\` with no `data\` folder, so the first run creates a fresh vault. The dev app is not running.
 - **Accepted baseline:** none. The owner has not accepted any result. One informal signal is recorded in [acceptance.md](acceptance.md) (the owner's "happy" with a screenshot, 18:06:46 UTC); it is not an acceptance.
 - **Active authority:** the approved plan ([snapshot](plan/approved-plan-2026-10-22.md)), amendment A9 (approved 13:07:49 UTC), and the owner's later instructions applied as A10 ([record](plan/A10-embed-and-appearance.md)), A11 ([record](plan/A11-redesign-and-block-notes.md)) and A12 ([record](plan/A12-notion-menus-subpages.md)) and A13 ([record](plan/A13-calculator-and-wording.md)) and A14 ([record](plan/A14-calculator-in-sticky-notes.md)), as listed with exact times in [approval-and-amendments.md](plan/approval-and-amendments.md). Standing rules: nothing is committed until the owner says; no release build without their go-ahead.
 - **Waiting on the owner:** see "Open questions for the owner" below.
@@ -22,13 +22,13 @@ Raised by the owner or by Claude since A12; none has been answered yet.
 | 1 | ~~Commit A10–A12?~~ **Answered 22:58:30 UTC: commit.** Done: code commit `2105a57`, then a documentation commit (see `git log`). No push, no remote. | 16:50 UTC | Nothing |
 | 2 | ~~Reword, or reword and trim, the Notion-like features?~~ **Answered 22:27 UTC: reword and trim.** Done as [A13](plan/A13-calculator-and-wording.md); awaiting the owner's review of how it reads. | 17:56 UTC | Nothing |
 | 3 | ~~A calculator under Sticky notes: basic or scientific?~~ **Answered 22:27 UTC: basic and scientific.** Built (A13); awaiting review. | 17:56 UTC | Nothing |
-| 4 | Portable build: **go-ahead given 22:58:30 UTC ("Start build exe for release"); built** (see [EX-09](execution/2026-10-22-release-build-and-commit.md)). Still open: copy the current dev vault (`.devdata\data\`) into the portable folder, or start fresh? And the GPL approach (question 9) before the build leaves the owner's own PCs. | 18:08 UTC | Using the build with existing notes; sharing it |
+| 4 | ~~Portable build: copy the dev vault or start fresh?~~ **Answered 23:14:05 UTC: fresh vault, fresh portable build.** Done ([EX-10](execution/2026-10-22-fresh-portable-build.md)); the dev vault in `.devdata\data\` was not copied and is untouched. | 18:08 UTC | Nothing |
 | 5 | ~~Name and icon~~ **Answered 22:26 UTC: keep Cipherleaf.** No rename and no change of the app identifier. An icon change was not asked for. | 18:09 UTC | Nothing |
 | 5b | ~~Is a calculator inside each sticky note what the owner wanted (A14)?~~ **Answered 22:55:26 UTC: yes.** | 22:55 UTC | Nothing |
 | 6 | ~~Is screenshot blocking turned back on in the dev vault?~~ **Answered 22:58:30 UTC: left off for now, and "it's working, no worries".** Recorded as the owner's choice; the setting is off in their dev vault. | 17:59 UTC | Nothing |
 | 7 | What did "happy" accept? | 18:06 UTC | Recording any acceptance |
 | 8 | Confirm that [acceptance.md](acceptance.md) and [sessions.md](sessions.md) join the compact record set, and say whether Decision Records are wanted (Claude recommends not unless asked). The CLAUDE.md additions, the execution index and the failure-intelligence record were approved at 22:03:12 UTC and are done. | 22:00 UTC | Nothing immediate |
-| 9 | Still open from before: A2 (single-record rollback) and A8 (version pinning); the GPL approach (A9 Q5) before any distribution. | 11:08–13:07 UTC | Acceptance; distribution |
+| 9 | Still open from before: A2 (single-record rollback) and A8 (version pinning). **The GPL approach (A9 Q5) was answered at 23:14:05 UTC:** keep KeePassXC bundled; the build is for the owner, close people and friends, nothing public; each copy keeps its license files, source and README.txt. | 11:08–23:14 UTC | Acceptance (A2, A8) |
 
 ## Continuation (unaccepted work and how to resume)
 
@@ -43,7 +43,7 @@ Raised by the owner or by Claude since A12; none has been answered yet.
 | Mock UI harness | `dev-mock/`, `vite.mock.config.ts`, `npm run mock` | Dev only (uncommitted) | Fakes the Tauri commands so screens can be viewed in a browser; not part of the app build. |
 | Records | `docs/`, `CLAUDE.md`, `README.md` | Reconciled at 21:49–22:10 UTC; also new: [execution index](execution/README.md), [failure-intelligence.md](failure-intelligence.md) | [EX-06](execution/2026-10-23-pbs-reconciliation.md). New: [acceptance.md](acceptance.md), [sessions.md](sessions.md). |
 | Git | Local repository, no remote; branch `feat/a9-keepassxc`; `main` untouched | HEAD is the documentation commit after `2105a57` (code, A10–A14); see `git log`. No push. | `git log`, `git status` |
-| Release build (first) | `E:\Project\Cipherleaf-portable\` (outside the repository): `Cipherleaf.exe` (SHA-256 `5D766105…5AAD`), `KeePassXC\`, `Licenses\KeePassXC\` (licenses and the complete source), `README.txt` | Built from commit `2105a57`; smoke-tested from a temporary copy | [EX-09](execution/2026-10-22-release-build-and-commit.md): it starts, creates `data\` next to the exe, writes nothing to AppData, makes no network connections, closes cleanly. Not tested: creating a vault, the Passwords view, lock, a USB stick (V3c). Unsigned. |
+| Release build (fresh, 23:14–23:18 UTC) | `E:\Project\Cipherleaf-portable\` (outside the repository): `Cipherleaf.exe` (SHA-256 `A10AAB35…FEFD`), `KeePassXC\`, `Licenses\KeePassXC\` (licenses and the complete source), `README.txt`; no `data\` folder | Rebuilt from the committed code (`2105a57`); smoke-tested from a temporary copy | [EX-10](execution/2026-10-22-fresh-portable-build.md), [EX-09](execution/2026-10-22-release-build-and-commit.md): it starts, creates `data\` next to the exe, writes nothing to AppData, makes no network connections, closes cleanly. Not tested: creating a vault, the Passwords view, lock, a USB stick (V3c). Unsigned. The first build's hash (`5D766105…5AAD`) is superseded. |
 | Owner's dev vault | `.devdata\data\` (ignored by Git) | Real use began 16:03 UTC; contents not inspected by Claude (the owner's screenshot at 18:06 shows a page "Hello Cipherleaf" and two "Untitled" pages) | File timestamps only |
 | Test leftovers | About 88 `cipherleaf-*` folders in `%TEMP%` (cargo test vaults, KeePassXC test copies) | Not deleted (the project rule is to ask before deleting) | Folder listing |
 
@@ -79,7 +79,7 @@ The owner ran the app and created things before the restart. Claude didn't watch
 
 ### Exact next permitted action
 
-1. The owner tries the release exe (`E:\Project\Cipherleaf-portable\Cipherleaf.exe`) and the dev app, and says what to change. Then: move the dev vault into the portable folder or start fresh (question 4), and decide the GPL approach before sharing the build.
+1. The owner runs `E:\Project\Cipherleaf-portable\Cipherleaf.exe` (it will ask to create a fresh vault) and the dev app, and says what to change. Anything that goes to other people keeps the `Licenses` folder and `README.txt` with it.
 2. Documentation upkeep is authorized now: after any meaningful step, follow the routine in [EX-06 Appendix A](execution/2026-10-23-pbs-reconciliation.md#appendix-a-documentation-routine-going-forward).
 3. Code changes, a commit, a release build, any change to security behavior or a new dependency wait for the owner's instruction on the matching question.
 4. When the owner says to continue: start the dev app without the debug port, let them test, fix what they report, re-run `cargo test --lib`, `npx tsc --noEmit -p tsconfig.json` and `npm run build`, and add an Execution Summary.

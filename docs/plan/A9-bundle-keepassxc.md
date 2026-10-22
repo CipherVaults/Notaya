@@ -119,6 +119,7 @@ This goes into `security-design.md` once A9 is approved.
 - **Q3:** Does the portable ZIP include the Visual C++ runtime, or must the PC already have it? The download page says KeePassXC requires it.
 - **Q4:** Where exactly does portable KeePassXC 2.8.0 keep its settings, and does it write anything to AppData?
 - **Q5:** What exactly does the GPL require when KeePassXC ships next to Cipherleaf? The GNU FAQ couldn't be checked on 2026-10-22.
+  - *Decision, 2026-10-22 23:14:05 UTC (owner):* keep KeePassXC bundled; the build is for the owner, close people and friends, and nothing is released publicly. The license files, the complete source and a README stay with every copy. To be revisited if a public release is ever planned. This is not legal advice.
 
 ## Decision requested
 
