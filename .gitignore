@@ -28,6 +28,10 @@ release
 *.csv
 /data/
 
+# Third-party binaries (KeePassXC); only the manifest is committed
+/vendor/*
+!/vendor/keepassxc-manifest.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
