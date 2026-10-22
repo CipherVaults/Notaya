@@ -32,7 +32,8 @@ export default defineConfig(() => ({
       : undefined,
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // The dev vault and WebView2 profile live in .devdata and change constantly.
+      ignored: ["**/src-tauri/**", "**/.devdata/**"],
     },
   },
 

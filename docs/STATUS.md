@@ -33,7 +33,7 @@ This file answers two questions: what is accepted right now, and exactly where w
 - Portable release build with KeePassXC copied in, plus KeePassXC's license files and source link.
 - `cargo audit`, `npm audit` and a security review.
 - A1 and A3–A7 evidence; README rewrite.
-- Add `**/.devdata/**` to `server.watch.ignored` in `vite.config.ts` to stop harmless watcher errors in the dev log (not done, because a restart of Vite reloads the open dev window).
+- (Done 16:09 UTC) `**/.devdata/**` is now in `server.watch.ignored` in `vite.config.ts`; the dev log showed 0 watcher errors afterwards. Note: editing `vite.config.ts` while `tauri dev` runs ends the whole dev session, so restart it after such an edit.
 
 ### Observed in the owner's first hands-on run (from files only, ~16:03–16:07 UTC)
 
