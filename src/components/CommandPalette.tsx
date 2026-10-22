@@ -9,10 +9,8 @@ import {
   Lock,
   NotebookPen,
   Palette,
-  Plus,
   Settings,
   StickyNote,
-  Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -66,9 +64,6 @@ export default function CommandPalette() {
       } else if (hit.kind === "notebook") {
         s.setView("notes");
         s.openNotebook(hit.id);
-      } else if (hit.kind === "login") {
-        s.setView("passwords");
-        s.openLogin(hit.id);
       } else if (hit.kind === "sticky") {
         await api.openSticky(hit.id);
       }
@@ -77,7 +72,6 @@ export default function CommandPalette() {
   const icon = (kind: SearchHit["kind"]) =>
     ({
       page: <FileText size={16} />,
-      login: <KeyRound size={16} />,
       sticky: <StickyNote size={16} />,
       notebook: <BookOpen size={16} />,
     })[kind];
@@ -123,11 +117,9 @@ export default function CommandPalette() {
               {!query.trim() && (
                 <Command.Group heading="Actions" className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint">
                   <Action icon={<FilePlus2 size={16} />} label="New page" onSelect={() => run(() => { const s = useApp.getState(); s.setView("notes"); s.setIntent("new-page"); })} className={itemClass} />
-                  <Action icon={<Plus size={16} />} label="New login" onSelect={() => run(() => { const s = useApp.getState(); s.setView("passwords"); s.setIntent("new-login"); })} className={itemClass} />
                   <Action icon={<StickyNote size={16} />} label="New sticky note" onSelect={() => run(async () => { await api.createSticky(true); useApp.getState().setStickies(await api.listStickies()); })} className={itemClass} />
-                  <Action icon={<Wand2 size={16} />} label="Generate a password" onSelect={() => run(() => useApp.getState().setView("generator"))} className={itemClass} />
                   <Action icon={<NotebookPen size={16} />} label="Go to Notes" onSelect={() => run(() => useApp.getState().setView("notes"))} className={itemClass} />
-                  <Action icon={<KeyRound size={16} />} label="Go to Passwords" onSelect={() => run(() => useApp.getState().setView("passwords"))} className={itemClass} />
+                  <Action icon={<KeyRound size={16} />} label="Passwords (KeePassXC)" onSelect={() => run(() => useApp.getState().setView("passwords"))} className={itemClass} />
                   <Action icon={<Palette size={16} />} label="Appearance & settings" onSelect={() => run(() => useApp.getState().setView("settings"))} className={itemClass} />
                   <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Encrypted backup saved."); })} className={itemClass} />
                   <Action icon={<Lock size={16} />} label="Lock vault" hint="Ctrl L" onSelect={() => run(() => api.lockVault())} className={itemClass} />

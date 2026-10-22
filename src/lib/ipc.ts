@@ -4,21 +4,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Generated,
-  Health,
-  ImportResult,
-  Login,
-  LoginInput,
-  LoginSummary,
+  KeePassXCStatus,
   NotesTree,
   Page,
   PageMeta,
   PassphraseOptions,
-  PasswordOptions,
   SearchHit,
   Settings,
   Sticky,
   Strength,
-  TotpCode,
   VaultStatus,
 } from "./types";
 
@@ -86,25 +80,13 @@ export const api = {
   closeSticky: (id: string) => invoke<void>("close_sticky", { id }),
   deleteSticky: (id: string) => invoke<void>("delete_sticky", { id }),
 
-  // Passwords
-  listLogins: () => invoke<LoginSummary[]>("list_logins"),
-  getLogin: (id: string) => invoke<Login>("get_login", { id }),
-  saveLogin: (input: LoginInput) => invoke<LoginSummary>("save_login", { input }),
-  deleteLogin: (id: string) => invoke<void>("delete_login", { id }),
-  setLoginFavorite: (id: string, favorite: boolean) =>
-    invoke<LoginSummary>("set_login_favorite", { id, favorite }),
-  copyLoginField: (id: string, field: string) => invoke<number>("copy_login_field", { id, field }),
-  copySecretText: (text: string) => invoke<number>("copy_secret_text", { text }),
-  totpCode: (id: string) => invoke<TotpCode>("totp_code", { id }),
-  totpPreview: (secret: string) => invoke<TotpCode>("totp_preview", { secret }),
-  passwordHealth: () => invoke<Health>("password_health"),
-  importCsv: () => invoke<ImportResult | null>("import_csv"),
-  checkBreach: (id: string) => invoke<number>("check_breach", { id }),
-  checkBreachText: (password: string) => invoke<number>("check_breach_text", { password }),
-  openUrl: (url: string) => invoke<void>("open_url", { url }),
+  // Passwords live in the bundled KeePassXC (amendment A9)
+  keepassxcStatus: () => invoke<KeePassXCStatus>("keepassxc_status"),
+  keepassxcOpen: () => invoke<void>("keepassxc_open"),
+  keepassxcLock: () => invoke<void>("keepassxc_lock"),
 
   // Tools
-  generatePassword: (options: PasswordOptions) => invoke<Generated>("generate_password", { options }),
+  openUrl: (url: string) => invoke<void>("open_url", { url }),
   generatePassphrase: (options: PassphraseOptions) =>
     invoke<Generated>("generate_passphrase", { options }),
   passwordStrength: (password: string, hints: string[] = []) =>

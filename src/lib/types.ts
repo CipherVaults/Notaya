@@ -22,9 +22,7 @@ export interface Settings {
   unlockBackground: "aurora" | "mesh" | "midnight" | "plain";
   idleLockMinutes: number;
   lockOnMinimize: boolean;
-  clipboardClearSeconds: number;
   screenCaptureProtection: boolean;
-  breachCheckEnabled: boolean;
   stickyDefaultColor: string;
 }
 
@@ -95,92 +93,6 @@ export interface Sticky {
   updated: number;
 }
 
-export interface CustomField {
-  name: string;
-  value: string;
-  secret: boolean;
-}
-
-export interface PasswordHistory {
-  password: string;
-  changed: number;
-}
-
-export interface Login {
-  id: string;
-  title: string;
-  username: string;
-  password: string;
-  urls: string[];
-  notes: string;
-  totp: string;
-  fields: CustomField[];
-  tags: string[];
-  folder: string;
-  favorite: boolean;
-  color: string;
-  created: number;
-  updated: number;
-  passwordChanged: number;
-  history: PasswordHistory[];
-}
-
-export interface LoginSummary {
-  id: string;
-  title: string;
-  username: string;
-  url: string;
-  folder: string;
-  tags: string[];
-  favorite: boolean;
-  color: string;
-  hasTotp: boolean;
-  updated: number;
-  passwordChanged: number;
-}
-
-export interface LoginInput {
-  id: string | null;
-  title: string;
-  username: string;
-  password: string;
-  urls: string[];
-  notes: string;
-  totp: string;
-  fields: CustomField[];
-  tags: string[];
-  folder: string;
-  favorite: boolean;
-  color: string;
-}
-
-export interface TotpCode {
-  code: string;
-  remaining: number;
-  period: number;
-}
-
-export interface HealthIssue {
-  id: string;
-  title: string;
-  username: string;
-  detail: string;
-}
-
-export interface Health {
-  total: number;
-  score: number;
-  weak: HealthIssue[];
-  reused: HealthIssue[];
-  old: HealthIssue[];
-}
-
-export interface ImportResult {
-  imported: number;
-  skipped: number;
-  path: string;
-}
-
 export interface Generated {
   value: string;
   entropy: number;
@@ -194,15 +106,6 @@ export interface Strength {
   suggestions: string[];
 }
 
-export interface PasswordOptions {
-  length: number;
-  lower: boolean;
-  upper: boolean;
-  digits: boolean;
-  symbols: boolean;
-  avoidAmbiguous: boolean;
-}
-
 export interface PassphraseOptions {
   words: number;
   separator: string;
@@ -211,10 +114,24 @@ export interface PassphraseOptions {
 }
 
 export interface SearchHit {
-  kind: "page" | "login" | "sticky" | "notebook";
+  kind: "page" | "sticky" | "notebook";
   id: string;
   title: string;
   subtitle: string;
   snippet: string;
   score: number;
+}
+
+/** The bundled KeePassXC, which holds the passwords (amendment A9). */
+export interface KeePassXCStatus {
+  /** KeePassXC is present next to Cipherleaf. */
+  installed: boolean;
+  /** Its executable matches the verified 2.8.0 release. */
+  verified: boolean;
+  version: string;
+  /** The password database that will be opened, if one exists. */
+  database: string | null;
+  dataDir: string;
+  /** KeePassXC was started by Cipherleaf and is still running. */
+  running: boolean;
 }

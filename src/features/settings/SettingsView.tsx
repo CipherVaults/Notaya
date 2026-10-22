@@ -159,19 +159,8 @@ export default function SettingsView() {
           <Row label="Lock when minimized">
             <Switch checked={settings.lockOnMinimize} onChange={(v) => update({ lockOnMinimize: v })} />
           </Row>
-          <Row label={`Clear copied secrets after ${settings.clipboardClearSeconds}s`} hint="Copied secrets are also kept out of Windows clipboard history and cloud sync.">
-            <div className="w-56">
-              <Slider label="Clipboard seconds" value={settings.clipboardClearSeconds} min={5} max={120} step={5} onChange={(v) => update({ clipboardClearSeconds: v })} />
-            </div>
-          </Row>
           <Row label="Block screenshots & screen sharing" hint="Cipherleaf windows appear black in screenshots, recordings and screen shares.">
             <Switch checked={settings.screenCaptureProtection} onChange={(v) => update({ screenCaptureProtection: v })} />
-          </Row>
-          <Row
-            label="Breach checking (online)"
-            hint="Off by default. When used, only the first 5 characters of a SHA-1 hash are sent to Have I Been Pwned, never your password."
-          >
-            <Switch checked={settings.breachCheckEnabled} onChange={(v) => update({ breachCheckEnabled: v })} />
           </Row>
           <Row label="Master password & keyfile">
             <Button variant="outline" size="sm" onClick={() => setChangeOpen(true)}>
@@ -217,13 +206,16 @@ export default function SettingsView() {
             <dt className="text-faint">Key derivation</dt>
             <dd>Argon2id · 256 MiB · 3 passes · 4 lanes, + HKDF-SHA256 with optional keyfile</dd>
             <dt className="text-faint">Network</dt>
-            <dd>None, except the optional breach check</dd>
+            <dd>None. Cipherleaf makes no network connections.</dd>
+            <dt className="text-faint">Passwords</dt>
+            <dd>Kept in the bundled KeePassXC 2.8.0 (GPL), which has its own master password and settings</dd>
           </dl>
           <div className="rounded-2xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
             <div className="mb-1 font-medium text-fg">Good to know</div>
             <ul className="list-disc space-y-1 pl-5">
               <li>There is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
+              <li>Cipherleaf's screenshot blocking and lock-when-unplugged don't cover KeePassXC's window. KeePassXC has its own protections.</li>
               <li>Passphrase words: EFF large wordlist, © Electronic Frontier Foundation, CC BY 3.0 US.</li>
             </ul>
           </div>

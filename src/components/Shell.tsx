@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { KeyRound, Loader2, NotebookPen, Settings as SettingsIcon, StickyNote, Wand2 } from "lucide-react";
+import { KeyRound, Loader2, NotebookPen, Settings as SettingsIcon, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { applyAppearance } from "@/lib/theme";
@@ -9,16 +9,14 @@ import { useApp, type View } from "@/store/app";
 import { Tip } from "./ui";
 import CommandPalette from "./CommandPalette";
 import NotesView from "@/features/notes/NotesView";
-import PasswordsView from "@/features/passwords/PasswordsView";
-import GeneratorView from "@/features/generator/GeneratorView";
+import KeePassXCPanel from "@/features/passwords/KeePassXCPanel";
 import StickyBoard from "@/features/sticky/StickyBoard";
 import SettingsView from "@/features/settings/SettingsView";
 
 const NAV: { view: View; label: string; icon: React.ReactNode; shortcut: string }[] = [
   { view: "notes", label: "Notes", icon: <NotebookPen size={19} />, shortcut: "1" },
   { view: "passwords", label: "Passwords", icon: <KeyRound size={19} />, shortcut: "2" },
-  { view: "generator", label: "Generator", icon: <Wand2 size={19} />, shortcut: "3" },
-  { view: "stickies", label: "Sticky notes", icon: <StickyNote size={19} />, shortcut: "4" },
+  { view: "stickies", label: "Sticky notes", icon: <StickyNote size={19} />, shortcut: "3" },
 ];
 
 export default function Shell() {
@@ -99,8 +97,7 @@ export default function Shell() {
             transition={{ duration: 0.18, ease: "easeOut" }}
           >
             {view === "notes" && <NotesView />}
-            {view === "passwords" && <PasswordsView />}
-            {view === "generator" && <GeneratorView />}
+            {view === "passwords" && <KeePassXCPanel />}
             {view === "stickies" && <StickyBoard />}
             {view === "settings" && <SettingsView />}
           </motion.div>
