@@ -70,3 +70,7 @@ Implemented and checked at build, engine and mock-UI level as in section 5. **No
 The owner opens a sticky note in the dev app (it is running, but needs the rebuilt UI, which hot-reloads), clicks the calculator button, and says what to change.
 
 **Do not repeat:** the calculator engine design.
+
+## Follow-up, 2026-10-23 (owner's report with a screenshot, about 01:42 on the owner's phone clock)
+
+The owner pointed at a white border around the calculator's display (in the small calculator inside a sticky note). Cause: the app's global focus rule (`*:focus-visible`, a 2 px outline) overrides the utility class `outline-none`, so the display input showed a focus outline. Fix: both calculators' expression inputs now set `outline: none` and `box-shadow: none` inline (`MiniCalculator.tsx`, `Calculator.tsx`). Checked in the mock UI: computed outline style `none` and no shadow on the focused input in both calculators; the screenshot shows no border. `tsc` and `npm run build` pass. The release exe and ZIP made before 23:30 UTC did not include this fix; the rebuild at 23:30 UTC does (see [EX-11](2026-10-22-icon-border-fix-and-rebuild.md)).

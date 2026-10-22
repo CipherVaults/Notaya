@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-22 (23:24–23:40) — EX-2026-10-22-11 — Calculator border fix, Cipherleaf app icon (A15), rebuilt portable build
+
+- Report: [2026-10-22-icon-border-fix-and-rebuild.md](2026-10-22-icon-border-fix-and-rebuild.md)
+- Task / Goal: the owner's messages at 23:24:31 (white border), 23:26:19 (icon) and "rebuild and commit"; amendment [A15](../plan/A15-app-icon.md)
+- Executor: Claude (Sonnet 5.5)
+- Outcome: border removed in both calculators; the Cipherleaf icon generated from `assets/cipherleaf-icon.svg` and used by the exe and window; the exe, portable folder and ZIP rebuilt; smoke-tested; committed
+- Integration / review: not applicable
+- Acceptance: pending (the owner's check of the taskbar icon and the calculator)
+- Open dependency / next action: the owner tries the build; A2 and A8 decisions
+
 ### 2026-10-22 (23:14–23:25) — EX-2026-10-22-10 — Fresh portable build; KeePassXC kept for private use
 
 - Report: [2026-10-22-fresh-portable-build.md](2026-10-22-fresh-portable-build.md)
