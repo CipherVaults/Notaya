@@ -2,7 +2,7 @@
 
 This file answers two questions: what is accepted right now, and exactly where work resumes. The two parts stay separate. Update it at meaningful checkpoints, and link to other records rather than copying them.
 
-- **As of:** 2026-10-22, about 14:30 UTC, after A9 D0 and D1 and the first launch
+- **As of:** 2026-10-22, 16:10 UTC, after the owner's first hands-on run and a restart of the dev app without the debug port
 - **Owner and decision-maker:** Mohamed Sayed
 - **Maintained by:** Claude (Claude Code), for the owner
 
@@ -35,9 +35,17 @@ This file answers two questions: what is accepted right now, and exactly where w
 - A1 and A3–A7 evidence; README rewrite.
 - Add `**/.devdata/**` to `server.watch.ignored` in `vite.config.ts` to stop harmless watcher errors in the dev log (not done, because a restart of Vite reloads the open dev window).
 
+### Observed in the owner's first hands-on run (from files only, ~16:03–16:07 UTC)
+
+The owner ran the app and created things before the restart. Claude didn't watch the run; this comes from file evidence in `.devdata\data\`:
+
+- `keepassxc\keepassxc.ini` (16:03) and `Passwords.kdbx` (16:04, valid KeePass signature `03 D9 A2 9A`): the KeePassXC panel started the bundled KeePassXC, which created a database in Cipherleaf's data folder.
+- `vault.clf` (16:05, a valid SQLite file) and `backups\vault-….clf` (16:06): a Cipherleaf vault was created, and a lock wrote its encrypted backup.
+- The owner has not yet reported what looked right or wrong.
+
 ### Blockers and decisions
 
-- **The dev app may still be running with WebView2's local debug port open** (`--remote-debugging-port=9222`, bound to 127.0.0.1) because it was restarted that way to read the first screen. Restart it without the port (`npm run tauri dev` in a fresh shell, with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` unset) before putting any real data in it. Its dev vault is in the ignored `.devdata` folder.
+- **Debug-port exposure (closed at 16:07 UTC).** From about 14:15 until the restart at 16:07 UTC the dev app ran with WebView2's local debug port open (127.0.0.1:9222, any origin). The vault was created during that window. Claude made no connection after reading the first screen. Whether another local program connected is unknown. The dev app now runs without the port (checked: nothing listening on 9222, no WebView2 process with remote debugging). If that vault will hold real data, change its master password (Settings → Master password & keyfile) or create a fresh vault.
 - A2 and A8 need the owner's decision. A1 and A3–A7 need evidence. See [the amendments record](plan/approval-and-amendments.md).
 
 ### Do not repeat

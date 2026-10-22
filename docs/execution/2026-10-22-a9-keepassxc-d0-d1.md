@@ -10,7 +10,7 @@
 
 **Executor / contributors:** Claude in Claude Code (Opus 5.5 until the owner switched the model; Sonnet 5.5 for the resumed D1 UI work).
 
-**Date / time:** 2026-10-22, about 13:08–14:30 UTC (taken from the session transcript and command output).
+**Date / time:** 2026-10-22, from 13:08 UTC (approval) until about 16:10 UTC, with a break while the owner was away. Early times come from the session transcript; the later wall-clock estimates in this file were off by about 1.5 hours, as the system clock showed 16:07 UTC at the restart.
 
 **Authority / task reference:** the owner's instruction at 13:07:49 UTC (A9 approved, pause lifted, downloads allowed). See [`../plan/approval-and-amendments.md`](../plan/approval-and-amendments.md). A pause for the owner's usage limit came at about 13:45 UTC; "continue" followed.
 
