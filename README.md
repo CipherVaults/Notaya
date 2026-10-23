@@ -2,7 +2,7 @@
 
 Cipherleaf is a portable Windows notes app. You write notes in notebooks, sections and pages, keep sticky notes on the desktop, and keep everything in one `data` folder, so the app can run from a folder or a USB stick.
 
-**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and the app has no network code, so nothing is sent anywhere. The only time it reaches the web is when you click a web link in a note, which opens in your normal browser.
+**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Cipherleaf's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup (what it sends was not captured). Your notes are not part of it, but the app is not silent on the network. A web link in a note opens in your normal browser only when you click it.
 
 Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. While it is off your notes are not private: anyone who can open the folder can read them. You can turn security on or off at any time in Settings. A password manager (KeePassXC) is a second optional extra, with its own switch.
 
@@ -26,7 +26,7 @@ Security is an optional extra. It is off by default: Cipherleaf opens straight t
 - **Formatting bar** on selected text: block type, font (Default, Sans, Serif, Mono, Handwriting, Rounded), size, bold, italic, underline, strikethrough, code, link, text color and highlight, alignment and remove formatting. `Ctrl+B`, `Ctrl+I` and `Ctrl+U` work as usual.
 - **Links.** Paste or type a link in the bar. `Ctrl+click` opens a web link in your browser (http and https only).
 - **Pictures.** Add with `/Picture`, paste, or drag and drop. PNG, JPEG, GIF and WebP up to 25 MB. Pictures are stored inside the vault, not as loose files. Align, resize and add a caption.
-- **Equations.** Block and inline, typed as TeX (for example `$x^2$`) and drawn on your PC with no network.
+- **Equations.** Block and inline, typed as TeX (for example `$x^2$`) and drawn on your PC (nothing is fetched for them).
 - **Search.** `Ctrl+K` searches page titles and text, sticky notes and notebook names, or runs a command (with the box empty: New page, New sticky note, Go to Notes, Appearance & settings, Back up vault now, and Lock vault or Passwords (KeePassXC) when those are on).
 - **Autosave.** Pages save about half a second after you stop typing. Text typed just before closing or locking is saved first.
 - **Home screen** with "New page", "New sticky note" and your recently edited pages.
@@ -147,7 +147,7 @@ Close Cipherleaf, then copy the whole folder (`Cipherleaf.exe`, `KeePassXC` and 
 
 Short answers. The full list is in [`docs/security-design.md`](docs/security-design.md).
 
-- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Cipherleaf makes no connections of its own (the page security policy allows only the app's internal channel), and KeePassXC is preset to make none. A web link in a note opens in your browser only when you click it.
+- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Cipherleaf's own code makes no connections (the page security policy allows only the app's internal channel), and KeePassXC is preset to make none. The WebView2 component that Windows uses to draw the window is Microsoft's, and a live test showed it contacting Microsoft addresses at startup; Cipherleaf does not control that and does not claim zero network traffic. A web link in a note opens in your browser only when you click it.
 - **With security on:** notes are encrypted with XChaCha20-Poly1305, with the key derived from your password by Argon2id (256 MiB, 3 passes), and tampering is detected.
 - **With security off, the notes are readable by anyone with the folder.** This is by design, and it is stated in Settings.
 - **The exe is not signed.** Windows SmartScreen may warn. Cipherleaf does not check itself, so a replaced exe would not be noticed.

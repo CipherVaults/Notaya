@@ -301,7 +301,7 @@ export default function SettingsView() {
             <dt className="text-faint">Key derivation</dt>
             <dd>{securityOn ? "Argon2id · 256 MiB · 3 passes · 4 lanes, + HKDF-SHA256 with optional keyfile" : "None while security is off: the notes use a built-in key, so they are not secret"}</dd>
             <dt className="text-faint">Network</dt>
-            <dd>None. Cipherleaf makes no network connections.</dd>
+            <dd>Cipherleaf's own code makes none. The Windows WebView2 component that draws the window may contact Microsoft at startup.</dd>
             <dt className="text-faint">Passwords</dt>
             <dd>Optional. Kept in the bundled KeePassXC 2.8.0 (GPL), which has its own master password and settings</dd>
             <dt className="text-faint">Credits</dt>
