@@ -335,7 +335,7 @@ Dev app: `npm run tauri dev` (dev vault in `.devdata\`). Refresh PATH in a new s
   - Sticky delete confirm and calculator +/- in a real window; the Passwords view in the release exe; typing inside the embedded KeePassXC.
   - V3c (pulling a USB drive locks the app), a real USB stick, a PC without the VC++ runtime, code signing and SmartScreen, the icon in the real taskbar.
   - `cargo audit`; the security-review skill on the code; A1 and A3 to A7 evidence.
-- **Test leftovers:** none any more. All 827 leftover `cipherleaf-*` folders in `%TEMP%` (test vaults, KeePassXC test copies) and four throwaway browser profiles in the old session scratch folder were deleted on 2026-10-23 with the owner's approval, after checking that nothing was running and none was newer than 30 minutes.
+- **Test leftovers:** none left after the cleanup (tests create new ones; 71 had appeared by 21:45 UTC). All 827 leftover `cipherleaf-*` folders in `%TEMP%` (test vaults, KeePassXC test copies) and four throwaway browser profiles in the old session scratch folder were deleted on 2026-10-23 with the owner's approval, after checking that nothing was running and none was newer than 30 minutes.
 
 ---
 

@@ -114,8 +114,8 @@ These hashes were copied from the records, not recomputed for this file. Recompu
 | `gh` (GitHub CLI 2.103.0) | Installed; signed in as `AbyssWatcher2`; token held by the Windows credential store |
 | Git | Branch `feat/a9-keepassxc`; `git status --short` printed nothing when this file's work began (clean); `origin/main` and `origin/feat/a9-keepassxc` both equal `7c40246` |
 | Uncommitted work | None. This file, the history file and `tools\` were committed and pushed (`f7912fb`); on 2026-10-23 the PC working tree was clean and matched GitHub. **Run `git status --short` first** and treat anything else as unknown. |
-| Test scripts | Until `tools\` is committed they live only in the session scratchpad, which a new session cannot see. |
-| Leftovers | None. All 827 leftover `cipherleaf-*` folders in `%TEMP%` (test vaults, KeePassXC test copies) and four throwaway browser profiles in the old session scratch folder were deleted on 2026-10-23 with the owner's approval, after checking that nothing was running and none was newer than 30 minutes. (This file first said "about 88"; the real count was 827.) |
+| Test scripts | `tools\` is committed (`f7912fb`); the older drafts in the first session's scratchpad are superseded. |
+| Leftovers | None left after the cleanup (running tests creates new ones; 71 had appeared by 21:45 UTC). All 827 leftover `cipherleaf-*` folders in `%TEMP%` (test vaults, KeePassXC test copies) and four throwaway browser profiles in the old session scratch folder were deleted on 2026-10-23 with the owner's approval, after checking that nothing was running and none was newer than 30 minutes. (This file first said "about 88"; the real count was 827.) |
 
 ### 4.6 Evidence limits
 
