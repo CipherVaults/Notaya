@@ -10,6 +10,8 @@ export interface VaultStatus {
   earlierCopies: boolean;
   /** A vault with security off could not be opened (for example a damaged file). */
   openError: string | null;
+  /** The vault header could be read, so keyfileRequired is known. */
+  headerOk: boolean;
   dataDir: string;
   version: string;
 }

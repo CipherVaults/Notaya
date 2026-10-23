@@ -118,6 +118,26 @@ pub fn restore_passwords(state: State<'_, AppState>, source: String) -> Result<R
     Ok(RestoreResult { undo_file })
 }
 
+/// "Start over" on the lock screen: sets the vault aside as
+/// `set-aside-<ms>.clf` in the data folder, so the first-run screen shows again.
+/// Only while locked. Nothing is deleted; the old vault can be brought back with
+/// "Restore from a backup" and its own password. The KeePassXC passwords file is
+/// not touched. Returns the set-aside file's name.
+#[tauri::command(async)]
+pub fn start_over(state: State<'_, AppState>) -> Result<String> {
+    if state.is_unlocked() {
+        return Err(Error::invalid("Lock the vault first."));
+    }
+    // Not while a restore is moving the same files.
+    let _gate = RESTORE_GATE.lock().unwrap_or_else(|e| e.into_inner());
+    // And not while the vault is being opened or created at start-up.
+    let _open_gate = state.open_gate();
+    if state.is_unlocked() {
+        return Err(Error::invalid("Lock the vault first."));
+    }
+    restore::set_aside(&state.paths, crate::model::now_ms().max(0) as u64)
+}
+
 /// Replaces the vault with a backup. Checks the backup first (header, every
 /// record and attachment, with the given password and keyfile), keeps the old
 /// vault as `restore-undo-<ms>.clf`, then unlocks the restored vault.
@@ -240,6 +260,6 @@ mod tests {
         let payload = restore_failed_payload(&e);
         assert!(payload.starts_with("restore-failed: "));
         assert_eq!(payload, "restore-failed: The backup was restored but could not be opened afterwards.");
-        assert_eq!(restore_failed_payload(&Error::BadCredentials), "restore-failed: Wrong password or keyfile.");
+        assert_eq!(restore_failed_payload(&Error::BadCredentials), "restore-failed: Wrong master password or keyfile for this Cipherleaf vault.");
     }
 }

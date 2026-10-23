@@ -83,6 +83,16 @@ Existing vaults keep their saved screenshot setting (it cannot be told apart fro
 - Crash between the two renames of a restore: the app now shows the "No notes found here" screen (Restore or Start new notes), not "Create your vault".
 - The suggested-passphrase Copy button now lives in the Turn on security dialog. The clipboard is not cleared automatically.
 
+## Start over (A20) in the notes-first flow
+
+A20 ([record](A20-start-over-and-unlock-wording.md)) was merged into `main` while this change was open, and this branch merges it. How the two work together:
+
+- The lock screen of a protected vault keeps its "Start over..." link and the typed START OVER confirmation. The dialog now says that new notes start without a password and that security can be turned on later in Settings.
+- The "Your notes could not be opened" screen (a vault that opens without a password but cannot be read) also has "Start over...", so a damaged open vault is not a dead end.
+- `start_over` also holds the start-up open gate, so it cannot run while the app is opening or creating a vault.
+- A `set-aside-*.clf` file counts as an earlier copy. After Start over the app therefore shows "No notes found here" (Restore from a backup, or Start new notes), not a silent new vault. Turning security on never deletes a set-aside file.
+- The unlock-screen keyfile hint, the clearer wrong-password text and the keyfile-location warning from A20 are kept as they are.
+
 ## Notes stay local
 
 Added at the owner's request, 2026-10-23, 19:02:09 UTC ("also the notes will be saved localy"). This was already true and is now stated in the README: notes are stored only in `data\vault.clf` (plus backups in `data\backups`) next to the app. No cloud, account or sync. A check of `src-tauri/src` and `src` found no HTTP client, socket or `fetch` call; `src-tauri/Cargo.toml` has no network crate; the CSP `connect-src` allows only the app's internal channel (plus the dev server in dev mode). The one outward action is `open_url`, which opens a link from a note in the default browser, only when the person clicks it. The check is a source search, not a packet capture, so it is not a proof of no traffic from the WebView or KeePassXC.

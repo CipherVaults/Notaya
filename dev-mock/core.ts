@@ -105,6 +105,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
         exists,
         unlocked,
         keyfileRequired: false,
+        headerOk: true,
         securityOn,
         earlierCopies: !exists,
         openError: null,
@@ -128,9 +129,12 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       settings.passwordsEnabled = !!args.enabled;
       return ok({ ...settings });
     case "unlock_vault":
-      if (args.password === "wrong") throw "Wrong password or keyfile.";
+      if (args.password === "wrong") throw "Wrong master password or keyfile for this Cipherleaf vault.";
       unlocked = true;
       return ok(null);
+    case "start_over":
+      exists = false;
+      return ok("set-aside-1792700000000.clf");
     case "lock_vault":
       if (!securityOn) return ok(null);
       unlocked = false;

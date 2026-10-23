@@ -29,6 +29,8 @@ pub struct VaultStatus {
     earlier_copies: bool,
     /// A vault with security off could not be opened (for example a damaged file).
     open_error: Option<String>,
+    /// The vault's header could be read, so `keyfile_required` is known and not a guess.
+    header_ok: bool,
     data_dir: String,
     version: String,
 }
@@ -84,20 +86,20 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
     let open_error = auto_open(&app, &state);
     let exists = state.paths.vault.exists();
     let unlocked = state.is_unlocked();
-    let (keyfile_required, security_on) = if unlocked {
+    let (keyfile_required, security_on, header_ok) = if unlocked {
         // Also while unlocked: turning security off needs the keyfile again.
         match state.with(|s| Ok((s.keyfile_required()?, !s.is_open()))) {
-            Ok(v) => v,
-            Err(_) => (false, true),
+            Ok((k, on)) => (k, on, true),
+            Err(_) => (false, true, false),
         }
     } else if exists {
         match Session::read_header(&state.paths.vault) {
-            Ok(h) => (h.keyfile_required, !h.open),
+            Ok(h) => (h.keyfile_required, !h.open, true),
             // Unreadable: treat it as protected, so it is never shown as an open vault.
-            Err(_) => (false, true),
+            Err(_) => (false, true, false),
         }
     } else {
-        (false, false)
+        (false, false, true)
     };
     Ok(VaultStatus {
         exists,
@@ -106,6 +108,7 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
         security_on,
         earlier_copies: !exists && openvault::has_earlier_copies(&state.paths),
         open_error,
+        header_ok,
         data_dir: state.paths.data.display().to_string(),
         version: app.package_info().version.to_string(),
     })

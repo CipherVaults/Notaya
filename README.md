@@ -20,7 +20,7 @@ Security is an optional extra. It is off by default: Cipherleaf opens straight t
 - **Sticky notes** on the desktop.
 - **Calculators.** A basic and scientific calculator sits under the sticky notes list, and a small one inside each sticky note. Nothing you calculate is saved.
 - **Themes and fonts.** Black, Graphite, White, Paper, or follow Windows. Accent colors, four fonts, text size, page width, density, and an optional Mica or Acrylic window material on Windows 11.
-- **Backups and restore.** When the vault closes or locks after changes, an automatic backup is saved to `data\backups` (the last 10 are kept). You can restore a backup inside the app. A restore checks the backup first and keeps your current file as a `restore-undo-...` file. Nothing is deleted.
+- **Backups and restore.** When the vault closes or locks after changes, an automatic backup is saved to `data\backups` (the last 10 are kept). You can restore a backup inside the app. A restore checks the backup first and keeps your current file as a `restore-undo-...` file. Nothing is deleted. **Start over** (on the lock screen of a protected vault, or when the notes file can't be opened) sets that file aside as `set-aside-....clf` so you can start new notes; nothing is deleted, and you can bring the old file back with Restore.
 - **Safe to close.** Text you typed just before closing is saved first.
 - **Portable.** Everything lives in the `data` folder next to `Cipherleaf.exe`. Copy the folder to move your notes. Do not share `data\` with other people, it holds your notes.
 

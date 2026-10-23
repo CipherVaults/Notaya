@@ -2,13 +2,14 @@
 //! copies of the vault that are readable by anyone, and removing them on request.
 //!
 //! "Earlier copies" are the automatic backups (`data/backups/vault-*.clf`) and the
-//! old vaults a restore keeps (`data/restore-undo-*.clf`).
+//! old vaults a restore keeps (`data/restore-undo-*.clf`) and the vaults "Start over"
+//! sets aside (`data/set-aside-*.clf`).
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::portable::Paths;
-use crate::restore::{is_backup_name, UNDO_PREFIX};
+use crate::restore::{is_backup_name, SET_ASIDE_PREFIX, UNDO_PREFIX};
 use crate::vault::Session;
 
 fn names_in(dir: &Path, wanted: fn(&str) -> bool) -> Vec<PathBuf> {
@@ -27,10 +28,16 @@ fn is_undo_name(name: &str) -> bool {
     name.starts_with(UNDO_PREFIX) && name.ends_with(".clf")
 }
 
-/// Every earlier copy of the vault in the data folder.
+fn is_set_aside_name(name: &str) -> bool {
+    name.starts_with(SET_ASIDE_PREFIX) && name.ends_with(".clf")
+}
+
+/// Every earlier copy of the vault in the data folder, including a vault the person set
+/// aside with "Start over" (it is never deleted either).
 pub fn earlier_copies(paths: &Paths) -> Vec<PathBuf> {
     let mut all = names_in(&paths.backups, is_backup_name);
     all.extend(names_in(&paths.data, is_undo_name));
+    all.extend(names_in(&paths.data, is_set_aside_name));
     all
 }
 
@@ -105,5 +112,15 @@ mod tests {
         let paths = paths();
         assert!(!has_earlier_copies(&paths));
         assert!(unprotected_copies(&paths).is_empty());
+    }
+
+    #[test]
+    fn a_vault_set_aside_by_start_over_counts_as_an_earlier_copy_and_is_never_deleted() {
+        let paths = paths();
+        drop(Session::create_open(&paths.data.join("set-aside-9.clf")).unwrap());
+        assert!(has_earlier_copies(&paths));
+        assert!(unprotected_copies(&paths).is_empty());
+        assert_eq!(delete_unprotected(&paths), 0);
+        assert!(paths.data.join("set-aside-9.clf").exists());
     }
 }

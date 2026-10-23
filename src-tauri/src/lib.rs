@@ -131,6 +131,7 @@ pub fn run() {
             backup_cmd::list_backups,
             backup_cmd::pick_backup_file,
             backup_cmd::restore_vault,
+            backup_cmd::start_over,
             backup_cmd::list_password_backups,
             backup_cmd::pick_passwords_backup_file,
             backup_cmd::restore_passwords,
