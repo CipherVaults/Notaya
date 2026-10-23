@@ -165,6 +165,20 @@ pub struct Settings {
     pub lock_on_minimize: bool,
     pub screen_capture_protection: bool,
     pub sticky_default_color: String,
+    /// The Passwords (KeePassXC) feature is switched on (A21). `None` in a vault saved
+    /// before A21: the app then treats it as on only if a passwords file already exists.
+    #[serde(default = "passwords_unset")]
+    pub passwords_enabled: Option<bool>,
+}
+
+fn passwords_unset() -> Option<bool> {
+    None
+}
+
+/// Whether the Passwords feature is on. A vault saved before A21 has no choice yet;
+/// it counts as on only if a passwords file already exists, so nobody loses the panel.
+pub fn resolve_passwords(flag: Option<bool>, passwords_file_exists: bool) -> bool {
+    flag.unwrap_or(passwords_file_exists)
 }
 
 impl Default for Settings {
@@ -180,8 +194,11 @@ impl Default for Settings {
             unlock_background: "midnight".into(),
             idle_lock_minutes: 5,
             lock_on_minimize: false,
-            screen_capture_protection: true,
+            // Off by default, always (A21). The person turns it on in Settings, and it
+            // only has an effect while security is on.
+            screen_capture_protection: false,
             sticky_default_color: "yellow".into(),
+            passwords_enabled: Some(false),
         }
     }
 }
@@ -204,5 +221,32 @@ impl Settings {
         self.font_size = self.font_size.clamp(12, 22);
         self.idle_lock_minutes = self.idle_lock_minutes.clamp(1, 240);
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn passwords_default_to_off_for_new_vaults_and_on_for_old_ones_with_a_file() {
+        assert_eq!(Settings::default().passwords_enabled, Some(false));
+        assert!(!Settings::default().screen_capture_protection);
+        assert!(!resolve_passwords(Some(false), true));
+        assert!(resolve_passwords(Some(true), false));
+        assert!(resolve_passwords(None, true));
+        assert!(!resolve_passwords(None, false));
+    }
+
+    #[test]
+    fn a_settings_record_saved_before_a20_loads_with_the_choice_unset() {
+        let old = r#"{"kind":"settings","theme":"paper","screenCaptureProtection":true}"#;
+        match serde_json::from_str::<Item>(old).unwrap() {
+            Item::Settings(s) => {
+                assert_eq!(s.passwords_enabled, None);
+                assert!(s.screen_capture_protection, "a saved choice is kept");
+            }
+            _ => panic!("expected settings"),
+        }
     }
 }

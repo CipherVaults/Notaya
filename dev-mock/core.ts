@@ -2,9 +2,12 @@
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
 const params = new URLSearchParams(location.search);
-const startState = params.get("s") ?? "app"; // create | lock | app
-let unlocked = startState === "app";
-let exists = startState !== "create";
+// app = notes with security off | secure = security on, unlocked | lock = security on, locked
+// | start = no vault but earlier copies exist (create is an alias of start)
+const startState = params.get("s") ?? "app";
+let securityOn = startState === "secure" || startState === "lock";
+let unlocked = startState === "app" || startState === "secure";
+let exists = startState !== "create" && startState !== "start";
 
 const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
@@ -20,8 +23,9 @@ const settings: Record<string, unknown> = {
   unlockBackground: params.get("bg") ?? "midnight",
   idleLockMinutes: 5,
   lockOnMinimize: false,
-  screenCaptureProtection: true,
+  screenCaptureProtection: false,
   stickyDefaultColor: "yellow",
+  passwordsEnabled: params.get("pw") === "1",
 };
 
 const tree = {
@@ -97,11 +101,33 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
   const ok = (v: unknown) => v as T;
   switch (cmd) {
     case "vault_status":
-      return ok({ exists, unlocked, keyfileRequired: false, headerOk: true, dataDir: "E:\\Cipherleaf\\data", version: "1.0.0" });
-    case "create_vault":
+      return ok({
+        exists,
+        unlocked,
+        keyfileRequired: false,
+        headerOk: true,
+        securityOn,
+        earlierCopies: !exists,
+        openError: null,
+        dataDir: "E:\\Cipherleaf\\data",
+        version: "1.0.0",
+      });
+    case "start_notes":
       exists = true;
       unlocked = true;
+      securityOn = false;
       return ok(null);
+    case "enable_security":
+      if (String(args.password ?? "").length < 10) throw "Use at least 10 characters for your master password.";
+      securityOn = true;
+      return ok({ removedCopies: args.removeUnprotectedCopies ? 3 : 0, backupFailed: false });
+    case "disable_security":
+      if (args.currentPassword === "wrong") throw "Wrong password or keyfile.";
+      securityOn = false;
+      return ok(null);
+    case "set_passwords_enabled":
+      settings.passwordsEnabled = !!args.enabled;
+      return ok({ ...settings });
     case "unlock_vault":
       if (args.password === "wrong") throw "Wrong master password or keyfile for this Cipherleaf vault.";
       unlocked = true;
@@ -110,6 +136,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       exists = false;
       return ok("set-aside-1792700000000.clf");
     case "lock_vault":
+      if (!securityOn) return ok(null);
       unlocked = false;
       return ok(null);
     case "list_backups":
@@ -125,6 +152,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       const undoFile = exists ? "restore-undo-1792700000000.clf" : null;
       exists = true;
       unlocked = true;
+      securityOn = !!args.password;
       return ok({ undoFile });
     }
     case "list_password_backups":
@@ -168,8 +196,6 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;
       return ok({ score, guessesLog10: len, crackTime: score > 2 ? "centuries" : "2 minutes", warning: null, suggestions: [] });
     }
-    case "generate_passphrase":
-      return ok({ value: "Tiger-Lamp-Orbit-Silver-Maple-Harbor7", entropy: 80 });
     case "keepassxc_status":
       return ok({ ...kpxc });
     case "search":

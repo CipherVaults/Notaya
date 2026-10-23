@@ -19,6 +19,8 @@ import { useApp } from "@/store/app";
 
 export default function CommandPalette() {
   const open = useApp((s) => s.paletteOpen);
+  const securityOn = useApp((s) => s.status?.securityOn ?? false);
+  const passwordsOn = useApp((s) => s.settings?.passwordsEnabled === true);
   const setOpen = useApp((s) => s.setPaletteOpen);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
@@ -119,10 +121,14 @@ export default function CommandPalette() {
                   <Action icon={<FilePlus2 size={16} />} label="New page" onSelect={() => run(() => { const s = useApp.getState(); s.setView("notes"); s.setIntent("new-page"); })} className={itemClass} />
                   <Action icon={<StickyNote size={16} />} label="New sticky note" onSelect={() => run(async () => { await api.createSticky(true); useApp.getState().setStickies(await api.listStickies()); })} className={itemClass} />
                   <Action icon={<NotebookPen size={16} />} label="Go to Notes" onSelect={() => run(() => useApp.getState().setView("notes"))} className={itemClass} />
-                  <Action icon={<KeyRound size={16} />} label="Passwords (KeePassXC)" onSelect={() => run(() => useApp.getState().setView("passwords"))} className={itemClass} />
+                  {passwordsOn && (
+                    <Action icon={<KeyRound size={16} />} label="Passwords (KeePassXC)" onSelect={() => run(() => useApp.getState().setView("passwords"))} className={itemClass} />
+                  )}
                   <Action icon={<Palette size={16} />} label="Appearance & settings" onSelect={() => run(() => useApp.getState().setView("settings"))} className={itemClass} />
-                  <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Encrypted backup saved."); })} className={itemClass} />
-                  <Action icon={<Lock size={16} />} label="Lock vault" hint="Ctrl L" onSelect={() => run(() => api.lockVault())} className={itemClass} />
+                  <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Backup saved."); })} className={itemClass} />
+                  {securityOn && (
+                    <Action icon={<Lock size={16} />} label="Lock vault" hint="Ctrl L" onSelect={() => run(() => api.lockVault())} className={itemClass} />
+                  )}
                 </Command.Group>
               )}
             </Command.List>

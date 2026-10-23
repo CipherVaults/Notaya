@@ -5,6 +5,7 @@ mod error;
 mod generator;
 mod keepassxc;
 mod model;
+mod openvault;
 mod portable;
 mod pwbackup;
 mod restore;
@@ -71,7 +72,11 @@ pub fn run() {
         })
         .setup(move |app| {
             paths.ensure_dirs()?;
-            ui::build_main(app.handle(), &paths)?;
+            // Hidden from screenshots only if the vault has a master password: its lock screen
+            // comes first. A vault with security off, or none yet, is never hidden (A21).
+            let protect = paths.vault.exists()
+                && vault::Session::read_header(&paths.vault).map(|h| !h.open).unwrap_or(true);
+            ui::build_main(app.handle(), &paths, protect)?;
             state::spawn_monitor(app.handle().clone());
             Ok(())
         })
@@ -105,7 +110,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             vault_cmd::vault_status,
-            vault_cmd::create_vault,
+            vault_cmd::start_notes,
+            vault_cmd::enable_security,
+            vault_cmd::disable_security,
+            vault_cmd::set_passwords_enabled,
             vault_cmd::unlock_vault,
             vault_cmd::lock_vault,
             vault_cmd::change_master,
@@ -163,7 +171,6 @@ pub fn run() {
             keepassxc_cmd::keepassxc_hide,
             keepassxc_cmd::keepassxc_detach,
             keepassxc_cmd::keepassxc_lock,
-            tools::generate_passphrase,
             tools::password_strength,
             tools::open_url,
             tools::search,

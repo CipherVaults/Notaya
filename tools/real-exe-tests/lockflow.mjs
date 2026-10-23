@@ -49,7 +49,9 @@ const main = await connect(isMain);
 await sleep(1500);
 
 if (phase === "setup") {
-  console.log("create vault:", JSON.stringify(await main.inv("create_vault", { password, keyfile: null })));
+  // A21: the first run opens an open vault by itself; give it a master password so it can lock.
+  await main.inv("vault_status");
+  console.log("turn security on:", JSON.stringify(await main.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: false })));
   // The PC may have been idle for more than the 5-minute auto-lock: raise it at once (throwaway vault only).
   { const s = (await main.inv("get_settings")).ok; console.log("idle lock raised:", s ? JSON.stringify((await main.inv("save_settings", { settings: { ...s, idleLockMinutes: 180 } })).ok?.idleLockMinutes) : "settings unavailable (already locked?)"); }
   await main.ev("location.reload()");

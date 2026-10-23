@@ -3,14 +3,9 @@ use tauri::{AppHandle, State};
 use zeroize::Zeroizing;
 
 use crate::error::{Error, Result};
-use crate::generator::{self, Generated, PassphraseOptions, Strength};
+use crate::generator::{self, Strength};
 use crate::model::Item;
 use crate::state::AppState;
-
-#[tauri::command]
-pub fn generate_passphrase(options: PassphraseOptions) -> Result<Generated> {
-    generator::passphrase(&options)
-}
 
 #[tauri::command]
 pub fn password_strength(password: String, hints: Vec<String>) -> Strength {

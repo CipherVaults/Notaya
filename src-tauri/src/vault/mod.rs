@@ -25,6 +25,8 @@ pub struct Session {
     vault_id: [u8; 16],
     store: Store,
     items: HashMap<String, Item>,
+    /// Security is off (amendment A21): the data key is wrapped under the built-in key.
+    open: bool,
     /// True once anything changed since unlock; triggers a backup on lock.
     pub dirty: bool,
 }
@@ -55,6 +57,23 @@ impl Session {
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
+            open: false,
+            dirty: true,
+        };
+        session.put(Item::Settings(Settings::default()))?;
+        Ok(session)
+    }
+
+    /// Creates a new vault with security off: no master password, opened by the built-in key.
+    pub fn create_open(path: &Path) -> Result<Session> {
+        let (header, dek) = Header::create_open()?;
+        let store = Store::create(path, &header)?;
+        let mut session = Session {
+            dek,
+            vault_id: header.vault_id,
+            store,
+            items: HashMap::new(),
+            open: true,
             dirty: true,
         };
         session.put(Item::Settings(Settings::default()))?;
@@ -69,6 +88,18 @@ impl Session {
         let store = Store::open(path)?;
         let header = store.read_header()?;
         let dek = header.unlock(password, keyfile)?;
+        Self::load(store, header, dek)
+    }
+
+    /// Opens a vault that has security off. Fails with `BadCredentials` if the vault has a master password.
+    pub fn unlock_open(path: &Path) -> Result<Session> {
+        let store = Store::open(path)?;
+        let header = store.read_header()?;
+        let dek = header.unlock_open()?;
+        Self::load(store, header, dek)
+    }
+
+    fn load(store: Store, header: Header, dek: Key) -> Result<Session> {
         let mut items = HashMap::new();
         for (id, data) in store.all(Table::Records)? {
             let plain = crypto::open(&dek, &aad(&header.vault_id, Table::Records, &id), &data)?;
@@ -78,7 +109,33 @@ impl Session {
             }
             items.insert(item.id().to_string(), item);
         }
-        Ok(Session { dek, vault_id: header.vault_id, store, items, dirty: false })
+        Ok(Session { dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false })
+    }
+
+    /// Opens a vault file whichever way it is protected: a vault with security off needs
+    /// no credentials (they are ignored), any other needs the password and keyfile.
+    pub fn unlock_any(path: &Path, password: &str, keyfile: Option<&[u8; 32]>) -> Result<Session> {
+        if Self::read_header(path)?.open {
+            Self::unlock_open(path)
+        } else {
+            Self::unlock(path, password, keyfile)
+        }
+    }
+
+    /// Whether the vault file needs a keyfile besides the master password.
+    pub fn keyfile_required(&self) -> Result<bool> {
+        Ok(self.store.read_header()?.keyfile_required)
+    }
+
+    /// True when security is off for this vault.
+    pub fn is_open(&self) -> bool {
+        self.open
+    }
+
+    /// Whether the app's windows are hidden from screenshots: only while security is on
+    /// and the person switched the setting on (it is off by default).
+    pub fn protects_capture(&self) -> bool {
+        !self.open && self.settings().screen_capture_protection
     }
 
     fn seal_item(&self, item: &Item) -> Result<(RowId, Vec<u8>)> {
@@ -221,6 +278,9 @@ impl Session {
         new_keyfile: Option<&[u8; 32]>,
         kdf: KdfParams,
     ) -> Result<()> {
+        if self.open {
+            return Err(Error::invalid("Security is off. Turn it on to set a master password."));
+        }
         let header = self.store.read_header()?;
         let check = header.unlock(current_password, current_keyfile)?;
         if *check != *self.dek {
@@ -228,6 +288,60 @@ impl Session {
         }
         let new_header = header.rewrap(&self.dek, new_password, new_keyfile, kdf)?;
         self.store.write_header(&new_header)?;
+        self.dirty = true;
+        Ok(())
+    }
+
+    /// Turns security on for an open vault: the notes get a master password (and keyfile).
+    ///
+    /// The vault is re-keyed, not just re-wrapped: a fresh data key and vault id, with every
+    /// record and attachment re-encrypted, all in one transaction (all or nothing). Otherwise
+    /// a copy made while security was off, which anyone can open, would still open this vault's
+    /// later data, because it would share the data key.
+    pub fn make_protected(&mut self, password: &str, keyfile: Option<&[u8; 32]>, kdf: KdfParams) -> Result<()> {
+        if !self.open {
+            return Err(Error::invalid("This vault already has a master password."));
+        }
+        self.rekey(false, |dek, id| Header::protected_for(dek, id, password, keyfile, kdf))
+    }
+
+    /// Turns security off for a protected vault. The current master password (and
+    /// keyfile) must be given and must open the file, so a stray call can't do it.
+    /// Re-keys the vault like `make_protected`, so older protected copies stay unreadable
+    /// to anyone who only has the new, open file.
+    pub fn make_open(&mut self, current_password: &str, current_keyfile: Option<&[u8; 32]>) -> Result<()> {
+        if self.open {
+            return Err(Error::invalid("Security is already off."));
+        }
+        let header = self.store.read_header()?;
+        let check = header.unlock(current_password, current_keyfile)?;
+        if *check != *self.dek {
+            return Err(Error::BadCredentials);
+        }
+        self.rekey(true, |dek, id| Header::open_for(dek, id))
+    }
+
+    /// Gives the vault a fresh data key and vault id, re-encrypts every record and attachment
+    /// (one at a time, so memory stays small) and writes the new header, all in one
+    /// transaction. On any error nothing changes, in the file or in memory.
+    fn rekey(&mut self, open_after: bool, header_for: impl FnOnce(&Key, [u8; 16]) -> Result<Header>) -> Result<()> {
+        let new_dek = crypto::random_key();
+        let new_id = crypto::random_bytes::<16>();
+        let header = header_for(&new_dek, new_id)?;
+        let (old_dek, old_id) = (&self.dek, self.vault_id);
+        self.store.transaction(|s| {
+            for table in [Table::Records, Table::Attachments] {
+                for id in s.ids(table)? {
+                    let sealed = s.get(table, &id)?.ok_or(Error::Corrupt)?;
+                    let plain = crypto::open(old_dek, &aad(&old_id, table, &id), &sealed)?;
+                    s.put(table, &id, &crypto::seal(&new_dek, &aad(&new_id, table, &id), &plain))?;
+                }
+            }
+            s.write_header(&header)
+        })?;
+        self.dek = new_dek;
+        self.vault_id = new_id;
+        self.open = open_after;
         self.dirty = true;
         Ok(())
     }
@@ -428,5 +542,146 @@ mod tests {
             Item::Page(p) => assert!(p.icon.is_empty() && p.cover.is_empty()),
             _ => panic!("expected a page"),
         }
+    }
+
+    #[test]
+    fn an_open_vault_reopens_without_a_password_and_keeps_its_notes() {
+        let path = temp_vault();
+        let p = page("plain notes");
+        let pid = p.id().to_string();
+        {
+            let mut s = Session::create_open(&path).unwrap();
+            assert!(s.is_open());
+            s.put(p).unwrap();
+        }
+        let s = Session::unlock_open(&path).unwrap();
+        assert!(s.is_open());
+        assert!(matches!(s.get(&pid), Some(Item::Page(pg)) if pg.text == "plain notes"));
+        assert!(!s.settings().screen_capture_protection, "screenshot protection is off by default");
+    }
+
+    #[test]
+    fn an_open_vault_is_still_in_the_encrypted_format() {
+        let path = temp_vault();
+        {
+            let mut s = Session::create_open(&path).unwrap();
+            s.put(page("TopSecretDiaryPhrase")).unwrap();
+        }
+        let raw = std::fs::read(&path).unwrap();
+        assert!(!raw.windows(20).any(|w| w == b"TopSecretDiaryPhrase"));
+        assert!(!raw.windows(5).any(|w| w == b"Diary"));
+    }
+
+    #[test]
+    fn a_protected_vault_does_not_open_without_its_password() {
+        let path = temp_vault();
+        drop(Session::create(&path, "pw", None, FAST).unwrap());
+        assert!(matches!(Session::unlock_open(&path), Err(Error::BadCredentials)));
+    }
+
+    #[test]
+    fn turning_security_on_and_off_keeps_every_note() {
+        let path = temp_vault();
+        let kf = crypto::random_bytes::<32>();
+        let p = page("survives both");
+        let pid = p.id().to_string();
+        let att;
+        {
+            let mut s = Session::create_open(&path).unwrap();
+            s.put(p).unwrap();
+            att = s.put_attachment("image/png", b"pixels").unwrap();
+            // Turn on.
+            s.make_protected("new-password", Some(&kf), FAST).unwrap();
+            assert!(!s.is_open());
+            assert!(s.make_protected("again", None, FAST).is_err(), "already protected");
+        }
+        assert!(matches!(Session::unlock_open(&path), Err(Error::BadCredentials)));
+        assert!(Session::unlock(&path, "new-password", None).is_err());
+        {
+            let mut s = Session::unlock(&path, "new-password", Some(&kf)).unwrap();
+            assert!(!s.is_open());
+            assert!(s.get(&pid).is_some());
+            assert_eq!(s.get_attachment(&att).unwrap().1, b"pixels".to_vec());
+            // Wrong password or keyfile changes nothing.
+            assert!(matches!(s.make_open("wrong", Some(&kf)), Err(Error::BadCredentials)));
+            assert!(matches!(s.make_open("new-password", None), Err(Error::BadCredentials)));
+            assert!(!s.is_open());
+            s.change_credentials("new-password", Some(&kf), "newer-password", None, FAST).unwrap();
+            // Turn off.
+            s.make_open("newer-password", None).unwrap();
+            assert!(s.is_open());
+            assert!(s.make_open("newer-password", None).is_err(), "already open");
+            assert!(s.change_credentials("x", None, "y", None, FAST).is_err(), "no password to change");
+        }
+        let s = Session::unlock_open(&path).unwrap();
+        assert!(s.get(&pid).is_some());
+        assert_eq!(s.get_attachment(&att).unwrap().1, b"pixels".to_vec());
+        assert!(Session::unlock(&path, "newer-password", None).is_err());
+    }
+
+    #[test]
+    fn the_open_flag_is_read_back_from_the_file() {
+        let path = temp_vault();
+        drop(Session::create_open(&path).unwrap());
+        assert!(Session::read_header(&path).unwrap().open);
+        let path2 = temp_vault();
+        drop(Session::create(&path2, "pw", None, FAST).unwrap());
+        assert!(!Session::read_header(&path2).unwrap().open);
+    }
+
+    #[test]
+    fn turning_security_on_or_off_gives_a_fresh_data_key() {
+        let path = temp_vault();
+        let old_copy = path.with_file_name("old-open-copy.clf");
+        let mut s = Session::create_open(&path).unwrap();
+        s.put(page("secret text")).unwrap();
+        s.backup_to(&old_copy).unwrap(); // a copy made while security was off: anyone can open it
+        let open_key = Session::read_header(&old_copy).unwrap().unlock_open().unwrap();
+        let id_before = Session::read_header(&path).unwrap().vault_id;
+
+        s.make_protected("Correct-Horse-Battery-9", None, FAST).unwrap();
+        let h = Session::read_header(&path).unwrap();
+        let prot_key = h.unlock("Correct-Horse-Battery-9", None).unwrap();
+        assert_ne!(*open_key, *prot_key, "the old open copy's key must not open the protected vault");
+        assert_ne!(h.vault_id, id_before);
+        // The records of the live vault do not open with the old key.
+        let swapped = std::fs::read(&path).unwrap();
+        assert!(!swapped.windows(11).any(|w| w == b"secret text"));
+
+        let protected_copy = path.with_file_name("protected-copy.clf");
+        s.backup_to(&protected_copy).unwrap();
+        s.make_open("Correct-Horse-Battery-9", None).unwrap();
+        let h2 = Session::read_header(&path).unwrap();
+        let open_key2 = h2.unlock_open().unwrap();
+        // After turning security off, the key of the earlier protected copy is not the open vault's key.
+        assert_ne!(*prot_key, *open_key2);
+        assert_ne!(h2.vault_id, h.vault_id);
+        drop(s);
+        // Everything still opens: the live open vault, and the protected copy with its password.
+        let live = Session::unlock_open(&path).unwrap();
+        assert_eq!(live.items().filter(|i| matches!(i, Item::Page(_))).count(), 1);
+        assert!(Session::unlock(&protected_copy, "Correct-Horse-Battery-9", None).is_ok());
+        // The protected copy's records are not readable with the open vault's key.
+        assert!(Session::unlock_open(&protected_copy).is_err());
+    }
+
+    #[test]
+    fn a_failed_rekey_changes_nothing() {
+        let path = temp_vault();
+        let mut s = Session::create_open(&path).unwrap();
+        let att = s.put_attachment("image/png", b"pixels").unwrap();
+        s.put(page("keep")).unwrap();
+        // Corrupt one attachment row so the re-encryption fails part way.
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute("UPDATE attachments SET data = x'00010203'", []).unwrap();
+        }
+        assert!(s.make_protected("Correct-Horse-Battery-9", None, FAST).is_err());
+        assert!(s.is_open(), "still open");
+        drop(s);
+        // The header is still the open one and the records still open.
+        let again = Session::unlock_open(&path).unwrap();
+        assert_eq!(again.items().filter(|i| matches!(i, Item::Page(_))).count(), 1);
+        let _ = att;
     }
 }

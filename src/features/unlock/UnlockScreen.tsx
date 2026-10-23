@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimationControls } from "motion/react";
-import { ArrowRight, Check, Copy, FileKey2, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, FileKey2, Loader2, NotebookPen, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { cachedAppearance } from "@/lib/theme";
-import type { Strength } from "@/lib/types";
 import { useApp } from "@/store/app";
-import { Button, Modal, StrengthMeter } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 import Logo from "@/components/Logo";
 import LockBackdrop from "./Backdrop";
-import { copyText, KeyfileChip, PasswordInput } from "./fields";
+import { KeyfileChip, PasswordInput } from "./fields";
 import RestoreDialog from "./RestoreDialog";
 
 export default function UnlockScreen() {
@@ -25,14 +24,18 @@ export default function UnlockScreen() {
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="relative w-[440px] max-w-[92vw]"
       >
-        {status.exists ? (
+        {!status.exists ? (
+          <StartCard />
+        ) : status.securityOn ? (
           <UnlockCard keyfileRequired={status.keyfileRequired} headerOk={status.headerOk} dataDir={status.dataDir} />
         ) : (
-          <CreateCard dataDir={status.dataDir} />
+          <ProblemCard message={status.openError} dataDir={status.dataDir} />
         )}
-        <p className="mt-6 text-center text-xs text-faint">
-          Encrypted with XChaCha20-Poly1305 · Argon2id · Stored only on this drive
-        </p>
+        {status.exists && status.securityOn && (
+          <p className="mt-6 text-center text-xs text-faint">
+            Encrypted with XChaCha20-Poly1305 · Argon2id · Stored only on this drive
+          </p>
+        )}
       </motion.div>
     </div>
   );
@@ -98,7 +101,7 @@ function UnlockCard({
             <Logo size={34} />
           </motion.div>
           <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mt-1 text-sm text-muted">Enter your master password to unlock your vault.</p>
+          <p className="mt-1 text-sm text-muted">Enter your master password to unlock your notes.</p>
         </div>
 
         <div className="space-y-3">
@@ -121,7 +124,10 @@ function UnlockCard({
           {!headerOk && (
             <p className="text-xs text-warn">
               The vault file couldn't be read, so Cipherleaf can't tell whether it needs a keyfile. It may be damaged, or
-              another program (antivirus or a sync tool) may be using it.
+              another program (antivirus or a sync tool) may be using it.{" "}
+              <button type="button" onClick={() => void refreshStatus().catch(() => {})} className="font-medium underline">
+                Check again
+              </button>
             </p>
           )}
           <AnimatePresence>
@@ -180,65 +186,100 @@ function UnlockCard({
   );
 }
 
-/** Shows a suggested passphrase in plain sight so it can be read, written down or copied. */
-function SuggestedPassphrase({ value }: { value: string }) {
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const copied = copyState === "copied";
+/** Shown when there is no vault file but earlier copies exist: never start empty without asking. */
+function StartCard() {
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const refreshStatus = useApp((s) => s.refreshStatus);
+  const earlierCopies = useApp((s) => s.status?.earlierCopies ?? false);
+  const openError = useApp((s) => s.status?.openError ?? null);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
-  // A new suggestion starts fresh.
-  useEffect(() => {
-    clearTimeout(timer.current);
-    setCopyState("idle");
-  }, [value]);
-
-  const copy = async () => {
-    const ok = await copyText(value);
-    setCopyState(ok ? "copied" : "failed");
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setCopyState("idle"), ok ? 2000 : 3000);
+  const start = async () => {
+    setBusy(true);
+    try {
+      await api.startNotes();
+      await refreshStatus();
+    } catch (e) {
+      toast.error(errorText(e));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="space-y-2 rounded-2xl border border-accent/40 bg-accent-soft p-4">
-      <div className="text-xs font-medium uppercase tracking-wider text-faint">Your suggested passphrase</div>
-      <div className="flex items-start gap-3">
-        {/* May wrap only after a hyphen. The <wbr /> adds no characters, so copying and selecting give the exact phrase. */}
-        <div
-          className="selectable min-w-0 flex-1 font-mono text-lg font-semibold leading-snug text-fg"
-          style={{ overflowWrap: "normal", wordBreak: "normal" }}
-        >
-          {value.split("-").map((part, i, all) => (
-            <span key={i}>
-              {part}
-              {i < all.length - 1 && (
-                <>
-                  -<wbr />
-                </>
-              )}
-            </span>
-          ))}
+    <Card>
+      <div className="mb-6 flex flex-col items-center text-center">
+        <div className="mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft">
+          <Logo size={34} />
         </div>
-        <Button variant="outline" size="sm" onClick={copy} className="shrink-0">
-          {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy"}
+        <h1 className="text-2xl font-semibold tracking-tight">{earlierCopies ? "No notes found here" : "Notes could not be started"}</h1>
+        <p className="mt-1 text-sm text-muted">
+          {earlierCopies
+            ? "This folder has earlier copies of your notes (backups or a vault that was set aside) but no current notes file. Restore a backup to get your notes back, or start new notes."
+            : (openError ?? "A new notes file could not be created in this folder. Check that the folder can be written to.")}
+        </p>
+      </div>
+      <div className="space-y-3">
+        <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)}>
+          Restore from a backup…
+        </Button>
+        <Button variant="outline" size="lg" className="w-full" onClick={start} disabled={busy}>
+          {busy ? (
+            <>
+              <Loader2 size={17} className="animate-spin" /> Starting…
+            </>
+          ) : (
+            <>
+              <NotebookPen size={17} /> Start new notes
+            </>
+          )}
+        </Button>
+        <p className="text-center text-xs text-faint">Your backups are not deleted either way.</p>
+      </div>
+      <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists={false} />
+    </Card>
+  );
+}
+
+/** A notes file that opens without a password could not be opened (for example it is damaged). */
+function ProblemCard({ message, dataDir }: { message: string | null; dataDir: string }) {
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const refreshStatus = useApp((s) => s.refreshStatus);
+  const [startOverOpen, setStartOverOpen] = useState(false);
+  return (
+    <Card>
+      <div className="mb-6 flex flex-col items-center text-center">
+        <div className="mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft">
+          <TriangleAlert size={30} className="text-warn" />
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Your notes could not be opened</h1>
+        <p className="mt-1 text-sm text-muted">{message ?? "The notes file could not be read."}</p>
+      </div>
+      <div className="space-y-3">
+        <Button variant="outline" size="lg" className="w-full" onClick={() => void refreshStatus().catch(() => {})}>
+          Try again
+        </Button>
+        <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)}>
+          Restore from a backup…
         </Button>
       </div>
-      <span role="status" aria-live="polite" className={copyState === "failed" ? "block text-xs text-danger" : "sr-only"}>
-        {copied ? "Copied to the clipboard" : copyState === "failed" ? "Couldn't copy - select the text and press Ctrl+C" : ""}
-      </span>
-      <p className="text-sm leading-relaxed text-fg">
-        Write this down on paper or save it in a password manager. Then type it again in the second box.
-      </p>
-      <p className="text-xs leading-relaxed text-muted">
-        Copying puts it on the clipboard. Windows may keep clipboard history (Win+V), so clear it after you have pasted it.
-      </p>
-    </div>
+      <div className="pt-3 text-center">
+        <button
+          type="button"
+          onClick={() => setStartOverOpen(true)}
+          className="rounded-md px-2 py-1 text-sm font-medium text-muted underline-offset-4 hover:text-fg hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-soft"
+        >
+          Start over…
+        </button>
+      </div>
+      <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists />
+      <StartOverDialog open={startOverOpen} onOpenChange={setStartOverOpen} dataDir={dataDir} />
+    </Card>
   );
 }
 
 /**
- * "Start over": sets the vault aside (renamed, never deleted) so a new one can be made.
+ * "Start over": sets the vault aside (renamed, never deleted) so new notes can be started.
  * The old one can be brought back later with "Restore from a backup" and its own password.
  */
 function StartOverDialog({
@@ -274,7 +315,7 @@ function StartOverDialog({
       const name = await api.startOver();
       onOpenChange(false);
       toast.success(
-        `Your old vault is kept as ${name} in the data folder (one level above the backups folder). To get it back, use "Already have a backup? Restore it" and choose that file.`,
+        `Your old vault is kept as ${name} in the data folder (one level above the backups folder). To get it back, use "Restore from a backup…" and choose that file.`,
         { duration: 20000 },
       );
       await refreshStatus().catch(() => {});
@@ -290,7 +331,7 @@ function StartOverDialog({
     <Modal
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
-      title="Start over with a new vault"
+      title="Start over with new notes"
       description="For when this vault won't open and you want to begin again."
       width={500}
     >
@@ -300,10 +341,13 @@ function StartOverDialog({
             Nothing is deleted. The current vault is renamed to <span className="font-mono text-fg">set-aside-….clf</span>{" "}
             in <span className="break-all font-mono text-fg">{dataDir}</span>.
           </li>
-          <li>You then create a new vault with a new master password. It starts empty.</li>
           <li>
-            To get the old vault back later, use "Already have a backup? Restore it", choose that file and enter its
-            old master password (and keyfile).
+            You then choose "Start new notes" (or restore a backup). New notes open without a password; you can turn on
+            a master password later in Settings.
+          </li>
+          <li>
+            To get the old vault back later, use "Restore from a backup…", choose that file and enter its old master
+            password (and keyfile).
           </li>
           <li>The KeePassXC passwords file is not touched and keeps its own password.</li>
         </ul>
@@ -329,187 +373,5 @@ function StartOverDialog({
         </div>
       </div>
     </Modal>
-  );
-}
-
-function CreateCard({ dataDir }: { dataDir: string }) {
-  const [step, setStep] = useState<0 | 1>(0);
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [strength, setStrength] = useState<Strength | null>(null);
-  const [keyfile, setKeyfile] = useState<string | null>(null);
-  const [understood, setUnderstood] = useState(false);
-  const [busy, setBusy] = useState(false);
-  // The suggested passphrase, shown so it can be read and copied. Kept in this component only.
-  const [suggested, setSuggested] = useState<string | null>(null);
-  const [restoreOpen, setRestoreOpen] = useState(false);
-  const refreshStatus = useApp((s) => s.refreshStatus);
-  const seq = useRef(0);
-
-  useEffect(() => {
-    const id = ++seq.current;
-    if (!password) {
-      setStrength(null);
-      return;
-    }
-    const t = setTimeout(async () => {
-      const s = await api.passwordStrength(password, ["cipherleaf"]);
-      if (id === seq.current) setStrength(s);
-    }, 120);
-    return () => clearTimeout(t);
-  }, [password]);
-
-  const strongEnough = password.length >= 10 && (strength?.score ?? 0) >= 3;
-  const matches = password === confirm;
-
-  const suggest = async () => {
-    const g = await api.generatePassphrase({ words: 6, separator: "-", capitalize: true, includeNumber: true });
-    setPassword(g.value);
-    setConfirm("");
-    setSuggested(g.value);
-    toast.info("Suggested a passphrase. It is shown below; write it down first.");
-  };
-
-  const changePassword = (v: string) => {
-    setPassword(v);
-    // Hide the box as soon as the password is edited to something else.
-    if (v !== suggested) setSuggested(null);
-  };
-
-  const create = async () => {
-    setBusy(true);
-    try {
-      await api.createVault(password, keyfile);
-      setPassword("");
-      setConfirm("");
-      setSuggested(null);
-      await refreshStatus();
-      toast.success("Your vault is ready.");
-    } catch (e) {
-      toast.error(errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      <div className="mb-6 flex flex-col items-center text-center">
-        <div className="mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft">
-          <Logo size={34} />
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Create your vault</h1>
-        <p className="mt-1 text-sm text-muted">
-          {step === 0
-            ? "Choose one strong master password. It is the only key to everything inside."
-            : "Optional: add a keyfile as a second factor."}
-        </p>
-      </div>
-
-      <AnimatePresence mode="wait" initial={false}>
-        {step === 0 ? (
-          <motion.div
-            key="pw"
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -16 }}
-            className="space-y-3"
-          >
-            <PasswordInput value={password} onChange={changePassword} placeholder="Master password" autoFocus />
-            {strength && <StrengthMeter score={strength.score} label={`~${strength.crackTime} to crack`} />}
-            {strength?.warning && <p className="text-xs text-warn">{strength.warning}</p>}
-            <PasswordInput
-              value={confirm}
-              onChange={setConfirm}
-              placeholder="Type it again"
-              onEnter={() => strongEnough && matches && setStep(1)}
-            />
-            {confirm && !matches && <p className="text-xs text-danger">The passwords don't match yet.</p>}
-            <button onClick={suggest} className="flex items-center gap-1.5 text-xs font-medium text-accent hover:underline">
-              <Sparkles size={13} /> Suggest a strong passphrase
-            </button>
-            {suggested && <SuggestedPassphrase value={suggested} />}
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full"
-              disabled={!strongEnough || !matches}
-              onClick={() => setStep(1)}
-            >
-              Continue <ArrowRight size={17} />
-            </Button>
-            {!strongEnough && password && (
-              <p className="text-center text-xs text-faint">Use at least 10 characters and reach "Strong".</p>
-            )}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setRestoreOpen(true)}
-                className="rounded-md px-2 py-1 text-sm font-medium text-fg underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-soft"
-              >
-                Already have a backup? Restore it
-              </button>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="kf"
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 16 }}
-            className="space-y-4"
-          >
-            <div className="rounded-2xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
-              <div className="mb-2 flex items-center gap-2 font-medium text-fg">
-                <FileKey2 size={16} className="text-accent" /> Keyfile (recommended for maximum security)
-              </div>
-              With a keyfile, someone who steals your vault <em>and</em> learns your password still can't open it
-              without the file. Keep it on a different drive than the vault.
-            </div>
-            {keyfile ? (
-              <KeyfileChip path={keyfile} onClear={() => setKeyfile(null)} dataDir={dataDir} />
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={async () => setKeyfile(await api.createKeyfile().catch(() => null))}>
-                  Create new
-                </Button>
-                <Button variant="outline" onClick={async () => setKeyfile(await api.pickKeyfile())}>
-                  Use existing
-                </Button>
-              </div>
-            )}
-            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-warn/30 bg-warn/5 p-4 text-sm leading-relaxed">
-              <input
-                type="checkbox"
-                checked={understood}
-                onChange={(e) => setUnderstood(e.target.checked)}
-                className="mt-1 h-4 w-4 accent-[var(--accent)]"
-              />
-              <span className="text-muted">
-                I understand there is <strong className="text-fg">no password reset</strong>. If I forget my master
-                password{keyfile ? " or lose my keyfile" : ""}, my data cannot be recovered by anyone.
-              </span>
-            </label>
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setStep(0)}>
-                Back
-              </Button>
-              <Button variant="primary" size="lg" className="flex-1" disabled={!understood || busy} onClick={create}>
-                {busy ? (
-                  <>
-                    <Loader2 size={17} className="animate-spin" /> Creating vault…
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck size={17} /> Create vault
-                  </>
-                )}
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists={false} />
-    </Card>
   );
 }

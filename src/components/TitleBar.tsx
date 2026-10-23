@@ -10,6 +10,8 @@ const win = getCurrentWindow();
 
 export default function TitleBar() {
   const unlocked = useApp((s) => s.status?.unlocked ?? false);
+  // The Lock button exists only while security is on (a vault without a password has nothing to lock).
+  const securityOn = useApp((s) => s.status?.securityOn ?? false);
   const setPaletteOpen = useApp((s) => s.setPaletteOpen);
   const sidebarOpen = useApp((s) => s.sidebarOpen);
   const setSidebarOpen = useApp((s) => s.setSidebarOpen);
@@ -63,7 +65,7 @@ export default function TitleBar() {
       </div>
 
       <div className="flex items-center">
-        {unlocked && (
+        {unlocked && securityOn && (
           <button
             onClick={() => api.lockVault()}
             className="mr-1 flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg"

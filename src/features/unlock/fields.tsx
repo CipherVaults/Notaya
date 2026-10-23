@@ -102,39 +102,3 @@ export function KeyfileChip({
     </div>
   );
 }
-
-/**
- * Puts text on the clipboard, with the older fallback if the page may not use the clipboard API.
- * Returns true only if the copy really worked.
- */
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Fall through to the older way.
-  }
-  const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.setAttribute("aria-hidden", "true");
-  ta.setAttribute("readonly", "");
-  ta.tabIndex = -1;
-  ta.style.position = "fixed";
-  ta.style.top = "0";
-  ta.style.left = "0";
-  ta.style.opacity = "0";
-  ta.style.pointerEvents = "none";
-  document.body.append(ta);
-  let ok = false;
-  try {
-    ta.select();
-    ok = document.execCommand("copy");
-  } catch {
-    ok = false;
-  } finally {
-    ta.remove();
-    previous?.focus();
-  }
-  return ok;
-}

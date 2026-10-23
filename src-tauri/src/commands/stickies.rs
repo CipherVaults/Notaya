@@ -43,7 +43,7 @@ pub fn create_sticky(app: AppHandle, state: State<'_, AppState>, open: bool) -> 
             updated: now,
         };
         s.put(Item::Sticky(st.clone()))?;
-        Ok((st, settings.screen_capture_protection))
+        Ok((st, s.protects_capture()))
     })?;
     if open {
         ui::open_sticky(&app, &state.paths, &st, protect)?;
@@ -106,7 +106,7 @@ pub fn open_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> Re
         let mut st = sticky(s, &id)?;
         st.open = true;
         s.put(Item::Sticky(st.clone()))?;
-        Ok((st, s.settings().screen_capture_protection))
+        Ok((st, s.protects_capture()))
     })?;
     ui::open_sticky(&app, &state.paths, &st, protect)?;
     Ok(())

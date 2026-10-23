@@ -14,6 +14,24 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (owner message 20:12:53 UTC for A22; the credits message time and work times not recorded), EX-2026-10-23-18: Credits for open source components and the suggested passphrase removed (A22)
+
+- Report: [2026-10-23-credits-and-passphrase-removal.md](2026-10-23-credits-and-passphrase-removal.md)
+- Task / Goal: the owner's request for credits and copyright for all open source used (`THIRD-PARTY-NOTICES.md`, Settings, About, README) and "Remove suggest a strong passphrase" (20:12:53 UTC); amendment A22 in [approval-and-amendments.md](../plan/approval-and-amendments.md)
+- Executor: Claude (Claude Code), with an independent completeness check of the notices (model output)
+- Outcome: credits committed (`503dd8b`, `d77eb63`). A22 committed as `d3171e5` (follow-up `1efad95`). The suggested passphrase, the `generate_passphrase` command, the `eff-wordlist` crate (declared AGPL-3.0) and `random_below` are removed; the strength meter stays. `tsc`, `npm run build` and the Tauri-free core harness (73 tests) passed in the cloud container. On the owner's PC at `d3171e5` (throwaway data, 2026-10-23 evening): build 0 errors, `cargo test --lib` 127 of 127, clippy 0 errors and 5 library warnings, release build ok, real-exe scripts passing (optional security 52/52, restore flow 13/13) and 11 of 11 real-window checks. On `1efad95` the PC re-ran `cargo test --lib` 127 of 127, clippy, release build (exe SHA-256 `3FC9AD340788B84DF61FFF1990A9B5E02492EA873DEB4AB1D5532D6250C7C341`), optional security 52/52, restore flow 13/13 and the licenses dialog; lock-flow and passwords scripts not re-run. Not run: `testD1`, USB removal, idle, Win+L and sleep, the stable portable build, `cargo audit`.
+- Acceptance: pending (the owner has not reviewed it)
+
+### 2026-10-23 (18:32:20 to 18:47:35, owner message times; work times not recorded), EX-2026-10-23-17: Notes first: security and passwords optional (A21)
+
+- Report: [2026-10-23-notes-first-optional-security.md](2026-10-23-notes-first-optional-security.md)
+- Task / Goal: the owner's messages at 18:32:20, 18:34:11, 18:35:23, 18:39:02 (agreeing to three security confirmations), 18:40:15 and 18:47:35; amendment [A21](../plan/A21-notes-first-optional-security.md)
+- Executor: Claude (Claude Code), with a README helper agent, two independent security review agents (read-only), a README fact-check agent and a PC remote session
+- Outcome: Cipherleaf is a notes app first. A new vault is open (no password, never locks, screenshot protection off, not confidential). Security (master password, auto-lock, screenshot protection) and Passwords (KeePassXC) are separate switches in Settings. README rewritten. Built and pushed on branch `claude/project-thread-sv2tfm` (`84b281d`, `0929ae5`; draft [PR #3](https://github.com/AbyssWatcher2/CipherLeaf/pull/3)). Review fixes in `f9d2676` (turning security on or off re-keys the vault; restore confirmation; quit and Passwords safeguards). The Rust core passes 69 unit tests in a Tauri-free harness (13 new for A21); the UI type-checks and builds; screens seen in the mock UI. On the owner's PC at `5ef5b07` (2026-10-23, throwaway data): the app crate builds, `cargo test --lib` 130 of 130, clippy 0 errors and 5 library warnings, real-exe scripts passing (optional security 52 of 52, restore flow 13 of 13). Not run: `testD1`, anything on the owner's real vault, USB removal, idle, Win+L and sleep on a real PC, a portable build or ZIP, `cargo audit`.
+- Integration / review: one independent security review (read-only agent) found 2 high, 3 medium and 6 low issues; the fixes are in `f9d2676` and "low 10" was not changed; a second independent review found no high issues and judged the fixes correct, with follow-ups in `dc5860a`; agent reports are model output; Claude checked the README against the code
+- Acceptance: pending (the owner reviews A21 on a real PC)
+- Open dependency / next action: the owner reviews draft PR #3 and A21 and merges when satisfied (a portable build and ZIP wait for the go-ahead); the owner also decides the saved screenshot setting of existing vaults and the restore-undo files; A2 and A8 decisions
+
 ### 2026-10-23 (17:04–17:35 UTC) — EX-2026-10-23-16 — Unlock after moving the portable folder; Start over, clearer errors, keyfile warning (A20)
 
 - Report: [2026-10-23-start-over-and-unlock-wording.md](2026-10-23-start-over-and-unlock-wording.md)

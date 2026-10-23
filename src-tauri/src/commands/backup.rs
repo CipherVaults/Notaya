@@ -14,6 +14,10 @@ use crate::state::{self, AppState};
 use crate::{keepassxc, pwbackup};
 use crate::vault::Session;
 
+/// Start of the error returned when a restore would turn security off and was not confirmed.
+/// The UI recognises it and asks the person to confirm.
+pub const SECURITY_OFF_CONFIRM: &str = "SECURITY_OFF: This backup was made while security was off. Restoring it will turn security off for your notes, so they will open without a password. Tick the box to confirm.";
+
 /// Lets only one restore run at a time (they share one temporary file).
 static RESTORE_GATE: Mutex<()> = Mutex::new(());
 
@@ -54,6 +58,9 @@ pub fn list_password_backups(state: State<'_, AppState>) -> Result<Vec<BackupInf
 
 #[tauri::command(async)]
 pub fn pick_passwords_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
+    if !state.passwords_on() {
+        return Err(Error::invalid(PASSWORDS_OFF));
+    }
     let mut dialog = app
         .dialog()
         .file()
@@ -70,6 +77,8 @@ pub fn pick_passwords_backup_file(app: AppHandle, state: State<'_, AppState>) ->
     Ok(Some(path.display().to_string()))
 }
 
+const PASSWORDS_OFF: &str = "Passwords is turned off. Turn it on in Settings first.";
+
 const KEEPASSXC_OPEN: &str = "KeePassXC is still open. Finish there (it may be asking to save), close it, and try again.";
 
 /// Replaces the KeePassXC passwords file with a backup. Only while Cipherleaf is
@@ -81,6 +90,9 @@ const KEEPASSXC_OPEN: &str = "KeePassXC is still open. Finish there (it may be a
 pub fn restore_passwords(state: State<'_, AppState>, source: String) -> Result<RestoreResult> {
     if !state.is_unlocked() {
         return Err(Error::Locked);
+    }
+    if !state.passwords_on() {
+        return Err(Error::invalid(PASSWORDS_OFF));
     }
     // One restore at a time (they share one temporary file and the picked path).
     let _gate = RESTORE_GATE.lock().unwrap_or_else(|e| e.into_inner());
@@ -118,6 +130,8 @@ pub fn start_over(state: State<'_, AppState>) -> Result<String> {
     }
     // Not while a restore is moving the same files.
     let _gate = RESTORE_GATE.lock().unwrap_or_else(|e| e.into_inner());
+    // And not while the vault is being opened or created at start-up.
+    let _open_gate = state.open_gate();
     if state.is_unlocked() {
         return Err(Error::invalid("Lock the vault first."));
     }
@@ -136,6 +150,7 @@ pub fn restore_vault(
     source: String,
     password: String,
     keyfile: Option<String>,
+    allow_security_off: Option<bool>,
 ) -> Result<RestoreResult> {
     let password = Zeroizing::new(password);
     state.check_rate_limit()?;
@@ -159,8 +174,19 @@ pub fn restore_vault(
         return Err(e);
     }
 
+    // A backup made while security was off would turn security off for a vault that has a
+    // master password. That needs the person's explicit confirmation.
+    let live_protected =
+        state.paths.vault.exists() && Session::read_header(&state.paths.vault).map(|h| !h.open).unwrap_or(true);
+    if live_protected && restore::staged_is_open(&state.paths).unwrap_or(false) && allow_security_off != Some(true) {
+        restore::remove_temp(&state.paths);
+        return Err(Error::invalid(SECURITY_OFF_CONFIRM));
+    }
+
     // The old vault file can only be replaced once it is closed: save the
     // windows' pending edits, make the normal backup, wipe the session.
+    // No other window may open or create a vault while the file is swapped.
+    let _open_gate = state.open_gate();
     let locked_here = state.is_unlocked();
     if locked_here {
         state::lock(&app, "restore");
@@ -201,7 +227,7 @@ fn install_and_open(
         }
     };
 
-    match Session::unlock(&state.paths.vault, password, kf) {
+    match Session::unlock_any(&state.paths.vault, password, kf) {
         Ok(session) => {
             state.set_session(session);
             after_unlock(app, state);

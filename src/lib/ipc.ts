@@ -5,12 +5,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { flushAll } from "./flush";
 import type {
   BackupInfo,
-  Generated,
+  EnableSecurityResult,
   KeePassXCStatus,
   NotesTree,
   Page,
   PageMeta,
-  PassphraseOptions,
   RestoreResult,
   SearchHit,
   Settings,
@@ -22,8 +21,15 @@ import type {
 export const api = {
   // Vault
   vaultStatus: () => invoke<VaultStatus>("vault_status"),
-  createVault: (password: string, keyfile: string | null) =>
-    invoke<void>("create_vault", { password, keyfile }),
+  // Start new notes (no master password) when there is no vault but earlier copies exist
+  startNotes: () => invoke<void>("start_notes"),
+  // Security is optional: turn the master password on or off at any time
+  enableSecurity: (password: string, keyfile: string | null, removeUnprotectedCopies: boolean) =>
+    invoke<EnableSecurityResult>("enable_security", { password, keyfile, removeUnprotectedCopies }),
+  disableSecurity: (currentPassword: string, currentKeyfile: string | null) =>
+    invoke<void>("disable_security", { currentPassword, currentKeyfile }),
+  // The Passwords (KeePassXC) feature is optional too
+  setPasswordsEnabled: (enabled: boolean) => invoke<Settings>("set_passwords_enabled", { enabled }),
   unlockVault: (password: string, keyfile: string | null) =>
     invoke<void>("unlock_vault", { password, keyfile }),
   lockVault: async () => {
@@ -44,8 +50,8 @@ export const api = {
   // Restore from a backup (works while locked). `source` is a backup name or a full path.
   listBackups: () => invoke<BackupInfo[]>("list_backups"),
   pickBackupFile: () => invoke<string | null>("pick_backup_file"),
-  restoreVault: (source: string, password: string, keyfile: string | null) =>
-    invoke<RestoreResult>("restore_vault", { source, password, keyfile }),
+  restoreVault: (source: string, password: string, keyfile: string | null, allowSecurityOff = false) =>
+    invoke<RestoreResult>("restore_vault", { source, password, keyfile, allowSecurityOff }),
   // Start over (only while locked): sets the vault aside and returns its new file name.
   startOver: () => invoke<string>("start_over"),
   // Restore the KeePassXC passwords file (only while unlocked). `source` is a backup name or a full path.
@@ -118,8 +124,6 @@ export const api = {
 
   // Tools
   openUrl: (url: string) => invoke<void>("open_url", { url }),
-  generatePassphrase: (options: PassphraseOptions) =>
-    invoke<Generated>("generate_passphrase", { options }),
   passwordStrength: (password: string, hints: string[] = []) =>
     invoke<Strength>("password_strength", { password, hints }),
   search: (query: string) => invoke<SearchHit[]>("search", { query }),

@@ -18,6 +18,8 @@ export default function Shell() {
   const view = useApp((s) => s.view);
   const setView = useApp((s) => s.setView);
   const settings = useApp((s) => s.settings);
+  const securityOn = useApp((s) => s.status?.securityOn ?? false);
+  const passwordsOn = useApp((s) => s.settings?.passwordsEnabled === true);
   const loadVault = useApp((s) => s.loadVault);
   const setPaletteOpen = useApp((s) => s.setPaletteOpen);
   const sidebarOpen = useApp((s) => s.sidebarOpen);
@@ -43,7 +45,7 @@ export default function Shell() {
         setPaletteOpen(true);
       } else if (k === "l") {
         e.preventDefault();
-        api.lockVault();
+        if (securityOn) api.lockVault();
       } else if (k === ",") {
         e.preventDefault();
         setView("settings");
@@ -52,12 +54,17 @@ export default function Shell() {
         setSidebarOpen(!useApp.getState().sidebarOpen);
       } else if (SHORTCUTS[k]) {
         e.preventDefault();
-        setView(SHORTCUTS[k]);
+        if (SHORTCUTS[k] !== "passwords" || passwordsOn) setView(SHORTCUTS[k]);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setPaletteOpen, setView, setSidebarOpen]);
+  }, [setPaletteOpen, setView, setSidebarOpen, securityOn, passwordsOn]);
+
+  // The Passwords page exists only while that feature is switched on.
+  useEffect(() => {
+    if (settings && !passwordsOn && view === "passwords") setView("notes");
+  }, [settings, passwordsOn, view, setView]);
 
   if (!ready) {
     return (
@@ -82,7 +89,7 @@ export default function Shell() {
             transition={{ duration: 0.14, ease: "easeOut" }}
           >
             {view === "notes" && <NotesView />}
-            {view === "passwords" && <KeePassXCPanel />}
+            {view === "passwords" && passwordsOn && <KeePassXCPanel />}
             {view === "stickies" && <StickyBoard />}
             {view === "settings" && <SettingsView />}
           </motion.div>

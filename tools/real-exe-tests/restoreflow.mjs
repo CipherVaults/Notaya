@@ -45,7 +45,9 @@ const pageText = async () => {
   return p ? (await m.inv("get_page", { id: p.id })).ok?.text : "(no page)";
 };
 
-console.log("create vault:", JSON.stringify(await m.inv("create_vault", { password, keyfile: null })));
+// A21: the first run opens an open vault by itself; give it a master password so it can lock.
+await m.inv("vault_status");
+console.log("turn security on:", JSON.stringify(await m.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: false })));
 // The PC may have been idle for more than the 5-minute auto-lock: raise it at once (throwaway vault only).
 { const s = (await m.inv("get_settings")).ok; console.log("idle lock raised:", s ? JSON.stringify((await m.inv("save_settings", { settings: { ...s, idleLockMinutes: 180 } })).ok?.idleLockMinutes) : "settings unavailable (already locked?)"); }
 await m.ev("location.reload()"); await sleep(4000);
