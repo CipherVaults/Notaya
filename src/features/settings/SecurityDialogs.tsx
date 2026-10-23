@@ -219,7 +219,7 @@ export function DisableSecurityDialog({
         onOpenChange(o);
       }}
       title="Turn off security"
-      description="Your notes are kept. Cipherleaf will open them without asking for a password."
+      description="Your notes are kept, with a new key (this takes a moment). Cipherleaf will then open them without asking for a password."
       width={500}
     >
       <div className="space-y-4">

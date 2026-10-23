@@ -38,14 +38,14 @@ By default security is **off**. Notes open straight away, nothing locks, and scr
 
 Open Settings and find "Security".
 
-- **Turn on:** Cipherleaf asks you to choose a master password (with a strength check, a suggested passphrase and an optional keyfile) and to confirm that there is no password reset. It also asks whether to delete earlier backups that were made while security was off (these can be read by anyone, see below). Turning security on only re-wraps the key. It is quick and does not touch your notes.
-- **Turn off:** Cipherleaf asks for your current password (and keyfile). It then shows warnings. After that, the notes open without a password again.
+- **Turn on:** Cipherleaf asks you to choose a master password (with a strength check, a suggested passphrase and an optional keyfile) and to confirm that there is no password reset. It also asks whether to delete earlier automatic backups that were made while security was off (these can be read by anyone, see below). Old vaults that a restore kept (`restore-undo-...` files) and backup copies you saved yourself are never deleted. Turning security on gives your notes a new key and re-encrypts all of them. Your notes are kept, but this takes a moment, and a large notebook takes longer. A copy made while security was off cannot open notes saved after you turn security on.
+- **Turn off:** Cipherleaf asks for your current password (and keyfile). It then shows warnings. After that, the notes open without a password again. Turning security off also gives your notes a new key and takes a moment.
 
 Warnings you can expect when turning security off:
 
 - Anyone who can open the folder or copy `vault.clf` can read your notes.
 - Nothing will lock automatically any more.
-- Older backups in `data\backups` keep the password they were made with.
+- Older protected backups in `data\backups` still need the password they were made with. They cannot be opened with the new open file.
 - The KeePassXC passwords file is not affected. It keeps its own master password.
 
 ### Be honest about "security off"
@@ -54,7 +54,7 @@ With security off, your notes are still saved in Cipherleaf's encrypted, tamper-
 
 ### If you forget the password
 
-There is no reset and no recovery. If you lose the master password, or a keyfile you required, the notes cannot be opened. Write the password down somewhere safe. Backups made while security was on open with the password they had at that time.
+There is no reset and no recovery. If you lose the master password, or a keyfile you required, the notes cannot be opened. Write the password down somewhere safe. Backups made while security was on open with the password they had at that time. If you restore a backup that was made while security was off onto notes that have a master password, Cipherleaf asks you to confirm, because the notes will then open without a password.
 
 ## Optional: passwords (KeePassXC)
 
@@ -78,6 +78,7 @@ Short answers. The full list is in [`docs/security-design.md`](docs/security-des
 - **The exe is not signed.** Windows SmartScreen may warn. Cipherleaf does not check itself, so a replaced exe would not be noticed.
 - **No password reset.** See above.
 - **With security off, the notes are readable by anyone with the folder.** This is by design, and it is stated in Settings.
+- **The lock screen and screenshots.** The lock screen of a protected vault is hidden from screenshots only when the app starts. After a lock during the session it follows your screenshot setting, which is off by default.
 - **Not defended:** malware or a keylogger on the PC, someone with administrator rights, reading memory while the app is open, and a file swapped by someone who can write to your `data` folder (for example replacing a protected vault with an open one).
 - **Not proven yet.** Most checks so far are unit tests and scripted runs on throwaway data. The owner has not accepted any result. See [`docs/acceptance.md`](docs/acceptance.md) for exactly what was checked.
 

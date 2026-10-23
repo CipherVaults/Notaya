@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (18:32:20 to 18:47:35, owner message times; work times not recorded), EX-2026-10-23-16: Notes first: security and passwords optional (A20)
+
+- Report: [2026-10-23-notes-first-optional-security.md](2026-10-23-notes-first-optional-security.md)
+- Task / Goal: the owner's messages at 18:32:20, 18:34:11, 18:35:23, 18:39:02 (agreeing to three security confirmations), 18:40:15 and 18:47:35; amendment [A20](../plan/A20-notes-first-optional-security.md)
+- Executor: Claude (Claude Code), with a README helper agent, an independent security review agent and a PC remote session (the last two PENDING)
+- Outcome: Cipherleaf is a notes app first. A new vault is open (no password, never locks, screenshot protection off, not confidential). Security (master password, auto-lock, screenshot protection) and Passwords (KeePassXC) are separate switches in Settings. README rewritten. Built and pushed on branch `claude/project-thread-sv2tfm` (`84b281d`, `0929ae5`). Review fixes in `f9d2676` (turning security on or off re-keys the vault; restore confirmation; quit and Passwords safeguards). The Rust core passes 69 unit tests in a Tauri-free harness (13 new for A20); the UI type-checks and builds; screens seen in the mock UI. The app crate build and tests and the real-exe tests: PENDING-FILL. Not run: the real exe, clippy, `cargo audit`.
+- Integration / review: one independent security review (read-only agent) found 2 high, 3 medium and 6 low issues; the fixes are in `f9d2676`, "low 10" was not changed, the fixes were not re-reviewed; agent reports are model output; Claude checked the README against the code
+- Acceptance: pending (the owner reviews A20 on a real PC)
+- Open dependency / next action: fill the PENDING-FILL results and the pull request number; the owner reviews A20, the saved screenshot setting of existing vaults and the restore-undo files; A2 and A8 decisions
+
 ### 2026-10-23 (after 14:17, until about 16:04) — EX-2026-10-23-15 — Back up and restore the KeePassXC passwords file; Quit never force-ends KeePassXC (A19), rebuild
 
 - Report: [2026-10-23-passwords-backup-and-safe-quit.md](2026-10-23-passwords-backup-and-safe-quit.md)
