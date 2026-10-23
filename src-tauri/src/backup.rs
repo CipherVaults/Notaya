@@ -52,6 +52,7 @@ static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
 
 /// `vault-<digits>.<ext>` gives the digits (`ext` includes the dot). Anything else is not ours
 /// (a safety backup, `vault-predelete-<digits>`, is not an automatic one).
+#[cfg(test)]
 fn number_in_name(name: &str, ext: &str) -> Option<u64> {
     number_with_prefix(name, AUTOMATIC, ext)
 }
@@ -658,10 +659,11 @@ mod tests {
         }
     }
 
+    const _: () = assert!(RENAME_TRIES >= 5);
+
     #[test]
     fn the_rename_retry_is_about_a_second_in_all() {
         let total = RENAME_PAUSE * (RENAME_TRIES - 1);
-        assert!(RENAME_TRIES >= 5);
         assert!(total >= Duration::from_millis(900) && total <= Duration::from_millis(1_200), "{total:?}");
     }
 
