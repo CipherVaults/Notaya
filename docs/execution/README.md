@@ -22,7 +22,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Outcome: the move itself is not the cause (real-exe move test passed on throwaway data); added Start over (sets the vault aside, never deletes), clearer wrong-password wording and a keyfile warning
 - Integration / review: one independent read-only review (found no data-loss path; its follow-ups are in `94d0235`); agent reports are model output
 - Acceptance: pending
-- Open dependency / next action: Rust tests and a real-exe check of the new screens on the PC; the owner's review; merging into `main` and `feat/a9-keepassxc` waits for the owner
+- Open dependency / next action: the owner's review (Rust tests and the real-exe check passed on the PC); merging into `main` and `feat/a9-keepassxc` waits for the owner
 
 ### 2026-10-23 (after 14:17, until about 16:04) — EX-2026-10-23-15 — Back up and restore the KeePassXC passwords file; Quit never force-ends KeePassXC (A19), rebuild
 
