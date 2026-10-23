@@ -1,4 +1,4 @@
-# Execution Summary: EX-2026-10-23-16: Notes first: security and passwords optional (A20)
+# Execution Summary: EX-2026-10-23-17: Notes first: security and passwords optional (A21)
 
 ## 1. Task Overview
 
@@ -15,19 +15,19 @@
 
 **Date / time:** 2026-10-23 (UTC). Times above are the owner's message timestamps. The start and end of the work, the commit times and the build times are not recorded.
 
-**Authority:** the owner's messages above, in [approval-and-amendments.md](../plan/approval-and-amendments.md); recorded as [A20](../plan/A20-notes-first-optional-security.md). The owner's messages do not name the commit, the push or the pull request; Claude read "work on everthing now" as covering them. **Stopping condition:** stop with the work committed and pushed to branch `claude/project-thread-sv2tfm`, a draft pull request against `main` to follow, the records updated, and the PC build, the real-exe results and the independent review marked PENDING. The pull request number and the PENDING results are not in this file yet.
+**Authority:** the owner's messages above, in [approval-and-amendments.md](../plan/approval-and-amendments.md); recorded as [A21](../plan/A21-notes-first-optional-security.md). The owner's messages do not name the commit, the push or the pull request; Claude read "work on everthing now" as covering them. **Stopping condition:** stop with the work committed and pushed to branch `claude/project-thread-sv2tfm`, a draft pull request against `main` to follow, the records updated, and the PC build, the real-exe results and the independent review marked PENDING. The pull request number and the PENDING results are not in this file yet.
 
 ## 2. Context Used
 
-`CLAUDE.md`, `docs/STATUS.md`, the amendments record, the security design, the A20 design file written at 18:35 UTC, and the source (the vault header and session, the settings model, the restore code, the lock and quit paths, the KeePassXC commands, and the UI shell, sidebar, settings and unlock screens).
+`CLAUDE.md`, `docs/STATUS.md`, the amendments record, the security design, the A21 design file written at 18:35 UTC, and the source (the vault header and session, the settings model, the restore code, the lock and quit paths, the KeePassXC commands, and the UI shell, sidebar, settings and unlock screens).
 
 ## 3. Work Performed
 
 **Built** (three commits on branch `claude/project-thread-sv2tfm`, all pushed):
 
-- `84b281d` "Notes first: security and passwords become optional (A20), README rewritten": the core, the UI and the README (about 1675 lines added across 31 files together with the next commit).
+- `84b281d` "Notes first: security and passwords become optional (A21), README rewritten": the core, the UI and the README (about 1675 lines added across 31 files together with the next commit).
 - `0929ae5` "Real-exe tests for optional security; existing test scripts use the new start": the new script `tools/real-exe-tests/optionalsecurity.mjs` and its runner, and small changes to the old scripts so they use the new start. The scripts were written. They were **not run**.
-- `f9d2676` "A20 review fixes: re-key on turning security on or off, quit and restore safeguards": the code changes after the independent review (see "Changes after the independent review" below).
+- `f9d2676` "A21 review fixes: re-key on turning security on or off, quit and restore safeguards": the code changes after the independent review (see "Changes after the independent review" below).
 
 **Core (Rust):**
 
@@ -55,7 +55,7 @@ Fixed, as seen in the code and the records:
 - `enable_security` deletes only automatic backups whose header says open (and their journal files). It never deletes `restore-undo-*.clf` files. Manual exports are never touched. Deleted SQLite journal data may linger on disk.
 - Restoring a security-off backup onto a protected vault needs the person's confirmation (see item 7 above).
 - A quit of a vault with security off no longer reloads the window and does not reopen that vault while the quit runs. If the quit is cancelled because KeePassXC stays open, the vault is opened again. A quit of a protected vault is unchanged.
-- `restore_passwords` and `pick_passwords_backup_file` are refused while Passwords is off. A quit from the lock screen still makes the last passwords-file copy. For a vault saved before A20 the Passwords switch counts as on if a passwords file or `keepassxc\keepassxc.ini` exists.
+- `restore_passwords` and `pick_passwords_backup_file` are refused while Passwords is off. A quit from the lock screen still makes the last passwords-file copy. For a vault saved before A21 the Passwords switch counts as on if a passwords file or `keepassxc\keepassxc.ini` exists.
 - After a crash between the two renames of a restore the app shows the "No notes found here" screen (Restore or Start new notes), not "Create your vault".
 - The Turn on security dialog says it takes a moment (the Turn off dialog does not say so yet), and the Copy button for the suggested passphrase is in the Turn on security dialog.
 
@@ -73,7 +73,7 @@ All results below apply to the source of commits `84b281d`, `0929ae5` and `f9d26
 
 | Check | Outcome | Applicability and limits |
 |---|---|---|
-| Rust core unit tests in a Tauri-free harness (2026-10-23, after `f9d2676`) | pass, 69 tests, 13 of them new for A20 (header, session including re-keying and the rollback of a failed re-key, model, restore and openvault) | Core logic only. This is **not** `cargo test --lib` on the app crate. The app crate result is PENDING-FILL. |
+| Rust core unit tests in a Tauri-free harness (2026-10-23, after `f9d2676`) | pass, 69 tests, 13 of them new for A21 (header, session including re-keying and the rollback of a failed re-key, model, restore and openvault) | Core logic only. This is **not** `cargo test --lib` on the app crate. The app crate result is PENDING-FILL. |
 | `cargo test --lib` on the app crate | PENDING-FILL (a PC session is compiling and running tests) | Not run in the cloud container: no GTK libraries |
 | `cargo clippy --all-targets` | not run | |
 | `npx tsc --noEmit -p tsconfig.json` | pass | Types only |
@@ -83,7 +83,7 @@ All results below apply to the source of commits `84b281d`, `0929ae5` and `f9d26
 | Independent security review (one read-only agent, Opus-class) | done: 2 high, 3 medium, 6 low issues; fixes in `f9d2676` (see section 3) | Model output. The fixes were not re-reviewed (PENDING-FILL). "Low 10" was not changed. |
 | `npm audit`, `cargo audit` | not run | |
 
-**Not tested:** everything that needs the real app: the window flags (content protection) of a new, an old and a protected vault; the first-run auto-create; the Restore or Start-new-notes screen; turning security on and off in the real window; the deletion of earlier unprotected copies; the Passwords switch with a running KeePassXC; idle lock, Win+L, sleep and drive removal with security on; the README in the portable build. No portable build or ZIP was made for A20.
+**Not tested:** everything that needs the real app: the window flags (content protection) of a new, an old and a protected vault; the first-run auto-create; the Restore or Start-new-notes screen; turning security on and off in the real window; the deletion of earlier unprotected copies; the Passwords switch with a running KeePassXC; idle lock, Win+L, sleep and drive removal with security on; the README in the portable build. No portable build or ZIP was made for A21.
 
 ## 6. Problems Encountered
 
@@ -93,7 +93,7 @@ All results below apply to the source of commits `84b281d`, `0929ae5` and `f9d26
 
 ## 7. Documentation Impact
 
-Added this file and the A20 status update. Updated the execution index, STATUS (as-of, mission state, open questions 12 to 14, what exists, exact next permitted action), the amendments record (the owner's six messages as authority rows and the A20 row), the security design (code-date sentence, the command paragraph, threats 4, 5 and 6 and 7, P7, P8, P11, P18, new promises P19 and P20, the A20 limits, the open-vault cryptography line) and the session history (a new entry). After the review the records were aligned with `f9d2676` (re-keying, restore confirmation, quit, Passwords refusals, lock screen limit, README and the A20 design file). The acceptance ledger was not changed: nothing is accepted and no check has a result on the app crate yet. The failure-intelligence record was not changed.
+Added this file and the A21 status update. Updated the execution index, STATUS (as-of, mission state, open questions 12 to 14, what exists, exact next permitted action), the amendments record (the owner's six messages as authority rows and the A21 row), the security design (code-date sentence, the command paragraph, threats 4, 5 and 6 and 7, P7, P8, P11, P18, new promises P20 and P21, the A21 limits, the open-vault cryptography line) and the session history (a new entry). After the review the records were aligned with `f9d2676` (re-keying, restore confirmation, quit, Passwords refusals, lock screen limit, README and the A21 design file). The acceptance ledger was not changed: nothing is accepted and no check has a result on the app crate yet. The failure-intelligence record was not changed.
 
 ## 8. Git / Version Control Impact
 
@@ -111,8 +111,8 @@ Code, tests and README: `84b281d`, `0929ae5` and the review fixes `f9d2676`, on 
 
 ## 10. Items That Need Human / Coordinator Review
 
-- The owner should review A20 on a real PC (STATUS question 12), including the security change and the README.
-- **Known limits** (also in [security-design.md](../security-design.md), "A20"):
+- The owner should review A21 on a real PC (STATUS question 12), including the security change and the README.
+- **Known limits** (also in [security-design.md](../security-design.md), "A21"):
   - with security off the notes are not confidential: anyone with `vault.clf` or a backup and a copy of Cipherleaf can read them;
   - a protected `vault.clf` replaced by an open one by someone with write access to `data\` opens with no prompt (the same access already allows replacing the exe);
   - earlier open automatic backups are deleted at turn-on if the person agrees (default on); `restore-undo-*.clf` files and manual exports are never deleted and stay readable by anyone if they were made with security off; after security is turned off, older protected backups still need their own password and cannot be opened with the new open file; changing the master password only re-wraps, so older backups open with the old password (existing limit);
@@ -121,15 +121,15 @@ Code, tests and README: `84b281d`, `0929ae5` and the review fixes `f9d2676`, on 
   - Passwords is independent of security, and KeePassXC relies on its own master password and idle lock;
   - the new commands `enable_security`, `disable_security`, `set_passwords_enabled` and `start_notes`, and `restore_vault` with `allowSecurityOff`, are callable by any window; `disable_security` needs the current password; `enable_security` can delete earlier open automatic backups and `restore_vault` can lower security, without more than a UI dialog, so a script injected into the UI could do either while the vault is open.
 - Open questions for the owner, now STATUS questions 13 and 14: whether existing vaults' saved screenshot setting should be reset to off, and whether to delete restore-undo files.
-- The PENDING-FILL results (section 5) must be filled in from the PC session, and the fixes from the review should be checked, before anyone relies on A20.
+- The PENDING-FILL results (section 5) must be filled in from the PC session, and the fixes from the review should be checked, before anyone relies on A21.
 - Still open from before: A2, A8, STATUS question 8, evidence for A1 and A3–A7, a license file, whether the repository may ever be public, and the outdated Drive ZIP.
 
 ## 11. Current Result
 
-A20 is built and pushed on branch `claude/project-thread-sv2tfm` (`84b281d`, `0929ae5`, `f9d2676`). The Rust core passes 69 unit tests in a Tauri-free harness (13 new for A20); the UI type-checks and builds; the screens were seen in the mock UI. One independent review found 2 high, 3 medium and 6 low issues; the fixes are in `f9d2676` and "low 10" is not changed. The app crate build and tests, the real-exe tests and a re-check of the fixes are PENDING-FILL. **Not accepted;** only the owner accepts results.
+A21 is built and pushed on branch `claude/project-thread-sv2tfm` (`84b281d`, `0929ae5`, `f9d2676`). The Rust core passes 69 unit tests in a Tauri-free harness (13 new for A21); the UI type-checks and builds; the screens were seen in the mock UI. One independent review found 2 high, 3 medium and 6 low issues; the fixes are in `f9d2676` and "low 10" is not changed. The app crate build and tests, the real-exe tests and a re-check of the fixes are PENDING-FILL. **Not accepted;** only the owner accepts results.
 
 ## 12. Recommended Next Step
 
-Fill the PENDING-FILL results from the PC session and a re-check of the review fixes (fix what they find), fill in the pull request number, then ask the owner to review A20 on a real PC. Anything that changes security behavior again, makes the repository public or adds a license waits for the owner.
+Fill the PENDING-FILL results from the PC session and a re-check of the review fixes (fix what they find), fill in the pull request number, then ask the owner to review A21 on a real PC. Anything that changes security behavior again, makes the repository public or adds a license waits for the owner.
 
 **Do not repeat:** the design, the core and UI build, the README.

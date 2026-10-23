@@ -165,8 +165,8 @@ pub struct Settings {
     pub lock_on_minimize: bool,
     pub screen_capture_protection: bool,
     pub sticky_default_color: String,
-    /// The Passwords (KeePassXC) feature is switched on (A20). `None` in a vault saved
-    /// before A20: the app then treats it as on only if a passwords file already exists.
+    /// The Passwords (KeePassXC) feature is switched on (A21). `None` in a vault saved
+    /// before A21: the app then treats it as on only if a passwords file already exists.
     #[serde(default = "passwords_unset")]
     pub passwords_enabled: Option<bool>,
 }
@@ -175,7 +175,7 @@ fn passwords_unset() -> Option<bool> {
     None
 }
 
-/// Whether the Passwords feature is on. A vault saved before A20 has no choice yet;
+/// Whether the Passwords feature is on. A vault saved before A21 has no choice yet;
 /// it counts as on only if a passwords file already exists, so nobody loses the panel.
 pub fn resolve_passwords(flag: Option<bool>, passwords_file_exists: bool) -> bool {
     flag.unwrap_or(passwords_file_exists)
@@ -194,7 +194,7 @@ impl Default for Settings {
             unlock_background: "midnight".into(),
             idle_lock_minutes: 5,
             lock_on_minimize: false,
-            // Off by default, always (A20). The person turns it on in Settings, and it
+            // Off by default, always (A21). The person turns it on in Settings, and it
             // only has an effect while security is on.
             screen_capture_protection: false,
             sticky_default_color: "yellow".into(),

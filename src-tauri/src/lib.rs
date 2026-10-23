@@ -73,7 +73,7 @@ pub fn run() {
         .setup(move |app| {
             paths.ensure_dirs()?;
             // Hidden from screenshots only if the vault has a master password: its lock screen
-            // comes first. A vault with security off, or none yet, is never hidden (A20).
+            // comes first. A vault with security off, or none yet, is never hidden (A21).
             let protect = paths.vault.exists()
                 && vault::Session::read_header(&paths.vault).map(|h| !h.open).unwrap_or(true);
             ui::build_main(app.handle(), &paths, protect)?;

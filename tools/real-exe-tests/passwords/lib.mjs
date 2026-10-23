@@ -39,7 +39,7 @@ export const SIG = Buffer.from([0x03, 0xD9, 0xA2, 0x9A, 0x67, 0xFB, 0x4B, 0xB5])
 export const fake = (n = 200) => Buffer.concat([SIG, randomBytes(n)]);
 export const ls = (d) => existsSync(d) ? readdirSync(d) : [];
 export function setup(m, password) { return (async () => {
-  // A20: the first run opens an open vault by itself; give it a master password so it can lock, and
+  // A21: the first run opens an open vault by itself; give it a master password so it can lock, and
   // switch Passwords on (with it off, locks make no passwords backups and leave KeePassXC alone).
   await m.inv("vault_status");
   console.log("turn security on:", JSON.stringify(await m.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: false })));

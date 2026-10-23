@@ -34,7 +34,7 @@ pub struct VaultStatus {
 }
 
 /// Opens the vault by itself when it has security off, and on a first run creates one,
-/// so Cipherleaf starts straight in the notes (A20). A vault with a master password is
+/// so Cipherleaf starts straight in the notes (A21). A vault with a master password is
 /// left alone for the lock screen. Returns why a vault with security off could not be opened.
 fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     let _gate = state.open_gate();

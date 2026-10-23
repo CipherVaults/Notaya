@@ -1,5 +1,5 @@
 <#
-  run-optionalsecurity.ps1 - real-exe test of "notes first, security optional" (amendment A20).
+  run-optionalsecurity.ps1 - real-exe test of "notes first, security optional" (amendment A21).
 
   Purpose : starts a COPY of Cipherleaf.exe in a fresh temp folder with NO vault, so the first run opens
             straight to notes, then goes through five phases: security off (nothing locks), turn security on

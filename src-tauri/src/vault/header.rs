@@ -8,7 +8,7 @@
 //! The first 67 bytes are authenticated as AAD when the data key is wrapped.
 //! Changing anything (e.g. lowering the Argon2 cost) makes unlocking fail.
 //!
-//! An "open" vault (security off, amendment A20) has the open flag set in `flags`.
+//! An "open" vault (security off, amendment A21) has the open flag set in `flags`.
 //! Its data key is wrapped under a built-in, public password, so the file is still
 //! in the encrypted, tamper-checked format but is NOT secret: anyone with the file
 //! and a copy of Cipherleaf can read it. Turning security on or off only re-wraps

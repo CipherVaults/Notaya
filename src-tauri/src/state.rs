@@ -17,7 +17,7 @@ use crate::{keepassxc, pwbackup, system, ui};
 
 const MAX_BACKUPS: usize = 10;
 
-/// A passwords file or KeePassXC settings already exist (so a vault saved before A20, which
+/// A passwords file or KeePassXC settings already exist (so a vault saved before A21, which
 /// has no choice for the Passwords feature, keeps it on).
 pub fn passwords_in_use(paths: &Paths) -> bool {
     keepassxc::find_database(paths).is_some() || paths.keepassxc_config.join("keepassxc.ini").exists()
@@ -442,7 +442,7 @@ pub fn spawn_monitor(app: AppHandle) {
                 desktop_seen_unlocked = false;
                 continue;
             };
-            // Security off: nothing locks the vault (A20).
+            // Security off: nothing locks the vault (A21).
             if security_off {
                 continue;
             }

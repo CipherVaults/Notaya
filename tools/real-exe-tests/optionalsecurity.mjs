@@ -1,4 +1,4 @@
-// optionalsecurity.mjs - real-exe test of "notes first, security optional" (amendment A20).
+// optionalsecurity.mjs - real-exe test of "notes first, security optional" (amendment A21).
 // Purpose: one phase of the test. The runner (run-optionalsecurity.ps1) starts a COPY of Cipherleaf.exe in
 //          a temp folder, runs this script once per phase, closes the app by its window close button between
 //          phases (the real quit path) and starts it again. Each phase prints PASS / FAIL lines.

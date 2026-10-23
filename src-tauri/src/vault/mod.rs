@@ -25,7 +25,7 @@ pub struct Session {
     vault_id: [u8; 16],
     store: Store,
     items: HashMap<String, Item>,
-    /// Security is off (amendment A20): the data key is wrapped under the built-in key.
+    /// Security is off (amendment A21): the data key is wrapped under the built-in key.
     open: bool,
     /// True once anything changed since unlock; triggers a backup on lock.
     pub dirty: bool,

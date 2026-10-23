@@ -45,7 +45,7 @@ const pageText = async () => {
   return p ? (await m.inv("get_page", { id: p.id })).ok?.text : "(no page)";
 };
 
-// A20: the first run opens an open vault by itself; give it a master password so it can lock.
+// A21: the first run opens an open vault by itself; give it a master password so it can lock.
 await m.inv("vault_status");
 console.log("turn security on:", JSON.stringify(await m.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: false })));
 // The PC may have been idle for more than the 5-minute auto-lock: raise it at once (throwaway vault only).

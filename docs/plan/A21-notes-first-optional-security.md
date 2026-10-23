@@ -1,6 +1,6 @@
-# A20: Notes first, security and passwords optional (design, built)
+# A21: Notes first, security and passwords optional (design, built)
 
-**Status:** design agreed by the owner at 18:39:02 UTC ("just to confirm agree but the securti can be off and on okay", agreeing to the three confirmations at the end of this file), then built. Built in commits `84b281d` (core, UI, README) and `0929ae5` (real-exe test scripts), and changed after an independent review in `f9d2676` (re-keying, quit and restore safeguards; see the section "Changes after the independent review" below), all pushed; a draft pull request against `main` follows (number: to be filled). The design was written 2026-10-23 (system clock, 18:35 UTC). See [EX-2026-10-23-16](../execution/2026-10-23-notes-first-optional-security.md). Built does not mean accepted: the app crate and real-exe results are PENDING-FILL, the fixes from the independent security review were not re-reviewed (PENDING-FILL), and the owner has not reviewed it.
+**Status:** design agreed by the owner at 18:39:02 UTC ("just to confirm agree but the securti can be off and on okay", agreeing to the three confirmations at the end of this file), then built. Built in commits `84b281d` (core, UI, README) and `0929ae5` (real-exe test scripts), and changed after an independent review in `f9d2676` (re-keying, quit and restore safeguards; see the section "Changes after the independent review" below), all pushed; a draft pull request against `main` follows (number: to be filled). The design was written 2026-10-23 (system clock, 18:35 UTC). See [EX-2026-10-23-17](../execution/2026-10-23-notes-first-optional-security.md). Built does not mean accepted: the app crate and real-exe results are PENDING-FILL, the fixes from the independent security review were not re-reviewed (PENDING-FILL), and the owner has not reviewed it.
 
 ## What the owner asked
 
@@ -55,7 +55,7 @@ Warnings shown when turning off: the notes will be readable by anyone who can op
 - On: today's panel appears. Turning it off closes KeePassXC politely first (the same close routine as Quit and refuses with the existing message if KeePassXC is still open).
 - The backend refuses every KeePassXC command while the switch is off, not only the UI. That includes `restore_passwords` and `pick_passwords_backup_file`.
 - A quit from the lock screen (no session to ask) still makes the last passwords-file copy, as it always did.
-- Existing vaults: for a vault saved before A20 the switch starts **on** if `data\passwords.kdbx` or `keepassxc\keepassxc.ini` exists, so nobody loses their panel. Otherwise off.
+- Existing vaults: for a vault saved before A21 the switch starts **on** if `data\passwords.kdbx` or `keepassxc\keepassxc.ini` exists, so nobody loses their panel. Otherwise off.
 
 ### Where the switches are stored
 
@@ -93,7 +93,7 @@ Notes, sticky notes, calculator, pictures, backups, restore, KeePassXC embedding
 
 ## Checks planned (see the execution summary for what ran)
 
-Unit tests (open header round trip, flag tampering, re-keying both ways with a fresh key and vault id, a failed re-key that changes nothing, restore of an open backup and the staged-copy check, deletion limited to open automatic backups). The Tauri-free core harness runs 69 tests, 13 of them new for A20. App crate results: PENDING-FILL, `cargo test --lib`, `tsc`, `npm run build`, mock UI screens, and a real-exe run on a throwaway `CIPHERLEAF_HOME` only after the PC session is back. An independent security review before the pull request.
+Unit tests (open header round trip, flag tampering, re-keying both ways with a fresh key and vault id, a failed re-key that changes nothing, restore of an open backup and the staged-copy check, deletion limited to open automatic backups). The Tauri-free core harness runs 69 tests, 13 of them new for A21. App crate results: PENDING-FILL, `cargo test --lib`, `tsc`, `npm run build`, mock UI screens, and a real-exe run on a throwaway `CIPHERLEAF_HOME` only after the PC session is back. An independent security review before the pull request.
 
 ## Questions for the owner
 
@@ -104,4 +104,4 @@ See the thread reply. Short form: (a) open mode with a public built-in key, (b) 
 
 ## Changes after the independent review
 
-One independent review agent (read-only, model output) found 2 high, 3 medium and 6 low issues. Commit `f9d2676` fixed the two high ones (the shared data key, now re-keying; keyfile users unable to turn security off), the three medium ones and most of the low ones. The restore confirmation, the narrower deletion, the quit handling, the Passwords refusals, the crash screen and the Copy button wording above come from that commit. The finding "low 10" (the lock screen can be captured after a lock during the session) was documented, not changed. The fixes were not re-reviewed. The list of fixed and unchanged findings is in [EX-2026-10-23-16](../execution/2026-10-23-notes-first-optional-security.md).
+One independent review agent (read-only, model output) found 2 high, 3 medium and 6 low issues. Commit `f9d2676` fixed the two high ones (the shared data key, now re-keying; keyfile users unable to turn security off), the three medium ones and most of the low ones. The restore confirmation, the narrower deletion, the quit handling, the Passwords refusals, the crash screen and the Copy button wording above come from that commit. The finding "low 10" (the lock screen can be captured after a lock during the session) was documented, not changed. The fixes were not re-reviewed. The list of fixed and unchanged findings is in [EX-2026-10-23-17](../execution/2026-10-23-notes-first-optional-security.md).

@@ -12,7 +12,7 @@ pub fn keepassxc_status(state: State<'_, AppState>) -> Status {
     keepassxc::status(&state.paths, &state.keepassxc)
 }
 
-/// The Passwords feature is optional (A20). While it is off, nothing starts KeePassXC.
+/// The Passwords feature is optional (A21). While it is off, nothing starts KeePassXC.
 fn require_passwords(state: &AppState) -> Result<()> {
     if state.passwords_on() {
         Ok(())

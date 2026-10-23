@@ -1,4 +1,4 @@
-//! Helpers for vaults whose security is off (amendment A20): finding the earlier
+//! Helpers for vaults whose security is off (amendment A21): finding the earlier
 //! copies of the vault that are readable by anyone, and removing them on request.
 //!
 //! "Earlier copies" are the automatic backups (`data/backups/vault-*.clf`) and the

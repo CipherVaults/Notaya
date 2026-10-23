@@ -8,7 +8,7 @@ Security is an optional extra. It is off by default: Cipherleaf opens straight t
 
 > **Status: in development, private, not yet accepted by its owner.** Portable builds are made by hand and shared only with a few close people. There is no public release, and the exe is not code-signed. The authoritative state is [`docs/STATUS.md`](docs/STATUS.md). What is and is not proven is in [`docs/acceptance.md`](docs/acceptance.md).
 >
-> **The "notes first, security optional" change is being built now** (design: [`docs/plan/A20-notes-first-optional-security.md`](docs/plan/A20-notes-first-optional-security.md)). This README describes that design. The owner has not accepted it, and it has not been checked on a real PC. Where the design and the code differ, the code and the records win.
+> **The "notes first, security optional" change is being built now** (design: [`docs/plan/A21-notes-first-optional-security.md`](docs/plan/A21-notes-first-optional-security.md)). This README describes that design. The owner has not accepted it, and it has not been checked on a real PC. Where the design and the code differ, the code and the records win.
 
 ## Core: notes
 
