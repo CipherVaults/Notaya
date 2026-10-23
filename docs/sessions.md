@@ -6,6 +6,18 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (17:04–17:35 UTC) — Cipherleaf — Unlock after moving the portable folder; Start over (A20)
+
+**Record basis:** written at the time, from the session transcript (owner message times 17:04:30, 17:16:33 and 17:26:10 UTC), the system clock on the owner's PC for the test and the repository. Executor: Claude (Claude Code) in a cloud thread, plus a Remote Control session on the owner's PC.
+
+**What happened:** The owner passed on a friend's report: after moving the portable folder to another drive, unlocking failed with a "password or file" error, and there was no way to start again. A code review found no path, drive or machine binding. A real-exe move test on throwaway data (E: to C:) unlocked fine. The owner said "Both" (test and fix), and Claude added Start over (sets the vault aside, never deletes), clearer wording and a keyfile warning ([A20](plan/A20-start-over-and-unlock-wording.md), [EX-16](execution/2026-10-23-start-over-and-unlock-wording.md)). After "Push it run tests recheck", Claude committed and pushed it to `claude/project-thread-p5yntz`.
+
+**Understanding changed:** the friend's failure is most likely a different or unselected keyfile, or a different password. The app gave one message for all of these.
+
+**Resume at:** the Rust tests and a real-exe check of the new screens on the PC; the owner's review; the owner decides whether to merge into `main` and `feat/a9-keepassxc`.
+
+---
+
 # 📘 Session: 2026-10-23 (after about 14:17, until about 16:04 UTC) — Cipherleaf — Passwords-file backup and restore, safe Quit (A19), rebuilt
 
 ## 🤖 Models, Effort, Roles and Provenance

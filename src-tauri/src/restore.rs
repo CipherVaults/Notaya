@@ -353,6 +353,41 @@ fn install_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) -> R
     Ok(kept_vault.and_then(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_string)))
 }
 
+/// Name prefix of a vault set aside by "Start over".
+const SET_ASIDE_PREFIX: &str = "set-aside-";
+
+/// "Start over": renames the vault to `data/set-aside-<now_ms>.clf` (with its
+/// `-journal` file, if any) so the app shows the first-run screen again, and
+/// returns the new name. Nothing is deleted, and the set-aside file can be
+/// brought back with "Restore from a backup". If a rename fails, the files are
+/// put back.
+pub fn set_aside(paths: &Paths, now_ms: u64) -> Result<String> {
+    set_aside_with(paths, now_ms, RENAME_ATTEMPTS, RENAME_DELAY).map_err(plain_io)
+}
+
+fn set_aside_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) -> Result<String> {
+    if !paths.vault.try_exists()? {
+        return Err(Error::NoVault);
+    }
+    let journal = with_suffix(&paths.vault, "-journal");
+    let has_journal = journal.try_exists()?;
+    // `rename` replaces an existing file on Windows, so pick a name that is free.
+    let mut ms = now_ms;
+    let base = loop {
+        let p = paths.data.join(format!("{SET_ASIDE_PREFIX}{ms}.clf"));
+        if !p.try_exists()? && !with_suffix(&p, "-journal").try_exists()? {
+            break p;
+        }
+        ms += 1;
+    };
+    rename_retry(&paths.vault, &base, attempts, delay)?;
+    if has_journal && let Err(e) = rename_retry(&journal, &with_suffix(&base, "-journal"), attempts, delay) {
+        let notes = roll_back(paths, &base, Moved { vault: true, journal: false }, attempts, delay);
+        return Err(install_failure(e, &notes));
+    }
+    Ok(base.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_string())
+}
+
 /// Which of the live files were moved aside to the undo name.
 struct Moved {
     vault: bool,
@@ -808,6 +843,42 @@ mod tests {
         assert!(text.contains("could not be put back") && text.contains("restore-undo-9.clf"), "{text}");
         assert!(!text.contains("access denied"), "raw error text stays out of the UI: {text}");
         assert!(matches!(install_failure(io::Error::other("x"), &[]), Error::Io(_)));
+    }
+
+    #[test]
+    fn set_aside_keeps_the_vault_and_its_journal_under_a_free_name() {
+        let paths = temp_paths();
+        write(&paths.vault, b"VAULT");
+        write(&with_suffix(&paths.vault, "-journal"), b"J");
+        // A name already taken is skipped, not replaced.
+        write(&paths.data.join("set-aside-7.clf"), b"EARLIER");
+        let name = set_aside_with(&paths, 7, 1, Duration::ZERO).unwrap();
+        assert_eq!(name, "set-aside-8.clf");
+        assert!(!paths.vault.exists());
+        assert!(!with_suffix(&paths.vault, "-journal").exists());
+        assert_eq!(std::fs::read(paths.data.join("set-aside-8.clf")).unwrap(), b"VAULT");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-8.clf-journal")).unwrap(), b"J");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-7.clf")).unwrap(), b"EARLIER");
+    }
+
+    #[test]
+    fn set_aside_without_a_vault_changes_nothing() {
+        let paths = temp_paths();
+        assert!(matches!(set_aside_with(&paths, 1, 1, Duration::ZERO), Err(Error::NoVault)));
+        assert_eq!(std::fs::read_dir(&paths.data).unwrap().count(), 1); // only backups/
+    }
+
+    #[test]
+    fn a_set_aside_vault_can_be_restored_with_its_password() {
+        let paths = temp_paths();
+        Session::create(&paths.vault, "pw", None, FAST).unwrap();
+        let name = set_aside(&paths, 5).unwrap();
+        let source = paths.data.join(&name);
+        let picked = fs::canonicalize(&source).ok();
+        let resolved = resolve_source(&paths, source.to_str().unwrap(), picked.as_deref()).unwrap();
+        verify_and_stage(&paths, &resolved, "pw", None).unwrap();
+        assert_eq!(install(&paths, 6).unwrap(), None);
+        Session::unlock(&paths.vault, "pw", None).unwrap();
     }
 
     #[test]

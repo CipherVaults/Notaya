@@ -6,7 +6,7 @@ import { api, errorText } from "@/lib/ipc";
 import { cachedAppearance } from "@/lib/theme";
 import type { Strength } from "@/lib/types";
 import { useApp } from "@/store/app";
-import { Button, StrengthMeter } from "@/components/ui";
+import { Button, Modal, StrengthMeter } from "@/components/ui";
 import Logo from "@/components/Logo";
 import LockBackdrop from "./Backdrop";
 import { copyText, KeyfileChip, PasswordInput } from "./fields";
@@ -25,7 +25,11 @@ export default function UnlockScreen() {
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="relative w-[440px] max-w-[92vw]"
       >
-        {status.exists ? <UnlockCard keyfileRequired={status.keyfileRequired} /> : <CreateCard />}
+        {status.exists ? (
+          <UnlockCard keyfileRequired={status.keyfileRequired} dataDir={status.dataDir} />
+        ) : (
+          <CreateCard dataDir={status.dataDir} />
+        )}
         <p className="mt-6 text-center text-xs text-faint">
           Encrypted with XChaCha20-Poly1305 · Argon2id · Stored only on this drive
         </p>
@@ -40,12 +44,16 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-function UnlockCard({ keyfileRequired }: { keyfileRequired: boolean }) {
+/** The error text for a wrong master password or keyfile (see `Error::BadCredentials` in Rust). */
+const BAD_CREDENTIALS = "Wrong master password or keyfile";
+
+function UnlockCard({ keyfileRequired, dataDir }: { keyfileRequired: boolean; dataDir: string }) {
   const [password, setPassword] = useState("");
   const [keyfile, setKeyfile] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [startOverOpen, setStartOverOpen] = useState(false);
   const controls = useAnimationControls();
   const refreshStatus = useApp((s) => s.refreshStatus);
 
@@ -89,7 +97,7 @@ function UnlockCard({ keyfileRequired }: { keyfileRequired: boolean }) {
           <PasswordInput value={password} onChange={setPassword} placeholder="Master password" autoFocus onEnter={unlock} />
           {keyfileRequired &&
             (keyfile ? (
-              <KeyfileChip path={keyfile} onClear={() => setKeyfile(null)} />
+              <KeyfileChip path={keyfile} onClear={() => setKeyfile(null)} dataDir={dataDir} />
             ) : (
               <Button
                 variant="outline"
@@ -99,6 +107,9 @@ function UnlockCard({ keyfileRequired }: { keyfileRequired: boolean }) {
                 <FileKey2 size={15} /> Choose keyfile
               </Button>
             ))}
+          {!keyfileRequired && (
+            <p className="text-xs text-faint">This vault was made without a keyfile, so only the master password is needed.</p>
+          )}
           <AnimatePresence>
             {error && (
               <motion.p
@@ -108,6 +119,12 @@ function UnlockCard({ keyfileRequired }: { keyfileRequired: boolean }) {
                 className="text-sm text-danger"
               >
                 {error}
+                {error.startsWith(BAD_CREDENTIALS) && (
+                  <span className="mt-1 block text-xs text-muted">
+                    This is the Cipherleaf master password. The KeePassXC passwords file has its own password, which
+                    may be different.{keyfileRequired ? " The keyfile must be the exact file chosen when the vault was made." : ""}
+                  </span>
+                )}
               </motion.p>
             )}
           </AnimatePresence>
@@ -130,10 +147,21 @@ function UnlockCard({ keyfileRequired }: { keyfileRequired: boolean }) {
             >
               Restore from a backup…
             </button>
+            <span className="text-faint" aria-hidden>
+              ·
+            </span>
+            <button
+              type="button"
+              onClick={() => setStartOverOpen(true)}
+              className="rounded-md px-2 py-1 text-sm font-medium text-muted underline-offset-4 hover:text-fg hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-soft"
+            >
+              Start over…
+            </button>
           </div>
         </div>
       </Card>
       <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists />
+      <StartOverDialog open={startOverOpen} onOpenChange={setStartOverOpen} dataDir={dataDir} />
     </motion.div>
   );
 }
@@ -195,7 +223,97 @@ function SuggestedPassphrase({ value }: { value: string }) {
   );
 }
 
-function CreateCard() {
+/**
+ * "Start over": sets the vault aside (renamed, never deleted) so a new one can be made.
+ * The old one can be brought back later with "Restore from a backup" and its own password.
+ */
+function StartOverDialog({
+  open,
+  onOpenChange,
+  dataDir,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  dataDir: string;
+}) {
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const refreshStatus = useApp((s) => s.refreshStatus);
+  const confirmed = typed.trim().toLowerCase() === "start over";
+
+  useEffect(() => {
+    if (!open) {
+      setTyped("");
+      setError(null);
+    }
+  }, [open]);
+
+  const startOver = async () => {
+    if (!confirmed || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const name = await api.startOver();
+      onOpenChange(false);
+      await refreshStatus();
+      toast.success(`Your old vault is kept as ${name} in the data folder. You can now create a new vault.`, {
+        duration: 15000,
+      });
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={(o) => !busy && onOpenChange(o)}
+      title="Start over with a new vault"
+      description="For when this vault won't open and you want to begin again."
+      width={500}
+    >
+      <div className="space-y-4 text-sm leading-relaxed">
+        <ul className="list-disc space-y-1.5 pl-5 text-muted">
+          <li>
+            Nothing is deleted. The current vault is renamed to <span className="font-mono text-fg">set-aside-….clf</span>{" "}
+            in <span className="break-all font-mono text-fg">{dataDir}</span>.
+          </li>
+          <li>You then create a new vault with a new master password. It starts empty.</li>
+          <li>
+            To get the old vault back later, use "Already have a backup? Restore it", choose that file and enter its
+            old master password (and keyfile).
+          </li>
+          <li>The KeePassXC passwords file is not touched and keeps its own password.</li>
+        </ul>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-faint">Type START OVER to confirm</span>
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && startOver()}
+            className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-fg outline-none focus:border-accent focus:ring-4 focus:ring-accent-soft"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        {error && <p className="text-danger">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={startOver} disabled={!confirmed || busy}>
+            {busy ? <Loader2 size={15} className="animate-spin" /> : null} Set aside and start over
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function CreateCard({ dataDir }: { dataDir: string }) {
   const [step, setStep] = useState<0 | 1>(0);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -330,7 +448,7 @@ function CreateCard() {
               without the file. Keep it on a different drive than the vault.
             </div>
             {keyfile ? (
-              <KeyfileChip path={keyfile} onClear={() => setKeyfile(null)} />
+              <KeyfileChip path={keyfile} onClear={() => setKeyfile(null)} dataDir={dataDir} />
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" onClick={async () => setKeyfile(await api.createKeyfile().catch(() => null))}>

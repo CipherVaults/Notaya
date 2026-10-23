@@ -46,6 +46,8 @@ export const api = {
   pickBackupFile: () => invoke<string | null>("pick_backup_file"),
   restoreVault: (source: string, password: string, keyfile: string | null) =>
     invoke<RestoreResult>("restore_vault", { source, password, keyfile }),
+  // Start over (only while locked): sets the vault aside and returns its new file name.
+  startOver: () => invoke<string>("start_over"),
   // Restore the KeePassXC passwords file (only while unlocked). `source` is a backup name or a full path.
   listPasswordBackups: () => invoke<BackupInfo[]>("list_password_backups"),
   pickPasswordsBackupFile: () => invoke<string | null>("pick_passwords_backup_file"),
