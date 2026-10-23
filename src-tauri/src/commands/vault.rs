@@ -259,11 +259,20 @@ pub fn flush_done(window: WebviewWindow, state: State<'_, AppState>, round: u64)
 }
 
 /// Runs on a worker thread, like `lock_vault`, so the windows can answer.
+/// Locks, asks KeePassXC to close and exits. If KeePassXC is still open (it may be
+/// asking to save) it does NOT exit and never ends KeePassXC: the owner gets the
+/// `app-notice` event instead, and the command still returns normally.
 #[tauri::command(async)]
-pub fn quit_app(app: AppHandle, state: State<'_, AppState>) {
-    state::lock(&app, "quit");
-    crate::keepassxc::shutdown(&state.keepassxc);
-    app.exit(0);
+pub fn quit_app(app: AppHandle) {
+    state::quit(&app);
+}
+
+/// A message for the owner that the app couldn't show live, returned once. The UI
+/// calls it on startup, because a lock reloads the window and an `app-notice`
+/// event sent just before could be missed.
+#[tauri::command]
+pub fn take_notice(state: State<'_, AppState>) -> Option<String> {
+    state.take_notice()
 }
 
 #[tauri::command]

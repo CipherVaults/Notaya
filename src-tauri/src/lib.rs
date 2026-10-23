@@ -6,6 +6,7 @@ mod generator;
 mod keepassxc;
 mod model;
 mod portable;
+mod pwbackup;
 mod restore;
 mod state;
 mod system;
@@ -20,6 +21,20 @@ use commands::{backup as backup_cmd, keepassxc as keepassxc_cmd, notes, stickies
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
+
+/// Resets `CLOSING` when the close thread ends, unless the app is exiting. It also
+/// runs if the thread panics, so a failed close can never block later ones.
+struct ClosingGuard {
+    exiting: bool,
+}
+
+impl Drop for ClosingGuard {
+    fn drop(&mut self) {
+        if !self.exiting {
+            CLOSING.store(false, Ordering::SeqCst);
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -78,15 +93,11 @@ pub fn run() {
                     if !CLOSING.swap(true, Ordering::SeqCst) {
                         let app = window.app_handle().clone();
                         std::thread::spawn(move || {
-                            // Whatever fails or panics here, the app must still exit:
-                            // the close was prevented, so nothing else would end it.
-                            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                                state::lock(&app, "quit");
-                            }));
-                            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                                keepassxc::shutdown(&app.state::<state::AppState>().keepassxc);
-                            }));
-                            app.exit(0);
+                            // Locks, asks KeePassXC to close, and exits. If KeePassXC is still
+                            // open (it may be asking to save), or anything panics, the app stays
+                            // open and the next close request may try again (see the guard).
+                            let mut guard = ClosingGuard { exiting: false };
+                            guard.exiting = state::quit(&app);
                         });
                     }
                 }
@@ -107,10 +118,14 @@ pub fn run() {
             vault_cmd::window_ready,
             vault_cmd::flush_done,
             vault_cmd::quit_app,
+            vault_cmd::take_notice,
             vault_cmd::open_data_folder,
             backup_cmd::list_backups,
             backup_cmd::pick_backup_file,
             backup_cmd::restore_vault,
+            backup_cmd::list_password_backups,
+            backup_cmd::pick_passwords_backup_file,
+            backup_cmd::restore_passwords,
             notes::list_notes,
             notes::create_notebook,
             notes::update_notebook,

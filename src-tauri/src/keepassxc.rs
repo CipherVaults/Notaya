@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
@@ -89,7 +90,8 @@ fn verify(paths: &Paths) -> bool {
 }
 
 /// `data/passwords.kdbx` if present; otherwise the first other `.kdbx` in the
-/// data folder, ignoring KeePassXC's `.old.kdbx` backups.
+/// data folder, ignoring KeePassXC's `.old.kdbx` backups and the
+/// `passwords-undo-*.kdbx` files that a restore of the passwords file leaves.
 pub fn find_database(paths: &Paths) -> Option<PathBuf> {
     let preferred = paths.data.join("passwords.kdbx");
     if preferred.is_file() {
@@ -106,7 +108,7 @@ pub fn find_database(paths: &Paths) -> Option<PathBuf> {
 
 fn is_database(p: &Path) -> bool {
     let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
-    name.ends_with(".kdbx") && !name.ends_with(".old.kdbx")
+    name.ends_with(".kdbx") && !name.ends_with(".old.kdbx") && !name.starts_with(crate::pwbackup::UNDO_PREFIX)
 }
 
 fn is_running(child: &mut Option<Child>) -> bool {
@@ -196,7 +198,7 @@ pub fn embed(
             if let Some(w) = crate::embed::find_main_window(&exe) {
                 return Some(w);
             }
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(100));
         }
         None
     };
@@ -223,18 +225,40 @@ pub fn detach() -> Result<()> {
     crate::embed::detach()
 }
 
-/// Closes KeePassXC when Cipherleaf quits: asks it politely, then ends it if it lingers.
-pub fn shutdown(child: &Mutex<Option<Child>>) {
-    crate::embed::close();
-    let mut guard = child.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some(c) = guard.as_mut() {
-        for _ in 0..30 {
-            if matches!(c.try_wait(), Ok(Some(_))) {
-                return;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(100));
+/// KeePassXC is gone: the process Cipherleaf started has exited, and there is no
+/// embedded window and no main window of the bundled KeePassXC on screen.
+fn is_gone(paths: &Paths, child: &Mutex<Option<Child>>) -> bool {
+    {
+        let mut guard = child.lock().unwrap_or_else(|e| e.into_inner());
+        if is_running(&mut guard) {
+            return false;
         }
-        let _ = c.kill();
+    }
+    crate::embed::embedded().is_none() && crate::embed::find_main_window(&exe(paths)).is_none()
+}
+
+/// Asks KeePassXC to close, like clicking its close button, and waits up to
+/// `timeout` for it to be gone. Covers the copy Cipherleaf started, the embedded
+/// window and one adopted or started by the user (found by its executable path).
+/// Returns true if KeePassXC is gone or was never running.
+///
+/// It never ends the process: KeePassXC may be asking whether to save, and
+/// force-ending it then would lose that save. If it is still open at the
+/// deadline the answer is false and the caller decides what to tell the owner.
+pub fn close_gracefully(child: &Mutex<Option<Child>>, paths: &Paths, timeout: Duration) -> bool {
+    crate::embed::close();
+    if let Some(window) = crate::embed::find_main_window(&exe(paths)) {
+        crate::embed::close_window(window);
+    }
+    let deadline = Instant::now() + timeout;
+    loop {
+        if is_gone(paths, child) {
+            return true;
+        }
+        if Instant::now() >= deadline {
+            return false;
+        }
+        std::thread::sleep(Duration::from_millis(100));
     }
 }
 
@@ -279,6 +303,9 @@ mod tests {
         assert!(find_database(&paths).is_none());
         std::fs::write(paths.data.join("zeta.old.kdbx"), b"x").unwrap();
         assert!(find_database(&paths).is_none());
+        // A kept copy from a restore is never taken for the database in use.
+        std::fs::write(paths.data.join("passwords-undo-5.kdbx"), b"x").unwrap();
+        assert!(find_database(&paths).is_none());
         std::fs::write(paths.data.join("alpha.kdbx"), b"x").unwrap();
         assert_eq!(find_database(&paths).unwrap().file_name().unwrap(), "alpha.kdbx");
         std::fs::write(paths.data.join("passwords.kdbx"), b"x").unwrap();
@@ -296,6 +323,35 @@ mod tests {
         assert!(err.contains("doesn't match"), "{err}");
         let s = status(&paths, &child);
         assert!(s.installed && !s.verified && !s.running);
+    }
+
+    #[test]
+    fn closing_when_keepassxc_is_not_running_succeeds_at_once() {
+        let paths = temp_paths();
+        let child = Mutex::new(None);
+        let started = Instant::now();
+        assert!(close_gracefully(&child, &paths, Duration::from_secs(3)));
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
+
+    #[test]
+    fn closing_never_kills_a_process_that_will_not_close() {
+        // A stand-in for a KeePassXC that is asking "save changes?": it ignores the request.
+        let paths = temp_paths();
+        let Ok(stand_in) = Command::new("ping").args(["-n", "30", "127.0.0.1"]).stdout(std::process::Stdio::null()).spawn() else {
+            return; // no `ping` on this machine: nothing to check
+        };
+        let child = Mutex::new(Some(stand_in));
+        let started = Instant::now();
+        assert!(!close_gracefully(&child, &paths, Duration::from_millis(400)), "still running, so not closed");
+        assert!(started.elapsed() >= Duration::from_millis(400));
+        let mut guard = child.lock().unwrap();
+        let c = guard.as_mut().unwrap();
+        assert!(matches!(c.try_wait(), Ok(None)), "the process must still be alive");
+        c.kill().unwrap(); // test cleanup only
+        let _ = c.wait();
+        drop(guard);
+        assert!(close_gracefully(&child, &paths, Duration::from_secs(1)), "once it has exited it counts as closed");
     }
 
     #[test]

@@ -46,6 +46,12 @@ export const api = {
   pickBackupFile: () => invoke<string | null>("pick_backup_file"),
   restoreVault: (source: string, password: string, keyfile: string | null) =>
     invoke<RestoreResult>("restore_vault", { source, password, keyfile }),
+  // Restore the KeePassXC passwords file (only while unlocked). `source` is a backup name or a full path.
+  listPasswordBackups: () => invoke<BackupInfo[]>("list_password_backups"),
+  pickPasswordsBackupFile: () => invoke<string | null>("pick_passwords_backup_file"),
+  restorePasswords: (source: string) => invoke<RestoreResult>("restore_passwords", { source }),
+  // A message the backend wants shown once (for example after Quit was cancelled)
+  takeNotice: () => invoke<string | null>("take_notice"),
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
   setBackdrop: (kind: string, dark: boolean) => invoke<boolean>("set_backdrop", { kind, dark }),

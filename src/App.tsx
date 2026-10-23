@@ -28,6 +28,14 @@ export default function App() {
       // Storage may be unavailable; nothing to show then.
     }
 
+    // A message the backend wants shown once (for example after Quit was cancelled).
+    api
+      .takeNotice()
+      .then((text) => {
+        if (text) toast.info(text, { duration: 15000 });
+      })
+      .catch(() => {});
+
     applyAppearance(cachedAppearance(), true).finally(() => {
       refreshStatus().finally(() => {
         // Show the window only after the first paint, so there is no white flash.
@@ -59,7 +67,18 @@ export default function App() {
         await api.flushDone(event.payload).catch(() => {});
       }
     });
+    // The backend can also send a notice while the app is running.
+    // The payload is ignored on purpose: taking the stored copy shows the message once and clears it.
+    const unlistenNotice = listen<string>("app-notice", () => {
+      api
+        .takeNotice()
+        .then((text) => {
+          if (text) toast.info(text, { duration: 15000 });
+        })
+        .catch(() => {});
+    });
     return () => {
+      unlistenNotice.then((f) => f());
       unlisten.then((f) => f());
       unlistenLocking.then((f) => f());
     };

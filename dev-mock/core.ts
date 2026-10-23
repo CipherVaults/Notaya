@@ -124,6 +124,19 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       unlocked = true;
       return ok({ undoFile });
     }
+    case "list_password_backups":
+      return ok([
+        { name: "passwords-1792700000000.kdbx", modifiedMs: ago(60 * 20), size: 24_576 },
+        { name: "passwords-1792600000000.kdbx", modifiedMs: ago(60 * 44), size: 22_528 },
+      ]);
+    case "pick_passwords_backup_file":
+      return ok("E:\\Backups\\my-old-passwords.kdbx");
+    case "restore_passwords":
+      if (String(args.source ?? "").endsWith("busy.kdbx"))
+        throw "KeePassXC is still open. Finish there (it may be asking to save), close it, and try again.";
+      return ok({ undoFile: "passwords-undo-1792800000000.kdbx" });
+    case "take_notice":
+      return ok(null);
     case "flush_done":
       return ok(null);
     case "get_settings":

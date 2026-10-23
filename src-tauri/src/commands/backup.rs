@@ -11,6 +11,7 @@ use super::vault::{after_unlock, read_keyfile};
 use crate::error::{Error, Result};
 use crate::restore::{self, BackupInfo};
 use crate::state::{self, AppState};
+use crate::{keepassxc, pwbackup};
 use crate::vault::Session;
 
 /// Lets only one restore run at a time (they share one temporary file).
@@ -42,6 +43,67 @@ pub fn pick_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Op
     // `restore_vault` accepts an absolute path only if it is this one.
     state.set_picked_backup(std::fs::canonicalize(&path)?);
     Ok(Some(path.display().to_string()))
+}
+
+/// The automatic copies of the KeePassXC passwords file
+/// (`data/backups/passwords-*.kdbx`), newest first. Names, times and sizes only.
+#[tauri::command]
+pub fn list_password_backups(state: State<'_, AppState>) -> Result<Vec<BackupInfo>> {
+    pwbackup::list(&state.paths)
+}
+
+#[tauri::command(async)]
+pub fn pick_passwords_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
+    let mut dialog = app
+        .dialog()
+        .file()
+        .set_title("Choose a passwords backup")
+        .add_filter("KeePassXC database", &["kdbx"]);
+    if state.paths.backups.is_dir() {
+        dialog = dialog.set_directory(&state.paths.backups);
+    }
+    let Some(path) = dialog.blocking_pick_file().and_then(|f| f.into_path().ok()) else {
+        return Ok(None);
+    };
+    // `restore_passwords` accepts an absolute path only if it is this one.
+    state.set_picked_passwords_backup(std::fs::canonicalize(&path)?);
+    Ok(Some(path.display().to_string()))
+}
+
+const KEEPASSXC_OPEN: &str = "KeePassXC is still open. Finish there (it may be asking to save), close it, and try again.";
+
+/// Replaces the KeePassXC passwords file with a backup. Only while Cipherleaf is
+/// unlocked (unlocking is how the owner proves who they are). KeePassXC is asked
+/// to close first and is never force-ended. The backup's own password is not
+/// asked, and Cipherleaf can only check that it is a KeePassXC file; the old
+/// file is kept as `passwords-undo-<ms>.kdbx`.
+#[tauri::command(async)]
+pub fn restore_passwords(state: State<'_, AppState>, source: String) -> Result<RestoreResult> {
+    if !state.is_unlocked() {
+        return Err(Error::Locked);
+    }
+    // One restore at a time (they share one temporary file and the picked path).
+    let _gate = RESTORE_GATE.lock().unwrap_or_else(|e| e.into_inner());
+    if !state.is_unlocked() {
+        return Err(Error::Locked);
+    }
+    let source = pwbackup::resolve_source(&state.paths, &source, state.picked_passwords_backup().as_deref())?;
+
+    // The file can only be replaced once KeePassXC has let go of it.
+    if !keepassxc::close_gracefully(&state.keepassxc, &state.paths, state::KEEPASSXC_CLOSE_TIMEOUT) {
+        // Give it its own window back, so any "save changes?" question can be seen.
+        let _ = keepassxc::detach();
+        return Err(Error::invalid(KEEPASSXC_OPEN));
+    }
+    // Cipherleaf may have locked while KeePassXC was closing: then nothing is changed.
+    if !state.is_unlocked() {
+        return Err(Error::Locked);
+    }
+    let undo_file = pwbackup::stage_and_install(&state.paths, &source, crate::model::now_ms().max(0) as u64)?;
+    // The chosen file has been used. Until this point the pick is kept, so the owner
+    // can simply try again.
+    state.clear_picked_passwords_backup();
+    Ok(RestoreResult { undo_file })
 }
 
 /// Replaces the vault with a backup. Checks the backup first (header, every
@@ -140,6 +202,13 @@ fn install_and_open(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn restore_result_uses_camel_case_json() {
+        let json = serde_json::to_string(&RestoreResult { undo_file: Some("passwords-undo-1.kdbx".into()) }).unwrap();
+        assert_eq!(json, r#"{"undoFile":"passwords-undo-1.kdbx"}"#);
+        assert_eq!(serde_json::to_string(&RestoreResult { undo_file: None }).unwrap(), r#"{"undoFile":null}"#);
+    }
 
     #[test]
     fn the_failure_payload_has_the_prefix_and_the_message() {

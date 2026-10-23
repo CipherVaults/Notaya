@@ -116,6 +116,12 @@ pub fn close() {
     }
 }
 
+/// Asks any window to close, like clicking its close button (for a KeePassXC
+/// window that is not the embedded one, found with [`find_main_window`]).
+pub fn close_window(h: isize) {
+    imp::close(h);
+}
+
 // Window style bits (see the Win32 documentation).
 const WS_POPUP: u32 = 0x8000_0000;
 const WS_VISIBLE: u32 = 0x1000_0000;

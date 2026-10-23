@@ -30,8 +30,8 @@ const MAX_RESTORE_T: u32 = 10;
 const MAX_RESTORE_P: u32 = 16;
 /// A rename that fails is tried again (Windows may still hold a file that was
 /// closed a moment ago).
-const RENAME_ATTEMPTS: u32 = 6;
-const RENAME_DELAY: Duration = Duration::from_millis(300);
+pub(crate) const RENAME_ATTEMPTS: u32 = 6;
+pub(crate) const RENAME_DELAY: Duration = Duration::from_millis(300);
 /// The verified copy, before it is renamed to `vault.clf`.
 const TEMP_NAME: &str = "restore-check.tmp";
 /// The old vault, kept when a restore replaces it.
@@ -64,7 +64,13 @@ fn temp_path(paths: &Paths) -> PathBuf {
 /// The regular files `vault-*.clf` in the backups folder, newest first. Reads
 /// only names, times and sizes, never contents, so it works while locked.
 pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
-    let entries = match fs::read_dir(&paths.backups) {
+    list_in(&paths.backups, is_backup_name)
+}
+
+/// The regular files in `dir` whose names satisfy `is_name`, newest first (shared
+/// with the passwords-file backups). A missing folder is an empty list.
+pub(crate) fn list_in(dir: &Path, is_name: fn(&str) -> bool) -> Result<Vec<BackupInfo>> {
+    let entries = match fs::read_dir(dir) {
         Ok(e) => e,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
         Err(e) => return Err(e.into()),
@@ -74,7 +80,7 @@ pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
         let Some(name) = entry.file_name().to_str().map(str::to_string) else {
             continue;
         };
-        if !is_backup_name(&name) {
+        if !is_name(&name) {
             continue;
         }
         let Ok(meta) = entry.metadata() else {
@@ -163,7 +169,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
 }
 
 /// True if `path` is the file the dialog returned last (compared canonicalized).
-fn is_picked(path: &Path, picked: Option<&Path>) -> bool {
+pub(crate) fn is_picked(path: &Path, picked: Option<&Path>) -> bool {
     picked.is_some_and(|p| fs::canonicalize(path).is_ok_and(|c| c == p))
 }
 
@@ -241,7 +247,7 @@ fn check_restore_kdf(kdf: &KdfParams) -> Result<()> {
 }
 
 /// `fs::rename`, tried again a few times if it fails. A missing source is final.
-fn rename_retry(from: &Path, to: &Path, attempts: u32, delay: Duration) -> io::Result<()> {
+pub(crate) fn rename_retry(from: &Path, to: &Path, attempts: u32, delay: Duration) -> io::Result<()> {
     let mut tries = 1;
     loop {
         match fs::rename(from, to) {
@@ -261,19 +267,24 @@ const NO_SPACE: &str = "There is not enough free space on the drive to restore t
 /// Turns a raw file error from the copy or rename steps into one plain message
 /// (the original goes to stderr). Other errors pass through unchanged.
 fn plain_io(e: Error) -> Error {
+    plain_io_with(e, IN_USE)
+}
+
+/// [`plain_io`] with the "in use" sentence of the file being restored.
+pub(crate) fn plain_io_with(e: Error, in_use: &str) -> Error {
     let Error::Io(io_err) = e else {
         return e;
     };
     eprintln!("restore: file error: {io_err}");
     // 112 = disk full, 39 = handle disk full.
     let full = io_err.kind() == io::ErrorKind::StorageFull || matches!(io_err.raw_os_error(), Some(112 | 39));
-    Error::Other(if full { NO_SPACE } else { IN_USE }.to_string())
+    Error::Other(if full { NO_SPACE } else { in_use }.to_string())
 }
 
 /// The error for a failed install. If putting the old files back failed too,
 /// the text says so and where they are, instead of hiding it. `rollback_notes`
 /// are plain sentences from [`roll_back`].
-fn install_failure(e: io::Error, rollback_notes: &[String]) -> Error {
+pub(crate) fn install_failure(e: io::Error, rollback_notes: &[String]) -> Error {
     if rollback_notes.is_empty() {
         return Error::Io(e);
     }

@@ -6,6 +6,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { Button, Modal } from "@/components/ui";
 import { KeyfileChip, PasswordInput } from "./fields";
 
+const noop = () => {};
 const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 
 function formatSize(bytes: number): string {
@@ -16,16 +17,22 @@ function formatSize(bytes: number): string {
 /**
  * Restore the vault from a backup file. Shared by the lock screen, the first-run screen and Settings.
  * The password lives only in this component's state and is cleared on close and on success.
+ *
+ * In "passwords" mode (Settings only, while unlocked) it restores the KeePassXC passwords file instead.
+ * That needs no password here: Cipherleaf never opens that file.
  */
 export default function RestoreDialog({
   open,
   onOpenChange,
   vaultExists,
+  mode = "vault",
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   vaultExists: boolean;
+  mode?: "vault" | "passwords";
 }) {
+  const isPasswords = mode === "passwords";
   const [backups, setBackups] = useState<BackupInfo[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
@@ -60,8 +67,7 @@ export default function RestoreDialog({
       return;
     }
     let cancelled = false;
-    api
-      .listBackups()
+    (isPasswords ? api.listPasswordBackups() : api.listBackups())
       .then((list) => !cancelled && setBackups(list))
       .catch((e) => {
         if (cancelled) return;
@@ -71,15 +77,20 @@ export default function RestoreDialog({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, isPasswords]);
 
-  const canRestore = !!source && !!password && !busy && !done;
+  const canRestore = !!source && (isPasswords || !!password) && !busy && !done;
 
   const restore = async () => {
-    if (!source || !password || busy || done) return;
+    if (!source || (!isPasswords && !password) || busy || done) return;
     setBusy(true);
     setError(null);
     try {
+      if (isPasswords) {
+        // No page reload here: Cipherleaf stays unlocked and the person goes on to Passwords.
+        setDone(await api.restorePasswords(source));
+        return;
+      }
       const result = await api.restoreVault(source, password, keyfile);
       setPassword("");
       setDone(result);
@@ -96,11 +107,11 @@ export default function RestoreDialog({
   const chooseFile = async () => {
     setError(null);
     try {
-      const path = await api.pickBackupFile();
+      const path = await (isPasswords ? api.pickPasswordsBackupFile() : api.pickBackupFile());
       if (path) {
         setPickedPath(path);
         setSource(path);
-        focusPassword();
+        if (!isPasswords) focusPassword();
       }
     } catch (e) {
       setError(errorText(e));
@@ -121,12 +132,16 @@ export default function RestoreDialog({
     <Modal
       open={open}
       onOpenChange={(o) => {
-        // Don't close halfway through a restore.
-        if (!o && (busy || done)) return;
+        // Don't close halfway through a restore. (The vault restore reloads the page by itself when done.)
+        if (!o && (busy || (done && !isPasswords))) return;
         onOpenChange(o);
       }}
-      title="Restore from a backup"
-      description="Go back to an earlier copy of your vault."
+      title={isPasswords ? "Restore the passwords file" : "Restore from a backup"}
+      description={
+        isPasswords
+          ? "Go back to an earlier copy of your KeePassXC passwords."
+          : "Go back to an earlier copy of your vault."
+      }
       width={520}
     >
       <div className="space-y-4">
@@ -140,7 +155,10 @@ export default function RestoreDialog({
           )}
           {backups?.length === 0 && !pickedPath && (
             <p className="rounded-xl border border-line bg-surface px-3.5 py-3 text-sm text-muted">
-              {listError ?? "No automatic backups found in the data folder."}
+              {listError ??
+                (isPasswords
+                  ? "No automatic passwords backups found yet. They are made when the vault locks and the passwords file has changed."
+                  : "No automatic backups found in the data folder.")}
             </p>
           )}
 
@@ -150,7 +168,7 @@ export default function RestoreDialog({
                 <BackupRow
                   checked={source === pickedPath}
                   onSelect={() => setSource(pickedPath)}
-                  onMouseChosen={focusPassword}
+                  onMouseChosen={isPasswords ? noop : focusPassword}
                   title={fileName(pickedPath)}
                   detail="A file you chose"
                   tooltip={pickedPath}
@@ -161,7 +179,7 @@ export default function RestoreDialog({
                   key={b.name}
                   checked={source === b.name}
                   onSelect={() => setSource(b.name)}
-                  onMouseChosen={focusPassword}
+                  onMouseChosen={isPasswords ? noop : focusPassword}
                   title={formatDate(b.modifiedMs)}
                   detail={formatSize(b.size)}
                   tooltip={b.name}
@@ -171,11 +189,23 @@ export default function RestoreDialog({
           )}
 
           <Button type="button" variant="outline" size="sm" onClick={chooseFile} className="disabled:opacity-70">
-            <FolderOpen size={14} /> Choose another backup file…
+            <FolderOpen size={14} /> {isPasswords ? "Choose another file…" : "Choose another backup file…"}
           </Button>
         </fieldset>
 
-        {vaultExists && (
+        {isPasswords && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-warn/30 bg-warn/5 p-3.5 text-sm leading-relaxed text-muted">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0 text-warn" />
+            <span>
+              This replaces your KeePassXC passwords file with the backup. KeePassXC will be closed first, so save
+              anything you are doing there. The backup opens with the KeePassXC master password it had when it was
+              made. Your current file is not deleted: it is kept in the data folder in a file whose name starts with
+              "passwords-undo".
+            </span>
+          </div>
+        )}
+
+        {!isPasswords && vaultExists && (
           <div className="flex items-start gap-2.5 rounded-xl border border-warn/30 bg-warn/5 p-3.5 text-sm leading-relaxed text-muted">
             <TriangleAlert size={16} className="mt-0.5 shrink-0 text-warn" />
             <span>
@@ -185,6 +215,7 @@ export default function RestoreDialog({
           </div>
         )}
 
+        {!isPasswords && (
         <div className="space-y-2">
           <div className="text-xs font-medium uppercase tracking-wider text-faint">Password of this backup</div>
           <PasswordInput
@@ -206,6 +237,7 @@ export default function RestoreDialog({
             then, use the old one.
           </p>
         </div>
+        )}
 
         {error && (
           <p role="alert" className="text-sm text-danger">
@@ -213,7 +245,27 @@ export default function RestoreDialog({
           </p>
         )}
 
-        {done && (
+        {done && isPasswords && (
+          <p
+            role="status"
+            className="flex items-start gap-2.5 rounded-xl border border-ok/50 bg-ok/10 p-3.5 text-sm font-medium leading-relaxed text-fg"
+          >
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-ok" />
+            <span>
+              Done.{" "}
+              {done.undoFile ? (
+                <>
+                  Your previous passwords file is kept as <span className="font-mono text-xs">{done.undoFile}</span>.
+                </>
+              ) : (
+                "There was no earlier passwords file to keep."
+              )}{" "}
+              Open Passwords to use the restored one.
+            </span>
+          </p>
+        )}
+
+        {done && !isPasswords && (
           <p
             role="status"
             className="flex items-start gap-2.5 rounded-xl border border-ok/50 bg-ok/10 p-3.5 text-sm font-medium leading-relaxed text-fg"
@@ -232,20 +284,33 @@ export default function RestoreDialog({
         )}
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy || !!done} className="disabled:opacity-70">
-            Cancel
-          </Button>
-          <Button type="button" variant="primary" onClick={restore} disabled={!canRestore}>
-            {busy ? (
-              <>
-                <Loader2 size={14} className="animate-spin" /> Restoring…
-              </>
-            ) : (
-              <>
-                <RotateCcw size={14} /> {vaultExists ? "Replace my vault with this backup" : "Restore backup"}
-              </>
-            )}
-          </Button>
+          {isPasswords && done ? (
+            <Button type="button" variant="primary" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy || !!done} className="disabled:opacity-70">
+                Cancel
+              </Button>
+              <Button type="button" variant="primary" onClick={restore} disabled={!canRestore}>
+                {busy ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Restoring…
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw size={14} />{" "}
+                    {isPasswords
+                      ? "Replace passwords file"
+                      : vaultExists
+                        ? "Replace my vault with this backup"
+                        : "Restore backup"}
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </Modal>

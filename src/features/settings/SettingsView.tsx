@@ -24,6 +24,7 @@ export default function SettingsView() {
   const status = useApp((s) => s.status);
   const [changeOpen, setChangeOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [restorePasswordsOpen, setRestorePasswordsOpen] = useState(false);
 
   const persist = useMemo(
     () =>
@@ -210,6 +211,7 @@ export default function SettingsView() {
             Each time the vault locks after changes, an encrypted backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
             Backups open with the password and keyfile they had when they were made.
             Restoring puts a backup in place of your current vault, and keeps the current vault as a separate file.
+            Your KeePassXC passwords file is also backed up automatically when the vault locks (the last 10 are kept).
           </p>
           <div className="flex flex-wrap gap-2 pb-2">
             <Button
@@ -228,6 +230,9 @@ export default function SettingsView() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => setRestoreOpen(true)}>
               <RotateCcw size={14} /> Restore from a backup…
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setRestorePasswordsOpen(true)}>
+              <KeyRound size={14} /> Restore passwords file…
             </Button>
             <Button variant="ghost" size="sm" onClick={() => api.openDataFolder()}>
               <FolderOpen size={14} /> Open data folder
@@ -265,6 +270,7 @@ export default function SettingsView() {
 
       <ChangeMasterDialog open={changeOpen} onOpenChange={setChangeOpen} />
       <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists />
+      <RestoreDialog open={restorePasswordsOpen} onOpenChange={setRestorePasswordsOpen} vaultExists mode="passwords" />
     </div>
   );
 }
