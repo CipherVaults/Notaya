@@ -1793,7 +1793,7 @@ SQLite 3.53.2 is compiled into the exe from the amalgamation inside `libsqlite3-
 
 These are the closest equivalents to NOTICE files; no crate ships a NOTICE file. Verbatim from the crate sources named.
 
-**rand project COPYRIGHT text (rand_core 0.10.1 carries a similar text with variations)** (source file `rand-0.8.8/COPYRIGHT`, from the rand repository)
+**rand project COPYRIGHT text** (source file `rand_core-0.10.1/COPYRIGHT`, from the rand repository)
 
 ~~~~text
 Copyrights in the Rand project are retained by their contributors. No
@@ -1805,9 +1805,6 @@ Except as otherwise noted (below and/or in individual files), Rand is
 licensed under the Apache License, Version 2.0 <LICENSE-APACHE> or
 <http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 <LICENSE-MIT> or <http://opensource.org/licenses/MIT>, at your option.
-
-The Rand project includes code from the Rust project
-published under these same licenses.
 ~~~~
 
 **utf8_iter 1.0.4** (source file `utf8_iter-1.0.4/COPYRIGHT`)

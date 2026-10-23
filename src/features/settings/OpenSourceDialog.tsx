@@ -38,7 +38,7 @@ export default function OpenSourceDialog({ open, onOpenChange }: { open: boolean
           </li>
           <li>
             The app is built with Tauri, Rust crates and npm packages (React, TipTap, ProseMirror, KaTeX and others),
-            fonts under the SIL Open Font License, and the EFF large word list (CC BY 3.0 US, Electronic Frontier Foundation).
+            and fonts under the SIL Open Font License.
           </li>
           <li>The license for Cipherleaf itself has not been chosen yet. This list is attribution, not legal advice.</li>
         </ul>
