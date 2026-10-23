@@ -4,6 +4,8 @@ export interface VaultStatus {
   exists: boolean;
   unlocked: boolean;
   keyfileRequired: boolean;
+  /** The vault header could be read, so keyfileRequired is known. */
+  headerOk: boolean;
   dataDir: string;
   version: string;
 }

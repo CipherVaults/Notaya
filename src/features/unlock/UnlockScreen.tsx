@@ -26,7 +26,7 @@ export default function UnlockScreen() {
         className="relative w-[440px] max-w-[92vw]"
       >
         {status.exists ? (
-          <UnlockCard keyfileRequired={status.keyfileRequired} dataDir={status.dataDir} />
+          <UnlockCard keyfileRequired={status.keyfileRequired} headerOk={status.headerOk} dataDir={status.dataDir} />
         ) : (
           <CreateCard dataDir={status.dataDir} />
         )}
@@ -47,7 +47,15 @@ function Card({ children }: { children: React.ReactNode }) {
 /** The error text for a wrong master password or keyfile (see `Error::BadCredentials` in Rust). */
 const BAD_CREDENTIALS = "Wrong master password or keyfile";
 
-function UnlockCard({ keyfileRequired, dataDir }: { keyfileRequired: boolean; dataDir: string }) {
+function UnlockCard({
+  keyfileRequired,
+  headerOk,
+  dataDir,
+}: {
+  keyfileRequired: boolean;
+  headerOk: boolean;
+  dataDir: string;
+}) {
   const [password, setPassword] = useState("");
   const [keyfile, setKeyfile] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -107,8 +115,14 @@ function UnlockCard({ keyfileRequired, dataDir }: { keyfileRequired: boolean; da
                 <FileKey2 size={15} /> Choose keyfile
               </Button>
             ))}
-          {!keyfileRequired && (
+          {headerOk && !keyfileRequired && (
             <p className="text-xs text-faint">This vault was made without a keyfile, so only the master password is needed.</p>
+          )}
+          {!headerOk && (
+            <p className="text-xs text-warn">
+              The vault file couldn't be read, so Cipherleaf can't tell whether it needs a keyfile. It may be damaged, or
+              another program (antivirus or a sync tool) may be using it.
+            </p>
           )}
           <AnimatePresence>
             {error && (
@@ -239,30 +253,35 @@ function StartOverDialog({
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
   const refreshStatus = useApp((s) => s.refreshStatus);
   const confirmed = typed.trim().toLowerCase() === "start over";
 
+  // Start fresh every time the dialog opens.
   useEffect(() => {
-    if (!open) {
+    if (open) {
       setTyped("");
       setError(null);
     }
   }, [open]);
 
   const startOver = async () => {
-    if (!confirmed || busy) return;
+    if (!confirmed || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
       const name = await api.startOver();
       onOpenChange(false);
-      await refreshStatus();
-      toast.success(`Your old vault is kept as ${name} in the data folder. You can now create a new vault.`, {
-        duration: 15000,
-      });
+      toast.success(
+        `Your old vault is kept as ${name} in the data folder (one level above the backups folder). To get it back, use "Already have a backup? Restore it" and choose that file.`,
+        { duration: 20000 },
+      );
+      await refreshStatus().catch(() => {});
     } catch (e) {
       setError(errorText(e));
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };

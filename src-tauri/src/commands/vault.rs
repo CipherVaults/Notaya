@@ -21,6 +21,8 @@ pub struct VaultStatus {
     exists: bool,
     unlocked: bool,
     keyfile_required: bool,
+    /// The vault's header could be read, so `keyfile_required` is known and not a guess.
+    header_ok: bool,
     data_dir: String,
     version: String,
 }
@@ -29,15 +31,14 @@ pub struct VaultStatus {
 pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultStatus> {
     let exists = state.paths.vault.exists();
     let unlocked = state.is_unlocked();
-    let keyfile_required = if exists && !unlocked {
-        Session::read_header(&state.paths.vault).map(|h| h.keyfile_required).unwrap_or(false)
-    } else {
-        false
-    };
+    let header = if exists && !unlocked { Session::read_header(&state.paths.vault).ok() } else { None };
+    let header_ok = header.is_some();
+    let keyfile_required = header.is_some_and(|h| h.keyfile_required);
     Ok(VaultStatus {
         exists,
         unlocked,
         keyfile_required,
+        header_ok,
         data_dir: state.paths.data.display().to_string(),
         version: app.package_info().version.to_string(),
     })

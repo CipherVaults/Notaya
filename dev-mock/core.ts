@@ -97,7 +97,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
   const ok = (v: unknown) => v as T;
   switch (cmd) {
     case "vault_status":
-      return ok({ exists, unlocked, keyfileRequired: false, dataDir: "E:\\Cipherleaf\\data", version: "1.0.0" });
+      return ok({ exists, unlocked, keyfileRequired: false, headerOk: true, dataDir: "E:\\Cipherleaf\\data", version: "1.0.0" });
     case "create_vault":
       exists = true;
       unlocked = true;
