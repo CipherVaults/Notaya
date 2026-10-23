@@ -150,6 +150,8 @@ function StartCard() {
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const refreshStatus = useApp((s) => s.refreshStatus);
+  const earlierCopies = useApp((s) => s.status?.earlierCopies ?? false);
+  const openError = useApp((s) => s.status?.openError ?? null);
 
   const start = async () => {
     setBusy(true);
@@ -169,10 +171,11 @@ function StartCard() {
         <div className="mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft">
           <Logo size={34} />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">No notes found here</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{earlierCopies ? "No notes found here" : "Notes could not be started"}</h1>
         <p className="mt-1 text-sm text-muted">
-          This folder has earlier backups but no current notes file. Restore a backup to get your notes back, or start
-          new notes.
+          {earlierCopies
+            ? "This folder has earlier backups but no current notes file. Restore a backup to get your notes back, or start new notes."
+            : (openError ?? "A new notes file could not be created in this folder. Check that the folder can be written to.")}
         </p>
       </div>
       <div className="space-y-3">

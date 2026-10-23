@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Manager, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
@@ -9,10 +9,10 @@ use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
 use crate::model::{resolve_passwords, Item, Settings, Sticky};
+use crate::openvault;
 use crate::state::{self, AppState};
 use crate::ui;
 use crate::vault::Session;
-use crate::openvault;
 
 const MIN_PASSWORD_CHARS: usize = 10;
 
@@ -38,7 +38,8 @@ pub struct VaultStatus {
 /// left alone for the lock screen. Returns why a vault with security off could not be opened.
 fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     let _gate = state.open_gate();
-    if state.is_unlocked() {
+    // A quit in progress must not bring the notes back to life while KeePassXC closes.
+    if state.is_unlocked() || state.is_quitting() {
         return None;
     }
     if !state.paths.vault.exists() {
@@ -62,6 +63,12 @@ fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     }
 }
 
+/// Opens a vault that has security off again after a cancelled quit had closed it.
+pub(crate) fn reopen_open_vault(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let _ = auto_open(app, &state);
+}
+
 /// Creates a new vault with security off and opens it.
 fn create_open(app: &AppHandle, state: &AppState) -> Result<()> {
     state.paths.ensure_dirs()?;
@@ -78,7 +85,11 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
     let exists = state.paths.vault.exists();
     let unlocked = state.is_unlocked();
     let (keyfile_required, security_on) = if unlocked {
-        (false, !state.with(|s| Ok(s.is_open())).unwrap_or(false))
+        // Also while unlocked: turning security off needs the keyfile again.
+        match state.with(|s| Ok((s.keyfile_required()?, !s.is_open()))) {
+            Ok(v) => v,
+            Err(_) => (false, true),
+        }
     } else if exists {
         match Session::read_header(&state.paths.vault) {
             Ok(h) => (h.keyfile_required, !h.open),
@@ -365,10 +376,7 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
     let mut settings = state.with(|s| Ok(s.settings()))?;
-    settings.passwords_enabled = Some(resolve_passwords(
-        settings.passwords_enabled,
-        crate::keepassxc::find_database(&state.paths).is_some(),
-    ));
+    settings.passwords_enabled = Some(resolve_passwords(settings.passwords_enabled, state::passwords_in_use(&state.paths)));
     Ok(settings)
 }
 

@@ -42,6 +42,9 @@ export default function RestoreDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ undoFile: string | null } | null>(null);
+  // The backup was made while security was off: restoring it turns security off, so ask first.
+  const [confirmOff, setConfirmOff] = useState(false);
+  const [askConfirmOff, setAskConfirmOff] = useState(false);
   const reloadTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +67,8 @@ export default function RestoreDialog({
       setKeyfile(null);
       setBusy(false);
       setError(null);
+      setConfirmOff(false);
+      setAskConfirmOff(false);
       return;
     }
     let cancelled = false;
@@ -80,7 +85,7 @@ export default function RestoreDialog({
   }, [open, isPasswords]);
 
   // The password may stay empty: a backup made while security was off needs none.
-  const canRestore = !!source && !busy && !done;
+  const canRestore = !!source && !busy && !done && (!askConfirmOff || confirmOff);
 
   const restore = async () => {
     if (!source || busy || done) return;
@@ -92,14 +97,21 @@ export default function RestoreDialog({
         setDone(await api.restorePasswords(source));
         return;
       }
-      const result = await api.restoreVault(source, password, keyfile);
+      const result = await api.restoreVault(source, password, keyfile, confirmOff);
       setPassword("");
       setDone(result);
       // The backend has unlocked the restored vault. A reload makes the screen start fresh from it.
       reloadTimer.current = setTimeout(() => window.location.reload(), 1200);
     } catch (e) {
-      setError(errorText(e));
-      focusPassword();
+      const text = errorText(e);
+      if (text.startsWith("SECURITY_OFF:")) {
+        // Not a failure: the person has to confirm before the restore turns security off.
+        setAskConfirmOff(true);
+        setError(text.replace(/^SECURITY_OFF:\s*/, ""));
+      } else {
+        setError(text);
+        focusPassword();
+      }
     } finally {
       setBusy(false);
     }
@@ -245,6 +257,20 @@ export default function RestoreDialog({
           <p role="alert" className="text-sm text-danger">
             {error}
           </p>
+        )}
+
+        {askConfirmOff && !isPasswords && !done && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-warn/30 bg-warn/5 p-4 text-sm leading-relaxed">
+            <input
+              type="checkbox"
+              checked={confirmOff}
+              onChange={(e) => setConfirmOff(e.target.checked)}
+              className="mt-1 h-4 w-4 accent-[var(--accent)]"
+            />
+            <span className="text-muted">
+              Turn security off and restore this backup. My notes will open without a password.
+            </span>
+          </label>
         )}
 
         {done && isPasswords && (

@@ -92,7 +92,7 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
         onOpenChange(o);
       }}
       title="Turn on security"
-      description="Your notes stay as they are. They get a master password, and the options below appear in Settings."
+      description="Your notes are kept. They get a new key and a master password; this takes a moment. The security options then appear in Settings."
       width={520}
     >
       <div className="space-y-4">
@@ -139,7 +139,7 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
           />
           <span className="text-muted">
             <strong className="text-fg">Delete earlier backups made while security was off.</strong> Anyone with the
-            folder can open those without a password. A new backup under your new password is saved first.
+            folder can open those without a password. A new backup under your new password is saved first. Old vaults that a restore kept (restore-undo files) are never deleted.
           </span>
         </label>
 

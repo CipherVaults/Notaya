@@ -77,6 +77,22 @@ impl Header {
         Self::wrap(dek, OPEN_PASSWORD, None, OPEN_KDF, self.vault_id, true)
     }
 
+    /// A header for a re-keyed vault (a fresh data key and vault id), under a master password.
+    pub fn protected_for(
+        dek: &Key,
+        vault_id: [u8; 16],
+        password: &str,
+        keyfile: Option<&[u8; 32]>,
+        kdf: KdfParams,
+    ) -> Result<Header> {
+        Self::wrap(dek, password, keyfile, kdf, vault_id, false)
+    }
+
+    /// A header for a re-keyed vault (a fresh data key and vault id), under the built-in key.
+    pub fn open_for(dek: &Key, vault_id: [u8; 16]) -> Result<Header> {
+        Self::wrap(dek, OPEN_PASSWORD, None, OPEN_KDF, vault_id, true)
+    }
+
     fn wrap(
         dek: &Key,
         password: &str,

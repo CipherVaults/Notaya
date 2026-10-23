@@ -52,8 +52,8 @@ export const api = {
   // Restore from a backup (works while locked). `source` is a backup name or a full path.
   listBackups: () => invoke<BackupInfo[]>("list_backups"),
   pickBackupFile: () => invoke<string | null>("pick_backup_file"),
-  restoreVault: (source: string, password: string, keyfile: string | null) =>
-    invoke<RestoreResult>("restore_vault", { source, password, keyfile }),
+  restoreVault: (source: string, password: string, keyfile: string | null, allowSecurityOff = false) =>
+    invoke<RestoreResult>("restore_vault", { source, password, keyfile, allowSecurityOff }),
   // Restore the KeePassXC passwords file (only while unlocked). `source` is a backup name or a full path.
   listPasswordBackups: () => invoke<BackupInfo[]>("list_password_backups"),
   pickPasswordsBackupFile: () => invoke<string | null>("pick_passwords_backup_file"),

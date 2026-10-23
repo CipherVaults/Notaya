@@ -196,6 +196,11 @@ pub fn remove_temp(paths: &Paths) {
     let _ = fs::remove_file(&tmp);
 }
 
+/// Whether the verified copy waiting to be installed is a vault with security off.
+pub fn staged_is_open(paths: &Paths) -> Result<bool> {
+    Ok(Session::read_header(&temp_path(paths))?.open)
+}
+
 /// Copies `source` to `data/restore-check.tmp` and opens THAT COPY with the
 /// credentials: the header, every record and every attachment must authenticate.
 /// On success the copy is closed and synced, ready for [`install`]. On any
@@ -710,6 +715,19 @@ mod tests {
         assert!(s.get(&item_id).is_some());
         // The protected vault it replaced is kept and still needs its password.
         assert!(Session::unlock(&paths.data.join("restore-undo-77.clf"), "password-B", None).is_ok());
+    }
+
+    #[test]
+    fn a_staged_copy_reports_whether_security_was_off() {
+        let paths = temp_paths();
+        let open_src = paths.backups.join("vault-1.clf");
+        drop(Session::create_open(&open_src).unwrap());
+        verify_and_stage(&paths, &open_src, "", None).unwrap();
+        assert!(staged_is_open(&paths).unwrap());
+        let prot_src = paths.backups.join("vault-2.clf");
+        drop(Session::create(&prot_src, "pw", None, FAST).unwrap());
+        verify_and_stage(&paths, &prot_src, "pw", None).unwrap();
+        assert!(!staged_is_open(&paths).unwrap());
     }
 
     #[test]

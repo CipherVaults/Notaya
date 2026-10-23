@@ -40,17 +40,19 @@ pub fn has_earlier_copies(paths: &Paths) -> bool {
     !earlier_copies(paths).is_empty()
 }
 
-/// The earlier copies whose header says "security off": anyone with the file can read them.
-/// A file whose header can't be read is left out (it is never touched).
+/// The automatic backups whose header says "security off": anyone with the file can read them.
+/// A file whose header can't be read is left out (it is never touched). The old vaults a
+/// restore keeps (`restore-undo-*.clf`) are NOT included: they hold notes that exist nowhere
+/// else, so the app never deletes them.
 pub fn unprotected_copies(paths: &Paths) -> Vec<PathBuf> {
-    earlier_copies(paths)
+    names_in(&paths.backups, is_backup_name)
         .into_iter()
         .filter(|p| matches!(Session::read_header(p), Ok(h) if h.open))
         .collect()
 }
 
-/// Deletes the unprotected earlier copies (and their `-journal` files) and returns how
-/// many were removed. Protected copies and anything unreadable stay.
+/// Deletes the unprotected automatic backups (and their `-journal` files) and returns how
+/// many were removed. Protected backups, restore-undo files and anything unreadable stay.
 pub fn delete_unprotected(paths: &Paths) -> usize {
     let mut removed = 0;
     for path in unprotected_copies(paths) {
@@ -88,10 +90,10 @@ mod tests {
         fs::write(paths.backups.join("vault-3.clf"), b"not a vault").unwrap(); // unreadable: left alone
         fs::write(paths.backups.join("notes.txt"), b"x").unwrap();
         assert!(has_earlier_copies(&paths));
-        assert_eq!(unprotected_copies(&paths).len(), 2);
-        assert_eq!(delete_unprotected(&paths), 2);
+        assert_eq!(unprotected_copies(&paths).len(), 1);
+        assert_eq!(delete_unprotected(&paths), 1);
         assert!(!paths.backups.join("vault-1.clf").exists());
-        assert!(!paths.data.join("restore-undo-5.clf").exists());
+        assert!(paths.data.join("restore-undo-5.clf").exists(), "an old vault kept by a restore is never deleted");
         assert!(paths.backups.join("vault-2.clf").exists(), "a protected backup stays");
         assert!(paths.backups.join("vault-3.clf").exists(), "an unreadable file stays");
         assert!(paths.backups.join("notes.txt").exists());
