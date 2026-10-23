@@ -20,7 +20,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Task / Goal: a friend's report passed on by the owner (17:04:30 UTC): unlocking failed after moving the portable folder, and there was no way to start over. Approved: "Both" (17:16:33 UTC), "Push it run tests recheck" (17:26:10 UTC)
 - Executor: Claude (Claude Code), cloud session plus a Remote Control session on the owner's PC
 - Outcome: the move itself is not the cause (real-exe move test passed on throwaway data); added Start over (sets the vault aside, never deletes), clearer wrong-password wording and a keyfile warning
-- Integration / review: no independent review
+- Integration / review: one independent read-only review (found no data-loss path; its follow-ups are in `94d0235`); agent reports are model output
 - Acceptance: pending
 - Open dependency / next action: Rust tests and a real-exe check of the new screens on the PC; the owner's review; merging into `main` and `feat/a9-keepassxc` waits for the owner
 
