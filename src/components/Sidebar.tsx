@@ -52,17 +52,56 @@ function contents(tree: NotesTree, sectionIds: string[], withSections: boolean):
 const DELETE_NOTE =
   "This can't be undone from inside the app, but Cipherleaf saves a backup copy first, so you can use Restore from a backup in Settings.";
 
-/** Deletes a notebook or section after a confirm that counts what goes. Shows the error if the backup or the delete fails. */
+const rowByKey = (key: string) => document.querySelector<HTMLElement>(`[data-rowkey="${window.CSS.escape(key)}"]`);
+
+/** The keys of the rows next to a row at the same level, nearest first: the next sibling, then the previous one. */
+function siblingKeys(key: string): string[] {
+  const row = rowByKey(key);
+  const items = row ? Array.from(row.closest('[role="tree"]')?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? []) : [];
+  const at = row ? items.indexOf(row) : -1;
+  if (at < 0) return [];
+  const level = Number(items[at].getAttribute("aria-level"));
+  const find = (dir: 1 | -1) => {
+    for (let i = at + dir; i >= 0 && i < items.length; i += dir) {
+      const l = Number(items[i].getAttribute("aria-level"));
+      if (l < level) return null;
+      if (l === level) return items[i].dataset.rowkey ?? null;
+    }
+    return null;
+  };
+  return [find(1), find(-1)].filter((k): k is string => !!k);
+}
+
+/**
+ * Deletes a notebook or section after a confirm that counts what goes. Shows the error if the backup or the delete fails.
+ * `rowKey` is the row being deleted: once the dialog closes, the keyboard focus goes back to that row,
+ * or, after a delete, to the next row at the same level, the previous one, or the row of the tree that is in the Tab order.
+ */
 function useDeleteWithConfirm() {
   const confirm = useConfirm();
   const setTree = useApp((s) => s.setTree);
-  return async (o: { title: string; body: string; confirm: string; name: string; del: () => Promise<NotesTree> }) => {
-    if (!(await confirm({ title: o.title, body: o.body, confirm: o.confirm, danger: true }))) return false;
+  return async (o: { rowKey: string; title: string; body: string; confirm: string; name: string; del: () => Promise<NotesTree> }) => {
+    const near = siblingKeys(o.rowKey);
+    const tree = rowByKey(o.rowKey)?.closest<HTMLElement>('[role="tree"]') ?? null;
+    // Wait a moment so the dialog has closed and the tree has redrawn before looking for the row.
+    const refocus = (keys: string[]) =>
+      setTimeout(() => {
+        const row =
+          keys.map(rowByKey).find((r) => r) ??
+          (tree?.isConnected ? tree : document).querySelector<HTMLElement>('[role="treeitem"][tabindex="0"], [role="treeitem"]');
+        row?.focus();
+      }, 120);
+    if (!(await confirm({ title: o.title, body: o.body, confirm: o.confirm, danger: true }))) {
+      refocus([o.rowKey]);
+      return false;
+    }
     try {
       setTree(await o.del());
+      refocus([o.rowKey, ...near]);
       return true;
     } catch (e) {
       toast.error(`"${o.name}" was not deleted. ${errorText(e)}`, { duration: 12000 });
+      refocus([o.rowKey]);
       return false;
     }
   };
@@ -285,6 +324,7 @@ export default function Sidebar() {
                           icon={<Trash2 size={14} />}
                           onSelect={async () => {
                             const ok = await deleteWithConfirm({
+                              rowKey: `nb:${nb.id}`,
                               title: `Delete notebook "${nb.name}"?`,
                               body: `${contents(tree, sections.map((s) => s.id), true)} ${DELETE_NOTE}`,
                               confirm: "Delete notebook",
@@ -817,6 +857,7 @@ function SectionBlock({
                 icon={<Trash2 size={14} />}
                 onSelect={async () => {
                   const ok = await deleteWithConfirm({
+                    rowKey,
                     title: `Delete section "${section.name}"?`,
                     body: `${contents(tree, [section.id], false)} ${DELETE_NOTE}`,
                     confirm: "Delete section",

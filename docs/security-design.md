@@ -6,7 +6,7 @@ A dependency scan, a plaintext search or a passing test can support one specific
 
 ## What it protects
 
-- **Cipherleaf vault contents:** notes and pages, sticky notes, pasted images and settings. **Since A21 this protection is confidentiality only while security is on.** With security off the contents are still encrypted and tamper-checked, but the key is public (see the A21 limits below).
+- **Cipherleaf vault contents:** notes and pages, sticky notes, pasted images and settings. **Since A21 this protection is confidentiality only while security is on.** With security off the contents are still in the encrypted, tamper-checked format, but the key is public, so they are not private (see the A21 limits below). Since A23 the screens do not call the notes "encrypted" while security is off.
 - **Cipherleaf keys and credentials:** the master password, the optional keyfile, and the 256-bit data key that encrypts everything.
 - **Passwords (A9):** usernames, passwords, TOTP secrets and attachments live in `data/passwords.kdbx`, protected by KeePassXC's own master password (and optional keyfile). Cipherleaf never decrypts, opens or interprets them. **Since A19 it does copy the encrypted file bytes** (on each lock, into `data/backups/`) and can replace the file from such a copy; it only checks the KeePass file signature (8 bytes) and the size.
 
@@ -53,7 +53,7 @@ Every app command is callable by any Cipherleaf window. So a script injected int
 |---|---|---|
 | P1 | Vault data can't be read without the master password, and the keyfile when one is set | Implemented; unit-tested on the 11:37 UTC state (historical) |
 | P2 | Any change to the header or a record, or a swapped record, is detected | Implemented; unit-tested on the 11:37 UTC state (historical) |
-| P3 | Changing the password keeps all data and doesn't re-encrypt it | Implemented; unit-tested on the 11:37 UTC state (historical) |
+| P3 | Changing the password keeps all data (**since A23 it also re-keys: a fresh data key and vault id, every record re-encrypted in one transaction, then a fresh backup; before A23 it only re-wrapped the data key**) | Implemented; the A23 re-key is unit-tested in the Tauri-free harness; PC results are in EX-21 |
 | P4 | Keys never leave the Rust core | By design; not independently reviewed |
 | P5 | Cipherleaf makes no network connections, and the bundled KeePassXC is started with offline presets | Cipherleaf has no network code (the HTTP library was removed). KeePassXC alone, with the presets, made no connections in an 8-second launch test on 2026-10-22; not yet tested through Cipherleaf. The preset also marks the first-run update question as answered (A11), so KeePassXC does not ask to turn update checks on. |
 | P6 | KeePassXC starts only if its executable matches the verified 2.8.0 hash, and its settings stay in `data/keepassxc/` | Implemented; unit-tested (refusal of an unverified file). Not yet tested through the running app. |
@@ -79,7 +79,7 @@ P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite passed agai
 
 ### A21: optional security and Passwords
 
-- **Security off is not confidentiality (A21).** With security off the notes are in the encrypted format, but the key is built into Cipherleaf and public. Anyone who has `vault.clf` or a backup and a copy of Cipherleaf can read the notes. Settings and the README say this in plain words.
+- **Security off is not confidentiality (A21).** With security off the notes are in the encrypted format, but the key is built into Cipherleaf and public. Anyone who has `vault.clf` or a backup and a copy of Cipherleaf can read the notes. Settings and the README say this in plain words, and since A23 Home shows a one-time dismissible note and the page bar says "Saved on this drive" instead of "Saved & encrypted" while security is off.
 - **A protected `vault.clf` can be replaced by an open one (A21).** Someone with write access to `data\` can put an open vault in place of a protected one. Cipherleaf then opens with no prompt and shows empty or different notes. The same access already allows replacing the exe, and the missing prompt is visible. Not defended.
 - **Earlier open backups and `restore-undo-*.clf` files stay readable by anyone (A21).** Turning security on offers to delete earlier automatic backups (`data/backups/vault-*.clf`) whose header says open, and their `-journal` files, after a fresh protected backup (default on). It never deletes `restore-undo-*.clf` files, because they hold notes that exist nowhere else; the person removes them by hand. Manual exports made with "Save a backup copy" are never touched. Deleted SQLite journal data may linger on disk. After security is turned off, older protected backups still need their own password and cannot be opened with the new open file. Changing the master password while security is on only re-wraps the header, so older backups still open with the old password (existing limit).
 - **Restoring an open backup onto a protected vault turns security off, after a confirmation (A21).** A backup made with security off is restored with no password (its key is built in). If the vault has a master password, `restore_vault` is refused with an error starting "SECURITY_OFF:" until the person confirms. The UI shows a checkbox and sends `allowSecurityOff`. The confirmation is only a UI gate: a script injected into the UI could pass it. Known limit.
@@ -121,7 +121,7 @@ P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite passed agai
 - **A pasted picture can be removed by the cleanup** if another page is deleted within the save delay of the page that holds the picture (plausible, low frequency; not fixed, see the backlog in [EX-13](execution/2026-10-23-lock-and-data-loss-fixes.md#findings-not-fixed-backlog)).
 - **A2 (pending owner decision):** restoring an older copy of a single record isn't detected, although the plan promises it.
 - **A1:** Argon2 settings are fixed rather than tuned per PC.
-- After a password change, **older backups** in `data/backups/` still open with the old password and keyfile.
+- After a password change, **older backups** in `data/backups/` still open with the old password and keyfile (the Change password dialog and the README say so). Since A23 records written after the change cannot be opened with the old password, even with an old backup's header (before A23 they could).
 - The failed-attempt delay is in memory, so it **resets when the app restarts**.
 - **Visible metadata:** the file is recognizably SQLite. Record and attachment counts, approximate sizes, the Argon2 settings, the vault ID and whether a keyfile is required are all visible.
 - **Appearance settings in plaintext:** theme, accent, font, and layout choices such as the sidebar width, in the WebView2 storage inside `data/webview/`.
@@ -138,7 +138,7 @@ P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite passed agai
 ## Cryptography (as implemented)
 
 - **Password handling:** the password is Unicode-normalized (NFC), then stretched with Argon2id v1.3 (256 MiB memory, 3 passes, 4 lanes, 32-byte random salt).
-- **Open vault (A21):** header flag `FLAG_OPEN` (bit 1 of the flags byte, authenticated like the rest of the header). The data key is wrapped under a built-in, public password with cheap Argon2 settings (8 MiB, 1 pass, 1 lane), because there is nothing to guess. Records, padding and tamper checks are unchanged. Turning security on or off re-keys the vault: a fresh data key and vault id, with every record and attachment re-encrypted in one transaction (all or nothing), then the new header. Changing the master password while security is on only re-wraps the header. A Cipherleaf older than A21 refuses such a file as damaged.
+- **Open vault (A21):** header flag `FLAG_OPEN` (bit 1 of the flags byte, authenticated like the rest of the header). The data key is wrapped under a built-in, public password with cheap Argon2 settings (8 MiB, 1 pass, 1 lane), because there is nothing to guess. Records, padding and tamper checks are unchanged. Turning security on or off re-keys the vault: a fresh data key and vault id, with every record and attachment re-encrypted in one transaction (all or nothing), then the new header. Since A23, changing the master password while security is on re-keys the vault the same way (before A23 it only re-wrapped the header, which kept the data key). A Cipherleaf older than A21 refuses such a file as damaged.
 - **Key-encryption key:** HKDF-SHA256 over the Argon2 output, plus the keyfile's SHA-256 when a keyfile is used.
 - **Data key:** 256 bits from the OS random generator, wrapped with XChaCha20-Poly1305. The first 67 header bytes are authenticated alongside it.
 - **Records:** XChaCha20-Poly1305 with a fresh random 24-byte nonce on every write. The authenticated data is `"cipherleaf"`, the format version, the vault ID, the table tag and the row ID.

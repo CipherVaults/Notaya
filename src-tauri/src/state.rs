@@ -313,12 +313,16 @@ fn emits_vault_locked(reason: &str, was_open: bool) -> bool {
 ///
 /// Waits for the windows, so call it only from a thread other than the main
 /// one (an `async` command, the monitor thread, the close handler's thread).
-pub fn lock(app: &AppHandle, reason: &str) {
+///
+/// Returns the failure notice if the backup made on locking failed (it has been reported
+/// already as a notice and an event); a quit uses it, because the window is gone before
+/// anyone could read the notice. `None` when nothing failed.
+pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     let state = app.state::<AppState>();
     // A vault with security off never locks by itself or by a button. Only a quit and a
     // restore close it (they have to, to save and to swap the file).
     if !matches!(reason, "quit" | "restore") && state.with(|s| Ok(s.is_open())).unwrap_or(false) {
-        return;
+        return None;
     }
     if reason != "drive-removed" && state.is_unlocked() {
         request_flush(app, FLUSH_TIMEOUT);
@@ -333,8 +337,9 @@ pub fn lock(app: &AppHandle, reason: &str) {
     }
     // Slow parts after that.
     let made = session.as_ref().filter(|s| s.dirty).map(|s| backup::make_backup(&state.paths, s));
+    let mut backup_failure = None;
     if let Some(Err(e)) = made {
-        report_backup_failure(app, &state, &e);
+        backup_failure = Some(report_backup_failure(app, &state, &e));
     }
     // With the Passwords feature off, KeePassXC and its file are left completely alone.
     // (With no session to ask, as in a second lock, do what a lock always did.)
@@ -349,6 +354,7 @@ pub fn lock(app: &AppHandle, reason: &str) {
         pwbackup::backup_on_lock(&state.paths);
         keepassxc::lock_if_running(&state.paths, &state.keepassxc);
     }
+    backup_failure
 }
 
 /// How long a quit (or a restore of the passwords file) waits for KeePassXC to
@@ -380,7 +386,7 @@ pub fn quit(app: &AppHandle) -> bool {
     // While quitting, nothing may reopen a vault that has security off.
     state.set_quitting(true);
     // Whatever fails or panics here, the next step must still run.
-    let _ = catch_unwind(AssertUnwindSafe(|| lock(app, "quit")));
+    let backup_failure = catch_unwind(AssertUnwindSafe(|| lock(app, "quit"))).ok().flatten();
     // If this fails we don't know that KeePassXC is closed, so we don't exit.
     let closed = catch_unwind(AssertUnwindSafe(|| {
         keepassxc::close_gracefully(&state.keepassxc, &state.paths, KEEPASSXC_CLOSE_TIMEOUT)
@@ -391,6 +397,12 @@ pub fn quit(app: &AppHandle) -> bool {
         if passwords {
             let _ = catch_unwind(AssertUnwindSafe(|| pwbackup::backup_on_lock(&state.paths)));
         }
+        // A failed backup at quit would go unseen (the window is destroyed right away), so say it
+        // in a message box first. Not when the vault file is gone (the drive was removed): the
+        // notice then is about the drive, and nothing may hold up the exit.
+        if let Some(text) = backup_failure.filter(|_| state.paths.vault.exists()) {
+            let _ = catch_unwind(AssertUnwindSafe(|| show_backup_failure(app, &text)));
+        }
         app.exit(0);
         return true;
     }
@@ -400,20 +412,40 @@ pub fn quit(app: &AppHandle) -> bool {
     if was_open {
         let _ = catch_unwind(AssertUnwindSafe(|| crate::commands::vault::reopen_open_vault(app)));
     }
-    state.set_notice(KEEPASSXC_STILL_OPEN.to_string());
-    let _ = app.emit("app-notice", KEEPASSXC_STILL_OPEN.to_string());
+    // Cipherleaf stays open, so the notice is seen; it also says that the backup failed.
+    let notice = match backup_failure {
+        Some(failure) => format!("{KEEPASSXC_STILL_OPEN} {failure}"),
+        None => KEEPASSXC_STILL_OPEN.to_string(),
+    };
+    state.set_notice(notice.clone());
+    let _ = app.emit("app-notice", notice);
     false
+}
+
+/// A native message box that waits until it is closed. Call it from a thread other than the
+/// main one (as `quit` is).
+fn show_backup_failure(app: &AppHandle, text: &str) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+    let _ = app
+        .dialog()
+        .message(text.to_string())
+        .title("Cipherleaf could not make a backup")
+        .kind(MessageDialogKind::Warning)
+        .blocking_show();
 }
 
 /// Tells the owner that an automatic backup could not be made (the release exe has no
 /// console, so a message on stderr would never be seen). The notice is kept as well as
 /// sent as an event, like the one for a cancelled quit: a lock reloads the window and a
-/// live event could be missed. The vault file itself is not affected.
-pub(crate) fn report_backup_failure(app: &AppHandle, state: &AppState, e: &Error) {
+/// live event could be missed. The vault file itself is not affected. Returns the text.
+pub(crate) fn report_backup_failure(app: &AppHandle, state: &AppState, e: &Error) -> String {
     eprintln!("backup failed: {e}");
-    let text = backup::failure_notice(e);
+    // What the notice says about the notes depends on the cause (and on whether the vault
+    // file is still there: it is not when the drive was removed).
+    let text = backup::failure_notice(e, state.paths.vault.exists());
     state.set_notice(text.clone());
-    let _ = app.emit("app-notice", text);
+    let _ = app.emit("app-notice", text.clone());
+    text
 }
 
 /// A backup of an open vault (security off) while it is running: it never locks, so
@@ -430,8 +462,13 @@ fn periodic_backup(app: &AppHandle, state: &AppState) {
         s.dirty = false;
         Ok(())
     });
-    if let Err(e) = result {
-        report_backup_failure(app, state, &e);
+    match result {
+        Ok(()) => {}
+        // A quit, a lock or a restore took the session while this was starting: nothing failed.
+        Err(Error::Locked) => {}
+        Err(e) => {
+            report_backup_failure(app, state, &e);
+        }
     }
 }
 

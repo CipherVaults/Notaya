@@ -68,7 +68,9 @@ Passwords are kept by [KeePassXC](https://keepassxc.org) 2.8.0, bundled with the
 
 ### Backups and restore
 
-- **Automatic backup** when the vault locks or the app quits after changes, saved in `data\backups` (the last 10 are kept).
+- **Automatic backup** when the app quits, and about once an hour while you work, if something changed (also when the vault locks, if you use security). Saved in `data\backups`; the newest 10 are kept.
+- **Safety backup before a delete.** Before a notebook or section is deleted, Cipherleaf makes a backup first (`vault-predelete-<number>.clf`). If it can't be made, nothing is deleted. The newest 5 of these are kept.
+- If a backup fails, Cipherleaf shows a message.
 - **Save a backup copy** from Settings, or "Back up vault now" in the `Ctrl+K` menu, saves a copy wherever you choose.
 - **Restore** from the lock screen, from Settings, or from the start screens. Cipherleaf checks the backup first and keeps your current file as `restore-undo-....clf`. Nothing is deleted.
 - **Start over** sets a vault you can't open aside as `set-aside-....clf` and lets you start new notes. Nothing is deleted, and you can bring the old file back with Restore.
@@ -123,7 +125,7 @@ There is no reset and no recovery. If you lose the master password, or a keyfile
 
 ### Backups and restore
 
-1. Cipherleaf backs up automatically on lock or quit, after changes. The last 10 are in `data\backups`.
+1. Cipherleaf backs up automatically when you quit and about once an hour while you work, if something changed (also on lock, if you use security). The newest 10 are in `data\backups`. Before a notebook or section is deleted it makes a safety backup first (`vault-predelete-<number>.clf`, newest 5 kept); if that can't be made, nothing is deleted. If a backup fails, Cipherleaf shows a message.
 2. For a copy you control, use **Settings, Backups, Save a backup copy…** and keep it somewhere else (another drive is best).
 3. To restore, choose **Restore from a backup…** (lock screen, start screens, or Settings), pick a backup from the list or "Choose another backup file…", enter "Password of this backup" if it has one, and press "Replace my vault with this backup" ("Restore backup" on the start screens). Your current vault is kept as `restore-undo-....clf`.
 4. A backup made while security was off needs no password. Restoring one onto a vault that has a master password asks you to confirm that security will be turned off.

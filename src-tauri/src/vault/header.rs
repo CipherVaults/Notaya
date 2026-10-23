@@ -62,7 +62,8 @@ impl Header {
         Ok((header, dek))
     }
 
-    /// Re-wraps an existing data key under the built-in key (security off).
+    /// Re-wraps an existing data key under the built-in key (security off). Only tests use it:
+    /// the app never re-wraps a data key (see the module comment); it re-keys the vault.
     pub fn rewrap_open(&self, dek: &Key) -> Result<Header> {
         Self::wrap(dek, OPEN_PASSWORD, None, OPEN_KDF, self.vault_id, true)
     }

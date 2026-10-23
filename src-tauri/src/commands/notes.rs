@@ -111,7 +111,7 @@ pub fn delete_notebook(state: State<'_, AppState>, id: String) -> Result<NotesTr
             .collect();
         doomed.extend(section_ids);
         doomed.push(id.clone());
-        backup::make_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
+        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
         s.remove_many(&doomed)?;
         s.collect_garbage()?;
         Ok(tree(s))
@@ -169,7 +169,7 @@ pub fn delete_section(state: State<'_, AppState>, id: String) -> Result<NotesTre
             })
             .collect();
         doomed.push(id.clone());
-        backup::make_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
+        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
         s.remove_many(&doomed)?;
         s.collect_garbage()?;
         Ok(tree(s))

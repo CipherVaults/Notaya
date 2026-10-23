@@ -221,8 +221,8 @@ pub fn backup_if_changed(paths: &Paths, now_ms: u64) -> Result<Option<String>> {
         }
         ms += 1;
     };
-    // Two quick tries only: a lock must not be held up by a stubborn file.
-    if let Err(e) = restore::rename_retry(&tmp, &dest, 2, Duration::from_millis(100)) {
+    // About a second in all: a lock must not be held up for long by a stubborn file.
+    if let Err(e) = restore::rename_retry(&tmp, &dest, crate::backup::RENAME_TRIES, crate::backup::RENAME_PAUSE) {
         let _ = fs::remove_file(&tmp);
         return Err(e.into());
     }

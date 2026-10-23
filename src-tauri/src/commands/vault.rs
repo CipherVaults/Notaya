@@ -177,10 +177,13 @@ pub struct EnableSecurityResult {
     backup_failed: bool,
 }
 
-/// Turns security on: the notes get a master password (and an optional keyfile). Only
-/// the key that protects them changes, so nothing is re-encrypted or lost. If asked, the
-/// earlier copies that were made while security was off (readable by anyone) are deleted,
-/// but only after a fresh backup under the new password has been saved.
+/// Turns security on: the notes get a master password (and an optional keyfile). The vault is
+/// re-keyed (a fresh data key and vault id, every record and attachment re-encrypted in one
+/// all-or-nothing step), so a copy made while security was off can't open data written later.
+/// Nothing is lost. If asked, the earlier copies that were made while security was off
+/// (readable by anyone, safety backups made before a delete included) are deleted, but only
+/// after a fresh backup under the new password has been saved. Restore-undo and set-aside
+/// vaults are never deleted.
 #[tauri::command(async)]
 pub fn enable_security(
     app: AppHandle,
@@ -213,7 +216,8 @@ pub fn enable_security(
 }
 
 /// Turns security off. The current master password (and keyfile) are required, and a
-/// wrong one counts as a failed attempt like on the lock screen. Nothing else changes.
+/// wrong one counts as a failed attempt like on the lock screen. The vault is re-keyed (like
+/// turning security on) and no note changes.
 #[tauri::command(async)]
 pub fn disable_security(
     app: AppHandle,
@@ -380,7 +384,7 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
     let Some(path) = app
         .dialog()
         .file()
-        .set_title("Save an encrypted backup")
+        .set_title("Save a backup copy")
         .set_file_name(format!("cipherleaf-backup-{}.clf", crate::model::now_ms() / 1000))
         .add_filter("Cipherleaf vault", &["clf"])
         .blocking_save_file()

@@ -8,6 +8,7 @@ const startState = params.get("s") ?? "app";
 let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
+let noticeTaken = false;
 
 const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
@@ -168,8 +169,13 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       if (String(args.source ?? "").endsWith("busy.kdbx"))
         throw "KeePassXC is still open. Finish there (it may be asking to save), close it, and try again.";
       return ok({ undoFile: "passwords-undo-1792800000000.kdbx" });
-    case "take_notice":
-      return ok(null);
+    case "take_notice": {
+      // ?notice=<text> shows that message once, as the backend would after a failed backup.
+      const text = params.get("notice");
+      if (!text || noticeTaken) return ok(null);
+      noticeTaken = true;
+      return ok(text);
+    }
     case "flush_done":
       return ok(null);
     case "get_settings":
