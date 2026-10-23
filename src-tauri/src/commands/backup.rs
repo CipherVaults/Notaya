@@ -143,6 +143,8 @@ pub fn restore_vault(
 
     // The old vault file can only be replaced once it is closed: save the
     // windows' pending edits, make the normal backup, wipe the session.
+    // No other window may open or create a vault while the file is swapped.
+    let _open_gate = state.open_gate();
     let locked_here = state.is_unlocked();
     if locked_here {
         state::lock(&app, "restore");
@@ -183,7 +185,7 @@ fn install_and_open(
         }
     };
 
-    match Session::unlock(&state.paths.vault, password, kf) {
+    match Session::unlock_any(&state.paths.vault, password, kf) {
         Ok(session) => {
             state.set_session(session);
             after_unlock(app, state);

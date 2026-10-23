@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { flushAll } from "./flush";
 import type {
   BackupInfo,
+  EnableSecurityResult,
   Generated,
   KeePassXCStatus,
   NotesTree,
@@ -22,8 +23,15 @@ import type {
 export const api = {
   // Vault
   vaultStatus: () => invoke<VaultStatus>("vault_status"),
-  createVault: (password: string, keyfile: string | null) =>
-    invoke<void>("create_vault", { password, keyfile }),
+  // Start new notes (no master password) when there is no vault but earlier copies exist
+  startNotes: () => invoke<void>("start_notes"),
+  // Security is optional: turn the master password on or off at any time
+  enableSecurity: (password: string, keyfile: string | null, removeUnprotectedCopies: boolean) =>
+    invoke<EnableSecurityResult>("enable_security", { password, keyfile, removeUnprotectedCopies }),
+  disableSecurity: (currentPassword: string, currentKeyfile: string | null) =>
+    invoke<void>("disable_security", { currentPassword, currentKeyfile }),
+  // The Passwords (KeePassXC) feature is optional too
+  setPasswordsEnabled: (enabled: boolean) => invoke<Settings>("set_passwords_enabled", { enabled }),
   unlockVault: (password: string, keyfile: string | null) =>
     invoke<void>("unlock_vault", { password, keyfile }),
   lockVault: async () => {

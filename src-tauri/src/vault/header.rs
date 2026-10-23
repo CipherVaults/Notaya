@@ -7,6 +7,12 @@
 //! ```
 //! The first 67 bytes are authenticated as AAD when the data key is wrapped.
 //! Changing anything (e.g. lowering the Argon2 cost) makes unlocking fail.
+//!
+//! An "open" vault (security off, amendment A20) has the open flag set in `flags`.
+//! Its data key is wrapped under a built-in, public password, so the file is still
+//! in the encrypted, tamper-checked format but is NOT secret: anyone with the file
+//! and a copy of Cipherleaf can read it. Turning security on or off only re-wraps
+//! the same data key under different credentials.
 
 use zeroize::Zeroizing;
 
@@ -16,6 +22,15 @@ use crate::error::{Error, Result};
 const MAGIC: &[u8; 4] = b"CLF1";
 pub const FORMAT_VERSION: u16 = 1;
 const FLAG_KEYFILE: u8 = 0b0000_0001;
+const FLAG_OPEN: u8 = 0b0000_0010;
+
+/// The built-in password of an open vault. It is public on purpose: an open vault
+/// is not confidential (see the module comment).
+pub const OPEN_PASSWORD: &str = "cipherleaf-open-vault-security-off";
+
+/// Cheap key stretching for an open vault: there is no secret to guess, so
+/// spending 256 MiB on every start would only slow down opening the notes.
+pub const OPEN_KDF: KdfParams = KdfParams { m_kib: 8 * 1024, t: 1, p: 1 };
 const AUTH_LEN: usize = 4 + 2 + 12 + 32 + 1 + 16;
 const WRAPPED_LEN: usize = NONCE_LEN + KEY_LEN + TAG_LEN;
 
@@ -24,6 +39,8 @@ pub struct Header {
     pub kdf: KdfParams,
     pub salt: [u8; 32],
     pub keyfile_required: bool,
+    /// Security is off: the data key is wrapped under [`OPEN_PASSWORD`].
+    pub open: bool,
     pub vault_id: [u8; 16],
     wrapped_key: Vec<u8>,
 }
@@ -32,7 +49,14 @@ impl Header {
     /// Creates a header for a brand-new vault and returns it with the fresh data key.
     pub fn create(password: &str, keyfile: Option<&[u8; 32]>, kdf: KdfParams) -> Result<(Header, Key)> {
         let dek = crypto::random_key();
-        let header = Self::wrap(&dek, password, keyfile, kdf, crypto::random_bytes::<16>())?;
+        let header = Self::wrap(&dek, password, keyfile, kdf, crypto::random_bytes::<16>(), false)?;
+        Ok((header, dek))
+    }
+
+    /// Creates a header for a brand-new open vault (security off).
+    pub fn create_open() -> Result<(Header, Key)> {
+        let dek = crypto::random_key();
+        let header = Self::wrap(&dek, OPEN_PASSWORD, None, OPEN_KDF, crypto::random_bytes::<16>(), true)?;
         Ok((header, dek))
     }
 
@@ -45,7 +69,12 @@ impl Header {
         keyfile: Option<&[u8; 32]>,
         kdf: KdfParams,
     ) -> Result<Header> {
-        Self::wrap(dek, password, keyfile, kdf, self.vault_id)
+        Self::wrap(dek, password, keyfile, kdf, self.vault_id, false)
+    }
+
+    /// Re-wraps an existing data key under the built-in key (security off).
+    pub fn rewrap_open(&self, dek: &Key) -> Result<Header> {
+        Self::wrap(dek, OPEN_PASSWORD, None, OPEN_KDF, self.vault_id, true)
     }
 
     fn wrap(
@@ -54,11 +83,13 @@ impl Header {
         keyfile: Option<&[u8; 32]>,
         kdf: KdfParams,
         vault_id: [u8; 16],
+        open: bool,
     ) -> Result<Header> {
         let mut header = Header {
             kdf,
             salt: crypto::random_bytes::<32>(),
             keyfile_required: keyfile.is_some(),
+            open,
             vault_id,
             wrapped_key: Vec::new(),
         };
@@ -84,6 +115,14 @@ impl Header {
         Ok(dek)
     }
 
+    /// Recovers the data key of an open vault. Fails for a vault that has a master password.
+    pub fn unlock_open(&self) -> Result<Key> {
+        if !self.open {
+            return Err(Error::BadCredentials);
+        }
+        self.unlock(OPEN_PASSWORD, None)
+    }
+
     fn auth_bytes(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(AUTH_LEN);
         out.extend_from_slice(MAGIC);
@@ -92,9 +131,13 @@ impl Header {
         out.extend_from_slice(&self.kdf.t.to_le_bytes());
         out.extend_from_slice(&self.kdf.p.to_le_bytes());
         out.extend_from_slice(&self.salt);
-        out.push(if self.keyfile_required { FLAG_KEYFILE } else { 0 });
+        out.push(self.flags());
         out.extend_from_slice(&self.vault_id);
         out
+    }
+
+    fn flags(&self) -> u8 {
+        (if self.keyfile_required { FLAG_KEYFILE } else { 0 }) | (if self.open { FLAG_OPEN } else { 0 })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -117,7 +160,11 @@ impl Header {
         let kdf = KdfParams { m_kib: u32_at(6), t: u32_at(10), p: u32_at(14) };
         kdf.validate()?;
         let flags = b[50];
-        if flags & !FLAG_KEYFILE != 0 {
+        if flags & !(FLAG_KEYFILE | FLAG_OPEN) != 0 {
+            return Err(Error::Corrupt);
+        }
+        // An open vault has no master password, so it cannot also need a keyfile.
+        if flags & FLAG_OPEN != 0 && flags & FLAG_KEYFILE != 0 {
             return Err(Error::Corrupt);
         }
         let mut salt = [0u8; 32];
@@ -128,6 +175,7 @@ impl Header {
             kdf,
             salt,
             keyfile_required: flags & FLAG_KEYFILE != 0,
+            open: flags & FLAG_OPEN != 0,
             vault_id,
             wrapped_key: b[AUTH_LEN..].to_vec(),
         })
@@ -177,5 +225,69 @@ mod tests {
         assert_ne!(h2.salt, h.salt);
         assert_eq!(*h2.unlock("new", None).unwrap(), *dek);
         assert!(h2.unlock("old", None).is_err());
+    }
+
+    #[test]
+    fn an_open_header_opens_without_credentials_and_is_marked() {
+        let (h, dek) = Header::create_open().unwrap();
+        let parsed = Header::from_bytes(&h.to_bytes()).unwrap();
+        assert!(parsed.open && !parsed.keyfile_required);
+        assert_eq!(*parsed.unlock_open().unwrap(), *dek);
+        assert!(parsed.unlock("anything else", None).is_err());
+    }
+
+    #[test]
+    fn a_protected_header_never_opens_as_open() {
+        let (h, _) = Header::create("pw", None, FAST).unwrap();
+        assert!(!h.open);
+        assert!(matches!(h.unlock_open(), Err(Error::BadCredentials)));
+        // Even the built-in password does not open it.
+        assert!(h.unlock(OPEN_PASSWORD, None).is_err());
+    }
+
+    #[test]
+    fn the_open_flag_cannot_be_flipped_either_way() {
+        let (open, _) = Header::create_open().unwrap();
+        let (prot, _) = Header::create("pw", None, FAST).unwrap();
+        let flags_at = 50;
+        let mut b = open.to_bytes();
+        b[flags_at] &= !FLAG_OPEN;
+        assert!(Header::from_bytes(&b).and_then(|p| p.unlock_open()).is_err());
+        assert!(Header::from_bytes(&b).and_then(|p| p.unlock(OPEN_PASSWORD, None)).is_err());
+        let mut b = prot.to_bytes();
+        b[flags_at] |= FLAG_OPEN;
+        assert!(Header::from_bytes(&b).and_then(|p| p.unlock_open()).is_err());
+        assert!(Header::from_bytes(&b).and_then(|p| p.unlock("pw", None)).is_err());
+    }
+
+    #[test]
+    fn every_open_header_byte_is_protected() {
+        let (h, _) = Header::create_open().unwrap();
+        let bytes = h.to_bytes();
+        for i in 0..bytes.len() {
+            let mut t = bytes.clone();
+            t[i] ^= 0x01;
+            assert!(Header::from_bytes(&t).and_then(|p| p.unlock_open()).is_err(), "byte {i}");
+        }
+    }
+
+    #[test]
+    fn rewrapping_between_open_and_protected_keeps_the_key_and_id() {
+        let (h, dek) = Header::create_open().unwrap();
+        let p = h.rewrap(&dek, "pw", None, FAST).unwrap();
+        assert!(!p.open && p.vault_id == h.vault_id);
+        assert_eq!(*p.unlock("pw", None).unwrap(), *dek);
+        let o = p.rewrap_open(&dek).unwrap();
+        assert!(o.open && o.vault_id == h.vault_id && !o.keyfile_required);
+        assert_eq!(*o.unlock_open().unwrap(), *dek);
+        assert!(o.unlock("pw", None).is_err());
+    }
+
+    #[test]
+    fn open_with_a_keyfile_flag_is_refused() {
+        let (open, _) = Header::create_open().unwrap();
+        let mut b = open.to_bytes();
+        b[50] |= FLAG_KEYFILE;
+        assert!(matches!(Header::from_bytes(&b), Err(Error::Corrupt)));
     }
 }

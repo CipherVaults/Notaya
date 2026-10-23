@@ -4,8 +4,19 @@ export interface VaultStatus {
   exists: boolean;
   unlocked: boolean;
   keyfileRequired: boolean;
+  /** The vault has a master password. False: notes open straight away (security off). */
+  securityOn: boolean;
+  /** No vault file, but earlier copies exist: ask whether to restore or start new notes. */
+  earlierCopies: boolean;
+  /** A vault with security off could not be opened (for example a damaged file). */
+  openError: string | null;
   dataDir: string;
   version: string;
+}
+
+export interface EnableSecurityResult {
+  /** How many earlier copies made while security was off were deleted. */
+  removedCopies: number;
 }
 
 /** One automatic backup file in the data folder (newest first from the backend). */
@@ -36,6 +47,8 @@ export interface Settings {
   lockOnMinimize: boolean;
   screenCaptureProtection: boolean;
   stickyDefaultColor: string;
+  /** The Passwords (KeePassXC) feature is on. Changed only through `setPasswordsEnabled`. */
+  passwordsEnabled: boolean | null;
 }
 
 export interface Notebook {

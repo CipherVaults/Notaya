@@ -12,6 +12,15 @@ pub fn keepassxc_status(state: State<'_, AppState>) -> Status {
     keepassxc::status(&state.paths, &state.keepassxc)
 }
 
+/// The Passwords feature is optional (A20). While it is off, nothing starts KeePassXC.
+fn require_passwords(state: &AppState) -> Result<()> {
+    if state.passwords_on() {
+        Ok(())
+    } else {
+        Err(Error::invalid("Passwords is turned off. Turn it on in Settings first."))
+    }
+}
+
 /// Opens the password database in KeePassXC's own window. Cipherleaf must be unlocked.
 /// An embedded KeePassXC is first given back its own window.
 #[tauri::command(async)]
@@ -19,6 +28,7 @@ pub fn keepassxc_open(state: State<'_, AppState>) -> Result<()> {
     if !state.is_unlocked() {
         return Err(Error::Locked);
     }
+    require_passwords(&state)?;
     keepassxc::detach()?;
     keepassxc::open(&state.paths, &state.keepassxc)
 }
@@ -30,6 +40,7 @@ pub fn keepassxc_embed(window: WebviewWindow, state: State<'_, AppState>, x: i32
     if !state.is_unlocked() {
         return Err(Error::Locked);
     }
+    require_passwords(&state)?;
     let parent = window.hwnd()?.0 as isize;
     keepassxc::embed(&state.paths, &state.keepassxc, parent, Rect { x, y, w, h }, &|| state.is_unlocked())
 }

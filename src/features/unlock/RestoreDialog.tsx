@@ -79,10 +79,11 @@ export default function RestoreDialog({
     };
   }, [open, isPasswords]);
 
-  const canRestore = !!source && (isPasswords || !!password) && !busy && !done;
+  // The password may stay empty: a backup made while security was off needs none.
+  const canRestore = !!source && !busy && !done;
 
   const restore = async () => {
-    if (!source || (!isPasswords && !password) || busy || done) return;
+    if (!source || busy || done) return;
     setBusy(true);
     setError(null);
     try {
@@ -217,7 +218,7 @@ export default function RestoreDialog({
 
         {!isPasswords && (
         <div className="space-y-2">
-          <div className="text-xs font-medium uppercase tracking-wider text-faint">Password of this backup</div>
+          <div className="text-xs font-medium uppercase tracking-wider text-faint">Password of this backup (if it has one)</div>
           <PasswordInput
             value={password}
             onChange={setPassword}
@@ -234,7 +235,8 @@ export default function RestoreDialog({
           )}
           <p className="text-xs leading-relaxed text-faint">
             Use the master password (and keyfile) the backup had when it was made. If you changed your password since
-            then, use the old one.
+            then, use the old one. A backup made while security was off has no password: leave the box empty, and your
+            notes will open without a password afterwards (you can turn security on again in Settings).
           </p>
         </div>
         )}

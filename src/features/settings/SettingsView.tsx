@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, Palette, RotateCcw, ShieldCheck } from "lucide-react";
+import { Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, LockOpen, Palette, RotateCcw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
@@ -9,6 +9,7 @@ import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
 import RestoreDialog from "@/features/unlock/RestoreDialog";
+import { DisableSecurityDialog, EnableSecurityDialog } from "./SecurityDialogs";
 
 const THEMES: { value: ThemeMode; label: string; bg: string; side: string; fg: string; line: string }[] = [
   { value: "black", label: "Black", bg: "#000000", side: "#0b0b0b", fg: "#f4f4f4", line: "rgba(255,255,255,0.14)" },
@@ -25,6 +26,9 @@ export default function SettingsView() {
   const [changeOpen, setChangeOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restorePasswordsOpen, setRestorePasswordsOpen] = useState(false);
+  const [enableOpen, setEnableOpen] = useState(false);
+  const [disableOpen, setDisableOpen] = useState(false);
+  const securityOn = status?.securityOn ?? false;
 
   const persist = useMemo(
     () =>
@@ -187,31 +191,69 @@ export default function SettingsView() {
           </Row>
         </Section>
 
-        <Section icon={<ShieldCheck size={16} />} title="Security">
-          <Row label={`Auto-lock after ${settings.idleLockMinutes} min of inactivity`} hint="Also locks on Win+L, sleep, hibernate, and when the USB drive is removed.">
-            <div className="w-56">
-              <Slider label="Auto-lock minutes" value={settings.idleLockMinutes} min={1} max={60} onChange={(v) => update({ idleLockMinutes: v })} />
-            </div>
-          </Row>
-          <Row label="Lock when minimized">
-            <Switch checked={settings.lockOnMinimize} onChange={(v) => update({ lockOnMinimize: v })} />
-          </Row>
-          <Row label="Block screenshots & screen sharing" hint="Cipherleaf windows appear black in screenshots, recordings and screen shares.">
-            <Switch checked={settings.screenCaptureProtection} onChange={(v) => update({ screenCaptureProtection: v })} />
-          </Row>
-          <Row label="Master password & keyfile">
-            <Button variant="outline" size="sm" onClick={() => setChangeOpen(true)}>
-              <KeyRound size={14} /> Change…
-            </Button>
+        <Section icon={<ShieldCheck size={16} />} title="Security (optional)">
+          {securityOn ? (
+            <>
+              <Row label="Security is on" hint="Your notes need the master password to open. You can turn security off at any time.">
+                <Button variant="outline" size="sm" onClick={() => setDisableOpen(true)}>
+                  <LockOpen size={14} /> Turn off…
+                </Button>
+              </Row>
+              <Row label={`Auto-lock after ${settings.idleLockMinutes} min of inactivity`} hint="Also locks on Win+L, sleep, hibernate, and when the USB drive is removed.">
+                <div className="w-56">
+                  <Slider label="Auto-lock minutes" value={settings.idleLockMinutes} min={1} max={60} onChange={(v) => update({ idleLockMinutes: v })} />
+                </div>
+              </Row>
+              <Row label="Lock when minimized">
+                <Switch checked={settings.lockOnMinimize} onChange={(v) => update({ lockOnMinimize: v })} />
+              </Row>
+              <Row label="Block screenshots & screen sharing" hint="Off by default. When on, Cipherleaf windows appear black in screenshots, recordings and screen shares.">
+                <Switch checked={settings.screenCaptureProtection} onChange={(v) => update({ screenCaptureProtection: v })} />
+              </Row>
+              <Row label="Master password & keyfile">
+                <Button variant="outline" size="sm" onClick={() => setChangeOpen(true)}>
+                  <KeyRound size={14} /> Change…
+                </Button>
+              </Row>
+            </>
+          ) : (
+            <Row
+              label="Security is off"
+              hint="Your notes open straight away and nothing locks. Anyone who can open this folder can read them. Turn security on to add a master password, an optional keyfile, auto-lock and screenshot blocking."
+            >
+              <Button variant="primary" size="sm" onClick={() => setEnableOpen(true)}>
+                <Lock size={14} /> Turn on…
+              </Button>
+            </Row>
+          )}
+        </Section>
+
+        <Section icon={<KeyRound size={16} />} title="Passwords with KeePassXC (optional)">
+          <Row
+            label="Passwords"
+            hint="Adds a Passwords page that shows the bundled KeePassXC inside this window. It has its own master password and works with or without Cipherleaf's security. Cipherleaf never sees that password."
+          >
+            <Switch
+              checked={settings.passwordsEnabled === true}
+              label="Passwords with KeePassXC"
+              onChange={async (v) => {
+                try {
+                  setSettings(await api.setPasswordsEnabled(v));
+                  if (!v && useApp.getState().view === "passwords") useApp.getState().setView("settings");
+                } catch (e) {
+                  toast.error(errorText(e));
+                }
+              }}
+            />
           </Row>
         </Section>
 
         <Section icon={<Archive size={16} />} title="Backups">
           <p className="pb-3 text-sm leading-relaxed text-muted">
-            Each time the vault locks after changes, an encrypted backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
-            Backups open with the password and keyfile they had when they were made.
+            Each time Cipherleaf locks or closes after changes, a backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
+            Backups open with the password and keyfile they had when they were made; a backup made while security was off needs no password.
             Restoring puts a backup in place of your current vault, and keeps the current vault as a separate file.
-            Your KeePassXC passwords file is also backed up automatically when the vault locks (the last 10 are kept).
+            {settings.passwordsEnabled === true && " Your KeePassXC passwords file is also backed up automatically when the vault locks (the last 10 are kept)."}
           </p>
           <div className="flex flex-wrap gap-2 pb-2">
             <Button
@@ -231,9 +273,11 @@ export default function SettingsView() {
             <Button variant="outline" size="sm" onClick={() => setRestoreOpen(true)}>
               <RotateCcw size={14} /> Restore from a backup…
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setRestorePasswordsOpen(true)}>
-              <KeyRound size={14} /> Restore passwords file…
-            </Button>
+            {settings.passwordsEnabled === true && (
+              <Button variant="outline" size="sm" onClick={() => setRestorePasswordsOpen(true)}>
+                <KeyRound size={14} /> Restore passwords file…
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => api.openDataFolder()}>
               <FolderOpen size={14} /> Open data folder
             </Button>
@@ -249,16 +293,16 @@ export default function SettingsView() {
             <dt className="text-faint">Encryption</dt>
             <dd>XChaCha20-Poly1305 (256-bit) for every item, with tamper detection</dd>
             <dt className="text-faint">Key derivation</dt>
-            <dd>Argon2id · 256 MiB · 3 passes · 4 lanes, + HKDF-SHA256 with optional keyfile</dd>
+            <dd>{securityOn ? "Argon2id · 256 MiB · 3 passes · 4 lanes, + HKDF-SHA256 with optional keyfile" : "None while security is off: the notes use a built-in key, so they are not secret"}</dd>
             <dt className="text-faint">Network</dt>
             <dd>None. Cipherleaf makes no network connections.</dd>
             <dt className="text-faint">Passwords</dt>
-            <dd>Kept in the bundled KeePassXC 2.8.0 (GPL), which has its own master password and settings</dd>
+            <dd>Optional. Kept in the bundled KeePassXC 2.8.0 (GPL), which has its own master password and settings</dd>
           </dl>
           <div className="rounded-xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
             <div className="mb-1 font-medium text-fg">Good to know</div>
             <ul className="list-disc space-y-1 pl-5">
-              <li>There is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
+              <li>With security on, there is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
               <li>Cipherleaf's screenshot blocking and lock-when-unplugged don't cover KeePassXC's window. KeePassXC has its own protections.</li>
               <li>Passphrase words: EFF large wordlist, © Electronic Frontier Foundation, CC BY 3.0 US.</li>
@@ -269,6 +313,8 @@ export default function SettingsView() {
       </div>
 
       <ChangeMasterDialog open={changeOpen} onOpenChange={setChangeOpen} />
+      <EnableSecurityDialog open={enableOpen} onOpenChange={setEnableOpen} />
+      <DisableSecurityDialog open={disableOpen} onOpenChange={setDisableOpen} keyfileUsed={status?.keyfileRequired ?? false} />
       <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists />
       <RestoreDialog open={restorePasswordsOpen} onOpenChange={setRestorePasswordsOpen} vaultExists mode="passwords" />
     </div>

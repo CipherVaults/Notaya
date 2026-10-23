@@ -35,7 +35,7 @@ pub(crate) const RENAME_DELAY: Duration = Duration::from_millis(300);
 /// The verified copy, before it is renamed to `vault.clf`.
 const TEMP_NAME: &str = "restore-check.tmp";
 /// The old vault, kept when a restore replaces it.
-const UNDO_PREFIX: &str = "restore-undo-";
+pub(crate) const UNDO_PREFIX: &str = "restore-undo-";
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -46,7 +46,7 @@ pub struct BackupInfo {
 }
 
 /// The automatic backups look like `vault-<ms>.clf` (same rule as the rotation).
-fn is_backup_name(name: &str) -> bool {
+pub(crate) fn is_backup_name(name: &str) -> bool {
     name.starts_with("vault-") && name.ends_with(".clf")
 }
 
@@ -221,7 +221,7 @@ fn stage(paths: &Paths, source: &Path, password: &str, keyfile: Option<&[u8; 32]
     };
     check_restore_kdf(&header.kdf)?;
     {
-        let session = match Session::unlock(&tmp, password, keyfile) {
+        let session = match Session::unlock_any(&tmp, password, keyfile) {
             Ok(s) => s,
             // Not a SQLite file at all, or tables missing: a damaged file.
             Err(Error::Db(_)) => return Err(Error::Corrupt),
@@ -689,6 +689,27 @@ mod tests {
         assert_eq!(install(&paths, 1).unwrap(), None);
         let s = Session::unlock(&paths.vault, "password-A", Some(&kf)).unwrap();
         assert!(s.get(&item_id).is_some());
+    }
+
+    #[test]
+    fn a_backup_made_with_security_off_restores_without_a_password() {
+        let paths = temp_paths();
+        let src = paths.backups.join("vault-9.clf");
+        let item_id = {
+            let mut s = Session::create_open(&src).unwrap();
+            let st = sticky("from an open backup");
+            let id = st.id().to_string();
+            s.put(st).unwrap();
+            id
+        };
+        drop(Session::create(&paths.vault, "password-B", None, FAST).unwrap());
+        verify_and_stage(&paths, &src, "", None).unwrap();
+        install(&paths, 77).unwrap();
+        let s = Session::unlock_any(&paths.vault, "", None).unwrap();
+        assert!(s.is_open());
+        assert!(s.get(&item_id).is_some());
+        // The protected vault it replaced is kept and still needs its password.
+        assert!(Session::unlock(&paths.data.join("restore-undo-77.clf"), "password-B", None).is_ok());
     }
 
     #[test]

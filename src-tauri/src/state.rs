@@ -9,6 +9,7 @@ use std::time::{Duration, Instant, SystemTime};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::error::{Error, Result};
+use crate::model::resolve_passwords;
 use crate::portable::Paths;
 use crate::vault::Session;
 use crate::{keepassxc, pwbackup, system, ui};
@@ -80,6 +81,10 @@ pub struct AppState {
     /// that was cancelled). Kept here as well as sent as an event, because a lock
     /// reloads the window and a live event could be missed.
     notice: Mutex<Option<String>>,
+    /// Held while the app opens or creates a vault that has security off, and while a
+    /// restore swaps the vault file, so two windows asking at once can't both create one
+    /// and nothing starts a new vault in the middle of a restore.
+    open_gate: Mutex<()>,
 }
 
 fn guard<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -101,6 +106,19 @@ impl AppState {
             picked_backup: Mutex::new(None),
             picked_passwords_backup: Mutex::new(None),
             notice: Mutex::new(None),
+            open_gate: Mutex::new(()),
+        }
+    }
+
+    pub fn open_gate(&self) -> MutexGuard<'_, ()> {
+        guard(&self.open_gate)
+    }
+
+    /// Whether the Passwords (KeePassXC) feature is on. False while locked.
+    pub fn passwords_on(&self) -> bool {
+        match self.with(|s| Ok(s.settings().passwords_enabled)) {
+            Ok(flag) => resolve_passwords(flag, keepassxc::find_database(&self.paths).is_some()),
+            Err(_) => false,
         }
     }
 
@@ -276,6 +294,11 @@ fn emits_vault_locked(reason: &str) -> bool {
 /// one (an `async` command, the monitor thread, the close handler's thread).
 pub fn lock(app: &AppHandle, reason: &str) {
     let state = app.state::<AppState>();
+    // A vault with security off never locks by itself or by a button. Only a quit and a
+    // restore close it (they have to, to save and to swap the file).
+    if !matches!(reason, "quit" | "restore") && state.with(|s| Ok(s.is_open())).unwrap_or(false) {
+        return;
+    }
     if reason != "drive-removed" && state.is_unlocked() {
         request_flush(app, FLUSH_TIMEOUT);
     }
@@ -291,11 +314,19 @@ pub fn lock(app: &AppHandle, reason: &str) {
     if let Some(Err(e)) = backup {
         eprintln!("backup failed: {e}");
     }
+    // With the Passwords feature off, KeePassXC and its file are left completely alone.
+    // (With no session to ask, as in a second lock, do what a lock always did.)
+    let passwords = session
+        .as_ref()
+        .map(|s| resolve_passwords(s.settings().passwords_enabled, keepassxc::find_database(&state.paths).is_some()))
+        .unwrap_or(true);
     drop(session); // zeroizes the data key and all items
-    // Copy the KeePassXC passwords file next to the vault backups (best effort), before
-    // KeePassXC is asked to lock. It never reads the file's contents.
-    pwbackup::backup_on_lock(&state.paths);
-    keepassxc::lock_if_running(&state.paths, &state.keepassxc);
+    if passwords {
+        // Copy the KeePassXC passwords file next to the vault backups (best effort), before
+        // KeePassXC is asked to lock. It never reads the file's contents.
+        pwbackup::backup_on_lock(&state.paths);
+        keepassxc::lock_if_running(&state.paths, &state.keepassxc);
+    }
 }
 
 /// How long a quit (or a restore of the passwords file) waits for KeePassXC to
@@ -319,9 +350,11 @@ pub const KEEPASSXC_STILL_OPEN: &str =
 /// Waits for the windows, so call it only from a thread other than the main one.
 pub fn quit(app: &AppHandle) -> bool {
     use std::panic::{catch_unwind, AssertUnwindSafe};
+    let state = app.state::<AppState>();
+    // Asked before the lock, which ends the session the answer comes from.
+    let passwords = state.passwords_on();
     // Whatever fails or panics here, the next step must still run.
     let _ = catch_unwind(AssertUnwindSafe(|| lock(app, "quit")));
-    let state = app.state::<AppState>();
     // If this fails we don't know that KeePassXC is closed, so we don't exit.
     let closed = catch_unwind(AssertUnwindSafe(|| {
         keepassxc::close_gracefully(&state.keepassxc, &state.paths, KEEPASSXC_CLOSE_TIMEOUT)
@@ -329,7 +362,9 @@ pub fn quit(app: &AppHandle) -> bool {
     .unwrap_or(false);
     if closed {
         // KeePassXC may have saved while closing: copy its final state too (best effort).
-        let _ = catch_unwind(AssertUnwindSafe(|| pwbackup::backup_on_lock(&state.paths)));
+        if passwords {
+            let _ = catch_unwind(AssertUnwindSafe(|| pwbackup::backup_on_lock(&state.paths)));
+        }
         app.exit(0);
         return true;
     }
@@ -339,7 +374,7 @@ pub fn quit(app: &AppHandle) -> bool {
     false
 }
 
-fn rotate_backup(paths: &Paths, session: &Session) -> Result<()> {
+pub fn rotate_backup(paths: &Paths, session: &Session) -> Result<()> {
     std::fs::create_dir_all(&paths.backups)?;
     let name = format!("vault-{}.clf", crate::model::now_ms());
     session.backup_to(&paths.backups.join(name))?;
@@ -374,10 +409,14 @@ pub fn spawn_monitor(app: AppHandle) {
             let slept = now.duration_since(last_wall).map(|d| d > Duration::from_secs(20)).unwrap_or(true);
             last_wall = now;
 
-            let Ok(settings) = state.with(|s| Ok(s.settings())) else {
+            let Ok((settings, security_off)) = state.with(|s| Ok((s.settings(), s.is_open()))) else {
                 desktop_seen_unlocked = false;
                 continue;
             };
+            // Security off: nothing locks the vault (A20).
+            if security_off {
+                continue;
+            }
 
             let screen_locked = system::workstation_locked();
             if !screen_locked {
