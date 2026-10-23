@@ -50,7 +50,6 @@ windows = { version = "0.62.2", features = [
   "Win32_System_SystemInformation",
   "Win32_UI_Input_KeyboardAndMouse",
 ] }
-eff-wordlist = "1.0.3"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

@@ -314,7 +314,6 @@ export default function SettingsView() {
               <li>With security on, there is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
               <li>Cipherleaf's screenshot blocking and lock-when-unplugged don't cover KeePassXC's window. KeePassXC has its own protections.</li>
-              <li>Passphrase words: EFF large wordlist, © Electronic Frontier Foundation, CC BY 3.0 US.</li>
               <li>Equations are drawn by KaTeX 0.19.0 (MIT licence, fonts under the SIL Open Font License), running on this device only.</li>
             </ul>
           </div>

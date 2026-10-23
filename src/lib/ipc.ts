@@ -6,12 +6,10 @@ import { flushAll } from "./flush";
 import type {
   BackupInfo,
   EnableSecurityResult,
-  Generated,
   KeePassXCStatus,
   NotesTree,
   Page,
   PageMeta,
-  PassphraseOptions,
   RestoreResult,
   SearchHit,
   Settings,
@@ -126,8 +124,6 @@ export const api = {
 
   // Tools
   openUrl: (url: string) => invoke<void>("open_url", { url }),
-  generatePassphrase: (options: PassphraseOptions) =>
-    invoke<Generated>("generate_passphrase", { options }),
   passwordStrength: (password: string, hints: string[] = []) =>
     invoke<Strength>("password_strength", { password, hints }),
   search: (query: string) => invoke<SearchHit[]>("search", { query }),

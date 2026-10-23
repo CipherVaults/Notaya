@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (owner message 20:12:53 UTC for A22; the credits message time and work times not recorded), EX-2026-10-23-18: Credits for open source components and the suggested passphrase removed (A22)
+
+- Report: [2026-10-23-credits-and-passphrase-removal.md](2026-10-23-credits-and-passphrase-removal.md)
+- Task / Goal: the owner's request for credits and copyright for all open source used (`THIRD-PARTY-NOTICES.md`, Settings, About, README) and "Remove suggest a strong passphrase" (20:12:53 UTC); amendment A22 in [approval-and-amendments.md](../plan/approval-and-amendments.md)
+- Executor: Claude (Claude Code), with an independent completeness check of the notices (model output)
+- Outcome: credits committed (`503dd8b`, `d77eb63`). The suggested passphrase, the `generate_passphrase` command, the `eff-wordlist` crate (declared AGPL-3.0) and `random_below` are removed; the strength meter stays. `tsc`, `npm run build` and the Tauri-free core harness (73 tests) passed in the cloud container. **Not run after this change:** app-crate `cargo test --lib` and clippy, and the real-exe tests. A22 not committed when the record was written.
+- Acceptance: pending (the owner has not reviewed it)
+
 ### 2026-10-23 (18:32:20 to 18:47:35, owner message times; work times not recorded), EX-2026-10-23-17: Notes first: security and passwords optional (A21)
 
 - Report: [2026-10-23-notes-first-optional-security.md](2026-10-23-notes-first-optional-security.md)

@@ -129,24 +129,12 @@ export interface Sticky {
   updated: number;
 }
 
-export interface Generated {
-  value: string;
-  entropy: number;
-}
-
 export interface Strength {
   score: number;
   guessesLog10: number;
   crackTime: string;
   warning: string | null;
   suggestions: string[];
-}
-
-export interface PassphraseOptions {
-  words: number;
-  separator: string;
-  capitalize: boolean;
-  includeNumber: boolean;
 }
 
 export interface SearchHit {

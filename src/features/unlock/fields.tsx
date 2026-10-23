@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Eye, EyeOff, FileKey2, KeyRound, X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { useState } from "react";
+import { Eye, EyeOff, FileKey2, KeyRound, X } from "lucide-react";
 
 /** A large password box with a show/hide eye. Used on the lock screen and in the restore dialog. */
 export function PasswordInput({
@@ -100,99 +99,6 @@ export function KeyfileChip({
         </button>
       </div>
       {warning && <p className="text-xs leading-relaxed text-warn">{warning}</p>}
-    </div>
-  );
-}
-
-/**
- * Puts text on the clipboard, with the older fallback if the page may not use the clipboard API.
- * Returns true only if the copy really worked.
- */
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Fall through to the older way.
-  }
-  const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.setAttribute("aria-hidden", "true");
-  ta.setAttribute("readonly", "");
-  ta.tabIndex = -1;
-  ta.style.position = "fixed";
-  ta.style.top = "0";
-  ta.style.left = "0";
-  ta.style.opacity = "0";
-  ta.style.pointerEvents = "none";
-  document.body.append(ta);
-  let ok = false;
-  try {
-    ta.select();
-    ok = document.execCommand("copy");
-  } catch {
-    ok = false;
-  } finally {
-    ta.remove();
-    previous?.focus();
-  }
-  return ok;
-}
-
-/** Shows a suggested passphrase in plain sight so it can be read, written down or copied. */
-export function SuggestedPassphrase({ value }: { value: string }) {
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const copied = copyState === "copied";
-
-  useEffect(() => () => clearTimeout(timer.current), []);
-  // A new suggestion starts fresh.
-  useEffect(() => {
-    clearTimeout(timer.current);
-    setCopyState("idle");
-  }, [value]);
-
-  const copy = async () => {
-    const ok = await copyText(value);
-    setCopyState(ok ? "copied" : "failed");
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setCopyState("idle"), ok ? 2000 : 3000);
-  };
-
-  return (
-    <div className="space-y-2 rounded-2xl border border-accent/40 bg-accent-soft p-4">
-      <div className="text-xs font-medium uppercase tracking-wider text-faint">Your suggested passphrase</div>
-      <div className="flex items-start gap-3">
-        {/* May wrap only after a hyphen. The <wbr /> adds no characters, so copying and selecting give the exact phrase. */}
-        <div
-          className="selectable min-w-0 flex-1 font-mono text-lg font-semibold leading-snug text-fg"
-          style={{ overflowWrap: "normal", wordBreak: "normal" }}
-        >
-          {value.split("-").map((part, i, all) => (
-            <span key={i}>
-              {part}
-              {i < all.length - 1 && (
-                <>
-                  -<wbr />
-                </>
-              )}
-            </span>
-          ))}
-        </div>
-        <Button variant="outline" size="sm" onClick={copy} className="shrink-0">
-          {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy"}
-        </Button>
-      </div>
-      <span role="status" aria-live="polite" className={copyState === "failed" ? "block text-xs text-danger" : "sr-only"}>
-        {copied ? "Copied to the clipboard" : copyState === "failed" ? "Couldn't copy - select the text and press Ctrl+C" : ""}
-      </span>
-      <p className="text-sm leading-relaxed text-fg">
-        Write this down on paper or save it in a password manager. Then type it again in the second box.
-      </p>
-      <p className="text-xs leading-relaxed text-muted">
-        Copying puts it on the clipboard. Windows may keep clipboard history (Win+V), so clear it after you have pasted it.
-      </p>
     </div>
   );
 }

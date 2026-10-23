@@ -14,7 +14,7 @@ Contents: At a glance, KeePassXC, Open decisions and things to check, Rust crate
 |---|---|---|---|
 | KeePassXC 2.8.0 | The optional Passwords panel. A separate program, started as its own process. | GNU GPL version 2 or (at your option) version 3, per upstream `COPYING`. Copyright (C) 2016-2023 KeePassXC Team (upstream's wording). | Not modified. Cipherleaf passes it only file paths and window handles. See the KeePassXC section. |
 | Libraries inside the KeePassXC package | Qt 6.11.2, Botan 3.12.0, zlib and minizip, libqrencode, readline (command-line tool only), and others | Qt: LGPL-3.0 (plus GPL options); Botan: BSD-2-Clause; zlib/minizip: Zlib; libqrencode: LGPL-2.1-or-later; readline.dll: GPL | Inside KeePassXC's own folder. Licenses partly unverified, see the KeePassXC section. |
-| Tauri and the Rust crates | The application shell and the Rust core (233 crates linked into the Windows exe) | Mostly MIT or Apache-2.0 (dual); also Unicode-3.0, Zlib, BSD-3-Clause, MPL-2.0, Unlicense, CC0-1.0, and one AGPL-3.0 crate | Full list in the Rust crates section. Open decision about the AGPL-3.0 crate. |
+| Tauri and the Rust crates | The application shell and the Rust core (226 crates linked into the Windows exe) | Mostly MIT or Apache-2.0 (dual); also Unicode-3.0, Zlib, BSD-3-Clause, MPL-2.0, Unlicense, CC0-1.0 | Full list in the Rust crates section. |
 | Microsoft Edge WebView2 runtime | Draws the interface | Microsoft's terms (unverified here) | Required on the PC. Not bundled. The Rust crate `webview2-com-sys` (MIT) links Microsoft's static WebView2 loader library (`WebView2LoaderStatic.lib`) into the exe; the crate package carries no copy of Microsoft's license for it. Its license text is still to be fetched (see open decisions). |
 | React, TipTap, ProseMirror, KaTeX, Radix UI, and other npm packages | The user interface | Mostly MIT; also ISC, BSD-3-Clause, 0BSD, SIL OFL 1.1 | 114 package rows plus Tailwind CSS in the npm packages section. |
 | Inter and JetBrains Mono (fonts) | Interface and code fonts, via the Fontsource npm packages | SIL Open Font License 1.1 | Copyright lines and license text below. |
@@ -22,10 +22,9 @@ Contents: At a glance, KeePassXC, Open decisions and things to check, Rust crate
 | Lucide icons | Interface icons (lucide-react) | ISC; Feather-derived icons are MIT, Copyright (c) 2013-present Cole Bemis | Both texts below. |
 | highlight.js (via lowlight) | Code block highlighting | BSD-3-Clause, Copyright (c) 2006, Ivan Sagalaev. | Text below. |
 | SQLite | Storage engine, compiled in via `libsqlite3-sys` (SQLite 3.53.2) | Public domain | The author disclaims copyright; credited as a courtesy. |
-| EFF large wordlist | Passphrase suggestions | CC BY 3.0 US | Copyright Electronic Frontier Foundation. Attribution below. |
 | zxcvbn | Password strength estimate (Rust crate `zxcvbn` 3.1.1, a port of Dropbox's zxcvbn) | MIT, Copyright (c) 2016 Joshua Holmer | Its frequency dictionaries derive from US census data, Wikipedia and TV/movie word lists (per the crate's README); the package carries no separate notice for those. |
 
-Trademarks: Windows, Microsoft Edge, WebView2, Segoe and Mica are names of Microsoft; KeePassXC, Tauri, KaTeX and the other project names belong to their owners. They are used here only to describe what is used. Cipherleaf is not affiliated with or endorsed by KeePassXC, the Electronic Frontier Foundation, Microsoft or any other project named here.
+Trademarks: Windows, Microsoft Edge, WebView2, Segoe and Mica are names of Microsoft; KeePassXC, Tauri, KaTeX and the other project names belong to their owners. They are used here only to describe what is used. Cipherleaf is not affiliated with or endorsed by KeePassXC, Microsoft or any other project named here.
 
 ## KeePassXC
 
@@ -79,25 +78,24 @@ The upstream ZIP has no license files and no README of its own (only `share/docs
 
 These come from the inventory work. They are facts for the owner to decide on; nothing was changed in the code or the build for them.
 
-1. **The `eff-wordlist` crate is declared AGPL-3.0.** `eff-wordlist` 1.0.3 (author Cyryl Plotnicki, https://github.com/cyplo/eff-wordlist-rs) declares `license = "AGPL-3.0"` and ships the unmodified AGPL-3.0 text. It is a direct dependency, compiled into the exe (`src-tauri/src/generator.rs` uses `eff_wordlist::large::LIST`). The crate contains only the word lists and a small helper and says nothing about EFF's license or copyright; the words are EFF's. The AGPL-3.0 text is deliberately not reproduced in this file until the owner decides. Options: (a) replace the crate by embedding EFF's own list under CC BY 3.0 US with the attribution given in the License texts section; (b) keep the crate (the AGPL-3.0 terms then apply to any exe given to others and limit the choice of Cipherleaf's own license); (c) ask the crate author for a different license; or remove the suggested-passphrase feature. Owner decision pending.
-2. **Cipherleaf's own license is not chosen.** There is no `LICENSE` file and no `license` field in `package.json` or `src-tauri/Cargo.toml`. Without a license nobody but the owner has rights to reuse Cipherleaf's code. The choice must also be considered together with how KeePassXC (GPL) is shipped and with item 1.
-3. **KeePassXC source offer for the bundled libraries.** The KeePassXC source archive covers KeePassXC only. It does not contain the source of Qt, Botan, zlib, minizip, libqrencode or readline. For the LGPL parts (Qt 6.11.2, libqrencode) the license asks for the license text, a notice that the library is used, and source or a written offer. This file names the versions and upstream locations (https://download.qt.io, https://code.qt.io, https://github.com/fukuchi/libqrencode, https://botan.randombit.net). A formal written offer or links in the README have not been decided. For a public release (the planned `CipherLeaf V1.0` ZIP), the earlier decision that the build stays private (2026-10-22) has to be revisited by the owner.
-4. **The portable folder's contents are unverified.** The actual contents of `Licenses\KeePassXC\` and of the portable `README.txt` are not in the repository. Check that the folder holds KeePassXC's `COPYING` and all `LICENSE.*` files from the 2.8.0 source archive and the source archive itself, and which GPL option (2 or 3) is offered.
-5. **`vc_redist.x64.exe` and other binaries in the KeePassXC folder.** The upstream ZIP includes Microsoft's installer `vc_redist.x64.exe`, which Cipherleaf's records said was not included (the runtime DLLs are indeed absent). Redistribution is under Microsoft's terms (not read). Also present: `opengl32sw.dll`, `d3dcompiler_47.dll`, `dxcompiler.dll`, `dxil.dll`, `ssl/certs/ca-bundle.crt`, and Qt image plugins; their license texts are not in the ZIP. Owner decides whether to keep, document or remove them.
-6. **Microsoft WebView2 loader license text.** `webview2-com-sys` 0.39.1 (MIT) contains prebuilt Microsoft binaries (`WebView2LoaderStatic.lib` is statically linked into the exe). Those come from Microsoft's Microsoft.Web.WebView2 SDK, which has its own license text. The crate package contains no copy of it. Fetch it from the NuGet package `Microsoft.Web.WebView2` (file `LICENSE.txt`) and add it here; not done and not verified. The WebView2 Runtime itself is a Microsoft component under Microsoft's license; it is not in the exe.
-7. **Rust crates whose packages carry no license file.** `webview2-com` 0.39.1 and `webview2-com-sys` 0.39.1 (both shipped) and `webview2-com-macros` 0.8.1 (build only) are MIT per `Cargo.toml` but ship no license file; the copyright line "Copyright (c) 2021 Bill Avery" comes from the upstream repository https://github.com/wravery/webview2-rs (file `LICENSE`, fetched on 2026-10-23). `alloc-stdlib` 0.3.0 (BSD-3-Clause) ships no license file; the line "Copyright (c) 2016 Dropbox, Inc." comes from the sibling repository https://github.com/dropbox/rust-alloc-no-stdlib. `selectors` 0.38.0 (MPL-2.0) ships no license file; its table row names only the `Cargo.toml` authors. `tauri-plugin` 2.7.2 (build only) ships none. Several crates by David Tolnay and others (anyhow, serde, serde_json, syn, thiserror and similar) have license files without a copyright line; their table rows show the `Cargo.toml` authors instead, labelled as such. `cargo-platform`, `hashlink`, `pin-project-lite`, `serde_json`, `winnow` have neither.
-8. **MPL-2.0 crates (shipped unmodified).** MPL-2.0 asks that the source of the covered files stays available and that the license text is included. The source is unmodified and available at the upstream URLs: `cssparser` 0.37.0 https://github.com/servo/rust-cssparser ; `dtoa-short` 0.3.5 https://github.com/upsuper/dtoa-short ; `option-ext` 0.2.0 https://github.com/soc/option-ext ; `selectors` 0.38.0 https://github.com/servo/stylo . (`cssparser-macros` 0.7.1, MPL-2.0, is a compile-time macro crate and is not in the exe.) The MPL-2.0 text is in the License texts section.
-9. **`regex-syntax` 0.8.11 Unicode data.** Declared `MIT OR Apache-2.0`, but its package contains a nested `src/unicode_tables/LICENSE-UNICODE` with the older "UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE" text (Unicode-DFS-2016). The metadata does not mention it. That text is reproduced below.
-10. **`react-remove-scroll-bar` 2.3.8 has no license file.** Its `package.json` says MIT and its README ends with "License: MIT", but the package ships no LICENSE file and no copyright line. It is credited here to its author Anton Korzunov (package.json author) without a year; sibling packages by the same author carry "Copyright (c) 2017/2020 Anton Korzunov". Upstream: https://github.com/theKashey/react-remove-scroll-bar.
-11. **KaTeX fonts: OFL notice only in the font files.** The `katex` npm package ships no separate license file for its fonts. The OFL grant exists only as a short notice inside each font file's name table (copyright lines Design Science, Inc. and Khan Academy, with a Reserved Font Name per family). The fonts are embedded in the exe unchanged. The in-app text "Equations are drawn by KaTeX 0.19.0 (MIT licence)" covers the code only and does not mention the OFL fonts.
-12. **Unverified because the sandbox could not reach them:** keepassxc.org, eff.org (the CC BY wording below is from the inventory's knowledge of EFF's published terms; confirm at https://www.eff.org/copyright), qt.io, crates.io, Microsoft's WebView2 and Visual C++ terms, the readline-win32 license, and the PGP signatures (the manifest records a successful check on 2026-10-22).
-13. **MIT-0.** `dunce` 1.0.5 is `CC0-1.0 OR MIT-0 OR Apache-2.0`; its package contains only the CC0-1.0 text, which is used here. No MIT-0 text is reproduced because no shipped package contains one.
-14. **Icon and logo.** The Cipherleaf mark (`assets/cipherleaf-icon.svg`, `src/components/Logo.tsx`, `src-tauri/icons/*`) was drawn for this project in the development sessions; no outside source is recorded. Whether any file in `src-tauri/icons/` still contains Tauri's default artwork was not checked. No license is recorded for the artwork. The emoji used for notebook icons are plain Unicode characters drawn by the system font and are not shipped.
-15. **Version numbers differ:** `package.json` and `src-tauri/Cargo.toml` say 0.1.0, `tauri.conf.json` says 1.0.0.
+1. **Cipherleaf's own license is not chosen.** There is no `LICENSE` file and no `license` field in `package.json` or `src-tauri/Cargo.toml`. Without a license nobody but the owner has rights to reuse Cipherleaf's code. The choice must also be considered together with how KeePassXC (GPL) is shipped.
+2. **KeePassXC source offer for the bundled libraries.** The KeePassXC source archive covers KeePassXC only. It does not contain the source of Qt, Botan, zlib, minizip, libqrencode or readline. For the LGPL parts (Qt 6.11.2, libqrencode) the license asks for the license text, a notice that the library is used, and source or a written offer. This file names the versions and upstream locations (https://download.qt.io, https://code.qt.io, https://github.com/fukuchi/libqrencode, https://botan.randombit.net). A formal written offer or links in the README have not been decided. For a public release (the planned `CipherLeaf V1.0` ZIP), the earlier decision that the build stays private (2026-10-22) has to be revisited by the owner.
+3. **The portable folder's contents are unverified.** The actual contents of `Licenses\KeePassXC\` and of the portable `README.txt` are not in the repository. Check that the folder holds KeePassXC's `COPYING` and all `LICENSE.*` files from the 2.8.0 source archive and the source archive itself, and which GPL option (2 or 3) is offered.
+4. **`vc_redist.x64.exe` and other binaries in the KeePassXC folder.** The upstream ZIP includes Microsoft's installer `vc_redist.x64.exe`, which Cipherleaf's records said was not included (the runtime DLLs are indeed absent). Redistribution is under Microsoft's terms (not read). Also present: `opengl32sw.dll`, `d3dcompiler_47.dll`, `dxcompiler.dll`, `dxil.dll`, `ssl/certs/ca-bundle.crt`, and Qt image plugins; their license texts are not in the ZIP. Owner decides whether to keep, document or remove them.
+5. **Microsoft WebView2 loader license text.** `webview2-com-sys` 0.39.1 (MIT) contains prebuilt Microsoft binaries (`WebView2LoaderStatic.lib` is statically linked into the exe). Those come from Microsoft's Microsoft.Web.WebView2 SDK, which has its own license text. The crate package contains no copy of it. Fetch it from the NuGet package `Microsoft.Web.WebView2` (file `LICENSE.txt`) and add it here; not done and not verified. The WebView2 Runtime itself is a Microsoft component under Microsoft's license; it is not in the exe.
+6. **Rust crates whose packages carry no license file.** `webview2-com` 0.39.1 and `webview2-com-sys` 0.39.1 (both shipped) and `webview2-com-macros` 0.8.1 (build only) are MIT per `Cargo.toml` but ship no license file; the copyright line "Copyright (c) 2021 Bill Avery" comes from the upstream repository https://github.com/wravery/webview2-rs (file `LICENSE`, fetched on 2026-10-23). `alloc-stdlib` 0.3.0 (BSD-3-Clause) ships no license file; the line "Copyright (c) 2016 Dropbox, Inc." comes from the sibling repository https://github.com/dropbox/rust-alloc-no-stdlib. `selectors` 0.38.0 (MPL-2.0) ships no license file; its table row names only the `Cargo.toml` authors. `tauri-plugin` 2.7.2 (build only) ships none. Several crates by David Tolnay and others (anyhow, serde, serde_json, syn, thiserror and similar) have license files without a copyright line; their table rows show the `Cargo.toml` authors instead, labelled as such. `cargo-platform`, `hashlink`, `pin-project-lite`, `serde_json`, `winnow` have neither.
+7. **MPL-2.0 crates (shipped unmodified).** MPL-2.0 asks that the source of the covered files stays available and that the license text is included. The source is unmodified and available at the upstream URLs: `cssparser` 0.37.0 https://github.com/servo/rust-cssparser ; `dtoa-short` 0.3.5 https://github.com/upsuper/dtoa-short ; `option-ext` 0.2.0 https://github.com/soc/option-ext ; `selectors` 0.38.0 https://github.com/servo/stylo . (`cssparser-macros` 0.7.1, MPL-2.0, is a compile-time macro crate and is not in the exe.) The MPL-2.0 text is in the License texts section.
+8. **`regex-syntax` 0.8.11 Unicode data.** Declared `MIT OR Apache-2.0`, but its package contains a nested `src/unicode_tables/LICENSE-UNICODE` with the older "UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE" text (Unicode-DFS-2016). The metadata does not mention it. That text is reproduced below.
+9. **`react-remove-scroll-bar` 2.3.8 has no license file.** Its `package.json` says MIT and its README ends with "License: MIT", but the package ships no LICENSE file and no copyright line. It is credited here to its author Anton Korzunov (package.json author) without a year; sibling packages by the same author carry "Copyright (c) 2017/2020 Anton Korzunov". Upstream: https://github.com/theKashey/react-remove-scroll-bar.
+10. **KaTeX fonts: OFL notice only in the font files.** The `katex` npm package ships no separate license file for its fonts. The OFL grant exists only as a short notice inside each font file's name table (copyright lines Design Science, Inc. and Khan Academy, with a Reserved Font Name per family). The fonts are embedded in the exe unchanged. The in-app text "Equations are drawn by KaTeX 0.19.0 (MIT licence)" covers the code only and does not mention the OFL fonts.
+11. **Unverified because the sandbox could not reach them:** keepassxc.org, qt.io, crates.io, Microsoft's WebView2 and Visual C++ terms, the readline-win32 license, and the PGP signatures (the manifest records a successful check on 2026-10-22).
+12. **MIT-0.** `dunce` 1.0.5 is `CC0-1.0 OR MIT-0 OR Apache-2.0`; its package contains only the CC0-1.0 text, which is used here. No MIT-0 text is reproduced because no shipped package contains one.
+13. **Icon and logo.** The Cipherleaf mark (`assets/cipherleaf-icon.svg`, `src/components/Logo.tsx`, `src-tauri/icons/*`) was drawn for this project in the development sessions; no outside source is recorded. Whether any file in `src-tauri/icons/` still contains Tauri's default artwork was not checked. No license is recorded for the artwork. The emoji used for notebook icons are plain Unicode characters drawn by the system font and are not shipped.
+14. **Version numbers differ:** `package.json` and `src-tauri/Cargo.toml` say 0.1.0, `tauri.conf.json` says 1.0.0.
 
 ## Rust crates
 
-All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), from `cargo metadata --locked`. License is the `license` field of each crate's `Cargo.toml`, unchanged (so "MIT OR Apache-2.0" means the recipient may choose either). Copyright text is copied from the crate's license, COPYRIGHT or SPDX files; where none names a holder, the `Cargo.toml` authors are shown and labelled. Crates that appear twice are different versions. Zero NOTICE files exist in any of the crates (checked across all 309 crates, shipped and build-time), so there is no Apache-2.0 NOTICE text to reproduce.
+All 226 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), from `cargo metadata --locked`. License is the `license` field of each crate's `Cargo.toml`, unchanged (so "MIT OR Apache-2.0" means the recipient may choose either). Copyright text is copied from the crate's license, COPYRIGHT or SPDX files; where none names a holder, the `Cargo.toml` authors are shown and labelled. Crates that appear twice are different versions. Zero NOTICE files exist in any of the crates (checked across all 302 crates, shipped and build-time), so there is no Apache-2.0 NOTICE text to reproduce.
 
 | Crate | Version | License (Cargo.toml) | Copyright / authors | Source URL |
 |---|---|---|---|---|
@@ -153,7 +151,6 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | dtoa-short | 0.3.5 | MPL-2.0 | Cargo.toml authors: Xidorn Quan (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/upsuper/dtoa-short |
 | dunce | 1.0.5 | CC0-1.0 OR MIT-0 OR Apache-2.0 | Cargo.toml authors: Kornel (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://gitlab.com/kornelski/dunce |
 | dyn-clone | 1.0.20 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/dyn-clone |
-| eff-wordlist | 1.0.3 | AGPL-3.0 | No crate-specific copyright line; Cargo.toml author: Cyryl Płotnicki; LICENSE file is the unmodified FSF GNU AGPL-3.0 text. NOTE: embeds the EFF large/short wordlists (not stated in package; EFF list is CC BY 3.0 US) | https://github.com/cyplo/eff-wordlist-rs |
 | either | 1.19.0 | MIT OR Apache-2.0 | Copyright (c) 2015 ; (license file names no holder; no Cargo.toml authors) | https://github.com/rayon-rs/either |
 | equivalent | 1.0.3 | Apache-2.0 OR MIT | Copyright (c) 2016--2023 ; (license file names no holder; no Cargo.toml authors) | https://github.com/indexmap-rs/equivalent |
 | erased-serde | 0.4.10 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/erased-serde |
@@ -163,7 +160,6 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | fnv | 1.0.7 | Apache-2.0 / MIT | Copyright (c) 2017 Contributors | https://github.com/servo/rust-fnv |
 | foldhash | 0.2.0 | Zlib | Copyright (c) 2024 Orson Peters | https://github.com/orlp/foldhash |
 | form_urlencoded | 1.2.2 | MIT OR Apache-2.0 | Copyright (c) 2013-2016 The rust-url developers | https://github.com/servo/rust-url |
-| getrandom | 0.2.17 | MIT OR Apache-2.0 | Copyright (c) 2018-2024 The rust-random Project Developers; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/getrandom |
 | getrandom | 0.3.4 | MIT OR Apache-2.0 | Copyright (c) 2018-2025 The rust-random Project Developers; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/getrandom |
 | getrandom | 0.4.3 | MIT OR Apache-2.0 | Copyright (c) 2018-2026 The rust-random Project Developers; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/getrandom |
 | glob | 0.3.4 | MIT OR Apache-2.0 | Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-lang/glob |
@@ -228,15 +224,11 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | poly1305 | 0.9.1 | Apache-2.0 OR MIT | Copyright (c) 2015-2026 The RustCrypto Project Developers | https://github.com/RustCrypto/universal-hashes |
 | potential_utf | 0.1.6 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
 | powerfmt | 0.2.1 | MIT OR Apache-2.0 | Copyright 2023 Jacob Pratt et al.; Copyright (c) 2023 Jacob Pratt et al. | https://github.com/jhpratt/powerfmt |
-| ppv-lite86 | 0.2.21 | MIT OR Apache-2.0 | Copyright 2019 The CryptoCorrosion Contributors; Copyright (c) 2019 The CryptoCorrosion Contributors | https://github.com/cryptocorrosion/cryptocorrosion |
 | precomputed-hash | 0.1.1 | MIT | Copyright (c) 2017 Emilio Cobos Álvarez | https://github.com/emilio/precomputed-hash |
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay, Alex Crichton (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/proc-macro2 |
 | quick-xml | 0.42.0 | MIT | Copyright (c) 2016 Johann Tuffe | https://github.com/tafia/quick-xml |
 | quote | 1.0.47 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/quote |
-| rand | 0.8.8 | MIT OR Apache-2.0 | Copyright 2018 Developers of the Rand project; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/rand |
-| rand_chacha | 0.3.1 | MIT OR Apache-2.0 | Copyright 2018 Developers of the Rand project; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/rand |
 | rand_core | 0.10.1 | MIT OR Apache-2.0 | Copyright (c) 2018-2026 The Rand Project Developers | https://github.com/rust-random/rand_core |
-| rand_core | 0.6.4 | MIT OR Apache-2.0 | Copyright 2018 Developers of the Rand project; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/rand |
 | raw-window-handle | 0.6.2 | MIT OR Apache-2.0 OR Zlib | Copyright (c) 2019 Osspial; Copyright (c) 2020 Osspial | https://github.com/rust-windowing/raw-window-handle |
 | rayon | 1.12.0 | MIT OR Apache-2.0 | Copyright (c) 2010 The Rust Project Developers | https://github.com/rayon-rs/rayon |
 | rayon-core | 1.13.0 | MIT OR Apache-2.0 | Copyright (c) 2010 The Rust Project Developers | https://github.com/rayon-rs/rayon |
@@ -327,7 +319,6 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | writeable | 0.6.4 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
 | wry | 0.57.0 | Apache-2.0 OR MIT | Copyright (c) 2020-2023 Ngo Iok Ui & Tauri Programme within The Commons Conservancy | https://github.com/tauri-apps/wry |
 | yoke | 0.8.4 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
-| zerocopy | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT | Copyright 2023 The Fuchsia Authors; Copyright 2019 The Fuchsia Authors. | https://github.com/google/zerocopy |
 | zerofrom | 0.1.8 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
 | zeroize | 1.9.1 | Apache-2.0 OR MIT | Copyright (c) 2018-2026 The RustCrypto Project Developers | https://github.com/RustCrypto/utils |
 | zerotrie | 0.2.5 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
@@ -982,37 +973,6 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-~~~~
-
-### BSD 2-Clause License, Fuchsia Authors
-
-Offered as one option by `zerocopy` 0.8.63 (`BSD-2-Clause OR Apache-2.0 OR MIT`); this file takes MIT for that crate, and the text is included for reference. Also the license family of Botan and Yubico ykcore in the KeePassXC package, whose own texts are in the KeePassXC source archive (unverified). Source: `zerocopy-0.8.63/LICENSE-BSD`.
-
-~~~~text
-Copyright 2019 The Fuchsia Authors.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-   * Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-   * Redistributions in binary form must reproduce the above
-copyright notice, this list of conditions and the following disclaimer
-in the documentation and/or other materials provided with the
-distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ~~~~
 
@@ -1833,7 +1793,7 @@ SQLite 3.53.2 is compiled into the exe from the amalgamation inside `libsqlite3-
 
 These are the closest equivalents to NOTICE files; no crate ships a NOTICE file. Verbatim from the crate sources named.
 
-**rand 0.8.8 (same text in rand_chacha 0.3.1, rand_core 0.6.4/0.10.1 with variations)** (source file `rand-0.8.8/COPYRIGHT`)
+**rand project COPYRIGHT text (rand_core 0.10.1 carries a similar text with variations)** (source file `rand-0.8.8/COPYRIGHT`, from the rand repository)
 
 ~~~~text
 Copyrights in the Rand project are retained by their contributors. No
@@ -2534,17 +2494,8 @@ License: BSD-2-Clause
 Comment: from the yubikey-personalization repo (https://github.com/Yubico/yubikey-personalization)
 ~~~~
 
-### EFF wordlist attribution (CC BY 3.0 US)
-
-Used for the passphrase suggestions (7,776-word large list, compiled in through the `eff-wordlist` crate; see open decisions for the crate's own AGPL-3.0 declaration). The attribution wording is the one recorded in the inventory; EFF's page could not be fetched from the preparation sandbox, so confirm it at https://www.eff.org/copyright before shipping.
-
-> Passphrase word lists (EFF Long Wordlist) by the Electronic Frontier Foundation (EFF), licensed under the Creative Commons Attribution 3.0 United States License (CC BY 3.0 US), https://creativecommons.org/licenses/by/3.0/us/. Source: https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases (files: https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt and eff_short_wordlist_1.txt). Changes: converted to a Rust array.
-
-Copyright (c) Electronic Frontier Foundation. The license text itself is at https://creativecommons.org/licenses/by/3.0/us/legalcode.
-
 ### Components whose license text is not included
 
-- AGPL-3.0 (`eff-wordlist` crate): not reproduced, pending the owner's decision (open decision 1).
-- Microsoft WebView2 loader and the Microsoft Edge WebView2 runtime: Microsoft's own terms; the loader text still has to be fetched from the NuGet package (open decision 6).
+- Microsoft WebView2 loader and the Microsoft Edge WebView2 runtime: Microsoft's own terms; the loader text still has to be fetched from the NuGet package (open decision 5).
 - Microsoft Visual C++ Redistributable installer, Qt, Botan, zlib and minizip, libqrencode, readline, Mesa and shader compilers inside KeePassXC's package: texts are in KeePassXC's source archive or not available here (see the KeePassXC section).
 - Zetetic LLC BSD-3 license in the `sqlcipher/` folder of `libsqlite3-sys`: that code is not compiled in (the sqlcipher features are not enabled).

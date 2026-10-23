@@ -6,6 +6,23 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (owner message 20:12:53 UTC; times of the other work not recorded), Cipherleaf: Credits for open source and the suggested passphrase removed (A22), cloud thread session
+
+**Executor:** Claude (Claude Code) in the cloud thread session, with an independent completeness check of the notices (model output). **Record basis:** the repository, the project-thread timestamp of the owner's message and the cloud container's check output; the time of the credits request and the work times are not recorded.
+
+## What happened
+
+1. **Credits.** At the owner's request for credits and copyright for everything used from outside as open source, `THIRD-PARTY-NOTICES.md` was added (KeePassXC, the Rust crates and npm packages that ship, fonts, icons, SQLite, zxcvbn, with license texts), with an "Open source licenses…" dialog under Settings, About and a README credits section (`503dd8b`, then fixes after the independent check in `d77eb63`). The license for Cipherleaf itself is still not chosen.
+2. **A22.** The credits check found that the `eff-wordlist` crate behind the suggested passphrase declares AGPL-3.0. At 20:12:53 UTC the owner wrote "Remove suggest a strong passphrase". The button, the passphrase box, the `generate_passphrase` command, the crate and its dependencies and the unused `random_below` were removed; the strength meter stays and the person types their own master password. Not committed when this entry was written.
+3. **What was and was not run.** `tsc`, `npm run build` and the Tauri-free core harness (73 tests, including the generator) passed in the cloud container. The app-crate `cargo test --lib`, `cargo clippy` and the real-exe tests were **not run** after A22. Nothing is accepted.
+4. **Records.** A22 and the authority row in the amendments record (with a note on A5), the clipboard limit in the security design marked as removed, A21 notes, acceptance rows V1f and X15, STATUS, and [EX-2026-10-23-18](execution/2026-10-23-credits-and-passphrase-removal.md). Older entries were not rewritten.
+
+## 🔜 Where to resume
+
+Run the app-crate tests, clippy and the real-exe optional-security script on the PC after A22; commit only when the owner says. The A21 resume steps below still apply. Open: the license for Cipherleaf itself (STATUS question 11).
+
+---
+
 # 📘 Session: 2026-10-23 (owner messages 18:32:20 to 18:47:35 UTC), Cipherleaf: Notes first, security and passwords optional (A21), cloud thread session
 
 ## 🤖 Models, Effort, Roles and Provenance

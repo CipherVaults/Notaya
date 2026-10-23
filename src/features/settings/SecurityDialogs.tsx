@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { FileKey2, Lock, LockOpen, Sparkles, TriangleAlert } from "lucide-react";
+import { FileKey2, Lock, LockOpen, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { Strength } from "@/lib/types";
 import { useApp } from "@/store/app";
 import { Button, Modal, StrengthMeter } from "@/components/ui";
-import { KeyfileChip, PasswordInput, SuggestedPassphrase } from "@/features/unlock/fields";
+import { KeyfileChip, PasswordInput } from "@/features/unlock/fields";
 
 /** Turn security on: choose a master password (and an optional keyfile). The notes are not re-encrypted. */
 export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
@@ -15,7 +15,6 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
   const [keyfile, setKeyfile] = useState<string | null>(null);
   const [understood, setUnderstood] = useState(false);
   const [removeCopies, setRemoveCopies] = useState(true);
-  const [suggested, setSuggested] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const refreshStatus = useApp((s) => s.refreshStatus);
   const setSettings = useApp((s) => s.setSettings);
@@ -30,7 +29,6 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
     setKeyfile(null);
     setUnderstood(false);
     setRemoveCopies(true);
-    setSuggested(null);
     setBusy(false);
   }, [open]);
 
@@ -50,18 +48,6 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
   const strongEnough = password.length >= 10 && (strength?.score ?? 0) >= 3;
   const matches = password === confirm;
   const ready = strongEnough && matches && understood && !busy;
-
-  const suggest = async () => {
-    const g = await api.generatePassphrase({ words: 6, separator: "-", capitalize: true, includeNumber: true });
-    setPassword(g.value);
-    setConfirm("");
-    setSuggested(g.value);
-  };
-
-  const changePassword = (v: string) => {
-    setPassword(v);
-    if (v !== suggested) setSuggested(null);
-  };
 
   const submit = async () => {
     if (!ready) return;
@@ -99,15 +85,11 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
     >
       <div className="space-y-4">
         <div className="space-y-3">
-          <PasswordInput value={password} onChange={changePassword} placeholder="Master password" autoFocus />
+          <PasswordInput value={password} onChange={setPassword} placeholder="Master password" autoFocus />
           {strength && <StrengthMeter score={strength.score} label={`~${strength.crackTime} to crack`} />}
           {strength?.warning && <p className="text-xs text-warn">{strength.warning}</p>}
           <PasswordInput value={confirm} onChange={setConfirm} placeholder="Type it again" onEnter={submit} />
           {confirm && !matches && <p className="text-xs text-danger">The passwords don't match yet.</p>}
-          <button type="button" onClick={suggest} className="flex items-center gap-1.5 text-xs font-medium text-accent hover:underline">
-            <Sparkles size={13} /> Suggest a strong passphrase
-          </button>
-          {suggested && <SuggestedPassphrase value={suggested} />}
           {!strongEnough && password && (
             <p className="text-xs text-faint">Use at least 10 characters and reach "Strong".</p>
           )}

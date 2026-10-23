@@ -38,19 +38,6 @@ pub fn random_key() -> Key {
     Zeroizing::new(random_bytes::<KEY_LEN>())
 }
 
-/// An unbiased random integer in `0..n`. Uses rejection sampling, so every value
-/// is exactly equally likely.
-pub fn random_below(n: u32) -> u32 {
-    assert!(n > 0);
-    let zone = u32::MAX - (u32::MAX % n);
-    loop {
-        let v = u32::from_le_bytes(random_bytes::<4>());
-        if v < zone {
-            return v % n;
-        }
-    }
-}
-
 /// Argon2id cost settings, stored in the vault header so a vault keeps opening
 /// if the defaults change later.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -272,12 +259,5 @@ mod tests {
         assert!(KdfParams { m_kib: u32::MAX, t: 3, p: 4 }.validate().is_err());
         assert!(KdfParams { m_kib: 1024, t: 0, p: 4 }.validate().is_err());
         assert!(KdfParams::DEFAULT.validate().is_ok());
-    }
-
-    #[test]
-    fn random_below_stays_in_range() {
-        for _ in 0..10_000 {
-            assert!(random_below(7) < 7);
-        }
     }
 }

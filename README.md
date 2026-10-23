@@ -47,7 +47,7 @@ Security is an optional extra. It is off by default: Cipherleaf opens straight t
 
 By default security is **off**: notes open straight away, nothing locks, and screenshots of the app are allowed. When you turn it on you get:
 
-- A **master password** that unlocks your notes (at least 10 characters and a "Strong" rating), with a suggested passphrase you can copy. You can add an optional **keyfile**, a file that must be present as well.
+- A **master password** that unlocks your notes (at least 10 characters and a "Strong" rating). You can add an optional **keyfile**, a file that must be present as well.
 - **Auto-lock** after 1 to 60 minutes of inactivity (5 to start with).
 - Lock when you press `Win+L`, when the PC sleeps or hibernates, and when the drive with the vault is removed. Optionally lock when the window is minimized.
 - A **Lock** button in the title bar and `Ctrl+L`.
@@ -98,7 +98,7 @@ Everything lives in the `data` folder next to `Cipherleaf.exe`. Copy the folder 
 ### Turn security on
 
 1. Open **Settings** and find **Security (optional)**. Press **Turn on…**.
-2. Choose a master password (or press "Suggest a strong passphrase" and write it down). Add a keyfile if you want one ("Create new" or "Use existing"). Confirm that you understand there is no password reset.
+2. Choose a master password (a long phrase of several unrelated words is easy to remember and strong) and write it down somewhere safe. Add a keyfile if you want one ("Create new" or "Use existing"). Confirm that you understand there is no password reset.
 3. Leave "Delete earlier backups made while security was off" ticked unless you want to keep them. Cipherleaf saves a fresh protected backup first and deletes only automatic backups; your own backup copies, `restore-undo` and `set-aside` files are never deleted.
 4. Press **Turn on security**. Your notes get a new key under the new password; this takes a moment, longer for big notebooks.
 5. From now on the app locks as described above, and you unlock with the password (and keyfile).
@@ -162,7 +162,6 @@ Cipherleaf is built on open source software, and we are grateful to everyone who
 - **[Tauri](https://tauri.app)** and the Rust crates it and Cipherleaf use (RustCrypto for the encryption, SQLite for storage, and others).
 - **npm packages** for the interface: React, TipTap and ProseMirror (the editor), KaTeX (equations), highlight.js (code colors), lucide icons, Radix, and others.
 - **Fonts:** Inter and JetBrains Mono (SIL Open Font License 1.1) and the KaTeX fonts.
-- **Word list:** the EFF large word list for suggested passphrases, (c) Electronic Frontier Foundation, CC BY 3.0 US.
 - **Microsoft Edge WebView2** shows the interface (required, not bundled).
 
 Every component is listed in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) with its version, copyright holder and license, together with the license texts that go with it (KeePassXC's full GPL texts are in the `Licenses\KeePassXC` folder). That file is also in the `Licenses` folder of the portable copy and inside the app (Settings, About, "Open source licenses…"). This is attribution, not legal advice.

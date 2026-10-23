@@ -196,8 +196,6 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;
       return ok({ score, guessesLog10: len, crackTime: score > 2 ? "centuries" : "2 minutes", warning: null, suggestions: [] });
     }
-    case "generate_passphrase":
-      return ok({ value: "Tiger-Lamp-Orbit-Silver-Maple-Harbor7", entropy: 80 });
     case "keepassxc_status":
       return ok({ ...kpxc });
     case "search":

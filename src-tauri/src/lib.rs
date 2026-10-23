@@ -171,7 +171,6 @@ pub fn run() {
             keepassxc_cmd::keepassxc_hide,
             keepassxc_cmd::keepassxc_detach,
             keepassxc_cmd::keepassxc_lock,
-            tools::generate_passphrase,
             tools::password_strength,
             tools::open_url,
             tools::search,
