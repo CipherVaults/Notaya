@@ -42,6 +42,8 @@ const tree = {
     { id: "p1", sectionId: "s1", title: "Morning pages", preview: "Slept badly, but the plan for the week is clear: finish the vault, then the editor polish.", words: 212, order: 0, favorite: true, parent: "", icon: "☀️", trashedAt: null, created: ago(300), updated: ago(5) },
     { id: "p2", sectionId: "s1", title: "Trip notes", preview: "Flights, hotel confirmation numbers and a rough itinerary for the first three days.", words: 96, order: 1, favorite: false, icon: "✈️", trashedAt: null, created: ago(500), updated: ago(120) },
     { id: "p4", sectionId: "s1", parent: "p1", title: "Weekly goals", preview: "Three things for this week.", words: 12, order: 0, favorite: false, icon: "🎯", trashedAt: null, created: ago(200), updated: ago(40) },
+    { id: "p5", sectionId: "s2", title: "Old draft", preview: "", words: 3, order: 0, favorite: false, parent: "", icon: "", trashedAt: ago(30), created: ago(700), updated: ago(30) },
+    { id: "p6", sectionId: "s2", title: "App ideas", preview: "A list.", words: 8, order: 1, favorite: false, parent: "", icon: "", trashedAt: null, created: ago(600), updated: ago(60) },
     { id: "p3", sectionId: "s1", title: "Reading list", preview: "Books to get through before the end of the year.", words: 41, order: 2, favorite: false, icon: "", trashedAt: null, created: ago(900), updated: ago(1500) },
   ],
 };
@@ -178,7 +180,35 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "set_backdrop":
       return ok(false);
     case "list_notes":
-      return ok(tree);
+      return ok(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree);
+    // The real app makes a verified backup first and fails the delete if that fails; ?failDelete=1 mimics that.
+    case "delete_notebook":
+    case "delete_section": {
+      if (params.get("failDelete") === "1") throw "Could not make a backup copy first (the drive is full), so nothing was deleted.";
+      const secs = new Set(cmd === "delete_notebook" ? tree.sections.filter((x) => x.notebookId === args.id).map((x) => x.id) : [String(args.id)]);
+      tree.pages = tree.pages.filter((p) => !secs.has(p.sectionId));
+      tree.sections = tree.sections.filter((x) => !secs.has(x.id));
+      if (cmd === "delete_notebook") tree.notebooks = tree.notebooks.filter((n) => n.id !== args.id);
+      return ok({ ...tree });
+    }
+    case "update_section": {
+      const sec = tree.sections.find((x) => x.id === args.id);
+      if (sec) sec.name = String(args.name);
+      return ok({ ...tree, sections: [...tree.sections] });
+    }
+    case "set_page_favorite": {
+      const pg = tree.pages.find((x) => x.id === args.id);
+      if (pg) pg.favorite = !!args.favorite;
+      return ok({ ...tree, pages: [...tree.pages] });
+    }
+    case "reorder": {
+      (args.ids as string[]).forEach((id, i) => {
+        const item = [...tree.notebooks, ...tree.sections, ...tree.pages].find((x) => x.id === id);
+        if (item) item.order = i;
+      });
+      for (const k of ["notebooks", "sections", "pages"] as const) (tree[k] as { order: number }[]).sort((a, b) => a.order - b.order);
+      return ok({ ...tree });
+    }
     case "get_page":
       return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk" });
     case "create_subpage":

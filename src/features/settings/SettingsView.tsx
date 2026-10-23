@@ -293,7 +293,11 @@ export default function SettingsView() {
             <dt className="text-faint">Vault location</dt>
             <dd className="selectable break-all font-mono text-xs">{status?.dataDir}</dd>
             <dt className="text-faint">Encryption</dt>
-            <dd>XChaCha20-Poly1305 (256-bit) for every item, with tamper detection</dd>
+            <dd>
+              {securityOn
+                ? "XChaCha20-Poly1305 (256-bit) for every item, with tamper detection"
+                : "XChaCha20-Poly1305 (256-bit) file format with tamper detection. With security off the key is built into the program, so this does not keep anyone out"}
+            </dd>
             <dt className="text-faint">Key derivation</dt>
             <dd>{securityOn ? "Argon2id · 256 MiB · 3 passes · 4 lanes, + HKDF-SHA256 with optional keyfile" : "None while security is off: the notes use a built-in key, so they are not secret"}</dd>
             <dt className="text-faint">Network</dt>
@@ -398,7 +402,7 @@ function ChangeMasterDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         onOpenChange(o);
       }}
       title="Change master password"
-      description="Your data isn't re-encrypted; only the key that protects it changes. It takes a second."
+      description="Changing the password also makes a new data key and re-encrypts your notes, which takes a moment. Notes saved from now on can't be opened with your old password. Older backups still open with the old password, so keep them somewhere safe or delete them."
       width={500}
     >
       <form

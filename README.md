@@ -4,7 +4,7 @@ Cipherleaf is a portable Windows notes app. You write notes in notebooks, sectio
 
 **Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and the app has no network code, so nothing is sent anywhere. The only time it reaches the web is when you click a web link in a note, which opens in your normal browser.
 
-Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. You can turn security on or off at any time in Settings. A password manager (KeePassXC) is a second optional extra, with its own switch.
+Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. While it is off your notes are not private: anyone who can open the folder can read them. You can turn security on or off at any time in Settings. A password manager (KeePassXC) is a second optional extra, with its own switch.
 
 > **Version 1.0, the first release.** The repository is private, portable builds are shared by hand with a few close people, and the exe is not code-signed (Windows SmartScreen may warn). What is and is not proven is in [`docs/acceptance.md`](docs/acceptance.md); the current project state is in [`docs/STATUS.md`](docs/STATUS.md).
 
@@ -21,7 +21,7 @@ Security is an optional extra. It is off by default: Cipherleaf opens straight t
 
 - **Notebooks, sections and pages.** A notebook has sections (a new notebook starts with one called "General"), and a section has pages. Pages can hold sub-pages to any depth. Notebooks have a name, an icon and a color.
 - **Sidebar.** Resizable and hideable (`Ctrl+\`). The `…` menus offer: notebook (Add section, Edit notebook, Delete notebook), section (Rename, Delete section) and page (Add a page inside, Add to favorites, Move to, Move to trash). The Trash lists deleted pages with Restore and Delete, plus Empty trash.
-- **Page tools.** Favorites, move a page to another section, move to Trash (with an Undo), Restore or Delete forever from Trash, and Empty trash. Drag sections and top-level pages to reorder them. The page bar shows the save state ("Saved & encrypted"). Hover it, or open the page's `…` menu, to see the word count and when the page was edited.
+- **Page tools.** Favorites, move a page to another section, move to Trash (with an Undo), Restore or Delete forever from Trash, and Empty trash. Drag sections and top-level pages to reorder them. The page bar shows the save state ("Saved on this drive", or "Saved & encrypted" when security is on). Hover it, or open the page's `…` menu, to see the word count and when the page was edited.
 - **A block editor.** Hover a block for its handle: `+` adds a block below, and the grip drags the block or opens Change type, Duplicate and Delete. Press `/` for the insert menu: paragraph, three heading sizes, bullet list, numbered list, checklist, collapsible section, quote, highlight box (a callout with a clickable icon), code block, divider, table, picture, equation, inline equation, sub-page, and today's date.
 - **Formatting bar** on selected text: block type, font (Default, Sans, Serif, Mono, Handwriting, Rounded), size, bold, italic, underline, strikethrough, code, link, text color and highlight, alignment and remove formatting. `Ctrl+B`, `Ctrl+I` and `Ctrl+U` work as usual.
 - **Links.** Paste or type a link in the bar. `Ctrl+click` opens a web link in your browser (http and https only).
@@ -53,7 +53,7 @@ By default security is **off**: notes open straight away, nothing locks, and scr
 - A **Lock** button in the title bar and `Ctrl+L`.
 - A short wait after wrong passwords (none for the first two tries, then 2 seconds, doubling up to a minute).
 - **Block screenshots & screen sharing**: its own switch, **off** until you turn it on. It is never switched on for you.
-- **Change master password and keyfile** in Settings ("Change…").
+- **Change master password and keyfile** in Settings ("Change…"). This also makes a new data key and re-encrypts your notes. Notes saved from now on cannot be opened with the old password, but older backups still open with the old password, so keep them somewhere safe or delete them.
 - **Turn off security** from Settings, at any time (see below).
 
 ### Optional: passwords (KeePassXC)
@@ -109,7 +109,7 @@ Everything lives in the `data` folder next to `Cipherleaf.exe`. Copy the folder 
 2. Read the warnings, type your current master password (and choose your keyfile if you use one), and confirm.
 3. Press **Turn off security**. The notes then open without a password. A wrong password changes nothing and counts toward the wait after wrong passwords.
 
-With security off, your notes are still saved in Cipherleaf's encrypted, tamper-checked format, but the key is a **public key built into the program**. So this is **not** confidentiality: anyone who has your `vault.clf` or a backup, and a copy of Cipherleaf, can read it.
+With security off, your notes are saved in Cipherleaf's file format, which is tamper-checked, but the key is a **public key built into the program**. So your notes are **not private**: anyone who has your `vault.clf` or a backup, and a copy of Cipherleaf, can read them. The app says so on the Home screen until you dismiss the note.
 
 ### If you forget the password
 

@@ -5,6 +5,7 @@ use tauri::{AppHandle, Manager, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
+use crate::backup;
 use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
@@ -199,8 +200,8 @@ pub fn enable_security(
     let mut removed_copies = 0;
     let mut backup_failed = false;
     if remove_unprotected_copies {
-        match state.with(|s| state::rotate_backup(&state.paths, s)) {
-            Ok(()) => removed_copies = openvault::delete_unprotected(&state.paths),
+        match state.with(|s| backup::make_backup(&state.paths, s)) {
+            Ok(_) => removed_copies = openvault::delete_unprotected(&state.paths),
             // No fresh backup: keep the old copies rather than leave none.
             Err(e) => {
                 eprintln!("backup after turning security on failed: {e}");
@@ -305,8 +306,13 @@ pub fn lock_vault(app: AppHandle) {
     state::lock(&app, "manual");
 }
 
+/// Changes the master password and/or keyfile. The vault is re-keyed (a fresh data key and vault
+/// id, see `Session::change_credentials`), so an old password with an old header or backup can't
+/// open data written afterwards. A fresh backup follows; older backups still open with the old
+/// password. If that backup fails the change stands and the owner gets the usual backup notice.
 #[tauri::command(async)]
 pub fn change_master(
+    app: AppHandle,
     state: State<'_, AppState>,
     current_password: String,
     current_keyfile: Option<String>,
@@ -330,6 +336,11 @@ pub fn change_master(
     });
     if matches!(result, Err(Error::BadCredentials)) {
         state.record_failure();
+    }
+    if result.is_ok() {
+        if let Err(e) = state.with(|s| backup::make_backup(&state.paths, s)) {
+            state::report_backup_failure(&app, &state, &e);
+        }
     }
     result
 }
@@ -377,7 +388,9 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
     else {
         return Ok(None);
     };
-    state.with(|s| s.backup_to(&path))?;
+    // Written next to the chosen file and checked first; an existing file is replaced only
+    // by a copy that passed, and the live vault is refused.
+    state.with(|s| backup::save_copy(s, &path, &state.paths.vault))?;
     Ok(Some(path.display().to_string()))
 }
 

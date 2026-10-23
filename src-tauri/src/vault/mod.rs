@@ -268,8 +268,13 @@ impl Session {
         Ok(removed)
     }
 
-    /// Changes the master password and/or keyfile. Only the header changes: the
-    /// data key is re-wrapped, so this is instant and can't lose data.
+    /// Changes the master password and/or keyfile.
+    ///
+    /// The vault is re-keyed, not just re-wrapped (like turning security on or off): a fresh
+    /// data key and vault id, with every record and attachment re-encrypted in one transaction
+    /// (all or nothing). Otherwise an older header, which sits in every automatic backup, would
+    /// still open the data written after the change with the OLD password. The caller makes a
+    /// fresh backup afterwards; older backups keep opening with the old password.
     pub fn change_credentials(
         &mut self,
         current_password: &str,
@@ -286,10 +291,7 @@ impl Session {
         if *check != *self.dek {
             return Err(Error::BadCredentials);
         }
-        let new_header = header.rewrap(&self.dek, new_password, new_keyfile, kdf)?;
-        self.store.write_header(&new_header)?;
-        self.dirty = true;
-        Ok(())
+        self.rekey(false, |dek, id| Header::protected_for(dek, id, new_password, new_keyfile, kdf))
     }
 
     /// Turns security on for an open vault: the notes get a master password (and keyfile).
@@ -348,6 +350,29 @@ impl Session {
 
     pub fn backup_to(&self, dest: &Path) -> Result<()> {
         self.store.backup_to(dest)
+    }
+
+    /// Checks that the file at `path` is a complete copy of this vault: the same header
+    /// (byte for byte), the same number of records and attachments, and every one of them
+    /// authenticates with this session's data key. It needs no password, and it reads one
+    /// row at a time. A backup is counted as made only after this passes.
+    pub fn verify_copy(&self, path: &Path) -> Result<()> {
+        let copy = Store::open(path)?;
+        if copy.read_header()?.to_bytes() != self.store.read_header()?.to_bytes() {
+            return Err(Error::Corrupt);
+        }
+        for table in [Table::Records, Table::Attachments] {
+            let ids = copy.ids(table)?;
+            if ids.len() != self.store.ids(table)?.len() {
+                return Err(Error::Corrupt);
+            }
+            for id in ids {
+                let sealed = copy.get(table, &id)?.ok_or(Error::Corrupt)?;
+                let plain = crypto::open(&self.dek, &aad(&self.vault_id, table, &id), &sealed)?;
+                crypto::unpad(&plain)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -476,16 +501,122 @@ mod tests {
         let kf = crypto::random_bytes::<32>();
         let p = page("keep me");
         let pid = p.id().to_string();
+        let att;
         {
             let mut s = Session::create(&path, "old", None, FAST).unwrap();
             s.put(p).unwrap();
+            att = s.put_attachment("image/png", b"pixels").unwrap();
             assert!(s.change_credentials("wrong", None, "new", Some(&kf), FAST).is_err());
             s.change_credentials("old", None, "new", Some(&kf), FAST).unwrap();
+            // The open session still works after the change.
+            assert!(s.get(&pid).is_some());
+            assert_eq!(s.get_attachment(&att).unwrap().1, b"pixels".to_vec());
+            s.put(page("written after")).unwrap();
         }
         assert!(Session::unlock(&path, "old", None).is_err());
         assert!(Session::unlock(&path, "new", None).is_err());
         let s = Session::unlock(&path, "new", Some(&kf)).unwrap();
         assert!(s.get(&pid).is_some());
+        assert_eq!(s.get_attachment(&att).unwrap().1, b"pixels".to_vec());
+        assert_eq!(s.items().filter(|i| matches!(i, Item::Page(_))).count(), 2);
+    }
+
+    #[test]
+    fn changing_the_password_gives_a_fresh_data_key_and_vault_id() {
+        let path = temp_vault();
+        let mut s = Session::create(&path, "old", None, FAST).unwrap();
+        s.put(page("secret text")).unwrap();
+        let before = Session::read_header(&path).unwrap();
+        let old_key = before.unlock("old", None).unwrap();
+        s.change_credentials("old", None, "new", None, FAST).unwrap();
+        let after = Session::read_header(&path).unwrap();
+        assert_ne!(after.vault_id, before.vault_id);
+        assert_ne!(*after.unlock("new", None).unwrap(), *old_key, "the data key must change");
+        assert!(after.unlock("old", None).is_err());
+    }
+
+    #[test]
+    fn a_failed_password_change_changes_nothing() {
+        let path = temp_vault();
+        let mut s = Session::create(&path, "old", None, FAST).unwrap();
+        s.put_attachment("image/png", b"pixels").unwrap();
+        s.put(page("keep")).unwrap();
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute("UPDATE attachments SET data = x'00010203'", []).unwrap();
+        }
+        assert!(s.change_credentials("old", None, "new", None, FAST).is_err());
+        drop(s);
+        // The old header is still in place; only the corrupt attachment is the problem.
+        assert!(Session::read_header(&path).unwrap().unlock("old", None).is_ok());
+        assert!(Session::read_header(&path).unwrap().unlock("new", None).is_err());
+    }
+
+    /// The audit's scenario (F-01): the old header sits in every automatic backup. After a
+    /// password change, that header plus the OLD password must not open data written later.
+    #[test]
+    fn an_old_header_and_old_password_do_not_open_data_written_after_a_password_change() {
+        let path = temp_vault();
+        let old_copy = path.with_file_name("old-copy.clf");
+        let mut s = Session::create(&path, "old-password-1", None, FAST).unwrap();
+        s.put(page("before")).unwrap();
+        s.backup_to(&old_copy).unwrap(); // an automatic backup lying next to the vault
+        let old_header = Session::read_header(&old_copy).unwrap();
+        s.change_credentials("old-password-1", None, "new-password-2", None, FAST).unwrap();
+        s.put(page("written after the change")).unwrap();
+        drop(s);
+
+        // Put the OLD header into a copy of the CURRENT file.
+        let franken = path.with_file_name("franken.clf");
+        std::fs::copy(&path, &franken).unwrap();
+        Store::open(&franken).unwrap().write_header(&old_header).unwrap();
+        assert!(
+            Session::unlock(&franken, "old-password-1", None).is_err(),
+            "old header + old password must not open the current data"
+        );
+        // The real file still opens with the new password and has everything.
+        let ok = Session::unlock(&path, "new-password-2", None).unwrap();
+        assert_eq!(ok.items().filter(|i| matches!(i, Item::Page(_))).count(), 2);
+    }
+
+    #[test]
+    fn verify_copy_accepts_a_good_backup_and_rejects_damaged_ones() {
+        let path = temp_vault();
+        let mut s = Session::create(&path, "pw", None, FAST).unwrap();
+        s.put(page("one")).unwrap();
+        s.put_attachment("image/png", b"pixels").unwrap();
+        let good = path.with_file_name("good.clf");
+        s.backup_to(&good).unwrap();
+        s.verify_copy(&good).unwrap();
+
+        // A zero-byte file, a missing file and some other vault are all refused.
+        let empty = path.with_file_name("empty.clf");
+        std::fs::write(&empty, b"").unwrap();
+        assert!(s.verify_copy(&empty).is_err());
+        assert!(s.verify_copy(&path.with_file_name("missing.clf")).is_err());
+        let other = temp_vault();
+        drop(Session::create(&other, "pw", None, FAST).unwrap());
+        assert!(s.verify_copy(&other).is_err());
+
+        // One flipped byte in a record, and in an attachment.
+        for table in ["records", "attachments"] {
+            let bad = path.with_file_name(format!("bad-{table}.clf"));
+            std::fs::copy(&good, &bad).unwrap();
+            let conn = Connection::open(&bad).unwrap();
+            let (id, mut data): (Vec<u8>, Vec<u8>) = conn
+                .query_row(&format!("SELECT id, data FROM {table} LIMIT 1"), [], |r| Ok((r.get(0)?, r.get(1)?)))
+                .unwrap();
+            data[40] ^= 0xff;
+            conn.execute(&format!("UPDATE {table} SET data = ?1 WHERE id = ?2"), params![data, id]).unwrap();
+            drop(conn);
+            assert!(s.verify_copy(&bad).is_err(), "a damaged {table} row must be caught");
+        }
+
+        // A row missing from the copy.
+        let short = path.with_file_name("short.clf");
+        std::fs::copy(&good, &short).unwrap();
+        Connection::open(&short).unwrap().execute("DELETE FROM attachments", []).unwrap();
+        assert!(s.verify_copy(&short).is_err());
     }
 
     #[test]

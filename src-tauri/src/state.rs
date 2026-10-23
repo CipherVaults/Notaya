@@ -13,9 +13,11 @@ use crate::error::{Error, Result};
 use crate::model::resolve_passwords;
 use crate::portable::Paths;
 use crate::vault::Session;
-use crate::{keepassxc, pwbackup, system, ui};
+use crate::{backup, keepassxc, pwbackup, system, ui};
 
-const MAX_BACKUPS: usize = 10;
+/// A vault with security off is backed up at most this often while it is open (and only if
+/// something changed since the last backup), because it never locks.
+const OPEN_BACKUP_EVERY: Duration = Duration::from_secs(60 * 60);
 
 /// A passwords file or KeePassXC settings already exist (so a vault saved before A21, which
 /// has no choice for the Passwords feature, keeps it on).
@@ -330,9 +332,9 @@ pub fn lock(app: &AppHandle, reason: &str) {
         let _ = app.emit("vault-locked", reason.to_string());
     }
     // Slow parts after that.
-    let backup = session.as_ref().filter(|s| s.dirty).map(|s| rotate_backup(&state.paths, s));
-    if let Some(Err(e)) = backup {
-        eprintln!("backup failed: {e}");
+    let made = session.as_ref().filter(|s| s.dirty).map(|s| backup::make_backup(&state.paths, s));
+    if let Some(Err(e)) = made {
+        report_backup_failure(app, &state, &e);
     }
     // With the Passwords feature off, KeePassXC and its file are left completely alone.
     // (With no session to ask, as in a second lock, do what a lock always did.)
@@ -403,24 +405,34 @@ pub fn quit(app: &AppHandle) -> bool {
     false
 }
 
-pub fn rotate_backup(paths: &Paths, session: &Session) -> Result<()> {
-    std::fs::create_dir_all(&paths.backups)?;
-    let name = format!("vault-{}.clf", crate::model::now_ms());
-    session.backup_to(&paths.backups.join(name))?;
-    let mut backups: Vec<_> = std::fs::read_dir(&paths.backups)?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| {
-            p.file_name()
-                .and_then(|n| n.to_str())
-                .is_some_and(|n| n.starts_with("vault-") && n.ends_with(".clf"))
-        })
-        .collect();
-    backups.sort();
-    while backups.len() > MAX_BACKUPS {
-        let _ = std::fs::remove_file(backups.remove(0));
+/// Tells the owner that an automatic backup could not be made (the release exe has no
+/// console, so a message on stderr would never be seen). The notice is kept as well as
+/// sent as an event, like the one for a cancelled quit: a lock reloads the window and a
+/// live event could be missed. The vault file itself is not affected.
+pub(crate) fn report_backup_failure(app: &AppHandle, state: &AppState, e: &Error) {
+    eprintln!("backup failed: {e}");
+    let text = backup::failure_notice(e);
+    state.set_notice(text.clone());
+    let _ = app.emit("app-notice", text);
+}
+
+/// A backup of an open vault (security off) while it is running: it never locks, so
+/// without this it would be backed up only when the app quits. Does nothing when nothing
+/// changed since the last backup. Holds the session for the length of the backup, like the
+/// safety backup before a delete does.
+fn periodic_backup(app: &AppHandle, state: &AppState) {
+    let result = state.with_mut(|s| {
+        if !s.dirty {
+            return Ok(());
+        }
+        backup::make_backup(&state.paths, s)?;
+        // The backup is current, so the quit-time backup has nothing new to add.
+        s.dirty = false;
+        Ok(())
+    });
+    if let Err(e) = result {
+        report_backup_failure(app, state, &e);
     }
-    Ok(())
 }
 
 /// Checks once a second for reasons to lock: idle time, Win+L, sleep/hibernate,
@@ -429,6 +441,7 @@ pub fn spawn_monitor(app: AppHandle) {
     std::thread::spawn(move || {
         let mut last_wall = SystemTime::now();
         let mut desktop_seen_unlocked = false;
+        let mut last_open_backup = Instant::now();
         loop {
             std::thread::sleep(Duration::from_secs(1));
             let state = app.state::<AppState>();
@@ -442,8 +455,12 @@ pub fn spawn_monitor(app: AppHandle) {
                 desktop_seen_unlocked = false;
                 continue;
             };
-            // Security off: nothing locks the vault (A21).
+            // Security off: nothing locks the vault (A21), but it is backed up now and then.
             if security_off {
+                if last_open_backup.elapsed() >= OPEN_BACKUP_EVERY && !state.is_quitting() {
+                    last_open_backup = Instant::now(); // a failing drive is retried in an hour, not every second
+                    periodic_backup(&app, &state);
+                }
                 continue;
             }
 
