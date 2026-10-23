@@ -15,7 +15,7 @@
 
 **Date / time:** 2026-10-23 (UTC). Times above are the owner's message timestamps. The start and end of the work, the commit times and the build times are not recorded.
 
-**Authority:** the owner's messages above, in [approval-and-amendments.md](../plan/approval-and-amendments.md); recorded as [A21](../plan/A21-notes-first-optional-security.md). The owner's messages do not name the commit, the push or the pull request; Claude read "work on everthing now" as covering them. **Stopping condition:** stop with the work committed and pushed to branch `claude/project-thread-sv2tfm`, a draft pull request against `main` to follow, the records updated, and the PC build, the real-exe results and the independent review marked PENDING. The pull request number and the PENDING results are not in this file yet.
+**Authority:** the owner's messages above, in [approval-and-amendments.md](../plan/approval-and-amendments.md); recorded as [A21](../plan/A21-notes-first-optional-security.md). The owner's messages do not name the commit, the push or the pull request; Claude read "work on everthing now" as covering them. **Stopping condition:** stop with the work committed and pushed to branch `claude/project-thread-sv2tfm`, a draft pull request against `main` (it became PR #3), the records updated, and the PC build and real-exe results filled in. Both are now recorded in section 5.
 
 ## 2. Context Used
 
@@ -44,7 +44,7 @@
 
 **README.** Rewritten (core notes, optional security, optional passwords) by a helper agent and checked by Claude against the code.
 
-**Agents used** (the owner's standing instruction, repeated at 18:47:35): a README helper agent (done); one independent security review agent (Opus-class, read-only; done, see below); a PC remote session to compile the Tauri crate and run the tests (started, result PENDING-FILL); a records agent for these documents. Other helper agents: not recorded. Effort settings are not recorded. Agent reports are model output.
+**Agents used** (the owner's standing instruction, repeated at 18:47:35): a README helper agent (done); one independent security review agent (Opus-class, read-only; done, see below); a PC remote session to compile the Tauri crate and run the tests (done, see section 5); a second independent review agent (read-only, done, see section 5); a README fact-check agent (done); a records agent for these documents. Other helper agents: not recorded. Effort settings are not recorded. Agent reports are model output.
 
 **Changes after the independent review** (`f9d2676`). The review found 2 high, 3 medium and 6 low issues. Fixed in `f9d2676`: the two high issues (a shared data key, so any earlier open copy could open the protected vault; users with a keyfile could not turn security off), the three medium issues, and most of the low ones. Not changed: "low 10", the lock screen of a protected vault can be captured after a lock during the session (it follows the saved screenshot setting; documented as a limit). "Low 11" was formatting and was fixed.
 
@@ -59,45 +59,52 @@ Fixed, as seen in the code and the records:
 - After a crash between the two renames of a restore the app shows the "No notes found here" screen (Restore or Start new notes), not "Create your vault".
 - The Turn on security dialog says it takes a moment (the Turn off dialog does not say so yet), and the Copy button for the suggested passphrase is in the Turn on security dialog.
 
-Not changed: "low 10" (lock screen capture after a lock during the session). Not re-reviewed: the fixes themselves.
+Not changed: "low 10" (lock screen capture after a lock during the session). A second independent review re-checked the fixes and judged them correct (section 5).
 
 **Environment limits.** The cloud container could not compile the Tauri crate (no GTK libraries). Claude did not install system packages. Claude ran `npm ci --ignore-scripts` in the container only (to type-check and build the UI); nothing was installed on the owner's PC by this work.
 
 ## 4. Commands / Tools Used
 
-In the cloud container: `npm ci --ignore-scripts`, `npx tsc --noEmit -p tsconfig.json`, `npm run build`, `npm run mock` with scripted screenshots, and the Rust core unit tests in a Tauri-free harness (the core modules compiled without the Tauri crate). Git for the two commits and the push (the draft pull request follows). Helper agents as listed in section 3.
+In the cloud container: `npm ci --ignore-scripts`, `npx tsc --noEmit -p tsconfig.json`, `npm run build`, `npm run mock` with scripted screenshots, and the Rust core unit tests in a Tauri-free harness (the core modules compiled without the Tauri crate). Git for the commits and the push; draft pull request #3. On the owner's PC (a PC remote session, system clock 2026-10-23, about 19:45 to 19:51 UTC, no source changes): `cargo build`, `cargo test --lib`, `cargo clippy --all-targets`, `cargo fmt --check`, `npx tsc --noEmit`, `npm run build`, the Tauri release build, and the PowerShell scripts in `tools/real-exe-tests/` on throwaway data in `%TEMP%`. Helper agents as listed in section 3.
 
 ## 5. Verification / Testing
 
-All results below apply to the source of commits `84b281d`, `0929ae5` and `f9d2676` unless said otherwise. The `tsc` and build results are from `0929ae5`; whether they were re-run after `f9d2676` is not recorded here.
+The Tauri-free harness results are from the commits named in each row. The PC results were measured on the owner's PC on 2026-10-23, about 19:45 to 19:51 UTC (system clock), on branch head `5ef5b07` unless said otherwise; the PC session made no source changes. The head includes `main` merged in (Start over, A20, from PR #1/#4) and the renumbering to A21, EX-17, P20 and P21.
 
 | Check | Outcome | Applicability and limits |
 |---|---|---|
-| Rust core unit tests in a Tauri-free harness (2026-10-23, after `f9d2676`) | pass, 69 tests, 13 of them new for A21 (header, session including re-keying and the rollback of a failed re-key, model, restore and openvault) | Core logic only. This is **not** `cargo test --lib` on the app crate. The app crate result is PENDING-FILL. |
-| `cargo test --lib` on the app crate | PENDING-FILL (a PC session is compiling and running tests) | Not run in the cloud container: no GTK libraries |
-| `cargo clippy --all-targets` | not run | |
-| `npx tsc --noEmit -p tsconfig.json` | pass | Types only |
-| `npm run build` | pass | The bundle only |
+| Rust core unit tests in a Tauri-free harness (2026-10-23, after `f9d2676`) | pass, 69 tests, 13 of them new for A21 (header, session including re-keying and the rollback of a failed re-key, model, restore and openvault) | Core logic only, on `f9d2676`. This is **not** `cargo test --lib` on the app crate. On `3bc011b` the same harness passed 73 tests. |
+| `cargo build` on the app crate (PC) | 0 errors | Not possible in the cloud container: no GTK libraries |
+| `cargo test --lib` on the app crate (PC) | pass: 130 passed, 0 failed on `5ef5b07` (also 130 of 130 on `dc5860a`; 126 on the earlier `8afc994`) | Unit level. Not the app runtime or OS integration |
+| `cargo clippy --all-targets` (PC) | 0 errors, 5 library warnings: unused `Vault::create`, `Header::create` and `Header::rewrap_open`; a collapsible `if` at `notes.rs:232`; a clone-to-slice at `stickies.rs:130`; a redundant closure at `vault/mod.rs:321`; plus one test-only `is_multiple_of` warning in `crypto.rs` | Style and dead-code warnings only |
+| `cargo fmt --check` (PC) | not clean | The repository was not rustfmt-clean before A21 and still is not (the new differences are mostly in `vault/mod.rs`); nothing was reformatted |
+| `npx tsc --noEmit -p tsconfig.json` (PC) | pass, exit 0 | Types only |
+| `npm run build` and the Tauri release build (PC) | pass | The bundle and the build only. Release exe SHA-256 of `5ef5b07`: `B22FF33973342A9A785D42678706BF67BDF356491BD204F55B300544CF86974A` (`dc5860a`: `18B20AAC194DB59BA4923633630E119082E81CF5064E845B675E8804DBC6B618`; `8afc994`: `10CE68EE925522B4CA64CE8EB1FAD00A94A50EC27AE44D481303A1B95423764A`) |
 | Screens in the mock UI | seen | Fake data in a plain browser; not the real backend, vault or OS integration |
-| Real-exe tests on a throwaway `CIPHERLEAF_HOME` (`optionalsecurity.mjs` and the regression scripts) | PENDING-FILL | The scripts are written; not run |
-| Independent security review (one read-only agent, Opus-class) | done: 2 high, 3 medium, 6 low issues; fixes in `f9d2676` (see section 3) | Model output. The fixes were not re-reviewed (PENDING-FILL). "Low 10" was not changed. |
+| Real-exe scripts on throwaway data in `%TEMP%`, each on exactly the `5ef5b07` exe | `run-optionalsecurity.ps1` 52 of 52 (p1 13, p2 21, p3 11 including 6 open-backup restore checks, p4 5, p5 2); `run-restoreflow.ps1` 13 pass, 0 fail; `run-lockflow.ps1` page, sticky and close as designed (page text saved on lock and on window close, sticky text saved on lock); passwords testA 13/13, testB 41/41, testC c1 3/3, c2 10/10, c2q 10/10, testE 5/5 | Throwaway vaults only. Port 9335 was closed after every run, `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` was not left set, no processes were left over, the temp folders were removed, and KeePassXC was only copied, never force-stopped. On the older `8afc994` two scripts had a first-connect "no main window" flake that passed on rerun (cause not proven; another test shared the PC and its port); no flake on `dc5860a` or `5ef5b07` |
+| Protected-vault Settings flow in the real window (a throwaway vault made open, protected with `enable_security`, exe restarted) | 19 of 20 checks pass; the one fail was the test's own wording (it looked for "Wrong password or keyfile"; the real text is "Wrong master password or keyfile for this Cipherleaf vault.") | Restart shows the lock screen; Settings shows "Security is on" and "Turn off security…"; a wrong password is refused and `vault.clf` stays byte-identical; the right password turns security off, the Lock button goes, the note text survives; the next start opens straight to the notes; "Turn on…" works again with the note intact. With security off there is no Lock button and Ctrl+L does nothing |
+| Re-key timing (PC) | on `5ef5b07`: through the dialogs about 140 ms on a one-page vault (on 144 ms, off 140 ms); through commands on a 400-page 3.5 MB vault 209 ms on and 181 ms off; all 401 pages present after the round trip | One machine, one run each |
+| Start over on a protected vault (PC) | lock screen, Start over, typed START OVER, "Set aside and start over", then "No notes found here"; the data folder then held only `set-aside-<ms>.clf`; "Start new notes" opened new empty notes with security off; both the set-aside file and the new `vault.clf` remain, and a toast names the set-aside file | Throwaway vault |
+| Independent security review (one read-only agent, Opus-class) | done: 2 high, 3 medium, 6 low issues; fixes in `f9d2676` (see section 3) | Model output. "Low 10" was not changed. |
+| Second independent review (one read-only agent) of the merged diff at `3bc011b` | no high issues; follow-ups fixed in `dc5860a` (its commit message: say when the earlier-copies deletion could not run, Check again buttons, wording); it re-checked the `f9d2676` fixes and judged them correct | Model output. Unchanged and recorded limits are in security-design.md |
+| README rewrite (`b00c174`) | fact-checked against the code by a separate agent; the Settings button label "Turn off security…" was clarified in `5ef5b07` | Model output |
 | `npm audit`, `cargo audit` | not run | |
 
-**Not tested:** everything that needs the real app: the window flags (content protection) of a new, an old and a protected vault; the first-run auto-create; the Restore or Start-new-notes screen; turning security on and off in the real window; the deletion of earlier unprotected copies; the Passwords switch with a running KeePassXC; idle lock, Win+L, sleep and drive removal with security on; the README in the portable build. No portable build or ZIP was made for A21.
+**Not run or not observed:** `testD1` (a long diagnostic); anything touching the owner's real vault or portable folder; idle lock, Win+L, sleep and USB removal on a real PC; the window flags (content protection) of a new, an old and a protected vault were not individually observed; a portable build or ZIP for A21 (not built yet); `cargo audit` and `npm audit`. **Cosmetic:** the password box of the Turn off dialog shows two eye icons (the app's and Edge's).
 
 ## 6. Problems Encountered
 
-- The Tauri crate cannot be compiled in the cloud container (no GTK libraries), so the app crate, clippy and the real exe could not be checked there. The core was tested in a Tauri-free harness instead, and a PC session was started for the rest.
+- The Tauri crate cannot be compiled in the cloud container (no GTK libraries), so the app crate, clippy and the real exe could not be checked there. The core was tested in a Tauri-free harness instead, and a PC session on the owner's PC ran the rest (section 5).
 - The independent review found two high issues in the first build: a shared data key (an earlier open copy could open the protected vault) and users with a keyfile could not turn security off. Both were fixed in `f9d2676`.
-- Further problems from the PC session: PENDING-FILL.
+- Further problems from the PC session: on the older `8afc994` two scripts had a first-connect "no main window" flake that passed on rerun (cause not proven; another test shared the PC and port), none on `dc5860a` or `5ef5b07`; one of 20 checks in the protected-vault Settings flow failed because of the test's own wording, not the app; the Turn off dialog shows two eye icons; `cargo fmt --check` is not clean (it was not before A21 either). No source changes came from the PC session.
 
 ## 7. Documentation Impact
 
-Added this file and the A21 status update. Updated the execution index, STATUS (as-of, mission state, open questions 12 to 14, what exists, exact next permitted action), the amendments record (the owner's six messages as authority rows and the A21 row), the security design (code-date sentence, the command paragraph, threats 4, 5 and 6 and 7, P7, P8, P11, P18, new promises P20 and P21, the A21 limits, the open-vault cryptography line) and the session history (a new entry). After the review the records were aligned with `f9d2676` (re-keying, restore confirmation, quit, Passwords refusals, lock screen limit, README and the A21 design file). The acceptance ledger was not changed: nothing is accepted and no check has a result on the app crate yet. The failure-intelligence record was not changed.
+Added this file and the A21 status update. Updated the execution index, STATUS (as-of, mission state, open questions 12 to 14, what exists, exact next permitted action), the amendments record (the owner's six messages as authority rows and the A21 row), the security design (code-date sentence, the command paragraph, threats 4, 5 and 6 and 7, P7, P8, P11, P18, new promises P20 and P21, the A21 limits, the open-vault cryptography line) and the session history (a new entry). After the review the records were aligned with `f9d2676` (re-keying, restore confirmation, quit, Passwords refusals, lock screen limit, README and the A21 design file). The acceptance ledger was not changed: nothing is accepted; the PC results are recorded in section 5 of this file. The failure-intelligence record was not changed.
 
 ## 8. Git / Version Control Impact
 
-Code, tests and README: `84b281d`, `0929ae5` and the review fixes `f9d2676`, on branch `claude/project-thread-sv2tfm`, all pushed. A draft pull request against `main` follows (number: PENDING-FILL). The records in this change are not committed by the records agent; the session commits them. Nothing was force-pushed and no visibility was changed.
+Code, tests and README: `84b281d`, `0929ae5` and the review fixes `f9d2676`, on branch `claude/project-thread-sv2tfm`, all pushed. Draft [PR #3](https://github.com/AbyssWatcher2/CipherLeaf/pull/3) against `main` holds them; `main` (with Start over, A20, from PR #1/#4) was merged into the branch and the records renumbered to A21, EX-17, P20 and P21. Later commits on the branch include `dc5860a` (review follow-ups), `5ef5b07` (clearer Turn off security button) and `b00c174` (README rewrite). The records in this change are not committed by the records agent; the session commits them. Nothing was force-pushed and no visibility was changed.
 
 ## 9. Decisions Made During Execution
 
@@ -121,15 +128,15 @@ Code, tests and README: `84b281d`, `0929ae5` and the review fixes `f9d2676`, on 
   - Passwords is independent of security, and KeePassXC relies on its own master password and idle lock;
   - the new commands `enable_security`, `disable_security`, `set_passwords_enabled` and `start_notes`, and `restore_vault` with `allowSecurityOff`, are callable by any window; `disable_security` needs the current password; `enable_security` can delete earlier open automatic backups and `restore_vault` can lower security, without more than a UI dialog, so a script injected into the UI could do either while the vault is open.
 - Open questions for the owner, now STATUS questions 13 and 14: whether existing vaults' saved screenshot setting should be reset to off, and whether to delete restore-undo files.
-- The PENDING-FILL results (section 5) must be filled in from the PC session, and the fixes from the review should be checked, before anyone relies on A21.
+- The PC results (section 5) are the session's own measurements on throwaway data; the owner's hands-on review on a real PC is still needed before anyone relies on A21.
 - Still open from before: A2, A8, STATUS question 8, evidence for A1 and A3–A7, a license file, whether the repository may ever be public, and the outdated Drive ZIP.
 
 ## 11. Current Result
 
-A21 is built and pushed on branch `claude/project-thread-sv2tfm` (`84b281d`, `0929ae5`, `f9d2676`). The Rust core passes 69 unit tests in a Tauri-free harness (13 new for A21); the UI type-checks and builds; the screens were seen in the mock UI. One independent review found 2 high, 3 medium and 6 low issues; the fixes are in `f9d2676` and "low 10" is not changed. The app crate build and tests, the real-exe tests and a re-check of the fixes are PENDING-FILL. **Not accepted;** only the owner accepts results.
+A21 is built, pushed and in draft PR #3 (branch `claude/project-thread-sv2tfm`, tested at head `5ef5b07`). On the owner's PC on throwaway data: the app crate builds, `cargo test --lib` passes 130 of 130, clippy has 0 errors and 5 library warnings, `tsc` and the builds pass, and the real-exe scripts pass (optional security 52 of 52, restore flow 13 of 13, lock flow as designed, passwords scripts all passing). A second independent review found no high issues and judged the first review's fixes correct. "Low 10" is not changed. Not run: `testD1`, anything on the owner's real vault, USB removal, idle, Win+L and sleep on a real PC, a portable build or ZIP. **Built, not accepted;** only the owner accepts results.
 
 ## 12. Recommended Next Step
 
-Fill the PENDING-FILL results from the PC session and a re-check of the review fixes (fix what they find), fill in the pull request number, then ask the owner to review A21 on a real PC. Anything that changes security behavior again, makes the repository public or adds a license waits for the owner.
+The owner reviews draft PR #3 and A21 on a real PC and merges it when satisfied. Anything that changes security behavior again, makes the repository public or adds a license waits for the owner.
 
 **Do not repeat:** the design, the core and UI build, the README.
