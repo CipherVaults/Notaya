@@ -104,8 +104,8 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | aead | 0.6.1 | MIT OR Apache-2.0 | Copyright (c) 2019-2026 The RustCrypto Project Developers; Copyright (c) 2019 MobileCoin, LLC | https://github.com/RustCrypto/traits |
 | aho-corasick | 1.1.5 | Unlicense OR MIT | Copyright (c) 2015 Andrew Gallant | https://github.com/BurntSushi/aho-corasick |
 | alloc-no-stdlib | 3.0.0 | BSD-3-Clause | Copyright (c) 2016 Dropbox, Inc. | https://github.com/dropbox/rust-alloc-no-stdlib |
-| alloc-stdlib | 0.3.0 | BSD-3-Clause | Cargo.toml authors: Daniel Reiter Horn (no copyright line in package license files) ; NOTE: package ships no license file; sibling repo dropbox/rust-alloc-no-stdlib LICENSE (BSD-3-Clause): "Copyright (c) 2016 Dropbox, Inc." [fetched] | https://github.com/dropbox/rust-alloc-no-stdlib |
-| anyhow | 1.0.104 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/anyhow |
+| alloc-stdlib | 0.3.0 | BSD-3-Clause | Cargo.toml authors: Daniel Reiter Horn (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) ; NOTE: package ships no license file; sibling repo dropbox/rust-alloc-no-stdlib LICENSE (BSD-3-Clause): "Copyright (c) 2016 Dropbox, Inc." [fetched] | https://github.com/dropbox/rust-alloc-no-stdlib |
+| anyhow | 1.0.104 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/anyhow |
 | argon2 | 0.6.0 | MIT OR Apache-2.0 | Copyright (c) 2021-2026 The RustCrypto Project Developers | https://github.com/RustCrypto/password-hashes |
 | base64 | 0.23.1 | MIT OR Apache-2.0 | Copyright (c) 2025 Alice Maz, Marshall Pierce | https://github.com/marshallpierce/rust-base64 |
 | base64ct | 1.8.3 | Apache-2.0 OR MIT | Copyright (c) 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com); Copyright (c) 2021-2025 The RustCrypto Project Developers | https://github.com/RustCrypto/formats |
@@ -119,9 +119,9 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | brotli-decompressor | 6.0.1 | BSD-3-Clause/MIT | Copyright (c) 2016 Dropbox, Inc. | https://github.com/dropbox/rust-brotli-decompressor |
 | bs58 | 0.5.1 | MIT/Apache-2.0 | Copyright (c) 2016 The roaring-rs developers. | https://github.com/Nullus157/bs58-rs |
 | bytes | 1.12.1 | MIT | Copyright (c) 2018 Carl Lerche | https://github.com/tokio-rs/bytes |
-| camino | 1.2.6 | MIT OR Apache-2.0 | Cargo.toml authors: Without Boats, Ashley Williams, Steve Klabnik, Rain (no copyright line in package license files) | https://github.com/camino-rs/camino |
+| camino | 1.2.6 | MIT OR Apache-2.0 | Cargo.toml authors: Without Boats, Ashley Williams, Steve Klabnik, Rain (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/camino-rs/camino |
 | cargo-platform | 0.1.9 | MIT OR Apache-2.0 | none stated in package (no copyright line, no Cargo.toml authors) | https://github.com/rust-lang/cargo |
-| cargo_metadata | 0.19.2 | MIT | Cargo.toml authors: Oliver Schneider (no copyright line in package license files) | https://github.com/oli-obk/cargo_metadata |
+| cargo_metadata | 0.19.2 | MIT | Cargo.toml authors: Oliver Schneider (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/oli-obk/cargo_metadata |
 | cfb | 0.14.0 | MIT | Copyright (c) 2017 Matthew D. Steele | https://github.com/mdsteele/rust-cfb |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 | Copyright (c) 2014 Alex Crichton | https://github.com/rust-lang/cfg-if |
 | chacha20 | 0.10.2 | MIT OR Apache-2.0 | Copyright (c) 2019-2026 The RustCrypto Project Developers | https://github.com/RustCrypto/stream-ciphers |
@@ -137,8 +137,8 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | crossbeam-epoch | 0.9.21 | MIT OR Apache-2.0 | Copyright (c) 2019 The Crossbeam Project Developers | https://github.com/crossbeam-rs/crossbeam |
 | crossbeam-utils | 0.8.23 | MIT OR Apache-2.0 | Copyright (c) 2019 The Crossbeam Project Developers | https://github.com/crossbeam-rs/crossbeam |
 | crypto-common | 0.2.2 | MIT OR Apache-2.0 | Copyright (c) 2021-2026 RustCrypto Developers | https://github.com/RustCrypto/traits |
-| cssparser | 0.37.0 | MPL-2.0 | Cargo.toml authors: Simon Sapin (no copyright line in package license files) | https://github.com/servo/rust-cssparser |
-| ctor | 1.0.13 | Apache-2.0 OR MIT | Cargo.toml authors: Matt Mastracci (no copyright line in package license files) | https://github.com/mmastrac/linktime |
+| cssparser | 0.37.0 | MPL-2.0 | Cargo.toml authors: Simon Sapin (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/servo/rust-cssparser |
+| ctor | 1.0.13 | Apache-2.0 OR MIT | Cargo.toml authors: Matt Mastracci (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/mmastrac/linktime |
 | ctutils | 0.4.3 | Apache-2.0 OR MIT | Copyright (c) 2025-2026 The RustCrypto Project Developers | https://github.com/RustCrypto/utils |
 | defmt | 1.2.0 | MIT OR Apache-2.0 | Copyright (c) Ferrous Systems | https://github.com/knurling-rs/defmt |
 | deranged | 0.5.9 | MIT OR Apache-2.0 | Copyright 2024 Jacob Pratt et al.; Copyright (c) 2024 Jacob Pratt et al. | https://github.com/jhpratt/deranged |
@@ -149,14 +149,14 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | dirs-sys | 0.5.0 | MIT OR Apache-2.0 | Copyright (c) 2018-2019 dirs-rs contributors | https://github.com/dirs-dev/dirs-sys-rs |
 | dom_query | 0.28.0 | MIT | Copyright (c) 2023 Mykola Humanov | https://github.com/niklak/dom_query |
 | dpi | 0.1.2 | Apache-2.0 AND MIT | Copyright (c) 2018 Jorge Aparicio; Copyright © 2005-2020 Rich Felker, et al.; Copyright © 1993,2004 Sun Microsystems or; Copyright © 2003-2011 David Schultz or; Copyright © 2003-2009 Steven G. Kargl or; Copyright © 2003-2009 Bruce D. Evans or; Copyright © 2008 Stephen L. Moshier or; Copyright © 2017-2018 Arm Limited | https://github.com/rust-windowing/winit |
-| dtoa | 1.0.11 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/dtoa |
-| dtoa-short | 0.3.5 | MPL-2.0 | Cargo.toml authors: Xidorn Quan (no copyright line in package license files) | https://github.com/upsuper/dtoa-short |
-| dunce | 1.0.5 | CC0-1.0 OR MIT-0 OR Apache-2.0 | Cargo.toml authors: Kornel (no copyright line in package license files) | https://gitlab.com/kornelski/dunce |
-| dyn-clone | 1.0.20 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/dyn-clone |
+| dtoa | 1.0.11 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/dtoa |
+| dtoa-short | 0.3.5 | MPL-2.0 | Cargo.toml authors: Xidorn Quan (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/upsuper/dtoa-short |
+| dunce | 1.0.5 | CC0-1.0 OR MIT-0 OR Apache-2.0 | Cargo.toml authors: Kornel (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://gitlab.com/kornelski/dunce |
+| dyn-clone | 1.0.20 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/dyn-clone |
 | eff-wordlist | 1.0.3 | AGPL-3.0 | No crate-specific copyright line; Cargo.toml author: Cyryl Płotnicki; LICENSE file is the unmodified FSF GNU AGPL-3.0 text. NOTE: embeds the EFF large/short wordlists (not stated in package; EFF list is CC BY 3.0 US) | https://github.com/cyplo/eff-wordlist-rs |
 | either | 1.19.0 | MIT OR Apache-2.0 | Copyright (c) 2015 ; (license file names no holder; no Cargo.toml authors) | https://github.com/rayon-rs/either |
 | equivalent | 1.0.3 | Apache-2.0 OR MIT | Copyright (c) 2016--2023 ; (license file names no holder; no Cargo.toml authors) | https://github.com/indexmap-rs/equivalent |
-| erased-serde | 0.4.10 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/erased-serde |
+| erased-serde | 0.4.10 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/erased-serde |
 | fallible-iterator | 0.3.0 | MIT/Apache-2.0 | Copyright (c) 2015 The rust-openssl-verify Developers | https://github.com/sfackler/rust-fallible-iterator |
 | fallible-streaming-iterator | 0.1.9 | MIT/Apache-2.0 | Copyright (c) 2016 The fallible-streaming-iterator Developers | https://github.com/sfackler/fallible-streaming-iterator |
 | fancy-regex | 0.18.0 | MIT | Copyright 2015 The Fancy Regex Authors. | https://github.com/fancy-regex/fancy-regex |
@@ -191,7 +191,7 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | infer | 0.22.0 | MIT | Copyright (c) 2019 Bojan | https://github.com/bojand/infer |
 | inout | 0.2.5 | MIT OR Apache-2.0 | Copyright (c) 2022-2025 The RustCrypto Project Developers; Copyright (c) 2022 Artyom Pavlov | https://github.com/RustCrypto/utils |
 | itertools | 0.14.0 | MIT OR Apache-2.0 | Copyright (c) 2015 ; Cargo.toml authors: bluss (license file names no holder) | https://github.com/rust-itertools/itertools |
-| itoa | 1.0.18 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/itoa |
+| itoa | 1.0.18 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/itoa |
 | jiff | 0.2.38 | Unlicense OR MIT | Copyright (c) 2015 Andrew Gallant | https://github.com/BurntSushi/jiff |
 | jiff-core | 0.1.1 | Unlicense OR MIT | Copyright (c) 2015 Andrew Gallant | https://github.com/BurntSushi/jiff |
 | jiff-tzdb | 0.1.9 | Unlicense OR MIT | Copyright (c) 2015 Andrew Gallant ; NOTE: embeds the IANA Time Zone Database (concatenated-zoneinfo.dat); no separate notice in package | https://github.com/BurntSushi/jiff |
@@ -199,7 +199,7 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | json-patch | 4.2.0 | MIT/Apache-2.0 | Copyright (c) 2017 Ivan Dubrov | https://github.com/idubrov/json-patch |
 | jsonptr | 0.7.1 | MIT OR Apache-2.0 | Copyright 2024 Chance Dinkins; Copyright (c) 2022 Chance Dinkins | https://github.com/chanced/jsonptr |
 | keyboard-types | 0.8.3 | MIT OR Apache-2.0 | Copyright (c) 2017 Pyfisch | https://github.com/rust-windowing/keyboard-types |
-| lazy_static | 1.5.1 | MIT OR Apache-2.0 | Cargo.toml authors: Marvin Löbel (no copyright line in package license files) | https://github.com/rust-lang-nursery/lazy-static.rs |
+| lazy_static | 1.5.1 | MIT OR Apache-2.0 | Cargo.toml authors: Marvin Löbel (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/rust-lang-nursery/lazy-static.rs |
 | libc | 0.2.191 | MIT OR Apache-2.0 | Copyright (c) The Rust Project Developers | https://github.com/rust-lang/libc |
 | libsqlite3-sys | 0.38.2 | MIT | Copyright (c) 2014 The rusqlite developers ; NOTE: bundles SQLite 3.53.2 amalgamation (sqlite3/sqlite3.c): "The author disclaims copyright to this source code" (public domain); sqlcipher/ dir (Zetetic BSD) is only used with the sqlcipher features, not enabled here | https://github.com/rusqlite/rusqlite |
 | litemap | 0.8.3 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
@@ -213,9 +213,9 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | new_debug_unreachable | 1.0.6 | MIT | Copyright (c) 2015 Jonathan Reem | https://github.com/mbrubeck/rust-debug-unreachable |
 | num-conv | 0.2.2 | MIT OR Apache-2.0 | Copyright (c) Jacob Pratt | https://github.com/jhpratt/num-conv |
 | num-traits | 0.2.19 | MIT OR Apache-2.0 | Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-num/num-traits |
-| once_cell | 1.21.4 | MIT OR Apache-2.0 | Cargo.toml authors: Aleksey Kladov (no copyright line in package license files) | https://github.com/matklad/once_cell |
+| once_cell | 1.21.4 | MIT OR Apache-2.0 | Cargo.toml authors: Aleksey Kladov (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/matklad/once_cell |
 | open | 5.4.5 | MIT | Copyright © `2015` `Sebastian Thiel` | https://github.com/Byron/open-rs |
-| option-ext | 0.2.0 | MPL-2.0 | Cargo.toml authors: Simon Ochsenreither (no copyright line in package license files) | https://github.com/soc/option-ext.git |
+| option-ext | 0.2.0 | MPL-2.0 | Cargo.toml authors: Simon Ochsenreither (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/soc/option-ext.git |
 | parking_lot | 0.12.5 | MIT OR Apache-2.0 | Copyright (c) 2016 The Rust Project Developers | https://github.com/Amanieu/parking_lot |
 | parking_lot_core | 0.9.12 | MIT OR Apache-2.0 | Copyright (c) 2016 The Rust Project Developers | https://github.com/Amanieu/parking_lot |
 | password-hash | 0.6.1 | MIT OR Apache-2.0 | Copyright (c) 2020-2026 RustCrypto Developers | https://github.com/RustCrypto/traits |
@@ -230,9 +230,9 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | powerfmt | 0.2.1 | MIT OR Apache-2.0 | Copyright 2023 Jacob Pratt et al.; Copyright (c) 2023 Jacob Pratt et al. | https://github.com/jhpratt/powerfmt |
 | ppv-lite86 | 0.2.21 | MIT OR Apache-2.0 | Copyright 2019 The CryptoCorrosion Contributors; Copyright (c) 2019 The CryptoCorrosion Contributors | https://github.com/cryptocorrosion/cryptocorrosion |
 | precomputed-hash | 0.1.1 | MIT | Copyright (c) 2017 Emilio Cobos Álvarez | https://github.com/emilio/precomputed-hash |
-| proc-macro2 | 1.0.107 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay, Alex Crichton (no copyright line in package license files) | https://github.com/dtolnay/proc-macro2 |
+| proc-macro2 | 1.0.107 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay, Alex Crichton (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/proc-macro2 |
 | quick-xml | 0.42.0 | MIT | Copyright (c) 2016 Johann Tuffe | https://github.com/tafia/quick-xml |
-| quote | 1.0.47 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/quote |
+| quote | 1.0.47 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/quote |
 | rand | 0.8.8 | MIT OR Apache-2.0 | Copyright 2018 Developers of the Rand project; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/rand |
 | rand_chacha | 0.3.1 | MIT OR Apache-2.0 | Copyright 2018 Developers of the Rand project; Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-random/rand |
 | rand_core | 0.10.1 | MIT OR Apache-2.0 | Copyright (c) 2018-2026 The Rand Project Developers | https://github.com/rust-random/rand_core |
@@ -240,28 +240,28 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | raw-window-handle | 0.6.2 | MIT OR Apache-2.0 OR Zlib | Copyright (c) 2019 Osspial; Copyright (c) 2020 Osspial | https://github.com/rust-windowing/raw-window-handle |
 | rayon | 1.12.0 | MIT OR Apache-2.0 | Copyright (c) 2010 The Rust Project Developers | https://github.com/rayon-rs/rayon |
 | rayon-core | 1.13.0 | MIT OR Apache-2.0 | Copyright (c) 2010 The Rust Project Developers | https://github.com/rayon-rs/rayon |
-| ref-cast | 1.0.27 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/ref-cast |
+| ref-cast | 1.0.27 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/ref-cast |
 | regex | 1.13.1 | MIT OR Apache-2.0 | Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-lang/regex |
 | regex-automata | 0.4.18 | MIT OR Apache-2.0 | Copyright (c) 2014 The Rust Project Developers | https://github.com/rust-lang/regex |
 | regex-syntax | 0.8.11 | MIT OR Apache-2.0 | Copyright (c) 2014 The Rust Project Developers ; NOTE: also bundles Unicode data tables under "UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE" (src/unicode_tables/LICENSE-UNICODE) | https://github.com/rust-lang/regex |
 | rfd | 0.16.0 | MIT | Copyright (c) 2022 Bartłomiej Maryńczak | https://github.com/PolyMeilex/rfd |
 | rusqlite | 0.40.2 | MIT | Copyright (c) 2014 The rusqlite developers | https://github.com/rusqlite/rusqlite |
-| rustc-hash | 2.1.3 | Apache-2.0 OR MIT | Cargo.toml authors: The Rust Project Developers (no copyright line in package license files) | https://github.com/rust-lang/rustc-hash |
+| rustc-hash | 2.1.3 | Apache-2.0 OR MIT | Cargo.toml authors: The Rust Project Developers (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/rust-lang/rustc-hash |
 | same-file | 1.0.6 | Unlicense/MIT | Copyright (c) 2017 Andrew Gallant | https://github.com/BurntSushi/same-file |
 | schemars | 0.8.22 | MIT | Copyright (c) 2019 Graham Esau | https://github.com/GREsau/schemars |
 | schemars | 0.9.0 | MIT | Copyright (c) 2019 Graham Esau | https://github.com/GREsau/schemars |
 | schemars | 1.2.3 | MIT | Copyright (c) 2019 Graham Esau | https://github.com/GREsau/schemars |
 | scopeguard | 1.2.0 | MIT OR Apache-2.0 | Copyright (c) 2016-2019 Ulrik Sverdrup "bluss" and scopeguard developers | https://github.com/bluss/scopeguard |
-| selectors | 0.38.0 | MPL-2.0 | Cargo.toml authors: The Servo Project Developers (no copyright line in package license files) | https://github.com/servo/stylo |
-| semver | 1.0.28 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/semver |
-| serde | 1.0.229 | MIT OR Apache-2.0 | Cargo.toml authors: Erick Tryzelaar, David Tolnay (no copyright line in package license files) | https://github.com/serde-rs/serde |
-| serde-untagged | 0.1.9 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/serde-untagged |
-| serde_core | 1.0.229 | MIT OR Apache-2.0 | Cargo.toml authors: Erick Tryzelaar, David Tolnay (no copyright line in package license files) | https://github.com/serde-rs/serde |
+| selectors | 0.38.0 | MPL-2.0 | Cargo.toml authors: The Servo Project Developers (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/servo/stylo |
+| semver | 1.0.28 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/semver |
+| serde | 1.0.229 | MIT OR Apache-2.0 | Cargo.toml authors: Erick Tryzelaar, David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/serde-rs/serde |
+| serde-untagged | 0.1.9 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/serde-untagged |
+| serde_core | 1.0.229 | MIT OR Apache-2.0 | Cargo.toml authors: Erick Tryzelaar, David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/serde-rs/serde |
 | serde_json | 1.0.154 | MIT OR Apache-2.0 | none stated in package (no copyright line, no Cargo.toml authors) | https://github.com/serde-rs/json |
 | serde_spanned | 1.1.2 | MIT OR Apache-2.0 | Copyright Individual contributors; Copyright (c) Individual contributors | https://github.com/toml-rs/toml |
 | serde_with | 3.24.0 | MIT OR Apache-2.0 | Copyright (c) 2015 ; Cargo.toml authors: Jonas Bushart, Marcin Kaźmierczak (license file names no holder) | https://github.com/jonasbb/serde_with/ |
 | serialize-to-javascript | 0.1.2 | MIT OR Apache-2.0 | Copyright (c) 2021 Chip Reed | https://github.com/chippers/serialize-to-javascript |
-| servo_arc | 0.4.3 | MIT OR Apache-2.0 | Cargo.toml authors: The Servo Project Developers (no copyright line in package license files) | https://github.com/servo/stylo |
+| servo_arc | 0.4.3 | MIT OR Apache-2.0 | Cargo.toml authors: The Servo Project Developers (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/servo/stylo |
 | sha2 | 0.11.1 | MIT OR Apache-2.0 | Copyright (c) 2016-2026 The RustCrypto Project Developers; Copyright (c) 2016 Artyom Pavlov; Copyright (c) 2009-2013 Mozilla Foundation; Copyright (c) 2006-2009 Graydon Hoare | https://github.com/RustCrypto/hashes |
 | siphasher | 1.0.4 | MIT OR Apache-2.0 | Copyright 2012-2016 The Rust Project Developers.; Copyright 2016-2026 Frank Denis. | https://github.com/jedisct1/rust-siphash |
 | smallvec | 1.16.3 | MIT OR Apache-2.0 | Copyright (c) 2018 The Servo Project Developers | https://github.com/servo/rust-smallvec |
@@ -269,7 +269,7 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | softbuffer | 0.4.8 | MIT OR Apache-2.0 | Copyright 2022 Kirill Chibisov | https://github.com/rust-windowing/softbuffer |
 | stable_deref_trait | 1.2.1 | MIT OR Apache-2.0 | Copyright (c) 2017 Robert Grosse | https://github.com/storyyeller/stable_deref_trait |
 | string_cache | 0.9.0 | MIT OR Apache-2.0 | Copyright (c) 2012-2013 Mozilla Foundation | https://github.com/servo/string-cache |
-| tao | 0.37.1 | Apache-2.0 | Cargo.toml authors: Tauri Programme within The Commons Conservancy, The winit contributors (no copyright line in package license files) | https://github.com/tauri-apps/tao |
+| tao | 0.37.1 | Apache-2.0 | Cargo.toml authors: Tauri Programme within The Commons Conservancy, The winit contributors (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/tauri-apps/tao |
 | tauri | 2.12.5 | Apache-2.0 OR MIT | Copyright (c) 2017 - Present Tauri Apps Contributors | https://github.com/tauri-apps/tauri |
 | tauri-plugin-dialog | 2.8.3 | Apache-2.0 OR MIT | Copyright (c) 2017 - Present Tauri Apps Contributors | https://github.com/tauri-apps/plugins-workspace |
 | tauri-plugin-fs | 2.7.1 | Apache-2.0 OR MIT | Copyright (c) 2017 - Present Tauri Apps Contributors | https://github.com/tauri-apps/plugins-workspace |
@@ -279,7 +279,7 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | tauri-runtime-wry | 2.12.3 | Apache-2.0 OR MIT | Copyright (c) 2017 - Present Tauri Apps Contributors | https://github.com/tauri-apps/tauri |
 | tauri-utils | 2.10.2 | Apache-2.0 OR MIT | Copyright (c) 2017 - Present Tauri Apps Contributors | https://github.com/tauri-apps/tauri |
 | tendril | 0.5.1 | MIT OR Apache-2.0 | Copyright (c) 2015 Keegan McAllister | https://github.com/servo/html5ever |
-| thiserror | 2.0.21 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/thiserror |
+| thiserror | 2.0.21 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/thiserror |
 | time | 0.3.55 | MIT OR Apache-2.0 | Copyright (c) Jacob Pratt et al. | https://github.com/time-rs/time |
 | time-core | 0.1.9 | MIT OR Apache-2.0 | Copyright (c) Jacob Pratt et al. | https://github.com/time-rs/time |
 | tinystr | 0.8.5 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
@@ -292,7 +292,7 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | tracing | 0.1.44 | MIT | Copyright (c) 2019 Tokio Contributors | https://github.com/tokio-rs/tracing |
 | tracing-core | 0.1.36 | MIT | Copyright (c) 2019 Tokio Contributors ; NOTE: also embeds MIT-licensed code in src/spin/: "Copyright (c) 2014 Mathijs van de Nes" | https://github.com/tokio-rs/tracing |
 | tray-icon | 0.25.1 | MIT OR Apache-2.0 | Copyright (c) 2022-2022 Tauri Programme within The Commons Conservancy | https://github.com/tauri-apps/tray-icon |
-| typeid | 1.0.3 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/typeid |
+| typeid | 1.0.3 | MIT OR Apache-2.0 | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/typeid |
 | typenum | 1.20.1 | MIT OR Apache-2.0 | Copyright 2014 Paho Lurie-Gregg; Copyright (c) 2014 Paho Lurie-Gregg | https://github.com/paholg/typenum |
 | unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 | Copyright © 1991-2023 Unicode, Inc. | https://github.com/dtolnay/unicode-ident |
 | unicode-normalization | 0.1.26 | (MIT OR Apache-2.0) AND Unicode-3.0 | Copyright (c) 2015 The Rust Project Developers; Copyright © 1991-2023 Unicode, Inc. | https://github.com/unicode-rs/unicode-normalization |
@@ -332,12 +332,91 @@ All 233 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 | zeroize | 1.9.1 | Apache-2.0 OR MIT | Copyright (c) 2018-2026 The RustCrypto Project Developers | https://github.com/RustCrypto/utils |
 | zerotrie | 0.2.5 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
 | zerovec | 0.11.9 | Unicode-3.0 | Copyright © 2020-2024 Unicode, Inc. | https://github.com/unicode-org/icu4x |
-| zmij | 1.0.23 | MIT | Cargo.toml authors: David Tolnay (no copyright line in package license files) | https://github.com/dtolnay/zmij |
+| zmij | 1.0.23 | MIT | Cargo.toml authors: David Tolnay (copyright line in the package's LICENSE.spdx: 2021-2023, The Tauri Programme in the Commons Conservancy) | https://github.com/dtolnay/zmij |
 | zxcvbn | 3.1.1 | MIT | Copyright (c) 2016 Joshua Holmer ; NOTE: frequency lists derived from US census data, Wikipedia, TV/movie subtitles (per README); no separate notice in package | https://github.com/shssoichiro/zxcvbn-rs |
 
 ### Rust crates used only at build time (not shipped)
 
-76 crates are used only to build Cipherleaf (build scripts, build dependencies and procedural macros). They are not linked into the exe; their generated code is. They are listed for completeness, and their licenses are in the full inventory: adler2 2.0.1, autocfg 1.5.1, block-buffer 0.10.4, byteorder 1.5.0, cargo_toml 1.0.1, cc 1.9.0, cpufeatures 0.2.17, crc32fast 1.5.3, crypto-common 0.1.7, cssparser-macros 0.7.1, darling 0.20.11, darling 0.24.1, darling_core 0.20.11, darling_core 0.24.1, darling_macro 0.20.11, darling_macro 0.24.1, defmt-macros 1.2.0, defmt-parser 1.1.0, derive_builder_core 0.20.2, derive_builder_macro 0.20.2, derive_more-impl 2.1.1, digest 0.10.7, displaydoc 0.2.7, embed-resource 3.0.12, fastrand 2.5.0, fdeflate 0.3.7, find-msvc-tools 0.1.15, flate2 1.1.10, generic-array 0.14.7, ico 0.6.0, ident_case 1.0.1, miniz_oxide 0.8.9, miniz_oxide 0.9.1, phf_codegen 0.13.1, phf_generator 0.13.1, phf_macros 0.13.1, pkg-config 0.3.34, png 0.18.1, ref-cast-impl 1.0.27, rustc_version 0.4.1, schemars_derive 0.8.22, serde_derive 1.0.229, serde_derive_internals 0.29.1, serde_repr 0.1.21, serde_with_macros 3.24.0, serialize-to-javascript-impl 0.1.2, sha2 0.10.9, shlex 2.0.1, simd-adler32 0.3.10, static_vcruntime 3.0.0, string_cache_codegen 0.6.1, strsim 0.11.1, syn 2.0.119, syn 3.0.9, synstructure 0.14.0, tauri-build 2.7.4, tauri-codegen 2.7.4, tauri-macros 2.7.4, tauri-plugin 2.7.2, tauri-winres 0.3.7, thiserror-impl 2.0.21, time-macros 0.2.32, tracing-attributes 0.1.31, vcpkg 0.2.15, version_check 0.9.5, vswhom 0.1.0, vswhom-sys 0.1.3, webview2-com-macros 0.8.1, windows-implement 0.60.2, windows-interface 0.59.3, winreg 0.56.0, yoke-derive 0.8.4, zerofrom-derive 0.1.8, zeroize_derive 1.5.0, zerovec-derive 0.11.7, zlib-rs 0.6.8.
+76 crates are used only to build Cipherleaf (build scripts, build dependencies and procedural macros). They are not linked into the exe, but code they generate is compiled into it, so they are listed with their licenses. Their copyright lines are the authors named in each crate's Cargo.toml; the license texts are the standard texts in the License texts section (MIT, Apache-2.0, Unicode-3.0, Zlib and so on).
+
+| Crate | Version | License | Authors (Cargo.toml) | Source |
+|---|---|---|---|---|
+| adler2 | 2.0.1 | 0BSD OR MIT OR Apache-2.0 | Jonas Schievink, oyvindln | https://github.com/oyvindln/adler2 |
+| autocfg | 1.5.1 | Apache-2.0 OR MIT | Josh Stone | https://github.com/cuviper/autocfg |
+| block-buffer | 0.10.4 | MIT OR Apache-2.0 | RustCrypto Developers | https://github.com/RustCrypto/utils |
+| byteorder | 1.5.0 | Unlicense OR MIT | Andrew Gallant | https://github.com/BurntSushi/byteorder |
+| cargo_toml | 1.0.1 | Apache-2.0 OR MIT | Kornel | https://gitlab.com/lib.rs/cargo_toml |
+| cc | 1.9.0 | MIT OR Apache-2.0 | - | https://github.com/rust-lang/cc-rs |
+| cpufeatures | 0.2.17 | MIT OR Apache-2.0 | RustCrypto Developers | https://github.com/RustCrypto/utils |
+| crc32fast | 1.5.3 | MIT OR Apache-2.0 | Sam Rijs, Alex Crichton | https://github.com/srijs/rust-crc32fast |
+| crypto-common | 0.1.7 | MIT OR Apache-2.0 | RustCrypto Developers | https://github.com/RustCrypto/traits |
+| cssparser-macros | 0.7.1 | MPL-2.0 | Simon Sapin | https://github.com/servo/rust-cssparser |
+| darling | 0.20.11 | MIT | Ted Driggs | https://github.com/TedDriggs/darling |
+| darling | 0.24.1 | MIT | Ted Driggs | https://github.com/TedDriggs/darling |
+| darling_core | 0.20.11 | MIT | Ted Driggs | https://github.com/TedDriggs/darling |
+| darling_core | 0.24.1 | MIT | Ted Driggs | https://github.com/TedDriggs/darling |
+| darling_macro | 0.20.11 | MIT | Ted Driggs | https://github.com/TedDriggs/darling |
+| darling_macro | 0.24.1 | MIT | Ted Driggs | https://github.com/TedDriggs/darling |
+| defmt-macros | 1.2.0 | MIT OR Apache-2.0 | The Knurling-rs developers | https://github.com/knurling-rs/defmt |
+| defmt-parser | 1.1.0 | MIT OR Apache-2.0 | The Knurling-rs developers | https://github.com/knurling-rs/defmt |
+| derive_builder_core | 0.20.2 | MIT OR Apache-2.0 | Colin Kiegel, Pascal Hertleif, Jan-Erik Rediger, Ted Driggs | https://github.com/colin-kiegel/rust-derive-builder |
+| derive_builder_macro | 0.20.2 | MIT OR Apache-2.0 | Colin Kiegel, Pascal Hertleif, Jan-Erik Rediger, Ted Driggs | https://github.com/colin-kiegel/rust-derive-builder |
+| derive_more-impl | 2.1.1 | MIT | Jelte Fennema | https://github.com/JelteF/derive_more |
+| digest | 0.10.7 | MIT OR Apache-2.0 | RustCrypto Developers | https://github.com/RustCrypto/traits |
+| displaydoc | 0.2.7 | MIT OR Apache-2.0 | Jane Lusby | https://github.com/yaahc/displaydoc |
+| embed-resource | 3.0.12 | MIT | наб, Cat Plus Plus, Liigo, azyobuzin, Peter Atashian, pravic, Gabriel Majeri, SonnyX, Johan Andersson, Jordan Poles, MSx | https://github.com/nabijaczleweli/rust-embed-resource |
+| fastrand | 2.5.0 | Apache-2.0 OR MIT | Stjepan Glavina | https://github.com/smol-rs/fastrand |
+| fdeflate | 0.3.7 | MIT OR Apache-2.0 | The image-rs Developers | https://github.com/image-rs/fdeflate |
+| find-msvc-tools | 0.1.15 | MIT OR Apache-2.0 | - | https://github.com/rust-lang/cc-rs |
+| flate2 | 1.1.10 | MIT OR Apache-2.0 | Alex Crichton, Josh Triplett | https://github.com/rust-lang/flate2-rs |
+| generic-array | 0.14.7 | MIT | Bartłomiej Kamiński, Aaron Trent | https://github.com/fizyk20/generic-array.git |
+| ico | 0.6.0 | MIT | Matthew D. Steele | https://github.com/mdsteele/rust-ico |
+| ident_case | 1.0.1 | MIT/Apache-2.0 | Ted Driggs | https://github.com/TedDriggs/ident_case |
+| miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 | Frommi, oyvindln, Rich Geldreich richgel99@gmail.com | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide |
+| miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 | Frommi, oyvindln, Rich Geldreich richgel99@gmail.com | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide |
+| phf_codegen | 0.13.1 | MIT | Steven Fackler | https://github.com/rust-phf/rust-phf |
+| phf_generator | 0.13.1 | MIT | Steven Fackler | https://github.com/rust-phf/rust-phf |
+| phf_macros | 0.13.1 | MIT | Steven Fackler | https://github.com/rust-phf/rust-phf |
+| pkg-config | 0.3.34 | MIT OR Apache-2.0 | Alex Crichton | https://github.com/rust-lang/pkg-config-rs |
+| png | 0.18.1 | MIT OR Apache-2.0 | The image-rs Developers | https://github.com/image-rs/image-png |
+| ref-cast-impl | 1.0.27 | MIT OR Apache-2.0 | David Tolnay | https://github.com/dtolnay/ref-cast |
+| rustc_version | 0.4.1 | MIT OR Apache-2.0 | - | https://github.com/djc/rustc-version-rs |
+| schemars_derive | 0.8.22 | MIT | Graham Esau | https://github.com/GREsau/schemars |
+| serde_derive | 1.0.229 | MIT OR Apache-2.0 | Erick Tryzelaar, David Tolnay | https://github.com/serde-rs/serde |
+| serde_derive_internals | 0.29.1 | MIT OR Apache-2.0 | Erick Tryzelaar, David Tolnay | https://github.com/serde-rs/serde |
+| serde_repr | 0.1.21 | MIT OR Apache-2.0 | David Tolnay | https://github.com/dtolnay/serde-repr |
+| serde_with_macros | 3.24.0 | MIT OR Apache-2.0 | Jonas Bushart | https://github.com/jonasbb/serde_with/ |
+| serialize-to-javascript-impl | 0.1.2 | MIT OR Apache-2.0 | Chip Reed | https://github.com/chippers/serialize-to-javascript |
+| sha2 | 0.10.9 | MIT OR Apache-2.0 | RustCrypto Developers | https://github.com/RustCrypto/hashes |
+| shlex | 2.0.1 | MIT OR Apache-2.0 | comex, Fenhl, Adrian Taylor, Alex Touchet, Daniel Parks, Garrett Berg | https://github.com/comex/rust-shlex |
+| simd-adler32 | 0.3.10 | MIT | Marvin Countryman | https://github.com/mcountryman/simd-adler32 |
+| static_vcruntime | 3.0.0 | MIT OR Apache-2.0 OR Zlib | - | https://github.com/ChrisDenton/static_vcruntime |
+| string_cache_codegen | 0.6.1 | MIT OR Apache-2.0 | The Servo Project Developers | https://github.com/servo/string-cache |
+| strsim | 0.11.1 | MIT | Danny Guo, maxbachmann | https://github.com/rapidfuzz/strsim-rs |
+| syn | 2.0.119 | MIT OR Apache-2.0 | David Tolnay | https://github.com/dtolnay/syn |
+| syn | 3.0.9 | MIT OR Apache-2.0 | David Tolnay | https://github.com/dtolnay/syn |
+| synstructure | 0.14.0 | MIT | Nika Layzell | https://github.com/mystor/synstructure |
+| tauri-build | 2.7.4 | Apache-2.0 OR MIT | Tauri Programme within The Commons Conservancy | https://github.com/tauri-apps/tauri |
+| tauri-codegen | 2.7.4 | Apache-2.0 OR MIT | Tauri Programme within The Commons Conservancy | https://github.com/tauri-apps/tauri |
+| tauri-macros | 2.7.4 | Apache-2.0 OR MIT | Tauri Programme within The Commons Conservancy | https://github.com/tauri-apps/tauri |
+| tauri-plugin | 2.7.2 | Apache-2.0 OR MIT | Tauri Programme within The Commons Conservancy | https://github.com/tauri-apps/tauri |
+| tauri-winres | 0.3.7 | MIT | Tauri Programme within The Commons Conservancy, Max Resch | https://github.com/tauri-apps/winres |
+| thiserror-impl | 2.0.21 | MIT OR Apache-2.0 | David Tolnay | https://github.com/dtolnay/thiserror |
+| time-macros | 0.2.32 | MIT OR Apache-2.0 | Jacob Pratt, Time contributors | https://github.com/time-rs/time |
+| tracing-attributes | 0.1.31 | MIT | Tokio Contributors, Eliza Weisman, David Barsky | https://github.com/tokio-rs/tracing |
+| vcpkg | 0.2.15 | MIT/Apache-2.0 | Jim McGrath | https://github.com/mcgoo/vcpkg-rs |
+| version_check | 0.9.5 | MIT/Apache-2.0 | Sergio Benitez | https://github.com/SergioBenitez/version_check |
+| vswhom | 0.1.0 | MIT | nabijaczleweli | https://github.com/nabijaczleweli/vswhom.rs |
+| vswhom-sys | 0.1.3 | MIT | наб, forrestsmithfb | https://github.com/nabijaczleweli/vswhom-sys.rs |
+| webview2-com-macros | 0.8.1 | MIT | - | https://github.com/wravery/webview2-rs |
+| windows-implement | 0.60.2 | MIT OR Apache-2.0 | - | https://github.com/microsoft/windows-rs |
+| windows-interface | 0.59.3 | MIT OR Apache-2.0 | - | https://github.com/microsoft/windows-rs |
+| winreg | 0.56.0 | MIT | Igor Shaula | https://github.com/gentoo90/winreg-rs |
+| yoke-derive | 0.8.4 | Unicode-3.0 | Manish Goregaokar | https://github.com/unicode-org/icu4x |
+| zerofrom-derive | 0.1.8 | Unicode-3.0 | Manish Goregaokar | https://github.com/unicode-org/icu4x |
+| zeroize_derive | 1.5.0 | Apache-2.0 OR MIT | The RustCrypto Project Developers | https://github.com/RustCrypto/utils |
+| zerovec-derive | 0.11.7 | Unicode-3.0 | Manish Goregaokar | https://github.com/unicode-org/icu4x |
+| zlib-rs | 0.6.8 | Zlib | - | https://github.com/trifectatechfoundation/zlib-rs |
 
 ## npm packages
 
@@ -2459,7 +2538,7 @@ Comment: from the yubikey-personalization repo (https://github.com/Yubico/yubike
 
 Used for the passphrase suggestions (7,776-word large list, compiled in through the `eff-wordlist` crate; see open decisions for the crate's own AGPL-3.0 declaration). The attribution wording is the one recorded in the inventory; EFF's page could not be fetched from the preparation sandbox, so confirm it at https://www.eff.org/copyright before shipping.
 
-> Passphrase word lists (EFF Long Wordlist and EFF Short Wordlist) by the Electronic Frontier Foundation (EFF), licensed under the Creative Commons Attribution 3.0 United States License (CC BY 3.0 US), https://creativecommons.org/licenses/by/3.0/us/. Source: https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases (files: https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt and eff_short_wordlist_1.txt). Changes: converted to a Rust array.
+> Passphrase word lists (EFF Long Wordlist) by the Electronic Frontier Foundation (EFF), licensed under the Creative Commons Attribution 3.0 United States License (CC BY 3.0 US), https://creativecommons.org/licenses/by/3.0/us/. Source: https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases (files: https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt and eff_short_wordlist_1.txt). Changes: converted to a Rust array.
 
 Copyright (c) Electronic Frontier Foundation. The license text itself is at https://creativecommons.org/licenses/by/3.0/us/legalcode.
 

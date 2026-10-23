@@ -165,7 +165,7 @@ Cipherleaf is built on open source software, and we are grateful to everyone who
 - **Word list:** the EFF large word list for suggested passphrases, (c) Electronic Frontier Foundation, CC BY 3.0 US.
 - **Microsoft Edge WebView2** shows the interface (required, not bundled).
 
-Every component, its version, copyright holder and license text is in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md), which is also in the `Licenses` folder of the portable copy and inside the app (Settings, About, "Open source licenses…"). This is attribution, not legal advice.
+Every component is listed in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) with its version, copyright holder and license, together with the license texts that go with it (KeePassXC's full GPL texts are in the `Licenses\KeePassXC` folder). That file is also in the `Licenses` folder of the portable copy and inside the app (Settings, About, "Open source licenses…"). This is attribution, not legal advice.
 
 **The license for Cipherleaf itself has not been chosen yet.** Until the owner decides, no license is granted to use, copy or share Cipherleaf's own code.
 
