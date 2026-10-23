@@ -35,6 +35,23 @@ Fill the PENDING-FILL results (PC build and tests, real-exe tests) and the pull 
 
 ---
 
+# 📘 Session: 2026-10-23 (about 17:00 to 21:45 UTC clock) — Cipherleaf — PC catch-up, test-folder cleanup, stale records fixed
+
+**Executor:** Claude (Opus 5.5) as a thread session of the owner's project; the work on the PC was read-only except the deletions below. **Reconstructed:** times are approximate system-clock readings (the PC clock read about 21:40 when the folders were deleted).
+
+## What happened
+
+1. **Catch-up.** The owner asked for everything on the PC about Cipherleaf to be read. Result: the repo was clean and equal to GitHub (`f7912fb` on `main` and `feat/a9-keepassxc`, no stashes, nothing unpushed); the 16 draft commit messages in the earlier session's scratch folder all matched commits in Git; the portable exe and ZIP hashes matched the handoff.
+2. **Cleanup, approved by the owner.** 827 `cipherleaf-*` folders in `%TEMP%` (the records said about 88) and the 4 `edgeprof-*` browser profiles in the old scratch folder were deleted after checking that no Cipherleaf, KeePassXC, cargo or node process ran, that none was newer than 30 minutes and that none was a link. Not touched: `E:\Project\New folder` (old portable copy, exe `F4F1E679…`, same build as the owner's Drive ZIP), `E:\Project\Cipherleaf-portable\data`, `.devdata`, the rest of the old scratch folder. Auto mode blocked the first attempts; they were not worked around.
+3. **Q7 answered.** The owner said "happy" (2026-10-22 18:06 UTC) meant they were glad the app existed. Nothing is accepted.
+4. **Records corrected** in this change: the "about 88" folder count, the "uncommitted" note about `dev-mock/`, the handoff's "not delivered" and "uncommitted work" wording, Q7 in STATUS, acceptance and the history file.
+
+## Where to resume
+
+Unchanged from [STATUS.md](STATUS.md): the owner picks the next task from the handoff checkpoint's list. Open decisions Q8 to Q11 remain with the owner.
+
+---
+
 # 📘 Session: 2026-10-23 (after about 14:17, until about 16:04 UTC) — Cipherleaf — Passwords-file backup and restore, safe Quit (A19), rebuilt
 
 ## 🤖 Models, Effort, Roles and Provenance
