@@ -148,6 +148,23 @@ if (phase === "p3") {
   await raiseIdle();
   const after = backups();
   check("no backup was deleted", before.every((n) => after.includes(n)), `${before.length} -> ${after.length}`);
+  // Restoring a backup made with security off onto a vault with a master password needs a confirmation.
+  const openBackup = after.find((n) => isOpenFile(`${backupsDir}\\${n}`));
+  check("an open backup from the earlier session is still there", !!openBackup, openBackup ?? "none");
+  if (openBackup) {
+    const refused = await m.inv("restore_vault", { source: openBackup, password: "", keyfile: null });
+    check("restoring an open backup onto a protected vault is refused until confirmed", !!refused.err && refused.err.startsWith("SECURITY_OFF:") && !isOpenFile(vaultPath), JSON.stringify(refused));
+    const st0 = await status();
+    check("the refused restore changed nothing", st0?.unlocked === true && st0?.securityOn === true && (await pageText()) === TEXT);
+    const allowed = await m.inv("restore_vault", { source: openBackup, password: "", keyfile: null, allowSecurityOff: true });
+    check("with the confirmation the restore works", !allowed.err && !!allowed.ok?.undoFile, JSON.stringify(allowed));
+    await sleep(1500);
+    const st1 = await status();
+    check("the restored vault is open (security off) and has the text", st1?.unlocked === true && st1?.securityOn === false && (await pageText()) === TEXT, JSON.stringify(st1));
+    const again = await m.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: false });
+    check("security turned on again after the restore", !again.err, JSON.stringify(again));
+    await raiseIdle();
+  }
   await m.inv("lock_vault"); await sleep(3500);
   const ok = await m.inv("unlock_vault", { password, keyfile: null });
   check("lock and unlock work", !ok.err && (await pageText()) === TEXT, JSON.stringify(ok));
