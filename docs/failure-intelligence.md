@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-22
 
-**Last substantive update:** 2026-10-22 (FI-01 to FI-03 entered; FI-01 moved here from STATUS)
+**Last substantive update:** 2026-10-23 (FI-04 entered; FI-01 to FI-03 entered on 2026-10-22, FI-01 moved here from STATUS)
 
 **Maintainer:** Claude (Claude Code), for the owner
 
@@ -21,6 +21,68 @@ To record what materially went wrong or nearly went wrong, why, the actual impac
 An entry belongs here if the problem reached, or could plausibly have reached, one of: the owner's data or vault; the security posture of the app or the PC; the integrity of the project's records; or work the owner would have had to redo. Ordinary friction (a tool limit, a failed first attempt that was fixed in the same step) stays in the session or execution records. For example, the refusal of `SetParent` on KeePassXC and KeePassXC's resistance to being force-stopped are tool limits, noted in [sessions.md](sessions.md) and [`CLAUDE.md`](../CLAUDE.md), not incidents.
 
 ## Incidents
+
+### FI-04 — Edits typed just before Lock or close were lost
+
+**Occurrence / observation date:** from the first build that had the delayed autosave until the fix in commit `dc95fd3` (portable builds up to the exe `F4F1E679…`, including the build and ZIP the owner gave to others). Found on 2026-10-23 by Claude's code review, not by a user report; reproduced the same day on the previous exe in the real-exe test.
+
+**Last resolution update:** 2026-10-23
+
+**Classification:** Failure (data loss risk, contained)
+
+**Status:** contained; the owner action in Resolution is open
+
+#### Context
+
+The editor saves a moment after you stop typing (about 0.5 s for a page, 0.4 s for a sticky note, 0.35 s for settings). Locking the vault (Lock button, Ctrl+L, idle lock, Win+L, sleep, minimize) and closing the app went through the same path. See [EX-13](execution/2026-10-23-lock-and-data-loss-fixes.md) and [A17](plan/A17-lock-and-data-loss-fixes.md).
+
+#### Mistake / Gap
+
+Text typed in the last fraction of a second before a lock, an idle lock or a close was lost. The save was still waiting when the lock wiped the session, and the window was only reloaded.
+
+#### Root Cause
+
+The lock wiped the session before the windows had a chance to write their pending saves, and the UI only reloaded. Supported by the code review and by the real-exe test, where the previous exe lost the text in both a page and a sticky-note case.
+
+**Why it was missed:** the earlier checks tested saving, not saving at the moment of locking, and the mock UI used for most checks has no real lock.
+
+**Evidence / limits:** the code and the real-exe test on a throwaway vault. How many times it happened to anyone is unknown; nobody reported it.
+
+#### Impact
+
+**Actual impact:** none established. Only text typed within about half a second before a lock or close could be lost. No vault corruption.
+
+**Potential impact:** a lost last sentence or number in a page or sticky note. This is the problem a notes app must not have, and it was in a build the owner shared with others.
+
+#### Resolution
+
+Fixed in `dc95fd3` (A17): before locking, every window writes its pending saves and the lock waits for them, at most 2 seconds. **Verification:** the same real-exe test passed on the new build (page, sticky note, closing the window). Not tested: idle lock, Win+L, sleep. **Outstanding action / owner:** replace the older ZIP copies (for example the one on the Drive, SHA-256 `1AD64164…D063`, exe `F4F1E679…`) with the rebuilt `E:\Project\Cipherleaf-portable.zip`. Not yet done as far as the records show.
+
+#### Lesson
+
+A save that waits for a timer can lose data if anything can end the session first. "Saving works" and "saving works at the moment of locking" are two checks.
+
+#### Prevention Rule
+
+**When:** a build changes how the app saves or locks.
+
+**Do:** run a "type, then lock at once" test in the real exe on a throwaway vault (page, sticky note, close the window), and compare with the previous build.
+
+**Check:** the typed text is there after unlocking. The script used (`lockflow.mjs` and `run-lockflow.ps1`) is in the session scratchpad, **not stored in the repository**, so it may need to be rewritten.
+
+**Adoption:** proposed here; not yet in `CLAUDE.md` (the owner decides on rule changes).
+
+**Durable owner:** this entry, until the owner adopts it.
+
+#### Pattern / Confidence
+
+**Pattern:** the checks covered the normal path but not the moment two events meet (typing and locking).
+
+**Confidence:** high that it happened (reproduced); high that it is fixed for the Lock button and closing the window; not established for the other lock paths.
+
+**Limits / revisit trigger:** a save that hangs for more than 2 seconds is still lost on purpose; revisit if the owner wants an automatic retry.
+
+---
 
 ### FI-03 — Backslashes in a command string became control characters
 

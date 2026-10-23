@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (about 08:28–09:05) — EX-2026-10-23-13 — Code review, lock and data-loss fixes (A17), rebuild
+
+- Report: [2026-10-23-lock-and-data-loss-fixes.md](2026-10-23-lock-and-data-loss-fixes.md)
+- Task / Goal: the owner's messages "re review the codes and apps", "use all skills and agents and sub agents" and "Yes, fix the lock and data-loss problems first ..., then rebuild and commit" (message times not recorded; the clock read 08:28:27 at the start and 09:05:27 after the ZIP); amendment [A17](../plan/A17-lock-and-data-loss-fixes.md)
+- Executor: Claude (Sonnet 5.5), with helper agents (review, fix, independent review, records)
+- Outcome: text typed just before Lock or close is now saved first (waits at most 2 seconds); a safer lock order; a failed save is rolled back or retried; KeePassXC lock and re-show fixes; sticky delete confirm; calculator +/- fixed. Committed (`dc95fd3`); portable exe and ZIP rebuilt (the owner's `data\` untouched, ZIP without it). 39 Rust tests, type check, build and calculator checks pass; a real-exe test on a throwaway vault passed (the old build failed it). Idle lock, Win+L, sleep and drive removal were not tested. A backlog of findings not fixed is in the report.
+- Integration / review: agent reports are model output; Claude checked the top findings against the code
+- Acceptance: pending (the owner tries the new exe)
+- Open dependency / next action: the owner replaces the older ZIP copies and picks which backlog items come next; A2 and A8 decisions
+
 ### 2026-10-22 (23:40–23:55) — EX-2026-10-22-12 — Wider note page, Paper as the default look (A16), commit and rebuild
 
 - Report: [2026-10-22-page-width-and-paper-default.md](2026-10-22-page-width-and-paper-default.md)

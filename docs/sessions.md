@@ -6,6 +6,129 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (from about 08:28 UTC) — Cipherleaf — Code review, lock and data-loss fixes (A17), rebuild
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and coordinator | Sonnet 5.5 (owner-selected; the session's own configuration names it) | Not recorded | Not independently verified |
+| Review agents (3: Rust backend, frontend and editor, product and UX), fix agents (2), follow-up fix agents (2), independent review agent (1), records agent (1) | Helper agents started by Claude; their model and effort settings are not recorded | Not recorded | Their reports are model output. Claude checked the top findings in the code. |
+| code-review skill | Claude Code skill | Not recorded | The security-review skill could not run (it needs a Git remote; there is none) |
+
+**Record basis:** written at the end of the work, from the system clock, the repository, the build and test output, and the owner's messages. **Reconstructed:** the owner's messages in this stretch have no recorded timestamps; the times below are system-clock readings (08:28:27 UTC when the review started, 09:05:27 UTC after the ZIP was made) and are approximate. The order of the owner's messages is from the conversation.
+
+## 🕒 Time
+
+- Date: 2026-10-23 (UTC), continuing from the owner's "Upload the zip in my drive" after 23:50 UTC on 2026-10-22 (time not recorded).
+- Start: about 08:28 UTC for the review (clock). The upload request came before it.
+- End / stopping point: about 09:05 UTC (clock, after the ZIP); the records were written after that. Commit time of `dc95fd3`: not recorded.
+- Session type: review, bug fixing, build and documentation.
+- Main focus: save text typed just before locking or closing, and the other lock and data-loss problems found in the review.
+- Contributors: the owner, Claude and helper agents.
+- Active working time: not measured.
+- Reason for summary: the fixes are committed and the work stops for the owner's trial of the new build.
+
+## 🎯 Session Goal
+
+First: put the portable ZIP on the owner's Drive. Then: answer "any suggestions to improve it", "re-review the codes and apps" and "did you delete the Notion words". Then, on the owner's choice: fix the lock and data-loss problems first, rebuild and commit. Stop with the fixes committed and the records updated.
+
+## 🛠️ Actions Taken
+
+### 1. Tried to upload the ZIP
+
+The Drive connector can't take an 83 MB file and Claude in Chrome was not connected, so Claude could not upload it. The owner uploaded it themselves ("Nothing I did it manually").
+
+### 2. Answered the Notion question and reviewed the code
+
+No source or app file contains "Notion" and Git history shows it was never committed there (it was removed in A13; the docs still name it as history). The owner twice said "Can you stop for a second"; work stopped each time. Then "Re do what i told you now but use all skills and agents and sub agents": three read-only review agents (Rust backend, frontend and editor, product and UX) and the code-review skill reviewed the project. Claude checked the top findings in the code.
+
+### 3. The owner chose the fixes
+
+"Fix the lock and data-loss problems first ..., then rebuild and commit." Two fix agents made the first set of fixes. An independent fourth review agent found 11 further problems; two follow-up fix agents fixed 9 of them; the automatic timed retry of a failed save was deliberately not done.
+
+### 4. Tested, committed and rebuilt
+
+Unit tests, clippy, type check, build and calculator checks on the committed source (`dc95fd3`), then a real-exe test on a throwaway vault in which the old build lost typed text and the new one kept it. The release exe was rebuilt (about 08:56 UTC), copied into the portable folder (the owner's `data\` untouched) and the ZIP remade without `data\`.
+
+### 5. Recorded it
+
+[A17](plan/A17-lock-and-data-loss-fixes.md), [EX-13](execution/2026-10-23-lock-and-data-loss-fixes.md) (with the backlog of findings not fixed), the authority table, STATUS, the acceptance ledger (X14, X11), the security design (P16 and limits), [FI-04](failure-intelligence.md) and this entry.
+
+## 🧠 Key Insights
+
+### Saving was tested, but not saving at the moment of locking
+
+Most earlier checks used the mock UI, which has no real lock, and tested that saving works. The loss only happens when a lock or close arrives within about half a second of typing, so it needed a real-exe "type, then lock at once" test. See FI-04.
+
+### The fix changes a security-relevant order of steps
+
+Saving first, then hiding and resetting the window, then the backup and the wipe is a change to when things happen at lock time, not to the encryption. It is written into the security design (P16, P10) so the owner can judge it.
+
+## 📌 Decisions Made
+
+- Confirmed (owner): fix the lock and data-loss problems first; rebuild and commit.
+- Confirmed (owner): **a standing instruction to use agents, sub-agents and skills on this project from now on** ("And use as agents and sub agents and skills from now on this project"). It was saved to Claude's memory. It does not change `CLAUDE.md` or the owner's authority; the "ask first" rules still apply.
+- Provisional (mine): lock after at most 2 seconds even if a window doesn't answer; no automatic timed retry of a failed save; the other review findings go to a backlog instead of being fixed now.
+- Deferred (owner): which backlog items come next; replacing the older ZIP copies; A2, A8 and the other open questions.
+
+## ⚠️ Difficulties / Friction
+
+The Drive upload was not possible. The security-review skill could not run. The first set of fixes still had holes (11 more found by the independent review).
+
+## ❌ Mistakes / Risks Noted
+
+### Edits typed just before Lock or close could be lost, in builds already shared
+
+- What happened: see [FI-04](failure-intelligence.md). It was found by the review, not by a report.
+- Actual impact: none established.
+- Correction / current status: fixed in `dc95fd3`; the older ZIP copies (including the one on the owner's Drive) still have the problem.
+
+### The fix is only partly tested
+
+- What could happen: a problem on a path that wasn't exercised (idle lock, Win+L, sleep, drive removal, KeePassXC lock and re-show, quit).
+- Actual impact: none established.
+- Correction / current status: listed as not tested in EX-13 and the acceptance ledger (X14).
+
+## 📍 Current Position
+
+**As of:** 2026-10-23, about 09:05 UTC (clock).
+
+**Before this session:** A10–A16 committed; the portable build and ZIP had the lost-text problem.
+
+**After this session:** A17 committed (`dc95fd3`, records in the commit after it); the portable exe and ZIP rebuilt (exe `D237C5B5…4183`, ZIP `A6BD40E6…C382`); nothing is accepted; the dev app is not running.
+
+**Current standing:** waiting for the owner to try the new build.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. The owner runs the rebuilt `E:\Project\Cipherleaf-portable\Cipherleaf.exe`.
+2. The owner replaces the older ZIP copies (for example on the Drive).
+3. The owner picks backlog items (EX-13, section 10) to do next.
+
+**Do not repeat / reopen:** the review and the 2-second saving design, unless the source changes.
+
+**Continuation boundary:** fixes on the owner's report; a push, signing, a security-behavior change or a new dependency wait for the owner.
+
+## ❓ Open Questions
+
+- Which backlog items next? — Needed from: owner.
+- A2 (single-record rollback), A8 (exact versions in `Cargo.toml`), STATUS question 8, evidence for A1 and A3–A7, and the owner's check of the Paper theme and the other A10–A16 items. — Needed from: owner.
+
+## 🧾 Session Outcome
+
+Text typed just before Lock or close is now saved first, and several related lock problems are fixed and committed, with a real-exe test showing the old build lost text and the new one did not. A backlog of unfixed findings is recorded.
+
+## 🔍 Confidence Level
+
+**The Lock button and closing the window keep typed text:** Medium-High. A real-exe test on a throwaway vault, three cases.
+
+**Idle lock, Win+L, sleep, drive removal, KeePassXC paths:** Low. Not tested in the real exe.
+
+---
+
 # 📘 Session: 2026-10-22 (22:58 UTC onward) — Cipherleaf — Commit of A10–A14 and the first release build
 
 ## 🤖 Models, Effort, Roles and Provenance
