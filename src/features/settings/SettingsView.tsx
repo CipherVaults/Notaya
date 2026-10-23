@@ -9,6 +9,7 @@ import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
 import RestoreDialog from "@/features/unlock/RestoreDialog";
+import OpenSourceDialog from "./OpenSourceDialog";
 import { DisableSecurityDialog, EnableSecurityDialog } from "./SecurityDialogs";
 
 const THEMES: { value: ThemeMode; label: string; bg: string; side: string; fg: string; line: string }[] = [
@@ -23,6 +24,7 @@ export default function SettingsView() {
   const settings = useApp((s) => s.settings);
   const setSettings = useApp((s) => s.setSettings);
   const status = useApp((s) => s.status);
+  const [licensesOpen, setLicensesOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restorePasswordsOpen, setRestorePasswordsOpen] = useState(false);
@@ -298,6 +300,13 @@ export default function SettingsView() {
             <dd>None. Cipherleaf makes no network connections.</dd>
             <dt className="text-faint">Passwords</dt>
             <dd>Optional. Kept in the bundled KeePassXC 2.8.0 (GPL), which has its own master password and settings</dd>
+            <dt className="text-faint">Credits</dt>
+            <dd>
+              Built on open source software.{" "}
+              <button type="button" onClick={() => setLicensesOpen(true)} className="font-medium text-accent underline-offset-4 hover:underline">
+                Open source licenses…
+              </button>
+            </dd>
           </dl>
           <div className="rounded-xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
             <div className="mb-1 font-medium text-fg">Good to know</div>
@@ -306,12 +315,13 @@ export default function SettingsView() {
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
               <li>Cipherleaf's screenshot blocking and lock-when-unplugged don't cover KeePassXC's window. KeePassXC has its own protections.</li>
               <li>Passphrase words: EFF large wordlist, © Electronic Frontier Foundation, CC BY 3.0 US.</li>
-              <li>Equations are drawn by KaTeX 0.19.0 (MIT licence), running on this device only.</li>
+              <li>Equations are drawn by KaTeX 0.19.0 (MIT licence, fonts under the SIL Open Font License), running on this device only.</li>
             </ul>
           </div>
         </Section>
       </div>
 
+      <OpenSourceDialog open={licensesOpen} onOpenChange={setLicensesOpen} />
       <ChangeMasterDialog open={changeOpen} onOpenChange={setChangeOpen} />
       <EnableSecurityDialog open={enableOpen} onOpenChange={setEnableOpen} />
       <DisableSecurityDialog open={disableOpen} onOpenChange={setDisableOpen} keyfileUsed={status?.keyfileRequired ?? false} />

@@ -154,6 +154,21 @@ Short answers. The full list is in [`docs/security-design.md`](docs/security-des
 - **Not defended:** malware or a keylogger on the PC, someone with administrator rights, reading memory while the app is open, and a file swapped by someone who can write to your `data` folder (for example replacing a protected vault with an open one).
 - **Not proven yet.** Most checks so far are unit tests and scripted runs on throwaway data. USB removal, sleep and long idle behavior have not been checked on a real PC. The owner has not formally accepted any result. See [`docs/acceptance.md`](docs/acceptance.md) for exactly what was checked.
 
+## Credits and licenses
+
+Cipherleaf is built on open source software, and we are grateful to everyone who made it:
+
+- **[KeePassXC](https://keepassxc.org) 2.8.0** (GPL-2.0 or GPL-3.0, (c) the KeePassXC Team) for passwords. It is bundled unmodified and runs as a separate program. Its license and the exact source are in the `Licenses\KeePassXC` folder of the portable copy, and at <https://github.com/keepassxreboot/keepassxc/releases/tag/2.8.0>.
+- **[Tauri](https://tauri.app)** and the Rust crates it and Cipherleaf use (RustCrypto for the encryption, SQLite for storage, and others).
+- **npm packages** for the interface: React, TipTap and ProseMirror (the editor), KaTeX (equations), highlight.js (code colors), lucide icons, Radix, and others.
+- **Fonts:** Inter and JetBrains Mono (SIL Open Font License 1.1) and the KaTeX fonts.
+- **Word list:** the EFF large word list for suggested passphrases, (c) Electronic Frontier Foundation, CC BY 3.0 US.
+- **Microsoft Edge WebView2** shows the interface (required, not bundled).
+
+Every component, its version, copyright holder and license text is in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md), which is also in the `Licenses` folder of the portable copy and inside the app (Settings, About, "Open source licenses…"). This is attribution, not legal advice.
+
+**The license for Cipherleaf itself has not been chosen yet.** Until the owner decides, no license is granted to use, copy or share Cipherleaf's own code.
+
 ## Requirements
 
 - Windows 10 or 11, 64-bit, with the Microsoft Edge WebView2 runtime (already part of Windows 11 and most Windows 10 installs).
