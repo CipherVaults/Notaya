@@ -6,6 +6,20 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (after the owner's merge at 20:45:05 UTC; work times not recorded), Cipherleaf: V1.0 portable build, cloud thread session
+
+**Executor:** Claude (Claude Code) in the cloud thread session, with a PC remote session for the build (model output). **Record basis:** GitHub (merge time, merge commit), the PC session's report.
+
+## What happened
+
+1. The owner merged PR #3 into `main` at 20:45:05 UTC (`0ed3f52`).
+2. A PC session built the V1.0 stable portable folder and ZIP from exactly that commit and tested the built exe on throwaway data: `cargo test --lib` 127 of 127, release build ok, optional security 52/52, restore flow 13/13, real window 12/12. Exe SHA-256 `C43E84220E560BB7A7F6E9C4273794F704B448D1CA8ECC48BC1E3CB72FA8EA11`; ZIP SHA-256 `CAB1E72E79B9061DA05558A9AFB5CFBCB916B589A32FB318AE110E04D522D53D`; no `data\` folder; full KeePassXC licence texts and source archive in `Licenses\KeePassXC`. Details: [EX-19](execution/2026-10-23-v1-portable-build.md).
+3. The private GitHub release was **not** created: the PC's permission layer denied `gh release create`, so no tag exists. The owner creates it (command in EX-19) or approves the command.
+
+Not run: testA, testB, testC c2/c2q, testD1, USB removal, idle lock, Win+L and sleep on a real PC, `cargo audit`. Nothing is accepted.
+
+---
+
 # 📘 Session: 2026-10-23 (owner message 20:12:53 UTC; times of the other work not recorded), Cipherleaf: Credits for open source and the suggested passphrase removed (A22), cloud thread session
 
 **Executor:** Claude (Claude Code) in the cloud thread session, with an independent completeness check of the notices (model output). **Record basis:** the repository, the project-thread timestamp of the owner's message and the cloud container's check output; the time of the credits request and the work times are not recorded.
