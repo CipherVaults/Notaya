@@ -138,7 +138,9 @@ pub fn unlock_vault(
     }
 }
 
-#[tauri::command]
+/// Runs on a worker thread: the lock first waits for every window (sticky
+/// notes included) to save, and their answers need the event-loop thread free.
+#[tauri::command(async)]
 pub fn lock_vault(app: AppHandle) {
     state::lock(&app, "manual");
 }
@@ -238,16 +240,26 @@ pub fn set_backdrop(window: WebviewWindow, kind: String, dark: bool) -> bool {
     ui::apply_backdrop(&window, &kind, dark)
 }
 
-/// Called by each window once it has painted its first frame.
+/// Called by each window once it has painted its first frame. From then on the
+/// window is asked to save its pending edits before the vault locks.
 #[tauri::command]
-pub fn window_ready(window: WebviewWindow) {
+pub fn window_ready(window: WebviewWindow, state: State<'_, AppState>) {
+    state.mark_ready(window.label());
     let _ = window.show();
     if window.label() == "main" {
         let _ = window.set_focus();
     }
 }
 
+/// Answer to the `vault-locking` event: this window has saved its pending
+/// edits. `round` is the number that came with the event.
 #[tauri::command]
+pub fn flush_done(window: WebviewWindow, state: State<'_, AppState>, round: u64) {
+    state.flush_done(window.label(), round);
+}
+
+/// Runs on a worker thread, like `lock_vault`, so the windows can answer.
+#[tauri::command(async)]
 pub fn quit_app(app: AppHandle, state: State<'_, AppState>) {
     state::lock(&app, "quit");
     crate::keepassxc::shutdown(&state.keepassxc);

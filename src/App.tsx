@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "motion/react";
 import { Toaster } from "sonner";
+import { flushAll } from "@/lib/flush";
 import { api } from "@/lib/ipc";
 import { applyAppearance, cachedAppearance, isDark } from "@/lib/theme";
 import { useApp } from "@/store/app";
@@ -26,8 +27,17 @@ export default function App() {
     // Rust tells us when the vault locks (idle, Win+L, sleep, USB removed...).
     // Reloading discards every decrypted value held by the UI.
     const unlisten = listen<string>("vault-locked", () => window.location.reload());
+    // Rust waits for every window to write its pending saves before it locks.
+    const unlistenLocking = listen<number>("vault-locking", async (event) => {
+      try {
+        await flushAll();
+      } finally {
+        await api.flushDone(event.payload).catch(() => {});
+      }
+    });
     return () => {
       unlisten.then((f) => f());
+      unlistenLocking.then((f) => f());
     };
   }, [refreshStatus]);
 

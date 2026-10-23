@@ -109,6 +109,8 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "lock_vault":
       unlocked = false;
       return ok(null);
+    case "flush_done":
+      return ok(null);
     case "get_settings":
       return ok({ ...settings });
     case "save_settings":

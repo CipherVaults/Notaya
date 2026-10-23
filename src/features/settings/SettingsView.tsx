@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, Palette, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { registerFlush } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
 import { ACCENTS, STICKY_COLORS } from "@/lib/palette";
 import type { Settings, ThemeMode } from "@/lib/types";
@@ -24,11 +25,15 @@ export default function SettingsView() {
 
   const persist = useMemo(
     () =>
-      debounce((s: Settings) => {
-        api.saveSettings(s).catch((e) => toast.error(errorText(e)));
-      }, 350),
+      debounce(
+        (s: Settings) => api.saveSettings(s).then(() => {}, (e) => void toast.error(errorText(e))),
+        350,
+      ),
     [],
   );
+
+  // Write a pending change before the vault locks or the app closes.
+  useEffect(() => registerFlush(() => persist.flush()), [persist]);
 
   if (!settings) return null;
 

@@ -28,13 +28,29 @@ export function formatDate(ms: number): string {
   });
 }
 
-export function debounce<A extends unknown[]>(fn: (...args: A) => void, ms: number) {
+export function debounce<A extends unknown[], R = void>(fn: (...args: A) => R, ms: number) {
   let t: ReturnType<typeof setTimeout> | undefined;
+  let queued: A | null = null;
   const run = (...args: A) => {
     clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
+    queued = args;
+    t = setTimeout(() => {
+      const a = queued;
+      queued = null;
+      if (a) fn(...a);
+    }, ms);
   };
-  run.cancel = () => clearTimeout(t);
+  run.cancel = () => {
+    clearTimeout(t);
+    queued = null;
+  };
+  /** Runs the queued call now, if there is one, and returns its result. */
+  run.flush = (): R | undefined => {
+    clearTimeout(t);
+    const a = queued;
+    queued = null;
+    return a ? fn(...a) : undefined;
+  };
   return run;
 }
 

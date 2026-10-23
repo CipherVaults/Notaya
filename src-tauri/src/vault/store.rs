@@ -132,12 +132,17 @@ impl Store {
         Ok(())
     }
 
-    /// Runs several writes as one all-or-nothing transaction.
+    /// Runs several writes as one all-or-nothing transaction. If the commit
+    /// itself fails, the transaction is rolled back so the connection is never
+    /// left inside an open transaction.
     pub fn transaction<T>(&self, f: impl FnOnce(&Store) -> Result<T>) -> Result<T> {
         self.conn.execute_batch("BEGIN IMMEDIATE")?;
         match f(self) {
             Ok(v) => {
-                self.conn.execute_batch("COMMIT")?;
+                if let Err(e) = self.conn.execute_batch("COMMIT") {
+                    let _ = self.conn.execute_batch("ROLLBACK");
+                    return Err(e.into());
+                }
                 Ok(v)
             }
             Err(e) => {
@@ -168,5 +173,65 @@ impl Table {
             Table::Records => b"rec",
             Table::Attachments => b"att",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A bare store (no header) in a fresh temp folder, with the two data tables.
+    fn temp_store() -> Store {
+        let dir = std::env::temp_dir().join(format!("cipherleaf-store-{}", crate::model::new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let store = Store::connect(&dir.join("test.clf")).unwrap();
+        store
+            .conn
+            .execute_batch(
+                "CREATE TABLE records (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;
+                 CREATE TABLE attachments (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;",
+            )
+            .unwrap();
+        store
+    }
+
+    #[test]
+    fn failing_closure_rolls_back_and_store_keeps_working() {
+        let store = temp_store();
+        let id = [1u8; 16];
+        let result: Result<()> = store.transaction(|s| {
+            s.put(Table::Records, &id, b"first")?;
+            Err(Error::Other("boom".into()))
+        });
+        assert!(result.is_err());
+        assert!(store.get(Table::Records, &id).unwrap().is_none(), "write must not survive");
+        // Not stuck inside the old transaction: a new one begins and commits.
+        store.transaction(|s| s.put(Table::Records, &[2u8; 16], b"second")).unwrap();
+        assert_eq!(store.get(Table::Records, &[2u8; 16]).unwrap().unwrap(), b"second");
+        assert!(store.get(Table::Records, &id).unwrap().is_none());
+    }
+
+    #[test]
+    fn failing_commit_rolls_back_and_store_keeps_working() {
+        let store = temp_store();
+        // A deferred foreign key violation makes COMMIT (not the statements) fail.
+        store
+            .conn
+            .execute_batch(
+                "PRAGMA foreign_keys = ON;
+                 CREATE TABLE parent (id INTEGER PRIMARY KEY);
+                 CREATE TABLE child (pid INTEGER REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED);",
+            )
+            .unwrap();
+        let result: Result<()> = store.transaction(|s| {
+            s.put(Table::Records, &[1u8; 16], b"lost")?;
+            s.conn.execute_batch("INSERT INTO child (pid) VALUES (99)")?;
+            Ok(())
+        });
+        assert!(result.is_err(), "the commit should have failed");
+        assert!(store.get(Table::Records, &[1u8; 16]).unwrap().is_none());
+        // A second BEGIN would fail if the failed commit had left a transaction open.
+        store.transaction(|s| s.put(Table::Records, &[2u8; 16], b"ok")).unwrap();
+        assert_eq!(store.get(Table::Records, &[2u8; 16]).unwrap().unwrap(), b"ok");
     }
 }

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { CalcError, evaluate, formatNumber } from "./calc";
+import { CalcError, evaluate, formatNumber, negateExpr } from "./calc";
 
 export interface CalcEntry {
   expr: string;
@@ -54,7 +54,7 @@ export function useCalc(degrees: boolean) {
     setExpr((x) => x.slice(0, -1));
     setShown(null);
   };
-  const negate = () => setExpr((x) => (x.startsWith("-") ? x.slice(1) : x ? "-(" + x + ")" : "-"));
+  const negate = () => setExpr(negateExpr);
 
   const equals = () => {
     if (!expr.trim()) return;

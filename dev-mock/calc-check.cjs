@@ -1,10 +1,10 @@
 // Checks for the calculator engine (src/features/sticky/calc.ts). Development only; not part of the app.
 // Run from the project root in PowerShell:
 //   npx tsc src/features/sticky/calc.ts --ignoreConfig --outDir .calc-check --target es2020 --module commonjs --skipLibCheck --strict
-//   Set-Content .calc-checkpackage.json '{"type":"commonjs"}'
+//   Set-Content .calc-check\package.json '{"type":"commonjs"}'
 //   node dev-mock/calc-check.cjs
 // Then delete the .calc-check folder. Prints ALL OK when every case passes.
-const { evaluate, formatNumber, CalcError } = require('../.calc-check/calc.js');
+const { evaluate, formatNumber, negateExpr, CalcError } = require('../.calc-check/calc.js');
 const cases = [
  ['1+2*3', 7], ['(1+2)*3', 9], ['2^3^2', 512], ['-2^2', -4], ['2^-1', 0.5], ['10/4', 2.5],
  ['0.1+0.2', 0.3], ['200+10%', 220], ['200-10%', 180], ['50%', 0.5], ['10%*200', 20], ['200*10%', 20],
@@ -30,4 +30,7 @@ for (const bad of ['1/0','sqrt(-1)','ln(0)','1+','(1+2','1+2)','foo','2**3','abs
 // formatting
 const fmt=[[0.1+0.2,'0.3'],[1/3,'0.333333333333'],[1e21,'1e21'],[123456789012345,'123456789012345'],[2.5,'2.5'],[-0,'0'],[1e-10,'1e-10'],[100,'100'],[1234.5678,'1234.5678']];
 for(const [v,w] of fmt){ const g=formatNumber(v); if(g!==w){fail++;console.log('FAIL fmt',v,g,w);} }
+// negateExpr (the +/- key)
+for(const [x,w] of [['-2+3','-(-2+3)'],['-2','2'],['-2.5','2.5'],['-(2+3)','2+3'],['-(2)+(3)','-(-(2)+(3))'],['5','-(5)'],['','-'],['-','']]){ const g=negateExpr(x); if(g!==w){fail++;console.log('FAIL negateExpr',JSON.stringify(x),JSON.stringify(g),JSON.stringify(w));} }
+chk('negate -2+3 evaluates',d(negateExpr('-2+3')),-1);
 console.log(fail? ('FAILURES: '+fail) : 'ALL OK');

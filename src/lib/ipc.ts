@@ -2,6 +2,7 @@
 // the UI has no other way to touch files, the network or the clipboard.
 
 import { invoke } from "@tauri-apps/api/core";
+import { flushAll } from "./flush";
 import type {
   Generated,
   KeePassXCStatus,
@@ -23,7 +24,12 @@ export const api = {
     invoke<void>("create_vault", { password, keyfile }),
   unlockVault: (password: string, keyfile: string | null) =>
     invoke<void>("unlock_vault", { password, keyfile }),
-  lockVault: () => invoke<void>("lock_vault"),
+  lockVault: async () => {
+    await flushAll();
+    return invoke<void>("lock_vault");
+  },
+  // Answers the "vault-locking" event once this window has written its pending saves
+  flushDone: (round: number) => invoke<void>("flush_done", { round }),
   changeMaster: (
     currentPassword: string,
     currentKeyfile: string | null,
@@ -37,7 +43,10 @@ export const api = {
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
   setBackdrop: (kind: string, dark: boolean) => invoke<boolean>("set_backdrop", { kind, dark }),
   windowReady: () => invoke<void>("window_ready"),
-  quitApp: () => invoke<void>("quit_app"),
+  quitApp: async () => {
+    await flushAll();
+    return invoke<void>("quit_app");
+  },
   openDataFolder: () => invoke<void>("open_data_folder"),
 
   // Notes

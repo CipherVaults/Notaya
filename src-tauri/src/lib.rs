@@ -11,9 +11,14 @@ mod system;
 mod ui;
 mod vault;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tauri::{http, Manager};
 
 use commands::{keepassxc as keepassxc_cmd, notes, stickies, tools, vault as vault_cmd};
+
+/// Set once the main window's close has started, so a second request is ignored.
+static CLOSING: AtomicBool = AtomicBool::new(false);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -56,15 +61,33 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             // Closing the main window locks the vault and quits, sticky notes included.
+            if let tauri::WindowEvent::Destroyed = event {
+                // A closed window can't answer a flush request any more.
+                window.app_handle().state::<state::AppState>().unmark_ready(window.label());
+            }
             if window.label() == "main" {
                 // Keep the embedded KeePassXC glued to the Passwords area (amendment A10).
                 if matches!(event, tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_)) {
                     embed::follow();
                 }
-                if let tauri::WindowEvent::CloseRequested { .. } = event {
-                    state::lock(window.app_handle(), "quit");
-                    keepassxc::shutdown(&window.app_handle().state::<state::AppState>().keepassxc);
-                    window.app_handle().exit(0);
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    // Don't close yet: the windows must save their edits first, and that
+                    // needs this (event-loop) thread to stay free. Finish on another thread.
+                    api.prevent_close();
+                    if !CLOSING.swap(true, Ordering::SeqCst) {
+                        let app = window.app_handle().clone();
+                        std::thread::spawn(move || {
+                            // Whatever fails or panics here, the app must still exit:
+                            // the close was prevented, so nothing else would end it.
+                            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                state::lock(&app, "quit");
+                            }));
+                            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                keepassxc::shutdown(&app.state::<state::AppState>().keepassxc);
+                            }));
+                            app.exit(0);
+                        });
+                    }
                 }
             }
         })
@@ -81,6 +104,7 @@ pub fn run() {
             vault_cmd::save_settings,
             vault_cmd::set_backdrop,
             vault_cmd::window_ready,
+            vault_cmd::flush_done,
             vault_cmd::quit_app,
             vault_cmd::open_data_folder,
             notes::list_notes,

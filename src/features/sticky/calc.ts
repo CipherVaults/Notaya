@@ -245,3 +245,25 @@ export function formatNumber(v: number): string {
   }
   return String(Number(v.toPrecision(12)));
 }
+
+/**
+ * The +/- key: flips the sign of the whole expression, not just its first number. "-2" becomes "2",
+ * "-(2+3)" becomes "2+3", and "-2+3" becomes "-(-2+3)".
+ */
+export function negateExpr(x: string): string {
+  if (x === "") return "-";
+  if (x === "-") return "";
+  if (/^-(\d+\.?\d*|\.\d+)$/.test(x)) return x.slice(1);
+  if (x.startsWith("-(") && x.endsWith(")")) {
+    // The "(" after the minus must close at the very end, or "-(2)+(3)" would lose its meaning.
+    let depth = 0;
+    for (let i = 1; i < x.length; i++) {
+      if (x[i] === "(") depth++;
+      else if (x[i] === ")" && --depth === 0) {
+        if (i === x.length - 1) return x.slice(2, -1);
+        break;
+      }
+    }
+  }
+  return "-(" + x + ")";
+}

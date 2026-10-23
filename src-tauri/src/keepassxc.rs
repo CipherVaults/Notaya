@@ -173,8 +173,21 @@ pub fn open(paths: &Paths, child: &Mutex<Option<Child>>) -> Result<()> {
 /// Starts KeePassXC if needed, waits for its window, and shows it inside Cipherleaf's
 /// window at `rect` (physical pixels, relative to that window). Returns an error if
 /// the window doesn't appear; the caller can then offer a separate window instead.
-pub fn embed(paths: &Paths, child: &Mutex<Option<Child>>, parent: isize, rect: crate::embed::Rect) -> Result<()> {
+///
+/// The wait can take seconds, so `still_unlocked` is asked after it and again
+/// after attaching; if Cipherleaf locked meanwhile, nothing stays on screen and
+/// `Error::Locked` is returned.
+pub fn embed(
+    paths: &Paths,
+    child: &Mutex<Option<Child>>,
+    parent: isize,
+    rect: crate::embed::Rect,
+    still_unlocked: &dyn Fn() -> bool,
+) -> Result<()> {
     if crate::embed::embedded().is_some() {
+        if !still_unlocked() {
+            return Err(Error::Locked);
+        }
         return crate::embed::place(rect);
     }
     let exe = exe(paths);
@@ -193,7 +206,16 @@ pub fn embed(paths: &Paths, child: &Mutex<Option<Child>>, parent: isize, rect: c
         window = wait_for_window();
     }
     let window = window.ok_or_else(|| Error::Other("KeePassXC didn't open a window in time.".into()))?;
-    crate::embed::attach(parent, window, rect)
+    if !still_unlocked() {
+        return Err(Error::Locked);
+    }
+    crate::embed::attach(parent, window, rect)?;
+    if !still_unlocked() {
+        // Locked while attaching: take the overlay back down.
+        crate::embed::hide();
+        return Err(Error::Locked);
+    }
+    Ok(())
 }
 
 /// Gives KeePassXC back its own window.
@@ -216,12 +238,17 @@ pub fn shutdown(child: &Mutex<Option<Child>>) {
     }
 }
 
-/// Asks a KeePassXC started by Cipherleaf to lock all its databases.
-/// Does nothing if it isn't running, so it never starts KeePassXC.
+/// Asks a running KeePassXC to lock all its databases. That covers the copy
+/// Cipherleaf started and also one it adopted (embedded after a Cipherleaf
+/// restart, or started by the user: its window is found by its executable path).
+/// Does nothing if none is running, so it never starts KeePassXC.
 pub fn lock_if_running(paths: &Paths, child: &Mutex<Option<Child>>) {
     crate::embed::hide();
     let mut guard = child.lock().unwrap_or_else(|e| e.into_inner());
-    if !is_running(&mut guard) {
+    let running = is_running(&mut guard)
+        || crate::embed::embedded().is_some()
+        || crate::embed::find_main_window(&exe(paths)).is_some();
+    if !running {
         return;
     }
     if let Ok(mut cmd) = base_command(paths) {

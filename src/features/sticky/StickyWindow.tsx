@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import { Popover } from "radix-ui";
 import { Bold, Calculator, Italic, ListChecks, Pin, PinOff, Trash2, X } from "lucide-react";
+import { flushAll, registerFlush, trackSave } from "@/lib/flush";
 import { api } from "@/lib/ipc";
 import { STICKY_COLORS, stickyColor } from "@/lib/palette";
 import { applyAppearance, cachedAppearance } from "@/lib/theme";
@@ -22,6 +24,20 @@ export default function StickyWindow({ id }: { id: string }) {
     api.getSticky(id).then(setSticky).catch(() => win.close());
   }, [id]);
 
+  // Rust waits for every window to write its pending saves before it locks the vault.
+  useEffect(() => {
+    const unlisten = listen<number>("vault-locking", async (event) => {
+      try {
+        await flushAll();
+      } finally {
+        await api.flushDone(event.payload).catch(() => {});
+      }
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
   if (!sticky) return null;
   return <StickyCard sticky={sticky} onChange={setSticky} />;
 }
@@ -31,21 +47,66 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
   const editorRef = useRef<Editor | null>(null);
   const [focused, setFocused] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const dirtyRef = useRef(false);
+  const inflightRef = useRef<Promise<void> | null>(null);
 
-  const save = useMemo(
-    () =>
-      debounce(() => {
-        const e = editorRef.current;
-        if (e) api.saveSticky(sticky.id, JSON.stringify(e.getJSON()), e.getText()).catch(() => {});
-      }, 400),
-    [sticky.id],
-  );
+  // Saves run one after another. The returned promise rejects if the save fails.
+  const doSave = useCallback((): Promise<void> => {
+    const e = editorRef.current;
+    if (!e) return Promise.resolve();
+    const content = JSON.stringify(e.getJSON());
+    const text = e.getText();
+    dirtyRef.current = false;
+    const run = async () => {
+      try {
+        await api.saveSticky(sticky.id, content, text);
+        if (!dirtyRef.current) setSaveFailed(false);
+      } catch (err) {
+        dirtyRef.current = true; // keep the edit so the next save retries it
+        setSaveFailed(true);
+        throw err;
+      }
+    };
+    const p = (inflightRef.current ?? Promise.resolve()).then(run);
+    inflightRef.current = p.catch(() => {});
+    return trackSave(p);
+  }, [sticky.id]);
+
+  const save = useMemo(() => debounce(() => doSave().catch(() => {}), 400), [doSave]);
+
+  // Writes the note now. Rejects if it couldn't be saved.
+  const flushNow = useCallback(async () => {
+    // A debounced save can start while we wait, so wait until the chain stops growing.
+    let last: Promise<void> | null;
+    do {
+      last = inflightRef.current;
+      await last;
+    } while (inflightRef.current !== last);
+    if (dirtyRef.current) {
+      save.cancel();
+      await doSave();
+    }
+    await inflightRef.current;
+  }, [save, doSave]);
+
+  useEffect(() => registerFlush(flushNow), [flushNow]);
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDelete]);
 
   const editor = useEditor({
     extensions: stickyExtensions(),
     content: parseContent(sticky.content),
     editorProps: { ...editorProps(() => editorRef.current), attributes: { class: "selectable" } },
-    onUpdate: () => save(),
+    onUpdate: () => {
+      dirtyRef.current = true;
+      save();
+    },
     onFocus: () => setFocused(true),
     onBlur: () => setFocused(false),
   });
@@ -57,12 +118,14 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
       const [pos, size, scale] = await Promise.all([win.outerPosition(), win.innerSize(), win.scaleFactor()]);
       const p = pos.toLogical(scale);
       const s = size.toLogical(scale);
-      api.setStickyGeometry(sticky.id, p.x, p.y, s.width, s.height).catch(() => {});
+      await api.setStickyGeometry(sticky.id, p.x, p.y, s.width, s.height).catch(() => {});
     }, 500);
+    const unregister = registerFlush(() => persist.flush());
     const a = win.onMoved(() => persist());
     const b = win.onResized(() => persist());
     requestAnimationFrame(() => requestAnimationFrame(() => api.windowReady()));
     return () => {
+      unregister();
       a.then((f) => f());
       b.then((f) => f());
     };
@@ -128,16 +191,23 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
           <BarButton label={sticky.onTop ? "Unpin from top" : "Keep on top"} onClick={() => style({ onTop: !sticky.onTop })}>
             {sticky.onTop ? <Pin size={13} /> : <PinOff size={13} />}
           </BarButton>
-          <BarButton label="Delete note" onClick={() => api.deleteSticky(sticky.id)}>
-            <Trash2 size={13} />
+          <BarButton
+            label={confirmDelete ? "Click again to delete this note" : "Delete note"}
+            onClick={() => (confirmDelete ? api.deleteSticky(sticky.id) : setConfirmDelete(true))}
+            onLeave={() => setConfirmDelete(false)}
+            className={confirmDelete ? "w-auto bg-red-600/85 px-2 text-[0.7rem] font-semibold text-white opacity-100 hover:bg-red-600" : undefined}
+          >
+            {confirmDelete ? "Delete?" : <Trash2 size={13} />}
           </BarButton>
           <BarButton
             label="Close (stays in your vault)"
-            onClick={() => {
-              save.cancel();
-              const e = editorRef.current;
-              const flush = e ? api.saveSticky(sticky.id, JSON.stringify(e.getJSON()), e.getText()) : Promise.resolve();
-              flush.finally(() => api.closeSticky(sticky.id));
+            onClick={async () => {
+              try {
+                await flushNow();
+              } catch {
+                return; // keep the window open so the text isn't lost
+              }
+              api.closeSticky(sticky.id);
             }}
           >
             <X size={14} />
@@ -161,6 +231,11 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
             />
           </div>
         )}
+        {saveFailed && (
+          <div role="alert" className="shrink-0 px-4 py-1.5 text-xs font-medium text-red-700" style={{ background: color.bar }}>
+            Couldn't save this note. Try again.
+          </div>
+        )}
         <div
           className="absolute bottom-3 right-3 h-3 w-3 cursor-se-resize opacity-40"
           onMouseDown={(e) => {
@@ -177,14 +252,30 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
   );
 }
 
-function BarButton({ label, onClick, children, active }: { label: string; onClick: () => void; children: React.ReactNode; active?: boolean }) {
+function BarButton({
+  label,
+  onClick,
+  children,
+  active,
+  className,
+  onLeave,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  active?: boolean;
+  className?: string;
+  onLeave?: () => void;
+}) {
   return (
     <button
       title={label}
       aria-label={label}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={cn("grid h-6 w-6 place-items-center rounded-md transition hover:bg-black/10 hover:opacity-100", active ? "bg-black/15 opacity-100" : "opacity-70")}
+      onMouseLeave={onLeave}
+      onBlur={onLeave}
+      className={cn("grid h-6 w-6 place-items-center rounded-md transition hover:bg-black/10 hover:opacity-100", active ? "bg-black/15 opacity-100" : "opacity-70", className)}
     >
       {children}
     </button>

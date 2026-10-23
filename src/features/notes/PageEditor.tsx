@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import { Check, ChevronRight, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { registerFlush, trackSave } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
 import type { Page } from "@/lib/types";
 import { cn, debounce, formatDate } from "@/lib/utils";
@@ -53,32 +54,59 @@ function LoadedEditor({ page }: { page: Page }) {
   const titleRef = useRef(page.title);
   const editorRef = useRef<Editor | null>(null);
   const dirtyRef = useRef(false);
+  const inflightRef = useRef<Promise<void> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const slashController = useRef<SlashController>({ state: null, onKey: () => false });
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
   const readOnly = page.trashedAt !== null;
 
-  const save = useMemo(
-    () =>
-      debounce(async () => {
-        const editor = editorRef.current;
-        if (!editor) return;
-        dirtyRef.current = false;
-        try {
-          const meta = await api.savePage(page.id, titleRef.current, JSON.stringify(editor.getJSON()), editor.getText());
-          const t = useApp.getState().tree;
-          setTree({ ...t, pages: t.pages.map((p) => (p.id === meta.id ? meta : p)) });
-          setUpdated(meta.updated);
-          setWords(meta.words);
-          setSaveState("saved");
-        } catch (e) {
-          setSaveState("error");
-          toast.error(`Couldn't save: ${errorText(e)}`);
-        }
-      }, 500),
-    [page.id, setTree],
-  );
+  // Saves run one after another, so an older save can never land after a newer one.
+  const doSave = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return Promise.resolve();
+    // Take the content now: on unmount the editor is gone by the time a queued save runs.
+    const title = titleRef.current;
+    const content = JSON.stringify(editor.getJSON());
+    const text = editor.getText();
+    dirtyRef.current = false;
+    const run = async () => {
+      try {
+        const meta = await api.savePage(page.id, title, content, text);
+        const t = useApp.getState().tree;
+        setTree({ ...t, pages: t.pages.map((p) => (p.id === meta.id ? meta : p)) });
+        setUpdated(meta.updated);
+        setWords(meta.words);
+        if (!dirtyRef.current) setSaveState("saved");
+      } catch (e) {
+        dirtyRef.current = true; // keep the edit so the next save retries it
+        setSaveState("error");
+        toast.error(`Couldn't save: ${errorText(e)}`);
+      }
+    };
+    const p = (inflightRef.current ?? Promise.resolve()).then(run);
+    inflightRef.current = p;
+    return trackSave(p); // a lock right after switching pages still waits for this save
+  }, [page.id, setTree]);
+
+  const save = useMemo(() => debounce(doSave, 500), [doSave]);
+
+  // Writes the page now, for locking the vault or closing the app.
+  const flushNow = useCallback(async () => {
+    // A debounced save can start while we wait, so wait until the chain stops growing.
+    let last: Promise<void> | null;
+    do {
+      last = inflightRef.current;
+      await last;
+    } while (inflightRef.current !== last);
+    if (dirtyRef.current) {
+      save.cancel();
+      await doSave();
+    }
+    await inflightRef.current;
+  }, [save, doSave]);
+
+  useEffect(() => registerFlush(flushNow), [flushNow]);
 
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
@@ -107,10 +135,7 @@ function LoadedEditor({ page }: { page: Page }) {
   useEffect(
     () => () => {
       save.cancel();
-      if (editorRef.current && dirtyRef.current) {
-        const e = editorRef.current;
-        api.savePage(page.id, titleRef.current, JSON.stringify(e.getJSON()), e.getText()).catch(() => {});
-      }
+      if (editorRef.current && dirtyRef.current) void doSave();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],

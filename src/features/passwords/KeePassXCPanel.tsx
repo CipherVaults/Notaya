@@ -18,6 +18,7 @@ export default function KeePassXCPanel() {
   const [phase, setPhase] = useState<Phase>("starting");
   const [error, setError] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
+  const mounted = useRef(true);
   const paletteOpen = useApp((s) => s.paletteOpen);
 
   /** The host area in physical pixels, relative to the window. */
@@ -42,8 +43,14 @@ export default function KeePassXCPanel() {
     setError(null);
     try {
       await api.keepassxcEmbed(r.x, r.y, r.w, r.h);
+      // The user may have left this view while KeePassXC was starting.
+      if (!mounted.current) {
+        api.keepassxcHide().catch(() => {});
+        return;
+      }
       setPhase("embedded");
     } catch (e) {
+      if (!mounted.current) return;
       setError(errorText(e));
       setPhase("failed");
     }
@@ -53,6 +60,7 @@ export default function KeePassXCPanel() {
   // Show KeePassXC when this panel appears; hide it when the panel goes away.
   useEffect(() => {
     let cancelled = false;
+    mounted.current = true;
     api.keepassxcStatus().then((s) => {
       if (cancelled) return;
       setStatus(s);
@@ -61,6 +69,7 @@ export default function KeePassXCPanel() {
     });
     return () => {
       cancelled = true;
+      mounted.current = false;
       api.keepassxcHide().catch(() => {});
     };
   }, [start]);

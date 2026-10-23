@@ -31,12 +31,16 @@ pub fn keepassxc_embed(window: WebviewWindow, state: State<'_, AppState>, x: i32
         return Err(Error::Locked);
     }
     let parent = window.hwnd()?.0 as isize;
-    keepassxc::embed(&state.paths, &state.keepassxc, parent, Rect { x, y, w, h })
+    keepassxc::embed(&state.paths, &state.keepassxc, parent, Rect { x, y, w, h }, &|| state.is_unlocked())
 }
 
-/// Moves and resizes the embedded KeePassXC as the panel changes size.
+/// Moves and resizes the embedded KeePassXC as the panel changes size. Refused
+/// while Cipherleaf is locked, so a late call can't bring the window back.
 #[tauri::command]
-pub fn keepassxc_place(x: i32, y: i32, w: i32, h: i32) -> Result<()> {
+pub fn keepassxc_place(state: State<'_, AppState>, x: i32, y: i32, w: i32, h: i32) -> Result<()> {
+    if !state.is_unlocked() {
+        return Err(Error::Locked);
+    }
     crate::embed::place(Rect { x, y, w, h })
 }
 
