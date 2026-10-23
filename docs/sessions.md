@@ -6,6 +6,29 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (about 11:00–13:55 UTC) — Cipherleaf — Passphrase and restore work paused, GitHub repository created
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and coordinator | Sonnet 5.5 | Raised to "ultracode" by the owner during this stretch | Not independently verified |
+| Helper agents (backend, UI, independent reviewer) and a verification workflow | Started by Claude; model and effort not recorded | Not recorded | Reports are model output; the workflow was stopped before it reported |
+
+**Record basis:** written at the end of the stretch from the repository, `gh` output and the conversation. **Reconstructed:** times are approximate system-clock readings (13:51 UTC when the push finished); the owner's messages have no recorded timestamps.
+
+## 🎯 What happened
+
+1. **Passphrase box and restore from backup** (the owner's choice after the A17 review): written by a backend agent and a UI agent, reviewed by an independent agent, partly fixed. Real-exe tests of the restore on throwaway vaults passed; a retry bug found by the code-review skill was fixed in the source but not rebuilt or re-tested. **Uncommitted** (14 files); nothing of it is in the portable build. Details and the list of what is left are in Claude's memory note `project_restore-feature-in-progress`.
+2. **Two pauses** at the owner's request (usage limit, then switching to ultracode). A verification workflow was started and stopped before it reported; its leftover mock server and test browser were stopped and the ports confirmed closed.
+3. **GitHub:** the owner asked for the project on GitHub as `CipherLeaf`. They chose **private** and **install GitHub CLI**. Claude installed `gh` 2.103.0 with winget; the owner signed in with a device code (two attempts failed: the second with GitHub "HTTP 503"; the third worked, account `AbyssWatcher2`). Claude created `main` at `8bd8ee8`, created the private repository <https://github.com/AbyssWatcher2/CipherLeaf>, added `origin` and pushed `main` and `feat/a9-keepassxc` (17 commits each side; both at `8bd8ee8`). Checked before the push: 135 tracked files, no vault data, keys, `.env` files or KeePassXC programs.
+
+## 🔜 Where to resume
+
+Finish the restore work (rebuild, re-run the real-exe tests, records, commit), then push the commit to GitHub. Open questions for the owner: a license, whether the repository may ever become public, and the outdated ZIP on the owner's Drive.
+
+---
+
 # 📘 Session: 2026-10-23 (from about 08:28 UTC) — Cipherleaf — Code review, lock and data-loss fixes (A17), rebuild
 
 ## 🤖 Models, Effort, Roles and Provenance
