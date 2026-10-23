@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (after the owner's message of 21:37:43 UTC; work times not recorded), EX-2026-10-23-20: Notices gaps (WebView2 loader licence, KeePassXC library sources)
+
+- Report: [2026-10-23-notices-gaps.md](2026-10-23-notices-gaps.md)
+- Task / Goal: fill the two small gaps in `THIRD-PARTY-NOTICES.md` after the V1.0 release
+- Executor: Claude (Claude Code), a research agent and a PC read-only inventory (model output)
+- Outcome: WebView2 loader licence text added; KeePassXC bundled libraries documented from real files with a source-pointer section; files added under `packaging/Licenses/`; the V1.0 asset is unchanged and does not include them
+- Acceptance: pending (the owner has not reviewed it)
+- Open dependency / next action: the owner decides between a V1.0.1 and editing the V1.0 asset
+
 ### 2026-10-23 (after the owner's merge at 20:45:05 UTC; work times not recorded), EX-2026-10-23-19: V1.0 stable portable folder and ZIP
 
 - Report: [2026-10-23-v1-portable-build.md](2026-10-23-v1-portable-build.md)

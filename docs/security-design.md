@@ -126,7 +126,7 @@ P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite passed agai
 - **Visible metadata:** the file is recognizably SQLite. Record and attachment counts, approximate sizes, the Argon2 settings, the vault ID and whether a keyfile is required are all visible.
 - **Appearance settings in plaintext:** theme, accent, font, and layout choices such as the sidebar width, in the WebView2 storage inside `data/webview/`.
 - **Two master passwords:** Cipherleaf and KeePassXC are unlocked separately.
-- **KeePassXC needs the Microsoft Visual C++ 2015–2022 x64 runtime** installed on the PC; the portable ZIP doesn't include it.
+- **KeePassXC needs the Microsoft Visual C++ 2015–2022 x64 runtime** installed on the PC. The V1.0 portable ZIP carries Microsoft's installer `vc_redist.x64.exe` inside the `KeePassXC\` folder (it is KeePassXC's upstream package content); nothing runs it automatically. `Cipherleaf.exe` itself does not import the runtime DLLs (read from its import table).
 - **Cipherleaf's lock-when-unplugged and screenshot blocking don't cover KeePassXC's window.** KeePassXC has its own protections.
 - **KeePassXC may remember recent file paths** in its settings (the preset turns that off; the owner can change it).
 - **Bundled copy must be kept updated:** 2.8.0 fixed several security issues, and later releases may too. 2.7.12 is the fallback if 2.8.0 shows problems.
