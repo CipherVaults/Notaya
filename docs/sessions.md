@@ -14,7 +14,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 1. The owner merged PR #3 into `main` at 20:45:05 UTC (`0ed3f52`).
 2. A PC session built the V1.0 stable portable folder and ZIP from exactly that commit and tested the built exe on throwaway data: `cargo test --lib` 127 of 127, release build ok, optional security 52/52, restore flow 13/13, real window 12/12. Exe SHA-256 `C43E84220E560BB7A7F6E9C4273794F704B448D1CA8ECC48BC1E3CB72FA8EA11`; ZIP SHA-256 `CAB1E72E79B9061DA05558A9AFB5CFBCB916B589A32FB318AE110E04D522D53D`; no `data\` folder; full KeePassXC licence texts and source archive in `Licenses\KeePassXC`. Details: [EX-19](execution/2026-10-23-v1-portable-build.md).
-3. The private GitHub release was **not** created: the PC's permission layer denied `gh release create`, so no tag exists. The owner creates it (command in EX-19) or approves the command.
+3. The PC's permission layer denied `gh release create` (twice), so the owner created it from their own terminal (published 21:32:53 UTC per GitHub). [Release v1.0](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.0): tag `v1.0` points at `0ed3f525c5a93dabfe9c1e73fe94d4ebe91840da`, not a draft, not a prerelease, one asset `Cipherleaf-V1.0-portable.zip` (87,186,510 bytes) whose GitHub-computed SHA-256 digest is `cab1e72e79b9061da05558a9afb5cfbcb916b589a32fb318ae110e04d522d53d` (matches the built ZIP). Checked through the GitHub API on 2026-10-23 at about 21:33 UTC; the asset was not downloaded and re-hashed. Not accepted by the owner.
 
 Not run: testA, testB, testC c2/c2q, testD1, USB removal, idle lock, Win+L and sleep on a real PC, `cargo audit`. Nothing is accepted.
 

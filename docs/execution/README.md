@@ -19,9 +19,9 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Report: [2026-10-23-v1-portable-build.md](2026-10-23-v1-portable-build.md)
 - Task / Goal: build the stable portable folder and ZIP from the merged `main` (`0ed3f52`) and publish the private release "CipherLeaf V1.0" (owner messages of 19:13:17 and 19:31:52 UTC)
 - Executor: Claude (Claude Code), PC remote session (model output)
-- Outcome: folder and ZIP built and tested on throwaway data (127/127 tests; optional security 52/52, restore flow 13/13; real window 12/12); exe SHA-256 `C43E84220E560BB7A7F6E9C4273794F704B448D1CA8ECC48BC1E3CB72FA8EA11`; ZIP SHA-256 `CAB1E72E79B9061DA05558A9AFB5CFBCB916B589A32FB318AE110E04D522D53D`; no `data\`. **The GitHub release was not created:** the PC's permission layer denied `gh release create`.
+- Outcome: folder and ZIP built and tested on throwaway data (127/127 tests; optional security 52/52, restore flow 13/13; real window 12/12); exe SHA-256 `C43E84220E560BB7A7F6E9C4273794F704B448D1CA8ECC48BC1E3CB72FA8EA11`; ZIP SHA-256 `CAB1E72E79B9061DA05558A9AFB5CFBCB916B589A32FB318AE110E04D522D53D`; no `data\`. The PC's permission layer denied `gh release create`; the owner then created release `v1.0` themselves (tag on `0ed3f52`, asset digest matches the ZIP hash).
 - Acceptance: pending (the owner has not reviewed it)
-- Open dependency / next action: the owner creates the release (command in the report)
+- Open dependency / next action: the owner's review and acceptance
 
 ### 2026-10-23 (owner message 20:12:53 UTC for A22; the credits message time and work times not recorded), EX-2026-10-23-18: Credits for open source components and the suggested passphrase removed (A22)
 
