@@ -174,6 +174,17 @@ impl Session {
         Ok((mime, body[1 + mime_len..].to_vec()))
     }
 
+    /// Decrypts and authenticates every attachment (one at a time, then drops
+    /// it). `unlock` already checks every record; attachments are otherwise
+    /// only checked when they are shown. A restore uses this to check the
+    /// whole file before it replaces the live vault.
+    pub fn verify_attachments(&self) -> Result<()> {
+        for id in self.store.ids(Table::Attachments)? {
+            self.get_attachment(&hex::encode(id))?;
+        }
+        Ok(())
+    }
+
     /// Deletes attachments no page or sticky note refers to any more.
     pub fn collect_garbage(&mut self) -> Result<usize> {
         let mut referenced = String::new();

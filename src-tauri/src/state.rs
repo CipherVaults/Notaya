@@ -1,6 +1,7 @@
 //! Shared app state, locking, and the background auto-lock monitor.
 
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::process::Child;
 use std::sync::{Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime};
@@ -69,6 +70,9 @@ pub struct AppState {
     flush_cv: Condvar,
     /// Lets only one flush round run at a time.
     flush_gate: Mutex<()>,
+    /// The backup file the user most recently chose in the file dialog (canonical
+    /// path). `restore_vault` accepts an absolute path only if it is this one.
+    picked_backup: Mutex<Option<PathBuf>>,
 }
 
 fn guard<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -87,7 +91,22 @@ impl AppState {
             flush: Mutex::new(Flush::default()),
             flush_cv: Condvar::new(),
             flush_gate: Mutex::new(()),
+            picked_backup: Mutex::new(None),
         }
+    }
+
+    /// Remembers the file the user just chose in the backup dialog.
+    pub fn set_picked_backup(&self, path: PathBuf) {
+        *guard(&self.picked_backup) = Some(path);
+    }
+
+    pub fn picked_backup(&self) -> Option<PathBuf> {
+        guard(&self.picked_backup).clone()
+    }
+
+    /// Forgets the chosen file, so a restore attempt can't be repeated without a new pick.
+    pub fn clear_picked_backup(&self) {
+        *guard(&self.picked_backup) = None;
     }
 
     /// Remembers that the window `label` is ready and will flush when asked.
@@ -210,6 +229,12 @@ pub fn request_flush(app: &AppHandle, timeout: Duration) {
     f.finish();
 }
 
+/// Whether a lock tells the UI with `vault-locked`. A restore finishes first and
+/// the UI reloads itself, so it must not reload in the middle of the restore.
+fn emits_vault_locked(reason: &str) -> bool {
+    reason != "restore"
+}
+
 /// Locks the vault: first lets every window save its pending edits (unless the
 /// drive was removed, when saving can't work), then wipes keys and decrypted
 /// data from memory, closes sticky notes, tells the UI to reset itself, and only
@@ -226,7 +251,9 @@ pub fn lock(app: &AppHandle, reason: &str) {
     // The UI comes first: hide the overlay, close stickies, reset the windows.
     crate::embed::hide();
     ui::close_stickies(app);
-    let _ = app.emit("vault-locked", reason.to_string());
+    if emits_vault_locked(reason) {
+        let _ = app.emit("vault-locked", reason.to_string());
+    }
     // Slow parts after that.
     let backup = session.as_ref().filter(|s| s.dirty).map(|s| rotate_backup(&state.paths, s));
     if let Some(Err(e)) = backup {
@@ -351,6 +378,27 @@ mod tests {
         f.finish();
         assert!(f.is_done());
         assert!(!f.ack("main", r));
+    }
+
+    #[test]
+    fn only_a_restore_lock_skips_the_vault_locked_event() {
+        for reason in ["manual", "idle", "sleep", "screen-locked", "minimized", "drive-removed", "quit"] {
+            assert!(emits_vault_locked(reason), "{reason}");
+        }
+        assert!(!emits_vault_locked("restore"));
+    }
+
+    #[test]
+    fn the_picked_backup_is_remembered_replaced_and_cleared() {
+        let root = std::env::temp_dir().join(format!("cipherleaf-state-{}", crate::model::new_id()));
+        let state = AppState::new(Paths::at(&root, root.join("kp")));
+        assert_eq!(state.picked_backup(), None);
+        state.set_picked_backup(PathBuf::from("a.clf"));
+        assert_eq!(state.picked_backup(), Some(PathBuf::from("a.clf")));
+        state.set_picked_backup(PathBuf::from("b.clf"));
+        assert_eq!(state.picked_backup(), Some(PathBuf::from("b.clf")));
+        state.clear_picked_backup();
+        assert_eq!(state.picked_backup(), None);
     }
 
     #[test]

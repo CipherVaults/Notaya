@@ -6,6 +6,7 @@ mod generator;
 mod keepassxc;
 mod model;
 mod portable;
+mod restore;
 mod state;
 mod system;
 mod ui;
@@ -15,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{keepassxc as keepassxc_cmd, notes, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, keepassxc as keepassxc_cmd, notes, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -107,6 +108,9 @@ pub fn run() {
             vault_cmd::flush_done,
             vault_cmd::quit_app,
             vault_cmd::open_data_folder,
+            backup_cmd::list_backups,
+            backup_cmd::pick_backup_file,
+            backup_cmd::restore_vault,
             notes::list_notes,
             notes::create_notebook,
             notes::update_notebook,

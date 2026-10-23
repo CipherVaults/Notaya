@@ -8,6 +8,18 @@ export interface VaultStatus {
   version: string;
 }
 
+/** One automatic backup file in the data folder (newest first from the backend). */
+export interface BackupInfo {
+  name: string;
+  modifiedMs: number;
+  size: number;
+}
+
+export interface RestoreResult {
+  /** File name of the old vault that was kept in the data folder, if there was one. */
+  undoFile: string | null;
+}
+
 export type ThemeMode = "black" | "graphite" | "white" | "paper" | "system";
 export type Backdrop = "mica" | "acrylic" | "none";
 

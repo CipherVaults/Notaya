@@ -109,6 +109,21 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "lock_vault":
       unlocked = false;
       return ok(null);
+    case "list_backups":
+      return ok([
+        { name: "vault-2026-10-22-18-40.clf", modifiedMs: ago(60 * 20), size: 482_304 },
+        { name: "vault-2026-10-21-09-05.clf", modifiedMs: ago(60 * 44), size: 1_572_864 },
+      ]);
+    case "pick_backup_file":
+      return ok("E:\\Backups\\my-old-vault.clf");
+    case "restore_vault":
+      if (args.password === "wrong") throw "That password (or keyfile) doesn't open this backup.";
+    {
+      const undoFile = exists ? "restore-undo-1792700000000.clf" : null;
+      exists = true;
+      unlocked = true;
+      return ok({ undoFile });
+    }
     case "flush_done":
       return ok(null);
     case "get_settings":

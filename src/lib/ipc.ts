@@ -4,12 +4,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { flushAll } from "./flush";
 import type {
+  BackupInfo,
   Generated,
   KeePassXCStatus,
   NotesTree,
   Page,
   PageMeta,
   PassphraseOptions,
+  RestoreResult,
   SearchHit,
   Settings,
   Sticky,
@@ -39,6 +41,11 @@ export const api = {
   pickKeyfile: () => invoke<string | null>("pick_keyfile"),
   createKeyfile: () => invoke<string | null>("create_keyfile"),
   backupNow: () => invoke<string | null>("backup_now"),
+  // Restore from a backup (works while locked). `source` is a backup name or a full path.
+  listBackups: () => invoke<BackupInfo[]>("list_backups"),
+  pickBackupFile: () => invoke<string | null>("pick_backup_file"),
+  restoreVault: (source: string, password: string, keyfile: string | null) =>
+    invoke<RestoreResult>("restore_vault", { source, password, keyfile }),
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
   setBackdrop: (kind: string, dark: boolean) => invoke<boolean>("set_backdrop", { kind, dark }),

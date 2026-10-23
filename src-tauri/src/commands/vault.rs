@@ -43,7 +43,7 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
     })
 }
 
-fn read_keyfile(path: Option<String>) -> Result<Option<Zeroizing<[u8; 32]>>> {
+pub(super) fn read_keyfile(path: Option<String>) -> Result<Option<Zeroizing<[u8; 32]>>> {
     path.filter(|p| !p.trim().is_empty())
         .map(|p| crypto::keyfile_digest(&PathBuf::from(p)))
         .transpose()
@@ -64,7 +64,7 @@ fn check_new_password(password: &str) -> Result<()> {
 }
 
 /// Things to do right after unlocking: restore sticky notes and window effects.
-fn after_unlock(app: &AppHandle, state: &AppState) {
+pub(super) fn after_unlock(app: &AppHandle, state: &AppState) {
     state.record_success();
     let Ok((settings, stickies)) = state.with(|s| {
         let stickies: Vec<Sticky> = s

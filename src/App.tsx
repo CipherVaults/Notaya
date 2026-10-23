@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "motion/react";
-import { Toaster } from "sonner";
+import { toast, Toaster } from "sonner";
 import { flushAll } from "@/lib/flush";
 import { api } from "@/lib/ipc";
 import { applyAppearance, cachedAppearance, isDark } from "@/lib/theme";
@@ -17,6 +17,17 @@ export default function App() {
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
 
   useEffect(() => {
+    // A message saved just before a reload (for example a restore that failed): show it once.
+    try {
+      const notice = sessionStorage.getItem("cipherleaf.notice");
+      if (notice) {
+        sessionStorage.removeItem("cipherleaf.notice");
+        toast.error(notice, { duration: 12000 });
+      }
+    } catch {
+      // Storage may be unavailable; nothing to show then.
+    }
+
     applyAppearance(cachedAppearance(), true).finally(() => {
       refreshStatus().finally(() => {
         // Show the window only after the first paint, so there is no white flash.
@@ -26,7 +37,20 @@ export default function App() {
 
     // Rust tells us when the vault locks (idle, Win+L, sleep, USB removed...).
     // Reloading discards every decrypted value held by the UI.
-    const unlisten = listen<string>("vault-locked", () => window.location.reload());
+    // If a restore failed after the vault was locked, the payload is "restore-failed: <message>".
+    // Keep the message across the reload so it can be shown once on the next start.
+    const unlisten = listen<string>("vault-locked", (event) => {
+      const payload = typeof event.payload === "string" ? event.payload : "";
+      if (payload.startsWith("restore-failed")) {
+        const text = payload.replace(/^restore-failed:?\s*/, "");
+        try {
+          sessionStorage.setItem("cipherleaf.notice", text || "The restore did not finish.");
+        } catch {
+          // Storage may be unavailable; the reload still happens.
+        }
+      }
+      window.location.reload();
+    });
     // Rust waits for every window to write its pending saves before it locks.
     const unlistenLocking = listen<number>("vault-locking", async (event) => {
       try {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimationControls } from "motion/react";
-import { ArrowRight, Eye, EyeOff, FileKey2, KeyRound, Loader2, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, Check, Copy, FileKey2, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { cachedAppearance } from "@/lib/theme";
@@ -9,6 +9,8 @@ import { useApp } from "@/store/app";
 import { Button, StrengthMeter } from "@/components/ui";
 import Logo from "@/components/Logo";
 import LockBackdrop from "./Backdrop";
+import { copyText, KeyfileChip, PasswordInput } from "./fields";
+import RestoreDialog from "./RestoreDialog";
 
 export default function UnlockScreen() {
   const status = useApp((s) => s.status);
@@ -38,67 +40,12 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PasswordInput({
-  value,
-  onChange,
-  placeholder,
-  autoFocus,
-  onEnter,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  autoFocus?: boolean;
-  onEnter?: () => void;
-}) {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative">
-      <KeyRound size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
-      <input
-        type={show ? "text" : "password"}
-        value={value}
-        autoFocus={autoFocus}
-        spellCheck={false}
-        autoComplete="off"
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && onEnter?.()}
-        className="h-12 w-full rounded-2xl border border-line bg-surface pl-10 pr-11 text-[0.95rem] text-fg outline-none transition-all placeholder:text-faint focus:border-accent focus:ring-4 focus:ring-accent-soft"
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        onClick={() => setShow(!show)}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-faint hover:text-fg"
-        aria-label={show ? "Hide password" : "Show password"}
-      >
-        {show ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
-    </div>
-  );
-}
-
-function KeyfileChip({ path, onClear }: { path: string; onClear: () => void }) {
-  const name = path.split(/[\\/]/).pop();
-  return (
-    <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft px-3 py-2 text-sm">
-      <FileKey2 size={15} className="text-accent" />
-      <span className="flex-1 truncate" title={path}>
-        {name}
-      </span>
-      <button onClick={onClear} className="rounded p-0.5 text-muted hover:text-fg" aria-label="Remove keyfile">
-        <X size={14} />
-      </button>
-    </div>
-  );
-}
-
 function UnlockCard({ keyfileRequired }: { keyfileRequired: boolean }) {
   const [password, setPassword] = useState("");
   const [keyfile, setKeyfile] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const controls = useAnimationControls();
   const refreshStatus = useApp((s) => s.refreshStatus);
 
@@ -175,9 +122,76 @@ function UnlockCard({ keyfileRequired }: { keyfileRequired: boolean }) {
               </>
             )}
           </Button>
+          <div className="pt-1 text-center">
+            <button
+              type="button"
+              onClick={() => setRestoreOpen(true)}
+              className="rounded-md px-2 py-1 text-sm font-medium text-fg underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-soft"
+            >
+              Restore from a backup…
+            </button>
+          </div>
         </div>
       </Card>
+      <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists />
     </motion.div>
+  );
+}
+
+/** Shows a suggested passphrase in plain sight so it can be read, written down or copied. */
+function SuggestedPassphrase({ value }: { value: string }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const copied = copyState === "copied";
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+  // A new suggestion starts fresh.
+  useEffect(() => {
+    clearTimeout(timer.current);
+    setCopyState("idle");
+  }, [value]);
+
+  const copy = async () => {
+    const ok = await copyText(value);
+    setCopyState(ok ? "copied" : "failed");
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCopyState("idle"), ok ? 2000 : 3000);
+  };
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-accent/40 bg-accent-soft p-4">
+      <div className="text-xs font-medium uppercase tracking-wider text-faint">Your suggested passphrase</div>
+      <div className="flex items-start gap-3">
+        {/* May wrap only after a hyphen. The <wbr /> adds no characters, so copying and selecting give the exact phrase. */}
+        <div
+          className="selectable min-w-0 flex-1 font-mono text-lg font-semibold leading-snug text-fg"
+          style={{ overflowWrap: "normal", wordBreak: "normal" }}
+        >
+          {value.split("-").map((part, i, all) => (
+            <span key={i}>
+              {part}
+              {i < all.length - 1 && (
+                <>
+                  -<wbr />
+                </>
+              )}
+            </span>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" onClick={copy} className="shrink-0">
+          {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy"}
+        </Button>
+      </div>
+      <span role="status" aria-live="polite" className={copyState === "failed" ? "block text-xs text-danger" : "sr-only"}>
+        {copied ? "Copied to the clipboard" : copyState === "failed" ? "Couldn't copy - select the text and press Ctrl+C" : ""}
+      </span>
+      <p className="text-sm leading-relaxed text-fg">
+        Write this down on paper or save it in a password manager. Then type it again in the second box.
+      </p>
+      <p className="text-xs leading-relaxed text-muted">
+        Copying puts it on the clipboard. Windows may keep clipboard history (Win+V), so clear it after you have pasted it.
+      </p>
+    </div>
   );
 }
 
@@ -189,6 +203,9 @@ function CreateCard() {
   const [keyfile, setKeyfile] = useState<string | null>(null);
   const [understood, setUnderstood] = useState(false);
   const [busy, setBusy] = useState(false);
+  // The suggested passphrase, shown so it can be read and copied. Kept in this component only.
+  const [suggested, setSuggested] = useState<string | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const refreshStatus = useApp((s) => s.refreshStatus);
   const seq = useRef(0);
 
@@ -212,7 +229,14 @@ function CreateCard() {
     const g = await api.generatePassphrase({ words: 6, separator: "-", capitalize: true, includeNumber: true });
     setPassword(g.value);
     setConfirm("");
-    toast.info("Suggested a 6-word passphrase. Write it down somewhere safe, then type it again to confirm.");
+    setSuggested(g.value);
+    toast.info("Suggested a passphrase. It is shown below; write it down first.");
+  };
+
+  const changePassword = (v: string) => {
+    setPassword(v);
+    // Hide the box as soon as the password is edited to something else.
+    if (v !== suggested) setSuggested(null);
   };
 
   const create = async () => {
@@ -221,6 +245,7 @@ function CreateCard() {
       await api.createVault(password, keyfile);
       setPassword("");
       setConfirm("");
+      setSuggested(null);
       await refreshStatus();
       toast.success("Your vault is ready.");
     } catch (e) {
@@ -253,7 +278,7 @@ function CreateCard() {
             exit={{ opacity: 0, x: -16 }}
             className="space-y-3"
           >
-            <PasswordInput value={password} onChange={setPassword} placeholder="Master password" autoFocus />
+            <PasswordInput value={password} onChange={changePassword} placeholder="Master password" autoFocus />
             {strength && <StrengthMeter score={strength.score} label={`~${strength.crackTime} to crack`} />}
             {strength?.warning && <p className="text-xs text-warn">{strength.warning}</p>}
             <PasswordInput
@@ -266,6 +291,7 @@ function CreateCard() {
             <button onClick={suggest} className="flex items-center gap-1.5 text-xs font-medium text-accent hover:underline">
               <Sparkles size={13} /> Suggest a strong passphrase
             </button>
+            {suggested && <SuggestedPassphrase value={suggested} />}
             <Button
               variant="primary"
               size="lg"
@@ -278,6 +304,15 @@ function CreateCard() {
             {!strongEnough && password && (
               <p className="text-center text-xs text-faint">Use at least 10 characters and reach "Strong".</p>
             )}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setRestoreOpen(true)}
+                className="rounded-md px-2 py-1 text-sm font-medium text-fg underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-soft"
+              >
+                Already have a backup? Restore it
+              </button>
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -337,6 +372,7 @@ function CreateCard() {
           </motion.div>
         )}
       </AnimatePresence>
+      <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists={false} />
     </Card>
   );
 }

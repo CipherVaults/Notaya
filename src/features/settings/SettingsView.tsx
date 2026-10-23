@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, Palette, ShieldCheck } from "lucide-react";
+import { Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, Palette, RotateCcw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
@@ -8,6 +8,7 @@ import type { Settings, ThemeMode } from "@/lib/types";
 import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
+import RestoreDialog from "@/features/unlock/RestoreDialog";
 
 const THEMES: { value: ThemeMode; label: string; bg: string; side: string; fg: string; line: string }[] = [
   { value: "black", label: "Black", bg: "#000000", side: "#0b0b0b", fg: "#f4f4f4", line: "rgba(255,255,255,0.14)" },
@@ -22,6 +23,7 @@ export default function SettingsView() {
   const setSettings = useApp((s) => s.setSettings);
   const status = useApp((s) => s.status);
   const [changeOpen, setChangeOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
   const persist = useMemo(
     () =>
@@ -206,9 +208,10 @@ export default function SettingsView() {
         <Section icon={<Archive size={16} />} title="Backups">
           <p className="pb-3 text-sm leading-relaxed text-muted">
             Each time the vault locks after changes, an encrypted backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
-            Backups open with the same password and keyfile.
+            Backups open with the password and keyfile they had when they were made.
+            Restoring puts a backup in place of your current vault, and keeps the current vault as a separate file.
           </p>
-          <div className="flex gap-2 pb-2">
+          <div className="flex flex-wrap gap-2 pb-2">
             <Button
               variant="outline"
               size="sm"
@@ -222,6 +225,9 @@ export default function SettingsView() {
               }}
             >
               <Archive size={14} /> Save a backup copy…
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setRestoreOpen(true)}>
+              <RotateCcw size={14} /> Restore from a backup…
             </Button>
             <Button variant="ghost" size="sm" onClick={() => api.openDataFolder()}>
               <FolderOpen size={14} /> Open data folder
@@ -258,6 +264,7 @@ export default function SettingsView() {
       </div>
 
       <ChangeMasterDialog open={changeOpen} onOpenChange={setChangeOpen} />
+      <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists />
     </div>
   );
 }
