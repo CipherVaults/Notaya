@@ -41,7 +41,7 @@ By default security is **off**. Notes open straight away, nothing locks, and scr
 Open Settings and find "Security".
 
 - **Turn on:** Cipherleaf asks you to choose a master password (with a strength check, a suggested passphrase and an optional keyfile) and to confirm that there is no password reset. It also asks whether to delete earlier automatic backups that were made while security was off (these can be read by anyone, see below). Old vaults that a restore kept (`restore-undo-...` files) and backup copies you saved yourself are never deleted. Turning security on gives your notes a new key and re-encrypts all of them. Your notes are kept, but this takes a moment, and a large notebook takes longer. A copy made while security was off cannot open notes saved after you turn security on.
-- **Turn off:** Cipherleaf asks for your current password (and keyfile). It then shows warnings. After that, the notes open without a password again. Turning security off also gives your notes a new key and takes a moment.
+- **Turn off:** this also works for a vault that already had a master password. Unlock it as usual, open Settings, find "Security" and press "Turn off security…". Cipherleaf asks for your current password (and keyfile) again. It then shows warnings. After that, the notes open without a password again. Turning security off also gives your notes a new key and takes a moment.
 
 Warnings you can expect when turning security off:
 

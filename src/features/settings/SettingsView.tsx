@@ -194,9 +194,9 @@ export default function SettingsView() {
         <Section icon={<ShieldCheck size={16} />} title="Security (optional)">
           {securityOn ? (
             <>
-              <Row label="Security is on" hint="Your notes need the master password to open. You can turn security off at any time.">
+              <Row label="Security is on" hint="Your notes need the master password to open. Once you have unlocked them, you can turn security off here at any time (it asks for the password again).">
                 <Button variant="outline" size="sm" onClick={() => setDisableOpen(true)}>
-                  <LockOpen size={14} /> Turn off…
+                  <LockOpen size={14} /> Turn off security…
                 </Button>
               </Row>
               <Row label={`Auto-lock after ${settings.idleLockMinutes} min of inactivity`} hint="Also locks on Win+L, sleep, hibernate, and when the USB drive is removed.">
