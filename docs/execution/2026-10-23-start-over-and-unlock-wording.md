@@ -29,4 +29,4 @@ Limits of the real-exe pass: the native file dialog can't be scripted on that PC
 
 ## 4. Documentation, Git and Next Step
 
-Records: [A20](../plan/A20-start-over-and-unlock-wording.md), the amendments table, P19 in security-design.md, the execution index, STATUS.md and sessions.md. Git: committed and pushed to branch `claude/project-thread-p5yntz` only. `main` and `feat/a9-keepassxc` were not changed: the push-both rule covers those two branches, and merging A20 into them waits for the owner. Next: the owner reviews A20 and PR #1; merging into `feat/a9-keepassxc` and a new portable build wait for the owner.
+Records: [A20](../plan/A20-start-over-and-unlock-wording.md), the amendments table, P19 in security-design.md, the execution index, STATUS.md and sessions.md. Git: committed and pushed to branch `claude/project-thread-p5yntz` only. PR #1 was then merged into `main` by the owner (2026-10-23, 19:09 UTC, `6999b73`); `feat/a9-keepassxc` was not changed and still needs the owner's decision. Next: the owner reviews A20 and PR #1; merging into `feat/a9-keepassxc` and a new portable build wait for the owner.
