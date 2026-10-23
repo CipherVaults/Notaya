@@ -6,6 +6,31 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (about 13:55–14:20 UTC) — Cipherleaf — Restore from backup and readable passphrase finished (A18), rebuilt
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and coordinator | Sonnet 5.5 | "ultracode", set by the owner earlier in the day | Not independently verified |
+| Helper agents: backend, UI, independent reviewers (rounds 1 and 3, plus a final reviewer in round 2), visual check, records; a verification workflow | Started by Claude; model and effort not recorded | Not recorded | Reports are model output; Claude checked the key claims in the code. The verification workflow was stopped before it reported and nothing from it is relied on. |
+| code-review skill | Claude Code skill | Not recorded | Used in review round 2 |
+
+**Record basis:** written at the end of the stretch from the repository, the build and test output and the conversation. **Reconstructed:** times are system-clock readings (13:51 UTC when the earlier GitHub push finished, about 14:14 UTC at the release build, 14:17 UTC when the ZIP was made); the owner's messages have no recorded timestamps. The start time of this stretch is approximate.
+
+## 🎯 What happened
+
+1. **The owner asked where to keep texting** ("should i keep texting in the project thread or here better ?", with a screenshot of the Claude app's project view). Answer: stay in this session for the unfinished restore work, because the project thread works from the GitHub copy and cannot see uncommitted files; use the project thread for planning and new tasks; never let two workers change the same files. Then the owner said "Finish the restore work".
+2. **Review rounds** on the passphrase box and the restore: an independent agent (stuck screen after a failed restore, a hostile Argon2 header, a file-check error taken as "no vault", a false "Copied", a missing attachment test); the code-review skill with Claude (the picked path was forgotten after a wrong password; an early clear had been brought back once by an agent's edit that overwrote Claude's fix, removed again and confirmed by a final reviewer); a final independent agent (lost error message, rollback and journal handling, raw OS errors, dead code, weak tests, IME Enter, focus) and a visual check agent on mock-UI screenshots (broken passphrase wrapping, a faint link, a plain success message, confusing wording). All fixed.
+3. **Checks and real-exe tests:** 68 Rust tests, clippy (3 old warnings), type check and build on the source that was committed. The first real-exe attempt failed only because the app's own 5-minute idle lock locked the throwaway vaults while the PC sat idle; the scripts now raise the throwaway vault's idle setting. Then the restore tests and the lock regression passed on the release exe `7BB5303F…`.
+4. **Committed and rebuilt:** code commit `1273093`; the portable folder got the new exe (the owner's `data\` untouched) and the ZIP was remade without `data\` (`03AD0B3E…E5AC`). The records were written after that. The records commit and the push to GitHub follow it.
+
+## 🔜 Where to resume
+
+The owner tries the new exe and replaces the outdated ZIP copies. Not tested: choosing a file with the native file dialog and restoring it, and the new screens in the real window. Open: A2, A8, STATUS question 8, evidence for A1 and A3–A7, a license file, whether the repository may ever be public, and the EX-13 backlog items not done (including backing up the KeePassXC passwords file).
+
+---
+
 # 📘 Session: 2026-10-23 (about 11:00–13:55 UTC) — Cipherleaf — Passphrase and restore work paused, GitHub repository created
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -26,6 +51,8 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 ## 🔜 Where to resume
 
 Finish the restore work (rebuild, re-run the real-exe tests, records, commit), then push the commit to GitHub. Open questions for the owner: a license, whether the repository may ever become public, and the outdated ZIP on the owner's Drive.
+
+**Correction (added 2026-10-23, later the same day):** point 1 above says the restore work was uncommitted and not in the portable build. It was finished afterwards: committed as `1273093` (A18) and put into the rebuilt portable build and ZIP. See the entry above this one and [EX-14](execution/2026-10-23-restore-from-backup.md).
 
 ---
 

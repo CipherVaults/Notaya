@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (about 11:00–14:20) — EX-2026-10-23-14 — Readable first-run passphrase and restore from backup (A18), rebuild
+
+- Report: [2026-10-23-restore-from-backup.md](2026-10-23-restore-from-backup.md)
+- Task / Goal: the owner's choice of "the first-run passphrase fix ... and the in-app restore from backup" and the later "Finish the restore work" (message times not recorded; the clock read 13:51 UTC after the earlier push, about 14:14 at the build and 14:17 after the ZIP); amendment [A18](../plan/A18-readable-passphrase-and-restore-from-backup.md)
+- Executor: Claude (Sonnet 5.5), with helper agents (backend, UI, independent reviewers, visual check, records)
+- Outcome: the suggested passphrase shows in plain text with a Copy button; a backup can be restored from the lock screen, the create-vault screen and Settings (the old vault is kept as `restore-undo-*.clf`). Committed (`1273093`); portable exe `7BB5303F…F3A1` and ZIP rebuilt (the owner's `data\` untouched, ZIP without it). 68 Rust tests, type check and build pass; real-exe tests on throwaway vaults passed for the restore (locked and unlocked, wrong password, refused paths) and for the lock regression. Not tested: the file-dialog path end to end, the new screens in the real window.
+- Integration / review: three review rounds; agent reports are model output; Claude checked the key claims in the code
+- Acceptance: pending (the owner tries the new exe)
+- Open dependency / next action: the owner replaces the older ZIP copies and reviews A18 (a new way to replace the vault file); A2 and A8 decisions
+
 ### 2026-10-23 (about 08:28–09:05) — EX-2026-10-23-13 — Code review, lock and data-loss fixes (A17), rebuild
 
 - Report: [2026-10-23-lock-and-data-loss-fixes.md](2026-10-23-lock-and-data-loss-fixes.md)
