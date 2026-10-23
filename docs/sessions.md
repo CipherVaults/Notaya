@@ -6,6 +6,21 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (after 22:25:50 UTC; work times not recorded), Cipherleaf: V1.0.1 audit fixes (A23), cloud thread session
+
+**Executor:** Claude (Claude Code) in the cloud thread session, with three writing agents, an independent review agent, two fix agents and a PC remote session (all model output). **Record basis:** the project-thread timestamps and the repository.
+
+## What happened
+
+1. The owner approved a V1.0.1 with the audit's top fixes (22:25:50 UTC, after saying at 21:51:03 UTC to wait for the audit). Amendment A23; [EX-21](execution/2026-10-23-v1-0-1-audit-fixes.md).
+2. Changes: password change re-keys; verified atomic backups, hourly for open vaults, failure notices; safety backup and counts before deleting a notebook or section; honest wording with security off; keyboard sidebar; `ctutils` 0.4.5; versions 1.0.1.
+3. Checks: cloud `tsc`, build and 101 harness tests; an independent review (no High; findings fixed); PC results are in EX-21 and A23. During the PC run another thread was using the same PC; one optional-security step failed once and may have been that collision (not proven).
+4. The owner said at 23:06:10 UTC that they would sleep and asked to continue everything and to put the computer to sleep afterwards (not while another thread tests).
+
+Not run: free-space check, real-PC USB removal, idle, Win+L, sleep, a screen reader. Nothing is accepted.
+
+---
+
 # 📘 Session: 2026-10-23 (after the owner's merge at 20:45:05 UTC; work times not recorded), Cipherleaf: V1.0 portable build, cloud thread session
 
 **Executor:** Claude (Claude Code) in the cloud thread session, with a PC remote session for the build (model output). **Record basis:** GitHub (merge time, merge commit), the PC session's report.
