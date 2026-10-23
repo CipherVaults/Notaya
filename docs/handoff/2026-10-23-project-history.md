@@ -1,6 +1,6 @@
 # Cipherleaf: project history handoff (2026-10-22 to 2026-10-23)
 
-Prepared 2026-10-23, about 16:30 UTC (the requester's time; the system clock read 16:39 UTC when the file was written). This is a prepared handoff. It has not been delivered to anyone and nobody has acknowledged it.
+Prepared 2026-10-23, about 16:30 UTC (the requester's time; the system clock read 16:39 UTC when the file was written). This is a prepared handoff. It was committed and pushed in `f7912fb` and read by the project thread on 2026-10-23, but the owner has not acknowledged it.
 
 Rules used to write it: every statement comes from the project's own records (listed at the end). Where a time or fact is not in them, it says "not recorded". Hashes are shortened in the text; full values are in the records named next to them. Times are UTC unless stated. The owner's PC is UTC+3, so Git shows local times (for example `19:13 +0300` is 16:13 UTC).
 
@@ -265,7 +265,7 @@ Test counts over time: 27 (11:37 on 10-22), 33, 39 (A17), 68 (A18), 107 (A19) Ru
 - A timing slip in the records: the KaTeX approval was once recorded as "after 17:50"; the transcript says 17:44:21.
 - Real-exe test of a cancelled Quit: a fake database cannot make KeePassXC wait; the "Open database" dialog was forced with UI Automation.
 - Two of Claude's own test checks misreported (a selector matched the button; two key presses in one tick saw old state). Test artifacts, corrected.
-- About 88 `cipherleaf-*` folders in `%TEMP%` were left because the rule is to ask before deleting.
+- `cipherleaf-*` folders in `%TEMP%` were left because the rule is to ask before deleting (later counted at 827, not 88, and deleted with the owner's approval on 2026-10-23).
 
 **What must not be repeated.**
 1. Driving a window the owner might be using.
@@ -335,14 +335,14 @@ Dev app: `npm run tauri dev` (dev vault in `.devdata\`). Refresh PATH in a new s
   - Sticky delete confirm and calculator +/- in a real window; the Passwords view in the release exe; typing inside the embedded KeePassXC.
   - V3c (pulling a USB drive locks the app), a real USB stick, a PC without the VC++ runtime, code signing and SmartScreen, the icon in the real taskbar.
   - `cargo audit`; the security-review skill on the code; A1 and A3 to A7 evidence.
-- **Test leftovers:** about 88 `cipherleaf-*` folders in `%TEMP%` (not deleted; ask first).
+- **Test leftovers:** none any more. All 827 leftover `cipherleaf-*` folders in `%TEMP%` (test vaults, KeePassXC test copies) and four throwaway browser profiles in the old session scratch folder were deleted on 2026-10-23 with the owner's approval, after checking that nothing was running and none was newer than 30 minutes.
 
 ---
 
 ## 8. Open items and decisions waiting for the owner
 
 **Questions (numbers are STATUS's).**
-- **Q7:** What did "happy" accept? Blocks recording any acceptance.
+- **Q7:** answered by the owner on 2026-10-23, 16:58 UTC: "happy" accepted nothing; they were glad the app was created. No acceptance exists.
 - **Q8:** Confirm that `acceptance.md` and `sessions.md` join the compact record set; say whether Decision Records are wanted (Claude recommends not).
 - **Q9:** **A2** (a single older record can be put back without detection; the plan promised it could not) and **A8** (`Cargo.toml` uses ranges, `Cargo.lock` pins exact versions). Both need his decision. A1 and A3 to A7 need evidence, not a decision. The GPL part of Q9 is answered (private use).
 - **Q10:** Which unfixed findings come next (list below).
