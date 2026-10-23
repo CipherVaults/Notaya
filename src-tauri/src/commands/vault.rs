@@ -172,6 +172,8 @@ pub fn start_notes(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
 pub struct EnableSecurityResult {
     /// How many earlier copies made while security was off were deleted.
     removed_copies: usize,
+    /// Deleting was asked for, but the fresh backup failed, so the earlier copies were kept.
+    backup_failed: bool,
 }
 
 /// Turns security on: the notes get a master password (and an optional keyfile). Only
@@ -195,14 +197,18 @@ pub fn enable_security(
         ui::set_capture_protection(&app, protect);
     }
     let mut removed_copies = 0;
+    let mut backup_failed = false;
     if remove_unprotected_copies {
         match state.with(|s| state::rotate_backup(&state.paths, s)) {
             Ok(()) => removed_copies = openvault::delete_unprotected(&state.paths),
             // No fresh backup: keep the old copies rather than leave none.
-            Err(e) => eprintln!("backup after turning security on failed: {e}"),
+            Err(e) => {
+                eprintln!("backup after turning security on failed: {e}");
+                backup_failed = true;
+            }
         }
     }
-    Ok(EnableSecurityResult { removed_copies })
+    Ok(EnableSecurityResult { removed_copies, backup_failed })
 }
 
 /// Turns security off. The current master password (and keyfile) are required, and a

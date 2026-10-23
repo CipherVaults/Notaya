@@ -19,6 +19,8 @@ export interface VaultStatus {
 export interface EnableSecurityResult {
   /** How many earlier copies made while security was off were deleted. */
   removedCopies: number;
+  /** Deleting was asked for, but the fresh backup failed, so the earlier copies were kept. */
+  backupFailed: boolean;
 }
 
 /** One automatic backup file in the data folder (newest first from the backend). */

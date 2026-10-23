@@ -262,7 +262,7 @@ export default function SettingsView() {
               onClick={async () => {
                 try {
                   const p = await api.backupNow();
-                  if (p) toast.success("Encrypted backup saved.", { description: p });
+                  if (p) toast.success("Backup saved.", { description: p });
                 } catch (e) {
                   toast.error(errorText(e));
                 }

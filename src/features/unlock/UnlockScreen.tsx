@@ -124,7 +124,10 @@ function UnlockCard({
           {!headerOk && (
             <p className="text-xs text-warn">
               The vault file couldn't be read, so Cipherleaf can't tell whether it needs a keyfile. It may be damaged, or
-              another program (antivirus or a sync tool) may be using it.
+              another program (antivirus or a sync tool) may be using it.{" "}
+              <button type="button" onClick={() => void refreshStatus().catch(() => {})} className="font-medium underline">
+                Check again
+              </button>
             </p>
           )}
           <AnimatePresence>
@@ -241,6 +244,7 @@ function StartCard() {
 /** A notes file that opens without a password could not be opened (for example it is damaged). */
 function ProblemCard({ message, dataDir }: { message: string | null; dataDir: string }) {
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const refreshStatus = useApp((s) => s.refreshStatus);
   const [startOverOpen, setStartOverOpen] = useState(false);
   return (
     <Card>
@@ -251,9 +255,14 @@ function ProblemCard({ message, dataDir }: { message: string | null; dataDir: st
         <h1 className="text-2xl font-semibold tracking-tight">Your notes could not be opened</h1>
         <p className="mt-1 text-sm text-muted">{message ?? "The notes file could not be read."}</p>
       </div>
-      <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)}>
-        Restore from a backup…
-      </Button>
+      <div className="space-y-3">
+        <Button variant="outline" size="lg" className="w-full" onClick={() => void refreshStatus().catch(() => {})}>
+          Try again
+        </Button>
+        <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)}>
+          Restore from a backup…
+        </Button>
+      </div>
       <div className="pt-3 text-center">
         <button
           type="button"
@@ -333,8 +342,8 @@ function StartOverDialog({
             in <span className="break-all font-mono text-fg">{dataDir}</span>.
           </li>
           <li>
-            You then start new, empty notes. They open without a password; you can turn on a master password later in
-            Settings.
+            You then choose "Start new notes" (or restore a backup). New notes open without a password; you can turn on
+            a master password later in Settings.
           </li>
           <li>
             To get the old vault back later, use "Restore from a backup…", choose that file and enter its old master

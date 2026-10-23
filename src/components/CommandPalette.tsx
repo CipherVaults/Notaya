@@ -125,7 +125,7 @@ export default function CommandPalette() {
                     <Action icon={<KeyRound size={16} />} label="Passwords (KeePassXC)" onSelect={() => run(() => useApp.getState().setView("passwords"))} className={itemClass} />
                   )}
                   <Action icon={<Palette size={16} />} label="Appearance & settings" onSelect={() => run(() => useApp.getState().setView("settings"))} className={itemClass} />
-                  <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Encrypted backup saved."); })} className={itemClass} />
+                  <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Backup saved."); })} className={itemClass} />
                   {securityOn && (
                     <Action icon={<Lock size={16} />} label="Lock vault" hint="Ctrl L" onSelect={() => run(() => api.lockVault())} className={itemClass} />
                   )}

@@ -74,7 +74,9 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
         description:
           result.removedCopies > 0
             ? `${result.removedCopies} earlier unprotected ${result.removedCopies === 1 ? "copy was" : "copies were"} deleted.`
-            : undefined,
+            : result.backupFailed
+              ? "The earlier unprotected copies were NOT deleted, because the new protected backup could not be saved. They can still be read by anyone."
+              : undefined,
       });
       onOpenChange(false);
     } catch (e) {

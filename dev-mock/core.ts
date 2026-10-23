@@ -120,7 +120,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "enable_security":
       if (String(args.password ?? "").length < 10) throw "Use at least 10 characters for your master password.";
       securityOn = true;
-      return ok({ removedCopies: args.removeUnprotectedCopies ? 3 : 0 });
+      return ok({ removedCopies: args.removeUnprotectedCopies ? 3 : 0, backupFailed: false });
     case "disable_security":
       if (args.currentPassword === "wrong") throw "Wrong password or keyfile.";
       securityOn = false;
