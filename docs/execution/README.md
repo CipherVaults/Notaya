@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (after 14:17, until about 16:04) — EX-2026-10-23-15 — Back up and restore the KeePassXC passwords file; Quit never force-ends KeePassXC (A19), rebuild
+
+- Report: [2026-10-23-passwords-backup-and-safe-quit.md](2026-10-23-passwords-backup-and-safe-quit.md)
+- Task / Goal: the owner's request "include the KeePassXC passwords file in backups and restore, and stop Quit from force-closing KeePassXC mid-save" and their two answers ("Copy + restore, keep 10"; "Stay open and tell me") (message times not recorded; the clock read about 15:30 UTC at the exe build and 16:04 UTC after the ZIP); amendment [A19](../plan/A19-passwords-file-backup-restore-and-safe-quit.md)
+- Executor: Claude (Sonnet 5.5), with helper agents (backend, UI, independent review, real-exe tests, records)
+- Outcome: every lock keeps up to 10 copies of the encrypted passwords file (only when it changed); Settings, Backups can restore one (the current file is kept as `passwords-undo-*.kdbx`); Quit asks KeePassXC to close and never force-ends it (if it stays open, Quit is cancelled with a message). Committed (`442036e`); portable exe `1B8949CE…E7D6` and ZIP `F0C90846…C0A1` rebuilt (the owner's `data\` untouched, ZIP without it). 107 Rust tests, type check and build pass; real-exe tests on throwaway data passed in two stages (the first found two concurrency defects, fixed by a mutex; the re-run passed). Not tested: the new dialog mode and Settings button on screen, the file-dialog path, Quit with KeePassXC in the tray, log off or shutdown.
+- Integration / review: one independent review (10 findings, 8 fixed); agent reports are model output; Claude checked the key claims in the code
+- Acceptance: pending (the owner tries the new exe and reviews the security change)
+- Open dependency / next action: the owner replaces the older ZIP copies and reviews A19 (a read-and-copy of the encrypted passwords file, a restore that replaces it, and a new Quit); A2 and A8 decisions
+
 ### 2026-10-23 (about 11:00–14:20) — EX-2026-10-23-14 — Readable first-run passphrase and restore from backup (A18), rebuild
 
 - Report: [2026-10-23-restore-from-backup.md](2026-10-23-restore-from-backup.md)

@@ -6,6 +6,33 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-23 (after about 14:17, until about 16:04 UTC) — Cipherleaf — Passwords-file backup and restore, safe Quit (A19), rebuilt
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and coordinator | Sonnet 5.5 | "ultracode", set by the owner earlier in the day | Not independently verified |
+| Helper agents: backend, UI, one independent review agent, a real-exe test agent, a records agent | Started by Claude; model and effort not recorded | Not recorded | Reports are model output; Claude checked the key claims in the code. The test agent's scripts are in the session scratchpad folder `pw\`, not in the repository. |
+
+**Record basis:** written at the end of the stretch from the repository, the build and test output and the conversation. **Reconstructed:** times are system-clock readings (the exe build finished about 15:30 UTC, the portable ZIP was made at 16:04 UTC); the owner's messages have no recorded timestamps, and the start of this stretch is not recorded (it is after the 14:17 UTC ZIP of A18).
+
+## 🎯 What happened
+
+1. **The owner's request:** "include the KeePassXC passwords file in backups and restore, and stop Quit from force-closing KeePassXC mid-save. Use agents and skills, and ask me before changing security behavior."
+2. **Two questions, because it changes security behavior.** Backups: the owner chose "Copy + restore, keep 10". Quit: the owner chose "Stay open and tell me" (if KeePassXC does not close, Quit is cancelled with a message; nothing is ever force-ended). The question named 3 seconds as the wait; Claude raised it to 10 seconds after the review (a save on close can take several seconds) without asking again about that number.
+3. **Built by a backend agent and a UI agent** ([A19](plan/A19-passwords-file-backup-restore-and-safe-quit.md)): lock-time copies of the encrypted passwords file, a restore for it (Settings, Backups), and a Quit that asks KeePassXC to close and never kills it.
+4. **One independent review agent:** 10 findings, 8 fixed (a notice shown twice, no final copy on Quit, rotation by file-name clock number, torn copies, concurrent locks sharing a temp file, a restore re-locking the vault after an idle lock, a 3 s timeout, a flag never reset after a panic); 2 not changed (a vague error text; hand-placed look-alike files are rotated).
+5. **Real-exe tests in two stages.** The first run, on a build made before the mutex fix, found two intermittent defects (rotation leaving 9 copies or adding two copies a few ms apart in about 1 of 13 to 1 of 30 locks; no copy at the first lock in about 2 of 20 runs), caused by two backups running at once. After the mutex fix, the re-run on the final exe passed: 90 stress locks, 32 of 32 first locks, 13 backup rules, 41 restore cases, the cancelled-Quit cases (10 of 10, twice) and the final copy after Quit. The vault restore and lock regressions passed again.
+6. **A status question** from the owner while the tests ran ("where are you now in the tests almost finished ?"): answered that the test agent was still running. Nothing changed.
+7. **Committed and rebuilt:** code commit `442036e` (13 files; 107 Rust tests, clippy with the 3 old warnings, type check and build pass). New exe `1B8949CE…E7D6`; the portable folder got the exe (the owner's `data\` untouched) and the ZIP was remade without `data\` (`F0C90846…C0A1`). The records were written after that by a records agent. The records commit and the push to GitHub follow it.
+
+## 🔜 Where to resume
+
+The owner tries the new exe (lock a few times and look at `data\backups`; Settings, Backups, "Restore passwords file..."; Quit with KeePassXC open) and replaces the outdated ZIP copies. Not tested: the new dialog mode and Settings button on screen, the file dialog for passwords backups, Quit with KeePassXC in the tray, log off or shutdown. Open: A2, A8, STATUS question 8, evidence for A1 and A3–A7, a license file, whether the repository may ever be public, and the EX-13 backlog items not done (the two about the passwords-file backup and the 3-second Quit are now done).
+
+---
+
 # 📘 Session: 2026-10-23 (about 13:55–14:20 UTC) — Cipherleaf — Restore from backup and readable passphrase finished (A18), rebuilt
 
 ## 🤖 Models, Effort, Roles and Provenance
