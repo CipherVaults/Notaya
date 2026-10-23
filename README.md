@@ -2,6 +2,8 @@
 
 Cipherleaf is a portable Windows notes app. You write notes in notebooks, sections and pages, and you can keep sticky notes on the desktop. Everything is stored in one `data` folder, so the app can run from a folder or a USB stick.
 
+**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and the app has no network code, so nothing is sent anywhere. The only time it reaches the web is when you click a web link in a note, which opens in your normal browser.
+
 Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. You can turn security on or off at any time in Settings. A password manager (KeePassXC) is a second optional extra, with its own switch.
 
 > **Status: in development, private, not yet accepted by its owner.** Portable builds are made by hand and shared only with a few close people. There is no public release, and the exe is not code-signed. The authoritative state is [`docs/STATUS.md`](docs/STATUS.md). What is and is not proven is in [`docs/acceptance.md`](docs/acceptance.md).
@@ -74,7 +76,7 @@ KeePassXC needs the Microsoft Visual C++ 2015 to 2022 x64 runtime on the PC.
 
 Short answers. The full list is in [`docs/security-design.md`](docs/security-design.md).
 
-- **No network code.** Cipherleaf makes no connections. KeePassXC is preset to make none.
+- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Cipherleaf makes no connections of its own (the page security policy allows only the app's internal channel), and KeePassXC is preset to make none. A web link in a note opens in your browser only when you click it.
 - **The exe is not signed.** Windows SmartScreen may warn. Cipherleaf does not check itself, so a replaced exe would not be noticed.
 - **No password reset.** See above.
 - **With security off, the notes are readable by anyone with the folder.** This is by design, and it is stated in Settings.

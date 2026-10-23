@@ -83,6 +83,10 @@ Existing vaults keep their saved screenshot setting (it cannot be told apart fro
 - Crash between the two renames of a restore: the app now shows the "No notes found here" screen (Restore or Start new notes), not "Create your vault".
 - The suggested-passphrase Copy button now lives in the Turn on security dialog. The clipboard is not cleared automatically.
 
+## Notes stay local
+
+Added at the owner's request, 2026-10-23, 19:02:09 UTC ("also the notes will be saved localy"). This was already true and is now stated in the README: notes are stored only in `data\vault.clf` (plus backups in `data\backups`) next to the app. No cloud, account or sync. A check of `src-tauri/src` and `src` found no HTTP client, socket or `fetch` call; `src-tauri/Cargo.toml` has no network crate; the CSP `connect-src` allows only the app's internal channel (plus the dev server in dev mode). The one outward action is `open_url`, which opens a link from a note in the default browser, only when the person clicks it. The check is a source search, not a packet capture, so it is not a proof of no traffic from the WebView or KeePassXC.
+
 ## Not changing
 
 Notes, sticky notes, calculator, pictures, backups, restore, KeePassXC embedding, crypto, record format, `docs/plan/approved-plan-2026-10-22.md`.
