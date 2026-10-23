@@ -97,15 +97,18 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
   const ok = (v: unknown) => v as T;
   switch (cmd) {
     case "vault_status":
-      return ok({ exists, unlocked, keyfileRequired: false, dataDir: "E:\\Cipherleaf\\data", version: "1.0.0" });
+      return ok({ exists, unlocked, keyfileRequired: false, headerOk: true, dataDir: "E:\\Cipherleaf\\data", version: "1.0.0" });
     case "create_vault":
       exists = true;
       unlocked = true;
       return ok(null);
     case "unlock_vault":
-      if (args.password === "wrong") throw "Wrong password or keyfile.";
+      if (args.password === "wrong") throw "Wrong master password or keyfile for this Cipherleaf vault.";
       unlocked = true;
       return ok(null);
+    case "start_over":
+      exists = false;
+      return ok("set-aside-1792700000000.clf");
     case "lock_vault":
       unlocked = false;
       return ok(null);

@@ -49,24 +49,56 @@ export function PasswordInput({
   );
 }
 
-/** Shows the chosen keyfile's name with a small remove button. */
-export function KeyfileChip({ path, onClear, disabled }: { path: string; onClear: () => void; disabled?: boolean }) {
+/** Files that change on their own or belong to an app: a keyfile like that stops working once it changes. */
+const CHANGING_FILE = /\.(clf|kdbx|ini|exe|dll|tmp|log|lnk|db|journal)$/i;
+
+/**
+ * A warning for a keyfile choice that is likely a mistake, or null. Any file can be a
+ * keyfile, but only its exact contents count: if the file changes, the vault won't open.
+ */
+export function keyfileWarning(path: string, dataDir?: string): string | null {
+  const norm = (p: string) => p.replace(/[\\/]+/g, "\\").replace(/\\$/, "").toLowerCase();
+  if (dataDir && norm(path).startsWith(norm(dataDir) + "\\")) {
+    return "This file is inside the vault's data folder. Files there change as the app runs, so it may stop working as a keyfile. Keep the keyfile somewhere else, ideally on another drive.";
+  }
+  if (CHANGING_FILE.test(path)) {
+    return "This kind of file changes on its own or belongs to an app. A keyfile only works while its contents stay exactly the same, so this may be the wrong file.";
+  }
+  return null;
+}
+
+/** Shows the chosen keyfile's name with a small remove button, and a warning if the choice looks wrong. */
+export function KeyfileChip({
+  path,
+  onClear,
+  disabled,
+  dataDir,
+}: {
+  path: string;
+  onClear: () => void;
+  disabled?: boolean;
+  dataDir?: string;
+}) {
   const name = path.split(/[\\/]/).pop();
+  const warning = keyfileWarning(path, dataDir);
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft px-3 py-2 text-sm">
-      <FileKey2 size={15} className="text-accent" />
-      <span className="flex-1 truncate" title={path}>
-        {name}
-      </span>
-      <button
-        onClick={onClear}
-        disabled={disabled}
-        className="rounded p-0.5 text-muted hover:text-fg disabled:pointer-events-none disabled:opacity-45"
-        aria-label="Remove keyfile"
-        type="button"
-      >
-        <X size={14} />
-      </button>
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent-soft px-3 py-2 text-sm">
+        <FileKey2 size={15} className="text-accent" />
+        <span className="flex-1 truncate" title={path}>
+          {name}
+        </span>
+        <button
+          onClick={onClear}
+          disabled={disabled}
+          className="rounded p-0.5 text-muted hover:text-fg disabled:pointer-events-none disabled:opacity-45"
+          aria-label="Remove keyfile"
+          type="button"
+        >
+          <X size={14} />
+        </button>
+      </div>
+      {warning && <p className="text-xs leading-relaxed text-warn">{warning}</p>}
     </div>
   );
 }

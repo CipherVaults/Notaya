@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (17:04–17:35 UTC) — EX-2026-10-23-16 — Unlock after moving the portable folder; Start over, clearer errors, keyfile warning (A20)
+
+- Report: [2026-10-23-start-over-and-unlock-wording.md](2026-10-23-start-over-and-unlock-wording.md)
+- Task / Goal: a friend's report passed on by the owner (17:04:30 UTC): unlocking failed after moving the portable folder, and there was no way to start over. Approved: "Both" (17:16:33 UTC), "Push it run tests recheck" (17:26:10 UTC)
+- Executor: Claude (Claude Code), cloud session plus a Remote Control session on the owner's PC
+- Outcome: the move itself is not the cause (real-exe move test passed on throwaway data); added Start over (sets the vault aside, never deletes), clearer wrong-password wording and a keyfile warning
+- Integration / review: one independent read-only review (found no data-loss path; its follow-ups are in `94d0235`); agent reports are model output
+- Acceptance: pending
+- Open dependency / next action: the owner's review (Rust tests and the real-exe check passed on the PC); merging into `main` and `feat/a9-keepassxc` waits for the owner
+
 ### 2026-10-23 (after 14:17, until about 16:04) — EX-2026-10-23-15 — Back up and restore the KeePassXC passwords file; Quit never force-ends KeePassXC (A19), rebuild
 
 - Report: [2026-10-23-passwords-backup-and-safe-quit.md](2026-10-23-passwords-backup-and-safe-quit.md)
