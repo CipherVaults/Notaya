@@ -54,7 +54,10 @@ export function useCalc(degrees: boolean) {
     setExpr((x) => x.slice(0, -1));
     setShown(null);
   };
-  const negate = () => setExpr(negateExpr);
+  const negate = () => {
+    setExpr(negateExpr);
+    setShown(null);
+  };
 
   const equals = () => {
     if (!expr.trim()) return;

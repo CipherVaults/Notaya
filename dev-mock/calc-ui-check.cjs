@@ -16,11 +16,14 @@ const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL'
   await p.getByRole('button', { name: 'Scientific' }).click();
   const expr = () => p.getByLabel('Expression').inputValue();
   const line = () => p.locator('section[aria-label=Calculator] [aria-live=polite]').innerText();
-  const unit = () => p.locator('section[aria-label=Calculator] span[aria-label^="Angles in"]').innerText();
+  const unit = async () => (await p.locator('section[aria-label=Calculator] span.sr-only').innerText()).replace('Angles in degrees', 'DEG').replace('Angles in radians', 'RAD');
+  const shownUnit = () => p.locator('section[aria-label=Calculator] span[aria-hidden=true]').first().innerText();
   const click = (name) => p.getByRole('button', { name, exact: true }).click();
 
   is('the unit label starts as DEG', await unit(), 'DEG');
+  is('and shows DEG on screen', await shownUnit(), 'DEG');
   await click('Rad'); is('toggling with an empty display changes the label', await unit(), 'RAD');
+  is('and shows RAD on screen', await shownUnit(), 'RAD');
   await click('Deg'); is('and back', await unit(), 'DEG');
 
   await p.getByLabel('Expression').fill('sin(30)');
@@ -36,6 +39,14 @@ const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL'
   await click('Deg');
   is('switching to Deg again recalls it', await expr(), 'sin(30)');
   is('and shows the Deg answer', await line(), '= 0.5');
+
+  await click('Deg'); // already shown as Deg after the line above: clicking the active unit changes nothing
+  await p.getByLabel('Expression').fill('sin(30)'); await click('=');
+  await click('Deg'); is('clicking the unit that is already active leaves the answer', await expr(), '0.5');
+  await click('±'); is('± after = negates the answer', await expr(), '-(0.5)');
+  is('and the result line follows it', await line(), '= -0.5');
+  await click('Rad'); is('the negated answer is not replaced by switching the unit', await expr(), '-(0.5)');
+  await click('Deg');
 
   await p.getByLabel('Expression').fill('asin(0.5)');
   await click('='); is('asin(0.5) in Deg', await expr(), '30');
