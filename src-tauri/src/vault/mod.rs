@@ -29,6 +29,9 @@ pub struct Session {
     open: bool,
     /// True once anything changed since unlock; triggers a backup on lock.
     pub dirty: bool,
+    /// True once anything changed since the last hourly backup of an open vault. It is kept
+    /// apart from `dirty` so an hourly copy never stands in for the backup made at lock or quit.
+    pub hourly_due: bool,
 }
 
 /// AAD binds each ciphertext to this vault, its table and its row id, so rows
@@ -49,6 +52,12 @@ pub fn parse_id(id: &str) -> Result<RowId> {
 }
 
 impl Session {
+    /// Records that something changed, for the backups made at lock or quit and the hourly ones.
+    fn changed(&mut self) {
+        self.dirty = true;
+        self.hourly_due = true;
+    }
+
     pub fn create(path: &Path, password: &str, keyfile: Option<&[u8; 32]>, kdf: KdfParams) -> Result<Session> {
         let (header, dek) = Header::create(password, keyfile, kdf)?;
         let store = Store::create(path, &header)?;
@@ -59,6 +68,7 @@ impl Session {
             items: HashMap::new(),
             open: false,
             dirty: true,
+            hourly_due: true,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -75,6 +85,7 @@ impl Session {
             items: HashMap::new(),
             open: true,
             dirty: true,
+            hourly_due: true,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -109,7 +120,7 @@ impl Session {
             }
             items.insert(item.id().to_string(), item);
         }
-        Ok(Session { dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false })
+        Ok(Session { dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false })
     }
 
     /// Opens a vault file whichever way it is protected: a vault with security off needs
@@ -153,7 +164,7 @@ impl Session {
         let (id, sealed) = self.seal_item(&item)?;
         self.store.put(Table::Records, &id, &sealed)?;
         self.items.insert(item.id().to_string(), item);
-        self.dirty = true;
+        self.changed();
         Ok(())
     }
 
@@ -169,7 +180,7 @@ impl Session {
         for item in items {
             self.items.insert(item.id().to_string(), item);
         }
-        self.dirty = true;
+        self.changed();
         Ok(())
     }
 
@@ -184,7 +195,7 @@ impl Session {
         for id in ids {
             self.items.remove(id);
         }
-        self.dirty = true;
+        self.changed();
         Ok(())
     }
 
@@ -216,7 +227,7 @@ impl Session {
         let padded = crypto::pad(&payload);
         let sealed = crypto::seal(&self.dek, &aad(&self.vault_id, Table::Attachments, &id), &padded);
         self.store.put(Table::Attachments, &id, &sealed)?;
-        self.dirty = true;
+        self.changed();
         Ok(id_hex)
     }
 
@@ -263,7 +274,7 @@ impl Session {
             }
         }
         if removed > 0 {
-            self.dirty = true;
+            self.changed();
         }
         Ok(removed)
     }
@@ -344,7 +355,7 @@ impl Session {
         self.dek = new_dek;
         self.vault_id = new_id;
         self.open = open_after;
-        self.dirty = true;
+        self.changed();
         Ok(())
     }
 
@@ -388,6 +399,23 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("cipherleaf-test-{}", new_id()));
         std::fs::create_dir_all(&dir).unwrap();
         dir.join("vault.clf")
+    }
+
+    #[test]
+    fn the_hourly_flag_is_kept_apart_from_the_lock_time_flag() {
+        let path = temp_vault();
+        let mut s = Session::create_open(&path).unwrap();
+        assert!(s.dirty && s.hourly_due, "a new vault has unsaved changes");
+        drop(s);
+        let mut s = Session::unlock_open(&path).unwrap();
+        assert!(!s.dirty && !s.hourly_due, "nothing changed since the vault was opened");
+        s.put(page("one")).unwrap();
+        assert!(s.dirty && s.hourly_due);
+        // An hourly backup clears only its own flag, so the backup at lock or quit is still made.
+        s.hourly_due = false;
+        assert!(s.dirty);
+        s.put(page("two")).unwrap();
+        assert!(s.dirty && s.hourly_due, "a later change makes both due again");
     }
 
     fn page(text: &str) -> Item {

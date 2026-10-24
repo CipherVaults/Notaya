@@ -2,11 +2,11 @@
 
 Cipherleaf is a portable Windows notes app. You write notes in notebooks, sections and pages, keep sticky notes on the desktop, and keep everything in one `data` folder, so the app can run from a folder or a USB stick.
 
-**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Cipherleaf's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup (what it sends was not captured). Your notes are not part of it, but the app is not silent on the network. A web link in a note opens in your normal browser only when you click it.
+**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Cipherleaf's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup. What it sends was not captured and Cipherleaf does not control it, so the app is not silent on the network. Cipherleaf's own code never sends your notes anywhere. A web link in a note opens in your normal browser only when you click it.
 
 Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. While it is off your notes are not private: anyone who can open the folder can read them. You can turn security on or off at any time in Settings. A password manager (KeePassXC) is a second optional extra, with its own switch.
 
-> **Version 1.0, the first release.** The repository is private, portable builds are shared by hand with a few close people, and the exe is not code-signed (Windows SmartScreen may warn). What is and is not proven is in [`docs/acceptance.md`](docs/acceptance.md); the current project state is in [`docs/STATUS.md`](docs/STATUS.md).
+> **Version 1.0.1** (a fix release after the first release, 1.0). The repository is private, portable builds are shared by hand with a few close people, and the exe is not code-signed (Windows SmartScreen may warn). What is and is not proven is in [`docs/acceptance.md`](docs/acceptance.md); the current project state is in [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contents
 
@@ -68,7 +68,8 @@ Passwords are kept by [KeePassXC](https://keepassxc.org) 2.8.0, bundled with the
 
 ### Backups and restore
 
-- **Automatic backup** when the app quits, and about once an hour while you work, if something changed (also when the vault locks, if you use security). Saved in `data\backups`; the newest 10 are kept.
+- **Automatic backup** when the app quits, and also when the vault locks if you use security, if something changed. Saved in `data\backups`; the newest 10 are kept.
+- **Hourly backup (security off only).** An open vault never locks, so while you work it is also backed up about once an hour if something changed and you have paused for a moment (`vault-hourly-<number>.clf`; the newest 3 are kept, so they never push out the older automatic backups).
 - **Safety backup before a delete.** Before a notebook or section is deleted, Cipherleaf makes a backup first (`vault-predelete-<number>.clf`). If it can't be made, nothing is deleted. The newest 5 of these are kept.
 - If a backup fails, Cipherleaf shows a message.
 - **Save a backup copy** from Settings, or "Back up vault now" in the `Ctrl+K` menu, saves a copy wherever you choose.
@@ -101,7 +102,7 @@ Everything lives in the `data` folder next to `Cipherleaf.exe`. Copy the folder 
 
 1. Open **Settings** and find **Security (optional)**. Press **Turn on…**.
 2. Choose a master password (a long phrase of several unrelated words is easy to remember and strong) and write it down somewhere safe. Add a keyfile if you want one ("Create new" or "Use existing"). Confirm that you understand there is no password reset.
-3. Leave "Delete earlier backups made while security was off" ticked unless you want to keep them. Cipherleaf saves a fresh protected backup first and deletes only automatic backups; your own backup copies, `restore-undo` and `set-aside` files are never deleted.
+3. Leave "Delete earlier backups made while security was off" ticked unless you want to keep them. Cipherleaf saves a fresh protected backup first and deletes only the backups Cipherleaf made while security was off (automatic, hourly, and the safety copies saved before a delete, so a notebook deleted earlier can no longer be brought back from them); your own backup copies, `restore-undo` and `set-aside` files are never deleted.
 4. Press **Turn on security**. Your notes get a new key under the new password; this takes a moment, longer for big notebooks.
 5. From now on the app locks as described above, and you unlock with the password (and keyfile).
 
@@ -125,7 +126,7 @@ There is no reset and no recovery. If you lose the master password, or a keyfile
 
 ### Backups and restore
 
-1. Cipherleaf backs up automatically when you quit and about once an hour while you work, if something changed (also on lock, if you use security). The newest 10 are in `data\backups`. Before a notebook or section is deleted it makes a safety backup first (`vault-predelete-<number>.clf`, newest 5 kept); if that can't be made, nothing is deleted. If a backup fails, Cipherleaf shows a message.
+1. Cipherleaf backs up automatically when you quit (and on lock, if you use security), if something changed. The newest 10 are in `data\backups`. With security off it also makes an hourly backup while you work (`vault-hourly-<number>.clf`, newest 3 kept). Before a notebook or section is deleted it makes a safety backup first (`vault-predelete-<number>.clf`, newest 5 kept); if that can't be made, nothing is deleted. To get a deleted notebook back, use Restore with that safety backup: it replaces your whole vault with that copy and keeps the current one as `restore-undo`. If a backup fails, Cipherleaf shows a message.
 2. For a copy you control, use **Settings, Backups, Save a backup copy…** and keep it somewhere else (another drive is best).
 3. To restore, choose **Restore from a backup…** (lock screen, start screens, or Settings), pick a backup from the list or "Choose another backup file…", enter "Password of this backup" if it has one, and press "Replace my vault with this backup" ("Restore backup" on the start screens). Your current vault is kept as `restore-undo-....clf`.
 4. A backup made while security was off needs no password. Restoring one onto a vault that has a master password asks you to confirm that security will be turned off.
@@ -139,6 +140,7 @@ Close Cipherleaf, then copy the whole folder (`Cipherleaf.exe`, `KeePassXC` and 
 - **"Wrong master password or keyfile for this Cipherleaf vault."** This is the Cipherleaf password, not the KeePassXC one. If the vault uses a keyfile, it must be the exact file chosen when the vault was made.
 - **"The vault file couldn't be read."** Another program (antivirus or a sync tool) may be using the file. Press "Check again" or "Try again". If it stays, use Restore or Start over.
 - **"No notes found here."** The folder has backups but no current notes file. Restore a backup, or start new notes.
+- **"Cipherleaf could not start".** The message says Cipherleaf cannot save its data in the `data` folder next to the app, or cannot open its window. The usual cause is a read-only folder (a write-protected USB stick, a CD, or a protected place such as Program Files). Move the whole Cipherleaf folder somewhere you can write to, for example your Documents folder, and start it again.
 - **Windows SmartScreen warns about the exe.** The exe is not code-signed. Choose "More info", then "Run anyway" if you trust where you got it.
 - **KeePassXC does not start.** It needs the Microsoft Visual C++ 2015 to 2022 x64 runtime, and its folder must be next to `Cipherleaf.exe`.
 - **Quit says KeePassXC is still open.** Finish or close it, then close Cipherleaf again.

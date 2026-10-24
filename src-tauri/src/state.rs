@@ -16,8 +16,31 @@ use crate::vault::Session;
 use crate::{backup, keepassxc, pwbackup, system, ui};
 
 /// A vault with security off is backed up at most this often while it is open (and only if
-/// something changed since the last backup), because it never locks.
+/// something changed since the last hourly backup), because it never locks.
 const OPEN_BACKUP_EVERY: Duration = Duration::from_secs(60 * 60);
+/// After a failed hourly backup, the next try comes after this long, not an hour later (and
+/// not every second).
+const OPEN_BACKUP_RETRY: Duration = Duration::from_secs(5 * 60);
+/// The hourly backup holds the vault for as long as the copy takes, which on a slow USB stick
+/// can be many seconds, so it starts only after the keyboard and mouse have been still this
+/// long (so it does not freeze the window mid-typing) ...
+const OPEN_BACKUP_IDLE_MS: u64 = 30_000;
+/// ... unless it is this much overdue, so a PC that is never idle (or whose idle time can't be
+/// read) is still backed up.
+const OPEN_BACKUP_OVERDUE: Duration = Duration::from_secs(90 * 60);
+
+/// How often the monitor makes the hourly backup of an open vault, how soon it retries after a
+/// failure, and how long the keyboard and mouse must have been still before it starts. The
+/// real-exe test scripts set `CIPHERLEAF_OPEN_BACKUP_SECS` to shorten both waits and to drop the
+/// pause, so the hourly backup can be watched without waiting an hour (like `CIPHERLEAF_HOME`,
+/// it is read in release builds too).
+fn open_backup_timing() -> (Duration, Duration, u64) {
+    let secs = std::env::var("CIPHERLEAF_OPEN_BACKUP_SECS").ok().and_then(|v| v.trim().parse::<u64>().ok());
+    match secs.filter(|n| *n > 0) {
+        Some(n) => (Duration::from_secs(n), Duration::from_secs(n), 0),
+        None => (OPEN_BACKUP_EVERY, OPEN_BACKUP_RETRY, OPEN_BACKUP_IDLE_MS),
+    }
+}
 
 /// A passwords file or KeePassXC settings already exist (so a vault saved before A21, which
 /// has no choice for the Passwords feature, keeps it on).
@@ -449,25 +472,35 @@ pub(crate) fn report_backup_failure(app: &AppHandle, state: &AppState, e: &Error
 }
 
 /// A backup of an open vault (security off) while it is running: it never locks, so
-/// without this it would be backed up only when the app quits. Does nothing when nothing
-/// changed since the last backup. Holds the session for the length of the backup, like the
-/// safety backup before a delete does.
-fn periodic_backup(app: &AppHandle, state: &AppState) {
+/// without this it would be backed up only when the app quits. It is an hourly copy
+/// (`vault-hourly-<ms>.clf`, the newest 3 kept) and does nothing when nothing changed since
+/// the last one. It does not stand in for the backup made at lock or quit, so the older
+/// backups keep a copy from the end of each session. Holds the session for the length of the
+/// backup, like the safety backup before a delete does.
+///
+/// Returns `Some(true)` when it worked or had nothing to do, `Some(false)` when it failed, and
+/// `None` when the session was taken in the meantime. A failure is shown to the person only
+/// when `notify` is true, so a drive that keeps failing is not announced every five minutes.
+fn periodic_backup(app: &AppHandle, state: &AppState, notify: bool) -> Option<bool> {
     let result = state.with_mut(|s| {
-        if !s.dirty {
+        if !s.hourly_due {
             return Ok(());
         }
-        backup::make_backup(&state.paths, s)?;
-        // The backup is current, so the quit-time backup has nothing new to add.
-        s.dirty = false;
+        backup::make_hourly_backup(&state.paths, s)?;
+        s.hourly_due = false;
         Ok(())
     });
     match result {
-        Ok(()) => {}
+        Ok(()) => Some(true),
         // A quit, a lock or a restore took the session while this was starting: nothing failed.
-        Err(Error::Locked) => {}
+        Err(Error::Locked) => None,
         Err(e) => {
-            report_backup_failure(app, state, &e);
+            if notify {
+                report_backup_failure(app, state, &e);
+            } else {
+                eprintln!("backup failed again: {e}");
+            }
+            Some(false)
         }
     }
 }
@@ -479,6 +512,8 @@ pub fn spawn_monitor(app: AppHandle) {
         let mut last_wall = SystemTime::now();
         let mut desktop_seen_unlocked = false;
         let mut last_open_backup = Instant::now();
+        let mut open_backup_failed = false;
+        let (open_backup_every, open_backup_retry, open_backup_idle_ms) = open_backup_timing();
         loop {
             std::thread::sleep(Duration::from_secs(1));
             let state = app.state::<AppState>();
@@ -494,12 +529,18 @@ pub fn spawn_monitor(app: AppHandle) {
             };
             // Security off: nothing locks the vault (A21), but it is backed up now and then.
             if security_off {
-                if last_open_backup.elapsed() >= OPEN_BACKUP_EVERY && !state.is_quitting() {
-                    last_open_backup = Instant::now(); // a failing drive is retried in an hour, not every second
-                    periodic_backup(&app, &state);
+                let due = if open_backup_failed { open_backup_retry } else { open_backup_every };
+                let since = last_open_backup.elapsed();
+                let quiet = system::idle_ms() >= open_backup_idle_ms || since >= due + OPEN_BACKUP_OVERDUE;
+                if since >= due && quiet && !state.is_quitting() {
+                    last_open_backup = Instant::now(); // a failing drive is retried in 5 minutes, not every second
+                    if let Some(ok) = periodic_backup(&app, &state, !open_backup_failed) {
+                        open_backup_failed = !ok;
+                    }
                 }
                 continue;
             }
+            open_backup_failed = false;
 
             let screen_locked = system::workstation_locked();
             if !screen_locked {

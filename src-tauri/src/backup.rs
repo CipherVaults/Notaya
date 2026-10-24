@@ -8,11 +8,13 @@
 //! the newest copies by modified time (the number in the name breaks a tie), never
 //! deletes the file just written, and ignores anything it does not clearly own.
 //!
-//! There are two separate rotations in the backups folder. The automatic backups are
-//! `vault-<digits>.clf` (10 kept). The safety backups made just before a notebook or section
-//! is deleted are `vault-predelete-<digits>.clf` (5 kept). Each rotation counts and deletes
-//! only its own files, so a run of deletes can't push out the ordinary backups, and the
-//! ordinary ones can't push out the copy that still holds what was just deleted.
+//! There are three separate rotations in the backups folder. The automatic backups (made when
+//! the vault locks or the app quits) are `vault-<digits>.clf` (10 kept). The hourly backups of
+//! an open vault that is running are `vault-hourly-<digits>.clf` (3 kept). The safety backups
+//! made just before a notebook or section is deleted are `vault-predelete-<digits>.clf` (5
+//! kept). Each rotation counts and deletes only its own files, so a day of hourly copies can't
+//! push out the older ordinary backups, a run of deletes can't push out the ordinary backups,
+//! and the ordinary ones can't push out the copy that still holds what was just deleted.
 
 use std::cmp::Ordering;
 use std::fs::{self, OpenOptions};
@@ -31,9 +33,13 @@ use crate::vault::Session;
 pub const MAX_BACKUPS: usize = 10;
 /// How many safety backups (made before a notebook or section is deleted) are kept.
 pub const MAX_SAFETY_BACKUPS: usize = 5;
+/// How many hourly backups (of an open vault that stays running) are kept.
+pub const MAX_HOURLY_BACKUPS: usize = 3;
 
-/// The file-name start of the automatic backups, and of the safety backups.
+/// The file-name start of the automatic backups, of the hourly backups and of the safety
+/// backups.
 const AUTOMATIC: &str = "vault-";
+const HOURLY: &str = "vault-hourly-";
 const PREDELETE: &str = "vault-predelete-";
 
 /// A rename that fails is tried again: 5 tries, 250 ms apart (about 1 s in all), because an
@@ -146,20 +152,35 @@ fn rotate(dir: &Path, prefix: &str, just_made: &str, keep: usize) {
 }
 
 /// Removes leftovers of a backup that was cut short (`vault-<digits>.tmp`, or
-/// `vault-predelete-<digits>.tmp` for a safety backup).
+/// `vault-hourly-<digits>.tmp` or `vault-predelete-<digits>.tmp` for the other kinds).
 fn clean_strays(dir: &Path) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
-        let is_stray = entry
-            .file_name()
-            .to_str()
-            .is_some_and(|n| number_with_prefix(n, AUTOMATIC, ".tmp").or(number_with_prefix(n, PREDELETE, ".tmp")).is_some());
+        let is_stray = entry.file_name().to_str().is_some_and(|n| {
+            [AUTOMATIC, HOURLY, PREDELETE].iter().any(|prefix| number_with_prefix(n, prefix, ".tmp").is_some())
+        });
         if is_stray && entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
             let _ = fs::remove_file(entry.path());
         }
     }
+}
+
+/// Flushes the file to disk. Opening it can fail for a moment when an antivirus or a sync tool
+/// is looking at the copy just written, so it is tried again like the rename (about a second).
+fn sync_to_disk(path: &Path) -> io::Result<()> {
+    let mut last = None;
+    for attempt in 0..RENAME_TRIES {
+        if attempt > 0 {
+            std::thread::sleep(RENAME_PAUSE);
+        }
+        match OpenOptions::new().write(true).open(path).and_then(|f| f.sync_all()) {
+            Ok(()) => return Ok(()),
+            Err(e) => last = Some(e),
+        }
+    }
+    Err(last.unwrap_or_else(|| io::Error::from(io::ErrorKind::Other)))
 }
 
 /// Writes `session` to `tmp`, checks it, flushes it to disk and renames it to `dest`.
@@ -168,7 +189,7 @@ fn clean_strays(dir: &Path) {
 fn write_checked(session: &Session, tmp: &Path, dest: &Path) -> Result<()> {
     session.backup_to(tmp)?;
     session.verify_copy(tmp)?;
-    OpenOptions::new().write(true).open(tmp)?.sync_all()?;
+    sync_to_disk(tmp)?;
     // About a second in all: a lock must not be held up for long by a stubborn file.
     rename_retry(tmp, dest, RENAME_TRIES, RENAME_PAUSE)?;
     Ok(())
@@ -186,6 +207,14 @@ pub fn make_backup(paths: &Paths, session: &Session) -> Result<String> {
 /// automatic rotation never touches it. Returns the file name.
 pub fn make_safety_backup(paths: &Paths, session: &Session) -> Result<String> {
     make_in(&paths.backups, session, now_ms().max(0) as u64, PREDELETE, MAX_SAFETY_BACKUPS)
+}
+
+/// The hourly backup of an open vault that stays running: `vault-hourly-<ms>.clf`, checked like
+/// any backup, in a rotation of its own (the newest `MAX_HOURLY_BACKUPS` are kept). A day of
+/// hourly copies therefore never pushes out the ordinary backups that go back days. Returns
+/// the file name.
+pub fn make_hourly_backup(paths: &Paths, session: &Session) -> Result<String> {
+    make_in(&paths.backups, session, now_ms().max(0) as u64, HOURLY, MAX_HOURLY_BACKUPS)
 }
 
 fn make_backup_in(dir: &Path, session: &Session, now: u64, keep: usize) -> Result<String> {
@@ -267,6 +296,39 @@ pub fn reason(e: &Error) -> String {
     }
 }
 
+/// True when the failure is about the place the copy goes to and says nothing bad about the
+/// vault file: a full drive, a folder or file that can't be written, a file another program is
+/// holding. Anything else (a damaged database, a read or write error from the drive itself) is
+/// not known to be harmless.
+fn is_destination_problem(e: &Error) -> bool {
+    match e {
+        Error::Io(io_err) => {
+            matches!(
+                io_err.kind(),
+                io::ErrorKind::StorageFull
+                    | io::ErrorKind::PermissionDenied
+                    | io::ErrorKind::ReadOnlyFilesystem
+                    | io::ErrorKind::AlreadyExists
+                    | io::ErrorKind::NotADirectory
+                    | io::ErrorKind::IsADirectory
+            ) || matches!(
+                // 5 access denied, 19 write-protected, 32 and 33 file in use, 39 and 112 drive
+                // full, 183 already exists.
+                io_err.raw_os_error(),
+                Some(5 | 19 | 32 | 33 | 39 | 112 | 183)
+            )
+        }
+        Error::Db(rusqlite::Error::SqliteFailure(f, _)) => matches!(
+            f.code,
+            rusqlite::ErrorCode::DiskFull
+                | rusqlite::ErrorCode::ReadOnly
+                | rusqlite::ErrorCode::CannotOpen
+                | rusqlite::ErrorCode::PermissionDenied
+        ),
+        _ => false,
+    }
+}
+
 /// The message shown when an automatic backup could not be made (lock, quit, hourly).
 ///
 /// What it says about the notes depends on the cause, and never promises more than is known:
@@ -274,8 +336,10 @@ pub fn reason(e: &Error) -> String {
 ///   reassurance, and a hint to check the drive;
 /// - the new copy failed its integrity check (`Error::Corrupt`): the vault file or the drive
 ///   may be damaged, so the person is told not to rely on the vault file alone;
-/// - anything else (a full drive, a locked folder): the vault file is untouched by a failed
-///   copy, so it is still saved.
+/// - a problem with the place the copy goes to (a full drive, a folder that can't be written):
+///   the vault file is untouched by a failed copy, so it is still saved;
+/// - anything else (a read or write error from the drive, a damaged database): the cause is not
+///   known, so there is no reassurance and the person is told to keep other copies.
 pub fn failure_notice(e: &Error, vault_present: bool) -> String {
     let because = reason(e);
     if !vault_present {
@@ -284,9 +348,13 @@ pub fn failure_notice(e: &Error, vault_present: bool) -> String {
         )
     } else if matches!(e, Error::Corrupt) {
         "Cipherleaf could not make a backup copy of your notes: the copy failed its integrity check, so the vault file data\\vault.clf or the drive it is on may be damaged. Do not rely on it alone. Keep your older backups, and if your notes look wrong, restore one of them.".to_string()
-    } else {
+    } else if is_destination_problem(e) {
         format!(
             "Cipherleaf could not make a backup copy of your notes ({because}). Your notes are still saved in data\\vault.clf."
+        )
+    } else {
+        format!(
+            "Cipherleaf could not make a backup copy of your notes ({because}). It is not clear whether the vault file data\\vault.clf or the drive is at fault, so do not rely on it alone. Keep your older backups, and if your notes are on a USB stick, copy the whole Cipherleaf folder to another drive."
         )
     }
 }
@@ -652,11 +720,117 @@ mod tests {
         assert!(text.contains("integrity check") && text.contains("Do not rely on it alone"), "{text}");
         assert!(text.contains("older backups") && text.contains("restore"), "{text}");
 
-        // Ordinary causes with the vault in place keep the reassurance.
-        for e in [&full, &gone] {
+        // Problems with the place the copy goes to, with the vault in place, keep the reassurance.
+        let denied = Error::Io(io::Error::from(io::ErrorKind::PermissionDenied));
+        let exists = Error::Io(io::Error::from_raw_os_error(183));
+        let in_use = Error::Io(io::Error::from_raw_os_error(32));
+        let sqlite_full = Error::Db(rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_FULL), None));
+        let sqlite_ro = Error::Db(rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_READONLY), None));
+        for e in [&full, &denied, &exists, &in_use, &sqlite_full, &sqlite_ro] {
             let text = failure_notice(e, true);
             assert!(text.ends_with("Your notes are still saved in data\\vault.clf."), "{text}");
         }
+    }
+
+    #[test]
+    fn a_failure_that_may_be_the_drive_is_not_called_harmless() {
+        use rusqlite::ffi;
+        let sqlite = |code| Error::Db(rusqlite::Error::SqliteFailure(ffi::Error::new(code), None));
+        let causes = [
+            sqlite(ffi::SQLITE_IOERR),
+            sqlite(ffi::SQLITE_CORRUPT),
+            sqlite(ffi::SQLITE_NOTADB),
+            Error::Io(io::Error::from(io::ErrorKind::NotFound)),
+            Error::Io(io::Error::from(io::ErrorKind::UnexpectedEof)),
+            Error::Other("something unexpected".into()),
+        ];
+        for e in &causes {
+            let text = failure_notice(e, true);
+            assert!(!text.contains("still saved"), "{e}: {text}");
+            assert!(text.contains("do not rely on it alone") && text.contains("older backups"), "{e}: {text}");
+            assert!(text.contains("copy the whole Cipherleaf folder"), "{e}: {text}");
+        }
+        // The vault file missing still wins over the cause.
+        assert!(failure_notice(&causes[0], false).contains("cannot be found"));
+    }
+
+    #[test]
+    fn hourly_backups_have_their_own_names_and_never_push_out_older_backups() {
+        let dir = temp_dir();
+        let s = session_in(&dir);
+        let backups = dir.join("backups");
+        // Ten ordinary backups from ten different days, oldest first.
+        let mut ordinary = Vec::new();
+        for i in 0..10u64 {
+            let name = make_backup_in(&backups, &s, 1_000 + i, MAX_BACKUPS).unwrap();
+            secs_ago(&backups.join(&name), (10 - i) * 86_400);
+            ordinary.push(name);
+        }
+        // A working day of hourly copies: only the newest three stay.
+        let mut hourly = Vec::new();
+        for i in 0..8u64 {
+            let name = make_in(&backups, &s, 5_000 + i, HOURLY, MAX_HOURLY_BACKUPS).unwrap();
+            assert_eq!(name, format!("vault-hourly-{}.clf", 5_000 + i));
+            s.verify_copy(&backups.join(&name)).unwrap();
+            hourly.push(name);
+        }
+        let left = names(&backups);
+        for o in &ordinary {
+            assert!(left.contains(o), "the older backup {o} must stay: {left:?}");
+        }
+        for n in &hourly[..5] {
+            assert!(!left.contains(n), "{n} is an old hourly copy and goes");
+        }
+        for n in &hourly[5..] {
+            assert!(left.contains(n), "{n}: {left:?}");
+        }
+        assert_eq!(left.len(), 13);
+        // A lock-time backup rotates only the ordinary ones.
+        let newer = make_backup_in(&backups, &s, 9_000, MAX_BACKUPS).unwrap();
+        let left = names(&backups);
+        assert_eq!(left.len(), 13, "{left:?}");
+        assert!(left.contains(&newer) && !left.contains(&ordinary[0]));
+        for n in &hourly[5..] {
+            assert!(left.contains(n), "the ordinary rotation must not touch {n}");
+        }
+        // The real entry point names its file the same way.
+        let paths = Paths::at(&dir, dir.join("kp"));
+        let name = make_hourly_backup(&paths, &s).unwrap();
+        assert!(name.starts_with("vault-hourly-") && name.ends_with(".clf"), "{name}");
+    }
+
+    #[test]
+    fn stray_hourly_temp_files_are_cleaned() {
+        let dir = temp_dir();
+        let s = session_in(&dir);
+        let backups = dir.join("backups");
+        fs::create_dir_all(&backups).unwrap();
+        write(&backups, "vault-hourly-5.tmp", b"half");
+        write(&backups, "vault-hourly-x.tmp", b"not ours");
+        make_in(&backups, &s, 10, HOURLY, MAX_HOURLY_BACKUPS).unwrap();
+        let left = names(&backups);
+        assert!(!left.contains(&"vault-hourly-5.tmp".to_string()), "{left:?}");
+        assert!(left.contains(&"vault-hourly-x.tmp".to_string()), "{left:?}");
+        assert!(left.contains(&"vault-hourly-10.clf".to_string()), "{left:?}");
+    }
+
+    #[test]
+    fn an_hourly_name_is_neither_an_ordinary_nor_a_safety_one() {
+        assert_eq!(number_in_name("vault-hourly-123.clf", ".clf"), None);
+        assert_eq!(number_with_prefix("vault-hourly-123.clf", HOURLY, ".clf"), Some(123));
+        assert_eq!(number_with_prefix("vault-hourly-123.clf", PREDELETE, ".clf"), None);
+        assert_eq!(number_with_prefix("vault-predelete-123.clf", HOURLY, ".clf"), None);
+        assert_eq!(number_with_prefix("vault-123.clf", HOURLY, ".clf"), None);
+    }
+
+    #[test]
+    fn flushing_a_missing_file_fails_after_the_retries() {
+        let dir = temp_dir();
+        let started = std::time::Instant::now();
+        assert!(sync_to_disk(&dir.join("nothing-here.tmp")).is_err());
+        assert!(started.elapsed() >= RENAME_PAUSE * (RENAME_TRIES - 1));
+        let there = write(&dir, "there.tmp", b"x");
+        sync_to_disk(&there).unwrap();
     }
 
     const _: () = assert!(RENAME_TRIES >= 5);

@@ -39,10 +39,17 @@ impl Paths {
         }
     }
 
+    /// Creates the folders the app keeps its data in, and checks that they can be written to.
+    /// `create_dir_all` succeeds for a folder that already exists even when it is read-only
+    /// (a write-protected USB stick), so a small file is created and removed to be sure.
     pub fn ensure_dirs(&self) -> std::io::Result<()> {
         std::fs::create_dir_all(&self.backups)?;
         std::fs::create_dir_all(&self.webview)?;
-        std::fs::create_dir_all(&self.keepassxc_config)
+        std::fs::create_dir_all(&self.keepassxc_config)?;
+        let probe = self.data.join(format!(".write-test-{}", std::process::id()));
+        std::fs::write(&probe, b"")?;
+        let _ = std::fs::remove_file(&probe);
+        Ok(())
     }
 }
 
@@ -68,5 +75,39 @@ fn default_keepassxc_dir(root: &Path) -> PathBuf {
             .join("KeePassXC-2.8.0-x64")
     } else {
         root.join("KeePassXC")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_root() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("cipherleaf-portable-{}", crate::model::new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn ensure_dirs_makes_the_folders_and_leaves_no_probe_file() {
+        let root = temp_root();
+        let paths = Paths::at(&root, root.join("kp"));
+        paths.ensure_dirs().unwrap();
+        paths.ensure_dirs().unwrap(); // a second start, with the folders already there
+        assert!(paths.backups.is_dir() && paths.webview.is_dir() && paths.keepassxc_config.is_dir());
+        let leftovers: Vec<_> = std::fs::read_dir(&paths.data)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().starts_with(".write-test"))
+            .collect();
+        assert!(leftovers.is_empty(), "the probe file must be removed");
+    }
+
+    #[test]
+    fn ensure_dirs_fails_when_the_data_folder_cannot_be_made() {
+        let root = temp_root();
+        std::fs::write(root.join("data"), b"a file where the folder should be").unwrap();
+        let paths = Paths::at(&root, root.join("kp"));
+        assert!(paths.ensure_dirs().is_err());
     }
 }
