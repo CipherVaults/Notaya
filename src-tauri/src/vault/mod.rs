@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn the_hourly_flag_is_kept_apart_from_the_lock_time_flag() {
         let path = temp_vault();
-        let mut s = Session::create_open(&path).unwrap();
+        let s = Session::create_open(&path).unwrap();
         assert!(s.dirty && s.hourly_due, "a new vault has unsaved changes");
         drop(s);
         let mut s = Session::unlock_open(&path).unwrap();
