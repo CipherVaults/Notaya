@@ -21,7 +21,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Executor: Claude (Claude Code) with a PC remote session for the build and the real-exe checks (model output)
 - Outcome: first folder and ZIP (SHA-256 `9AD3F863…B209`) built and tested, then superseded after the owner's Deg/Rad finding (PR #12, #13); the final build from `6fa9ee5` (ZIP SHA-256 `863500C6…E321`) was released by the owner as GitHub release `v1.0.1` (published 2026-10-24 12:09:45 UTC; tag on `6fa9ee5`; asset digest equal to the ZIP hash; see the report's last addendum)
 - Acceptance: pending (the owner said his tests were good and, at 12:16:47 UTC, that USB removal, Win+L, sleep and idle lock passed; those are test reports, not an acceptance)
-- Open dependency / next action: the owner's decision on acceptance; he applies the corrected release notes with `gh release edit v1.0.1` (see the report's last addendum)
+- Open dependency / next action: the owner's decision on acceptance; the corrected release notes are applied (12:22:01 UTC; see the report's last addendum)
 
 ### 2026-10-23 (owner approval 22:25:50 UTC; work times not recorded), EX-2026-10-23-21: V1.0.1 audit fixes (A23)
 
