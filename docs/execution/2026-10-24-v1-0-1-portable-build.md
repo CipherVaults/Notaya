@@ -53,10 +53,22 @@ Built on the PC at about 11:54 UTC from the merge commit of [PR #13](https://git
 - **Release notes:** `E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\RELEASE-NOTES.md` (3,916 bytes, UTF-8 without BOM): the first notes plus a Calculator bullet, the new commit line and the new hashes.
 - **Tests on the shipped exe in a fresh extraction of the ZIP (throwaway data; port 9335 closed after each):** optional security 52/52; restoreflow 13/13; passwords testE 5/5; licenses window 4/4; and a real-window calculator check (the CDP port of `dev-mock/calc-ui-check.cjs`) 21/21: the DEG/RAD label on screen and in the hidden text; `sin(30)` is 0.5 in Deg and -0.988031624093 in Rad; after `=` switching to Rad brings `sin(30)` back with the Rad answer and switching to Deg recalls it again; clicking the already active unit leaves the answer; `±` after `=` gives `-(0.5)` with the result line `= -0.5` and switching the unit keeps it; `asin(0.5)` is 30 in Deg and 0.523598775598 in Rad; `2+3=` then Deg leaves 5.
 - The first folder `E:\Project\Cipherleaf-V1.0.1-2026-10-24` (ZIP SHA-256 `9AD3F863…B209`) is superseded and untouched; V1.0 and `E:\Project\Cipherleaf-portable` were not touched.
-- **Not released.** The owner retests, then runs, in his own terminal:
+- **Not released when this build was made** (released at 12:09:45 UTC, see the last addendum). The owner retests, then runs, in his own terminal:
 
   ```
   gh release create v1.0.1 "E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\Cipherleaf-V1.0.1-portable.zip" --repo AbyssWatcher2/CipherLeaf --target 6fa9ee59040d93704c20a2392a24863069b7e78e --title "CipherLeaf V1.0.1" --notes-file "E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\RELEASE-NOTES.md" --latest
   ```
 
   Afterwards the release is checked on GitHub (tag, target, one asset, digest equal to the ZIP hash) and recorded here.
+
+## Addendum: the release (2026-10-24 12:09:45 UTC)
+
+The owner wrote at 12:02:30 UTC that all his tests were good and that he would run the command, and at 12:10:45 UTC "Check out". He ran the `gh release create` command above in his own terminal. Checked through the GitHub API on 2026-10-24 at about 12:11 UTC (system clock 12:11:27 UTC); the asset was not downloaded and re-hashed:
+
+- [Release v1.0.1](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.0.1), "CipherLeaf V1.0.1", published 12:09:45 UTC, not a draft, not a prerelease.
+- Tag `v1.0.1` points at `6fa9ee59040d93704c20a2392a24863069b7e78e`, the commit the final build was made from.
+- One asset, `Cipherleaf-V1.0.1-portable.zip`, 87,224,165 bytes (equal to the built ZIP), GitHub-computed digest `sha256:863500c69e6ee614f08e258986f3c285d8e520efab603db53cf47ec769d0e321` (equal to the built ZIP's SHA-256). The asset upload began at 12:02:52 UTC; download count 0 at the check.
+- The release notes are the contents of `RELEASE-NOTES.md` (the Calculator bullet, the commit line and the new hashes are in it).
+- Release `v1.0` is untouched: tag on `0ed3f525c5a93dabfe9c1e73fe94d4ebe91840da`, one asset of 87,186,510 bytes with digest `cab1e72e79b9061da05558a9afb5cfbcb916b589a32fb318ae110e04d522d53d`.
+
+Not checked: that the GitHub release is marked as the latest one; the downloaded asset. The owner has not accepted the release. His own USB removal, Win+L and sleep tests are his to report.

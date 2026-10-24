@@ -19,9 +19,9 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Report: [2026-10-24-v1-0-1-portable-build.md](2026-10-24-v1-0-1-portable-build.md)
 - Task / Goal: build the V1.0.1 folder and ZIP from the merged PR #9 (`1e7afe5`) and test the exe in it, for the owner's own testing before the release
 - Executor: Claude (Claude Code) with a PC remote session for the build and the real-exe checks (model output)
-- Outcome: first folder and ZIP (SHA-256 `9AD3F863…B209`) built and tested, then superseded after the owner's Deg/Rad finding (PR #12, #13); the final build from `6fa9ee5` (ZIP SHA-256 `863500C6…E321`) is in the report's last addendum; not released
-- Acceptance: pending (the owner is testing it)
-- Open dependency / next action: the owner's manual tests; then he runs the `gh release create v1.0.1` command in the report
+- Outcome: first folder and ZIP (SHA-256 `9AD3F863…B209`) built and tested, then superseded after the owner's Deg/Rad finding (PR #12, #13); the final build from `6fa9ee5` (ZIP SHA-256 `863500C6…E321`) was released by the owner as GitHub release `v1.0.1` (published 2026-10-24 12:09:45 UTC; tag on `6fa9ee5`; asset digest equal to the ZIP hash; see the report's last addendum)
+- Acceptance: pending (the owner said his tests were good; that is not an acceptance)
+- Open dependency / next action: the owner's decision on acceptance; his own USB removal, Win+L and sleep tests
 
 ### 2026-10-23 (owner approval 22:25:50 UTC; work times not recorded), EX-2026-10-23-21: V1.0.1 audit fixes (A23)
 
