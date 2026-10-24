@@ -17,6 +17,8 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 3. Checks: cloud `tsc`, build and 101 harness tests; an independent review (no High; findings fixed); PC results are in EX-21 and A23. During the PC run another thread was using the same PC; one optional-security step failed once and may have been that collision (not proven).
 4. The owner said at 23:06:10 UTC that they would sleep and asked to continue everything and to put the computer to sleep afterwards (not while another thread tests).
 
+5. After the limit reset (23:43 UTC) the live-checks report (draft PR #10) showed WebView2 contacting Microsoft addresses at startup, so the README, Settings About and security-design wording was corrected (commit `63a3ffd`; no claim of zero traffic). Final PC run on `97d94b9` (2026-10-24 00:22 to 00:41 UTC): every build check and real-exe run passed (155 cargo tests, optional security 52/52 including p3/p4); details in EX-21 and A23. Remaining: owner merge, then the V1.0.1 folder and ZIP.
+
 Not run: free-space check, real-PC USB removal, idle, Win+L, sleep, a screen reader. Nothing is accepted.
 
 ---
