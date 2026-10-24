@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-24 (after the owner's message of 08:59:52 UTC; work times not recorded), EX-2026-10-24-N1: Proposal to run without WebView2 or Microsoft components
+
+- Report: [2026-10-24-no-webview2-proposal.md](2026-10-24-no-webview2-proposal.md)
+- Task / Goal: a plan (not code) for removing the WebView2/Edge dependency
+- Executor: Claude (Claude Code), cloud thread (model output)
+- Outcome: proposal with options O0 to O5, a phased recommendation and five owner decisions, in `docs/plan/proposal-2026-10-24-no-webview2.md`; nothing built or run
+- Acceptance: pending (the owner has not reviewed it)
+- Open dependency / next action: the owner's answers to the decisions at the end of the proposal
+
 ### 2026-10-23 (after the owner's message of 21:37:43 UTC; work times not recorded), EX-2026-10-23-20: Notices gaps (WebView2 loader licence, KeePassXC library sources)
 
 - Report: [2026-10-23-notices-gaps.md](2026-10-23-notices-gaps.md)

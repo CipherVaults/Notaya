@@ -6,6 +6,20 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-24 (owner message 08:59:52 UTC; work times not recorded), Cipherleaf: plan to run without WebView2 or Microsoft components, cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread session (model output). **Record basis:** the owner's project-thread message, the repository at `f79bab3`, web research, draft PR #10.
+
+## What happened
+
+1. The owner asked for a plan so the app does not use WebView2 or Microsoft, since some people removed Edge. The request was read-only research plus a document.
+2. The proposal `docs/plan/proposal-2026-10-24-no-webview2.md` compares keeping WebView2 with clearer errors, a bundled Fixed Version WebView2, Tauri's CEF runtime (experimental, blocked by the stable-only rule), Electron, a native Rust UI and a native Lite edition. It recommends a bundled non-Microsoft Chromium for the full editor and a measured spike first, and notes that removing Edge does not by itself remove the WebView2 runtime.
+3. No code was changed, nothing was built or run; the amendments record and STATUS were left alone because nothing is approved.
+
+Where to resume: the owner answers the decisions at the end of the proposal.
+
+---
+
 # 📘 Session: 2026-10-23 (after the owner's merge at 20:45:05 UTC; work times not recorded), Cipherleaf: V1.0 portable build, cloud thread session
 
 **Executor:** Claude (Claude Code) in the cloud thread session, with a PC remote session for the build (model output). **Record basis:** GitHub (merge time, merge commit), the PC session's report.
