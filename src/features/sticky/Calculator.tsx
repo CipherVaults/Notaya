@@ -120,7 +120,10 @@ export default function Calculator() {
         {mode === "scientific" && (
           <Segmented
             value={degrees ? "deg" : "rad"}
-            onChange={(v) => setDegrees(v === "deg")}
+            onChange={(v) => {
+              setDegrees(v === "deg");
+              calc.recallForAngleUnit();
+            }}
             options={[
               { value: "deg", label: "Deg" },
               { value: "rad", label: "Rad" },
@@ -162,15 +165,22 @@ export default function Calculator() {
               style={{ outline: "none", boxShadow: "none" }}
             />
             <div className="mt-1 flex h-6 items-center justify-between gap-2">
-              <button
-                onClick={calc.copy}
-                disabled={!preview && !(shown && !shown.error)}
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-faint hover:bg-surface-2 hover:text-fg disabled:pointer-events-none disabled:opacity-40"
-                aria-label="Copy the result"
-                title="Copy the result"
-              >
-                {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={calc.copy}
+                  disabled={!preview && !(shown && !shown.error)}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-faint hover:bg-surface-2 hover:text-fg disabled:pointer-events-none disabled:opacity-40"
+                  aria-label="Copy the result"
+                  title="Copy the result"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}
+                </button>
+                {mode === "scientific" && (
+                  <span className="text-xs font-medium text-faint" title="Angles for sin, cos and tan are in this unit" aria-label={degrees ? "Angles in degrees" : "Angles in radians"}>
+                    {degrees ? "DEG" : "RAD"}
+                  </span>
+                )}
+              </div>
               <div className={cn("truncate text-right font-mono text-sm tabular-nums", shown?.error ? "text-danger" : "text-muted")} aria-live="polite">
                 {shown ? (shown.error ? shown.text : `= ${shown.text}`) : preview ? `= ${preview}` : ""}
               </div>

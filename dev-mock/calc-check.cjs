@@ -4,7 +4,7 @@
 //   Set-Content .calc-check\package.json '{"type":"commonjs"}'
 //   node dev-mock/calc-check.cjs
 // Then delete the .calc-check folder. Prints ALL OK when every case passes.
-const { evaluate, formatNumber, negateExpr, CalcError } = require('../.calc-check/calc.js');
+const { evaluate, formatNumber, negateExpr, dependsOnAngleUnit, CalcError } = require('../.calc-check/calc.js');
 const cases = [
  ['1+2*3', 7], ['(1+2)*3', 9], ['2^3^2', 512], ['-2^2', -4], ['2^-1', 0.5], ['10/4', 2.5],
  ['0.1+0.2', 0.3], ['200+10%', 220], ['200-10%', 180], ['50%', 0.5], ['10%*200', 20], ['200*10%', 20],
@@ -23,6 +23,8 @@ const chk=(name,got,want)=>{ if(Math.abs(got-want)>1e-9){fail++;console.log('FAI
 chk('sin90deg',d('sin(90)'),1); chk('cos90deg',d('cos(90)'),0); chk('sin180deg',d('sin(180)'),0); chk('tan45',d('tan(45)'),1);
 chk('sin rad',d('sin(pi/2)',{degrees:false}),1); chk('asin1 deg',d('asin(1)'),90); chk('atan1 deg',d('atan(1)'),45); chk('acos0 rad',d('acos(0)',{degrees:false}),Math.PI/2);
 chk('ans',d('ans*2',{ans:21}),42);
+// which expressions the Deg/Rad switch can change (the display brings them back after "=")
+for (const [x,w] of [['sin(30)',true],['asin(0.5)',true],['2cos(60)+1',true],['TAN(45)',true],['2+3',false],['sqrt(4)',false],['ln(e)',false],['sin(ans)',false],['',false]]) { if (dependsOnAngleUnit(x)!==w) { fail++; console.log('FAIL dependsOnAngleUnit',JSON.stringify(x),!w,w); } }
 // errors
 for (const bad of ['1/0','sqrt(-1)','ln(0)','1+','(1+2','1+2)','foo','2**3','abs','1..2','5.5!','171!','tan(90)','asin(2)','','3 $ 4']) {
   try { const v=evaluate(bad,{degrees:true,ans:0}); fail++; console.log('FAIL should error:',JSON.stringify(bad),'got',v); } catch(e){ if(!(e instanceof CalcError)){fail++;console.log('FAIL non-CalcError',bad,e);} else console.log('error ok:',JSON.stringify(bad),'->',e.message); }
