@@ -11,8 +11,10 @@
 //! An "open" vault (security off, amendment A21) has the open flag set in `flags`.
 //! Its data key is wrapped under a built-in, public password, so the file is still
 //! in the encrypted, tamper-checked format but is NOT secret: anyone with the file
-//! and a copy of Cipherleaf can read it. Turning security on or off only re-wraps
-//! the same data key under different credentials.
+//! and a copy of Cipherleaf can read it. Turning security on or off, and changing the
+//! master password or keyfile, re-key the vault (a fresh data key and vault id, see
+//! `Session::rekey`): a header is never re-wrapped around the old data key, because
+//! an older header and its password would then still open data written later.
 
 use zeroize::Zeroizing;
 
@@ -60,24 +62,14 @@ impl Header {
         Ok((header, dek))
     }
 
-    /// Re-wraps an existing data key under new credentials (password change).
-    /// Uses a fresh salt but keeps the vault id, so existing records stay valid.
-    pub fn rewrap(
-        &self,
-        dek: &Key,
-        password: &str,
-        keyfile: Option<&[u8; 32]>,
-        kdf: KdfParams,
-    ) -> Result<Header> {
-        Self::wrap(dek, password, keyfile, kdf, self.vault_id, false)
-    }
-
-    /// Re-wraps an existing data key under the built-in key (security off).
+    /// Re-wraps an existing data key under the built-in key (security off). Only tests use it:
+    /// the app never re-wraps a data key (see the module comment); it re-keys the vault.
     pub fn rewrap_open(&self, dek: &Key) -> Result<Header> {
         Self::wrap(dek, OPEN_PASSWORD, None, OPEN_KDF, self.vault_id, true)
     }
 
     /// A header for a re-keyed vault (a fresh data key and vault id), under a master password.
+    /// Used when security is turned on and when the master password or keyfile is changed.
     pub fn protected_for(
         dek: &Key,
         vault_id: [u8; 16],
@@ -234,12 +226,18 @@ mod tests {
     }
 
     #[test]
-    fn rewrap_keeps_data_key_and_vault_id() {
-        let (h, dek) = Header::create("old", None, FAST).unwrap();
-        let h2 = h.rewrap(&dek, "new", None, FAST).unwrap();
-        assert_eq!(h2.vault_id, h.vault_id);
+    fn a_header_for_a_new_password_wraps_the_given_fresh_key_and_id() {
+        // Changing the password builds a header for a NEW data key and vault id (the old
+        // header is never re-wrapped around the old key, see the module comment).
+        let (h, old_dek) = Header::create("old", None, FAST).unwrap();
+        let new_dek = crypto::random_key();
+        let new_id = crypto::random_bytes::<16>();
+        let h2 = Header::protected_for(&new_dek, new_id, "new", None, FAST).unwrap();
+        assert_eq!(h2.vault_id, new_id);
+        assert_ne!(h2.vault_id, h.vault_id);
         assert_ne!(h2.salt, h.salt);
-        assert_eq!(*h2.unlock("new", None).unwrap(), *dek);
+        assert_eq!(*h2.unlock("new", None).unwrap(), *new_dek);
+        assert_ne!(*h2.unlock("new", None).unwrap(), *old_dek);
         assert!(h2.unlock("old", None).is_err());
     }
 
@@ -288,9 +286,9 @@ mod tests {
     }
 
     #[test]
-    fn rewrapping_between_open_and_protected_keeps_the_key_and_id() {
+    fn wrapping_between_open_and_protected_keeps_the_key_and_id() {
         let (h, dek) = Header::create_open().unwrap();
-        let p = h.rewrap(&dek, "pw", None, FAST).unwrap();
+        let p = Header::protected_for(&dek, h.vault_id, "pw", None, FAST).unwrap();
         assert!(!p.open && p.vault_id == h.vault_id);
         assert_eq!(*p.unlock("pw", None).unwrap(), *dek);
         let o = p.rewrap_open(&dek).unwrap();

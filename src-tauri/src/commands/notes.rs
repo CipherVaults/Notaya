@@ -3,6 +3,7 @@ use tauri::ipc::{InvokeBody, Request};
 use tauri::State;
 
 use super::{check_color, limit, notebook, page, section};
+use crate::backup;
 use crate::error::{Error, Result};
 use crate::model::{new_id, now_ms, Item, Notebook, Page, PageMeta, Section};
 use crate::state::AppState;
@@ -87,8 +88,10 @@ pub fn update_notebook(state: State<'_, AppState>, id: String, name: String, col
     })
 }
 
-/// Deletes a notebook with all of its sections and pages.
-#[tauri::command]
+/// Deletes a notebook with all of its sections and pages. A checked backup is made first
+/// (there is no trash for a whole notebook); if it fails, nothing is deleted. Runs on a worker
+/// thread because the backup can take a moment.
+#[tauri::command(async)]
 pub fn delete_notebook(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
         notebook(s, &id)?;
@@ -108,6 +111,7 @@ pub fn delete_notebook(state: State<'_, AppState>, id: String) -> Result<NotesTr
             .collect();
         doomed.extend(section_ids);
         doomed.push(id.clone());
+        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
         s.remove_many(&doomed)?;
         s.collect_garbage()?;
         Ok(tree(s))
@@ -152,7 +156,8 @@ pub fn update_section(state: State<'_, AppState>, id: String, name: String, colo
     })
 }
 
-#[tauri::command]
+/// Deletes a section with all of its pages, after a checked backup (see `delete_notebook`).
+#[tauri::command(async)]
 pub fn delete_section(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
         section(s, &id)?;
@@ -164,6 +169,7 @@ pub fn delete_section(state: State<'_, AppState>, id: String) -> Result<NotesTre
             })
             .collect();
         doomed.push(id.clone());
+        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
         s.remove_many(&doomed)?;
         s.collect_garbage()?;
         Ok(tree(s))

@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-23 (owner approval 22:25:50 UTC; work times not recorded), EX-2026-10-23-21: V1.0.1 audit fixes (A23)
+
+- Report: [2026-10-23-v1-0-1-audit-fixes.md](2026-10-23-v1-0-1-audit-fixes.md)
+- Task / Goal: password change re-keys; safer backups; safety backup and counts before deleting a notebook or section; honest wording with security off; keyboard sidebar; `ctutils` update; updated `Licenses` folder
+- Executor: Claude (Claude Code), agents and an independent review (model output), a PC session for the compile and real-exe checks
+- Outcome: implemented and reviewed; PC results see the report
+- Acceptance: pending (the owner has not reviewed it)
+- Open dependency / next action: the owner merges the PR, then the V1.0.1 folder, ZIP and release
+
 ### 2026-10-23 (after the owner's message of 21:37:43 UTC; work times not recorded), EX-2026-10-23-20: Notices gaps (WebView2 loader licence, KeePassXC library sources)
 
 - Report: [2026-10-23-notices-gaps.md](2026-10-23-notices-gaps.md)

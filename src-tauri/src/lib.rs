@@ -1,3 +1,4 @@
+mod backup;
 mod commands;
 mod crypto;
 mod embed;
@@ -71,12 +72,21 @@ pub fn run() {
             response.unwrap_or_else(|_| http::Response::new(Vec::new()))
         })
         .setup(move |app| {
-            paths.ensure_dirs()?;
+            if let Err(e) = paths.ensure_dirs() {
+                // The folder next to the app can't be written (a read-only drive or folder).
+                // The release exe has no console, so without a message it would just vanish.
+                report_startup_failure(app.handle().clone(), data_folder_message(&paths, &e));
+                return Ok(());
+            }
             // Hidden from screenshots only if the vault has a master password: its lock screen
             // comes first. A vault with security off, or none yet, is never hidden (A21).
             let protect = paths.vault.exists()
                 && vault::Session::read_header(&paths.vault).map(|h| !h.open).unwrap_or(true);
-            ui::build_main(app.handle(), &paths, protect)?;
+            if let Err(e) = ui::build_main(app.handle(), &paths, protect) {
+                // Usually the Microsoft WebView2 component is missing or its folder can't be used.
+                report_startup_failure(app.handle().clone(), window_message(&paths, &e));
+                return Ok(());
+            }
             state::spawn_monitor(app.handle().clone());
             Ok(())
         })
@@ -176,5 +186,50 @@ pub fn run() {
             tools::search,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Cipherleaf");
+        .unwrap_or_else(|e| {
+            // No window and no console to tell the owner: leave without a crash report.
+            eprintln!("Cipherleaf could not start: {e}");
+            std::process::exit(1);
+        });
+}
+
+/// The text shown when the data folder next to the app cannot be written to.
+fn data_folder_message(paths: &portable::Paths, e: &std::io::Error) -> String {
+    format!(
+        "Cipherleaf could not start because it cannot save its data in {}. The folder may be \
+         read-only (a locked USB stick, a CD, or a protected location such as Program Files).\n\n\
+         Move the whole Cipherleaf folder somewhere you can write to, for example your \
+         Documents folder, and start it again.\n\n({e})",
+        paths.data.display()
+    )
+}
+
+/// The text shown when the window itself could not be opened.
+fn window_message(paths: &portable::Paths, e: &tauri::Error) -> String {
+    format!(
+        "Cipherleaf could not open its window. The usual cause is that the Microsoft WebView2 \
+         Runtime is missing (Windows normally has it; if not, install the \"Evergreen\" runtime \
+         from Microsoft's website, search for \"WebView2 Runtime\"). Cipherleaf also needs a \
+         folder it can write to: {}. If that folder is read-only, move the whole Cipherleaf \
+         folder somewhere you can write to, for example your Documents folder.\n\n\
+         Then start Cipherleaf again.\n\n({e})",
+        paths.data.display()
+    )
+}
+
+/// Tells the owner, in a native message box, why Cipherleaf cannot start, then exits. It runs
+/// on its own thread because the box needs the (already starting) event loop, which setup is
+/// still holding.
+fn report_startup_failure(app: tauri::AppHandle, text: String) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+    eprintln!("Cipherleaf could not start: {text}");
+    std::thread::spawn(move || {
+        let _ = app
+            .dialog()
+            .message(text)
+            .title("Cipherleaf could not start")
+            .kind(MessageDialogKind::Error)
+            .blocking_show();
+        std::process::exit(1);
+    });
 }

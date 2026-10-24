@@ -5,7 +5,8 @@
 //! exact bytes that will be installed are the ones that were verified). Only
 //! then is the live vault renamed to `data/restore-undo-<ms>.clf` and the copy
 //! renamed to `data/vault.clf`. The app never deletes or rotates `restore-undo-*`
-//! files; the backup rotation only touches `vault-*.clf` in `data/backups`.
+//! files; the backup rotations only touch `vault-<digits>.clf` and
+//! `vault-predelete-<digits>.clf` in `data/backups`.
 
 use std::ffi::OsString;
 use std::fs::{self, File, OpenOptions};
@@ -45,7 +46,12 @@ pub struct BackupInfo {
     pub size: u64,
 }
 
-/// The automatic backups look like `vault-<ms>.clf` (same rule as the rotation).
+/// The backups look like `vault-<ms>.clf` (automatic) or `vault-predelete-<ms>.clf` (the safety
+/// backup made before a notebook or section is deleted). Both start with `vault-`, so this one
+/// loose rule lists both for a restore and counts both as "earlier copies" (`openvault`), which
+/// is wanted: a safety backup holds what the person deleted and may want back, and it is
+/// readable by anyone when security was off, so turning security on removes it too. (The
+/// rotation in `backup.rs` is stricter: it owns only exact names, one pattern per rotation.)
 pub(crate) fn is_backup_name(name: &str) -> bool {
     name.starts_with("vault-") && name.ends_with(".clf")
 }
@@ -61,7 +67,7 @@ fn temp_path(paths: &Paths) -> PathBuf {
     paths.data.join(TEMP_NAME)
 }
 
-/// The regular files `vault-*.clf` in the backups folder, newest first. Reads
+/// The regular files `vault-*.clf` in the backups folder (safety backups included), newest first. Reads
 /// only names, times and sizes, never contents, so it works while locked.
 pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
     list_in(&paths.backups, is_backup_name)
@@ -508,6 +514,42 @@ mod tests {
         assert_eq!(names, ["vault-300.clf", "vault-200.clf", "vault-100.clf"]);
         assert_eq!(list[0].size, 7);
         assert!(list[0].modified_ms > list[1].modified_ms && list[1].modified_ms > list[2].modified_ms);
+    }
+
+    #[test]
+    fn safety_backups_are_listed_and_can_be_restored_from() {
+        let paths = temp_paths();
+        let b = &paths.backups;
+        write(&b.join("vault-100.clf"), b"old");
+        write(&b.join("vault-predelete-200.clf"), b"before a delete");
+        write(&b.join("vault-predelete-5.tmp"), b"half"); // a stray temp file is not a backup
+        set_age(&b.join("vault-100.clf"), 300);
+        set_age(&b.join("vault-predelete-200.clf"), 100);
+        let list = list_backups(&paths).unwrap();
+        let names: Vec<&str> = list.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["vault-predelete-200.clf", "vault-100.clf"]);
+        assert_eq!(
+            resolve_source(&paths, "vault-predelete-200.clf", None).unwrap(),
+            paths.backups.join("vault-predelete-200.clf")
+        );
+    }
+
+    #[test]
+    fn hourly_backups_are_listed_and_can_be_restored_from() {
+        let paths = temp_paths();
+        let b = &paths.backups;
+        write(&b.join("vault-100.clf"), b"old");
+        write(&b.join("vault-hourly-200.clf"), b"hourly");
+        write(&b.join("vault-hourly-5.tmp"), b"half"); // a stray temp file is not a backup
+        set_age(&b.join("vault-100.clf"), 300);
+        set_age(&b.join("vault-hourly-200.clf"), 100);
+        let list = list_backups(&paths).unwrap();
+        let names: Vec<&str> = list.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["vault-hourly-200.clf", "vault-100.clf"]);
+        assert_eq!(
+            resolve_source(&paths, "vault-hourly-200.clf", None).unwrap(),
+            paths.backups.join("vault-hourly-200.clf")
+        );
     }
 
     #[test]

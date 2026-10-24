@@ -59,6 +59,7 @@ function LoadedEditor({ page }: { page: Page }) {
   const slashController = useRef<SlashController>({ state: null, onKey: () => false });
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
+  const securityOn = useApp((s) => s.status?.securityOn ?? false);
   const readOnly = page.trashedAt !== null;
 
   // Saves run one after another, so an older save can never land after a newer one.
@@ -217,12 +218,12 @@ function LoadedEditor({ page }: { page: Page }) {
         <span className="flex items-center gap-1.5 text-xs text-faint" title={`Edited ${formatDate(updated)} · ${words} words`}>
           {saveState === "saving" && (
             <>
-              <Loader2 size={12} className="animate-spin" /> Encrypting…
+              <Loader2 size={12} className="animate-spin" /> {securityOn ? "Encrypting…" : "Saving…"}
             </>
           )}
           {saveState === "saved" && (
             <>
-              <Check size={12} /> Saved &amp; encrypted
+              <Check size={12} /> {securityOn ? "Saved & encrypted" : "Saved on this drive"}
             </>
           )}
           {saveState === "error" && <span className="text-danger">Not saved</span>}

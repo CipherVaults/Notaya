@@ -123,7 +123,7 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
           />
           <span className="text-muted">
             <strong className="text-fg">Delete earlier backups made while security was off.</strong> Anyone with the
-            folder can open those without a password. A new backup under your new password is saved first. Old vaults that a restore kept (restore-undo files) are never deleted.
+            folder can open those without a password. This includes the safety copies saved before a notebook or section was deleted, so a notebook deleted earlier can no longer be brought back from them. A new backup under your new password is saved first. Old vaults that a restore kept (restore-undo files) are never deleted.
           </span>
         </label>
 

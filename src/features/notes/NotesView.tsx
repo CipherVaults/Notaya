@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { BookPlus, FilePlus2, FileText, NotebookPen, RotateCcw, Trash2 } from "lucide-react";
+import { BookPlus, FilePlus2, FileText, NotebookPen, RotateCcw, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { NotesTree } from "@/lib/types";
@@ -29,21 +30,61 @@ export default function NotesView() {
   );
 }
 
+const OPEN_NOTE_KEY = "cipherleaf.openVaultNoteDismissed";
+
+/** One-time reminder, shown only while security is off. Remembers the dismissal in this browser profile only. */
+function OpenVaultNote() {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(OPEN_NOTE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (dismissed) return null;
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(OPEN_NOTE_KEY, "1");
+    } catch {
+      /* the note simply shows again next time */
+    }
+  };
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left text-sm text-muted" role="note">
+      <p className="flex-1">Your notes open without a password. Turn on security in Settings, Security, to protect them.</p>
+      <button onClick={dismiss} className="rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-fg" aria-label="Dismiss" title="Dismiss">
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 function Home() {
   const tree = useApp((s) => s.tree);
   const setIntent = useApp((s) => s.setIntent);
   const openPage = useApp((s) => s.openPage);
+  const statusKnown = useApp((s) => s.status !== null);
+  const securityOn = useApp((s) => s.status?.securityOn ?? false);
+  const showNote = statusKnown && !securityOn;
 
   if (tree.notebooks.length === 0) {
     return (
       <EmptyState
         icon={<NotebookPen size={28} />}
         title="Your first notebook"
-        body="Notebooks hold sections, and sections hold pages. Everything is encrypted the moment you type it."
+        body={
+          securityOn
+            ? "Notebooks hold sections, and sections hold pages. Everything is encrypted the moment you type it."
+            : "Notebooks hold sections, and sections hold pages. Your notes are saved on this drive, in the app's vault file. They are not private until you turn on security in Settings."
+        }
         action={
-          <Button variant="primary" onClick={() => setIntent("new-notebook")}>
-            <BookPlus size={16} /> Create notebook
-          </Button>
+          <div className="flex max-w-md flex-col items-center gap-4">
+            <Button variant="primary" onClick={() => setIntent("new-notebook")}>
+              <BookPlus size={16} /> Create notebook
+            </Button>
+            {showNote && <OpenVaultNote />}
+          </div>
         }
       />
     );
@@ -60,7 +101,16 @@ function Home() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto px-10 pb-16 pt-16" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
         <h1 className="text-[2rem] font-bold tracking-tight">{greeting}</h1>
-        <p className="mt-1 text-muted">Everything here is encrypted. Pick a page from the sidebar, or start a new one.</p>
+        <p className="mt-1 text-muted">
+          {securityOn
+            ? "Everything here is encrypted. Pick a page from the sidebar, or start a new one."
+            : "Your notes are saved on this drive. Pick a page from the sidebar, or start a new one."}
+        </p>
+        {showNote && (
+          <div className="mt-5">
+            <OpenVaultNote />
+          </div>
+        )}
 
         <div className="mt-8 flex gap-2">
           <Button variant="primary" onClick={() => setIntent("new-page")}>
