@@ -41,3 +41,34 @@ The owner merged [PR #9](https://github.com/AbyssWatcher2/CipherLeaf/pull/9) int
 While testing, the owner reported (11:40:11 UTC) that the Deg/Rad switch of the Calculator seemed to do nothing, and confirmed it on this ZIP. The engine was right (`sin(30)` is 0.5 in Deg and -0.988031624093 in Rad, `asin(0.5)` is 30 in Deg); the cause was the display: after `=` it holds only the answer, and with an empty display nothing visible changed (reproduced in the mock UI with a browser). Fix (front end only): the unit is shown as DEG or RAD next to Copy, and switching it after `=` brings the last expression back (when it has sin, cos or tan and not `ans`) with its answer in the new unit ([PR #12](https://github.com/AbyssWatcher2/CipherLeaf/pull/12), merged 11:46:38 UTC, `c44a293`). A read-only review agent then found three low issues, fixed in PR #13 (clicking the active unit changed the display; `+/-` after `=` left a stale result line; the label's screen-reader text). The checks are `dev-mock/calc-check.cjs` (engine, `dependsOnAngleUnit`) and the new `dev-mock/calc-ui-check.cjs` (a browser against the mock UI), mutation-checked.
 
 The folder and ZIP described above are therefore **not** to be released. They stay in `E:\Project\Cipherleaf-V1.0.1-2026-10-24` unchanged. A rebuild from the final `main` commit goes into `E:\Project\Cipherleaf-V1.0.1-2026-10-24-b`; its commit, hashes, tests and release command are added here once it exists.
+
+## Addendum 2026-10-24 12:0x UTC: the final build (replaces the one above)
+
+Built on the PC at about 11:54 UTC from the merge commit of [PR #13](https://github.com/AbyssWatcher2/CipherLeaf/pull/13), `6fa9ee59040d93704c20a2392a24863069b7e78e` (merged by the owner at 11:49:38 UTC; its tree is identical to `91fc68d`, so it holds the calculator fix of PR #12 and the three review fixes). A clean detached worktree; `git diff --stat 1e7afe5..HEAD` shows only `src/features/sticky/Calculator.tsx`, `calc.ts`, `useCalc.ts`, `dev-mock/calc-check.cjs`, `dev-mock/calc-ui-check.cjs` and docs files.
+
+- **Build:** `cargo test --lib` 167 passed 0 failed; `tsc` and `npm run build` ok; `tauri` release build ok. The build script stopped once (a fault in the script, which read the folder suffix as a date), the half-made target folder was deleted, and the build was run again from scratch.
+- **Exe (shipped):** SHA-256 `A5BEE8A702C0740C78D7704EA02ADF3859AAB6A41B12E9860C140948A043C0E7`, 11,382,272 bytes. The first build of the same commit gave `D0F9E8F5375BB5FA5F6C377270C168DC57BF5850837F68CB24841D50477F9A6F` (same size), so the exe is not reproducible bit for bit; every test ran on the shipped one.
+- **Folder:** `E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\Cipherleaf`, 176 files, 166,641,014 bytes, laid out as above (KeePassXC 156 files hash-identical to V1.0). No `data\`, `.devdata`, `*.clf`, `*.key`, `.env` or CSV; the exe was never started from it.
+- **ZIP:** `E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\Cipherleaf-V1.0.1-portable.zip`, 87,224,165 bytes, SHA-256 `863500C69E6EE614F08E258986F3C285D8E520EFAB603DB53CF47EC769D0E321`, 176 entries, 0 backslash entry names, one top-level folder `Cipherleaf/`. Extracted to Temp: 0 of 176 files differ from the folder, 0 extra files.
+- **Release notes:** `E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\RELEASE-NOTES.md` (3,916 bytes, UTF-8 without BOM): the first notes plus a Calculator bullet, the new commit line and the new hashes.
+- **Tests on the shipped exe in a fresh extraction of the ZIP (throwaway data; port 9335 closed after each):** optional security 52/52; restoreflow 13/13; passwords testE 5/5; licenses window 4/4; and a real-window calculator check (the CDP port of `dev-mock/calc-ui-check.cjs`) 21/21: the DEG/RAD label on screen and in the hidden text; `sin(30)` is 0.5 in Deg and -0.988031624093 in Rad; after `=` switching to Rad brings `sin(30)` back with the Rad answer and switching to Deg recalls it again; clicking the already active unit leaves the answer; `±` after `=` gives `-(0.5)` with the result line `= -0.5` and switching the unit keeps it; `asin(0.5)` is 30 in Deg and 0.523598775598 in Rad; `2+3=` then Deg leaves 5.
+- The first folder `E:\Project\Cipherleaf-V1.0.1-2026-10-24` (ZIP SHA-256 `9AD3F863…B209`) is superseded and untouched; V1.0 and `E:\Project\Cipherleaf-portable` were not touched.
+- **Not released when this build was made** (released at 12:09:45 UTC, see the last addendum). The owner retests, then runs, in his own terminal:
+
+  ```
+  gh release create v1.0.1 "E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\Cipherleaf-V1.0.1-portable.zip" --repo AbyssWatcher2/CipherLeaf --target 6fa9ee59040d93704c20a2392a24863069b7e78e --title "CipherLeaf V1.0.1" --notes-file "E:\Project\Cipherleaf-V1.0.1-2026-10-24-b\RELEASE-NOTES.md" --latest
+  ```
+
+  Afterwards the release is checked on GitHub (tag, target, one asset, digest equal to the ZIP hash) and recorded here.
+
+## Addendum: the release (2026-10-24 12:09:45 UTC)
+
+The owner wrote at 12:02:30 UTC that all his tests were good and that he would run the command, and at 12:10:45 UTC "Check out". He ran the `gh release create` command above in his own terminal. Checked through the GitHub API on 2026-10-24 at about 12:11 UTC (system clock 12:11:27 UTC); the asset was not downloaded and re-hashed:
+
+- [Release v1.0.1](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.0.1), "CipherLeaf V1.0.1", published 12:09:45 UTC, not a draft, not a prerelease.
+- Tag `v1.0.1` points at `6fa9ee59040d93704c20a2392a24863069b7e78e`, the commit the final build was made from.
+- One asset, `Cipherleaf-V1.0.1-portable.zip`, 87,224,165 bytes (equal to the built ZIP), GitHub-computed digest `sha256:863500c69e6ee614f08e258986f3c285d8e520efab603db53cf47ec769d0e321` (equal to the built ZIP's SHA-256). The asset upload began at 12:02:52 UTC; download count 0 at the check.
+- The release notes are the contents of `RELEASE-NOTES.md` (the Calculator bullet, the commit line and the new hashes are in it).
+- Release `v1.0` is untouched: tag on `0ed3f525c5a93dabfe9c1e73fe94d4ebe91840da`, one asset of 87,186,510 bytes with digest `cab1e72e79b9061da05558a9afb5cfbcb916b589a32fb318ae110e04d522d53d`.
+
+Not checked: that the GitHub release is marked as the latest one; the downloaded asset. The owner has not accepted the release. His own USB removal, Win+L and sleep tests are his to report.
