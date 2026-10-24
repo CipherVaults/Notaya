@@ -6,15 +6,16 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
-# 📘 Session: 2026-10-24 (owner message 08:59:52 UTC; work times not recorded), Cipherleaf: plan to run without WebView2 or Microsoft components, cloud thread session
+# 📘 Session: 2026-10-24 (owner message 08:59:52 UTC; work times not recorded), Cipherleaf: plan for a native Windows app with no browser engine, cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread session (model output). **Record basis:** the owner's project-thread message, the repository at `f79bab3`, web research, draft PR #10.
 
 ## What happened
 
 1. The owner asked for a plan so the app does not use WebView2 or Microsoft, since some people removed Edge. The request was read-only research plus a document.
-2. The proposal `docs/plan/proposal-2026-10-24-no-webview2.md` compares keeping WebView2 with clearer errors, a bundled Fixed Version WebView2, Tauri's CEF runtime (experimental, blocked by the stable-only rule), Electron, a native Rust UI and a native Lite edition. It recommends a bundled non-Microsoft Chromium for the full editor and a measured spike first, and notes that removing Edge does not by itself remove the WebView2 runtime.
-3. No code was changed, nothing was built or run; the amendments record and STATUS were left alone because nothing is approved.
+2. The owner then clarified (09:07:13 to 09:12:34 UTC): the concern is people without Edge, then a truly native Windows app, self-contained, on any Windows 10 or 11 update level, "exactly as we did". The proposal `docs/plan/proposal-2026-10-24-no-webview2.md` was rewritten around that: a parity inventory (what can and cannot match), toolkit comparison (recommends Masonry/Parley/Vello with iced and Qt as fallbacks, pending a spike), the notes-editor rebuild, `vault.clf` and backend compatibility (a `cipherleaf-core` crate shared by both apps), self-contained Windows 10/11 packaging, phases with a go/no-go spike, licences and decisions.
+3. The earlier no-Edge finding is kept as an interim step: the current exe most likely exits silently when the WebView2 runtime is missing (audit F-13).
+4. No code was changed, nothing was built or run; the amendments record and STATUS were left alone because nothing is approved.
 
 Where to resume: the owner answers the decisions at the end of the proposal.
 
