@@ -121,6 +121,7 @@ export default function Calculator() {
           <Segmented
             value={degrees ? "deg" : "rad"}
             onChange={(v) => {
+              if ((v === "deg") === degrees) return; // the unit already shown: nothing to change
               setDegrees(v === "deg");
               calc.recallForAngleUnit();
             }}
@@ -176,8 +177,9 @@ export default function Calculator() {
                   {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}
                 </button>
                 {mode === "scientific" && (
-                  <span className="text-xs font-medium text-faint" title="Angles for sin, cos and tan are in this unit" aria-label={degrees ? "Angles in degrees" : "Angles in radians"}>
-                    {degrees ? "DEG" : "RAD"}
+                  <span className="text-xs font-medium text-faint" title="Angles for sin, cos and tan are in this unit">
+                    <span aria-hidden="true">{degrees ? "DEG" : "RAD"}</span>
+                    <span className="sr-only">{degrees ? "Angles in degrees" : "Angles in radians"}</span>
                   </span>
                 )}
               </div>
