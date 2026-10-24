@@ -156,7 +156,7 @@ Short answers. The full list is in [`docs/security-design.md`](docs/security-des
 - **No password reset.** See above.
 - **The lock screen and screenshots.** The lock screen of a protected vault is hidden from screenshots only when the app starts. After a lock during the session it follows your screenshot setting, which is off by default.
 - **Not defended:** malware or a keylogger on the PC, someone with administrator rights, reading memory while the app is open, and a file swapped by someone who can write to your `data` folder (for example replacing a protected vault with an open one).
-- **Not proven yet.** Most checks so far are unit tests and scripted runs on throwaway data. USB removal, sleep and long idle behavior have not been checked on a real PC. The owner has not formally accepted any result. See [`docs/acceptance.md`](docs/acceptance.md) for exactly what was checked.
+- **Not proven yet.** Most checks so far are unit tests and scripted runs on throwaway data. The owner reports that on 2026-10-24 he checked idle lock, Win+L, sleep and USB removal by hand on a real PC and that they passed; there is no detailed record or automated test of them. The owner has not formally accepted any result. See [`docs/acceptance.md`](docs/acceptance.md) for exactly what was checked.
 
 ## Credits and licenses
 
