@@ -104,6 +104,18 @@ mod tests {
     }
 
     #[test]
+    fn ensure_dirs_fails_when_a_file_cannot_be_created_in_an_existing_data_folder() {
+        // `create_dir_all` succeeds for folders that exist, so only the write probe can notice a
+        // folder that can't be written to. A folder where the probe file should go stands in
+        // for that (creating a file with that name fails).
+        let root = temp_root();
+        let paths = Paths::at(&root, root.join("kp"));
+        paths.ensure_dirs().unwrap();
+        std::fs::create_dir(paths.data.join(format!(".write-test-{}", std::process::id()))).unwrap();
+        assert!(paths.ensure_dirs().is_err(), "the write probe must be what fails here");
+    }
+
+    #[test]
     fn ensure_dirs_fails_when_the_data_folder_cannot_be_made() {
         let root = temp_root();
         std::fs::write(root.join("data"), b"a file where the folder should be").unwrap();

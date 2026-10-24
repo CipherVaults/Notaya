@@ -207,10 +207,12 @@ fn data_folder_message(paths: &portable::Paths, e: &std::io::Error) -> String {
 /// The text shown when the window itself could not be opened.
 fn window_message(paths: &portable::Paths, e: &tauri::Error) -> String {
     format!(
-        "Cipherleaf could not open its window. It needs the Microsoft WebView2 Runtime, which \
-         Windows normally has already, and a folder it can write to: {}.\n\n\
-         If that folder is read-only, move the whole Cipherleaf folder somewhere you can write \
-         to, for example your Documents folder, and start it again.\n\n({e})",
+        "Cipherleaf could not open its window. The usual cause is that the Microsoft WebView2 \
+         Runtime is missing (Windows normally has it; if not, install the \"Evergreen\" runtime \
+         from Microsoft's website, search for \"WebView2 Runtime\"). Cipherleaf also needs a \
+         folder it can write to: {}. If that folder is read-only, move the whole Cipherleaf \
+         folder somewhere you can write to, for example your Documents folder.\n\n\
+         Then start Cipherleaf again.\n\n({e})",
         paths.data.display()
     )
 }

@@ -129,6 +129,17 @@ mod tests {
     }
 
     #[test]
+    fn hourly_copies_made_with_security_off_are_deleted_too() {
+        let paths = paths();
+        drop(Session::create_open(&paths.backups.join("vault-hourly-1.clf")).unwrap());
+        drop(Session::create(&paths.backups.join("vault-hourly-2.clf"), "pw", None, FAST).unwrap());
+        assert_eq!(unprotected_copies(&paths).len(), 1);
+        assert_eq!(delete_unprotected(&paths), 1);
+        assert!(!paths.backups.join("vault-hourly-1.clf").exists());
+        assert!(paths.backups.join("vault-hourly-2.clf").exists(), "a protected hourly copy stays");
+    }
+
+    #[test]
     fn an_empty_folder_has_no_earlier_copies() {
         let paths = paths();
         assert!(!has_earlier_copies(&paths));

@@ -18,8 +18,9 @@ use crate::{backup, keepassxc, pwbackup, system, ui};
 /// A vault with security off is backed up at most this often while it is open (and only if
 /// something changed since the last hourly backup), because it never locks.
 const OPEN_BACKUP_EVERY: Duration = Duration::from_secs(60 * 60);
-/// After a failed hourly backup, the next try comes after this long, not an hour later (and
-/// not every second).
+/// After a failed hourly backup, the next try comes after this long, then 3 times and 12 times
+/// as long if it keeps failing (5 minutes, 15 minutes, then hourly). Each try copies the whole
+/// vault, so a drive that stays full or broken must not be hammered.
 const OPEN_BACKUP_RETRY: Duration = Duration::from_secs(5 * 60);
 /// The hourly backup holds the vault for as long as the copy takes, which on a slow USB stick
 /// can be many seconds, so it starts only after the keyboard and mouse have been still this
@@ -512,7 +513,7 @@ pub fn spawn_monitor(app: AppHandle) {
         let mut last_wall = SystemTime::now();
         let mut desktop_seen_unlocked = false;
         let mut last_open_backup = Instant::now();
-        let mut open_backup_failed = false;
+        let mut open_backup_failures: u32 = 0;
         let (open_backup_every, open_backup_retry, open_backup_idle_ms) = open_backup_timing();
         loop {
             std::thread::sleep(Duration::from_secs(1));
@@ -529,18 +530,30 @@ pub fn spawn_monitor(app: AppHandle) {
             };
             // Security off: nothing locks the vault (A21), but it is backed up now and then.
             if security_off {
-                let due = if open_backup_failed { open_backup_retry } else { open_backup_every };
+                let due = match open_backup_failures {
+                    0 => open_backup_every,
+                    1 => open_backup_retry,
+                    2 => open_backup_retry * 3,
+                    _ => open_backup_retry * 12,
+                };
                 let since = last_open_backup.elapsed();
                 let quiet = system::idle_ms() >= open_backup_idle_ms || since >= due + OPEN_BACKUP_OVERDUE;
                 if since >= due && quiet && !state.is_quitting() {
-                    last_open_backup = Instant::now(); // a failing drive is retried in 5 minutes, not every second
-                    if let Some(ok) = periodic_backup(&app, &state, !open_backup_failed) {
-                        open_backup_failed = !ok;
+                    // The first failure is shown, the second (soon after) is not, and from the third
+                    // on each one is shown again, at the slow pace, so a drive that stays broken
+                    // is not forgotten and not announced every few minutes.
+                    let notify = open_backup_failures == 0 || open_backup_failures >= 2;
+                    if let Some(ok) = periodic_backup(&app, &state, notify) {
+                        open_backup_failures = if ok { 0 } else { open_backup_failures.saturating_add(1) };
                     }
+                    // The wait starts when the copy ends (a slow copy must not make the next one
+                    // due at once), and the clock jump the copy caused is not a sleep.
+                    last_open_backup = Instant::now();
+                    last_wall = SystemTime::now();
                 }
                 continue;
             }
-            open_backup_failed = false;
+            open_backup_failures = 0;
 
             let screen_locked = system::workstation_locked();
             if !screen_locked {

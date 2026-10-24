@@ -793,10 +793,21 @@ mod tests {
         for n in &hourly[5..] {
             assert!(left.contains(n), "the ordinary rotation must not touch {n}");
         }
-        // The real entry point names its file the same way.
+        // The real entry point names its file the same way and keeps the newest three.
         let paths = Paths::at(&dir, dir.join("kp"));
-        let name = make_hourly_backup(&paths, &s).unwrap();
-        assert!(name.starts_with("vault-hourly-") && name.ends_with(".clf"), "{name}");
+        let mut made = Vec::new();
+        for _ in 0..6 {
+            let name = make_hourly_backup(&paths, &s).unwrap();
+            assert!(name.starts_with("vault-hourly-") && name.ends_with(".clf"), "{name}");
+            // Older than the next one, whatever the clock resolution.
+            secs_ago(&paths.backups.join(&name), 600 - made.len() as u64 * 60);
+            made.push(name);
+        }
+        let left = names(&paths.backups);
+        assert_eq!(left.len(), MAX_HOURLY_BACKUPS, "{left:?}");
+        for n in &made[3..] {
+            assert!(left.contains(n), "{n}: {left:?}");
+        }
     }
 
     #[test]

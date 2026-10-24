@@ -418,6 +418,49 @@ mod tests {
         assert!(s.dirty && s.hourly_due, "a later change makes both due again");
     }
 
+    #[test]
+    fn every_kind_of_change_makes_both_backup_flags_due() {
+        let path = temp_vault();
+        let mut s = Session::create_open(&path).unwrap();
+        let p = page("flags");
+        let id = p.id().to_string();
+        s.put(p).unwrap();
+        let settled = |s: &mut Session| {
+            s.dirty = false;
+            s.hourly_due = false;
+        };
+
+        settled(&mut s);
+        s.put_many(vec![page("a"), page("b")]).unwrap();
+        assert!(s.dirty && s.hourly_due, "put_many");
+
+        settled(&mut s);
+        s.remove_many(&[id]).unwrap();
+        assert!(s.dirty && s.hourly_due, "remove_many");
+
+        settled(&mut s);
+        s.put_attachment("image/png", b"pixels").unwrap();
+        assert!(s.dirty && s.hourly_due, "put_attachment");
+
+        // The picture is not used by any page, so the cleanup removes it.
+        settled(&mut s);
+        assert!(s.collect_garbage().unwrap() >= 1);
+        assert!(s.dirty && s.hourly_due, "collect_garbage when it removed something");
+
+        settled(&mut s);
+        assert_eq!(s.collect_garbage().unwrap(), 0);
+        assert!(!s.dirty && !s.hourly_due, "a cleanup that removed nothing changes nothing");
+
+        // Turning security on re-keys the vault: every record is new, so a backup is due.
+        settled(&mut s);
+        s.make_protected("a long enough password 1", None, FAST).unwrap();
+        assert!(s.dirty && s.hourly_due, "make_protected");
+
+        settled(&mut s);
+        s.change_credentials("a long enough password 1", None, "another long password 2", None, FAST).unwrap();
+        assert!(s.dirty && s.hourly_due, "change_credentials");
+    }
+
     fn page(text: &str) -> Item {
         Item::Page(Page {
             id: new_id(),

@@ -535,6 +535,24 @@ mod tests {
     }
 
     #[test]
+    fn hourly_backups_are_listed_and_can_be_restored_from() {
+        let paths = temp_paths();
+        let b = &paths.backups;
+        write(&b.join("vault-100.clf"), b"old");
+        write(&b.join("vault-hourly-200.clf"), b"hourly");
+        write(&b.join("vault-hourly-5.tmp"), b"half"); // a stray temp file is not a backup
+        set_age(&b.join("vault-100.clf"), 300);
+        set_age(&b.join("vault-hourly-200.clf"), 100);
+        let list = list_backups(&paths).unwrap();
+        let names: Vec<&str> = list.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["vault-hourly-200.clf", "vault-100.clf"]);
+        assert_eq!(
+            resolve_source(&paths, "vault-hourly-200.clf", None).unwrap(),
+            paths.backups.join("vault-hourly-200.clf")
+        );
+    }
+
+    #[test]
     fn list_of_a_missing_folder_is_empty() {
         let paths = temp_paths();
         std::fs::remove_dir_all(&paths.backups).unwrap();

@@ -2,7 +2,7 @@
 
 Cipherleaf is a portable Windows notes app. You write notes in notebooks, sections and pages, keep sticky notes on the desktop, and keep everything in one `data` folder, so the app can run from a folder or a USB stick.
 
-**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Cipherleaf's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup. What it sends was not captured and Cipherleaf does not control it, so the app is not silent on the network. Cipherleaf's own code never sends your notes anywhere. A web link in a note opens in your normal browser only when you click it.
+**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Cipherleaf's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup. What it sends was not captured, and Cipherleaf does not currently stop it, so the app is not silent on the network. Cipherleaf's own code never sends your notes anywhere. A web link in a note opens in your normal browser only when you click it.
 
 Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. While it is off your notes are not private: anyone who can open the folder can read them. You can turn security on or off at any time in Settings. A password manager (KeePassXC) is a second optional extra, with its own switch.
 
@@ -102,7 +102,7 @@ Everything lives in the `data` folder next to `Cipherleaf.exe`. Copy the folder 
 
 1. Open **Settings** and find **Security (optional)**. Press **Turn on…**.
 2. Choose a master password (a long phrase of several unrelated words is easy to remember and strong) and write it down somewhere safe. Add a keyfile if you want one ("Create new" or "Use existing"). Confirm that you understand there is no password reset.
-3. Leave "Delete earlier backups made while security was off" ticked unless you want to keep them. Cipherleaf saves a fresh protected backup first and deletes only the backups Cipherleaf made while security was off (automatic, hourly, and the safety copies saved before a delete, so a notebook deleted earlier can no longer be brought back from them); your own backup copies, `restore-undo` and `set-aside` files are never deleted.
+3. Leave "Delete earlier backups made while security was off" ticked unless you want to keep them. Cipherleaf saves a fresh protected backup first and deletes the files named `vault-*.clf` in `data\backups` that open without a password (the automatic and hourly backups and the safety copies saved before a delete, so a notebook deleted earlier can no longer be brought back from them, and also any `vault-*.clf` you put there yourself); your own backup copies saved elsewhere, `restore-undo` and `set-aside` files are never deleted.
 4. Press **Turn on security**. Your notes get a new key under the new password; this takes a moment, longer for big notebooks.
 5. From now on the app locks as described above, and you unlock with the password (and keyfile).
 
@@ -140,7 +140,7 @@ Close Cipherleaf, then copy the whole folder (`Cipherleaf.exe`, `KeePassXC` and 
 - **"Wrong master password or keyfile for this Cipherleaf vault."** This is the Cipherleaf password, not the KeePassXC one. If the vault uses a keyfile, it must be the exact file chosen when the vault was made.
 - **"The vault file couldn't be read."** Another program (antivirus or a sync tool) may be using the file. Press "Check again" or "Try again". If it stays, use Restore or Start over.
 - **"No notes found here."** The folder has backups but no current notes file. Restore a backup, or start new notes.
-- **"Cipherleaf could not start".** The message says Cipherleaf cannot save its data in the `data` folder next to the app, or cannot open its window. The usual cause is a read-only folder (a write-protected USB stick, a CD, or a protected place such as Program Files). Move the whole Cipherleaf folder somewhere you can write to, for example your Documents folder, and start it again.
+- **"Cipherleaf could not start".** The message says either that Cipherleaf cannot save its data in the `data` folder next to the app, or that it cannot open its window. For the first, the usual cause is a read-only folder (a write-protected USB stick, a CD, or a protected place such as Program Files): move the whole Cipherleaf folder somewhere you can write to, for example your Documents folder, and start it again. For the second, the usual cause is a missing Microsoft WebView2 Runtime (Windows normally has it): install the "Evergreen" runtime from Microsoft's website (search for "WebView2 Runtime").
 - **Windows SmartScreen warns about the exe.** The exe is not code-signed. Choose "More info", then "Run anyway" if you trust where you got it.
 - **KeePassXC does not start.** It needs the Microsoft Visual C++ 2015 to 2022 x64 runtime, and its folder must be next to `Cipherleaf.exe`.
 - **Quit says KeePassXC is still open.** Finish or close it, then close Cipherleaf again.
@@ -149,7 +149,7 @@ Close Cipherleaf, then copy the whole folder (`Cipherleaf.exe`, `KeePassXC` and 
 
 Short answers. The full list is in [`docs/security-design.md`](docs/security-design.md).
 
-- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Cipherleaf's own code makes no connections (the page security policy allows only the app's internal channel), and KeePassXC is preset to make none. The WebView2 component that Windows uses to draw the window is Microsoft's, and a live test showed it contacting Microsoft addresses at startup; Cipherleaf does not control that and does not claim zero network traffic. A web link in a note opens in your browser only when you click it.
+- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Cipherleaf's own code makes no connections (the page security policy allows only the app's internal channel), and KeePassXC is preset to make none. The WebView2 component that Windows uses to draw the window is Microsoft's, and a live test showed it contacting Microsoft addresses at startup; Cipherleaf does not currently stop that and does not claim zero network traffic. A web link in a note opens in your browser only when you click it.
 - **With security on:** notes are encrypted with XChaCha20-Poly1305, with the key derived from your password by Argon2id (256 MiB, 3 passes), and tampering is detected.
 - **With security off, the notes are readable by anyone with the folder.** This is by design, and it is stated in Settings.
 - **The exe is not signed.** Windows SmartScreen may warn. Cipherleaf does not check itself, so a replaced exe would not be noticed.
