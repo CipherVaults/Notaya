@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { CalcError, evaluate, formatNumber, negateExpr } from "./calc";
+import { CalcError, dependsOnAngleUnit, evaluate, formatNumber, negateExpr } from "./calc";
 
 export interface CalcEntry {
   expr: string;
@@ -70,6 +70,15 @@ export function useCalc(degrees: boolean) {
     }
   };
 
+  // After "=" the display holds only the answer, so switching Deg/Rad would seem to do nothing. Bring the
+  // last expression back (if it has sin, cos or tan) so the preview shows its answer in the new unit.
+  const recallForAngleUnit = () => {
+    const last = history[0];
+    if (!shown || shown.error || !last || !dependsOnAngleUnit(last.expr)) return;
+    setExpr(last.expr);
+    setShown(null);
+  };
+
   const copy = async () => {
     const text = shown && !shown.error ? shown.text : preview;
     if (!text) return;
@@ -88,5 +97,5 @@ export function useCalc(degrees: boolean) {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  return { expr, type, input, preview, shown, copied, history, setHistory, insert, clear, back, negate, equals, copy };
+  return { expr, type, input, preview, shown, copied, history, setHistory, insert, clear, back, negate, equals, recallForAngleUnit, copy };
 }

@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
+
+- Report: [2026-10-24-v1-0-1-portable-build.md](2026-10-24-v1-0-1-portable-build.md)
+- Task / Goal: build the V1.0.1 folder and ZIP from the merged PR #9 (`1e7afe5`) and test the exe in it, for the owner's own testing before the release
+- Executor: Claude (Claude Code) with a PC remote session for the build and the real-exe checks (model output)
+- Outcome: folder, ZIP (SHA-256 `9AD3F863…B209`) and release notes built; tests on the exe passed; not released
+- Acceptance: pending (the owner is testing it)
+- Open dependency / next action: the owner's manual tests; then he runs the `gh release create v1.0.1` command in the report
+
 ### 2026-10-23 (owner approval 22:25:50 UTC; work times not recorded), EX-2026-10-23-21: V1.0.1 audit fixes (A23)
 
 - Report: [2026-10-23-v1-0-1-audit-fixes.md](2026-10-23-v1-0-1-audit-fixes.md)
