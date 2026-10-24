@@ -14,8 +14,8 @@ The owner (project thread message of 2026-10-24 08:59:52 UTC) asked for a plan s
 
 ## 3. Not verified
 
-Nothing was built or run. Effort figures, the Fixed Version runtime size and terms, Tauri-on-Windows CEF behaviour, Servo's state and most licences are unverified (listed in section 8 of the proposal). The network finding comes from unmerged draft PR #10.
+Nothing was built or run. Effort figures, the Fixed Version runtime size and terms, Tauri-on-Windows CEF behaviour, Servo's state and most licences are unverified (listed in section 9 of the proposal). The network finding comes from unmerged draft PR #10.
 
 ## 4. Open items
 
-The owner's answers to the five decisions at the end of the proposal. No approval was given; `docs/plan/approval-and-amendments.md` and `docs/STATUS.md` are unchanged on purpose to avoid conflicts with open PRs; add the amendment and the status row when the owner chooses a direction.
+The owner's answers to the decisions at the end of the proposal. No approval was given; `docs/plan/approval-and-amendments.md` and `docs/STATUS.md` are unchanged on purpose to avoid conflicts with open PRs; add the amendment and the status row when the owner chooses a direction.

@@ -4,6 +4,8 @@
 
 **The owner's request (2026-10-24, 08:59:52 UTC):** "Can you come up with a plan so the app doesn't use web view or Microsoft. You know some people deleted Edge because they don't want it."
 
+**Clarification (2026-10-24, 09:07:13 UTC):** "I mean if anyone doesn't have Microsoft Edge, what should we do then." So the main concern is **people on PCs without Edge**, not a ban on every Microsoft component. That is meaning (a) in section 1, and it makes section 6 (the simple fix) the answer to act on first; the bigger options stay as later choices.
+
 ## 1. The problem, in plain terms
 
 Cipherleaf's interface is a web page (React, TipTap/ProseMirror, KaTeX) drawn by **Microsoft Edge WebView2**, a Chromium engine that Windows supplies. The Rust core (vault, crypto, backups, KeePassXC handling) does not depend on it.
@@ -15,6 +17,17 @@ What this costs today:
 3. **Weight.** The same checks measured about 410 MB of memory at idle for Cipherleaf plus its WebView2 processes.
 
 **One fact to check first.** Microsoft's answers say that uninstalling the Edge *browser* does not remove the *WebView2 runtime*; they are separate, and Windows features (Widgets, Teams, Office, Outlook) depend on the runtime ([Microsoft Q&A](https://learn.microsoft.com/en-us/answers/a/12737586)). So people who "deleted Edge" may still have WebView2, or may have used a removal tool that also took it out. We do not know which. Plan step 0 finds out.
+
+**What happens today on a PC without Edge** (from the code and the audit; the exe was **never run on a PC without the runtime**, so the visible behaviour is plausible, not observed):
+
+| PC state | What Cipherleaf does |
+|---|---|
+| Edge browser removed, WebView2 runtime still installed | Works. Cipherleaf uses the runtime, not the browser. |
+| WebView2 runtime missing (removed by a "debloat" tool, or an old Windows 10) | Window creation fails in `ui::build_main` (`lib.rs:79`), the error ends in `.expect(...)`, and with `panic = "abort"` and the GUI subsystem the process **exits with no message** (audit F-13, code path confirmed). The person sees "I double-click and nothing happens". |
+| Runtime present but broken | Probably the same as the row above (unverified). |
+| ZIP opened without extracting, read-only stick | Separate F-13 causes; same silent exit. |
+
+The README already says WebView2 is required but gives no help, and no installer is bundled. The standard Microsoft bootstrapper needs internet, so it does not fit an offline USB stick.
 
 **What "no Microsoft" can mean** (the answer changes the plan):
 
@@ -133,27 +146,39 @@ A separate edition with plain text and Markdown-style notes, sticky notes, the l
 
 **Testing.** Everything here needs the Windows PC with throwaway vaults and `CIPHERLEAF_HOME` (CLAUDE.md). The cloud container cannot run any of it, so a spike's result is "built and ran on the PC", never "compiles".
 
-## 6. Recommendation and phases
+## 6. The simple fix for people without Edge (do this first)
+
+Two small changes, in this order. Both leave the vault, the UI and the security model alone.
+
+1. **A clear message instead of a silent exit (about 2 to 4 days, also closes audit F-13).** At start-up check for the WebView2 runtime (the registry key or the `GetAvailableCoreWebView2BrowserVersionString` call that the `webview2-com` crate already wraps, to confirm). If it is missing, show a native Windows message box (`MessageBoxW`; the `windows` crate is already a dependency) that says in plain words what is missing, offers Microsoft's runtime download page, and says the other option is the "no Edge needed" ZIP. Also show a box for the other silent exits (cannot create `data\`). Add the README troubleshooting entry. No new dependency.
+2. **A second ZIP that carries its own runtime (about 1 to 2 weeks).** Ship Microsoft's *Fixed Version* WebView2 runtime inside a separate ZIP (for example `Cipherleaf-V1.x-portable-no-edge.zip`), in a folder next to the exe, and point the app at it at start-up when the folder exists. The normal small ZIP stays as it is. This works on a PC with no Edge and no WebView2 and offline. Costs, already listed under O1: the ZIP grows by hundreds of megabytes, we must publish a new ZIP when Microsoft fixes Chromium bugs, Microsoft's redistribution terms must be read and added to the notices, and it is still Microsoft's engine (so it answers "no Edge", not "no Microsoft"). It must be tested on a PC or VM **without** the runtime installed, using a throwaway vault, before it is offered.
+
+Why not the alternatives for this case: Microsoft's online bootstrapper needs a network and an install (admin rights may be needed), which is wrong for a USB stick; telling people to install Edge defeats the point; Electron or CEF (section 3) also fix it but cost weeks and are not needed just for this.
+
+If the owner later wants the engine itself to be non-Microsoft, continue with the phases in section 7.
+
+## 7. Recommendation and phases
 
 The cheapest option that fully meets "no WebView2, no Edge, nothing from Microsoft's runtime on the machine" while keeping the product the owner has is **a bundled non-Microsoft Chromium (O2, or O3 if O2 is not ready)**. The option that removes browsers altogether (O4) is a different, much larger project and should be chosen only if the owner wants a small, browser-free app more than the current editor. Meanwhile O0 is worth doing regardless.
 
-1. **Phase 0, find the real problem (about 1 day, no code).** Ask the people who removed Edge what exactly happens: does the app show anything, is "WebView2 Runtime" in Apps & features, which tool removed Edge. Confirm meaning (a) or (b). Merge or read the live-checks PR for the network finding.
-2. **Phase 1, O0 (days).** Start-up check with a clear native message, README wording, the "nothing happens" audit item. Ship in a V1.1.
+1. **Phase 0, find the real problem (about 1 day, no code).** Ask the people who removed Edge what exactly happens: does the app show anything, is "WebView2 Runtime" in Apps & features, which tool removed Edge. (Meaning (a) is now settled by the owner's clarification.) Merge or read the live-checks PR for the network finding.
+2. **Phase 1, the message (days).** Section 6 step 1: start-up check, native message box with a link, README entry. Ship in a V1.1.
+2b. **Phase 1b, the "no Edge needed" ZIP (1 to 2 weeks).** Section 6 step 2, after a test on a PC or VM without the runtime.
 3. **Phase 2, a measured spike (about 1 to 2 weeks, on the PC, throwaway data).** In branches, never in `main`: (i) O1 with a fixed-version runtime, measuring ZIP size, idle memory and network connections; (ii) whichever of O2 or O3 is allowed (Electron now; CEF only if Tauri's CEF runtime has reached stable and runs on Windows). Pass criteria: all existing real-exe scripts, capture protection, KeePassXC overlay, `clatt` images, USB-style move, Start over, restore. Output: a record with measurements, not opinions.
 4. **Phase 3, adopt one (2 to 6 weeks).** A new amendment (A24 or next free) with the owner's approval, security-design update, licence entries in the notices, V1.x release with the old build kept available.
 5. **Phase 4, optional and separate: O5/O4 research.** A 2-week prototype of one native text editor (Xilem/Parley or egui) opening real TipTap JSON read-only with equations, to decide whether a browser-free edition is realistic. No commitment before the prototype.
 
-If the owner wants **only** a quick relief for people without Edge, do Phase 0 and Phase 1, then O1 as a clearly labelled "no Edge needed" ZIP, and say plainly that it still contains Microsoft's engine.
+For people without Edge, Phases 0, 1 and 1b are the whole answer, and the clearly labelled "no Edge needed" ZIP must say plainly that it still contains Microsoft's engine. Phases 2 to 4 are only for the wish to drop Microsoft's engine too.
 
-## 7. Decisions for the owner
+## 8. Decisions for the owner
 
-1. Which meaning of "no Microsoft": (a) no Edge, (b) no Microsoft runtime, or (c) Linux/macOS too?
+1. ~~Which meaning of "no Microsoft"?~~ Answered 09:07:13 UTC: people without Edge installed (meaning (a)). Still open: do you also want Microsoft's engine gone (meaning (b))?
 2. Is a larger download (hundreds of MB) acceptable for a self-contained build, and are you willing to take on engine updates?
 3. Phase 0 first (ask the people who removed Edge), then spike O1 and O3: yes or no?
 4. Do you want the browser-free path (O4/O5) researched, knowing it is months of work?
 5. Cipherleaf's own licence is still open and affects Slint and any GPL choice.
 
-## 8. What was not verified
+## 9. What was not verified
 
 Everything in section 3 was researched from documentation and the repository, not run. Unverified: the Fixed Version runtime's real size and redistribution terms; whether Tauri 2 can use a fixed runtime folder without a patch; the Windows state of any CEF runtime; whether transparent windows, Mica and capture protection behave with Chromium builds; Servo's state beyond a secondary source; the licences of crates not named as verified; any effort figure. The network finding comes from an unmerged draft PR (#10).
 
