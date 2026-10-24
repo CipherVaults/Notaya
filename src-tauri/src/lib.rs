@@ -72,7 +72,12 @@ pub fn run() {
             response.unwrap_or_else(|_| http::Response::new(Vec::new()))
         })
         .setup(move |app| {
-            paths.ensure_dirs()?;
+            if let Err(e) = paths.ensure_dirs() {
+                // The folder next to the app can't be written (a read-only drive or folder).
+                // The release exe has no console, so without a message it would just vanish.
+                report_startup_failure(app.handle().clone(), &paths, &e);
+                return Ok(());
+            }
             // Hidden from screenshots only if the vault has a master password: its lock screen
             // comes first. A vault with security off, or none yet, is never hidden (A21).
             let protect = paths.vault.exists()
@@ -177,5 +182,33 @@ pub fn run() {
             tools::search,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Cipherleaf");
+        .unwrap_or_else(|e| {
+            // No window and no console to tell the owner: leave without a crash report.
+            eprintln!("Cipherleaf could not start: {e}");
+            std::process::exit(1);
+        });
+}
+
+/// Tells the owner, in a native message box, that Cipherleaf cannot save its data where it
+/// is, then exits. It runs on its own thread because the box needs the (already starting)
+/// event loop, which setup is still holding.
+fn report_startup_failure(app: tauri::AppHandle, paths: &portable::Paths, e: &std::io::Error) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+    let text = format!(
+        "Cipherleaf could not start because it cannot save its data in {}. The folder may be \
+         read-only (a locked USB stick, a CD, or a protected location such as Program Files).\n\n\
+         Move the whole Cipherleaf folder somewhere you can write to, for example your \
+         Documents folder, and start it again.\n\n({e})",
+        paths.data.display()
+    );
+    eprintln!("Cipherleaf could not start: {e}");
+    std::thread::spawn(move || {
+        let _ = app
+            .dialog()
+            .message(text)
+            .title("Cipherleaf could not start")
+            .kind(MessageDialogKind::Error)
+            .blocking_show();
+        std::process::exit(1);
+    });
 }
