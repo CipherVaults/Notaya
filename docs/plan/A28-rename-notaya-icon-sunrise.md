@@ -1,6 +1,6 @@
 # A28: Renamed to Notaya, sticky-notes icon, Sunrise theme
 
-**Status:** applied on the owner's instruction (2026-10-27 16:59:11 UTC); the code is in draft [PR #24](https://github.com/AbyssWatcher2/CipherLeaf/pull/24), commit `6003e81`. On the owner's PC (2026-10-27, 18:58 to 19:15 UTC) `cargo test --lib` passed 129 of 129, the release build, a real-exe test on throwaway data and a throwaway Cipherleaf 1.1.0 vault opening in `Notaya.exe` passed (see [EX-2026-10-27-27](../execution/2026-10-27-notaya-rename.md), addendum 4); the exe description and publisher fixes (`a97d5e7`, `d4933ef`) were rebuilt and checked on the PC (addenda 5 and 6; CompanyName now Notaya). Not accepted.
+**Status:** applied on the owner's instruction (2026-10-27 16:59:11 UTC); the code is in draft [PR #24](https://github.com/AbyssWatcher2/CipherLeaf/pull/24), commit `6003e81`. On the owner's PC (2026-10-27, 18:58 to 19:15 UTC) `cargo test --lib` passed 129 of 129, the release build, a real-exe test on throwaway data and a throwaway Cipherleaf 1.1.0 vault opening in `Notaya.exe` passed (see [EX-2026-10-30](../execution/2026-10-27-notaya-rename.md), addendum 4); the exe description and publisher fixes (`a97d5e7`, `d4933ef`) were rebuilt and checked on the PC (addenda 5 and 6; CompanyName now Notaya). Not accepted.
 
 ## What the owner asked for
 

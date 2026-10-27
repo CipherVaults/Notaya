@@ -1,4 +1,4 @@
-# Execution Summary: EX-2026-10-27-27 — renamed to Notaya, sticky-notes icon, Sunrise theme (A28)
+# Execution Summary: EX-2026-10-30 — renamed to Notaya, sticky-notes icon, Sunrise theme (A28)
 
 (4-section form.)
 
@@ -81,3 +81,8 @@ Checked at `e537071` in the same temp clone: `cargo test --lib` 129 of 129; `car
 Checked at `d4933ef` in the same temp clone: `git diff e537071 -- src src-tauri` is only `tauri.conf.json`, +1 line (`"publisher": "Notaya"`). `cargo test --lib` 129 of 129; `cargo clean -p cipherleaf` and `npm run tauri build` exit 0. `Notaya.exe` 11,260,928 bytes, SHA-256 `37243FC24796D76C93C4DCF0B21BDD92FED7E419F827F0B67321CD24EE252D8D`. Properties > Details: **CompanyName Notaya** (was "cipherleaf"), FileDescription Notaya, ProductName Notaya, FileVersion and ProductVersion 1.1.0; InternalName, OriginalFilename, LegalCopyright and Comments are empty (tauri-build 2.7.4 does not set them; not changed). Cause found in tauri-build 2.7.4 `src/lib.rs`: CompanyName is `bundle.publisher` if set, otherwise the second dot-segment of the identifier ("cipherleaf"). Smoke test on throwaway data: title "Notaya", theme sunrise, new vault, port 9335 closed afterwards, `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` unset, no test processes left; `E:\Project\cipherleaf` status unchanged. No user-visible "Cipherleaf" remains in the exe's file properties.
 
 **State for the owner:** the code is `d4933ef` (the records commits after it are docs only). Tested on the PC: `cargo test --lib` 129 of 129, release build, real-exe test on throwaway data, an old Cipherleaf 1.1.0 vault (with and without a password) opening in `Notaya.exe`, and the exe metadata. Not run: the repo's runners (`run-restoreflow`, `run-lockflow`, `run-optionalsecurity`, they delete their temp folders), a restore from the listed 1.1.0 backup, keyboard-only use and a screen reader. The full real-exe pass above was on `91d7068`; later commits changed only metadata (description, publisher). Not accepted. A release is a separate step.
+
+## Addendum 7 (2026-10-27, about 19:30 UTC, system clock): numbering and merge of `main`
+
+- `main` moved on while this PR waited (PR #27 `5013244`, PR #28 `b11ec6d`: the live-audit comparison, "record every step", and the PBS adoption, A29). Those PRs also used the number EX-2026-10-27-27 (the "record every step" report), so **this report is renumbered EX-2026-10-30** (the numbers 28 and 29 are taken too). Earlier addenda and commit messages that say EX-2026-10-27-27 mean this report.
+- `main` was merged into the branch; only the records files conflicted (`STATUS.md`, `sessions.md`, `approval-and-amendments.md`, `execution/README.md`) and were resolved by keeping both sides. No source file changed. `CLAUDE.md` now has the "Cloud threads" and "PBS work cycle" sections from A29; this PR follows them (baseline `b11ec6d`; the task, scope and stop point are in sections 1 and 4 above).

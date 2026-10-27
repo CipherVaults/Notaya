@@ -14,13 +14,36 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
-### 2026-10-27 (owner's messages 16:59:11 and 17:03:39 UTC; work from about 17:00 UTC, system clock), EX-2026-10-27-27: renamed to Notaya, sticky-notes icon, Sunrise theme
+### 2026-10-27 (owner's messages 16:59:11 and 17:03:39 UTC; work from about 17:00 UTC, system clock), EX-2026-10-30: renamed to Notaya, sticky-notes icon, Sunrise theme
 
 - Report: [2026-10-27-notaya-rename.md](2026-10-27-notaya-rename.md)
 - Task / Goal: "proceed with this and The app name is Notaya"; Sunrise the default, Sunrise dark optional ([A28](../plan/A28-rename-notaya-icon-sunrise.md))
-- Executor: Claude (Claude Code) in a cloud thread; PC checks to follow
-- Outcome: code commit `6003e81` in draft PR #24; `tsc` and build pass; mock screens checked; Rust tests and real-exe test not yet run (PC)
+- Executor: Claude (Claude Code) in a cloud thread; PC checks in a Remote Control session
+- Outcome: code `6003e81` plus review and exe-metadata fixes (latest code commit `d4933ef`) in draft PR #24; on the owner's PC: `cargo test --lib` 129 of 129, release build, real-exe test and old Cipherleaf 1.1.0 vaults opening in `Notaya.exe`, all on throwaway data; exe properties say Notaya (addenda 4 to 6). Not run: the repo's runner scripts, a restore from the 1.1.0 backup, keyboard-only use
 - Acceptance: pending
+
+### 2026-10-27 (owner's messages 19:05:05 and 19:08:33 UTC; work 19:10 to about 19:45 UTC, system clock), EX-2026-10-27-29: PBS adopted in its smallest useful form
+
+- Report: [2026-10-27-pbs-adoption.md](2026-10-27-pbs-adoption.md)
+- Task / Goal: "That's really goo just want to to follow / that's my answer" (follow PBS; the recommended answers to the review's four questions)
+- Executor: Claude (Claude Code) in a cloud thread, docs only
+- Outcome: amendment A29, `CLAUDE.md` gains "Cloud threads" and "PBS work cycle", STATUS "Current state" holds only accepted items, questions 8 and 22 answered
+- Open dependency / next action: the owner merges the PR; then the PC copy is fast-forwarded; the skill refresh is a separate review card; nothing is accepted
+
+### 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), EX-2026-10-27-28: live audit (PR #10) compared with V1.1.0
+
+- Report: [2026-10-27-live-audit-comparison.md](2026-10-27-live-audit-comparison.md) (table: [docs/audit/2026-10-27-live-checks-vs-v1-1-0.md](../audit/2026-10-27-live-checks-vs-v1-1-0.md))
+- Task / Goal: "check the live audit" / "compare the current verison with this thread to see if everthign got fixed"
+- Executor: Claude (Claude Code) in a cloud thread, docs only, read-only code check
+- Outcome: PR #10 is merged and its PC session is finished; of the live-check findings 5 are fixed, 3 partly, 1 no longer relevant, 15 still open
+- Open dependency / next action: the owner decides whether to plan a fix release; nothing is accepted
+
+### 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), EX-2026-10-27-27: record every step; PC copy on `main`
+
+- Report: [2026-10-27-record-every-step.md](2026-10-27-record-every-step.md)
+- Task / Goal: the owner's standing rule "record on both github and the pc ... with everything" / "and everystep", and the update of his PC copy after PR #25
+- Executor: Claude (Claude Code) in a cloud thread, docs only; the PC step in a Remote Control session
+- Outcome: PC copy switched from `feat/a9-keepassxc` to `main` and fast-forwarded to `2c8c2e6`; the rule recorded in the authority table and STATUS; untracked `vendor\` folder found (STATUS question 24)
 
 ### 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), EX-2026-10-27-26: records catch-up
 
