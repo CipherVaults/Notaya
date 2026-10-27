@@ -6,6 +6,21 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 16:29:35 to 19:08:33 UTC; work 16:30 to about 19:45 UTC, system clock), Cipherleaf: PBS review, then adoption in its smallest form, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC timestamps), the Notion hub and every page and file that could be opened, the repository at `main` `5013244`. **Reconstructed:** nothing; written at the end of the work. **Big stop:** a change of direction (a new way of working), so this entry has the fuller form.
+
+## What happened
+
+1. At 16:29:35 the owner asked for a read-only understanding review of PBS and how it fits CipherLeaf, with no changes until his word. The review was delivered as a Claude Doc (outside the repo, as asked).
+2. At 17:07:25 he asked why some pages were not opened. They were reachable and had been skipped by choice; they were read and the doc updated. At 19:05:05 he said "read them all"; every reachable page and all 56 files of the ZIP were read (manifest hashes match). Four Notion pages and the Drive originals could not be opened (probably not shared).
+3. Understanding changed in two places. PBS had already been adopted in a compact form on 2026-10-22 (EX-06), and the records had drifted from it (STATUS "Current state" held unaccepted items; the work method for cloud threads was not written down). So the adoption is small: fix those, not start over.
+4. At 19:08:33 the owner wrote "just want to follow / that's my answer". That was read as approval to follow PBS and to take the recommended answer to each of the four questions (records win over memory; one docs PR plus a skill card; full session entries only at big stops; `acceptance.md` and `sessions.md` are in the record set, no Decision Records). Implemented in a draft docs PR: A29, `CLAUDE.md` sections "Cloud threads" and "PBS work cycle", the STATUS restructure, [EX-2026-10-27-29](execution/2026-10-27-pbs-adoption.md).
+
+Not changed: code, the security design, the plan snapshot. Not run: anything (docs only). Nothing is accepted. Where to resume: the owner merges the PR, the PC copy is fast-forwarded, the skill refresh card is saved by him if he agrees.
+
+---
+
 # 📘 Session: 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), Cipherleaf: live audit (PR #10) compared with V1.1.0, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** GitHub PR #10, the "Live PC audit checks" thread (read in full), `git log` and the code of `main` `6981442`.
