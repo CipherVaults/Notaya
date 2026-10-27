@@ -6,6 +6,22 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in the cloud thread "Design new app icon and name" (branch `claude/project-thread-669o55`, draft PR #24). **Record basis:** the thread's messages (UTC timestamps), the system clock and `git log`. Written at the time.
+
+## What happened
+
+1. **Options (13:31 to 15:51 UTC):** three icon rounds (leaf ideas turned down at 13:46:09, "I don't need leaf"), six themes, six rounds of names screened on the web. The owner picked icon 5 (two sticky notes, 14:00:13) and Sunrise (14:29:43). His own names PocketNote and MicroNote were found to clash with existing apps and a trademark record, and he was told. All of it is in `docs/design/`.
+2. **Effort (16:16:23):** "From now every thread is opus with high effort"; this thread switched to high and told the coordinator.
+3. **Go (16:59:11):** "proceed with this and The app name is Notaya". The name was screened (no exact match; "Nota" is common) and the owner told. **17:03:39:** Sunrise is the default, the dark one optional.
+4. **Built (`6003e81`):** the rename, the icon and the two Sunrise looks ([A28](plan/A28-rename-notaya-icon-sunrise.md)). The identifier, data paths, vault format constants, environment variables and browser-profile keys were kept on purpose so existing notes open; existing vaults keep the look they saved (a judgement call, stated to the owner).
+5. Checked in the cloud: `tsc`, build, mock screens, an independent review. Not run: Rust tests, release build, real-exe test (they need the PC).
+
+## Where to resume
+
+Run the PC checks on throwaway data ([EX-2026-10-27-27](execution/2026-10-27-notaya-rename.md) section 4), then the owner merges PR #24 and his PC copy is fast-forwarded. Nothing is accepted.
+
 # 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the project chat and thread messages (UTC timestamps), `git log` of `main` at `87eb7ff`, the GitHub pull request list, the read-only PBS review thread's gap list. **Reconstructed:** items 1 and 2 below come from the project chat, not from a session that recorded them at the time.

@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (owner's messages 16:59:11 and 17:03:39 UTC; work from about 17:00 UTC, system clock), EX-2026-10-27-27: renamed to Notaya, sticky-notes icon, Sunrise theme
+
+- Report: [2026-10-27-notaya-rename.md](2026-10-27-notaya-rename.md)
+- Task / Goal: "proceed with this and The app name is Notaya"; Sunrise the default, Sunrise dark optional ([A28](../plan/A28-rename-notaya-icon-sunrise.md))
+- Executor: Claude (Claude Code) in a cloud thread; PC checks to follow
+- Outcome: code commit `6003e81` in draft PR #24; `tsc` and build pass; mock screens checked; Rust tests and real-exe test not yet run (PC)
+- Acceptance: pending
+
 ### 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), EX-2026-10-27-26: records catch-up
 
 - Report: [2026-10-27-records-catch-up.md](2026-10-27-records-catch-up.md)
