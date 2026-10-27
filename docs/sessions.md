@@ -6,7 +6,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
-# 📘 Session: 2026-10-27 (owner's messages 19:40:47 to 22:28:11 UTC; work 19:41 to about 22:35 UTC, system clock and PC clock), Notaya: release V1.2.0, cloud thread session
+# 📘 Session: 2026-10-27 (owner's messages 19:40:47 to 22:28:11 UTC; work 19:41 to about 22:30 UTC, system clock and PC clock), Notaya: release V1.2.0, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests ran in Remote Control sessions on the owner's PC. **Record basis:** the thread messages (UTC timestamps), the PC sessions' reports, the GitHub API, the repository at `main` `49cd9de` then `4e40d1a`. **Reconstructed:** nothing; written at the end. **Big stop:** a release.
 
