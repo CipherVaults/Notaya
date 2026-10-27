@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (owner's messages 19:05:05 and 19:08:33 UTC; work 19:10 to about 19:45 UTC, system clock), EX-2026-10-27-29: PBS adopted in its smallest useful form
+
+- Report: [2026-10-27-pbs-adoption.md](2026-10-27-pbs-adoption.md)
+- Task / Goal: "That's really goo just want to to follow / that's my answer" (follow PBS; the recommended answers to the review's four questions)
+- Executor: Claude (Claude Code) in a cloud thread, docs only
+- Outcome: amendment A29, `CLAUDE.md` gains "Cloud threads" and "PBS work cycle", STATUS "Current state" holds only accepted items, questions 8 and 22 answered
+- Open dependency / next action: the owner merges the PR; then the PC copy is fast-forwarded; the skill refresh is a separate review card; nothing is accepted
+
 ### 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), EX-2026-10-27-28: live audit (PR #10) compared with V1.1.0
 
 - Report: [2026-10-27-live-audit-comparison.md](2026-10-27-live-audit-comparison.md) (table: [docs/audit/2026-10-27-live-checks-vs-v1-1-0.md](../audit/2026-10-27-live-checks-vs-v1-1-0.md))
