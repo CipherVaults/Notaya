@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager, State};
 
 use super::{check_color, limit, sticky};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::model::{new_id, now_ms, Item, Sticky};
 use crate::state::AppState;
 use crate::ui;
@@ -132,5 +132,41 @@ pub fn delete_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> 
         Ok(())
     })?;
     ui::close_sticky(&app, &id);
+    Ok(())
+}
+
+/// Deletes several sticky notes in one vault write. Ids that no longer exist (deleted
+/// in their own window meanwhile) are skipped; if any other id is not a sticky note,
+/// nothing is removed.
+#[tauri::command]
+pub fn delete_stickies(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> Result<()> {
+    let mut ids = ids;
+    ids.sort();
+    ids.dedup();
+    if ids.is_empty() {
+        return Ok(());
+    }
+    if ids.len() > 10_000 {
+        return Err(Error::Invalid("Too many sticky notes at once.".into()));
+    }
+    state.with_mut(|s| {
+        let mut found = Vec::with_capacity(ids.len());
+        for id in &ids {
+            match s.get(id) {
+                None => {}
+                Some(Item::Sticky(_)) => found.push(id.clone()),
+                Some(_) => return Err(Error::NotFound),
+            }
+        }
+        if found.is_empty() {
+            return Ok(());
+        }
+        s.remove_many(&found)?;
+        s.collect_garbage()?;
+        Ok(())
+    })?;
+    for id in &ids {
+        ui::close_sticky(&app, id);
+    }
     Ok(())
 }

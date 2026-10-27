@@ -111,6 +111,7 @@ export const api = {
   openSticky: (id: string) => invoke<void>("open_sticky", { id }),
   closeSticky: (id: string) => invoke<void>("close_sticky", { id }),
   deleteSticky: (id: string) => invoke<void>("delete_sticky", { id }),
+  deleteStickies: (ids: string[]) => invoke<void>("delete_stickies", { ids }),
 
   // Passwords live in the bundled KeePassXC (amendment A9)
   keepassxcStatus: () => invoke<KeePassXCStatus>("keepassxc_status"),

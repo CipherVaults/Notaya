@@ -224,9 +224,15 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "save_page":
       return ok({ ...tree.pages[0] });
     case "list_stickies":
-      return ok(stickies);
+      return ok([...stickies]);
     case "get_sticky":
       return ok(stickies[0]);
+    case "delete_sticky":
+    case "delete_stickies": {
+      const gone = new Set((args.ids as string[] | undefined) ?? [String(args.id)]);
+      for (let i = stickies.length - 1; i >= 0; i--) if (gone.has(stickies[i].id)) stickies.splice(i, 1);
+      return ok(null);
+    }
     case "password_strength": {
       const len = String(args.password ?? "").length;
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;
