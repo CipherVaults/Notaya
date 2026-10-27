@@ -86,3 +86,7 @@ Checked at `d4933ef` in the same temp clone: `git diff e537071 -- src src-tauri`
 
 - `main` moved on while this PR waited (PR #27 `5013244`, PR #28 `b11ec6d`: the live-audit comparison, "record every step", and the PBS adoption, A29). Those PRs also used the number EX-2026-10-27-27 (the "record every step" report), so **this report is renumbered EX-2026-10-30** (the numbers 28 and 29 are taken too). Earlier addenda and commit messages that say EX-2026-10-27-27 mean this report.
 - `main` was merged into the branch; only the records files conflicted (`STATUS.md`, `sessions.md`, `approval-and-amendments.md`, `execution/README.md`) and were resolved by keeping both sides. No source file changed. `CLAUDE.md` now has the "Cloud threads" and "PBS work cycle" sections from A29; this PR follows them (baseline `b11ec6d`; the task, scope and stop point are in sections 1 and 4 above).
+
+## Addendum 8 (2026-10-27, 19:39 UTC, project transcript): the owner's look at the real window
+
+The owner tried `Notaya.exe` (build of `d4933ef`, in `%TEMP%\notaya-pr24\src-tauri\target\release\`) and said "Okay looks good" at 19:39:24 UTC. Recorded as an informal visual check at X26 in `docs/acceptance.md`; **not an acceptance** (no requirement named, and he did not say "accepted"). It is not known which of the suggested checks he made (new vault, themes, a copy of his old notes). Result state: **verified** on the PC checks above; **integrated** only after he merges PR #24.
