@@ -172,7 +172,7 @@ pub struct Settings {
 }
 
 /// How many calculations the history keeps.
-pub const CALC_HISTORY_MAX: usize = 100;
+pub const CALC_HISTORY_MAX: usize = 200;
 
 /// One line of the calculator history: what was typed and the answer shown.
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize)]

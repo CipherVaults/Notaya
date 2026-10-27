@@ -217,7 +217,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "add_calc_entry": {
       const expr = String(args.expr), result = String(args.result);
       if (!(calcHistory[0]?.expr === expr && calcHistory[0]?.result === result)) calcHistory.unshift({ expr, result });
-      calcHistory.length = Math.min(calcHistory.length, 100);
+      calcHistory.length = Math.min(calcHistory.length, 200);
       return ok([...calcHistory]);
     }
     case "clear_calc_history":
