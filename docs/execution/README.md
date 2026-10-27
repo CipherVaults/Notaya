@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (about 06:45 to 06:55 UTC), EX-2026-10-27-ribbon: OneNote-style ribbon over the page editor
+
+- Report: [2026-10-27-ribbon-editor.md](2026-10-27-ribbon-editor.md)
+- Task / Goal: the owner's item 4 of 06:45:11 UTC: a ribbon editor on top like OneNote, keeping the "/" menu
+- Executor: Claude (Claude Code) in a cloud thread, with an independent review agent (model output)
+- Outcome: Home, Insert and a contextual Table tab; `tsc`, build and 24/24 mock UI checks passed; review findings fixed
+- Acceptance: pending
+- Open dependency / next action: owner merge of the draft PR; real-exe check on the PC
+
 ### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
 
 - Report: [2026-10-24-v1-0-1-portable-build.md](2026-10-24-v1-0-1-portable-build.md)
