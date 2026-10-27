@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="230" fill="#f4f4f6"/>
+  <g transform="rotate(-8 430 440)"><rect x="200" y="210" width="460" height="460" rx="28" fill="#5aa9ff"/></g>
+  <g transform="rotate(6 600 600)">
+    <path d="M370 370H830V700L700 830H370Z" fill="#ff7eb0"/>
+    <path d="M830 700L700 830V730Q700 700 730 700Z" fill="#d94d86"/>
+    <rect x="430" y="460" width="300" height="30" rx="15" fill="#ffffff" opacity=".7"/>
+    <rect x="430" y="540" width="240" height="30" rx="15" fill="#ffffff" opacity=".7"/>
+  </g>
+</svg>
