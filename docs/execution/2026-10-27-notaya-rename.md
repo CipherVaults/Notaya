@@ -45,3 +45,8 @@ The owner said "proceed with this and The app name is Notaya" on 2026-10-27 at 1
 - **Done:** code, icon, themes, review fixes, records, all pushed to PR #24 (draft).
 - **Not done:** `cargo test --lib`, `npm run tauri build` (after `cargo clean -p cipherleaf`), the real-exe test on throwaway data (including a throwaway Cipherleaf 1.1.0 vault opened in `Notaya.exe`), the owner's merge, the PC copy fast-forward.
 - **Exact next step (only when the owner says resume):** on the owner's PC, in a temp clone of branch `claude/project-thread-669o55` (not `E:\Project\cipherleaf`), run `cd src-tauri; cargo test --lib`.
+
+## Addendum 2 (2026-10-27, from 18:57 UTC, system clock): resumed, PC checks
+
+- The owner said "Resume" at 18:56:19 UTC (project transcript, relayed 18:56:34). The coordinator also relayed a rule change dated 17:22 UTC (exact owner words not in this thread): **Sonnet 5.5 for everyday work, Opus 5.5 for hard jobs**. This addendum and the later PC checks are done on the new rule; the code of `6003e81` and the review were done under the older one (Opus, high effort).
+- Branch head at resume: `029887b`. PC results follow below as they come in.
