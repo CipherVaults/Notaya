@@ -6,6 +6,8 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+> **Added 2026-10-27 19:20 UTC (system clock):** the owner said "Resume" (18:56:19 UTC). The PC checks of `91d7068` passed (129 of 129 Rust tests, release build, real-exe test, old 1.1.0 vault opens); details in addendum 4 of [EX-2026-10-27-27](execution/2026-10-27-notaya-rename.md). The owner asked why tests still say cipherleaf (19:10:41 UTC): addendum 3. Left: rebuild check of `a97d5e7`, the owner's merge.
+>
 > **Added 2026-10-27 17:16 UTC (system clock):** the independent review found no blockers; its two should-fix items and the swatch nit were fixed and pushed. The owner said "stop now at resume point" at 17:13:39 UTC; work stopped before the PC tests. Resume point: the addendum of [EX-2026-10-27-27](execution/2026-10-27-notaya-rename.md).
 
 # 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
