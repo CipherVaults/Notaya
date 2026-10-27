@@ -20,7 +20,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Task / Goal: "Release one" (the first release as Notaya, version 1.2.0)
 - Executor: Claude (Claude Code) in a cloud thread; build and tests in Remote Control sessions on the owner's PC, throwaway data only
 - Outcome: version bump merged onto `main` `49cd9de` (`e25f804`); `cargo test --lib` 129 of 129, `npm audit` 0, ZIP 5,915,148 bytes (`A7FDD822…CC77D`), exe `D04D42F5…F705C2`; real-exe runners 13 PASS, lock flow ok, 47 of 47; Cipherleaf 1.1.0 vault opens unchanged. The owner's own runs from an Administrator shell failed to find the window (no check ran). Not run: `cargo audit`, password-vault migration, lock events
-- Open dependency / next action: the owner merges the PR, then runs the `gh release create` command in the report; then the release is checked on GitHub
+- Open dependency / next action: none for the release: PR #30 merged (`4e40d1a`), the owner published [v1.2.0](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.2.0) at 22:28:04 UTC and it was verified on GitHub (tag `e25f804`, one asset, digest equal; report addendum)
 - Acceptance: pending
 
 ### 2026-10-27 (owner's messages 16:59:11 and 17:03:39 UTC; work from about 17:00 UTC, system clock), EX-2026-10-30: renamed to Notaya, sticky-notes icon, Sunrise theme
