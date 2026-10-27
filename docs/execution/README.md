@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), EX-2026-10-27-28: live audit (PR #10) compared with V1.1.0
+
+- Report: [2026-10-27-live-audit-comparison.md](2026-10-27-live-audit-comparison.md) (table: [docs/audit/2026-10-27-live-checks-vs-v1-1-0.md](../audit/2026-10-27-live-checks-vs-v1-1-0.md))
+- Task / Goal: "check the live audit" / "compare the current verison with this thread to see if everthign got fixed"
+- Executor: Claude (Claude Code) in a cloud thread, docs only, read-only code check
+- Outcome: PR #10 is merged and its PC session is finished; of the live-check findings 5 are fixed, 3 partly, 1 no longer relevant, 15 still open
+- Open dependency / next action: the owner decides whether to plan a fix release; nothing is accepted
+
 ### 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), EX-2026-10-27-27: record every step; PC copy on `main`
 
 - Report: [2026-10-27-record-every-step.md](2026-10-27-record-every-step.md)
