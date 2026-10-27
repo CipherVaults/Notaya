@@ -6,6 +6,29 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the project chat and thread messages (UTC timestamps), `git log` of `main` at `87eb7ff`, the GitHub pull request list, the read-only PBS review thread's gap list. **Reconstructed:** items 1 and 2 below come from the project chat, not from a session that recorded them at the time.
+
+## What happened
+
+1. **After the V1.1.0 release (08:42 to 16:36 UTC, from the project chat):** the owner asked for a Windows installer plan (09:29:31; plan only, draft PR #23), set the rule that plans and reports go into the repo under `docs/` (09:35:37), asked for new icons, names and themes (13:31:51 onwards; draft PR #24; he picked icon 5, two sticky notes, at 14:00:13 and the Sunrise theme at 14:29:43; the name is still open), said every new thread runs on Opus at high effort (16:16), and asked for a read-only PBS understanding review (16:29:35; done in another thread as an artifact, nothing adopted).
+2. **Earlier gap, also reconstructed:** the combined test of PRs #17 to #20 and the check of `main` after the merges (07:21 to 08:20 UTC) had no record; it is now [EX-2026-10-27-25](execution/2026-10-27-combined-test.md).
+3. **The catch-up itself** (the owner's "okay so document them commits and ammedments and the records" and "till this moment"): the authority table now runs from 2026-10-23 20:34 to 2026-10-27 16:36 UTC; A24 and A25 have their merge and release status; sticky multi-delete is A26 and the ribbon A27; the 27 Oct commits and merges are named in the execution records; STATUS and the acceptance ledger describe the state after V1.1.0. Details: [EX-2026-10-27-26](execution/2026-10-27-records-catch-up.md).
+
+Not changed: code, the security design (no promise changed), the handoff files, the plan snapshot. Outside the repo and not changed here: the GitHub About text and the three saved skills still mention KeePassXC. Nothing is accepted.
+
+# 📘 Session: 2026-10-27 (owner's "Yes test" 07:21:42 UTC; work 07:22 to 08:20 UTC, PC system clock), Cipherleaf: combined test of the four changes, PC thread session
+
+**Executor:** a Claude Code session on the owner's PC (model output). **Record basis:** that thread's messages. **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
+
+## What happened
+
+1. The owner paused the no-network plan and said "Yes test" (07:21:42 UTC). The four draft PRs (#17 to #20) were combined in a throwaway copy in the order 18, 17, 20, 19; the code conflicts were the sticky notes toolbar (#17 and #19) and KeePassXC code left in #19. The calculator amendment was renumbered A25. Merge commits `e589baf`, `ef548eb` and `996ae34` were pushed to the PR branches (no force push).
+2. Combined: 128/128 Rust tests, optional security 47/47, restore 13/13, lock flow as designed, 23/23 new checks. The owner merged #18, #17, #20 and #19 at 08:04:20 to 08:05:20 UTC; `main` `4600561` then passed 128/128 and 27/27 (200-line history survives a restart). Details: [EX-2026-10-27-25](execution/2026-10-27-combined-test.md).
+
+Not run: a hand click-through, the release ZIP (made next, EX-2026-10-27-24). Nothing is accepted.
+
 # 📘 Session: 2026-10-27 (owner "Yes please" 08:21:52 UTC; work about 08:22 to 08:40 UTC, system clock), Cipherleaf: V1.1.0 portable build, thread session on the owner's PC
 
 **Executor:** Claude (Claude Code) in a thread session on the owner's PC, in a throwaway worktree. **Record basis:** the project-thread timestamps, the system clock and the repository.
@@ -53,6 +76,20 @@ Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts),
 4. 2026-10-27 07:50:00 UTC (transcript): the owner asked for a history of 200 lines and a check that it survives a full restart. The limit was raised to 200; the restart check runs on the PC with a throwaway vault (EX-23). (The amendment was renumbered A25 when the KeePassXC removal took A24.)
 
 Resume: draft PR into `main`; the PC check and the owner's review. Nothing is accepted.
+
+**Correction (2026-10-27, records catch-up):** the heading and item 2 of this entry say A24; the amendment is **A25** since `996ae34` (item 4 already says so). This entry is not rewritten. The PR (#19) was merged by the owner at 08:05:20 UTC (`4600561`) and released in V1.1.0.
+
+# 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work until about 06:53 UTC, system clock), Cipherleaf: select several sticky notes and delete them together (A26), cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** [EX-2026-10-27-sticky-multi-select](execution/2026-10-27-sticky-multi-select.md), the commit (`31dc920`, 06:53:05 UTC) and the project chat (draft PR #17 announced 06:53:36 UTC). **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
+
+## What happened
+
+1. This thread got item 3 of the owner's message of 06:45:11 UTC, "select multiple sticky notes to delete".
+2. Built a Select mode on the Sticky notes screen and a `delete_stickies` command that removes the ticked notes in one transaction after one confirmation (`31dc920`, draft PR #17). An independent review found no blocking issue; its low findings were fixed.
+3. `tsc`, the build and a scripted mock test passed in the cloud; the Rust side was not compiled there. It was compiled, tested and tried in the real app later in the combined test (EX-2026-10-27-25). The owner merged PR #17 at 08:04:39 UTC (`d69a3f7`). Numbered A26 in the records catch-up.
+
+Nothing is accepted.
 
 ---
 

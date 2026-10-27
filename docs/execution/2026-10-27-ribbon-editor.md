@@ -31,3 +31,7 @@ The owner asked on 2026-10-27 at 06:45:11 UTC (project chat timestamp, item 4 of
 - The owner reviews and merges the draft PR; nothing is accepted.
 - A real-exe check on the owner's PC with throwaway data is still to do.
 - Parallel threads (KeePass removal, sticky notes) may touch the same records files; merge order decides small conflicts in `docs/`.
+
+## Addendum (2026-10-27, records catch-up)
+
+Code commit `0e9d626` on branch `claude/project-thread-5mfrnw` ([PR #18](https://github.com/AbyssWatcher2/CipherLeaf/pull/18)). Checked in the real app in the combined test on the owner's PC ([EX-2026-10-27-25](2026-10-27-combined-test.md): the ribbon shows, Bold works, the "/" menu opens). The owner merged PR #18 at 08:04:20 UTC (GitHub; merge commit `b523df8`), and it was released in V1.1.0 (tag `v1.1.0` on `70d38a1`). Amendment number given in the catch-up: **A27**. Still open: the owner's acceptance, keyboard-only use, a screen reader.
