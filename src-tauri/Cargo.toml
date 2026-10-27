@@ -1,6 +1,6 @@
 [package]
 name = "cipherleaf"
-version = "1.0.1"
+version = "1.1.0"
 description = "Cipherleaf - portable notes app with optional encryption"
 authors = ["Mohamed Sayed"]
 edition = "2024"

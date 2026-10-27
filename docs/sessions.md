@@ -6,6 +6,18 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner "Yes please" 08:21:52 UTC; work about 08:22 to 08:40 UTC, system clock), Cipherleaf: V1.1.0 portable build, thread session on the owner's PC
+
+**Executor:** Claude (Claude Code) in a thread session on the owner's PC, in a throwaway worktree. **Record basis:** the project-thread timestamps, the system clock and the repository.
+
+## What happened
+
+1. The owner agreed to a release of `main` (`4600561`) with KeePassXC removed, the ribbon, sticky multi-delete and pop-out calculators. Version 1.1.0 was chosen because a feature is removed and several are added.
+2. Bumped the version (`70d38a1`), built and tested on the PC, assembled the 5-file portable folder and ZIP and wrote the release notes; details in [EX-2026-10-27-24](execution/2026-10-27-v1-1-0-portable-build.md).
+3. The first ZIP had backslash entry names (.NET Framework `CreateFromDirectory`); it was rebuilt with `/` names before any test.
+
+Not run: the new features in the real window on this exe, a plain first start, an upgrade of a real V1.0.1 data folder. Not released (the owner runs `gh release create`). Nothing is accepted.
+
 # 📘 Session: 2026-10-27 (06:45 to about 06:56 UTC, system clock), Cipherleaf: ribbon editor, cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** the project-thread timestamps, the system clock and the repository.
