@@ -9,7 +9,7 @@ Scripts that start a **copy of the built `Notaya.exe`** with a **throwaway vault
 
 ## Safety rules
 
-- **Never** run these against a real vault or `E:\Project\Notaya-portable\data`. The runners copy the exe into `%TEMP%\clf-*` and create a new vault there. Never test on the owner's live window.
+- **Never** run these against a real vault or `E:\Project\Cipherleaf-portable\data` (the owner's real vault; also any future `Notaya-portable\data`). The runners copy the exe into `%TEMP%\clf-*` and create a new vault there. Never test on the owner's live window.
 - The debug port is **9335**, set (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`) for the test process only, never left set. After a run, the runner prints `port 9335 listening after test: 0`. If it is not 0, find out why and close it.
 - The passphrase is generated fresh for each run from a cryptographic RNG, written to a temp file and deleted at the end. It is never printed or stored. Do not hard-code one.
 - Only the Notaya the script started is stopped.

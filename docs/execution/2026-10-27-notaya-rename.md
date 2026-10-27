@@ -19,7 +19,7 @@ The owner said "proceed with this and The app name is Notaya" on 2026-10-27 at 1
 - `npm ci` (from the lockfile, no new packages), then `npx tsc --noEmit -p tsconfig.json`: passed. `npm run build`: passed.
 - `npx tauri icon assets/notaya-icon.svg`: all icon files regenerated; `icon.ico` holds 16, 24, 32, 48, 64 and 256 px (read with Pillow).
 - Mock UI (`npm run mock`, Playwright screenshots): Home in Sunrise and Sunrise dark, Settings with the seven theme tiles, the lock screen with the new mark. Looked right; screenshots in the project files (`notaya-build/`), not in the repo. The mock server was stopped afterwards.
-- An independent review agent (did not write the change) read the diff for data-compatibility, compile and security problems: result recorded in the PR and in an addendum here.
+- An independent review agent (did not write the change) read the diff for data-compatibility, compile and security problems: see the addendum below.
 - **Not run here:** `cargo test --lib` (the Linux container has no WebView/GTK libraries and no Windows toolchain), `npm run tauri build`, the real-exe tests. They are to run on the owner's PC with throwaway data only.
 
 ## 4. Open items
@@ -28,3 +28,20 @@ The owner said "proceed with this and The app name is Notaya" on 2026-10-27 at 1
 - The owner's review and merge of PR #24; then fast-forward `E:\Project\cipherleaf` (`git pull --ff-only` on `main`; never `git add -A` there, an untracked `vendor\` folder exists) and confirm it matches GitHub.
 - A release (version number, ZIP named Notaya) is a separate step on the owner's word.
 - Optional, not built: Sunrise amber and coral as sticky-note colours.
+
+## Addendum (2026-10-27, about 17:10 to 17:16 UTC, system clock): review, fixes, stop
+
+- **Independent review of `6003e81`: no blockers.** It confirmed by reading that the identifier, data paths, format constants, backup names, `CIPHERLEAF_HOME` and browser keys are unchanged, that the changed Rust test texts match their producers, that the new Rust test should compile, and that there is no security change. Its findings and what was done:
+  1. Should fix: the real-exe README's safety rule named `E:\Project\Notaya-portable\data` instead of the owner's real vault folder `E:\Project\Cipherleaf-portable\data`. **Fixed** (names the real folder again, and any future `Notaya-portable\data`).
+  2. Should fix (records): A28 said an older Cipherleaf changes nothing when it opens a Sunrise vault; in fact it saves Black once it saves any setting. **A28 corrected.**
+  3. Nit: the "Theme color" swatch was always drawn coral and black. **Fixed:** it now shows the theme's real colour (checked in the mock: coral in Sunrise, near-black in Paper, white in Black).
+  4. Nit: coral as small text on cream is about 3.5 to 1. **Recorded in A28** (owner's colour; not changed).
+  5. Nit: "Match Windows" does not follow Sunrise. **Recorded in A28**, as intended.
+- After the fixes: `npx tsc --noEmit -p tsconfig.json` passed, `npm run build` passed (cloud). The mock server was stopped.
+- **Stopped on the owner's word** "stop now at resume point" (17:13:39 UTC, project transcript, relayed by the coordinator). PC tests were not started.
+
+### Resume point
+
+- **Done:** code, icon, themes, review fixes, records, all pushed to PR #24 (draft).
+- **Not done:** `cargo test --lib`, `npm run tauri build` (after `cargo clean -p cipherleaf`), the real-exe test on throwaway data (including a throwaway Cipherleaf 1.1.0 vault opened in `Notaya.exe`), the owner's merge, the PC copy fast-forward.
+- **Exact next step (only when the owner says resume):** on the owner's PC, in a temp clone of branch `claude/project-thread-669o55` (not `E:\Project\cipherleaf`), run `cd src-tauri; cargo test --lib`.

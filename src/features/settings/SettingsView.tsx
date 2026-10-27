@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { registerFlush } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
 import { ACCENTS, STICKY_COLORS } from "@/lib/palette";
+import { isDark, resolveAccent, resolveTheme } from "@/lib/theme";
 import type { Settings, ThemeMode } from "@/lib/types";
 import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
@@ -88,7 +89,7 @@ export default function SettingsView() {
               ))}
             </div>
           </div>
-          <Row label="Accent color" hint="Used for buttons, checkboxes and highlights. Theme color follows the theme: coral in Sunrise, black and white in the others.">
+          <Row label="Accent color" hint="Used for buttons, checkboxes and highlights. Theme color follows the theme: coral in Sunrise, black or white in the others.">
             <div className="flex flex-wrap items-center justify-end gap-2">
               {ACCENTS.map((a) => (
                 <button
@@ -100,7 +101,7 @@ export default function SettingsView() {
                     "h-6 w-6 rounded-full border border-line transition-transform hover:scale-110",
                     settings.accent.toLowerCase() === a.value && "ring-2 ring-fg ring-offset-2 ring-offset-[var(--bg)]",
                   )}
-                  style={{ background: a.value === "mono" ? "linear-gradient(135deg, #e8553f 50%, #000 50%)" : a.value }}
+                  style={{ background: a.value === "mono" ? resolveAccent("mono", isDark(settings.theme), resolveTheme(settings.theme)).accent : a.value }}
                 />
               ))}
               <label className="relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-line" title="Custom color">

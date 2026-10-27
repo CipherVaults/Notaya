@@ -6,6 +6,8 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+> **Added 2026-10-27 17:16 UTC (system clock):** the independent review found no blockers; its two should-fix items and the swatch nit were fixed and pushed. The owner said "stop now at resume point" at 17:13:39 UTC; work stopped before the PC tests. Resume point: the addendum of [EX-2026-10-27-27](execution/2026-10-27-notaya-rename.md).
+
 # 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in the cloud thread "Design new app icon and name" (branch `claude/project-thread-669o55`, draft PR #24). **Record basis:** the thread's messages (UTC timestamps), the system clock and `git log`. Written at the time.

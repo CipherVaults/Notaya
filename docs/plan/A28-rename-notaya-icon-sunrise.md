@@ -25,13 +25,14 @@ Before this, the owner picked the icon (round 3, option 5, two sticky notes, 14:
 - The `data` folder next to the exe, `data\vault.clf` and its format: the AAD prefix `cipherleaf`, the HKDF label `cipherleaf/v1/key-encryption-key` and the built-in open-vault password are unchanged, with a comment at each saying why. Backup names (`vault-*.clf`, `restore-undo-*`, `set-aside-*`) are unchanged.
 - `CIPHERLEAF_HOME` and `CIPHERLEAF_OPEN_BACKUP_SECS`, the browser-profile keys (`cipherleaf.appearance`, `cipherleaf.layout`, `cipherleaf.ribbonCollapsed` and the others) and the Rust crate and npm package names (`cipherleaf`, internal only).
 - **An existing vault keeps the theme it saved** (most have Paper, the old default). Its owner chooses Sunrise in Settings > Appearance once. This was chosen over switching saved vaults silently, which would override a deliberate choice of Paper.
-- An older Cipherleaf that opens a vault saved with a Sunrise look shows it in Black, as it does for any look it does not know; nothing else changes.
+- An older Cipherleaf that opens a vault saved with a Sunrise look shows it in Black, as it does for any look it does not know, and saves Black as soon as it saves any setting or calculator entry; Notaya then shows Black too until Sunrise is chosen again. Nothing else changes.
 
 ## Things to know
 
 - The password strength check now treats both "cipherleaf" and "notaya" as weak words.
 - The default file names in the save dialogs are now `notaya.key` and `notaya-backup-<seconds>.clf`.
-- Contrast: white text on coral `#e8553f` is about 3.6 to 1, enough for buttons and large text but below 4.5 to 1 for small text. The owner asked for these exact colours.
+- Contrast: white text on coral `#e8553f` is about 3.6 to 1, enough for buttons and large text but below 4.5 to 1 for small text. Coral `#e8553f` as text on the Sunrise cream (the active sidebar item, links in Settings) is about 3.5 to 1, also below 4.5 to 1. The owner asked for these exact colours; a darker coral for text only is an option if he wants it.
+- "Match Windows" still follows Windows into Black or White, not into the Sunrise looks.
 - Windows keeps an icon cache: a pinned taskbar entry or a shortcut to `Cipherleaf.exe` keeps the old icon and points at the old exe. Pin `Notaya.exe` again.
 - A build must pick up the new icons: clean the cached build output first (`cargo clean -p cipherleaf`), as found in A15.
 
