@@ -8,6 +8,13 @@
 - 13:46:09 "I don't need leaf" (after round 1). No leaf in any later icon or name.
 - 13:50:08 "New set 9 icons" and 13:50:37 "And names that no company has it ot trademark" (after round 2). Round 3 below answers both.
 
+## Decisions so far (owner's picks, 2026-10-27, times from the project transcript, UTC)
+
+- **Icon:** round 3, option 5, two sticky notes ("That 2 sticky notes really good one", 14:00:13).
+- **Theme:** **Sunrise** ("Sunrise", 14:29:43). The icon would use the Sunrise colours, which is [`themes/2-sunrise-icon.svg`](../themes/2-sunrise-icon.svg) (amber `#ffb020` back note, coral `#ff6b5a` front note, accent `#e8553f`). That pairing is Kevin's reading of the pick; the owner can still ask for the original blue and pink.
+- **Name:** not chosen yet.
+- **Build:** not started. It waits until the owner picks a name and says go.
+
 ## Why a new identity
 
 The name and icon came from the first plan, when Cipherleaf was a password-locked vault with KeePassXC bundled. Since V1.1.0 (2026-10-27) KeePassXC is gone and the app is notes-first: pages and sub-pages, a ribbon editor with a `/` menu, sticky notes, pop-out calculators, all stored locally. The password lock and encryption are still there but optional (A21). So the new icon and name should say "notes" first and "private, on your PC" second.

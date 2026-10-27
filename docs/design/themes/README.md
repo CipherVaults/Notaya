@@ -1,8 +1,15 @@
 # Theme ideas to match the two-sticky-notes icon (discussion only)
 
-**Status:** ideas for the owner to choose from. Nothing in the app has changed.
+**Status:** the owner picked **Sunrise** (2026-10-27 14:29:43 UTC). Nothing in the app has changed yet.
 
 **Asked:** "That 2 sticky notes really good one. But can you give me ideas of themes can match it" (Mohamed, 2026-10-27 14:00:13 UTC, from the project transcript). The icon is round 3, option 5 in [../icon-options/](../icon-options/README.md).
+
+## Decisions so far (owner's picks, 2026-10-27, times from the project transcript, UTC)
+
+- **Icon:** round 3, option 5, two sticky notes ("That 2 sticky notes really good one", 14:00:13).
+- **Theme:** **Sunrise** ("Sunrise", 14:29:43). The icon would use the Sunrise colours, which is [`themes/2-sunrise-icon.svg`](2-sunrise-icon.svg) (amber `#ffb020` back note, coral `#ff6b5a` front note, accent `#e8553f`). That pairing is Kevin's reading of the pick; the owner can still ask for the original blue and pink.
+- **Name:** not chosen yet.
+- **Build:** not started. It waits until the owner picks a name and says go.
 
 ## The ideas
 
