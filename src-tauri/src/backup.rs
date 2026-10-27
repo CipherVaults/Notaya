@@ -794,7 +794,7 @@ mod tests {
             assert!(left.contains(n), "the ordinary rotation must not touch {n}");
         }
         // The real entry point names its file the same way and keeps the newest three.
-        let paths = Paths::at(&dir, dir.join("kp"));
+        let paths = Paths::at(&dir);
         let mut made = Vec::new();
         for _ in 0..6 {
             let name = make_hourly_backup(&paths, &s).unwrap();

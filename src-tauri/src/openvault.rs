@@ -84,7 +84,7 @@ mod tests {
 
     fn paths() -> Paths {
         let root = std::env::temp_dir().join(format!("cipherleaf-open-{}", new_id()));
-        let paths = Paths::at(&root, root.join("kp"));
+        let paths = Paths::at(&root);
         fs::create_dir_all(&paths.backups).unwrap();
         paths
     }

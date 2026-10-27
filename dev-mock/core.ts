@@ -26,7 +26,6 @@ const settings: Record<string, unknown> = {
   lockOnMinimize: false,
   screenCaptureProtection: false,
   stickyDefaultColor: "yellow",
-  passwordsEnabled: params.get("pw") === "1",
 };
 
 const tree = {
@@ -87,16 +86,6 @@ const stickies = [
   { id: "k3", content: "", text: "Buy: coffee, batteries, USB stick", color: "pink", x: 180, y: 180, w: 320, h: 320, onTop: false, open: false, created: ago(300), updated: ago(240) },
 ];
 
-const kpxc = {
-  installed: true,
-  verified: true,
-  version: "2.8.0",
-  database: params.get("db") === "none" ? null : "E:\\Cipherleaf\\data\\passwords.kdbx",
-  dataDir: "E:\\Cipherleaf\\data",
-  running: false,
-  embedded: false,
-};
-
 type Args = Record<string, unknown>;
 
 export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise<T> {
@@ -128,9 +117,6 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       if (args.currentPassword === "wrong") throw "Wrong password or keyfile.";
       securityOn = false;
       return ok(null);
-    case "set_passwords_enabled":
-      settings.passwordsEnabled = !!args.enabled;
-      return ok({ ...settings });
     case "unlock_vault":
       if (args.password === "wrong") throw "Wrong master password or keyfile for this Cipherleaf vault.";
       unlocked = true;
@@ -158,17 +144,6 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       securityOn = !!args.password;
       return ok({ undoFile });
     }
-    case "list_password_backups":
-      return ok([
-        { name: "passwords-1792700000000.kdbx", modifiedMs: ago(60 * 20), size: 24_576 },
-        { name: "passwords-1792600000000.kdbx", modifiedMs: ago(60 * 44), size: 22_528 },
-      ]);
-    case "pick_passwords_backup_file":
-      return ok("E:\\Backups\\my-old-passwords.kdbx");
-    case "restore_passwords":
-      if (String(args.source ?? "").endsWith("busy.kdbx"))
-        throw "KeePassXC is still open. Finish there (it may be asking to save), close it, and try again.";
-      return ok({ undoFile: "passwords-undo-1792800000000.kdbx" });
     case "take_notice": {
       // ?notice=<text> shows that message once, as the backend would after a failed backup.
       const text = params.get("notice");
@@ -238,8 +213,6 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;
       return ok({ score, guessesLog10: len, crackTime: score > 2 ? "centuries" : "2 minutes", warning: null, suggestions: [] });
     }
-    case "keepassxc_status":
-      return ok({ ...kpxc });
     case "search":
       return ok([
         { kind: "page", id: "p1", title: "Morning pages", subtitle: "", snippet: "Slept badly, but the plan for the week is clear", score: 3 },

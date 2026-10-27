@@ -14,14 +14,6 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
-### 2026-10-27 (owner's message 06:45:11 UTC), EX-2026-10-27-sticky-multi-select: select several sticky notes and delete them together
-
-- Report: [2026-10-27-sticky-multi-select.md](2026-10-27-sticky-multi-select.md)
-- Task / Goal: tick several sticky notes and delete them with one confirmation
-- Executor: Claude (Claude Code) with an independent review agent (model output)
-- Outcome: implemented; UI type check, build and a scripted mock test passed; Rust not compiled and the real exe not run
-- Acceptance: pending
-- Open dependency / next action: `cargo test --lib` and a real-exe try on Windows; the owner merges the PR
 ### 2026-10-27 (about 06:45 to 06:55 UTC), EX-2026-10-27-ribbon: OneNote-style ribbon over the page editor
 
 - Report: [2026-10-27-ribbon-editor.md](2026-10-27-ribbon-editor.md)
@@ -30,6 +22,22 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Outcome: Home, Insert and a contextual Table tab; `tsc`, build and 24/24 mock UI checks passed; review findings fixed
 - Acceptance: pending
 - Open dependency / next action: owner merge of the draft PR; real-exe check on the PC
+### 2026-10-27 (owner's message 06:45:11 UTC), EX-2026-10-27-sticky-multi-select: select several sticky notes and delete them together
+
+- Report: [2026-10-27-sticky-multi-select.md](2026-10-27-sticky-multi-select.md)
+- Task / Goal: tick several sticky notes and delete them with one confirmation
+- Executor: Claude (Claude Code) with an independent review agent (model output)
+- Outcome: implemented; UI type check, build and a scripted mock test passed; Rust not compiled and the real exe not run
+- Acceptance: pending
+- Open dependency / next action: `cargo test --lib` and a real-exe try on Windows; the owner merges the PR
+### 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), EX-2026-10-27-23: KeePassXC removed (A24)
+
+- Report: [2026-10-27-keepassxc-removed.md](2026-10-27-keepassxc-removed.md)
+- Task / Goal: remove KeePassXC from Cipherleaf entirely (code, UI, settings switch, docs, notices, test scripts), keeping notes and the optional security layer
+- Executor: Claude (Claude Code) with a documentation agent and an independent review agent (model output)
+- Outcome: implemented; `tsc`, UI build and 124 of 124 Rust tests (Windows GNU target under Wine) pass in the cloud; not yet run on the owner's PC
+- Acceptance: pending (the owner has not reviewed it)
+- Open dependency / next action: the owner reviews and merges the draft PR; a PC pass on throwaway data before the next release
 
 ### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
 

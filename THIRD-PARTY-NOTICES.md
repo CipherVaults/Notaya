@@ -6,14 +6,12 @@ The license for Cipherleaf's own code has not been chosen yet (the owner has not
 
 How this file was made: the lists in the Rust crates and npm packages sections were generated from the Rust lockfile (`src-tauri/Cargo.lock`, target `x86_64-pc-windows-msvc`) and from the npm lockfile and installed packages on 2026-10-23 (system clock, UTC). Copyright lines were copied from the license files of the packages. Where a package ships no copyright line, the table says so and gives the source of the name. Anything that could not be checked is marked "unverified".
 
-Contents: At a glance, KeePassXC, Open decisions and things to check, Rust crates, npm packages, License texts.
+Contents: At a glance, Open decisions and things to check, Rust crates, npm packages, License texts.
 
 ## At a glance
 
 | Component | What it is here | License | Status |
 |---|---|---|---|
-| KeePassXC 2.8.0 | The optional Passwords panel. A separate program, started as its own process. | GNU GPL version 2 or (at your option) version 3, per upstream `COPYING`. Copyright (C) 2016-2023 KeePassXC Team (upstream's wording). | Not modified. Cipherleaf passes it only file paths and window handles. See the KeePassXC section. |
-| Libraries inside the KeePassXC package | Qt 6.11.2 (Qt's official build), Botan 3.12.0, zlib and minizip 1.3.2, libqrencode 4.1.1, readline 5.0 (command-line tool only), Mesa, Microsoft files, and others | Qt: LGPL-3.0 (plus GPL options); Botan: BSD-2-Clause; zlib/minizip: Zlib; libqrencode: LGPL-2.1-or-later; readline.dll: GPL-2.0-or-later | Inside KeePassXC's own folder. The KeePassXC section names every library, its licence and where its source is (a source offer by link); parts are marked unverified. |
 | Tauri and the Rust crates | The application shell and the Rust core (226 crates linked into the Windows exe) | Mostly MIT or Apache-2.0 (dual); also Unicode-3.0, Zlib, BSD-3-Clause, MPL-2.0, Unlicense, CC0-1.0 | Full list in the Rust crates section. |
 | Microsoft Edge WebView2 runtime | Draws the interface | Loader library: Microsoft BSD-style license (text below). Runtime: Microsoft's own terms, not reproduced | Required on the PC. Not bundled. The Rust crate `webview2-com-sys` (MIT) links Microsoft's static WebView2 loader library (`WebView2LoaderStatic.lib`, Microsoft.Web.WebView2 SDK 1.0.3800.47) into the exe. That library's license text, from Microsoft's own package, is reproduced in the License texts section and ships in `Licenses\WebView2-LICENSE.txt`. The Edge WebView2 Runtime on the PC is Microsoft's product under Microsoft's own terms and is not part of the ZIP. |
 | React, TipTap, ProseMirror, KaTeX, Radix UI, and other npm packages | The user interface | Mostly MIT; also ISC, BSD-3-Clause, 0BSD, SIL OFL 1.1 | 114 package rows plus Tailwind CSS in the npm packages section. |
@@ -24,87 +22,23 @@ Contents: At a glance, KeePassXC, Open decisions and things to check, Rust crate
 | SQLite | Storage engine, compiled in via `libsqlite3-sys` (SQLite 3.53.2) | Public domain | The author disclaims copyright; credited as a courtesy. |
 | zxcvbn | Password strength estimate (Rust crate `zxcvbn` 3.1.1, a port of Dropbox's zxcvbn) | MIT, Copyright (c) 2016 Joshua Holmer | Its frequency dictionaries derive from US census data, Wikipedia and TV/movie word lists (per the crate's README); the package carries no separate notice for those. |
 
-Trademarks: Windows, Microsoft Edge, WebView2, Segoe and Mica are names of Microsoft; KeePassXC, Tauri, KaTeX and the other project names belong to their owners. They are used here only to describe what is used. Cipherleaf is not affiliated with or endorsed by KeePassXC, Microsoft or any other project named here.
-
-## KeePassXC
-
-Cipherleaf's optional Passwords panel is the program KeePassXC. It is not part of Cipherleaf's code.
-
-| Field | Value |
-|---|---|
-| Version | 2.8.0 |
-| Upstream | https://keepassxc.org (not reachable from the sandbox where this file was prepared, unverified); source code and releases: https://github.com/keepassxreboot/keepassxc |
-| Release page and written source link | https://github.com/keepassxreboot/keepassxc/releases/tag/2.8.0 |
-| Binary used | `KeePassXC-2.8.0-x64.zip` (70,348,471 bytes), https://github.com/keepassxreboot/keepassxc/releases/download/2.8.0/KeePassXC-2.8.0-x64.zip, SHA-256 `48FF4F088E9CE70E241DA1270E5081528DBA77C38B17DAE4AA6690FFC50FC828` (recorded in `vendor/keepassxc-manifest.md`; equals the upstream `.DIGEST` file) |
-| Corresponding source | `keepassxc-2.8.0-src.tar.xz` (10,867,052 bytes), https://github.com/keepassxreboot/keepassxc/releases/download/2.8.0/keepassxc-2.8.0-src.tar.xz, SHA-256 `4ED4B77D375F021FC04648C257FEDFB41DC13C6BD5C4965D8DED31284C9C653C` |
-| Hash the app checks | Only `KeePassXC.exe`: SHA-256 `72200BFE1A6C59162BEE904832F3B292EDE45325EFFCEF54060C6AFF836DD28D` (constant `EXE_SHA256` in `src-tauri/src/keepassxc.rs`). The app starts no other file. |
-| Copyright | "Copyright (C) 2016-2023 KeePassXC Team <team@keepassxc.org>" as written in upstream's `COPYING` for 2.8.0 (the year range in that file was not updated; it is reproduced as upstream wrote it). Other holders are listed in `COPYING` and at https://github.com/keepassxreboot/keepassxc/graphs/contributors. |
-| License | GNU General Public License, version 2 or (at your option) version 3. The text of `COPYING` is reproduced in full in the License texts section; the source archive also contains `LICENSE.GPL-2` and `LICENSE.GPL-3`. |
-
-KeePassXC is not modified. KeePassXC and its libraries keep their own licenses; Cipherleaf does not modify them.
-
-### How Cipherleaf uses KeePassXC
-
-- Cipherleaf starts `KeePassXC.exe` as a separate process (`std::process::Command`). Only file paths (its configuration files and the database path) and the `--lock` switch are passed. Cipherleaf does not link to KeePassXC or its libraries and does not read or pass its master password or entries.
-- Only window handles and rectangles cross the boundary, so that KeePassXC's window can be shown over the Passwords area.
-- Cipherleaf's source contains no KeePassXC source code.
-- `keepassxc-cli.exe` and `keepassxc-proxy.exe` are in the KeePassXC folder but are never started by Cipherleaf.
-- What this means for combining the licenses is the owner's decision (or a lawyer's); this file only records the facts.
-
-### Where the license texts and the source are
-
-The portable ZIP is meant to hold, next to `Cipherleaf.exe` and the `KeePassXC\` folder, a folder `Licenses\KeePassXC\` with KeePassXC's license files and the complete corresponding source archive `keepassxc-2.8.0-src.tar.xz` for the exact version in use. The GPL text for KeePassXC is in the `Licenses\KeePassXC\` folder of the portable ZIP. The GPL asks that a copy of the license, the copyright notice and the no-warranty notice go with every copy, and that the source for the exact version be provided; the written link above (https://github.com/keepassxreboot/keepassxc/releases/tag/2.8.0) names the tarball. Note: the actual contents of `Licenses\KeePassXC\` and the portable `README.txt` are not stored in the Cipherleaf repository, and this file's author could not inspect them; check them before publishing (see open decisions).
-
-### Libraries inside the KeePassXC package
-
-What follows was read from the real shipped files on 2026-10-23: the 156 files in `Cipherleaf\KeePassXC\` of the V1.0 ZIP (file names, version resources and strings), the upstream `KeePassXC-2.8.0-x64.zip` and `keepassxc-2.8.0-src.tar.xz`, and upstream source files read from raw.githubusercontent.com (each is named below). They belong to KeePassXC's distribution, not to Cipherleaf, and keep their own licenses. "Unverified" means it could not be read or fetched from where this file was prepared (the hosts download.qt.io, code.qt.io, botan.randombit.net, zlib.net, curl.se, keepassxc.org and Microsoft's sites were not reachable, and no source archive of the libraries below was downloaded or hash-checked).
-
-The libraries come from two places. **Qt** is Qt's own official 6.11.2 build: every Qt DLL has file version `6.11.2.0`, "Copyright (C) The Qt Company Ltd. and other contributors." and a debug path under `C:\Users\qt\work\qt\...` (Qt's build machine), so the vcpkg Qt pin (6.11.1) in KeePassXC's `vcpkg.json` is not what ships. **Botan, zlib, minizip, libqrencode and readline** are built by vcpkg at the baseline KeePassXC 2.8.0 pins (`1600ce2ba1b6b621bfc5a31a785c4963b817a1c7`, read from https://raw.githubusercontent.com/keepassxreboot/keepassxc/2.8.0/vcpkg.json); the DLL strings and PDB paths confirm vcpkg builds.
-
-| Component | In the ZIP as | Version | License | Copyright and where the source for that version is | Status |
-|---|---|---|---|---|---|
-| Qt 6 (qtbase: Core, Gui, Widgets, Network, Concurrent, plugins `platforms/qwindows`, `styles/qmodernwindowsstyle`, `tls/*`, `networkinformation/*`, `generic/*`, `imageformats/qgif,qico,qjpeg`) | `Qt6Core.dll`, `Qt6Gui.dll`, `Qt6Widgets.dll`, `Qt6Network.dll`, `Qt6Concurrent.dll` and the plugin folders | 6.11.2 | The source files say `LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only`. This distribution is used under the LGPL-3.0-only option (the text is `LICENSE.LGPL-3` in `Licenses\KeePassXC\`). | Copyright The Qt Company Ltd. and other contributors. Source: git tag `v6.11.2` of https://github.com/qt/qtbase and the tarball https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtbase-everywhere-src-6.11.2.tar.xz | Version, copyright and licence line verified from the DLLs and from https://raw.githubusercontent.com/qt/qtbase/v6.11.2/ source headers (windows platform, vista style, schannel, networklistmanager, jpeg, gif, ico). The tarball was not downloaded. |
-| Qt SVG | `Qt6Svg.dll`, `Qt6SvgWidgets.dll`, `imageformats/qsvg.dll`, `iconengines/qsvgicon.dll` | 6.11.2 | same licence line, LGPL-3.0-only option | Source: tag `v6.11.2` of https://github.com/qt/qtsvg ; tarball https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtsvg-everywhere-src-6.11.2.tar.xz | licence line verified from raw source files at the tag; tarball not downloaded |
-| Qt Image Formats | `imageformats/qicns,qtga,qtiff,qwbmp,qwebp` | 6.11.2 | same licence line, LGPL-3.0-only option | Source: tag `v6.11.2` of https://github.com/qt/qtimageformats ; tarball https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtimageformats-everywhere-src-6.11.2.tar.xz (the icns plugin also carries "Copyright (C) 2016 Alex Char.") | licence line verified at the tag; tarball not downloaded |
-| Qt translations | `translations/qt_*.qm` (35 files) and `share/translations` | 6.11.2 (assumed to match the release) | **Unverified.** The repository https://github.com/qt/qttranslations at `v6.11.2` has only GPL-3.0 and commercial licence files, so these are probably GPL-3.0-only. | Source: https://github.com/qt/qttranslations tag `v6.11.2` | unverified per file |
-| Code that Qt compiles into its own DLLs | inside `Qt6Gui.dll`, `Qt6Core.dll`, `imageformats/qjpeg.dll`, `qtiff.dll` | per Qt's `qt_attribution.json` at tag `v6.11.2` (not each checked inside the binaries) | libpng 1.6.58 (Libpng AND libpng-2.0); FreeType 2.14.3 (FTL OR GPL-2.0-only); HarfBuzz 14.3.0 (MIT); PCRE2 10.47 (BSD-3-Clause with its binary-package exception); zlib 1.3.2 (Zlib); double-conversion 3.4.0 (BSD-3-Clause); md4c 0.5.3 (MIT); libjpeg-turbo 3.2.0 (IJG AND BSD-3-Clause); libtiff 4.7.2 (libtiff); libwebp 1.6.0 (BSD-3-Clause) | Their source is in Qt's source tarballs above (`src/3rdparty/`). The strings of libjpeg-turbo 3.2.0 and the libtiff path were found in `qjpeg.dll` and `qtiff.dll`; the others were not found as separate DLLs. | versions from Qt's attribution file (https://raw.githubusercontent.com/qt/qtbase/v6.11.2/src/3rdparty/ and each module); licence texts of these parts not reproduced here |
-| Botan | `botan-3.dll` | 3.12.0 (vcpkg port and the DLL string "Botan 3.12.0 (unreleased, distribution 'vcpkg x64-windows')") | BSD-2-Clause | "Copyright (C) 1999-2026 The Botan Authors. All rights reserved." (upstream `license.txt` at tag 3.12.0). Source: https://github.com/randombit/botan/archive/3.12.0.tar.gz ; vcpkg applies 3 patches (`ports/botan/` at the baseline) | licence and copyright verified at https://raw.githubusercontent.com/randombit/botan/3.12.0/ ; archive not downloaded |
-| zlib | `z.dll` | 1.3.2 ("deflate 1.3.2 Copyright 1995-2026 Jean-loup Gailly and Mark Adler" in the DLL) | Zlib | "(C) 1995-2026 Jean-loup Gailly and Mark Adler". Source: https://github.com/madler/zlib/archive/v1.3.2.tar.gz (one vcpkg patch) | verified at https://raw.githubusercontent.com/madler/zlib/v1.3.2/ ; archive not downloaded |
-| minizip | `minizip.dll` | 1.3.2 (vcpkg port; the DLL has no version string) | Zlib | "Copyright (C) 1998-2026 Gilles Vollant (minizip)"; "Modifications for Zip64 support Copyright (C) 2009-2010 Mathias Svensson". Source: `contrib/minizip` inside the zlib v1.3.2 archive above, plus 5 vcpkg patches | verified in the header at tag v1.3.2 |
-| libqrencode | `qrencode.dll` | 4.1.1 (vcpkg pin only; the DLL has no version string) | LGPL-2.1-or-later | "Copyright (C) 2006-2018 Kentaro Fukuchi" (README), `qrencode.h` says 2006-2017; the Reed-Solomon part "Copyright (C) 2002, 2003, 2004, 2006 Phil Karn, KA9Q". Source: https://github.com/fukuchi/libqrencode at commit `715e29fd4cd71b6e452ae0f4e36d917b43122ce8` (tag v4.1.1) | licence and copyright read from the repository; version inside the DLL unverified |
-| readline (readline-win32 port) | `readline.dll` | 5.0 (`RL_READLINE_VERSION 0x0500`) | The vcpkg port says GPL-2.0; the file headers say "version 2, or (at your option) any later version" (GPL-2.0-or-later) | "Copyright (C) 1987-2002 Free Software Foundation, Inc." Source: https://github.com/xiaozhuai/readline-win32 at commit `0fa4001557c27157a51a9ca7f32a8c50bc97927a`. Only `keepassxc-cli.exe` uses it; Cipherleaf never runs that file. | read from the repository; the DLL itself has no version string |
-| KeePassXC's password word list | `share/wordlists/eff_large.wordlist` | not stated | **Unverified.** Based on the file name, KeePassXC's default list is derived from the Electronic Frontier Foundation's long word list, which the EFF publishes under Creative Commons Attribution 3.0 US; KeePassXC's changelog says offensive words were replaced in it. Not confirmed from a source here (eff.org was not reachable). | Credit: Electronic Frontier Foundation (https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases). Cipherleaf does not use this list (the Cipherleaf passphrase suggestion was removed). | unverified |
-| Mesa software OpenGL | `opengl32sw.dll` (20.6 MB) | "Mesa 11.2.2" and LLVM strings in the DLL | **Unverified.** Mesa is normally under MIT-style terms and LLVM 3.x under the UIUC/NCSA licence; not read here. | Qt's deployment tool copies this file from Qt's bin folder. Source: Mesa 11.2.2, expected at https://archive.mesa3d.org/older-versions/11.x/ (not reachable, unverified) | version from the binary; licence and source unverified |
-| Microsoft DirectX shader compilers | `d3dcompiler_47.dll`, `dxcompiler.dll`, `dxil.dll` | 10.0.28000.2526; 1.9.2602.17 (21d28f727) | Microsoft binaries ("(c) Microsoft Corporation. All rights reserved."), redistributed under Microsoft's redistribution terms (not read: unverified). The open-source DirectXShaderCompiler project is under the UIUC licence; whether these DLLs are under that or Microsoft's terms is not established. | Copied by Qt's deployment tool from the Windows SDK. No source offer applies if proprietary. | unverified |
-| Microsoft Visual C++ Redistributable | `vc_redist.x64.exe` (18.7 MB, SHA-256 `241A335E0FB6DF7C615BE3D5287BC808287B2FFFCA991FECE29E75FBAC05C8AD`) | 14.51.36247.0, "Microsoft Visual C++ v14 Redistributable (x64)" | Microsoft's redistributable terms, shown by the installer when it runs; not reproduced here (unverified). | It is a Microsoft installer; it installs the runtime on the PC and is not part of Cipherleaf. The KeePassXC release team re-signs every exe and dll in the folder, so its digital signature says "DroidMonkey Apps, LLC" (Authenticode valid, as read on the PC), not Microsoft. | version and signer read from the file; terms unverified |
-| CA bundle | `ssl/certs/ca-bundle.crt` (118 certificates) | the file says "Certificate data from Mozilla as of: Tue Oct 20 13:32:40 2026 GMT", converted with `mk-ca-bundle.pl` 1.35 | Mozilla's certificate list (`certdata.txt`) is under MPL-2.0 (its header says so); the bundle file itself carries no licence text, so MPL-2.0 for the bundle is an inference. | Source: Mozilla's `certdata.txt`; KeePassXC fetches the extract from https://curl.se/ca/cacert.pem (read from KeePassXC's `src/CMakeLists.txt`) | inference |
-| Items inside KeePassXC's own source (listed in its `COPYING`) | compiled into `KeePassXC.exe` and its resources | per file | zxcvbn (Tony Evans, MIT); KMessageWidget (Aurelien Gateau, Dominik Haumann, LGPL-2.1); Qt IO compressor (Nokia, LGPL-2.1 or GPL-3); Yubico ykcore (BSD-2-Clause); icons from Pictogrammers/Material Design Icons (Apache-2.0), icons8 flat-color-icons (MIT), paomedia small-n-flat (CC0), Lorenzo Stella (LGPL-2), the Material Design Icons font (OFL); Lars Bilke CodeCoverage (BSD-3); halex2005 (MIT) | The exact list is upstream's `COPYING`, reproduced in full below. Their source is inside `keepassxc-2.8.0-src.tar.xz`. Upstream's source archive has no separate Apache-2.0 text although `COPYING` names Apache-2.0 for the Pictogrammers icons; the Apache-2.0 text is reproduced in the License texts section. | from upstream's `COPYING` |
-
-The upstream ZIP has no license files and no README of its own (only `share/docs/*.html` and the `.portable` marker). The license texts for KeePassXC are in the source archive.
-
-### Source offer for the libraries inside KeePassXC
-
-KeePassXC's own source (all of KeePassXC, GPL-2.0-or-later / GPL-3.0) is included in full as `keepassxc-2.8.0-src.tar.xz` in `Licenses\KeePassXC\` of this release, and also at https://github.com/keepassxreboot/keepassxc/releases/tag/2.8.0. That archive does **not** contain the source of Qt, Botan, zlib, minizip, libqrencode, readline, Mesa or the Microsoft files.
-
-For the libraries covered by the GNU LGPL or GPL (Qt 6.11.2 under the LGPL-3.0, libqrencode 4.1.1 under the LGPL-2.1-or-later, readline 5.0 under the GPL) the corresponding source for the exact version is available at the locations named in the table above (Qt: https://download.qt.io/archive/qt/6.11/6.11.2/submodules/ and https://github.com/qt ; libqrencode: https://github.com/fukuchi/libqrencode at commit `715e29fd4cd71b6e452ae0f4e36d917b43122ce8` ; readline: https://github.com/xiaozhuai/readline-win32 at commit `0fa4001557c27157a51a9ca7f32a8c50bc97927a`). Botan (BSD-2-Clause), zlib and minizip (Zlib) have no source obligation; their upstream locations are listed too. The exact build recipes (patches) used by KeePassXC's release are the vcpkg ports at baseline `1600ce2ba1b6b621bfc5a31a785c4963b817a1c7` in https://github.com/microsoft/vcpkg.
-
-This is a link-based pointer to public upstream sources, written by Cipherleaf's maintainer, not a statement from the KeePassXC team: **no official KeePassXC statement about the source of its bundled libraries or about relinking against a different Qt was found** (README, INSTALL, COPYING, SECURITY, CONTRIBUTING and CHANGELOG of 2.8.0 were read), and the release build job could not be read. The Qt DLLs are the unmodified-looking official Qt builds (Qt's build-machine paths), but whether KeePassXC changed them was not checked. A written offer by mail is not made; the owner may add one. Where this file says "unverified", a fact could not be read from where it was prepared.
+Trademarks: Windows, Microsoft Edge, WebView2, Segoe and Mica are names of Microsoft; Tauri, KaTeX and the other project names belong to their owners. They are used here only to describe what is used. Cipherleaf is not affiliated with or endorsed by Microsoft or any other project named here.
 
 ## Open decisions and things to check
 
 These come from the inventory work. They are facts for the owner to decide on; nothing was changed in the code or the build for them.
 
-1. **Cipherleaf's own license is not chosen.** There is no `LICENSE` file and no `license` field in `package.json` or `src-tauri/Cargo.toml`. Without a license nobody but the owner has rights to reuse Cipherleaf's code. The choice must also be considered together with how KeePassXC (GPL) is shipped.
-2. **KeePassXC source offer for the bundled libraries. (Closed with limits on 2026-10-23.)** The section "Source offer for the libraries inside KeePassXC" now names each library, its version, licence, copyright where read, and where the source for that version is. It is a link-based pointer to public sources, not a mailed written offer, and the Qt, Botan, zlib and libqrencode source archives were not downloaded or hash-checked. For a public release, the earlier decision that the build stays private (2026-10-22) still has to be revisited by the owner.
-3. **The portable folder's contents. (Checked on 2026-10-23.)** The V1.0 ZIP's `Licenses\KeePassXC\` holds `COPYING`, `LICENSE.GPL-2`, `LICENSE.GPL-3`, `LICENSE.LGPL-2.1`, `LICENSE.LGPL-3`, `LICENSE.BSD`, `LICENSE.CC0`, `LICENSE.MIT`, `LICENSE.OFL`, `LICENSE.NOKIA-LGPL-EXCEPTION`, the source archive `keepassxc-2.8.0-src.tar.xz` (+ `.DIGEST`, `.sig`) and `SOURCE.txt`. That ZIP does not yet contain the WebView2 loader text or the library source offer; a later folder takes them from `packaging/Licenses/` in the repository. The GPL option offered for KeePassXC is version 2 or version 3 at the recipient's choice, as upstream's `COPYING` says.
-4. **`vc_redist.x64.exe` and other binaries in the KeePassXC folder. (Checked on 2026-10-23.)** The V1.0 ZIP does contain `KeePassXC\vc_redist.x64.exe` (Microsoft's installer, 14.51.36247.0), and also `opengl32sw.dll`, `d3dcompiler_47.dll`, `dxcompiler.dll`, `dxil.dll`, `ssl/certs/ca-bundle.crt`, the Qt plugins and `share/wordlists/eff_large.wordlist`; the table above describes each. Microsoft's terms for the installer and the DirectX files were not read (Microsoft's sites were not reachable). Note: earlier Cipherleaf documents said the ZIP does not include the Visual C++ runtime; the installer is in the KeePassXC folder but nothing installs it automatically. `Cipherleaf.exe` itself does not import the Visual C++ runtime DLLs (the C runtime is linked in; read from its import table, not tested on a PC without the runtime): only KeePassXC and Qt need it. The owner decides whether to keep, document or remove the Microsoft files.
+1. **Cipherleaf's own license is not chosen.** There is no `LICENSE` file and no `license` field in `package.json` or `src-tauri/Cargo.toml`. Without a license nobody but the owner has rights to reuse Cipherleaf's code.
+2. **(No longer applicable.)** The source offer for the libraries inside KeePassXC. KeePassXC was removed from Cipherleaf on 2026-10-27, so Cipherleaf no longer ships it or its libraries.
+3. **(No longer applicable.)** The KeePassXC license files and source archive in the portable folder. Removed together with KeePassXC on 2026-10-27.
+4. **(No longer applicable.)** `vc_redist.x64.exe` and the other Microsoft files in the KeePassXC folder. Removed together with KeePassXC on 2026-10-27. `Cipherleaf.exe` itself does not import the Visual C++ runtime DLLs (the C runtime is linked in; read from its import table, not tested on a PC without the runtime).
 5. **Microsoft WebView2 loader license text. (Closed on 2026-10-23.)** `webview2-com-sys` 0.39.1 (MIT) ships Microsoft's prebuilt loader libraries (`WebView2LoaderStatic.lib` is linked statically into the exe). The version string inside the library is `1.0.3800.47`. The license text was read from Microsoft's own NuGet package `Microsoft.Web.WebView2` 1.0.3800.47 (file `LICENSE.txt`, downloaded from api.nuget.org on 2026-10-23; the package's `.nuspec` says `<license type="file">LICENSE.txt</license>`) and is reproduced in the License texts section. That package's `NOTICE.txt` lists third-party components of Microsoft's SDK tooling (for example ANTLR and StringTemplate) and says they come from Microsoft's build of the SDK; it was not found to apply to the loader library itself, and this was not checked further. The WebView2 Runtime on the PC is a Microsoft component under Microsoft's license; it is not in the exe or the ZIP.
 6. **Rust crates whose packages carry no license file.** `webview2-com` 0.39.1 and `webview2-com-sys` 0.39.1 (both shipped) and `webview2-com-macros` 0.8.1 (build only) are MIT per `Cargo.toml` but ship no license file; the copyright line "Copyright (c) 2021 Bill Avery" comes from the upstream repository https://github.com/wravery/webview2-rs (file `LICENSE`, fetched on 2026-10-23). `alloc-stdlib` 0.3.0 (BSD-3-Clause) ships no license file; the line "Copyright (c) 2016 Dropbox, Inc." comes from the sibling repository https://github.com/dropbox/rust-alloc-no-stdlib. `selectors` 0.38.0 (MPL-2.0) ships no license file; its table row names only the `Cargo.toml` authors. `tauri-plugin` 2.7.2 (build only) ships none. Several crates by David Tolnay and others (anyhow, serde, serde_json, syn, thiserror and similar) have license files without a copyright line; their table rows show the `Cargo.toml` authors instead, labelled as such. `cargo-platform`, `hashlink`, `pin-project-lite`, `serde_json`, `winnow` have neither.
 7. **MPL-2.0 crates (shipped unmodified).** MPL-2.0 asks that the source of the covered files stays available and that the license text is included. The source is unmodified and available at the upstream URLs: `cssparser` 0.37.0 https://github.com/servo/rust-cssparser ; `dtoa-short` 0.3.5 https://github.com/upsuper/dtoa-short ; `option-ext` 0.2.0 https://github.com/soc/option-ext ; `selectors` 0.38.0 https://github.com/servo/stylo . (`cssparser-macros` 0.7.1, MPL-2.0, is a compile-time macro crate and is not in the exe.) The MPL-2.0 text is in the License texts section.
 8. **`regex-syntax` 0.8.11 Unicode data.** Declared `MIT OR Apache-2.0`, but its package contains a nested `src/unicode_tables/LICENSE-UNICODE` with the older "UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE" text (Unicode-DFS-2016). The metadata does not mention it. That text is reproduced below.
 9. **`react-remove-scroll-bar` 2.3.8 has no license file.** Its `package.json` says MIT and its README ends with "License: MIT", but the package ships no LICENSE file and no copyright line. It is credited here to its author Anton Korzunov (package.json author) without a year; sibling packages by the same author carry "Copyright (c) 2017/2020 Anton Korzunov". Upstream: https://github.com/theKashey/react-remove-scroll-bar.
 10. **KaTeX fonts: OFL notice only in the font files.** The `katex` npm package ships no separate license file for its fonts. The OFL grant exists only as a short notice inside each font file's name table (copyright lines Design Science, Inc. and Khan Academy, with a Reserved Font Name per family). The fonts are embedded in the exe unchanged. The in-app text "Equations are drawn by KaTeX 0.19.0 (MIT licence)" covers the code only and does not mention the OFL fonts.
-11. **Unverified because the sandbox could not reach them:** keepassxc.org, qt.io, Microsoft's WebView2 Runtime terms and the Visual C++ Redistributable terms (shown by the installer), the readline-win32 license, and the PGP signatures (the manifest records a successful check on 2026-10-22).
+11. **Unverified because the sandbox could not reach it:** Microsoft's WebView2 Runtime terms.
 12. **MIT-0.** `dunce` 1.0.5 is `CC0-1.0 OR MIT-0 OR Apache-2.0`; its package contains only the CC0-1.0 text, which is used here. No MIT-0 text is reproduced because no shipped package contains one.
 13. **Icon and logo.** The Cipherleaf mark (`assets/cipherleaf-icon.svg`, `src/components/Logo.tsx`, `src-tauri/icons/*`) was drawn for this project in the development sessions; no outside source is recorded. Whether any file in `src-tauri/icons/` still contains Tauri's default artwork was not checked. No license is recorded for the artwork. The emoji used for notebook icons are plain Unicode characters drawn by the system font and are not shipped.
 14. **Version numbers differ:** `package.json` and `src-tauri/Cargo.toml` say 0.1.0, `tauri.conf.json` says 1.0.0.
@@ -790,7 +724,7 @@ have been licensed under extremely permissive terms.
 
 ### Apache License 2.0
 
-Used by every Rust crate and npm package that is offered under `Apache-2.0` (alone or as an alternative to MIT, for example Tauri, serde, `tao` (Apache-2.0 only) and the RustCrypto crates). Where MIT is an alternative, this file lists MIT as the license taken. The text is copied from `serde` 1.0.229 (`LICENSE-APACHE`). The same text applies to the Apache-2.0 icons in KeePassXC's `COPYING` (Pictogrammers); upstream's source archive does not include an Apache-2.0 file.
+Used by every Rust crate and npm package that is offered under `Apache-2.0` (alone or as an alternative to MIT, for example Tauri, serde, `tao` (Apache-2.0 only) and the RustCrypto crates). Where MIT is an alternative, this file lists MIT as the license taken. The text is copied from `serde` 1.0.229 (`LICENSE-APACHE`).
 
 ~~~~text
                               Apache License
@@ -2246,303 +2180,7 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ~~~~
 
-### KeePassXC COPYING (GNU GPL version 2 or version 3 and bundled-component notices)
-
-Upstream's `COPYING` file at tag 2.8.0 of https://github.com/keepassxreboot/keepassxc, copied verbatim. It states the KeePassXC license ("GNU General Public License ... version 2 or (at your option) version 3") and lists the third-party code and icons inside KeePassXC. The full GPL-2.0 and GPL-3.0 texts are in `LICENSE.GPL-2` and `LICENSE.GPL-3` in the source archive and in the `Licenses\KeePassXC\` folder of the portable ZIP.
-
-~~~~text
-KeePassXC - http://www.keepassxc.org/
-Copyright (C) 2016-2023 KeePassXC Team <team@keepassxc.org>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 or (at your option)
-version 3 of the License.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
---------------------------------------------------------------------
-
-Format-Specification: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: KeePassXC
-Upstream-Contact: KeePassXC Team <team@keepassxc.org>
-Source: http://www.keepassxc.org/
-
-Copyright: 2010-2012, Felix Geyer <debfx@fobos.de>
-           2011-2012, Florian Geyer <blueice@fobos.de>
-           2012, Tobias Tangemann
-           2007, Trolltech ASA <info@trolltech.com>
-           2012, Intel Corporation
-           2012, Nokia Corporation and/or its subsidiary(-ies)
-           2000-2008, Tom Sato <VEF00200@nifty.ne.jp>
-           2013, Laszlo Papp <lpapp@kde.org>
-           2013, David Faure <faure@kde.org>
-           2016-2023, KeePassXC Team <team@keepassxc.org>
-License: GPL-2 or GPL-3
-
-Comment: The "KeePassXC Team" in every copyright notice is formed by the following people:
-           - droidmonkey
-           - phoerious
-           - varjolintu
-           - hifi
-           - louib
-         Every other contributor is listed on https://github.com/keepassxreboot/keepassxc/graphs/contributors
-
-Files: cmake/CodeCoverage.cmake
-Copyright: 2012 - 2015, Lars Bilke
-License: BSD-3-clause
-
-Files: cmake/FindBotan.cmake
-Copyright: none
-License: LGPL-2.1
-
-Files: cmake/GenerateProductVersion.cmake
-Copyright: 2015 halex2005 <akharlov@gmail.com>
-License: MIT
-
-Files: share/icons/application/scalable/apps/keepassxc.svg
-       share/icons/application/scalable/apps/keepassxc-dark.svg
-       share/icons/application/scalable/apps/keepassxc-locked.svg
-       share/icons/application/scalable/apps/keepassxc-unlocked.svg
-       share/icons/application/scalable/mimetypes/application-x-keepassxc.svg
-Copyright: 2016, Lorenzo Stella <lorenzo.stl@gmail.com>
-License: LGPL-2
-
-Files: share/icons/database/C00_Password.svg
-       share/icons/database/C01_Package_Network.svg
-       share/icons/database/C02_MessageBox_Warning.svg
-       share/icons/database/C03_Server.svg
-       share/icons/database/C04_Klipper.svg
-       share/icons/database/C05_Edu_Languages.svg
-       share/icons/database/C06_KCMDF.svg
-       share/icons/database/C08_Socket.svg
-       share/icons/database/C09_Identity.svg
-       share/icons/database/C10_Kontact.svg
-       share/icons/database/C11_Camera.svg
-       share/icons/database/C12_IRKickFlash.svg
-       share/icons/database/C13_KGPG_Key3.svg
-       share/icons/database/C14_Laptop_Power.svg
-       share/icons/database/C15_Scanner.svg
-       share/icons/database/C16_Mozilla_Firebird.svg
-       share/icons/database/C19_Mail_Generic.svg
-       share/icons/database/C20_Misc.svg
-       share/icons/database/C21_KOrganizer.svg
-       share/icons/database/C22_ASCII.svg
-       share/icons/database/C23_Icons.svg
-       share/icons/database/C24_Connect_Established.svg
-       share/icons/database/C25_Folder_Mail.svg
-       share/icons/database/C28_QuickTime.svg
-       share/icons/database/C29_KGPG_Term.svg
-       share/icons/database/C30_Konsole.svg
-       share/icons/database/C31_FilePrint.svg
-       share/icons/database/C32_FSView.svg
-       share/icons/database/C33_Run.svg
-       share/icons/database/C34_Configure.svg
-       share/icons/database/C36_Ark.svg
-       share/icons/database/C39_History.svg
-       share/icons/database/C40_Mail_Find.svg
-       share/icons/database/C41_VectorGfx.svg
-       share/icons/database/C42_KCMMemory.svg
-       share/icons/database/C43_EditTrash.svg
-       share/icons/database/C47_KPackage.svg
-       share/icons/database/C48_Folder.svg
-       share/icons/database/C49_Folder_Blue_Open.svg
-       share/icons/database/C50_Folder_Tar.svg
-       share/icons/database/C55_Thumbnail.svg
-       share/icons/database/C56_KAddressBook.svg
-       share/icons/database/C57_View_Text.svg
-       share/icons/database/C58_KGPG.svg
-       share/icons/database/C59_Package_Development.svg
-       share/icons/database/C60_KFM_Home.svg
-       share/icons/database/C62_Tux.svg
-       share/icons/database/C63_Feather.svg
-       share/icons/database/C65_W.svg
-       share/icons/database/C67_Certificate.svg
-       share/icons/database/C68_BlackBerry.svg
-Copyright: none
-License: MIT
-Comment: Taken from https://github.com/icons8/flat-color-icons
-
-Files: share/icons/badges/0_ShareActive.svg
-       share/icons/badges/1_ShareInactive.svg
-       share/icons/database/C07_Kate.svg
-       share/icons/database/C17_CDROM_Unmount.svg
-       share/icons/database/C18_Display.svg
-       share/icons/database/C26_FileSave.svg
-       share/icons/database/C27_NFS_Unmount.svg
-       share/icons/database/C35_KRFB.svg
-       share/icons/database/C38_Samba_Unmount.svg
-       share/icons/database/C44_KNotes.svg
-       share/icons/database/C51_Decrypted.svg
-       share/icons/database/C52_Encrypted.svg
-       share/icons/database/C54_Signature.svg
-       share/icons/database/C66_Money.svg
-Copyright: none
-License: CC0
-Comment: Taken from https://github.com/paomedia/small-n-flat
-
-Files: share/icons/badges/2_Expired.svg
-       share/icons/database/C37_KPercentage.svg
-       share/icons/database/C45_Cancel.svg
-       share/icons/database/C46_Help.svg
-       share/icons/database/C53_Apply.svg
-       share/icons/database/C61_Services.svg
-       share/icons/application/scalable/actions/proton.svg
-Copyright: 2022 KeePassXC Team <team@keepassxc.org>
-License: MIT
-
-Files: share/icons/application/scalable/actions/application-exit.svg
-       share/icons/application/scalable/actions/arrow-collapse-down.svg
-       share/icons/application/scalable/actions/attributes-copy.svg
-       share/icons/application/scalable/actions/auto-type.svg
-       share/icons/application/scalable/actions/bitwarden.svg
-       share/icons/application/scalable/actions/bugreport.svg
-       share/icons/application/scalable/actions/chevron-double-down.svg
-       share/icons/application/scalable/actions/chevron-double-right.svg
-       share/icons/application/scalable/actions/clipboard-text.svg
-       share/icons/application/scalable/actions/configure.svg
-       share/icons/application/scalable/actions/csv.svg
-       share/icons/application/scalable/actions/database-change-key.svg
-       share/icons/application/scalable/actions/database-lock.svg
-       share/icons/application/scalable/actions/database-lock-all.svg
-       share/icons/application/scalable/actions/database-merge.svg
-       share/icons/application/scalable/actions/database-search.svg
-       share/icons/application/scalable/actions/database-settings.svg
-       share/icons/application/scalable/actions/dialog-close.svg
-       share/icons/application/scalable/actions/dialog-ok.svg
-       share/icons/application/scalable/actions/document-close.svg
-       share/icons/application/scalable/actions/document-edit.svg
-       share/icons/application/scalable/actions/document-export.svg
-       share/icons/application/scalable/actions/document-import.svg
-       share/icons/application/scalable/actions/document-new.svg
-       share/icons/application/scalable/actions/document-open.svg
-       share/icons/application/scalable/actions/document-open-recent.svg
-       share/icons/application/scalable/actions/document-properties.svg
-       share/icons/application/scalable/actions/document-save.svg
-       share/icons/application/scalable/actions/document-save-as.svg
-       share/icons/application/scalable/actions/document-save-copy.svg
-       share/icons/application/scalable/actions/donate.svg
-       share/icons/application/scalable/actions/edit-clear-locationbar-ltr.svg
-       share/icons/application/scalable/actions/edit-clear-locationbar-rtl.svg
-       share/icons/application/scalable/actions/entry-clone.svg
-       share/icons/application/scalable/actions/entry-delete.svg
-       share/icons/application/scalable/actions/entry-restore.svg
-       share/icons/application/scalable/actions/entry-edit.svg
-       share/icons/application/scalable/actions/entry-expire.svg
-       share/icons/application/scalable/actions/entry-new.svg
-       share/icons/application/scalable/actions/favicon-download.svg
-       share/icons/application/scalable/actions/fingerprint.svg
-       share/icons/application/scalable/actions/getting-started.svg
-       share/icons/application/scalable/actions/group-delete.svg
-       share/icons/application/scalable/actions/group-edit.svg
-       share/icons/application/scalable/actions/group-clone.svg
-       share/icons/application/scalable/actions/group-empty-trash.svg
-       share/icons/application/scalable/actions/group-new.svg
-       share/icons/application/scalable/actions/hammer-wrench.svg
-       share/icons/application/scalable/actions/health.svg
-       share/icons/application/scalable/actions/help-about.svg
-       share/icons/application/scalable/actions/lock-question.svg
-       share/icons/application/scalable/actions/keyboard-shortcuts.svg
-       share/icons/application/scalable/actions/message-close.svg
-       share/icons/application/scalable/actions/move-down.svg
-       share/icons/application/scalable/actions/move-up.svg
-       share/icons/application/scalable/actions/object-locked.svg
-       share/icons/application/scalable/actions/object-unlocked.svg
-       share/icons/application/scalable/actions/onepassword.svg
-       share/icons/application/scalable/actions/paperclip.svg
-       share/icons/application/scalable/actions/password-copy.svg
-       share/icons/application/scalable/actions/passkey.svg
-       share/icons/application/scalable/actions/password-generator.svg
-       share/icons/application/scalable/actions/password-show-off.svg
-       share/icons/application/scalable/actions/password-show-on.svg
-       share/icons/application/scalable/actions/qrcode.svg
-       share/icons/application/scalable/actions/refresh.svg
-       share/icons/application/scalable/actions/remote-sync.svg
-       share/icons/application/scalable/actions/reports.svg
-       share/icons/application/scalable/actions/reports-exclude.svg
-       share/icons/application/scalable/actions/sort-alphabetical-ascending.svg
-       share/icons/application/scalable/actions/sort-alphabetical-descending.svg
-       share/icons/application/scalable/actions/statistics.svg
-       share/icons/application/scalable/actions/system-help.svg
-       share/icons/application/scalable/actions/system-search.svg
-       share/icons/application/scalable/actions/system-software-update.svg
-       share/icons/application/scalable/actions/tag.svg
-       share/icons/application/scalable/actions/tag-multiple.svg
-       share/icons/application/scalable/actions/tag-search.svg
-       share/icons/application/scalable/actions/totp.svg
-       share/icons/application/scalable/actions/totp-copy.svg
-       share/icons/application/scalable/actions/totp-copy-password.svg
-       share/icons/application/scalable/actions/totp-edit.svg
-       share/icons/application/scalable/actions/totp-invalid.svg
-       share/icons/application/scalable/actions/trash.svg
-       share/icons/application/scalable/actions/url-copy.svg
-       share/icons/application/scalable/actions/user-guide.svg
-       share/icons/application/scalable/actions/username-copy.svg
-       share/icons/application/scalable/actions/view-history.svg
-       share/icons/application/scalable/actions/web.svg
-       share/icons/application/scalable/actions/yubikey-refresh.svg
-       share/icons/application/scalable/apps/internet-web-browser.svg
-       share/icons/application/scalable/apps/keepassxc.svg
-       share/icons/application/scalable/apps/keepassxc-dark.svg
-       share/icons/application/scalable/apps/keepassxc-locked.svg
-       share/icons/application/scalable/apps/keepassxc-unlocked.svg
-       share/icons/application/scalable/apps/preferences-desktop-icons.svg
-       share/icons/application/scalable/apps/preferences-system-network-sharing.svg
-       share/icons/application/scalable/apps/utilities-terminal.svg
-       share/icons/application/scalable/categories/preferences-other.svg
-       share/icons/application/scalable/mimetypes/application-x-keepassxc.svg
-       share/icons/application/scalable/status/dialog-error.svg
-       share/icons/application/scalable/status/dialog-information.svg
-       share/icons/application/scalable/status/dialog-warning.svg
-       share/icons/application/scalable/status/security-high.svg
-       share/icons/application/scalable/actions/lock-open-alert.svg
-       share/icons/application/scalable/actions/lock-open.svg
-       share/icons/application/scalable/actions/lock.svg
-Copyright: 2023 Pictogrammers <https://pictogrammers.com/docs/general/about/>
-License: Apache-2.0
-Comment: Some icons are modified to fit KeePassXC design (https://pictogrammers.com/library/mdi/)
-
-Files: src/streams/qtiocompressor.*
-       src/streams/QtIOCompressor
-       tests/modeltest.*
-Copyright: 2009-2012, Nokia Corporation and/or its subsidiary(-ies)
-License: LGPL-2.1 or GPL-3
-
-Files: src/thirdparty/zxcvbn/zxcvbn.*
-Copyright: 2015-2017, Tony Evans
-License: MIT
-
-Files: src/gui/KMessageWidget.h
-       src/gui/KMessageWidget.cpp
-Copyright: 2011 Aurélien Gâteau <agateau@kde.org>
-           2014 Dominik Haumann <dhaumann@kde.org>
-License: LGPL-2.1
-
-Files: share/macosx/background.tiff
-Copyright: 2008-2014, Andrey Tarantsov
-License: MIT
-
-Files: share/icons/application/scalable/apps/freedesktop.svg
-Copyright: GPL-2+
-Comment: from Freedesktop.org website
-
-Files: share/icons/application/scalable/actions/hibp.svg
-       share/icons/database/C64_Apple.svg
-Copyright: GPL-2+
-Comment: from the Simple Icons repo (https://github.com/simple-icons/simple-icons/)
-
-Files: src/thirdparty/ykcore/yk*
-       src/thirdparty/ykcore/yubikey.h
-Copyright: 2006-2015, Yubico AB
-License: BSD-2-Clause
-Comment: from the yubikey-personalization repo (https://github.com/Yubico/yubikey-personalization)
-~~~~
-
 ### Components whose license text is not included
 
 - The Microsoft Edge WebView2 Runtime: Microsoft's own terms, not reproduced (it is installed on the PC, not shipped). The loader library's text is reproduced above (open decision 5).
-- Qt (including its translations and the third-party code inside it), Botan, zlib, minizip, libqrencode, readline, Mesa, the Microsoft Visual C++ Redistributable installer and the Microsoft shader compilers inside KeePassXC's package: their license texts are not reproduced here. The KeePassXC source archive carries `LICENSE.LGPL-3`, `LICENSE.LGPL-2.1`, `LICENSE.BSD` and others, and each upstream project is named with its source in the KeePassXC section; Microsoft's terms and the Mesa terms were not read.
 - Zetetic LLC BSD-3 license in the `sqlcipher/` folder of `libsqlite3-sys`: that code is not compiled in (the sqlcipher features are not enabled).

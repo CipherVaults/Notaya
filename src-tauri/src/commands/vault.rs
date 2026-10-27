@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State, WebviewWindow};
+use tauri::{AppHandle, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
@@ -9,7 +9,7 @@ use crate::backup;
 use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
-use crate::model::{resolve_passwords, Item, Settings, Sticky};
+use crate::model::{Item, Settings, Sticky};
 use crate::openvault;
 use crate::state::{self, AppState};
 use crate::ui;
@@ -41,7 +41,7 @@ pub struct VaultStatus {
 /// left alone for the lock screen. Returns why a vault with security off could not be opened.
 fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     let _gate = state.open_gate();
-    // A quit in progress must not bring the notes back to life while KeePassXC closes.
+    // A quit in progress must not bring the notes back to life.
     if state.is_unlocked() || state.is_quitting() {
         return None;
     }
@@ -64,12 +64,6 @@ fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
         // A master password, or a header that can't be read: the lock screen deals with it.
         _ => None,
     }
-}
-
-/// Opens a vault that has security off again after a cancelled quit had closed it.
-pub(crate) fn reopen_open_vault(app: &AppHandle) {
-    let state = app.state::<AppState>();
-    let _ = auto_open(app, &state);
 }
 
 /// Creates a new vault with security off and opens it.
@@ -246,29 +240,6 @@ pub fn disable_security(
     result
 }
 
-/// Switches the Passwords (KeePassXC) feature on or off. Turning it off first asks a
-/// running KeePassXC to close; if it stays open the switch stays on.
-#[tauri::command(async)]
-pub fn set_passwords_enabled(state: State<'_, AppState>, enabled: bool) -> Result<Settings> {
-    if !state.is_unlocked() {
-        return Err(Error::Locked);
-    }
-    if !enabled {
-        if !crate::keepassxc::close_gracefully(&state.keepassxc, &state.paths, state::KEEPASSXC_CLOSE_TIMEOUT) {
-            // Give it its own window back, so any "save changes?" question can be seen.
-            let _ = crate::keepassxc::detach();
-            return Err(Error::invalid(state::KEEPASSXC_STILL_OPEN));
-        }
-        crate::embed::hide();
-    }
-    state.with_mut(|s| {
-        let mut settings = s.settings();
-        settings.passwords_enabled = Some(enabled);
-        s.put(Item::Settings(settings))
-    })?;
-    get_settings(state)
-}
-
 #[tauri::command(async)]
 pub fn unlock_vault(
     app: AppHandle,
@@ -398,21 +369,15 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
     Ok(Some(path.display().to_string()))
 }
 
-/// The settings as the UI sees them: the Passwords switch is always a definite on/off.
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
-    let mut settings = state.with(|s| Ok(s.settings()))?;
-    settings.passwords_enabled = Some(resolve_passwords(settings.passwords_enabled, state::passwords_in_use(&state.paths)));
-    Ok(settings)
+    state.with(|s| Ok(s.settings()))
 }
 
 #[tauri::command]
 pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> Result<Settings> {
-    let mut settings = settings.sanitized();
+    let settings = settings.sanitized();
     let protect = state.with_mut(|s| {
-        // The Passwords switch changes only through `set_passwords_enabled` (it has to close
-        // KeePassXC first), so a late or stale save from a window can't flip it.
-        settings.passwords_enabled = s.settings().passwords_enabled;
         s.put(Item::Settings(settings.clone()))?;
         Ok(s.protects_capture())
     })?;
@@ -445,9 +410,7 @@ pub fn flush_done(window: WebviewWindow, state: State<'_, AppState>, round: u64)
 }
 
 /// Runs on a worker thread, like `lock_vault`, so the windows can answer.
-/// Locks, asks KeePassXC to close and exits. If KeePassXC is still open (it may be
-/// asking to save) it does NOT exit and never ends KeePassXC: the owner gets the
-/// `app-notice` event instead, and the command still returns normally.
+/// Locks and exits.
 #[tauri::command(async)]
 pub fn quit_app(app: AppHandle) {
     state::quit(&app);

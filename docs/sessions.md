@@ -17,6 +17,19 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 3. `tsc`, the build and a new 24-check mock UI script passed; an independent review found one medium and three low issues, all fixed.
 
 Not run: the real app, a real-exe test on Windows. Nothing is accepted.
+# 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), Cipherleaf: KeePassXC removed (A24), cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread session started by the project coordinator, with a documentation agent and an independent review agent (model output). **Record basis:** the project-chat timestamp of the owner's message, the system clock and the repository.
+
+## What happened
+
+1. The owner sent four asks in the project chat at 06:45:11 UTC. This thread got item 1, "remove KeePass entirely"; the calculator pop-out, sticky-note multi-delete and ribbon editor went to other threads.
+2. KeePassXC was removed from the Rust core, the UI, the mock, the docs, the notices, packaging and the real-exe scripts (A24, [EX-2026-10-27-23](execution/2026-10-27-keepassxc-removed.md)). Quit no longer waits for KeePassXC. Existing `.kdbx` files are left alone.
+3. Checks in the cloud: `tsc`, UI build, and `cargo test --lib` cross-built for Windows (GNU) and run under Wine, 124 of 124 (167 on `main`; the difference is the removed tests). An independent review found no High or Medium issue; its small items were applied.
+
+Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts), the app itself. Nothing is accepted.
+
+---
 
 # 📘 Session: 2026-10-23 (after 22:25:50 UTC; work times not recorded), Cipherleaf: V1.0.1 audit fixes (A23), cloud thread session
 

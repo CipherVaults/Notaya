@@ -10,10 +10,6 @@ pub struct Paths {
     pub backups: PathBuf,
     /// WebView2 profile folder (cache, local storage) kept with the app, not in AppData.
     pub webview: PathBuf,
-    /// KeePassXC's settings, kept with the vault instead of in AppData (amendment A9).
-    pub keepassxc_config: PathBuf,
-    /// Folder of the bundled KeePassXC program (amendment A9).
-    pub keepassxc_dir: PathBuf,
 }
 
 impl Paths {
@@ -21,20 +17,15 @@ impl Paths {
         let root = std::env::var_os("CIPHERLEAF_HOME")
             .map(PathBuf::from)
             .unwrap_or_else(default_root);
-        let keepassxc_dir = std::env::var_os("CIPHERLEAF_KEEPASSXC")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| default_keepassxc_dir(&root));
-        Paths::at(&root, keepassxc_dir)
+        Paths::at(&root)
     }
 
-    pub fn at(root: &Path, keepassxc_dir: PathBuf) -> Paths {
+    pub fn at(root: &Path) -> Paths {
         let data = root.join("data");
         Paths {
             vault: data.join("vault.clf"),
             backups: data.join("backups"),
             webview: data.join("webview"),
-            keepassxc_config: data.join("keepassxc"),
-            keepassxc_dir,
             data,
         }
     }
@@ -45,7 +36,6 @@ impl Paths {
     pub fn ensure_dirs(&self) -> std::io::Result<()> {
         std::fs::create_dir_all(&self.backups)?;
         std::fs::create_dir_all(&self.webview)?;
-        std::fs::create_dir_all(&self.keepassxc_config)?;
         let probe = self.data.join(format!(".write-test-{}", std::process::id()));
         std::fs::write(&probe, b"")?;
         let _ = std::fs::remove_file(&probe);
@@ -65,19 +55,6 @@ fn default_root() -> PathBuf {
     }
 }
 
-fn default_keepassxc_dir(root: &Path) -> PathBuf {
-    if cfg!(debug_assertions) {
-        // During development, use the verified copy in vendor/ (see vendor/keepassxc-manifest.md).
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join("vendor")
-            .join("keepassxc-2.8.0")
-            .join("KeePassXC-2.8.0-x64")
-    } else {
-        root.join("KeePassXC")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,10 +68,10 @@ mod tests {
     #[test]
     fn ensure_dirs_makes_the_folders_and_leaves_no_probe_file() {
         let root = temp_root();
-        let paths = Paths::at(&root, root.join("kp"));
+        let paths = Paths::at(&root);
         paths.ensure_dirs().unwrap();
         paths.ensure_dirs().unwrap(); // a second start, with the folders already there
-        assert!(paths.backups.is_dir() && paths.webview.is_dir() && paths.keepassxc_config.is_dir());
+        assert!(paths.backups.is_dir() && paths.webview.is_dir());
         let leftovers: Vec<_> = std::fs::read_dir(&paths.data)
             .unwrap()
             .flatten()
@@ -109,7 +86,7 @@ mod tests {
         // folder that can't be written to. A folder where the probe file should go stands in
         // for that (creating a file with that name fails).
         let root = temp_root();
-        let paths = Paths::at(&root, root.join("kp"));
+        let paths = Paths::at(&root);
         paths.ensure_dirs().unwrap();
         std::fs::create_dir(paths.data.join(format!(".write-test-{}", std::process::id()))).unwrap();
         assert!(paths.ensure_dirs().is_err(), "the write probe must be what fails here");
@@ -119,7 +96,7 @@ mod tests {
     fn ensure_dirs_fails_when_the_data_folder_cannot_be_made() {
         let root = temp_root();
         std::fs::write(root.join("data"), b"a file where the folder should be").unwrap();
-        let paths = Paths::at(&root, root.join("kp"));
+        let paths = Paths::at(&root);
         assert!(paths.ensure_dirs().is_err());
     }
 }

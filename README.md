@@ -4,7 +4,7 @@ Cipherleaf is a portable Windows notes app. You write notes in notebooks, sectio
 
 **Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Cipherleaf's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup. What it sends was not captured, and Cipherleaf does not currently stop it, so the app is not silent on the network. Cipherleaf's own code never sends your notes anywhere. A web link in a note opens in your normal browser only when you click it.
 
-Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. While it is off your notes are not private: anyone who can open the folder can read them. You can turn security on or off at any time in Settings. A password manager (KeePassXC) is a second optional extra, with its own switch.
+Security is an optional extra. It is off by default: Cipherleaf opens straight to your notes with no password. While it is off your notes are not private: anyone who can open the folder can read them. You can turn security on or off at any time in Settings.
 
 > **Version 1.0.1** (a fix release after the first release, 1.0). The repository is private, portable builds are shared by hand with a few close people, and the exe is not code-signed (Windows SmartScreen may warn). What is and is not proven is in [`docs/acceptance.md`](docs/acceptance.md); the current project state is in [`docs/STATUS.md`](docs/STATUS.md).
 
@@ -27,7 +27,7 @@ Security is an optional extra. It is off by default: Cipherleaf opens straight t
 - **Links.** Paste or type a link in the bar. `Ctrl+click` opens a web link in your browser (http and https only).
 - **Pictures.** Add with `/Picture`, paste, or drag and drop. PNG, JPEG, GIF and WebP up to 25 MB. Pictures are stored inside the vault, not as loose files. Align, resize and add a caption.
 - **Equations.** Block and inline, typed as TeX (for example `$x^2$`) and drawn on your PC (nothing is fetched for them).
-- **Search.** `Ctrl+K` searches page titles and text, sticky notes and notebook names, or runs a command (with the box empty: New page, New sticky note, Go to Notes, Appearance & settings, Back up vault now, and Lock vault or Passwords (KeePassXC) when those are on).
+- **Search.** `Ctrl+K` searches page titles and text, sticky notes and notebook names, or runs a command (with the box empty: New page, New sticky note, Go to Notes, Appearance & settings, Back up vault now, and Lock vault when security is on).
 - **Autosave.** Pages save about half a second after you stop typing. Text typed just before closing or locking is saved first.
 - **Home screen** with "New page", "New sticky note" and your recently edited pages.
 
@@ -56,16 +56,6 @@ By default security is **off**: notes open straight away, nothing locks, and scr
 - **Change master password and keyfile** in Settings ("Change…"). This also makes a new data key and re-encrypts your notes. Notes saved from now on cannot be opened with the old password, but older backups still open with the old password, so keep them somewhere safe or delete them.
 - **Turn off security** from Settings, at any time (see below).
 
-### Optional: passwords (KeePassXC)
-
-Passwords are kept by [KeePassXC](https://keepassxc.org) 2.8.0, bundled with the portable copy and shown inside the Cipherleaf window. This is a separate switch in Settings ("Passwords"), off for a new vault.
-
-- Cipherleaf only starts KeePassXC if its file matches a checked hash. It is set up to make no network connections, with a 5-minute auto-lock and a clipboard that clears after 20 seconds.
-- KeePassXC has its own master password, its own lock and its own database file, `data\passwords.kdbx`. Cipherleaf never sees the password or your entries.
-- Passwords do not need security, and security does not need passwords.
-- Copies of the encrypted passwords file are kept in `data\backups` (the last 10) when it changed, and you can restore one from Settings ("Restore passwords file…"); the file it replaces is kept as `passwords-undo-....kdbx`.
-- Quitting never force-closes KeePassXC. If it is still open (for example asking to save), the quit is cancelled with a message.
-
 ### Backups and restore
 
 - **Automatic backup** when the app quits, and also when the vault locks if you use security, if something changed. Saved in `data\backups`; the newest 10 are kept.
@@ -85,7 +75,7 @@ Everything lives in the `data` folder next to `Cipherleaf.exe`. Copy the folder 
 
 ### Getting started
 
-1. Unzip the folder anywhere (a normal folder or a USB stick) and run `Cipherleaf.exe`. Keep the `KeePassXC` folder next to it if you want the passwords panel.
+1. Unzip the folder anywhere (a normal folder or a USB stick) and run `Cipherleaf.exe`.
 2. The first time, Cipherleaf opens straight to your notes. There is no password and nothing to set up.
 3. Click **Create your first notebook** (or the `+` next to Notebooks). Give it a name, an icon and a color.
 4. Press `Ctrl+N` or "New page" (the sidebar must be showing), click the title at the top and type it, then press Enter to move into the page.
@@ -95,7 +85,7 @@ Everything lives in the `data` folder next to `Cipherleaf.exe`. Copy the folder 
 - Press `/` to insert headings, lists, checklists, tables, pictures, equations and more. Select text to get the formatting bar.
 - Use the `...` menu next to a page to add a page inside it, favorite it, move it or send it to Trash.
 - Press `Ctrl+K` to search everything, or to run a command.
-- Useful keys: `Ctrl+K` search, `Ctrl+N` new page, `Ctrl+,` Settings, `Ctrl+\` show or hide the sidebar, `Ctrl+1` Notes, `Ctrl+2` Passwords (when on), `Ctrl+3` Sticky notes, `Ctrl+L` lock (when security is on).
+- Useful keys: `Ctrl+K` search, `Ctrl+N` new page, `Ctrl+,` Settings, `Ctrl+\` show or hide the sidebar, `Ctrl+1` Notes, `Ctrl+3` Sticky notes, `Ctrl+L` lock (when security is on).
 - Sticky notes: open "Sticky notes" in the sidebar and press "New note". In its top bar, the dot picks the color and the pin switches "Keep on top" off or on. The X closes the note (it stays in the vault) and the bin deletes it.
 
 ### Turn security on
@@ -118,12 +108,6 @@ With security off, your notes are saved in Cipherleaf's file format, which is ta
 
 There is no reset and no recovery. If you lose the master password, or a keyfile you required, the notes cannot be opened. The way forward is **Start over…** on the lock screen: type START OVER and press "Set aside and start over". Your old vault is set aside (never deleted); then press "Start new notes". If you find the password later, use **Restore from a backup…**, choose the `set-aside-....clf` file in `data\` and type its password. Backups made while security was on open with the password they had then.
 
-### Optional passwords panel
-
-1. In **Settings**, find **Passwords with KeePassXC (optional)** and switch "Passwords" on. A Passwords item appears in the sidebar (`Ctrl+2`).
-2. The first time, KeePassXC opens its own start screen. Choose "Create new database" and save it as `passwords.kdbx` in the `data` folder, with its own master password. Cipherleaf never sees that password. (If `data` already holds a `.kdbx` file, KeePassXC opens that.)
-3. To switch the panel off, use the same switch. Cipherleaf closes KeePassXC politely first. Your `passwords.kdbx` is not deleted.
-
 ### Backups and restore
 
 1. Cipherleaf backs up automatically when you quit (and on lock, if you use security), if something changed. The newest 10 are in `data\backups`. With security off it also makes an hourly backup while you work (`vault-hourly-<number>.clf`, newest 3 kept). Before a notebook or section is deleted it makes a safety backup first (`vault-predelete-<number>.clf`, newest 5 kept); if that can't be made, nothing is deleted. To get a deleted notebook back, use Restore with that safety backup: it replaces your whole vault with that copy and keeps the current one as `restore-undo`. If a backup fails, Cipherleaf shows a message.
@@ -133,23 +117,26 @@ There is no reset and no recovery. If you lose the master password, or a keyfile
 
 ### Moving or backing up the folder
 
-Close Cipherleaf, then copy the whole folder (`Cipherleaf.exe`, `KeePassXC` and `data`). Moving the folder to another drive or PC does not change the password or the keyfile. A keyfile is identified by its content, so keep the same file, not a copy that has been edited.
+Close Cipherleaf, then copy the whole folder (`Cipherleaf.exe` and `data`). Moving the folder to another drive or PC does not change the password or the keyfile. A keyfile is identified by its content, so keep the same file, not a copy that has been edited.
+
+### Upgrading from 1.0 or 1.0.1
+
+- **KeePassXC is no longer part of Cipherleaf.** The Passwords panel and its switch are gone. A passwords file made with an earlier version (`data\passwords.kdbx`, and its copies `passwords-*.kdbx` in `data\backups`) is left in the `data` folder as it is. Cipherleaf does not open, change or back it up any more. To open it, use KeePassXC itself (download it from <https://keepassxc.org>), or the `KeePassXC` folder of your old portable copy if you still have it.
+- Your notes, sticky notes, security settings and backups are not changed.
 
 ### Troubleshooting
 
-- **"Wrong master password or keyfile for this Cipherleaf vault."** This is the Cipherleaf password, not the KeePassXC one. If the vault uses a keyfile, it must be the exact file chosen when the vault was made.
+- **"Wrong master password or keyfile for this Cipherleaf vault."** If the vault uses a keyfile, it must be the exact file chosen when the vault was made.
 - **"The vault file couldn't be read."** Another program (antivirus or a sync tool) may be using the file. Press "Check again" or "Try again". If it stays, use Restore or Start over.
 - **"No notes found here."** The folder has backups but no current notes file. Restore a backup, or start new notes.
 - **"Cipherleaf could not start".** The message says either that Cipherleaf cannot save its data in the `data` folder next to the app, or that it cannot open its window. For the first, the usual cause is a read-only folder (a write-protected USB stick, a CD, or a protected place such as Program Files): move the whole Cipherleaf folder somewhere you can write to, for example your Documents folder, and start it again. For the second, the usual cause is a missing Microsoft WebView2 Runtime (Windows normally has it): install the "Evergreen" runtime from Microsoft's website (search for "WebView2 Runtime").
 - **Windows SmartScreen warns about the exe.** The exe is not code-signed. Choose "More info", then "Run anyway" if you trust where you got it.
-- **KeePassXC does not start.** It needs the Microsoft Visual C++ 2015 to 2022 x64 runtime, and its folder must be next to `Cipherleaf.exe`.
-- **Quit says KeePassXC is still open.** Finish or close it, then close Cipherleaf again.
 
 ## Is it safe?
 
 Short answers. The full list is in [`docs/security-design.md`](docs/security-design.md).
 
-- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Cipherleaf's own code makes no connections (the page security policy allows only the app's internal channel), and KeePassXC is preset to make none. The WebView2 component that Windows uses to draw the window is Microsoft's, and a live test showed it contacting Microsoft addresses at startup; Cipherleaf does not currently stop that and does not claim zero network traffic. A web link in a note opens in your browser only when you click it.
+- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Cipherleaf's own code makes no connections (the page security policy allows only the app's internal channel). The WebView2 component that Windows uses to draw the window is Microsoft's, and a live test showed it contacting Microsoft addresses at startup; Cipherleaf does not currently stop that and does not claim zero network traffic. A web link in a note opens in your browser only when you click it.
 - **With security on:** notes are encrypted with XChaCha20-Poly1305, with the key derived from your password by Argon2id (256 MiB, 3 passes), and tampering is detected.
 - **With security off, the notes are readable by anyone with the folder.** This is by design, and it is stated in Settings.
 - **The exe is not signed.** Windows SmartScreen may warn. Cipherleaf does not check itself, so a replaced exe would not be noticed.
@@ -162,18 +149,16 @@ Short answers. The full list is in [`docs/security-design.md`](docs/security-des
 
 Cipherleaf is built on open source software, and we are grateful to everyone who made it:
 
-- **[KeePassXC](https://keepassxc.org) 2.8.0** (GPL-2.0 or GPL-3.0, (c) the KeePassXC Team) for passwords. It is bundled unmodified and runs as a separate program. Its license and the exact source are in the `Licenses\KeePassXC` folder of the portable copy, and at <https://github.com/keepassxreboot/keepassxc/releases/tag/2.8.0>.
 - **[Tauri](https://tauri.app)** and the Rust crates it and Cipherleaf use (RustCrypto for the encryption, SQLite for storage, and others).
 - **npm packages** for the interface: React, TipTap and ProseMirror (the editor), KaTeX (equations), highlight.js (code colors), lucide icons, Radix, and others.
 - **Fonts:** Inter and JetBrains Mono (SIL Open Font License 1.1) and the KaTeX fonts.
 - **Microsoft Edge WebView2** shows the interface (required, not bundled).
 
-Every component is listed in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) with its version, copyright holder and license, together with the license texts that go with it (KeePassXC's full GPL texts are in the `Licenses\KeePassXC` folder). That file is also in the `Licenses` folder of the portable copy and inside the app (Settings, About, "Open source licenses…"). This is attribution, not legal advice.
+Every component is listed in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) with its version, copyright holder and license, together with the license texts that go with it. That file is also in the `Licenses` folder of the portable copy and inside the app (Settings, About, "Open source licenses…"). This is attribution, not legal advice.
 
 **The license for Cipherleaf itself has not been chosen yet.** Until the owner decides, no license is granted to use, copy or share Cipherleaf's own code.
 
 ## Requirements
 
 - Windows 10 or 11, 64-bit, with the Microsoft Edge WebView2 runtime (already part of Windows 11 and most Windows 10 installs).
-- The Microsoft Visual C++ 2015 to 2022 x64 runtime, needed by the bundled KeePassXC.
 - The window is at least 960 by 640 pixels. Mica and Acrylic window materials need Windows 11. Unlocking a password-protected vault uses about 256 MB of memory for a moment.
