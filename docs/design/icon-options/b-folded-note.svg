@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option B: a paper note with a folded corner and a small green leaf. Notes first. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2a8a5c"/><stop offset="1" stop-color="#0d3a26"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <path d="M310 200H630L760 330V788Q760 824 724 824H310Q274 824 274 788V236Q274 200 310 200Z" fill="#fbfaf5"/>
+  <path d="M630 200V298Q630 330 662 330H760Z" fill="#d6d0c0"/>
+  <rect x="340" y="400" width="320" height="34" rx="17" fill="#cfc9b9"/>
+  <rect x="340" y="480" width="270" height="34" rx="17" fill="#cfc9b9"/>
+  <rect x="340" y="560" width="190" height="34" rx="17" fill="#cfc9b9"/>
+  <g transform="translate(640 690) rotate(40)">
+    <path d="M0 -120C80 -80 92 40 0 120C-92 40 -80 -80 0 -120Z" fill="#2fa36b"/>
+    <path d="M0 -80V96" stroke="#fbfaf5" stroke-width="14" stroke-linecap="round"/>
+  </g>
+</svg>
