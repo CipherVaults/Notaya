@@ -31,3 +31,9 @@ All in the cloud container, on the working tree that is committed as this change
 - A PC pass on throwaway data before a release: MSVC build and tests, release build, the optional-security, restore and lock-flow scripts, and a look at Settings (no Passwords section) and the sidebar (no Passwords item).
 - Amendment number A24 may collide with numbers picked by the parallel threads; renumber at merge if needed.
 - Whether `Ctrl+3` for Sticky notes should become `Ctrl+2` now that the gap exists (not changed).
+
+## Addendum (2026-10-27, records catch-up)
+
+Code commit `4104557` on branch `claude/project-thread-4cul4u` ([PR #20](https://github.com/AbyssWatcher2/CipherLeaf/pull/20)); sticky multi-delete (with the ribbon) was merged into this branch as `ef548eb`. The PC pass named in section 4 was done in the combined test ([EX-2026-10-27-25](2026-10-27-combined-test.md): 128/128 Rust tests, optional security 47/47, restore 13/13, lock flow as designed, no Passwords entry or switch). The owner merged PR #20 at 08:04:55 UTC (GitHub; merge commit `7f64b86`), confirmed at 08:23:08 UTC that Cipherleaf's own optional security stays, and released it in V1.1.0 (tag `v1.1.0` on `70d38a1`). The number A24 was kept; the calculator became A25. Not decided: `Ctrl+3` for Sticky notes. Still open: the owner's acceptance.
+
+Note: this report and the calculator report both carry the short id EX-23 (this one as EX-2026-10-27-23). Ids stay stable, so neither is renumbered; the file names tell them apart.
