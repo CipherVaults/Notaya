@@ -19,7 +19,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Report: [2026-10-27-v1-1-0-portable-build.md](2026-10-27-v1-1-0-portable-build.md)
 - Task / Goal: the owner's "Yes please" of 08:21:52 UTC to a release of `main` with A24 (KeePassXC removed), the ribbon, sticky multi-delete and pop-out calculators
 - Executor: Claude (Claude Code) in a thread session on the owner's PC, throwaway worktree and data
-- Outcome: version 1.1.0 (`70d38a1`); 128/128 Rust tests; ZIP 5,916,923 bytes, SHA-256 `2E0B94B1…A890`; restore 12/12, lock flow 3/3, optional security 47/47 on the shipped exe; not released (the owner runs `gh release create`)
+- Outcome: version 1.1.0 (`70d38a1`); 128/128 Rust tests; ZIP 5,916,923 bytes, SHA-256 `2E0B94B1…A890`; restore 12/12, lock flow 3/3, optional security 47/47 on the shipped exe; released by the owner as v1.1.0 at 08:39:05 UTC, checked on GitHub
 - Acceptance: pending
 
 ### 2026-10-27 (about 06:45 to 06:55 UTC), EX-2026-10-27-ribbon: OneNote-style ribbon over the page editor
