@@ -403,6 +403,8 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
     let mut settings = state.with(|s| Ok(s.settings()))?;
     settings.passwords_enabled = Some(resolve_passwords(settings.passwords_enabled, state::passwords_in_use(&state.paths)));
+    // The calculator history has its own commands; the settings screen doesn't need it.
+    settings.calc_history.clear();
     Ok(settings)
 }
 
@@ -412,7 +414,10 @@ pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Setti
     let protect = state.with_mut(|s| {
         // The Passwords switch changes only through `set_passwords_enabled` (it has to close
         // KeePassXC first), so a late or stale save from a window can't flip it.
-        settings.passwords_enabled = s.settings().passwords_enabled;
+        let stored = s.settings();
+        settings.passwords_enabled = stored.passwords_enabled;
+        // Likewise the calculator history changes only through the calculator commands.
+        settings.calc_history = stored.calc_history;
         s.put(Item::Settings(settings.clone()))?;
         Ok(s.protects_capture())
     })?;

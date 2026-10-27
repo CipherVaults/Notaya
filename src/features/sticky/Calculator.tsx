@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { Calculator as CalcIcon, Check, Copy, Delete, History, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Calculator as CalcIcon, Check, Copy, Delete, History, Minus, Trash2, X } from "lucide-react";
+import { api } from "@/lib/ipc";
+import { applyAppearance, cachedAppearance } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { Segmented } from "@/components/ui";
 import { useCalc } from "./useCalc";
@@ -72,11 +76,45 @@ const toneClass = (tone: Key["tone"]) =>
         ? "bg-surface text-muted hover:bg-surface-2 hover:text-fg"
         : "bg-surface text-fg hover:bg-surface-2";
 
+const win = getCurrentWindow();
+
 /**
- * A calculator that lives under the sticky notes. It parses what you type itself (nothing is run as code)
- * and keeps its history only in memory, so closing the app or locking the vault clears it.
+ * A calculator in its own small window, opened from the sticky notes. Any number can be open at once.
+ * It parses what you type itself (nothing is run as code). The history is shared by every calculator
+ * window and saved in the vault, so it is still there after the windows close; Clear empties it.
  */
-export default function Calculator() {
+export default function CalculatorWindow() {
+  useEffect(() => {
+    applyAppearance(cachedAppearance(), false);
+    // Rust asks every window to save before the vault locks. A calculator has nothing pending: answer at once.
+    const unlisten = listen<number>("vault-locking", (event) => {
+      api.flushDone(event.payload).catch(() => {});
+    });
+    // Ready only once it can answer, so a lock never waits for this window.
+    unlisten.then(() => requestAnimationFrame(() => requestAnimationFrame(() => api.windowReady())));
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  return (
+    <div className="h-full p-2.5">
+      <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-bg shadow-[0_12px_32px_-8px_rgba(0,0,0,0.45)]">
+        <Calculator />
+        <div
+          className="absolute bottom-1 right-1 h-3 w-3 cursor-se-resize opacity-40"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            win.startResizeDragging("SouthEast");
+          }}
+          style={{ background: "linear-gradient(135deg, transparent 50%, var(--text) 50%)", borderBottomRightRadius: 4 }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Calculator() {
   const [mode, setMode] = useState<Mode>("basic");
   const [degrees, setDegrees] = useState(true);
   const calc = useCalc(degrees);
@@ -91,7 +129,7 @@ export default function Calculator() {
     input.current?.focus();
   };
 
-  const keys = (list: Key[], cols: number) => (
+  const keys = (list: Key[], cols: number, small?: boolean) => (
     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
       {list.map((k, i) => (
         <button
@@ -100,7 +138,8 @@ export default function Calculator() {
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => press(k)}
           className={cn(
-            "grid h-11 place-items-center rounded-lg text-[0.95rem] font-medium tabular-nums transition-colors active:scale-[0.97]",
+            "grid place-items-center rounded-lg font-medium tabular-nums transition-colors active:scale-[0.97]",
+            small ? "h-8 text-[0.8rem]" : "h-9 text-[0.95rem]",
             toneClass(k.tone),
           )}
           style={k.span ? { gridColumn: `span ${k.span}` } : undefined}
@@ -112,105 +151,126 @@ export default function Calculator() {
   );
 
   return (
-    <section aria-label="Calculator" className="rounded-2xl border border-line bg-surface p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <CalcIcon size={17} className="text-muted" />
-        <h3 className="text-sm font-semibold">Calculator</h3>
-        <div className="flex-1" />
-        {mode === "scientific" && (
-          <Segmented
-            value={degrees ? "deg" : "rad"}
-            onChange={(v) => {
-              if ((v === "deg") === degrees) return; // the unit already shown: nothing to change
-              setDegrees(v === "deg");
-              calc.recallForAngleUnit();
-            }}
-            options={[
-              { value: "deg", label: "Deg" },
-              { value: "rad", label: "Rad" },
-            ]}
-          />
-        )}
-        <Segmented
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: "basic", label: "Basic" },
-            { value: "scientific", label: "Scientific" },
-          ]}
-        />
+    <section aria-label="Calculator" className="flex min-h-0 flex-1 flex-col">
+      <div data-tauri-drag-region className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
+        <CalcIcon size={15} className="pointer-events-none text-muted" />
+        <h1 data-tauri-drag-region className="text-sm font-semibold">
+          Calculator
+        </h1>
+        <div data-tauri-drag-region className="flex-1" />
+        <button
+          onClick={() => win.minimize()}
+          className="grid h-6 w-6 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
+          aria-label="Minimize"
+          title="Minimize"
+        >
+          <Minus size={14} />
+        </button>
+        <button
+          onClick={() => win.close()}
+          className="grid h-6 w-6 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
+          aria-label="Close (the history stays saved)"
+          title="Close (the history stays saved)"
+        >
+          <X size={15} />
+        </button>
       </div>
 
-      <div className="flex flex-col gap-5 lg:flex-row">
-        <div className={cn("shrink-0", mode === "scientific" ? "w-full lg:w-[520px]" : "w-full lg:w-[300px]")}>
-          <div className="mb-3 rounded-xl border border-line bg-bg px-3 py-2.5">
-            <input
-              ref={input}
-              value={expr}
-              onChange={(e) => calc.type(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  calc.equals();
-                } else if (e.key === "Escape") calc.clear();
-                else if (e.key === "ArrowUp" && history[0]) {
-                  e.preventDefault();
-                  calc.type(history[0].expr);
-                }
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+        <div className="flex items-center gap-2">
+          <Segmented
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "basic", label: "Basic" },
+              { value: "scientific", label: "Scientific" },
+            ]}
+          />
+          <div className="flex-1" />
+          {mode === "scientific" && (
+            <Segmented
+              value={degrees ? "deg" : "rad"}
+              onChange={(v) => {
+                if ((v === "deg") === degrees) return; // the unit already shown: nothing to change
+                setDegrees(v === "deg");
+                calc.recallForAngleUnit();
               }}
-              aria-label="Expression"
-              placeholder="Type or tap: 12.5 × (3 + 4)"
-              spellCheck={false}
-              autoComplete="off"
-              className="w-full bg-transparent text-right font-mono text-lg tabular-nums text-fg outline-none placeholder:text-faint"
-              style={{ outline: "none", boxShadow: "none" }}
+              options={[
+                { value: "deg", label: "Deg" },
+                { value: "rad", label: "Rad" },
+              ]}
             />
-            <div className="mt-1 flex h-6 items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={calc.copy}
-                  disabled={!preview && !(shown && !shown.error)}
-                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-faint hover:bg-surface-2 hover:text-fg disabled:pointer-events-none disabled:opacity-40"
-                  aria-label="Copy the result"
-                  title="Copy the result"
-                >
-                  {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}
-                </button>
-                {mode === "scientific" && (
-                  <span className="text-xs font-medium text-faint" title="Angles for sin, cos and tan are in this unit">
-                    <span aria-hidden="true">{degrees ? "DEG" : "RAD"}</span>
-                    <span className="sr-only">{degrees ? "Angles in degrees" : "Angles in radians"}</span>
-                  </span>
-                )}
-              </div>
-              <div className={cn("truncate text-right font-mono text-sm tabular-nums", shown?.error ? "text-danger" : "text-muted")} aria-live="polite">
-                {shown ? (shown.error ? shown.text : `= ${shown.text}`) : preview ? `= ${preview}` : ""}
-              </div>
-            </div>
-          </div>
+          )}
+        </div>
 
-          <div className="flex gap-3">
-            {mode === "scientific" && <div className="w-[210px] shrink-0">{keys(SCIENTIFIC, 3)}</div>}
-            <div className="min-w-0 flex-1">{keys(BASIC, 4)}</div>
+        <div className="shrink-0 rounded-xl border border-line bg-surface px-3 py-2.5">
+          <input
+            ref={input}
+            autoFocus
+            value={expr}
+            onChange={(e) => calc.type(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                calc.equals();
+              } else if (e.key === "Escape") calc.clear();
+              else if (e.key === "ArrowUp" && history[0]) {
+                e.preventDefault();
+                calc.type(history[0].expr);
+              }
+            }}
+            aria-label="Expression"
+            placeholder="Type or tap: 12.5 × (3 + 4)"
+            spellCheck={false}
+            autoComplete="off"
+            className="w-full bg-transparent text-right font-mono text-lg tabular-nums text-fg outline-none placeholder:text-faint"
+            style={{ outline: "none", boxShadow: "none" }}
+          />
+          <div className="mt-1 flex h-6 items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={calc.copy}
+                disabled={!preview && !(shown && !shown.error)}
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-faint hover:bg-surface-2 hover:text-fg disabled:pointer-events-none disabled:opacity-40"
+                aria-label="Copy the result"
+                title="Copy the result"
+              >
+                {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}
+              </button>
+              {mode === "scientific" && (
+                <span className="text-xs font-medium text-faint" title="Angles for sin, cos and tan are in this unit">
+                  <span aria-hidden="true">{degrees ? "DEG" : "RAD"}</span>
+                  <span className="sr-only">{degrees ? "Angles in degrees" : "Angles in radians"}</span>
+                </span>
+              )}
+            </div>
+            <div className={cn("truncate text-right font-mono text-sm tabular-nums", shown?.error ? "text-danger" : "text-muted")} aria-live="polite">
+              {shown ? (shown.error ? shown.text : `= ${shown.text}`) : preview ? `= ${preview}` : ""}
+            </div>
           </div>
         </div>
 
-        <div className="min-w-0 flex-1 lg:border-l lg:border-line lg:pl-5">
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-faint">
+        <div className="shrink-0 space-y-1.5">
+          {mode === "scientific" && keys(SCIENTIFIC, 6, true)}
+          {keys(BASIC, 4)}
+        </div>
+
+        <div className="flex min-h-[120px] flex-1 flex-col border-t border-line pt-2">
+          <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-faint">
             <History size={13} /> History
             <div className="flex-1" />
             {history.length > 0 && (
-              <button onClick={() => calc.setHistory([])} className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-fg">
+              <button onClick={calc.clearHistory} className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-fg">
                 <Trash2 size={12} /> Clear
               </button>
             )}
           </div>
           {history.length === 0 ? (
-            <p className="text-sm leading-relaxed text-faint">
-              Your calculations show up here. Click one to use it again. History isn't saved: it is cleared when you lock the vault or close the app.
+            <p className="text-xs leading-relaxed text-faint">
+              Your calculations show up here, in every calculator window. Click one to use it again. They stay saved in your vault until you clear them.
             </p>
           ) : (
-            <ul className="max-h-[300px] space-y-0.5 overflow-y-auto">
+            <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
               {history.map((h, i) => (
                 <li key={i}>
                   <button
@@ -218,7 +278,7 @@ export default function Calculator() {
                       calc.type(h.expr);
                       input.current?.focus();
                     }}
-                    className="flex w-full items-baseline justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left hover:bg-surface-2"
+                    className="flex w-full items-baseline justify-between gap-3 rounded-lg px-2 py-1 text-left hover:bg-surface-2"
                   >
                     <span className="truncate font-mono text-sm text-muted">{h.expr}</span>
                     <span className="shrink-0 font-mono text-sm tabular-nums text-fg">= {h.result}</span>

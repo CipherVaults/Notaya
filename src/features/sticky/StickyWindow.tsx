@@ -11,7 +11,6 @@ import { applyAppearance, cachedAppearance } from "@/lib/theme";
 import type { Sticky } from "@/lib/types";
 import { cn, debounce } from "@/lib/utils";
 import { editorProps, parseContent, stickyExtensions } from "@/features/notes/editor/extensions";
-import MiniCalculator from "./MiniCalculator";
 
 const win = getCurrentWindow();
 
@@ -46,7 +45,6 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
   const color = stickyColor(sticky.color);
   const editorRef = useRef<Editor | null>(null);
   const [focused, setFocused] = useState(false);
-  const [calcOpen, setCalcOpen] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const dirtyRef = useRef(false);
@@ -175,17 +173,7 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
           <BarButton label="Checklist" onClick={() => editor?.chain().focus().toggleTaskList().run()}>
             <ListChecks size={13} />
           </BarButton>
-          <BarButton
-            label={calcOpen ? "Back to the note" : "Calculator"}
-            active={calcOpen}
-            onClick={() => {
-              setCalcOpen((open) => {
-                // Closing returns the cursor to the note.
-                if (open) requestAnimationFrame(() => editorRef.current?.commands.focus());
-                return !open;
-              });
-            }}
-          >
+          <BarButton label="Open a calculator" onClick={() => api.openCalculator().catch(() => {})}>
             <Calculator size={13} />
           </BarButton>
           <BarButton label={sticky.onTop ? "Unpin from top" : "Keep on top"} onClick={() => style({ onTop: !sticky.onTop })}>
@@ -214,23 +202,11 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
           </BarButton>
         </div>
         <div
-          className={cn("sticky-editor min-h-0 flex-1 cursor-text overflow-y-auto px-4 py-3", calcOpen && "hidden")}
+          className="sticky-editor min-h-0 flex-1 cursor-text overflow-y-auto px-4 py-3"
           onClick={() => editor?.commands.focus()}
         >
           <EditorContent editor={editor} className="h-full" />
         </div>
-        {calcOpen && (
-          <div className="min-h-0 flex-1">
-            <MiniCalculator
-              ink={color.ink}
-              paper={color.paper}
-              onClose={() => {
-                setCalcOpen(false);
-                requestAnimationFrame(() => editorRef.current?.commands.focus());
-              }}
-            />
-          </div>
-        )}
         {saveFailed && (
           <div role="alert" className="shrink-0 px-4 py-1.5 text-xs font-medium text-red-700" style={{ background: color.bar }}>
             Couldn't save this note. Try again.

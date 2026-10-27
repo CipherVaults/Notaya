@@ -34,7 +34,7 @@ Security is an optional extra. It is off by default: Cipherleaf opens straight t
 ### Sticky notes and calculators
 
 - **Sticky notes** are small frameless windows on the desktop. Eight colors, bold, italic, checklist, "Keep on top" (on by default), resize and move; position and size are remembered. They are saved in the vault and are searchable. With security on they hide when the vault locks. Closing one with the X keeps it in the vault; click its tile in "Sticky notes" or press "Show all on desktop" to bring it back.
-- **Calculator.** A basic and scientific calculator sits under the sticky notes list (Deg/Rad, history of 30 entries, Copy, percent such as `200 + 10%`). A small one sits inside each sticky note. Nothing you calculate is saved.
+- **Calculator.** The Calculator button on the Sticky notes screen, or the calculator button on a sticky note, opens a basic and scientific calculator in its own small window (Deg/Rad, Copy, percent such as `200 + 10%`). Open as many as you like. They share one history of the last 100 calculations, saved in your vault (encrypted when security is on), so it is still there after you close them; Clear empties it. Calculator windows close when the vault locks.
 
 ### Looks (Settings, Appearance)
 

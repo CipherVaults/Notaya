@@ -169,7 +169,22 @@ pub struct Settings {
     /// before A21: the app then treats it as on only if a passwords file already exists.
     #[serde(default = "passwords_unset")]
     pub passwords_enabled: Option<bool>,
+    /// The calculator history, newest first, shared by every calculator window. It is kept
+    /// here (not as its own record) so an older Cipherleaf can still open the vault: it
+    /// ignores the field. The UI reads and changes it only through the calculator commands.
+    pub calc_history: Vec<CalcEntry>,
 }
+
+/// One line of the calculator history: what was typed and the answer shown.
+#[derive(Clone, Default, Serialize, Deserialize, Zeroize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CalcEntry {
+    pub expr: String,
+    pub result: String,
+}
+
+/// How many calculations the history keeps.
+pub const CALC_HISTORY_MAX: usize = 100;
 
 fn passwords_unset() -> Option<bool> {
     None
@@ -199,6 +214,7 @@ impl Default for Settings {
             screen_capture_protection: false,
             sticky_default_color: "yellow".into(),
             passwords_enabled: Some(false),
+            calc_history: Vec::new(),
         }
     }
 }
@@ -220,6 +236,7 @@ impl Settings {
         };
         self.font_size = self.font_size.clamp(12, 22);
         self.idle_lock_minutes = self.idle_lock_minutes.clamp(1, 240);
+        self.calc_history.truncate(CALC_HISTORY_MAX);
         self
     }
 }
@@ -248,5 +265,29 @@ mod tests {
             }
             _ => panic!("expected settings"),
         }
+    }
+
+    #[test]
+    fn calc_history_defaults_to_empty_and_round_trips() {
+        let old = r#"{"kind":"settings","theme":"paper"}"#;
+        match serde_json::from_str::<Item>(old).unwrap() {
+            Item::Settings(s) => assert!(s.calc_history.is_empty()),
+            _ => panic!("expected settings"),
+        }
+        let mut s = Settings::default();
+        s.calc_history.push(CalcEntry { expr: "2+2".into(), result: "4".into() });
+        let json = serde_json::to_string(&Item::Settings(s)).unwrap();
+        assert!(json.contains(r#""calcHistory":[{"expr":"2+2","result":"4"}]"#));
+        match serde_json::from_str::<Item>(&json).unwrap() {
+            Item::Settings(s) => assert_eq!(s.calc_history[0].result, "4"),
+            _ => panic!("expected settings"),
+        }
+    }
+
+    #[test]
+    fn sanitized_caps_the_calc_history() {
+        let mut s = Settings::default();
+        s.calc_history = vec![CalcEntry::default(); CALC_HISTORY_MAX + 20];
+        assert_eq!(s.sanitized().calc_history.len(), CALC_HISTORY_MAX);
     }
 }

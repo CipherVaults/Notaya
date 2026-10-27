@@ -1,4 +1,4 @@
-// Checks the Deg/Rad switch of the big calculator in the mock UI. Development only; not part of the app.
+// Checks the Deg/Rad switch of a calculator window in the mock UI. Development only; not part of the app.
 // Needs Playwright (npm i -g playwright, or any copy that require('playwright') finds). From the project root:
 //   npm run mock            (leave it running; it serves http://127.0.0.1:1421/)
 //   node dev-mock/calc-ui-check.cjs
@@ -8,11 +8,9 @@ let fail = 0;
 const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name); };
 (async () => {
   const b = await chromium.launch();
-  const p = await b.newPage({ viewport: { width: 1400, height: 900 } });
-  await p.goto('http://127.0.0.1:1421/');
+  const p = await b.newPage({ viewport: { width: 360, height: 640 } });
+  await p.goto('http://127.0.0.1:1421/?label=calc-1');
   await p.waitForTimeout(1500);
-  await p.getByText('Sticky notes', { exact: false }).first().click();
-  await p.waitForTimeout(800);
   await p.getByRole('button', { name: 'Scientific' }).click();
   const expr = () => p.getByLabel('Expression').inputValue();
   const line = () => p.locator('section[aria-label=Calculator] [aria-live=polite]').innerText();

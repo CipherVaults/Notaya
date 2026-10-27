@@ -6,6 +6,20 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (from 06:45 UTC, container clock), Cipherleaf: pop-out calculators (A24), cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread session, with an independent review agent (model output). **Record basis:** the transcript and this repository.
+
+## What happened
+
+1. The owner's message of 06:45:11 UTC listed four items; this thread did item 2 only (pop-out calculators with a shared saved history). The other items run in other threads.
+2. Built as A24 ([EX-23](execution/2026-10-27-pop-out-calculator.md)): a Calculator button replaces the panel, sticky notes open a calculator window too, any number of windows, one history of 100 lines saved in the vault.
+3. `tsc` and the UI build passed in the cloud; the mock UI showed the screens. The Rust crate cannot build in the Linux container, so `cargo test --lib` and the real app were not run there. Review findings fixed (EX-23).
+
+Resume: draft PR into `main`; the PC check and the owner's review. Nothing is accepted.
+
+---
+
 # 📘 Session: 2026-10-23 (after 22:25:50 UTC; work times not recorded), Cipherleaf: V1.0.1 audit fixes (A23), cloud thread session
 
 **Executor:** Claude (Claude Code) in the cloud thread session, with three writing agents, an independent review agent, two fix agents and a PC remote session (all model output). **Record basis:** the project-thread timestamps and the repository.

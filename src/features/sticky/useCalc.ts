@@ -1,23 +1,32 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { api } from "@/lib/ipc";
+import type { CalcEntry } from "@/lib/types";
 import { CalcError, dependsOnAngleUnit, evaluate, formatNumber, negateExpr } from "./calc";
 
-export interface CalcEntry {
-  expr: string;
-  result: string;
-}
-
 /**
- * The state and actions of a calculator display, shared by the big calculator under the sticky notes and
- * the small one inside a sticky note. Nothing is stored: it all lives in memory and is gone when the
- * screen reloads (for example when the vault locks).
+ * The state and actions of a calculator window. The display and "Ans" belong to this window; the history
+ * is shared by every calculator window and saved in the vault, so it is still there after closing them.
  */
 export function useCalc(degrees: boolean) {
   const [expr, setExpr] = useState("");
   const [ans, setAns] = useState(0);
   const [history, setHistory] = useState<CalcEntry[]>([]);
+
+  // Load the shared history, and reload it whenever any calculator window changes it.
+  useEffect(() => {
+    const load = () => api.calcHistory().then(setHistory).catch(() => {});
+    load();
+    const unlisten = listen("calc-history-changed", load);
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
   const [shown, setShown] = useState<{ text: string; error: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  // The last expression calculated in this window (the shared history may have newer lines from other windows).
+  const lastExpr = useRef("");
 
   // A live preview of the answer while typing.
   const preview = useMemo(() => {
@@ -64,7 +73,8 @@ export function useCalc(degrees: boolean) {
     try {
       const value = evaluate(expr, { degrees, ans });
       const text = formatNumber(value);
-      setHistory((h) => [{ expr: expr.trim(), result: text }, ...h].slice(0, 30));
+      lastExpr.current = expr.trim();
+      api.addCalcEntry(expr.trim(), text).then(setHistory).catch(() => {});
       setAns(value);
       setExpr(text);
       setShown({ text, error: false });
@@ -76,9 +86,9 @@ export function useCalc(degrees: boolean) {
   // After "=" the display holds only the answer, so switching Deg/Rad would seem to do nothing. Bring the
   // last expression back (if it has sin, cos or tan) so the preview shows its answer in the new unit.
   const recallForAngleUnit = () => {
-    const last = history[0];
-    if (!shown || shown.error || !last || !dependsOnAngleUnit(last.expr)) return;
-    setExpr(last.expr);
+    const last = lastExpr.current;
+    if (!shown || shown.error || !last || !dependsOnAngleUnit(last)) return;
+    setExpr(last);
     setShown(null);
   };
 
@@ -100,5 +110,11 @@ export function useCalc(degrees: boolean) {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  return { expr, type, input, preview, shown, copied, history, setHistory, insert, clear, back, negate, equals, recallForAngleUnit, copy };
+  const clearHistory = () => {
+    setHistory([]);
+    // If it couldn't be cleared, show what is still saved.
+    api.clearCalcHistory().catch(() => api.calcHistory().then(setHistory).catch(() => {}));
+  };
+
+  return { expr, type, input, preview, shown, copied, history, clearHistory, insert, clear, back, negate, equals, recallForAngleUnit, copy };
 }
