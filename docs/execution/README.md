@@ -45,7 +45,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Outcome: built; `tsc` and `npm run build` passed in the cloud; on the PC (commit `f35acb2`) `cargo test --lib` 171 passed, `tsc` and the build passed
 - Integration / review: draft PR into `main`; independent review done (see the record)
 - Acceptance: pending
-- Open dependency / next action: a real-window check; the owner's review
+- Open dependency / next action: the owner's review (real exe at `58c299c`: 20 of 20 checks, history survives a restart, 200-line limit)
 
 ### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
 
