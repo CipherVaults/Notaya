@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 2: a spiral-bound notepad. -->
+  <defs><linearGradient id="t" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3a3f4b"/><stop offset="1" stop-color="#12141a"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#t)"/>
+  <rect x="252" y="230" width="520" height="620" rx="48" fill="#f7f3ea"/>
+  <rect x="252" y="230" width="520" height="110" rx="48" fill="#e2574c"/>
+  <rect x="252" y="290" width="520" height="50" fill="#e2574c"/>
+  <g fill="none" stroke="#c9ced8" stroke-width="26" stroke-linecap="round">
+    <path d="M330 280V180"/>
+<path d="M420 280V180"/>
+<path d="M510 280V180"/>
+<path d="M600 280V180"/>
+<path d="M690 280V180"/>
+  </g>
+  <g fill="#d9d2c2"><rect x="312" y="430" width="400" height="22" rx="11"/>
+<rect x="312" y="520" width="400" height="22" rx="11"/>
+<rect x="312" y="610" width="400" height="22" rx="11"/>
+<rect x="312" y="700" width="400" height="22" rx="11"/></g>
+</svg>

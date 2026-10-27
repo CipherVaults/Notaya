@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 4: a page marked with "/", the quick-insert menu in the editor. -->
+  <defs><linearGradient id="t" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7b5cff"/><stop offset="1" stop-color="#3b1fb0"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#t)"/>
+  <rect x="252" y="190" width="520" height="644" rx="64" fill="#ffffff"/>
+  <path d="M590 300L434 724" stroke="#5b3ee0" stroke-width="80" stroke-linecap="round"/>
+</svg>
