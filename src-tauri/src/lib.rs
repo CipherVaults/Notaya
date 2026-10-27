@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, notes, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, calculator, notes, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -163,6 +163,10 @@ pub fn run() {
             stickies::close_sticky,
             stickies::delete_sticky,
             stickies::delete_stickies,
+            calculator::open_calculator,
+            calculator::calc_history,
+            calculator::add_calc_entry,
+            calculator::clear_calc_history,
             tools::password_strength,
             tools::open_url,
             tools::search,

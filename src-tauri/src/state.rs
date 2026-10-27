@@ -296,7 +296,7 @@ fn emits_vault_locked(reason: &str, was_open: bool) -> bool {
 
 /// Locks the vault: first lets every window save its pending edits (unless the
 /// drive was removed, when saving can't work), then wipes keys and decrypted
-/// data from memory, closes sticky notes, tells the UI to reset itself, and only
+/// data from memory, closes sticky notes and calculators, tells the UI to reset itself, and only
 /// then does the slow work (the backup).
 ///
 /// Waits for the windows, so call it only from a thread other than the main
@@ -319,6 +319,7 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     let was_open = session.as_ref().is_some_and(|s| s.is_open());
     // The UI comes first: close stickies, reset the windows.
     ui::close_stickies(app);
+    ui::close_calculators(app);
     if emits_vault_locked(reason, was_open) {
         let _ = app.emit("vault-locked", reason.to_string());
     }

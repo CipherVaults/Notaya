@@ -9,6 +9,7 @@ let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
 let noticeTaken = false;
+const calcHistory: { expr: string; result: string }[] = [{ expr: "12.5 × (3 + 4)", result: "87.5" }];
 
 const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
@@ -208,6 +209,20 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       for (let i = stickies.length - 1; i >= 0; i--) if (gone.has(stickies[i].id)) stickies.splice(i, 1);
       return ok(null);
     }
+    // The real app opens a calculator window; here, open ?label=calc-1 in a new tab to see one.
+    case "open_calculator":
+      return ok(null);
+    case "calc_history":
+      return ok([...calcHistory]);
+    case "add_calc_entry": {
+      const expr = String(args.expr), result = String(args.result);
+      if (!(calcHistory[0]?.expr === expr && calcHistory[0]?.result === result)) calcHistory.unshift({ expr, result });
+      calcHistory.length = Math.min(calcHistory.length, 200);
+      return ok([...calcHistory]);
+    }
+    case "clear_calc_history":
+      calcHistory.length = 0;
+      return ok(null);
     case "password_strength": {
       const len = String(args.password ?? "").length;
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;

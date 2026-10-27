@@ -2,10 +2,11 @@
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-use crate::model::Sticky;
+use crate::model::{new_id, Sticky};
 use crate::portable::Paths;
 
 pub const STICKY_PREFIX: &str = "sticky-";
+pub const CALC_PREFIX: &str = "calc-";
 
 /// `protect`: hide the window from screenshots from the start. True only for a vault that
 /// has a master password (its lock screen); a vault with security off is never hidden.
@@ -103,6 +104,37 @@ pub fn close_sticky(app: &AppHandle, id: &str) {
 pub fn close_stickies(app: &AppHandle) {
     for (label, window) in app.webview_windows() {
         if label.starts_with(STICKY_PREFIX) {
+            let _ = window.destroy();
+        }
+    }
+}
+
+/// Opens one more calculator window. Any number can be open; each one gets a new label
+/// and they all share one history, kept in the vault.
+pub fn open_calculator(app: &AppHandle, paths: &Paths, protect: bool) -> tauri::Result<WebviewWindow> {
+    let open = app.webview_windows().keys().filter(|l| l.starts_with(CALC_PREFIX)).count() as f64;
+    // Each new one sits a little lower and to the right of the last, so none hides another.
+    let (x, y) = visible_position(app, 220.0 + (open % 8.0) * 32.0, 140.0 + (open % 8.0) * 32.0);
+    WebviewWindowBuilder::new(app, format!("{CALC_PREFIX}{}", new_id()), WebviewUrl::App("index.html".into()))
+        .title("Calculator")
+        .inner_size(360.0, 640.0)
+        .min_inner_size(300.0, 440.0)
+        .position(x, y)
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .always_on_top(true)
+        .data_directory(paths.webview.clone())
+        .content_protected(protect)
+        .disable_drag_drop_handler()
+        .visible(false)
+        .build()
+}
+
+/// Closes every calculator window (when the vault locks).
+pub fn close_calculators(app: &AppHandle) {
+    for (label, window) in app.webview_windows() {
+        if label.starts_with(CALC_PREFIX) {
             let _ = window.destroy();
         }
     }

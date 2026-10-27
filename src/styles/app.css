@@ -139,8 +139,9 @@ html[data-backdrop="on"] body {
   background: var(--bg-glass);
 }
 
-/* Sticky-note windows are fully transparent; the note draws its own card. */
-html[data-window="sticky"] body {
+/* Sticky-note and calculator windows are fully transparent; each draws its own card. */
+html[data-window="sticky"] body,
+html[data-window="calc"] body {
   background: transparent;
 }
 

@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Check, CheckSquare, ExternalLink, MonitorUp, Plus, StickyNote, Trash2, X } from "lucide-react";
+import { Calculator, Check, CheckSquare, ExternalLink, MonitorUp, Plus, StickyNote, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { stickyColor } from "@/lib/palette";
 import { timeAgo } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, useConfirm } from "@/components/ui";
-import Calculator from "./Calculator";
 
 export default function StickyBoard() {
   const stickies = useApp((s) => s.stickies);
@@ -97,6 +96,9 @@ export default function StickyBoard() {
     }
   };
 
+  // Each press opens one more calculator window; they all share one saved history.
+  const openCalculator = () => api.openCalculator().catch((e) => toast.error(errorText(e)));
+
   const openAll = async () => {
     for (const s of stickies) await api.openSticky(s.id);
     await refresh();
@@ -143,6 +145,9 @@ export default function StickyBoard() {
                   <CheckSquare size={16} /> Select
                 </Button>
               )}
+              <Button variant="outline" onClick={openCalculator} title="Open a calculator in its own window">
+                <Calculator size={16} /> Calculator
+              </Button>
               <Button variant="outline" onClick={openAll}>
                 <MonitorUp size={16} /> Show all on desktop
               </Button>
@@ -237,9 +242,6 @@ export default function StickyBoard() {
           })}
         </div>
 
-        <div className="mt-10">
-          <Calculator />
-        </div>
       </div>
     </div>
   );

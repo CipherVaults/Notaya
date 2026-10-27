@@ -53,6 +53,12 @@ export interface Settings {
   stickyDefaultColor: string;
 }
 
+/** One line of the shared calculator history. */
+export interface CalcEntry {
+  expr: string;
+  result: string;
+}
+
 export interface Notebook {
   id: string;
   name: string;

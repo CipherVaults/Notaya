@@ -28,6 +28,19 @@ Not run: the real app, a real-exe test on Windows. Nothing is accepted.
 3. Checks in the cloud: `tsc`, UI build, and `cargo test --lib` cross-built for Windows (GNU) and run under Wine, 124 of 124 (167 on `main`; the difference is the removed tests). An independent review found no High or Medium issue; its small items were applied.
 
 Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts), the app itself. Nothing is accepted.
+# 📘 Session: 2026-10-27 (from 06:45 UTC, container clock), Cipherleaf: pop-out calculators (A24), cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread session, with an independent review agent (model output). **Record basis:** the transcript and this repository.
+
+## What happened
+
+1. The owner's message of 06:45:11 UTC listed four items; this thread did item 2 only (pop-out calculators with a shared saved history). The other items run in other threads.
+2. Built as A24 ([EX-23](execution/2026-10-27-pop-out-calculator.md)): a Calculator button replaces the panel, sticky notes open a calculator window too, any number of windows, one history of 100 lines saved in the vault.
+3. `tsc` and the UI build passed in the cloud; the mock UI showed the screens. The Rust crate cannot build in the Linux container, so `cargo test --lib` and the real app were not run there. Review findings fixed (EX-23).
+
+4. 2026-10-27 07:50:00 UTC (transcript): the owner asked for a history of 200 lines and a check that it survives a full restart. The limit was raised to 200; the restart check runs on the PC with a throwaway vault (EX-23). (The amendment was renumbered A25 when the KeePassXC removal took A24.)
+
+Resume: draft PR into `main`; the PC check and the owner's review. Nothing is accepted.
 
 ---
 

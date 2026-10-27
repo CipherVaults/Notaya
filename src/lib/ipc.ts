@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { flushAll } from "./flush";
 import type {
   BackupInfo,
+  CalcEntry,
   EnableSecurityResult,
   NotesTree,
   Page,
@@ -105,6 +106,12 @@ export const api = {
   closeSticky: (id: string) => invoke<void>("close_sticky", { id }),
   deleteSticky: (id: string) => invoke<void>("delete_sticky", { id }),
   deleteStickies: (ids: string[]) => invoke<void>("delete_stickies", { ids }),
+
+  // Calculators pop out in their own windows; all of them share one saved history
+  openCalculator: () => invoke<void>("open_calculator"),
+  calcHistory: () => invoke<CalcEntry[]>("calc_history"),
+  addCalcEntry: (expr: string, result: string) => invoke<CalcEntry[]>("add_calc_entry", { expr, result }),
+  clearCalcHistory: () => invoke<void>("clear_calc_history"),
 
   // Tools
   openUrl: (url: string) => invoke<void>("open_url", { url }),
