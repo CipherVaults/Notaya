@@ -19,12 +19,13 @@ Reading used: the panel under the Sticky notes list becomes a **Calculator** but
 - Cloud container (2026-10-27): `npx tsc --noEmit -p tsconfig.json` passed; `npm run build` passed (after `npm ci`).
 - `dev-mock/calc-ui-check.cjs` (now pointed at a calculator window) printed ALL OK in the cloud.
 - Mock UI with Playwright (cloud): the Sticky notes screen shows the Calculator button and no panel; a calculator window (`?label=calc-1`) evaluates `200 + 10%` = 220 and `sin(30)` = 0.5 in Deg, and its history lists them.
-- **Not run in the cloud:** `cargo test --lib` and any Rust build (the crate needs the `windows` crate and an MSVC toolchain, which the Linux container does not have). The new Rust unit tests (`calculator::tests`, two in `model::tests`) have not run yet.
+- **Not run in the cloud:** `cargo test --lib` and any Rust build (the crate needs the `windows` crate and an MSVC toolchain, which the Linux container does not have).
+- Owner's PC, throwaway clone `%TEMP%\clf-calc` of commit `f35acb2`, finished 2026-10-27 06:57:59 UTC (system clock): `cargo test --lib` 171 passed, 0 failed, no compiler warnings (including the new `calculator::tests` and `model::tests`); `npm ci` 0 vulnerabilities; `tsc` and `npm run build` passed. The project folder `E:\Project\cipherleaf` and every vault were not touched.
 - **Not run:** the real app (opening several windows, the history shared between them, surviving a restart, closing on lock).
 - Independent review (an agent that did not write the code): nothing serious. Fixed from it: Deg/Rad recall now uses this window's last expression, not the shared newest line; the window says it is ready only after its lock listener is in place; a calculator window made while the vault was locking is closed at once; a failed Clear reloads the saved history; the records (README, P15, the window limit) were corrected. Left as is: a calculator window keeps the look it opened with until reopened; each "=" rewrites the settings record (small); an older Cipherleaf that saves settings drops the history (recorded in security-design).
 
 ## 4. Open points
 
-- Run `cargo test --lib` and a real-window check on the PC with throwaway data.
+- A real-window check (several windows, the shared history, a restart, closing on lock) on throwaway data; not run.
 - The owner's review. Nothing is accepted.
 - The amendment number A24 may clash with another thread working at the same time; renumber on merge if so.

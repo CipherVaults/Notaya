@@ -18,10 +18,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 - File: [2026-10-27-pop-out-calculator.md](2026-10-27-pop-out-calculator.md)
 - Executor: Claude (Claude Code) in a cloud thread session, with an independent review agent
-- Outcome: built; `tsc` and `npm run build` passed in the cloud; the Rust crate could not be compiled there (Windows-only dependencies)
+- Outcome: built; `tsc` and `npm run build` passed in the cloud; on the PC (commit `f35acb2`) `cargo test --lib` 171 passed, `tsc` and the build passed
 - Integration / review: draft PR into `main`; independent review done (see the record)
 - Acceptance: pending
-- Open dependency / next action: `cargo test --lib` and a real-window check on the PC; the owner's review
+- Open dependency / next action: a real-window check; the owner's review
 
 ### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
 
