@@ -25,8 +25,8 @@ import { Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { applyTurnInto, BLOCKS, currentBlock, type BlockKey } from "./turnInto";
 
-const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64];
-const FONT_FAMILIES = [
+export const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64];
+export const FONT_FAMILIES = [
   { label: "Default", value: "" },
   { label: "Sans", value: '"Inter Variable", "Segoe UI", sans-serif' },
   { label: "Serif", value: "Georgia, Cambria, serif" },
@@ -307,11 +307,11 @@ function Btn({ label, active, onClick, children }: { label: string; active?: boo
   );
 }
 
-function Sep() {
+export function Sep() {
   return <div className="mx-0.5 h-5 w-px bg-line" />;
 }
 
-function Row({ active, onClick, children }: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
+export function Row({ active, onClick, children }: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <Popover.Close asChild>
       <button
@@ -326,12 +326,13 @@ function Row({ active, onClick, children }: { active?: boolean; onClick: () => v
   );
 }
 
-function Pop({
+export function Pop({
   trigger,
   children,
   width,
   track,
   onOpen,
+  onClose,
   align = "start",
 }: {
   trigger: React.ReactNode;
@@ -339,6 +340,8 @@ function Pop({
   width: number;
   track: (open: boolean) => void;
   onOpen?: () => void;
+  /** Where focus goes when the pop-up closes; without it, focus returns to the trigger. */
+  onClose?: () => void;
   align?: "start" | "center" | "end";
 }) {
   const host = useContext(HostContext);
@@ -358,6 +361,14 @@ function Pop({
           style={{ width, maxHeight: "min(60vh, 420px)" }}
           className={cn(panel, "overflow-y-auto")}
           onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={
+            onClose
+              ? (e) => {
+                  e.preventDefault();
+                  onClose();
+                }
+              : undefined
+          }
         >
           {children}
         </Popover.Content>
@@ -366,10 +377,11 @@ function Pop({
   );
 }
 
-function ColorPop({ editor, color, track }: { editor: Editor; color: string; track: (o: boolean) => void }) {
+export function ColorPop({ editor, color, track, onClose }: { editor: Editor; color: string; track: (o: boolean) => void; onClose?: () => void }) {
   return (
     <Pop
       track={track}
+      onClose={onClose}
       width={236}
       trigger={
         <button
@@ -466,11 +478,12 @@ function AlignPop({ editor, align, track }: { editor: Editor; align: string; tra
   );
 }
 
-function LinkPop({ editor, active, track }: { editor: Editor; active: boolean; track: (o: boolean) => void }) {
+export function LinkPop({ editor, active, track, onClose }: { editor: Editor; active: boolean; track: (o: boolean) => void; onClose?: () => void }) {
   const [url, setUrl] = useState("");
   return (
     <Pop
       track={track}
+      onClose={onClose}
       width={300}
       onOpen={() => setUrl((editor.getAttributes("link").href as string | undefined) ?? "")}
       trigger={
