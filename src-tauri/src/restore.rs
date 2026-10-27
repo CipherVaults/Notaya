@@ -119,7 +119,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
     }
     let path = if !source.contains(['/', '\\']) {
         if source.contains("..") || source.contains(':') || !is_backup_name(source) {
-            return Err(Error::invalid("That is not the name of a Cipherleaf backup."));
+            return Err(Error::invalid("That is not the name of a Notaya backup."));
         }
         paths.backups.join(source)
     } else {
@@ -141,7 +141,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
 
     let is_clf = path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("clf"));
     if !is_clf {
-        return Err(Error::invalid("A Cipherleaf backup is a file ending in .clf."));
+        return Err(Error::invalid("A Notaya backup is a file ending in .clf."));
     }
     let meta = match fs::metadata(&path) {
         Ok(m) => m,
@@ -157,7 +157,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
         return Err(Error::invalid("That backup file is empty."));
     }
     if meta.len() > MAX_BACKUP_BYTES {
-        return Err(Error::invalid("That file is too large to be a Cipherleaf backup."));
+        return Err(Error::invalid("That file is too large to be a Notaya backup."));
     }
 
     // A link could still lead somewhere else, so look at where the file really is.
@@ -189,7 +189,7 @@ fn copy_file(from: &Path, to: &Path) -> Result<()> {
         return Err(Error::invalid("That backup file is empty."));
     }
     if copied > MAX_BACKUP_BYTES {
-        return Err(Error::invalid("That file is too large to be a Cipherleaf backup."));
+        return Err(Error::invalid("That file is too large to be a Notaya backup."));
     }
     dst.sync_all()?;
     Ok(())
@@ -478,10 +478,10 @@ mod tests {
         OpenOptions::new().write(true).open(path).unwrap().set_modified(t).unwrap();
     }
 
-    const NOT_A_NAME: &str = "That is not the name of a Cipherleaf backup.";
+    const NOT_A_NAME: &str = "That is not the name of a Notaya backup.";
     const DIALOG: &str = "Choose the backup file with the file dialog.";
     const NETWORK: &str = "Backups on a network or device path can't be used. Copy the file to this PC first.";
-    const NOT_CLF: &str = "A Cipherleaf backup is a file ending in .clf.";
+    const NOT_CLF: &str = "A Notaya backup is a file ending in .clf.";
 
     /// `source` must be refused with exactly `reason`. For an absolute path that
     /// exists, the dialog is taken to have returned it, so the refusal comes from

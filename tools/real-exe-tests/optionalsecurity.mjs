@@ -1,10 +1,10 @@
 // optionalsecurity.mjs - real-exe test of "notes first, security optional" (amendment A21).
-// Purpose: one phase of the test. The runner (run-optionalsecurity.ps1) starts a COPY of Cipherleaf.exe in
+// Purpose: one phase of the test. The runner (run-optionalsecurity.ps1) starts a COPY of Notaya.exe in
 //          a temp folder, runs this script once per phase, closes the app by its window close button between
 //          phases (the real quit path) and starts it again. Each phase prints PASS / FAIL lines.
 // Usage:   normally started by run-optionalsecurity.ps1:  node optionalsecurity.mjs <port> <password-file> <data-dir> <phase>
 //          phase is p1 .. p5 (see below). <data-dir> is the test copy's data folder (read-only here).
-// Needs:   Node 24 (global fetch and WebSocket, node:sqlite) and a Cipherleaf window started with the debug port.
+// Needs:   Node 24 (global fetch and WebSocket, node:sqlite) and a Notaya window started with the debug port.
 //          Throwaway data only: it creates a new vault in the test folder, so never point it at a real one.
 // Phases:  p1 first run opens straight to notes (security off), nothing locks, text saved
 //          p2 restart opens by itself; turn security on (weak password refused, earlier open backups deleted),

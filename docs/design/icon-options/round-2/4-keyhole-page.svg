@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option 4: a page with a keyhole cut through it. One simple shape for "private notes". -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22b8b0"/><stop offset="1" stop-color="#0b4f5c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <path fill-rule="evenodd" fill="#ffffff" d="M300 190H620L750 320V790Q750 826 714 826H300Q264 826 264 790V226Q264 190 300 190Z
+    M507 420A70 70 0 0 0 472 551L446 660H568L542 551A70 70 0 0 0 507 420Z"/>
+  <path d="M620 190V288Q620 320 652 320H750Z" fill="#cfe9e7"/>
+</svg>

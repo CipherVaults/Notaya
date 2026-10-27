@@ -1,19 +1,14 @@
-/** Cipherleaf mark: a leaf whose vein forms a keyhole. */
+/** Notaya mark: two sticky notes, amber behind and coral in front (the Sunrise colours). */
 export default function Logo({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
-      <defs>
-        <linearGradient id="cl-leaf" x1="4" y1="28" x2="28" y2="4" gradientUnits="userSpaceOnUse">
-          <stop stopColor="var(--accent)" />
-          <stop offset="1" stopColor="var(--accent-strong)" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M27 5C15 5 5 11.5 5 22.5c0 2 .4 3.4.9 4.5C7 25 9.5 21.5 13 19c-3 3.4-5 6.6-6.1 9C21 27 27 18 27 5Z"
-        fill="url(#cl-leaf)"
-      />
-      <circle cx="18.2" cy="13.2" r="2.6" fill="var(--bg)" />
-      <path d="M17.3 14.6h1.8l.9 4.4h-3.6l.9-4.4Z" fill="var(--bg)" />
+      <rect x="3.5" y="4.5" width="15.5" height="15.5" rx="1.4" fill="#ffb020" transform="rotate(-8 11 12)" />
+      <g transform="rotate(6 19 19)">
+        <path d="M11.5 11.5h16v11.2L23.2 27H11.5Z" fill="#ff6b5a" />
+        <path d="M27.5 22.7 23.2 27v-3.3c0-.6.4-1 1-1Z" fill="#d9483a" />
+        <rect x="14" y="15" width="10" height="1.6" rx=".8" fill="#ffffff" opacity=".75" />
+        <rect x="14" y="18.6" width="7.5" height="1.6" rx=".8" fill="#ffffff" opacity=".75" />
+      </g>
     </svg>
   );
 }

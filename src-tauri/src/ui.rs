@@ -12,7 +12,7 @@ pub const CALC_PREFIX: &str = "calc-";
 /// has a master password (its lock screen); a vault with security off is never hidden.
 pub fn build_main(app: &AppHandle, paths: &Paths, protect: bool) -> tauri::Result<WebviewWindow> {
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-        .title("Cipherleaf")
+        .title("Notaya")
         .inner_size(1280.0, 820.0)
         .min_inner_size(960.0, 640.0)
         .center()

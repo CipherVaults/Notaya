@@ -1,4 +1,4 @@
-// act.mjs - drive the Cipherleaf MOCK UI (fake data, plain browser; development only) with a list of steps.
+// act.mjs - drive the Notaya MOCK UI (fake data, plain browser; development only) with a list of steps.
 // Purpose: scripted clicks / typing / screenshots of the mock, for documentation and review.
 // Usage:   node act.mjs <url> <steps.json>      (env VW / VH set the viewport, default 1360x860)
 //          steps.json is an array of steps: {js}|{key}|{type}|{click:[x,y]}|{clickJs}|{move:[x,y]}|{wait}|{shot:"file.png"}

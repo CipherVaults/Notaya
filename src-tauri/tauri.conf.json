@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Cipherleaf",
-  "mainBinaryName": "Cipherleaf",
+  "productName": "Notaya",
+  "mainBinaryName": "Notaya",
   "version": "1.1.0",
   "identifier": "app.cipherleaf.vault",
   "build": {
@@ -44,6 +44,7 @@
   },
   "bundle": {
     "active": false,
+    "publisher": "Notaya",
     "targets": "all",
     "icon": [
       "icons/32x32.png",

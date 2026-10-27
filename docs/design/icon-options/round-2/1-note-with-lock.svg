@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option 1: a paper note with a small gold padlock badge. Notes first, lock second. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4a5be0"/><stop offset="1" stop-color="#1a2170"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <path d="M296 190H616L746 320V790Q746 826 710 826H296Q260 826 260 790V226Q260 190 296 190Z" fill="#fbfaf7"/>
+  <path d="M616 190V288Q616 320 648 320H746Z" fill="#cfd3e6"/>
+  <rect x="326" y="390" width="330" height="36" rx="18" fill="#c3c8de"/>
+  <rect x="326" y="472" width="280" height="36" rx="18" fill="#c3c8de"/>
+  <rect x="326" y="554" width="200" height="36" rx="18" fill="#c3c8de"/>
+  <circle cx="716" cy="742" r="150" fill="#1a2170"/>
+  <path d="M664 728V690A52 52 0 0 1 768 690V728" fill="none" stroke="#f2c14e" stroke-width="26"/>
+  <rect x="636" y="720" width="160" height="124" rx="24" fill="#f2c14e"/>
+  <circle cx="716" cy="772" r="16" fill="#1a2170"/>
+  <rect x="708" y="776" width="16" height="36" rx="6" fill="#1a2170"/>
+</svg>

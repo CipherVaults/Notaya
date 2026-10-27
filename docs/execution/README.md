@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (owner's messages 16:59:11 and 17:03:39 UTC; work from about 17:00 UTC, system clock), EX-2026-10-30: renamed to Notaya, sticky-notes icon, Sunrise theme
+
+- Report: [2026-10-27-notaya-rename.md](2026-10-27-notaya-rename.md)
+- Task / Goal: "proceed with this and The app name is Notaya"; Sunrise the default, Sunrise dark optional ([A28](../plan/A28-rename-notaya-icon-sunrise.md))
+- Executor: Claude (Claude Code) in a cloud thread; PC checks in a Remote Control session
+- Outcome: code `6003e81` plus review and exe-metadata fixes (latest code commit `d4933ef`) in draft PR #24; on the owner's PC: `cargo test --lib` 129 of 129, release build, real-exe test and old Cipherleaf 1.1.0 vaults opening in `Notaya.exe`, all on throwaway data; exe properties say Notaya (addenda 4 to 6). Not run: the repo's runner scripts, a restore from the 1.1.0 backup, keyboard-only use
+- Acceptance: pending
+
 ### 2026-10-27 (owner's messages 19:05:05 and 19:08:33 UTC; work 19:10 to about 19:45 UTC, system clock), EX-2026-10-27-29: PBS adopted in its smallest useful form
 
 - Report: [2026-10-27-pbs-adoption.md](2026-10-27-pbs-adoption.md)

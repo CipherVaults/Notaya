@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { registerFlush } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
 import { ACCENTS, STICKY_COLORS } from "@/lib/palette";
+import { isDark, resolveAccent, resolveTheme } from "@/lib/theme";
 import type { Settings, ThemeMode } from "@/lib/types";
 import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
@@ -13,6 +14,8 @@ import OpenSourceDialog from "./OpenSourceDialog";
 import { DisableSecurityDialog, EnableSecurityDialog } from "./SecurityDialogs";
 
 const THEMES: { value: ThemeMode; label: string; bg: string; side: string; fg: string; line: string }[] = [
+  { value: "sunrise", label: "Sunrise", bg: "#fffaf3", side: "#fbefe0", fg: "#2b1d14", line: "rgba(120,60,20,0.16)" },
+  { value: "sunrise-dark", label: "Sunrise dark", bg: "#1a1411", side: "#231b16", fg: "#f7ece2", line: "rgba(255,230,210,0.14)" },
   { value: "black", label: "Black", bg: "#000000", side: "#0b0b0b", fg: "#f4f4f4", line: "rgba(255,255,255,0.14)" },
   { value: "graphite", label: "Graphite", bg: "#191919", side: "#202020", fg: "#ececec", line: "rgba(255,255,255,0.12)" },
   { value: "white", label: "White", bg: "#ffffff", side: "#f7f7f5", fg: "#1f1f1f", line: "rgba(0,0,0,0.12)" },
@@ -59,7 +62,7 @@ export default function SettingsView() {
         <Section icon={<Palette size={16} />} title="Appearance">
           <div className="pb-5">
             <div className="mb-3 text-sm">Theme</div>
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               {THEMES.map((t) => (
                 <button
                   key={t.value}
@@ -86,7 +89,7 @@ export default function SettingsView() {
               ))}
             </div>
           </div>
-          <Row label="Accent color" hint="Used for buttons, checkboxes and highlights. Black & white follows the theme.">
+          <Row label="Accent color" hint="Used for buttons, checkboxes and highlights. Theme color follows the theme: coral in Sunrise, black or white in the others.">
             <div className="flex flex-wrap items-center justify-end gap-2">
               {ACCENTS.map((a) => (
                 <button
@@ -98,7 +101,7 @@ export default function SettingsView() {
                     "h-6 w-6 rounded-full border border-line transition-transform hover:scale-110",
                     settings.accent.toLowerCase() === a.value && "ring-2 ring-fg ring-offset-2 ring-offset-[var(--bg)]",
                   )}
-                  style={{ background: a.value === "mono" ? "linear-gradient(135deg, #000 50%, #fff 50%)" : a.value }}
+                  style={{ background: a.value === "mono" ? resolveAccent("mono", isDark(settings.theme), resolveTheme(settings.theme)).accent : a.value }}
                 />
               ))}
               <label className="relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-line" title="Custom color">
@@ -208,7 +211,7 @@ export default function SettingsView() {
               <Row label="Lock when minimized">
                 <Switch checked={settings.lockOnMinimize} onChange={(v) => update({ lockOnMinimize: v })} />
               </Row>
-              <Row label="Block screenshots & screen sharing" hint="Off by default. When on, Cipherleaf windows appear black in screenshots, recordings and screen shares.">
+              <Row label="Block screenshots & screen sharing" hint="Off by default. When on, Notaya windows appear black in screenshots, recordings and screen shares.">
                 <Switch checked={settings.screenCaptureProtection} onChange={(v) => update({ screenCaptureProtection: v })} />
               </Row>
               <Row label="Master password & keyfile">
@@ -231,7 +234,7 @@ export default function SettingsView() {
 
         <Section icon={<Archive size={16} />} title="Backups">
           <p className="pb-3 text-sm leading-relaxed text-muted">
-            Each time Cipherleaf locks or closes after changes, a backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
+            Each time Notaya locks or closes after changes, a backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
             Backups open with the password and keyfile they had when they were made; a backup made while security was off needs no password.
             Restoring puts a backup in place of your current vault, and keeps the current vault as a separate file.
           </p>
@@ -274,7 +277,7 @@ export default function SettingsView() {
             <dt className="text-faint">Key derivation</dt>
             <dd>{securityOn ? "Argon2id · 256 MiB · 3 passes · 4 lanes, + HKDF-SHA256 with optional keyfile" : "None while security is off: the notes use a built-in key, so they are not secret"}</dd>
             <dt className="text-faint">Network</dt>
-            <dd>Cipherleaf's own code makes none. The Windows WebView2 component that draws the window may contact Microsoft at startup.</dd>
+            <dd>Notaya's own code makes none. The Windows WebView2 component that draws the window may contact Microsoft at startup.</dd>
             <dt className="text-faint">Credits</dt>
             <dd>
               Built on open source software.{" "}
@@ -288,7 +291,8 @@ export default function SettingsView() {
             <ul className="list-disc space-y-1 pl-5">
               <li>With security on, there is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
-              <li>Cipherleaf no longer includes KeePassXC. A passwords file made with an earlier version (a .kdbx file in the data folder, and its copies in data\backups) is left as it is and still opens in KeePassXC itself.</li>
+              <li>Notaya was called Cipherleaf up to version 1.1.0. Notes, backups and settings made with Cipherleaf open in Notaya unchanged.</li>
+              <li>Notaya no longer includes KeePassXC. A passwords file made with an earlier version (a .kdbx file in the data folder, and its copies in data\backups) is left as it is and still opens in KeePassXC itself.</li>
               <li>Equations are drawn by KaTeX 0.19.0 (MIT licence, fonts under the SIL Open Font License), running on this device only.</li>
             </ul>
           </div>

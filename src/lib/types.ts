@@ -35,7 +35,7 @@ export interface RestoreResult {
   undoFile: string | null;
 }
 
-export type ThemeMode = "black" | "graphite" | "white" | "paper" | "system";
+export type ThemeMode = "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system";
 export type Backdrop = "mica" | "acrylic" | "none";
 
 export interface Settings {

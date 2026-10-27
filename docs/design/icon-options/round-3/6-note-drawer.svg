@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 6: a page tucked into a drawer. Notes stored in one place, on your PC. -->
+  <defs><linearGradient id="t" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2bb3a3"/><stop offset="1" stop-color="#0e5e64"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#t)"/>
+  <rect x="332" y="170" width="360" height="420" rx="36" fill="#ffffff"/>
+  <rect x="382" y="250" width="220" height="28" rx="14" fill="#c7e6e2"/>
+  <rect x="382" y="320" width="170" height="28" rx="14" fill="#c7e6e2"/>
+  <rect x="222" y="460" width="580" height="380" rx="56" fill="#0b3f44"/>
+  <rect x="222" y="460" width="580" height="80" rx="40" fill="#08343a"/>
+  <rect x="432" y="640" width="160" height="56" rx="28" fill="#2bb3a3"/>
+</svg>

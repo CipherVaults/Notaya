@@ -37,7 +37,7 @@ pub struct VaultStatus {
 }
 
 /// Opens the vault by itself when it has security off, and on a first run creates one,
-/// so Cipherleaf starts straight in the notes (A21). A vault with a master password is
+/// so Notaya starts straight in the notes (A21). A vault with a master password is
 /// left alone for the lock screen. Returns why a vault with security off could not be opened.
 fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     let _gate = state.open_gate();
@@ -121,7 +121,7 @@ fn check_new_password(password: &str) -> Result<()> {
             "Use at least {MIN_PASSWORD_CHARS} characters for your master password."
         )));
     }
-    if generator::strength(password, &["cipherleaf"]).score < 3 {
+    if generator::strength(password, &["cipherleaf", "notaya"]).score < 3 {
         return Err(Error::invalid(
             "That master password is too easy to guess. Try a longer passphrase.",
         ));
@@ -336,7 +336,7 @@ pub fn create_keyfile(app: AppHandle) -> Result<Option<String>> {
         .dialog()
         .file()
         .set_title("Save your new keyfile (keep it somewhere other than the vault)")
-        .set_file_name("cipherleaf.key")
+        .set_file_name("notaya.key")
         .add_filter("Keyfile", &["key"])
         .blocking_save_file()
         .and_then(|f| f.into_path().ok())
@@ -356,8 +356,8 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
         .dialog()
         .file()
         .set_title("Save a backup copy")
-        .set_file_name(format!("cipherleaf-backup-{}.clf", crate::model::now_ms() / 1000))
-        .add_filter("Cipherleaf vault", &["clf"])
+        .set_file_name(format!("notaya-backup-{}.clf", crate::model::now_ms() / 1000))
+        .add_filter("Notaya vault", &["clf"])
         .blocking_save_file()
         .and_then(|f| f.into_path().ok())
     else {

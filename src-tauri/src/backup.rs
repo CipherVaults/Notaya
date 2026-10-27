@@ -250,7 +250,7 @@ fn make_in(dir: &Path, session: &Session, now: u64, prefix: &str, keep: usize) -
 pub fn save_copy(session: &Session, dest: &Path, live_vault: &Path) -> Result<()> {
     if same_file(dest, live_vault) {
         return Err(Error::invalid(
-            "That is the file Cipherleaf is using for your notes right now. Choose a different name or folder for the backup copy.",
+            "That is the file Notaya is using for your notes right now. Choose a different name or folder for the backup copy.",
         ));
     }
     let _one = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
@@ -344,24 +344,24 @@ pub fn failure_notice(e: &Error, vault_present: bool) -> String {
     let because = reason(e);
     if !vault_present {
         format!(
-            "Cipherleaf could not make a backup copy of your notes ({because}). The vault file data\\vault.clf cannot be found, so check that the drive is connected."
+            "Notaya could not make a backup copy of your notes ({because}). The vault file data\\vault.clf cannot be found, so check that the drive is connected."
         )
     } else if matches!(e, Error::Corrupt) {
-        "Cipherleaf could not make a backup copy of your notes: the copy failed its integrity check, so the vault file data\\vault.clf or the drive it is on may be damaged. Do not rely on it alone. Keep your older backups, and if your notes look wrong, restore one of them.".to_string()
+        "Notaya could not make a backup copy of your notes: the copy failed its integrity check, so the vault file data\\vault.clf or the drive it is on may be damaged. Do not rely on it alone. Keep your older backups, and if your notes look wrong, restore one of them.".to_string()
     } else if is_destination_problem(e) {
         format!(
-            "Cipherleaf could not make a backup copy of your notes ({because}). Your notes are still saved in data\\vault.clf."
+            "Notaya could not make a backup copy of your notes ({because}). Your notes are still saved in data\\vault.clf."
         )
     } else {
         format!(
-            "Cipherleaf could not make a backup copy of your notes ({because}). It is not clear whether the vault file data\\vault.clf or the drive is at fault, so do not rely on it alone. Keep your older backups, and if your notes are on a USB stick, copy the whole Cipherleaf folder to another drive."
+            "Notaya could not make a backup copy of your notes ({because}). It is not clear whether the vault file data\\vault.clf or the drive is at fault, so do not rely on it alone. Keep your older backups, and if your notes are on a USB stick, copy the whole Notaya folder to another drive."
         )
     }
 }
 
 /// The error returned when the safety backup before a bulk delete failed.
 pub fn safety_failure(e: &Error) -> Error {
-    Error::Other(format!("Cipherleaf could not make a safety backup first, so nothing was deleted: {}", reason(e)))
+    Error::Other(format!("Notaya could not make a safety backup first, so nothing was deleted: {}", reason(e)))
 }
 
 #[cfg(test)]
@@ -693,11 +693,11 @@ mod tests {
         assert_eq!(reason(&full), "the drive is full");
         assert_eq!(
             failure_notice(&full, true),
-            "Cipherleaf could not make a backup copy of your notes (the drive is full). Your notes are still saved in data\\vault.clf."
+            "Notaya could not make a backup copy of your notes (the drive is full). Your notes are still saved in data\\vault.clf."
         );
         assert_eq!(
             safety_failure(&full).to_string(),
-            "Cipherleaf could not make a safety backup first, so nothing was deleted: the drive is full"
+            "Notaya could not make a safety backup first, so nothing was deleted: the drive is full"
         );
         assert_eq!(reason(&Error::Corrupt), "The vault file is damaged or has been tampered with.");
     }
@@ -748,7 +748,7 @@ mod tests {
             let text = failure_notice(e, true);
             assert!(!text.contains("still saved"), "{e}: {text}");
             assert!(text.contains("do not rely on it alone") && text.contains("older backups"), "{e}: {text}");
-            assert!(text.contains("copy the whole Cipherleaf folder"), "{e}: {text}");
+            assert!(text.contains("copy the whole Notaya folder"), "{e}: {text}");
         }
         // The vault file missing still wins over the cause.
         assert!(failure_notice(&causes[0], false).contains("cannot be found"));

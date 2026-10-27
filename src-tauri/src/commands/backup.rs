@@ -36,7 +36,7 @@ pub fn list_backups(state: State<'_, AppState>) -> Result<Vec<BackupInfo>> {
 
 #[tauri::command(async)]
 pub fn pick_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
-    let mut dialog = app.dialog().file().set_title("Choose a Cipherleaf backup").add_filter("Cipherleaf vault", &["clf"]);
+    let mut dialog = app.dialog().file().set_title("Choose a Notaya backup").add_filter("Notaya vault", &["clf"]);
     if state.paths.backups.is_dir() {
         dialog = dialog.set_directory(&state.paths.backups);
     }
@@ -190,6 +190,6 @@ mod tests {
         let payload = restore_failed_payload(&e);
         assert!(payload.starts_with("restore-failed: "));
         assert_eq!(payload, "restore-failed: The backup was restored but could not be opened afterwards.");
-        assert_eq!(restore_failed_payload(&Error::BadCredentials), "restore-failed: Wrong master password or keyfile for this Cipherleaf vault.");
+        assert_eq!(restore_failed_payload(&Error::BadCredentials), "restore-failed: Wrong master password or keyfile for this Notaya vault.");
     }
 }

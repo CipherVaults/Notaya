@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option 5: a fountain-pen nib drawing a line. "Writing" without saying paper or lock. -->
+  <rect width="1024" height="1024" rx="230" fill="#0d0d0d"/>
+  <path d="M220 800C360 760 470 820 600 780" fill="none" stroke="#e8b04a" stroke-width="30" stroke-linecap="round"/>
+  <g transform="translate(610 500) rotate(45)">
+    <path d="M0 300L-140 50Q-160 0 -140 -60L-120 -200H120L140 -60Q160 0 140 50Z" fill="#ffffff"/>
+    <rect x="-130" y="-290" width="260" height="70" rx="16" fill="#ffffff"/>
+    <circle cx="0" cy="-40" r="34" fill="#0d0d0d"/>
+    <path d="M0 -6V280" stroke="#0d0d0d" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>

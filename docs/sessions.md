@@ -42,9 +42,29 @@ Not changed: code, the security design (no promise changed), the plan snapshot. 
 ## What happened
 
 1. The owner merged records PR #25 (16:52:41 UTC, `2c8c2e6`) and said "do it" to updating his PC copy. It was on the stale `feat/a9-keepassxc` branch with a clean tree, so it was switched to `main` and fast-forwarded to `2c8c2e6`; nothing forced, the old branch kept. An untracked `vendor\` folder of old KeePassXC files showed up (it was ignored until A24) and was left alone (STATUS question 24).
-2. The owner set a standing rule: record every step, on GitHub and on the PC (16:57:24, 16:57:39 UTC). From now on each step goes into the records through a docs PR, and after his merge the PC copy is fast-forwarded. Recorded in the authority table, STATUS and [EX-2026-10-27-27](execution/2026-10-27-record-every-step.md).
+2. The owner set a standing rule: record every step, on GitHub and on the PC (16:57:24, 16:57:39 UTC). From now on each step goes into the records through a docs PR, and after his merge the PC copy is fast-forwarded. Recorded in the authority table, STATUS and [EX-2026-10-30](execution/2026-10-27-record-every-step.md).
 
 Not changed: code. Nothing is accepted.
+
+> **Added 2026-10-27 19:20 UTC (system clock):** the owner said "Resume" (18:56:19 UTC). The PC checks of `91d7068` passed (129 of 129 Rust tests, release build, real-exe test, old 1.1.0 vault opens); details in addendum 4 of [EX-2026-10-30](execution/2026-10-27-notaya-rename.md). The owner asked why tests still say cipherleaf (19:10:41 UTC): addendum 3. The exe metadata fixes were rebuilt and checked (addenda 5 and 6, publisher `d4933ef`). Left: the owner's merge.
+>
+> **Added 2026-10-27 17:16 UTC (system clock):** the independent review found no blockers; its two should-fix items and the swatch nit were fixed and pushed. The owner said "stop now at resume point" at 17:13:39 UTC; work stopped before the PC tests. Resume point: the addendum of [EX-2026-10-30](execution/2026-10-27-notaya-rename.md).
+
+# 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in the cloud thread "Design new app icon and name" (branch `claude/project-thread-669o55`, draft PR #24). **Record basis:** the thread's messages (UTC timestamps), the system clock and `git log`. Written at the time.
+
+## What happened
+
+1. **Options (13:31 to 15:51 UTC):** three icon rounds (leaf ideas turned down at 13:46:09, "I don't need leaf"), six themes, six rounds of names screened on the web. The owner picked icon 5 (two sticky notes, 14:00:13) and Sunrise (14:29:43). His own names PocketNote and MicroNote were found to clash with existing apps and a trademark record, and he was told. All of it is in `docs/design/`.
+2. **Effort (16:16:23):** "From now every thread is opus with high effort"; this thread switched to high and told the coordinator.
+3. **Go (16:59:11):** "proceed with this and The app name is Notaya". The name was screened (no exact match; "Nota" is common) and the owner told. **17:03:39:** Sunrise is the default, the dark one optional.
+4. **Built (`6003e81`):** the rename, the icon and the two Sunrise looks ([A28](plan/A28-rename-notaya-icon-sunrise.md)). The identifier, data paths, vault format constants, environment variables and browser-profile keys were kept on purpose so existing notes open; existing vaults keep the look they saved (a judgement call, stated to the owner).
+5. Checked in the cloud: `tsc`, build, mock screens, an independent review. Not run: Rust tests, release build, real-exe test (they need the PC).
+
+## Where to resume
+
+Run the PC checks on throwaway data ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) section 4), then the owner merges PR #24 and his PC copy is fast-forwarded. Nothing is accepted.
 
 # 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
 

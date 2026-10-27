@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option D: a green notebook with a gold clasp and a leaf on the cover, on a paper tile. -->
+  <rect width="1024" height="1024" rx="230" fill="#f3ede0"/>
+  <rect x="250" y="176" width="500" height="672" rx="52" fill="#1f5640"/>
+  <path d="M302 176H340V848H302Q250 848 250 796V228Q250 176 302 176Z" fill="#163f2f"/>
+  <g transform="translate(500 420) rotate(35)">
+    <path d="M0 -130C86 -86 98 44 0 130C-98 44 -86 -86 0 -130Z" fill="#d9ab4e"/>
+    <path d="M0 -88V104" stroke="#1f5640" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <rect x="640" y="560" width="160" height="150" rx="34" fill="#d9ab4e"/>
+  <circle cx="722" cy="616" r="22" fill="#1f5640"/>
+  <path d="M712 630H732L740 674H704Z" fill="#1f5640"/>
+</svg>

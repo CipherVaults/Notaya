@@ -1,7 +1,7 @@
 // Color choices offered in the UI.
 
 export const ACCENTS = [
-  { name: "Black & white", value: "mono" },
+  { name: "Theme color", value: "mono" },
   { name: "Blue", value: "#3b82f6" },
   { name: "Sky", value: "#0ea5e9" },
   { name: "Teal", value: "#14b8a6" },

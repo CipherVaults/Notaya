@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 8: a crescent moon over a page. Quiet and private, pairs with names like Hushpad. -->
+  <defs><linearGradient id="t" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2a2f5c"/><stop offset="1" stop-color="#0c0f26"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#t)"/>
+  <rect x="262" y="400" width="460" height="460" rx="52" fill="#f2efe6"/>
+  <rect x="322" y="560" width="300" height="30" rx="15" fill="#c9c4b6"/>
+  <rect x="322" y="660" width="240" height="30" rx="15" fill="#c9c4b6"/>
+  <rect x="322" y="760" width="270" height="30" rx="15" fill="#c9c4b6"/>
+  <path transform="translate(60 -30)" d="M600 160A170 170 0 1 0 760 400A136 136 0 1 1 600 160Z" fill="#ffd36e"/>
+  <circle cx="330" cy="230" r="14" fill="#ffd36e"/><circle cx="420" cy="170" r="9" fill="#ffd36e"/>
+</svg>

@@ -1,8 +1,8 @@
 # Third-party notices
 
-Cipherleaf includes or uses the open source components listed in this file. This file gives credit to their authors and reproduces the licenses that ask to travel with the program. It is attribution work and not legal advice.
+Notaya includes or uses the open source components listed in this file. This file gives credit to their authors and reproduces the licenses that ask to travel with the program. It is attribution work and not legal advice.
 
-The license for Cipherleaf's own code has not been chosen yet (the owner has not decided). Nothing in this file grants any license to Cipherleaf itself. Each component below keeps its own license and its own copyright holders.
+The license for Notaya's own code has not been chosen yet (the owner has not decided). Nothing in this file grants any license to Notaya itself. Each component below keeps its own license and its own copyright holders.
 
 How this file was made: the lists in the Rust crates and npm packages sections were generated from the Rust lockfile (`src-tauri/Cargo.lock`, target `x86_64-pc-windows-msvc`) and from the npm lockfile and installed packages on 2026-10-23 (system clock, UTC). Copyright lines were copied from the license files of the packages. Where a package ships no copyright line, the table says so and gives the source of the name. Anything that could not be checked is marked "unverified".
 
@@ -22,16 +22,16 @@ Contents: At a glance, Open decisions and things to check, Rust crates, npm pack
 | SQLite | Storage engine, compiled in via `libsqlite3-sys` (SQLite 3.53.2) | Public domain | The author disclaims copyright; credited as a courtesy. |
 | zxcvbn | Password strength estimate (Rust crate `zxcvbn` 3.1.1, a port of Dropbox's zxcvbn) | MIT, Copyright (c) 2016 Joshua Holmer | Its frequency dictionaries derive from US census data, Wikipedia and TV/movie word lists (per the crate's README); the package carries no separate notice for those. |
 
-Trademarks: Windows, Microsoft Edge, WebView2, Segoe and Mica are names of Microsoft; Tauri, KaTeX and the other project names belong to their owners. They are used here only to describe what is used. Cipherleaf is not affiliated with or endorsed by Microsoft or any other project named here.
+Trademarks: Windows, Microsoft Edge, WebView2, Segoe and Mica are names of Microsoft; Tauri, KaTeX and the other project names belong to their owners. They are used here only to describe what is used. Notaya is not affiliated with or endorsed by Microsoft or any other project named here.
 
 ## Open decisions and things to check
 
 These come from the inventory work. They are facts for the owner to decide on; nothing was changed in the code or the build for them.
 
-1. **Cipherleaf's own license is not chosen.** There is no `LICENSE` file and no `license` field in `package.json` or `src-tauri/Cargo.toml`. Without a license nobody but the owner has rights to reuse Cipherleaf's code.
-2. **(No longer applicable.)** The source offer for the libraries inside KeePassXC. KeePassXC was removed from Cipherleaf on 2026-10-27, so Cipherleaf no longer ships it or its libraries.
+1. **Notaya's own license is not chosen.** There is no `LICENSE` file and no `license` field in `package.json` or `src-tauri/Cargo.toml`. Without a license nobody but the owner has rights to reuse Notaya's code.
+2. **(No longer applicable.)** The source offer for the libraries inside KeePassXC. KeePassXC was removed from Notaya on 2026-10-27, so Notaya no longer ships it or its libraries.
 3. **(No longer applicable.)** The KeePassXC license files and source archive in the portable folder. Removed together with KeePassXC on 2026-10-27.
-4. **(No longer applicable.)** `vc_redist.x64.exe` and the other Microsoft files in the KeePassXC folder. Removed together with KeePassXC on 2026-10-27. `Cipherleaf.exe` itself does not import the Visual C++ runtime DLLs (the C runtime is linked in; read from its import table, not tested on a PC without the runtime).
+4. **(No longer applicable.)** `vc_redist.x64.exe` and the other Microsoft files in the KeePassXC folder. Removed together with KeePassXC on 2026-10-27. `Notaya.exe` itself does not import the Visual C++ runtime DLLs (the C runtime is linked in; read from its import table, not tested on a PC without the runtime).
 5. **Microsoft WebView2 loader license text. (Closed on 2026-10-23.)** `webview2-com-sys` 0.39.1 (MIT) ships Microsoft's prebuilt loader libraries (`WebView2LoaderStatic.lib` is linked statically into the exe). The version string inside the library is `1.0.3800.47`. The license text was read from Microsoft's own NuGet package `Microsoft.Web.WebView2` 1.0.3800.47 (file `LICENSE.txt`, downloaded from api.nuget.org on 2026-10-23; the package's `.nuspec` says `<license type="file">LICENSE.txt</license>`) and is reproduced in the License texts section. That package's `NOTICE.txt` lists third-party components of Microsoft's SDK tooling (for example ANTLR and StringTemplate) and says they come from Microsoft's build of the SDK; it was not found to apply to the loader library itself, and this was not checked further. The WebView2 Runtime on the PC is a Microsoft component under Microsoft's license; it is not in the exe or the ZIP.
 6. **Rust crates whose packages carry no license file.** `webview2-com` 0.39.1 and `webview2-com-sys` 0.39.1 (both shipped) and `webview2-com-macros` 0.8.1 (build only) are MIT per `Cargo.toml` but ship no license file; the copyright line "Copyright (c) 2021 Bill Avery" comes from the upstream repository https://github.com/wravery/webview2-rs (file `LICENSE`, fetched on 2026-10-23). `alloc-stdlib` 0.3.0 (BSD-3-Clause) ships no license file; the line "Copyright (c) 2016 Dropbox, Inc." comes from the sibling repository https://github.com/dropbox/rust-alloc-no-stdlib. `selectors` 0.38.0 (MPL-2.0) ships no license file; its table row names only the `Cargo.toml` authors. `tauri-plugin` 2.7.2 (build only) ships none. Several crates by David Tolnay and others (anyhow, serde, serde_json, syn, thiserror and similar) have license files without a copyright line; their table rows show the `Cargo.toml` authors instead, labelled as such. `cargo-platform`, `hashlink`, `pin-project-lite`, `serde_json`, `winnow` have neither.
 7. **MPL-2.0 crates (shipped unmodified).** MPL-2.0 asks that the source of the covered files stays available and that the license text is included. The source is unmodified and available at the upstream URLs: `cssparser` 0.37.0 https://github.com/servo/rust-cssparser ; `dtoa-short` 0.3.5 https://github.com/upsuper/dtoa-short ; `option-ext` 0.2.0 https://github.com/soc/option-ext ; `selectors` 0.38.0 https://github.com/servo/stylo . (`cssparser-macros` 0.7.1, MPL-2.0, is a compile-time macro crate and is not in the exe.) The MPL-2.0 text is in the License texts section.
@@ -40,7 +40,7 @@ These come from the inventory work. They are facts for the owner to decide on; n
 10. **KaTeX fonts: OFL notice only in the font files.** The `katex` npm package ships no separate license file for its fonts. The OFL grant exists only as a short notice inside each font file's name table (copyright lines Design Science, Inc. and Khan Academy, with a Reserved Font Name per family). The fonts are embedded in the exe unchanged. The in-app text "Equations are drawn by KaTeX 0.19.0 (MIT licence)" covers the code only and does not mention the OFL fonts.
 11. **Unverified because the sandbox could not reach it:** Microsoft's WebView2 Runtime terms.
 12. **MIT-0.** `dunce` 1.0.5 is `CC0-1.0 OR MIT-0 OR Apache-2.0`; its package contains only the CC0-1.0 text, which is used here. No MIT-0 text is reproduced because no shipped package contains one.
-13. **Icon and logo.** The Cipherleaf mark (`assets/cipherleaf-icon.svg`, `src/components/Logo.tsx`, `src-tauri/icons/*`) was drawn for this project in the development sessions; no outside source is recorded. Whether any file in `src-tauri/icons/` still contains Tauri's default artwork was not checked. No license is recorded for the artwork. The emoji used for notebook icons are plain Unicode characters drawn by the system font and are not shipped.
+13. **Icon and logo.** The Notaya mark, two sticky notes in the Sunrise colours (`assets/notaya-icon.svg`, `src/components/Logo.tsx`, `src-tauri/icons/*`), was drawn for this project in the development sessions on 2026-10-27; no outside source is recorded. Every file in `src-tauri/icons/` was regenerated from `assets/notaya-icon.svg` with `npx tauri icon`. No license is recorded for the artwork. The emoji used for notebook icons are plain Unicode characters drawn by the system font and are not shipped.
 14. **Version numbers differ:** `package.json` and `src-tauri/Cargo.toml` say 0.1.0, `tauri.conf.json` says 1.0.0.
 
 ## Rust crates
@@ -278,7 +278,7 @@ All 226 crates linked into the Windows release exe (`x86_64-pc-windows-msvc`), f
 
 ### Rust crates used only at build time (not shipped)
 
-76 crates are used only to build Cipherleaf (build scripts, build dependencies and procedural macros). They are not linked into the exe, but code they generate is compiled into it, so they are listed with their licenses. Their copyright lines are the authors named in each crate's Cargo.toml; the license texts are the standard texts in the License texts section (MIT, Apache-2.0, Unicode-3.0, Zlib and so on).
+76 crates are used only to build Notaya (build scripts, build dependencies and procedural macros). They are not linked into the exe, but code they generate is compiled into it, so they are listed with their licenses. Their copyright lines are the authors named in each crate's Cargo.toml; the license texts are the standard texts in the License texts section (MIT, Apache-2.0, Unicode-3.0, Zlib and so on).
 
 | Crate | Version | License | Authors (Cargo.toml) | Source |
 |---|---|---|---|---|

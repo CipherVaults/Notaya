@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option E: a bold "C" whose top end grows into a leaf. Works if the name stays C-something. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#065f46"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <path d="M676 348A240 240 0 1 0 676 676" fill="none" stroke="#ffffff" stroke-width="120" stroke-linecap="round"/>
+  <g transform="translate(765 268) rotate(48) scale(0.8)">
+    <path d="M0 -150C100 -100 114 50 0 150C-114 50 -100 -100 0 -150Z" fill="#ffffff"/>
+    <path d="M0 -100V120" stroke="#0f8a63" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>

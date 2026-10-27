@@ -38,6 +38,7 @@ pub struct Session {
 /// can't be moved, swapped or copied between vaults without detection.
 fn aad(vault_id: &[u8; 16], table: Table, id: &RowId) -> Vec<u8> {
     let mut out = Vec::with_capacity(48);
+    // The old app name stays here after the rename to Notaya: it is part of the file format (A28).
     out.extend_from_slice(b"cipherleaf");
     out.extend_from_slice(&FORMAT_VERSION.to_le_bytes());
     out.extend_from_slice(vault_id);

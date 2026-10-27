@@ -35,7 +35,7 @@ export default function App() {
         .takeNotice()
         .then((text) => {
           if (!text) return;
-          if (text.startsWith("Cipherleaf could not")) toast.error(text, { duration: 15000 });
+          if (text.startsWith("Notaya could not")) toast.error(text, { duration: 15000 });
           else toast.info(text, { duration: 15000 });
         })
         .catch(() => {});
