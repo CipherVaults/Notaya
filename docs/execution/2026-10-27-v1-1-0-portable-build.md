@@ -37,3 +37,15 @@ Runners from `tools/real-exe-tests/` at `70d38a1`, each printing the tested exe'
   The tag targets the exact commit the exe was built from; it is in `main`'s history once the PR is merged. Afterwards the release is checked on GitHub (tag, target, one asset, digest equal to the ZIP hash) and recorded here.
 - Nothing is accepted.
 - The throwaway folders `%TEMP%\clf-v110-release` (worktree), `%TEMP%\clf-v110-test-*` (extraction) and `%TEMP%\clf-v110-build.log` stay until the owner approves deleting them.
+
+## Addendum: the release (2026-10-27 08:39:05 UTC)
+
+The owner merged [PR #21](https://github.com/AbyssWatcher2/CipherLeaf/pull/21) at 08:37:53 UTC (merge commit `350c3a225f84974219d12b2316f8f49ea2b52d9d`, GitHub time), ran the `gh release create` command above in his own terminal and wrote "I think done" at 08:39:52 UTC (message timestamp). Checked through the GitHub API at 08:40:10 UTC (system clock); the asset was not downloaded and re-hashed:
+
+- [Release v1.1.0](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.1.0), "CipherLeaf V1.1.0", published 08:39:05 UTC, not a draft, not a prerelease, and the latest release (`releases/latest` returns `v1.1.0`).
+- Tag `v1.1.0` points at `70d38a1c744dd7dd249a61ba648bce96462ee70b`, the commit the exe was built from (in `main`'s history through the PR #21 merge).
+- One asset, `Cipherleaf-V1.1.0-portable.zip`, 5,916,923 bytes, GitHub digest `sha256:2e0b94b1046469b63f829c5c8c8d4c40474e32a600ab45c7c93b5686a498a890`, equal to the built ZIP's size and SHA-256.
+- The release text equals `RELEASE-NOTES.md` (compared as text after normalising line endings).
+- Releases `v1.0` (tag on `0ed3f52`, one asset of 87,186,510 bytes, digest `cab1e72e…d53d`) and `v1.0.1` (tag on `6fa9ee5`, one asset of 87,224,165 bytes, digest `863500c6…e321`) are unchanged.
+
+Not checked: the downloaded asset. The owner has not accepted the release.
