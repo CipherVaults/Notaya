@@ -50,3 +50,12 @@ The owner said "proceed with this and The app name is Notaya" on 2026-10-27 at 1
 
 - The owner said "Resume" at 18:56:19 UTC (project transcript, relayed 18:56:34). The coordinator also relayed a rule change dated 17:22 UTC (exact owner words not in this thread): **Sonnet 5.5 for everyday work, Opus 5.5 for hard jobs**. This addendum and the later PC checks are done on the new rule; the code of `6003e81` and the review were done under the older one (Opus, high effort).
 - Branch head at resume: `029887b`. PC results follow below as they come in.
+
+## Addendum 3 (2026-10-27, 19:1x UTC, system clock): "Why it's still cipherleaf in tests" (owner, 19:10:41 UTC)
+
+A search of `src/`, `src-tauri/src/`, `index.html`, `tauri.conf.json`, the capability file, the mock and the test scripts found no user-visible "Cipherleaf" left (window titles, dialogs, messages, Settings, README, the real-exe scripts). What still says `cipherleaf` is internal and kept on purpose:
+
+- The app identifier `app.cipherleaf.vault` (single-instance guard), the crate and npm package names, the Rust library name `cipherleaf_lib`, the repository and the folder `E:\Project\cipherleaf`. So `cargo test` prints `cipherleaf` and `cipherleaf_lib`, and the build folders are `...\cipherleaf\...`.
+- The temp folders the Rust unit tests make (`cipherleaf-test-*`, `cipherleaf-state-*` and similar) and `CIPHERLEAF_HOME`: names only the tests and the scripts see.
+- The vault format strings (`cipherleaf` in the encryption label, the open-vault password, the HKDF label) and the browser-storage keys `cipherleaf.*`: changing them would stop existing notes from opening or reset settings.
+- One user-visible spot was missed: the exe's "file description" (Properties > Details) came from `Cargo.toml` and said "Notaya (formerly Cipherleaf) - ...". **Fixed:** it now says "Notaya - portable notes app with optional encryption". This changes only exe metadata, so the exe built on the PC from `91d7068` needs one more rebuild and check before merge.
