@@ -46,6 +46,8 @@ Not changed: code, the security design (no promise changed), the plan snapshot. 
 
 Not changed: code. Nothing is accepted.
 
+> **Added 2026-10-27 19:45 UTC (system clock):** the owner tried the real window ("Okay looks good", 19:39:24 UTC, informal), marked PR #24 ready and merged it at 19:40:27 UTC (`9510b54`); his PC copy was fast-forwarded and checked equal to `origin/main` at 19:40:56 UTC ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) addendum 9). Integrated, not accepted, not released.
+>
 > **Added 2026-10-27 19:20 UTC (system clock):** the owner said "Resume" (18:56:19 UTC). The PC checks of `91d7068` passed (129 of 129 Rust tests, release build, real-exe test, old 1.1.0 vault opens); details in addendum 4 of [EX-2026-10-30](execution/2026-10-27-notaya-rename.md). The owner asked why tests still say cipherleaf (19:10:41 UTC): addendum 3. The exe metadata fixes were rebuilt and checked (addenda 5 and 6, publisher `d4933ef`). Left: the owner's merge.
 >
 > **Added 2026-10-27 17:16 UTC (system clock):** the independent review found no blockers; its two should-fix items and the swatch nit were fixed and pushed. The owner said "stop now at resume point" at 17:13:39 UTC; work stopped before the PC tests. Resume point: the addendum of [EX-2026-10-30](execution/2026-10-27-notaya-rename.md).
