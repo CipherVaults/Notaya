@@ -6,6 +6,20 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), Cipherleaf: live audit (PR #10) compared with V1.1.0, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** GitHub PR #10, the "Live PC audit checks" thread (read in full), `git log` and the code of `main` `6981442`.
+
+## What happened
+
+1. The owner asked to check the idle "Live PC audit checks" session. It was found to be finished: PR #10 was merged by the owner on 2026-10-24 at 09:23:51 UTC and its temp folder deleted by him the same morning.
+2. He then asked whether everything in that thread got fixed. The code was compared item by item. At 17:13:39 UTC he said stop; the partial result was saved outside the repo. At 18:56:19 UTC he said "Resume" and the comparison was finished and put in a docs PR.
+3. Understanding changed in one place: the first quick answer to the owner ("PR #10 is merged, the session is finished") covered only the main items. The full comparison shows that not everything is fixed: 15 rows are still open, including the WebView2 traffic, F-04, F-10, SE-03 and CR-02.
+
+Not changed: code, the security design (no promise changed), the plan snapshot. Not run: anything on Windows, `cargo audit`, tests. Nothing is accepted. Where to resume: the owner merges the PR, then the PC copy is fast-forwarded; a fix release only on his word.
+
+---
+
 # 📘 Session: 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), Cipherleaf: record every step, PC copy on `main`, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in the records thread; the PC step in a Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC timestamps), `git log` after fetching `main`, the PC session's `git` output.
