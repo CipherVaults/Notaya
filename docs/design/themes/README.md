@@ -8,7 +8,7 @@
 
 - **Icon:** round 3, option 5, two sticky notes ("That 2 sticky notes really good one", 14:00:13).
 - **Theme:** **Sunrise** ("Sunrise", 14:29:43). The icon would use the Sunrise colours, which is [`themes/2-sunrise-icon.svg`](2-sunrise-icon.svg) (amber `#ffb020` back note, coral `#ff6b5a` front note, accent `#e8553f`). That pairing is Kevin's reading of the pick; the owner can still ask for the original blue and pink.
-- **Name:** not chosen yet.
+- **Name:** not chosen yet. The owner suggested PocketNote and MicroNote (15:48:09). Both clash with existing note apps; see [pocketnote-micronote/](pocketnote-micronote/README.md) for themes and the screen.
 - **Build:** not started. It waits until the owner picks a name and says go.
 
 ## The ideas
