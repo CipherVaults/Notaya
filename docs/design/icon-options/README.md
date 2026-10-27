@@ -16,7 +16,35 @@
 - **Name:** not chosen yet.
 - **Build:** not started. It waits until the owner picks a name and says go.
 
-## Round 5 names: 10 more, "everything in one place" (current)
+## Round 6 names: like PocketNote and MicroNote (current)
+
+**Asked:** "Can you generate something similar for those names" (Mohamed, 2026-10-27 15:51:19 UTC, from the project transcript), after the screen found that PocketNote and MicroNote are already used (see [../themes/pocketnote-micronote/](../themes/pocketnote-micronote/README.md)). These are short "small thing + note" names in the same spirit. Same best-effort web screen as before: apps, companies and trademark listings for each exact name. This is not legal clearance, and the official databases were not reachable.
+
+**Passed the screen.** Pocket-style names:
+
+| Name | Why | Screen notes |
+|---|---|---|
+| **Pocketling** | A little pocket that holds everything. | No exact match. "Pocket" is a well-known app brand, so the "-ling" ending matters. |
+| **Satchelnote** | Notes in a satchel you carry. | No match. |
+| **Pouchnote** | A pouch for your notes. | No exact match, but it sounds close to "Pocket Note". Weaker. |
+| **Cubbynote** | A cubby hole for every note. | No exact match; "CubeNote" exists. Weaker. |
+| **Microcove** | A tiny cove for everything. | No exact match; "Cove" is a common app name. Weaker. |
+
+Micro-style names:
+
+| Name | Why | Screen notes |
+|---|---|---|
+| **Specknote** | A speck is tiny, like "micro". | No match. |
+| **Thimblenote** | Small as a thimble, holds what matters. | No match. |
+| **Teenynote** | Teeny-tiny notes. | No exact match; "WeeNote" exists. Weaker. |
+| **Pennynote** | Small and handy, like a penny. | No exact match; "Penned" and "Pencil Note" exist. Weaker. |
+| **Acornnote** | Small, but holds a lot. | No exact match; "Acorn" is a well-known Mac image editor. Weaker. |
+
+**Checked and dropped:** Pipnote (PiP Notes, PPNote), Pebblenote (Pebble Notes), Crumbnote (an App Store app called CrumbNote), Snipnote (SnipNote and SnipNotes apps), Seednote (a Seedsnote extension), Minimnote and Minipage (MiniNote, MinNote and Mini Notes apps), Mitenote (mitynote app), Pocknote (a "pocketnote" software package), Pocketnook (Barnes & Noble's Nook), Pocketkin (Pocketkins toys), Wrennote (Wren apps), Jotlet (an existing Jotlet software project), Notekin (close to "Notchkin").
+
+**Recommendation (round 6):** **Specknote** for the "micro" feel, or **Pocketling** for the "pocket" feel. Both came out clean, and both fit the Micro Sunrise or Sunrise pocket themes.
+
+## Round 5 names: 10 more, "everything in one place"
 
 **Asked:** "Another give me 10 names" (Mohamed, 2026-10-27 15:05:29 UTC, from the project transcript). None of these repeats an earlier round. They were screened the same way as round 4: a web search for each exact name, looking for apps, companies and trademark listings. This is best effort and not legal clearance, and the official USPTO, EUIPO and WIPO databases were not reachable.
 
