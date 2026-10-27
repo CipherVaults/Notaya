@@ -73,9 +73,9 @@ pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
     list_in(&paths.backups, is_backup_name)
 }
 
-/// The regular files in `dir` whose names satisfy `is_name`, newest first (shared
-/// with the passwords-file backups). A missing folder is an empty list.
-pub(crate) fn list_in(dir: &Path, is_name: fn(&str) -> bool) -> Result<Vec<BackupInfo>> {
+/// The regular files in `dir` whose names satisfy `is_name`, newest first. A missing
+/// folder is an empty list.
+fn list_in(dir: &Path, is_name: fn(&str) -> bool) -> Result<Vec<BackupInfo>> {
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -447,7 +447,7 @@ mod tests {
     fn temp_paths() -> Paths {
         let root = std::env::temp_dir().join(format!("cipherleaf-restore-{}", new_id()));
         std::fs::create_dir_all(&root).unwrap();
-        let paths = Paths::at(&root, root.join("kp"));
+        let paths = Paths::at(&root);
         std::fs::create_dir_all(&paths.backups).unwrap();
         paths
     }

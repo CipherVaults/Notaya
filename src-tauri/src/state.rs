@@ -2,7 +2,6 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::process::Child;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime};
@@ -10,10 +9,9 @@ use std::time::{Duration, Instant, SystemTime};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::error::{Error, Result};
-use crate::model::resolve_passwords;
 use crate::portable::Paths;
 use crate::vault::Session;
-use crate::{backup, keepassxc, pwbackup, system, ui};
+use crate::{backup, system, ui};
 
 /// A vault with security off is backed up at most this often while it is open (and only if
 /// something changed since the last hourly backup), because it never locks.
@@ -41,12 +39,6 @@ fn open_backup_timing() -> (Duration, Duration, u64) {
         Some(n) => (Duration::from_secs(n), Duration::from_secs(n), 0),
         None => (OPEN_BACKUP_EVERY, OPEN_BACKUP_RETRY, OPEN_BACKUP_IDLE_MS),
     }
-}
-
-/// A passwords file or KeePassXC settings already exist (so a vault saved before A21, which
-/// has no choice for the Passwords feature, keeps it on).
-pub fn passwords_in_use(paths: &Paths) -> bool {
-    keepassxc::find_database(paths).is_some() || paths.keepassxc_config.join("keepassxc.ini").exists()
 }
 
 /// How long a lock waits for the windows to save their pending edits.
@@ -96,8 +88,6 @@ pub struct AppState {
     pub paths: Paths,
     session: Mutex<Option<Session>>,
     attempts: Mutex<Attempts>,
-    /// The KeePassXC process Cipherleaf started, if any (amendment A9).
-    pub keepassxc: Mutex<Option<Child>>,
     /// Labels of windows that have called `window_ready` (they listen for `vault-locking`).
     ready: Mutex<HashSet<String>>,
     flush: Mutex<Flush>,
@@ -107,11 +97,8 @@ pub struct AppState {
     /// The backup file the user most recently chose in the file dialog (canonical
     /// path). `restore_vault` accepts an absolute path only if it is this one.
     picked_backup: Mutex<Option<PathBuf>>,
-    /// The same for the passwords-file restore (`restore_passwords`), kept apart
-    /// so choosing one kind of backup never allows the other.
-    picked_passwords_backup: Mutex<Option<PathBuf>>,
-    /// A message for the owner that the UI shows once (for example after a quit
-    /// that was cancelled). Kept here as well as sent as an event, because a lock
+    /// A message for the owner that the UI shows once (for example after a backup
+    /// failed). Kept here as well as sent as an event, because a lock
     /// reloads the window and a live event could be missed.
     notice: Mutex<Option<String>>,
     /// Held while the app opens or creates a vault that has security off, and while a
@@ -133,13 +120,11 @@ impl AppState {
             paths,
             session: Mutex::new(None),
             attempts: Mutex::new(Attempts { failures: 0, wait_until: None }),
-            keepassxc: Mutex::new(None),
             ready: Mutex::new(HashSet::new()),
             flush: Mutex::new(Flush::default()),
             flush_cv: Condvar::new(),
             flush_gate: Mutex::new(()),
             picked_backup: Mutex::new(None),
-            picked_passwords_backup: Mutex::new(None),
             notice: Mutex::new(None),
             open_gate: Mutex::new(()),
             quitting: AtomicBool::new(false),
@@ -150,33 +135,12 @@ impl AppState {
         guard(&self.open_gate)
     }
 
-    /// Whether the Passwords (KeePassXC) feature is on. False while locked.
-    pub fn passwords_on(&self) -> bool {
-        match self.with(|s| Ok(s.settings().passwords_enabled)) {
-            Ok(flag) => resolve_passwords(flag, passwords_in_use(&self.paths)),
-            Err(_) => false,
-        }
-    }
-
     pub fn is_quitting(&self) -> bool {
         self.quitting.load(Ordering::SeqCst)
     }
 
     fn set_quitting(&self, on: bool) {
         self.quitting.store(on, Ordering::SeqCst);
-    }
-
-    /// Remembers the passwords backup the user just chose in the file dialog.
-    pub fn set_picked_passwords_backup(&self, path: PathBuf) {
-        *guard(&self.picked_passwords_backup) = Some(path);
-    }
-
-    pub fn picked_passwords_backup(&self) -> Option<PathBuf> {
-        guard(&self.picked_passwords_backup).clone()
-    }
-
-    pub fn clear_picked_passwords_backup(&self) {
-        *guard(&self.picked_passwords_backup) = None;
     }
 
     /// Keeps `text` for the UI to show once.
@@ -333,7 +297,7 @@ fn emits_vault_locked(reason: &str, was_open: bool) -> bool {
 /// Locks the vault: first lets every window save its pending edits (unless the
 /// drive was removed, when saving can't work), then wipes keys and decrypted
 /// data from memory, closes sticky notes and calculators, tells the UI to reset itself, and only
-/// then does the slow work (backup, asking KeePassXC to lock).
+/// then does the slow work (the backup).
 ///
 /// Waits for the windows, so call it only from a thread other than the main
 /// one (an `async` command, the monitor thread, the close handler's thread).
@@ -353,8 +317,7 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     }
     let session = state.take_session();
     let was_open = session.as_ref().is_some_and(|s| s.is_open());
-    // The UI comes first: hide the overlay, close stickies, reset the windows.
-    crate::embed::hide();
+    // The UI comes first: close stickies, reset the windows.
     ui::close_stickies(app);
     ui::close_calculators(app);
     if emits_vault_locked(reason, was_open) {
@@ -366,85 +329,28 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     if let Some(Err(e)) = made {
         backup_failure = Some(report_backup_failure(app, &state, &e));
     }
-    // With the Passwords feature off, KeePassXC and its file are left completely alone.
-    // (With no session to ask, as in a second lock, do what a lock always did.)
-    let passwords = session
-        .as_ref()
-        .map(|s| resolve_passwords(s.settings().passwords_enabled, passwords_in_use(&state.paths)))
-        .unwrap_or(true);
     drop(session); // zeroizes the data key and all items
-    if passwords {
-        // Copy the KeePassXC passwords file next to the vault backups (best effort), before
-        // KeePassXC is asked to lock. It never reads the file's contents.
-        pwbackup::backup_on_lock(&state.paths);
-        keepassxc::lock_if_running(&state.paths, &state.keepassxc);
-    }
     backup_failure
 }
 
-/// How long a quit (or a restore of the passwords file) waits for KeePassXC to
-/// close after asking it to. A save on close can take several seconds.
-pub const KEEPASSXC_CLOSE_TIMEOUT: Duration = Duration::from_secs(10);
-
-/// Shown when a quit is cancelled because KeePassXC didn't close.
-pub const KEEPASSXC_STILL_OPEN: &str =
-    "KeePassXC is still open (it may be asking to save). Finish there, close it, then close Cipherleaf again.";
-
-/// Quits Cipherleaf: locks, asks KeePassXC to close, and exits. Returns true if
-/// the app was told to exit.
-///
-/// KeePassXC is never force-ended. If it is still open after the wait (it may be
-/// asking whether to save), the quit is cancelled: KeePassXC gets its own window
-/// back, so its dialog can be seen, the owner is told what to do (as the
-/// `app-notice` event and as a notice the UI can fetch with `take_notice`), and
-/// Cipherleaf stays open, already locked. Exiting would destroy the embedded
-/// window, which Cipherleaf owns, together with its unsaved changes.
+/// Quits Cipherleaf: locks (saving the windows' edits and making the backup) and exits.
 ///
 /// Waits for the windows, so call it only from a thread other than the main one.
 pub fn quit(app: &AppHandle) -> bool {
     use std::panic::{catch_unwind, AssertUnwindSafe};
     let state = app.state::<AppState>();
-    // Asked before the lock, which ends the session the answer comes from. From the lock
-    // screen there is no session to ask, so do what a quit always did.
-    let passwords = if state.is_unlocked() { state.passwords_on() } else { true };
-    let was_open = state.with(|s| Ok(s.is_open())).unwrap_or(false);
     // While quitting, nothing may reopen a vault that has security off.
     state.set_quitting(true);
-    // Whatever fails or panics here, the next step must still run.
+    // Whatever fails or panics here, the exit must still happen.
     let backup_failure = catch_unwind(AssertUnwindSafe(|| lock(app, "quit"))).ok().flatten();
-    // If this fails we don't know that KeePassXC is closed, so we don't exit.
-    let closed = catch_unwind(AssertUnwindSafe(|| {
-        keepassxc::close_gracefully(&state.keepassxc, &state.paths, KEEPASSXC_CLOSE_TIMEOUT)
-    }))
-    .unwrap_or(false);
-    if closed {
-        // KeePassXC may have saved while closing: copy its final state too (best effort).
-        if passwords {
-            let _ = catch_unwind(AssertUnwindSafe(|| pwbackup::backup_on_lock(&state.paths)));
-        }
-        // A failed backup at quit would go unseen (the window is destroyed right away), so say it
-        // in a message box first. Not when the vault file is gone (the drive was removed): the
-        // notice then is about the drive, and nothing may hold up the exit.
-        if let Some(text) = backup_failure.filter(|_| state.paths.vault.exists()) {
-            let _ = catch_unwind(AssertUnwindSafe(|| show_backup_failure(app, &text)));
-        }
-        app.exit(0);
-        return true;
+    // A failed backup at quit would go unseen (the window is destroyed right away), so say it
+    // in a message box first. Not when the vault file is gone (the drive was removed): the
+    // notice then is about the drive, and nothing may hold up the exit.
+    if let Some(text) = backup_failure.filter(|_| state.paths.vault.exists()) {
+        let _ = catch_unwind(AssertUnwindSafe(|| show_backup_failure(app, &text)));
     }
-    let _ = catch_unwind(AssertUnwindSafe(keepassxc::detach));
-    // The quit is cancelled: a vault with security off was closed by the lock, so open it again.
-    state.set_quitting(false);
-    if was_open {
-        let _ = catch_unwind(AssertUnwindSafe(|| crate::commands::vault::reopen_open_vault(app)));
-    }
-    // Cipherleaf stays open, so the notice is seen; it also says that the backup failed.
-    let notice = match backup_failure {
-        Some(failure) => format!("{KEEPASSXC_STILL_OPEN} {failure}"),
-        None => KEEPASSXC_STILL_OPEN.to_string(),
-    };
-    state.set_notice(notice.clone());
-    let _ = app.emit("app-notice", notice);
-    false
+    app.exit(0);
+    true
 }
 
 /// A native message box that waits until it is closed. Call it from a thread other than the
@@ -461,8 +367,8 @@ fn show_backup_failure(app: &AppHandle, text: &str) {
 
 /// Tells the owner that an automatic backup could not be made (the release exe has no
 /// console, so a message on stderr would never be seen). The notice is kept as well as
-/// sent as an event, like the one for a cancelled quit: a lock reloads the window and a
-/// live event could be missed. The vault file itself is not affected. Returns the text.
+/// sent as an event, because a lock reloads the window and a live event could be
+/// missed. The vault file itself is not affected. Returns the text.
 pub(crate) fn report_backup_failure(app: &AppHandle, state: &AppState, e: &Error) -> String {
     eprintln!("backup failed: {e}");
     // What the notice says about the notes depends on the cause (and on whether the vault
@@ -648,7 +554,7 @@ mod tests {
     #[test]
     fn the_picked_backup_is_remembered_replaced_and_cleared() {
         let root = std::env::temp_dir().join(format!("cipherleaf-state-{}", crate::model::new_id()));
-        let state = AppState::new(Paths::at(&root, root.join("kp")));
+        let state = AppState::new(Paths::at(&root));
         assert_eq!(state.picked_backup(), None);
         state.set_picked_backup(PathBuf::from("a.clf"));
         assert_eq!(state.picked_backup(), Some(PathBuf::from("a.clf")));
@@ -659,36 +565,14 @@ mod tests {
     }
 
     #[test]
-    fn the_picked_passwords_backup_is_separate_from_the_picked_vault_backup() {
-        let root = std::env::temp_dir().join(format!("cipherleaf-state-{}", crate::model::new_id()));
-        let state = AppState::new(Paths::at(&root, root.join("kp")));
-        assert_eq!(state.picked_passwords_backup(), None);
-        state.set_picked_passwords_backup(PathBuf::from("a.kdbx"));
-        assert_eq!(state.picked_passwords_backup(), Some(PathBuf::from("a.kdbx")));
-        assert_eq!(state.picked_backup(), None, "the vault slot is not touched");
-        state.set_picked_backup(PathBuf::from("v.clf"));
-        state.clear_picked_passwords_backup();
-        assert_eq!(state.picked_passwords_backup(), None);
-        assert_eq!(state.picked_backup(), Some(PathBuf::from("v.clf")));
-    }
-
-    #[test]
     fn a_notice_is_returned_once() {
         let root = std::env::temp_dir().join(format!("cipherleaf-state-{}", crate::model::new_id()));
-        let state = AppState::new(Paths::at(&root, root.join("kp")));
+        let state = AppState::new(Paths::at(&root));
         assert_eq!(state.take_notice(), None);
         state.set_notice("first".into());
-        state.set_notice(KEEPASSXC_STILL_OPEN.into());
-        assert_eq!(state.take_notice().as_deref(), Some(KEEPASSXC_STILL_OPEN));
+        state.set_notice("second".into());
+        assert_eq!(state.take_notice().as_deref(), Some("second"));
         assert_eq!(state.take_notice(), None, "gone after the first read");
-    }
-
-    #[test]
-    fn the_quit_notice_text_is_exact() {
-        assert_eq!(
-            KEEPASSXC_STILL_OPEN,
-            "KeePassXC is still open (it may be asking to save). Finish there, close it, then close Cipherleaf again."
-        );
     }
 
     #[test]

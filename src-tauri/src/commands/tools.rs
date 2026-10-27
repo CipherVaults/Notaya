@@ -50,7 +50,7 @@ fn snippet(text: &str, needle: &str) -> String {
 }
 
 /// Searches notes, notebooks and sticky notes in memory. The index is never
-/// written to disk. Passwords live in KeePassXC and are searched there.
+/// written to disk.
 #[tauri::command]
 pub fn search(state: State<'_, AppState>, query: String) -> Result<Vec<SearchHit>> {
     let q = query.trim().to_lowercase();

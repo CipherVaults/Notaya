@@ -3,7 +3,6 @@
 
 pub mod backup;
 pub mod calculator;
-pub mod keepassxc;
 pub mod notes;
 pub mod stickies;
 pub mod tools;

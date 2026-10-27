@@ -51,8 +51,6 @@ export interface Settings {
   lockOnMinimize: boolean;
   screenCaptureProtection: boolean;
   stickyDefaultColor: string;
-  /** The Passwords (KeePassXC) feature is on. Changed only through `setPasswordsEnabled`. */
-  passwordsEnabled: boolean | null;
 }
 
 /** One line of the shared calculator history. */
@@ -152,18 +150,3 @@ export interface SearchHit {
   score: number;
 }
 
-/** The bundled KeePassXC, which holds the passwords (amendment A9). */
-export interface KeePassXCStatus {
-  /** KeePassXC is present next to Cipherleaf. */
-  installed: boolean;
-  /** Its executable matches the verified 2.8.0 release. */
-  verified: boolean;
-  version: string;
-  /** The password database that will be opened, if one exists. */
-  database: string | null;
-  dataDir: string;
-  /** KeePassXC was started by Cipherleaf and is still running. */
-  running: boolean;
-  /** Its window is shown inside Cipherleaf's window. */
-  embedded: boolean;
-}

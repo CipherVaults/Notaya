@@ -17,7 +17,6 @@ import {
   Home,
   ArrowDown,
   ArrowUp,
-  KeyRound,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -130,7 +129,6 @@ const dndA11y = {
 
 export default function Sidebar() {
   const view = useApp((s) => s.view);
-  const passwordsOn = useApp((s) => s.settings?.passwordsEnabled === true);
   const setView = useApp((s) => s.setView);
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
@@ -240,9 +238,6 @@ export default function Sidebar() {
     <aside className="relative flex shrink-0 flex-col bg-sidebar" style={{ width }}>
       <nav aria-label="Primary" className="space-y-0.5 px-2 pb-2 pt-1">
         <NavRow icon={<Home size={17} />} label="Home" active={homeActive} onClick={() => { useApp.setState({ activePageId: null, showTrash: false }); setView("notes"); }} />
-        {passwordsOn && (
-          <NavRow icon={<KeyRound size={17} />} label="Passwords" hint="Ctrl 2" active={view === "passwords"} onClick={() => setView("passwords")} />
-        )}
         <NavRow icon={<StickyNote size={17} />} label="Sticky notes" hint="Ctrl 3" active={view === "stickies"} onClick={() => setView("stickies")} />
         <NavRow icon={<SettingsIcon size={17} />} label="Settings" hint="Ctrl ," active={view === "settings"} onClick={() => setView("settings")} />
       </nav>
