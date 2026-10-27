@@ -2,47 +2,53 @@
 
 **Status:** options for the owner to choose from. Nothing in the app has changed: the icon files in `src-tauri/icons/`, `assets/cipherleaf-icon.svg` and the name "Cipherleaf" in the code are untouched. Building starts only after the owner picks and says go.
 
-**Asked:** "Okay let's design some new icons give me choices and new names" and "Cause you know something has been changed" (Mohamed, 2026-10-27 13:31:51 and 13:32:44 UTC, from the project transcript).
+**Asked (times from the project transcript, UTC, 2026-10-27):**
+- 13:31:51 "Okay let's design some new icons give me choices and new names"
+- 13:32:44 "Cause you know something has been changed"
+- 13:46:09 "I don't need leaf" (after round 1). So round 2 below has no leaf in any icon or name.
 
 ## Why a new identity
 
-The name and icon came from the first plan, when Cipherleaf was a password-locked vault with KeePassXC bundled. Since V1.1.0 (2026-10-27) KeePassXC is gone and the app is notes-first: pages and sub-pages, a ribbon editor with a `/` menu, sticky notes, pop-out calculators, all stored locally. The password lock and encryption are still there but optional (A21). So the new icon and name should say "notes" first and "private, on your PC" second, rather than "cipher" or "password".
+The name and icon came from the first plan, when Cipherleaf was a password-locked vault with KeePassXC bundled. Since V1.1.0 (2026-10-27) KeePassXC is gone and the app is notes-first: pages and sub-pages, a ribbon editor with a `/` menu, sticky notes, pop-out calculators, all stored locally. The password lock and encryption are still there but optional (A21). So the new icon and name should say "notes" first and "private, on your PC" second.
 
-## Icon options
+## Round 2 icon options (current)
 
-All seven are 1024 × 1024 SVGs in this folder, ready to feed `npx tauri icon <file>.svg` (the same step as [A15](../../plan/A15-app-icon.md)). The sheet shows each at full size and at 48, 32 and 16 px on a dark and a light taskbar.
+All six are 1024 × 1024 SVGs in [`round-2/`](round-2/), ready to feed `npx tauri icon <file>.svg` (the same step as [A15](../../plan/A15-app-icon.md)). The sheet shows each at full size and at 48, 32 and 16 px on a dark and a light taskbar.
 
-![All icon options](icon-options-sheet.png)
+![Round 2 icon options](round-2/icon-options-sheet.png)
 
 | | Option | Idea | Notes |
 |---|---|---|---|
-| A | [Green keyhole leaf](a-green-keyhole-leaf.svg) | Today's mark, recoloured green | Smallest change. Still says "lock" first. |
-| B | [Folded note](b-folded-note.svg) | A paper note with a folded corner and a small leaf | Reads as "notes" instantly. Leaf is hard to see at 16 px. |
-| C | [Shield leaf](c-shield-leaf.svg) | White leaf inside an emerald shield | Strongest "protected" message; looks like a security app, which the app no longer mainly is. |
-| D | [Locked notebook](d-locked-notebook.svg) | Green notebook, gold clasp with keyhole, leaf on the cover | Notes plus optional lock in one picture. Light tile; busy at 16 px. |
-| E | [Leaf C](e-leaf-c-monogram.svg) | A bold "C" that grows into a leaf | Only fits if the new name also starts with C. Very clear at small sizes. |
-| F | [Stacked pages](f-stacked-pages.svg) | Three stacked pages (pages and sub-pages) with a leaf | Keeps today's black-and-white app look. |
-| G | [Leaf page](g-leaf-page.svg) | The leaf *is* the page, with lines of writing on it | Notes and the leaf in one simple shape; clean at 16 px. |
+| 1 | [Note with lock](round-2/1-note-with-lock.svg) | A paper note with a small gold padlock badge, on indigo | Says both things in the right order: notes, then lock. |
+| 2 | [Sticky note](round-2/2-sticky-note.svg) | A yellow sticky note with a lifted corner, on black | The clearest at 16 px. Matches the sticky notes feature. |
+| 3 | [Banded notebook](round-2/3-banded-notebook.svg) | A notebook with an elastic band and a ribbon bookmark | Personal and "kept closed" without a lock symbol. Light tile. |
+| 4 | [Keyhole page](round-2/4-keyhole-page.svg) | A page with a keyhole cut through it, on teal | One simple shape; leans a bit more towards "lock". |
+| 5 | [Pen nib](round-2/5-pen-nib.svg) | A fountain-pen nib drawing a gold line, on black | About writing; says nothing about privacy. |
+| 6 | [Pages with bookmark](round-2/6-pages-with-bookmark.svg) | Stacked pages (pages and sub-pages) with a red bookmark | Keeps today's black-and-white app look. |
 
-## Name options
+## Round 2 name options (current)
 
 None of these has been checked for trademarks or existing apps with the same name; that check comes before a final choice.
 
 | Name | Why |
 |---|---|
-| **Leafnote** | Says exactly what it is now (notes) and keeps the leaf, so the icon and existing users carry over. |
-| **Quietleaf** | Calm and private: local only, no account, no network. |
-| **Leafbook** | A notebook made of pages and sub-pages; pairs with icon D or G. |
-| **Fernpad** | "Pad" covers notes, sticky notes and the calculator scratchpad. |
-| **Pocketleaf** | The portable ZIP: the whole app and your notes in one folder you can carry. |
-| **Inkleaf** | Writing first, the leaf stays. |
-| **Margin** | Short; the place you jot things down. Very common word, harder to search for. |
-| **Leaflet** | A leaflet is a small printed page, and a small leaf. Clashes with the well-known Leaflet map library. |
-| **Cipherleaf** (keep) | No rename work and nothing for users to relearn, but "cipher" points at encryption, which is now optional. |
+| **Hushpad** | A quiet, private notepad. "Hush" hints at the optional lock without making it the point. |
+| **Quietpad** | Calm and offline: no account, no network, nothing leaves your PC. |
+| **Pagekeep** | It keeps your pages and sub-pages, on your own computer. |
+| **Stillnote** | Calm, simple notes. |
+| **Jotkeep** | For quick jots and sticky notes that stay put. |
+| **Homepad** | Your notes stay at home, on your PC. |
+| **Paperlock** | Paper plus a lock. Says "lock" more than the app now does. |
+| **Folio** | Classic word for a set of pages. Very common, harder to search for. |
+| **Margin** | Short; the place you jot things down. Very common word. |
 
-## Recommendation
+## Recommendation (round 2)
 
-**Icon G (Leaf page) with the name Leafnote.** It keeps the leaf people already know, says "notes" in both the picture and the word, and stays readable at 16 px in the taskbar. Runner-up: icon B with Quietleaf.
+**Icon 1 (Note with lock) with the name Hushpad.** Both say "notes first, private if you want it", which is what the app is now. Runner-up: **icon 2 (Sticky note) with Quietpad**, the friendliest and the clearest in the taskbar.
+
+## Round 1 (history)
+
+The first round used a leaf in every icon and most names. The owner turned the leaf down, so it is kept only as a record: [`round-1/`](round-1/README.md).
 
 ## What a rename would touch (for when the owner says go)
 

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option 2: a yellow sticky note with a lifted corner. Friendly and instantly "notes". -->
+  <rect width="1024" height="1024" rx="230" fill="#161616"/>
+  <g transform="rotate(-5 512 512)">
+    <path d="M232 232H792V640L640 792H232Z" fill="#ffd54a"/>
+    <path d="M792 640L640 792V676Q640 640 676 640Z" fill="#c99a12"/>
+    <rect x="300" y="340" width="400" height="34" rx="17" fill="#8a6a00" opacity=".55"/>
+    <rect x="300" y="430" width="340" height="34" rx="17" fill="#8a6a00" opacity=".55"/>
+    <rect x="300" y="520" width="240" height="34" rx="17" fill="#8a6a00" opacity=".55"/>
+  </g>
+</svg>
