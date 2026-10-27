@@ -6,6 +6,7 @@
 - 13:31:51 "Okay let's design some new icons give me choices and new names"
 - 13:32:44 "Cause you know something has been changed"
 - 13:46:09 "I don't need leaf" (after round 1). No leaf in any later icon or name.
+- 15:03:34 "something related like everything in one place" (names). Round 4 names below answer it.
 - 13:50:08 "New set 9 icons" and 13:50:37 "And names that no company has it ot trademark" (after round 2). Round 3 below answers both.
 
 ## Decisions so far (owner's picks, 2026-10-27, times from the project transcript, UTC)
@@ -14,6 +15,37 @@
 - **Theme:** **Sunrise** ("Sunrise", 14:29:43). The icon would use the Sunrise colours, which is [`themes/2-sunrise-icon.svg`](../themes/2-sunrise-icon.svg) (amber `#ffb020` back note, coral `#ff6b5a` front note, accent `#e8553f`). That pairing is Kevin's reading of the pick; the owner can still ask for the original blue and pink.
 - **Name:** not chosen yet.
 - **Build:** not started. It waits until the owner picks a name and says go.
+
+## Round 4 names: "everything in one place" (current)
+
+**Asked:** "So about the names. What about something related like everything in one place. Suggest" (Mohamed, 2026-10-27 15:03:34 UTC, from the project transcript). The idea: notes, sticky notes, calculators and the optional lock all in one app.
+
+**What was checked (2026-10-27, best effort, not legal clearance):** the same screen as round 3. Each exact name got a web search for apps (App Store, F-Droid, Product Hunt, AlternativeTo), companies and trademark listings. The USPTO, EUIPO and WIPO databases still could not be read from this environment, so search your pick there yourself before you commit (links in the round 3 section below).
+
+**Passed the screen (no app, company or trademark with this exact name found):**
+
+| Name | Why | Screen notes |
+|---|---|---|
+| **Onenook** | One cosy nook where everything lives. | No match (only a holiday rental called "The Onemana Nook"). |
+| **Allstow** | Stow it all: notes, stickies, calculators. | No exact match. "AllStays" is a camping app, a different field but a similar sound. |
+| **Stowpad** | A pad you stow everything on. | No match. |
+| **Wholepad** | The whole lot on one pad. | No match. |
+| **Kitnest** | Your whole kit in one nest. | No match. |
+| **Allhaven** | A safe haven for all of it. | No match. |
+| **Deskhold** | Holds everything on your desk. | No product with this name; close to the common phrase "desk holder", so it is harder to search for. |
+
+**Dropped:**
+
+| Name | What was found |
+|---|---|
+| Onefold | A product called Onefold is listed on HuntScreens. |
+| Onestash | "Stash" is a well-known investing app and brand. |
+| Allkeep | "Keep" is Google's notes app (Google Keep). |
+| Totepad | "TowPad" and "Tot" are existing note and text apps. |
+| Gatherpad | "Gather" is a well-known software brand. |
+| Allfold, Tidybase | Close to existing apps ("Alle Folders", "TIDY", "TidyBox"). |
+
+**Recommendation (round 4):** **Onenook**. It says "everything in one place" and has the same cosy, personal feel as the sticky-notes icon and the Sunrise theme. Runner-up: **Allstow**.
 
 ## Why a new identity
 
@@ -37,7 +69,7 @@ Nine new 1024 × 1024 SVGs in [`round-3/`](round-3/), all different from rounds 
 | 8 | [Moon page](round-3/8-moon-page.svg) | A crescent moon over a page: quiet and private. |
 | 9 | [Lock-shaped note](round-3/9-lock-shaped-note.svg) | A padlock whose body is a lined note: notes with the lock built in. |
 
-## Round 3 name options (current), with a name-clash screen
+## Round 3 name options, with a name-clash screen
 
 **What was checked (2026-10-27, best effort, not legal clearance):** a web search for each exact name, looking for apps (App Store, Microsoft Store, F-Droid, Product Hunt, AlternativeTo), companies and trademark listings (Justia's copy of US trademark records). The official databases (USPTO, EUIPO, WIPO Global Brand Database) could not be read from this environment (they need a browser), so they were **not** checked. Before committing to a name, search it yourself in the [WIPO Global Brand Database](https://branddb.wipo.int/), [USPTO trademark search](https://tmsearch.uspto.gov/) and [EUIPO eSearch](https://euipo.europa.eu/eSearch/) for class 9 (software), check the Microsoft Store, and see whether the .com / .app domain is free. For real protection, ask a trademark lawyer.
 
