@@ -14,6 +14,13 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), EX-2026-10-27-27: record every step; PC copy on `main`
+
+- Report: [2026-10-27-record-every-step.md](2026-10-27-record-every-step.md)
+- Task / Goal: the owner's standing rule "record on both github and the pc ... with everything" / "and everystep", and the update of his PC copy after PR #25
+- Executor: Claude (Claude Code) in a cloud thread, docs only; the PC step in a Remote Control session
+- Outcome: PC copy switched from `feat/a9-keepassxc` to `main` and fast-forwarded to `2c8c2e6`; the rule recorded in the authority table and STATUS; untracked `vendor\` folder found (STATUS question 24)
+
 ### 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), EX-2026-10-27-26: records catch-up
 
 - Report: [2026-10-27-records-catch-up.md](2026-10-27-records-catch-up.md)

@@ -6,6 +6,17 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), Cipherleaf: record every step, PC copy on `main`, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in the records thread; the PC step in a Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC timestamps), `git log` after fetching `main`, the PC session's `git` output.
+
+## What happened
+
+1. The owner merged records PR #25 (16:52:41 UTC, `2c8c2e6`) and said "do it" to updating his PC copy. It was on the stale `feat/a9-keepassxc` branch with a clean tree, so it was switched to `main` and fast-forwarded to `2c8c2e6`; nothing forced, the old branch kept. An untracked `vendor\` folder of old KeePassXC files showed up (it was ignored until A24) and was left alone (STATUS question 24).
+2. The owner set a standing rule: record every step, on GitHub and on the PC (16:57:24, 16:57:39 UTC). From now on each step goes into the records through a docs PR, and after his merge the PC copy is fast-forwarded. Recorded in the authority table, STATUS and [EX-2026-10-27-27](execution/2026-10-27-record-every-step.md).
+
+Not changed: code. Nothing is accepted.
+
 # 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the project chat and thread messages (UTC timestamps), `git log` of `main` at `87eb7ff`, the GitHub pull request list, the read-only PBS review thread's gap list. **Reconstructed:** items 1 and 2 below come from the project chat, not from a session that recorded them at the time.
