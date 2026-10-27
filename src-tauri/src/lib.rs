@@ -162,6 +162,7 @@ pub fn run() {
             stickies::open_sticky,
             stickies::close_sticky,
             stickies::delete_sticky,
+            stickies::delete_stickies,
             tools::password_strength,
             tools::open_url,
             tools::search,

@@ -6,6 +6,17 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (06:45 to about 06:56 UTC, system clock), Cipherleaf: ribbon editor, cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** the project-thread timestamps, the system clock and the repository.
+
+## What happened
+
+1. The owner sent four asks at 06:45:11 UTC; the coordinator gave item 4 (a OneNote-style ribbon, keeping the "/" menu) to this thread. The other three run in parallel threads.
+2. Built the ribbon (Home, Insert, contextual Table tab, hide button) reusing the selection toolbar's pop-ups; details in [EX-2026-10-27-ribbon](execution/2026-10-27-ribbon-editor.md).
+3. `tsc`, the build and a new 24-check mock UI script passed; an independent review found one medium and three low issues, all fixed.
+
+Not run: the real app, a real-exe test on Windows. Nothing is accepted.
 # 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), Cipherleaf: KeePassXC removed (A24), cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread session started by the project coordinator, with a documentation agent and an independent review agent (model output). **Record basis:** the project-chat timestamp of the owner's message, the system clock and the repository.

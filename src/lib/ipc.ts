@@ -104,6 +104,7 @@ export const api = {
   openSticky: (id: string) => invoke<void>("open_sticky", { id }),
   closeSticky: (id: string) => invoke<void>("close_sticky", { id }),
   deleteSticky: (id: string) => invoke<void>("delete_sticky", { id }),
+  deleteStickies: (ids: string[]) => invoke<void>("delete_stickies", { ids }),
 
   // Tools
   openUrl: (url: string) => invoke<void>("open_url", { url }),
