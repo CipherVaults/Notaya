@@ -174,6 +174,7 @@ pub fn run() {
             stickies::open_sticky,
             stickies::close_sticky,
             stickies::delete_sticky,
+            stickies::delete_stickies,
             keepassxc_cmd::keepassxc_status,
             keepassxc_cmd::keepassxc_open,
             keepassxc_cmd::keepassxc_embed,

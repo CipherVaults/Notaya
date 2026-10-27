@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (owner's message 06:45:11 UTC), EX-2026-10-27-sticky-multi-select: select several sticky notes and delete them together
+
+- Report: [2026-10-27-sticky-multi-select.md](2026-10-27-sticky-multi-select.md)
+- Task / Goal: tick several sticky notes and delete them with one confirmation
+- Executor: Claude (Claude Code) with an independent review agent (model output)
+- Outcome: implemented; UI type check, build and a scripted mock test passed; Rust not compiled and the real exe not run
+- Acceptance: pending
+- Open dependency / next action: `cargo test --lib` and a real-exe try on Windows; the owner merges the PR
+
 ### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
 
 - Report: [2026-10-24-v1-0-1-portable-build.md](2026-10-24-v1-0-1-portable-build.md)
