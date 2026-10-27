@@ -29,3 +29,7 @@ An independent review agent (read-only) found no blocking bugs or security issue
 - Compile and run `cargo test --lib` on Windows, and try it in the real app on a throwaway vault.
 - The owner's acceptance.
 - Another thread is changing the calculator on the same screen; a merge conflict in `StickyBoard.tsx` is possible and small.
+
+## Addendum (2026-10-27, records catch-up)
+
+Code commit `31dc920` on branch `claude/project-thread-7bq1py` ([PR #17](https://github.com/AbyssWatcher2/CipherLeaf/pull/17)); the ribbon was merged into this branch as `e589baf` so it merges cleanly after PR #18. The Rust side was compiled and tested in the combined test on the owner's PC ([EX-2026-10-27-25](2026-10-27-combined-test.md): 128/128, "Delete 4 sticky notes?" deleted all 4). The owner merged PR #17 at 08:04:39 UTC (GitHub; merge commit `d69a3f7`), and it was released in V1.1.0 (tag `v1.1.0` on `70d38a1`). Amendment number given in the catch-up: **A26**. Still open: the owner's acceptance.

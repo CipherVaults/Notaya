@@ -49,3 +49,7 @@ The owner merged [PR #21](https://github.com/AbyssWatcher2/CipherLeaf/pull/21) a
 - Releases `v1.0` (tag on `0ed3f52`, one asset of 87,186,510 bytes, digest `cab1e72e…d53d`) and `v1.0.1` (tag on `6fa9ee5`, one asset of 87,224,165 bytes, digest `863500c6…e321`) are unchanged.
 
 Not checked: the downloaded asset. The owner has not accepted the release.
+
+## Addendum (2026-10-27, records catch-up)
+
+Commits of this work: version bump `70d38a1`, build record `b090533` (PR #21, merged 08:37:53 UTC as `350c3a2`), release record `8eb8497` (PR #22, merged by the owner at 08:42:07 UTC as `87eb7ff`; GitHub times). PR #22 was opened ready for review, not as a draft. The `main` that was released (`4600561`) had been checked on the PC just before ([EX-2026-10-27-25](2026-10-27-combined-test.md)). At 08:41:46 UTC the owner wrote "Delete" for the `%TEMP%\clf-*` test folders; the PC's auto mode blocked it and he was given a PowerShell command at 08:42:34 UTC; whether he ran it is not recorded.
