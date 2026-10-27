@@ -141,8 +141,7 @@ function UnlockCard({
                 {error}
                 {error.startsWith(BAD_CREDENTIALS) && (
                   <span className="mt-1 block text-xs text-muted">
-                    This is the Cipherleaf master password. The KeePassXC passwords file has its own password, which
-                    may be different.{keyfileRequired ? " The keyfile must be the exact file chosen when the vault was made." : ""}
+                    This is the Cipherleaf master password.{keyfileRequired ? " The keyfile must be the exact file chosen when the vault was made." : ""}
                   </span>
                 )}
               </motion.p>
@@ -349,7 +348,7 @@ function StartOverDialog({
             To get the old vault back later, use "Restore from a backup…", choose that file and enter its old master
             password (and keyfile).
           </li>
-          <li>The KeePassXC passwords file is not touched and keeps its own password.</li>
+          <li>Other files in the data folder are not touched.</li>
         </ul>
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-faint">Type START OVER to confirm</span>

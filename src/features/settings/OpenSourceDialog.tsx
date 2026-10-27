@@ -32,11 +32,6 @@ export default function OpenSourceDialog({ open, onOpenChange }: { open: boolean
       <div className="space-y-3 text-sm leading-relaxed">
         <ul className="list-disc space-y-1 pl-5 text-muted">
           <li>
-            Passwords are kept by <span className="text-fg">KeePassXC 2.8.0</span> (GPL-2.0 or GPL-3.0), bundled unmodified
-            as a separate program. Its license text and source are in the <span className="font-mono text-xs">Licenses</span>{" "}
-            folder next to Cipherleaf.exe.
-          </li>
-          <li>
             The app is built with Tauri, Rust crates and npm packages (React, TipTap, ProseMirror, KaTeX and others),
             and fonts under the SIL Open Font License.
           </li>

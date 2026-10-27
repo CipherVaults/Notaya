@@ -27,7 +27,6 @@ export default function SettingsView() {
   const [licensesOpen, setLicensesOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
-  const [restorePasswordsOpen, setRestorePasswordsOpen] = useState(false);
   const [enableOpen, setEnableOpen] = useState(false);
   const [disableOpen, setDisableOpen] = useState(false);
   const securityOn = status?.securityOn ?? false;
@@ -230,32 +229,11 @@ export default function SettingsView() {
           )}
         </Section>
 
-        <Section icon={<KeyRound size={16} />} title="Passwords with KeePassXC (optional)">
-          <Row
-            label="Passwords"
-            hint="Adds a Passwords page that shows the bundled KeePassXC inside this window. It has its own master password and works with or without Cipherleaf's security. Cipherleaf never sees that password."
-          >
-            <Switch
-              checked={settings.passwordsEnabled === true}
-              label="Passwords with KeePassXC"
-              onChange={async (v) => {
-                try {
-                  setSettings(await api.setPasswordsEnabled(v));
-                  if (!v && useApp.getState().view === "passwords") useApp.getState().setView("settings");
-                } catch (e) {
-                  toast.error(errorText(e));
-                }
-              }}
-            />
-          </Row>
-        </Section>
-
         <Section icon={<Archive size={16} />} title="Backups">
           <p className="pb-3 text-sm leading-relaxed text-muted">
             Each time Cipherleaf locks or closes after changes, a backup is saved to <code className="font-mono text-xs">data\backups</code> (the last 10 are kept).
             Backups open with the password and keyfile they had when they were made; a backup made while security was off needs no password.
             Restoring puts a backup in place of your current vault, and keeps the current vault as a separate file.
-            {settings.passwordsEnabled === true && " Your KeePassXC passwords file is also backed up automatically when the vault locks (the last 10 are kept)."}
           </p>
           <div className="flex flex-wrap gap-2 pb-2">
             <Button
@@ -275,11 +253,6 @@ export default function SettingsView() {
             <Button variant="outline" size="sm" onClick={() => setRestoreOpen(true)}>
               <RotateCcw size={14} /> Restore from a backup…
             </Button>
-            {settings.passwordsEnabled === true && (
-              <Button variant="outline" size="sm" onClick={() => setRestorePasswordsOpen(true)}>
-                <KeyRound size={14} /> Restore passwords file…
-              </Button>
-            )}
             <Button variant="ghost" size="sm" onClick={() => api.openDataFolder()}>
               <FolderOpen size={14} /> Open data folder
             </Button>
@@ -302,8 +275,6 @@ export default function SettingsView() {
             <dd>{securityOn ? "Argon2id · 256 MiB · 3 passes · 4 lanes, + HKDF-SHA256 with optional keyfile" : "None while security is off: the notes use a built-in key, so they are not secret"}</dd>
             <dt className="text-faint">Network</dt>
             <dd>Cipherleaf's own code makes none. The Windows WebView2 component that draws the window may contact Microsoft at startup.</dd>
-            <dt className="text-faint">Passwords</dt>
-            <dd>Optional. Kept in the bundled KeePassXC 2.8.0 (GPL), which has its own master password and settings</dd>
             <dt className="text-faint">Credits</dt>
             <dd>
               Built on open source software.{" "}
@@ -317,7 +288,7 @@ export default function SettingsView() {
             <ul className="list-disc space-y-1 pl-5">
               <li>With security on, there is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
-              <li>Cipherleaf's screenshot blocking and lock-when-unplugged don't cover KeePassXC's window. KeePassXC has its own protections.</li>
+              <li>Cipherleaf no longer includes KeePassXC. A passwords file made with an earlier version (a .kdbx file in the data folder, and its copies in data\backups) is left as it is and still opens in KeePassXC itself.</li>
               <li>Equations are drawn by KaTeX 0.19.0 (MIT licence, fonts under the SIL Open Font License), running on this device only.</li>
             </ul>
           </div>
@@ -329,7 +300,6 @@ export default function SettingsView() {
       <EnableSecurityDialog open={enableOpen} onOpenChange={setEnableOpen} />
       <DisableSecurityDialog open={disableOpen} onOpenChange={setDisableOpen} keyfileUsed={status?.keyfileRequired ?? false} />
       <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists />
-      <RestoreDialog open={restorePasswordsOpen} onOpenChange={setRestorePasswordsOpen} vaultExists mode="passwords" />
     </div>
   );
 }

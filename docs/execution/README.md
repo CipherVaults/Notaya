@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), EX-2026-10-27-23: KeePassXC removed (A24)
+
+- Report: [2026-10-27-keepassxc-removed.md](2026-10-27-keepassxc-removed.md)
+- Task / Goal: remove KeePassXC from Cipherleaf entirely (code, UI, settings switch, docs, notices, test scripts), keeping notes and the optional security layer
+- Executor: Claude (Claude Code) with a documentation agent and an independent review agent (model output)
+- Outcome: implemented; `tsc`, UI build and 124 of 124 Rust tests (Windows GNU target under Wine) pass in the cloud; not yet run on the owner's PC
+- Acceptance: pending (the owner has not reviewed it)
+- Open dependency / next action: the owner reviews and merges the draft PR; a PC pass on throwaway data before the next release
+
 ### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
 
 - Report: [2026-10-24-v1-0-1-portable-build.md](2026-10-24-v1-0-1-portable-build.md)

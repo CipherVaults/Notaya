@@ -8,18 +8,16 @@ import { useApp, type View } from "@/store/app";
 import CommandPalette from "./CommandPalette";
 import Sidebar from "./Sidebar";
 import NotesView from "@/features/notes/NotesView";
-import KeePassXCPanel from "@/features/passwords/KeePassXCPanel";
 import StickyBoard from "@/features/sticky/StickyBoard";
 import SettingsView from "@/features/settings/SettingsView";
 
-const SHORTCUTS: Record<string, View> = { "1": "notes", "2": "passwords", "3": "stickies" };
+const SHORTCUTS: Record<string, View> = { "1": "notes", "3": "stickies" };
 
 export default function Shell() {
   const view = useApp((s) => s.view);
   const setView = useApp((s) => s.setView);
   const settings = useApp((s) => s.settings);
   const securityOn = useApp((s) => s.status?.securityOn ?? false);
-  const passwordsOn = useApp((s) => s.settings?.passwordsEnabled === true);
   const loadVault = useApp((s) => s.loadVault);
   const setPaletteOpen = useApp((s) => s.setPaletteOpen);
   const sidebarOpen = useApp((s) => s.sidebarOpen);
@@ -54,17 +52,12 @@ export default function Shell() {
         setSidebarOpen(!useApp.getState().sidebarOpen);
       } else if (SHORTCUTS[k]) {
         e.preventDefault();
-        if (SHORTCUTS[k] !== "passwords" || passwordsOn) setView(SHORTCUTS[k]);
+        setView(SHORTCUTS[k]);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setPaletteOpen, setView, setSidebarOpen, securityOn, passwordsOn]);
-
-  // The Passwords page exists only while that feature is switched on.
-  useEffect(() => {
-    if (settings && !passwordsOn && view === "passwords") setView("notes");
-  }, [settings, passwordsOn, view, setView]);
+  }, [setPaletteOpen, setView, setSidebarOpen, securityOn]);
 
   if (!ready) {
     return (
@@ -89,7 +82,6 @@ export default function Shell() {
             transition={{ duration: 0.14, ease: "easeOut" }}
           >
             {view === "notes" && <NotesView />}
-            {view === "passwords" && passwordsOn && <KeePassXCPanel />}
             {view === "stickies" && <StickyBoard />}
             {view === "settings" && <SettingsView />}
           </motion.div>

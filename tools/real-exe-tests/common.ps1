@@ -3,7 +3,6 @@
 # Purpose : one place for the safety-relevant helpers: a fresh random throwaway passphrase,
 #           a check that the debug port is free, and "stop only the Cipherleaf I started".
 # Usage   : . (Join-Path $PSScriptRoot 'common.ps1')          # from run-*.ps1 in this folder
-#           . (Join-Path $PSScriptRoot '..\common.ps1')       # from the passwords\ folder
 # Needs   : Windows PowerShell 5.1. Nothing is installed or changed outside $env:TEMP.
 
 $script:WordList = @(

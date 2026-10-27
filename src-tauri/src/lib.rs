@@ -1,14 +1,11 @@
 mod backup;
 mod commands;
 mod crypto;
-mod embed;
 mod error;
 mod generator;
-mod keepassxc;
 mod model;
 mod openvault;
 mod portable;
-mod pwbackup;
 mod restore;
 mod state;
 mod system;
@@ -19,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, keepassxc as keepassxc_cmd, notes, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, notes, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -97,10 +94,6 @@ pub fn run() {
                 window.app_handle().state::<state::AppState>().unmark_ready(window.label());
             }
             if window.label() == "main" {
-                // Keep the embedded KeePassXC glued to the Passwords area (amendment A10).
-                if matches!(event, tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_)) {
-                    embed::follow();
-                }
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     // Don't close yet: the windows must save their edits first, and that
                     // needs this (event-loop) thread to stay free. Finish on another thread.
@@ -108,9 +101,8 @@ pub fn run() {
                     if !CLOSING.swap(true, Ordering::SeqCst) {
                         let app = window.app_handle().clone();
                         std::thread::spawn(move || {
-                            // Locks, asks KeePassXC to close, and exits. If KeePassXC is still
-                            // open (it may be asking to save), or anything panics, the app stays
-                            // open and the next close request may try again (see the guard).
+                            // Locks and exits. If this thread panics before the exit, the app
+                            // stays open and the next close request may try again (see the guard).
                             let mut guard = ClosingGuard { exiting: false };
                             guard.exiting = state::quit(&app);
                         });
@@ -123,7 +115,6 @@ pub fn run() {
             vault_cmd::start_notes,
             vault_cmd::enable_security,
             vault_cmd::disable_security,
-            vault_cmd::set_passwords_enabled,
             vault_cmd::unlock_vault,
             vault_cmd::lock_vault,
             vault_cmd::change_master,
@@ -142,9 +133,6 @@ pub fn run() {
             backup_cmd::pick_backup_file,
             backup_cmd::restore_vault,
             backup_cmd::start_over,
-            backup_cmd::list_password_backups,
-            backup_cmd::pick_passwords_backup_file,
-            backup_cmd::restore_passwords,
             notes::list_notes,
             notes::create_notebook,
             notes::update_notebook,
@@ -174,13 +162,6 @@ pub fn run() {
             stickies::open_sticky,
             stickies::close_sticky,
             stickies::delete_sticky,
-            keepassxc_cmd::keepassxc_status,
-            keepassxc_cmd::keepassxc_open,
-            keepassxc_cmd::keepassxc_embed,
-            keepassxc_cmd::keepassxc_place,
-            keepassxc_cmd::keepassxc_hide,
-            keepassxc_cmd::keepassxc_detach,
-            keepassxc_cmd::keepassxc_lock,
             tools::password_strength,
             tools::open_url,
             tools::search,

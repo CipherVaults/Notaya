@@ -19,18 +19,16 @@ dist-ssr
 release
 
 # Secrets and exports that must never be committed
-# (*.csv covers browser password exports used for import)
+# (*.csv covers browser password exports used for import; *.kdbx covers
+# passwords files made by earlier versions)
 .env
 .env.*
 *.pem
 *.pfx
 *.p12
 *.csv
+*.kdbx
 /data/
-
-# Third-party binaries (KeePassXC); only the manifest is committed
-/vendor/*
-!/vendor/keepassxc-manifest.md
 
 # Editor directories and files
 .vscode/*

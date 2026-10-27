@@ -28,7 +28,7 @@ export default function App() {
       // Storage may be unavailable; nothing to show then.
     }
 
-    // A message the backend wants shown once (for example after Quit was cancelled, or a backup failed).
+    // A message the backend wants shown once (for example after a backup failed).
     // A failed backup is shown as an error; the other messages are information.
     const showNotice = () =>
       api

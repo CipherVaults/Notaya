@@ -213,7 +213,6 @@ export function DisableSecurityDialog({
             <li>Anyone who can open this folder, or copy the notes file, will be able to read your notes.</li>
             <li>Nothing locks automatically any more, and screenshots are no longer blocked.</li>
             <li>Earlier backups keep the password they were made with. New backups will have no password.</li>
-            <li>Your KeePassXC passwords file is not changed. It keeps its own master password.</li>
           </ul>
         </div>
         <PasswordInput value={current} onChange={setCurrent} placeholder="Current master password" autoFocus onEnter={submit} />

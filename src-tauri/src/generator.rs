@@ -1,5 +1,4 @@
 //! Master-password strength estimate.
-//! Generating passwords for logins is KeePassXC's job (amendment A9).
 
 use serde::Serialize;
 
