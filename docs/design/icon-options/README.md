@@ -6,7 +6,7 @@
 - 13:31:51 "Okay let's design some new icons give me choices and new names"
 - 13:32:44 "Cause you know something has been changed"
 - 13:46:09 "I don't need leaf" (after round 1). No leaf in any later icon or name.
-- 15:03:34 "something related like everything in one place" (names). Round 4 names below answer it.
+- 15:03:34 "something related like everything in one place" and 15:05:29 "Another give me 10 names". Rounds 4 and 5 below answer them.
 - 13:50:08 "New set 9 icons" and 13:50:37 "And names that no company has it ot trademark" (after round 2). Round 3 below answers both.
 
 ## Decisions so far (owner's picks, 2026-10-27, times from the project transcript, UTC)
@@ -16,7 +16,30 @@
 - **Name:** not chosen yet.
 - **Build:** not started. It waits until the owner picks a name and says go.
 
-## Round 4 names: "everything in one place" (current)
+## Round 5 names: 10 more, "everything in one place" (current)
+
+**Asked:** "Another give me 10 names" (Mohamed, 2026-10-27 15:05:29 UTC, from the project transcript). None of these repeats an earlier round. They were screened the same way as round 4: a web search for each exact name, looking for apps, companies and trademark listings. This is best effort and not legal clearance, and the official USPTO, EUIPO and WIPO databases were not reachable.
+
+**All 10 passed the screen (no app, company or trademark with this exact name found):**
+
+| Name | Why | Screen notes |
+|---|---|---|
+| **Onedrawer** | Everything in one drawer: notes, stickies, calculators. | No match (only the generic "app drawer"). |
+| **Everynook** | A nook for every kind of note, all in one app. | No match. |
+| **Onecove** | One sheltered cove where everything is kept. | No match. |
+| **Pocketcove** | A small cove you carry with you (the portable ZIP). | No match. |
+| **Wholenook** | The whole lot, in one nook. | No match (a place called Woolenook in Australia). |
+| **Holdnook** | A nook that holds it all. | No match. |
+| **Kithaven** | A safe haven for your whole kit. | No match. |
+| **Allroost** | Everything comes home to roost in one place. | No match (an unrelated UK company, "Allro Limited"). |
+| **Allburrow** | One cosy burrow for all of it. | No match. |
+| **Snugstash** | A snug stash for everything. | No exact match; "Snugpak" (outdoor gear) is a similar-sounding brand. |
+
+**Checked and dropped this round:** Allcove (the "Alcove" apps), Covepad ("Cove" apps and backup software), Allnest (an app called "Allnest" with documents, calculators and a vault already exists), Nestpad (Google Nest), Onecrate and Allcrate ("Crate" apps), Bundlepad (Vic Firth and Zildjian "Bundle Pad" products), Tuckpad ("Tucks" pads), Homebin (HomeBinder), Onehold (OneHome and AppHold apps), Onelodge (hotels called "One Lodge"), Onetrove and Trovepad ("Trove" and TaskTrove), Allharbor ("Harbor" apps).
+
+**Recommendation (round 5):** **Onedrawer**. It is the plainest way to say "everything in one place", and it is easy to say and to spell. Runner-up: **Everynook**. Onenook from round 4 is still my overall favourite for its cosy feel.
+
+## Round 4 names: "everything in one place"
 
 **Asked:** "So about the names. What about something related like everything in one place. Suggest" (Mohamed, 2026-10-27 15:03:34 UTC, from the project transcript). The idea: notes, sticky notes, calculators and the optional lock all in one app.
 
