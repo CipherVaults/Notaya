@@ -11,7 +11,7 @@
 //! An "open" vault (security off, amendment A21) has the open flag set in `flags`.
 //! Its data key is wrapped under a built-in, public password, so the file is still
 //! in the encrypted, tamper-checked format but is NOT secret: anyone with the file
-//! and a copy of Cipherleaf can read it. Turning security on or off, and changing the
+//! and a copy of Notaya can read it. Turning security on or off, and changing the
 //! master password or keyfile, re-key the vault (a fresh data key and vault id, see
 //! `Session::rekey`): a header is never re-wrapped around the old data key, because
 //! an older header and its password would then still open data written later.
@@ -27,7 +27,8 @@ const FLAG_KEYFILE: u8 = 0b0000_0001;
 const FLAG_OPEN: u8 = 0b0000_0010;
 
 /// The built-in password of an open vault. It is public on purpose: an open vault
-/// is not confidential (see the module comment).
+/// is not confidential (see the module comment). It keeps the old app name on purpose:
+/// changing it would stop every open vault made so far from opening (A28).
 pub const OPEN_PASSWORD: &str = "cipherleaf-open-vault-security-off";
 
 /// Cheap key stretching for an open vault: there is no secret to guess, so
@@ -162,7 +163,7 @@ impl Header {
         let version = u16::from_le_bytes([b[4], b[5]]);
         if version != FORMAT_VERSION {
             return Err(Error::invalid(
-                "This vault was made by a newer version of Cipherleaf.",
+                "This vault was made by a newer version of Notaya.",
             ));
         }
         let kdf = KdfParams { m_kib: u32_at(6), t: u32_at(10), p: u32_at(14) };

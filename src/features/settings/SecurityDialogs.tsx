@@ -39,7 +39,7 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
       return;
     }
     const t = setTimeout(async () => {
-      const s = await api.passwordStrength(password, ["cipherleaf"]);
+      const s = await api.passwordStrength(password, ["cipherleaf", "notaya"]);
       if (id === seq.current) setStrength(s);
     }, 120);
     return () => clearTimeout(t);
@@ -203,7 +203,7 @@ export function DisableSecurityDialog({
         onOpenChange(o);
       }}
       title="Turn off security"
-      description="Your notes are kept, with a new key (this takes a moment). Cipherleaf will then open them without asking for a password."
+      description="Your notes are kept, with a new key (this takes a moment). Notaya will then open them without asking for a password."
       width={500}
     >
       <div className="space-y-4">

@@ -7,7 +7,7 @@ use serde::{Serialize, Serializer};
 pub enum Error {
     #[error("The vault is locked.")]
     Locked,
-    #[error("Wrong master password or keyfile for this Cipherleaf vault.")]
+    #[error("Wrong master password or keyfile for this Notaya vault.")]
     BadCredentials,
     #[error("The vault file is damaged or has been tampered with.")]
     Corrupt,

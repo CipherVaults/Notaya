@@ -1,6 +1,6 @@
 # Mock screenshots
 
-`shot.mjs` saves a PNG of the Cipherleaf **mock UI** (fake data in a plain browser, `npm run mock`). `act.mjs` does the same with a list of scripted clicks, keys and screenshots. They never touch the real app or a vault. Development use only.
+`shot.mjs` saves a PNG of the Notaya **mock UI** (fake data in a plain browser, `npm run mock`). `act.mjs` does the same with a list of scripted clicks, keys and screenshots. They never touch the real app or a vault. Development use only.
 
 ## Run
 
