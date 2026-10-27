@@ -45,3 +45,15 @@ Several attempts were needed, so the order is recorded:
 - The owner's PowerShell permission: `C:\Users\moham\.claude\settings.json` now allows all of PowerShell for Claude on that PC (his choice, 20:00:02 and 20:08:44 UTC). The owner rules in `CLAUDE.md` still apply. Remove it when he no longer wants it.
 - The owner ran a command at about 22:10 UTC that removed the old test worktrees and every `%TEMP%\clf-*` folder (his pasted output ends with a count of 0). That answers STATUS question 21.
 - Nothing is accepted.
+
+## Addendum: the release (2026-10-27 22:28:04 UTC)
+
+The owner merged [PR #30](https://github.com/AbyssWatcher2/CipherLeaf/pull/30) with a merge commit at about 22:26 UTC (GitHub; `main` `4e40d1a`, parents `49cd9de` and `f7ce9c5`). The build commit `e25f804` is in `main`'s history (checked with `git merge-base --is-ancestor`). His PC copy `E:\Project\cipherleaf` was fast-forwarded `49cd9de` to `4e40d1a` and equals `origin/main` (22:27:26 UTC, PC clock; `git status` only `?? vendor/`, `package.json` says 1.2.0). He then ran the `gh release create` command in his own terminal and wrote "Done" at 22:28:11 UTC (message timestamp). Checked through the GitHub API (after 22:28 UTC); the asset was not downloaded and re-hashed:
+
+- [Release v1.2.0](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.2.0), "Notaya V1.2.0", published 22:28:04 UTC, not a draft, not a prerelease, and the latest release (`releases/latest` returns `v1.2.0`).
+- Tag `v1.2.0` points at `e25f80411b5a652b93db02faadc05ddb649d359c`, the commit the exe was built from.
+- One asset, `Notaya-V1.2.0-portable.zip`, 5,915,148 bytes, GitHub digest `sha256:a7fdd82201315c95244f72e20069c4b794a0ea7d920c496723b83e40e41cc77d`, equal to the built ZIP's size and SHA-256.
+- The release text is the prepared notes with the commit and both hashes filled in (read back from the API; the PC file itself was not compared byte for byte).
+- Releases `v1.0` (tag on `0ed3f52`, asset 87,186,510 bytes, digest `cab1e72e…d53d`), `v1.0.1` (tag on `6fa9ee5`, asset 87,224,165 bytes, digest `863500c6…e321`) and `v1.1.0` are unchanged.
+
+Not checked: the downloaded asset. The owner has not accepted the release. Still open: the PowerShell allow rule in `C:\Users\moham\.claude\settings.json` (his choice; remove it when he wants), and whether an Administrator shell really was the cause of his failed 22:10 runs.

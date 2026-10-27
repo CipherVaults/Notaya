@@ -6,6 +6,23 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 19:40:47 to 22:28:11 UTC; work 19:41 to about 22:30 UTC, system clock and PC clock), Notaya: release V1.2.0, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests ran in Remote Control sessions on the owner's PC. **Record basis:** the thread messages (UTC timestamps), the PC sessions' reports, the GitHub API, the repository at `main` `49cd9de` then `4e40d1a`. **Reconstructed:** nothing; written at the end. **Big stop:** a release.
+
+## What happened
+
+1. At 19:40:47 the owner wrote "Release one" right after merging PR #24. Claude proposed V1.2.0 "Notaya", bumped the five version files (`7e84cdc`) and had the PC build it. When main moved (records PR #29, `49cd9de`), the branch was merged with main (`e25f804`) and the build redone from it; the first build was discarded.
+2. Build and unit tests passed (129 of 129, `npm audit` 0). The real-exe runners were then blocked three times by the PC session's automatic permission check, even after a decision card (19:56:25) and after the owner saved a full PowerShell allow rule (20:08:44). He ran the runners himself at 22:10 from an Administrator shell; they found no window, so no check ran. A fresh non-elevated PC session then ran them: restore 13 PASS, lock flow ok, optional security 47 of 47, and a throwaway Cipherleaf 1.1.0 vault opened unchanged in the shipped `Notaya.exe`.
+3. Understanding changed: a test script that cannot find the window is "not run", not a failure of the app, and an automatic permission layer on the PC session is separate from the owner's settings file. The elevated shell is the probable cause of the 22:10 failure but is unproven.
+4. PR #30 (bump and records) was merged by the owner with a merge commit; the PC copy was fast-forwarded to `4e40d1a`; he published `v1.2.0` at 22:28:04 and it was verified on GitHub (tag, one asset, digest equal).
+
+## Where to resume
+
+Nothing is accepted. Open for the owner: acceptance of V1.2.0 (and earlier releases), the PowerShell allow rule he saved (remove when he wants), STATUS questions 11, 19, 20 (not-tested upgrade of a real V1.0.1 data folder) and 25 (a fix release). Not run for V1.2.0: `cargo audit`, a password-vault migration, lock events. Details: [EX-2026-10-27-31](execution/2026-10-27-notaya-v1-2-0-portable-build.md).
+
+---
+
 # 📘 Session: 2026-10-27 (owner's messages 16:29:35 to 19:08:33 UTC; work 16:30 to about 19:45 UTC, system clock), Cipherleaf: PBS review, then adoption in its smallest form, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC timestamps), the Notion hub and every page and file that could be opened, the repository at `main` `5013244`. **Reconstructed:** nothing; written at the end of the work. **Big stop:** a change of direction (a new way of working), so this entry has the fuller form.
