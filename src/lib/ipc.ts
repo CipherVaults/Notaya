@@ -7,6 +7,8 @@ import type {
   BackupInfo,
   CalcEntry,
   EnableSecurityResult,
+  ExportRequest,
+  ExportSummary,
   ImportSummary,
   NotesTree,
   Page,
@@ -100,6 +102,8 @@ export const api = {
   deletePage: (id: string) => invoke<NotesTree>("delete_page", { id }),
   emptyTrash: () => invoke<NotesTree>("empty_trash"),
   addAttachment: (bytes: Uint8Array) => invoke<string>("add_attachment", bytes),
+  // Export: the backend asks where to save (resolves to null if cancelled) and writes an unencrypted file
+  exportNotes: (request: ExportRequest) => invoke<ExportSummary | null>("export_notes", { request }),
 
   // Sticky notes
   listStickies: () => invoke<Sticky[]>("list_stickies"),

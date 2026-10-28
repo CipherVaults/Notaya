@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
-import { Check, ChevronRight, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Download, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush, trackSave } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
@@ -15,6 +15,7 @@ import SlashMenu, { type SlashController } from "./editor/SlashMenu";
 import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
 import { PageCover, PageIconAndActions } from "./PageHeader";
+import { openExport } from "./ExportDialog";
 
 type SaveState = "saved" | "saving" | "error";
 
@@ -264,6 +265,9 @@ function LoadedEditor({ page }: { page: Page }) {
                     );
                   })}
                 <MenuSeparator />
+                <MenuItem icon={<Download size={15} />} onSelect={() => openExport("page", page.id)}>
+                  Export…
+                </MenuItem>
                 <MenuItem danger icon={<Trash2 size={15} />} onSelect={trash}>
                   Move to trash
                 </MenuItem>

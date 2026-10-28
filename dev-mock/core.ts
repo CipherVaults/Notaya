@@ -244,6 +244,22 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "clear_calc_history":
       calcHistory.length = 0;
       return ok(null);
+    // The real app opens a save dialog and writes the file; here it pretends the file was saved.
+    case "export_notes": {
+      const req = args.request as { scope: string; ids: string[]; format: string; includeSubpages: boolean };
+      await new Promise((r) => setTimeout(r, 400));
+      const ext = req.format === "docx" ? "docx" : req.format === "pdf" ? "pdf" : "md";
+      const pages = req.scope === "pages" ? req.ids.length : tree.pages.filter((p) => p.trashedAt === null).length;
+      return ok({
+        path: `C:\\Users\\you\\Documents\\Notaya export.${ext}`,
+        pages,
+        images: 1,
+        missingImages: 0,
+        imagesLeftOut: 0,
+        charsReplaced: req.format === "pdf" ? 2 : 0,
+        assetsFolder: ext === "md" ? "C:\\Users\\you\\Documents\\Notaya export.assets" : null,
+      });
+    }
     case "password_strength": {
       const len = String(args.password ?? "").length;
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;

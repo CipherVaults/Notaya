@@ -163,6 +163,31 @@ export interface Strength {
   suggestions: string[];
 }
 
+export type ExportFormat = "markdown" | "pdf" | "docx";
+
+/** What to export. The backend opens the save dialog and writes the file itself. */
+export interface ExportRequest {
+  scope: "pages" | "section" | "notebook";
+  ids: string[];
+  format: ExportFormat;
+  includeSubpages: boolean;
+}
+
+/** What an export wrote (mirrors `ExportSummary` in src-tauri/src/export/mod.rs). */
+export interface ExportSummary {
+  path: string;
+  pages: number;
+  images: number;
+  /** Pictures that could not be read from the vault. */
+  missingImages: number;
+  /** Pictures the PDF could not hold (GIF, WebP). */
+  imagesLeftOut: number;
+  /** Characters the PDF fonts do not have. */
+  charsReplaced: number;
+  /** Markdown: the folder the pictures went to. */
+  assetsFolder: string | null;
+}
+
 export interface SearchHit {
   kind: "page" | "sticky" | "notebook";
   id: string;

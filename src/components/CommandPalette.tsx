@@ -3,6 +3,7 @@ import { Command } from "cmdk";
 import { Dialog } from "radix-ui";
 import {
   BookOpen,
+  Download,
   FilePlus2,
   FileText,
   Lock,
@@ -15,6 +16,7 @@ import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { SearchHit } from "@/lib/types";
 import { useApp } from "@/store/app";
+import { openExport } from "@/features/notes/ExportDialog";
 
 export default function CommandPalette() {
   const open = useApp((s) => s.paletteOpen);
@@ -120,6 +122,19 @@ export default function CommandPalette() {
                   <Action icon={<StickyNote size={16} />} label="New sticky note" onSelect={() => run(async () => { await api.createSticky(true); useApp.getState().setStickies(await api.listStickies()); })} className={itemClass} />
                   <Action icon={<NotebookPen size={16} />} label="Go to Notes" onSelect={() => run(() => useApp.getState().setView("notes"))} className={itemClass} />
                   <Action icon={<Palette size={16} />} label="Appearance & settings" onSelect={() => run(() => useApp.getState().setView("settings"))} className={itemClass} />
+                  <Action
+                    icon={<Download size={16} />}
+                    label="Export…"
+                    onSelect={() =>
+                      run(() => {
+                        const s = useApp.getState();
+                        if (s.activePageId) openExport("page", s.activePageId);
+                        else if (s.activeNotebookId) openExport("notebook", s.activeNotebookId);
+                        else toast("Open a page or a notebook to export it.");
+                      })
+                    }
+                    className={itemClass}
+                  />
                   <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Backup saved."); })} className={itemClass} />
                   {securityOn && (
                     <Action icon={<Lock size={16} />} label="Lock vault" hint="Ctrl L" onSelect={() => run(() => api.lockVault())} className={itemClass} />

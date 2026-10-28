@@ -171,6 +171,8 @@ export function Segmented<T extends string>({
       {options.map((o) => (
         <button
           key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
             "relative rounded-md px-3 py-1 text-sm transition-colors",

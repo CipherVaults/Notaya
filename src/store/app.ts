@@ -8,6 +8,15 @@ export type View = "notes" | "stickies" | "settings";
 /** A one-shot request for a view to do something once it is shown (e.g. from the command palette). */
 export type Intent = "new-page" | "new-notebook" | null;
 
+/** Where "Export…" was chosen: the dialog offers this page, its section and its notebook. */
+export interface ExportTarget {
+  notebookId: string;
+  sectionId?: string;
+  pageId?: string;
+  /** What the dialog starts with. */
+  initial: "page" | "section" | "notebook";
+}
+
 interface AppState {
   status: VaultStatus | null;
   settings: Settings | null;
@@ -22,8 +31,11 @@ interface AppState {
   intent: Intent;
   sidebarOpen: boolean;
   sidebarWidth: number;
+  exportTarget: ExportTarget | null;
 
   setIntent: (i: Intent) => void;
+  /** Opens the export dialog (null closes it). */
+  setExportTarget: (t: ExportTarget | null) => void;
   setView: (v: View) => void;
   refreshStatus: () => Promise<VaultStatus>;
   loadVault: () => Promise<void>;
@@ -73,8 +85,10 @@ export const useApp = create<AppState>((set, get) => ({
   intent: null,
   sidebarOpen: layout().open,
   sidebarWidth: layout().width,
+  exportTarget: null,
 
   setIntent: (intent) => set({ intent }),
+  setExportTarget: (exportTarget) => set({ exportTarget }),
   setView: (view) => set({ view }),
 
   refreshStatus: async () => {

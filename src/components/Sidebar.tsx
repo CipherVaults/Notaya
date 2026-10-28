@@ -12,6 +12,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronRight,
+  Download,
   FilePlus2,
   FileText,
   Home,
@@ -32,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "./ui";
 import NotebookDialog, { type NotebookDraft } from "@/features/notes/NotebookDialog";
+import { openExport } from "@/features/notes/ExportDialog";
 
 /** Runs a tree-changing command and reports whether it worked (a failure is shown as a toast). */
 type Run = (fn: () => Promise<NotesTree>) => Promise<boolean>;
@@ -313,6 +315,9 @@ export default function Sidebar() {
                             Move down
                           </MenuItem>
                         )}
+                        <MenuItem icon={<Download size={14} />} onSelect={() => openExport("notebook", nb.id)}>
+                          Export…
+                        </MenuItem>
                         <MenuSeparator />
                         <MenuItem
                           danger
@@ -846,6 +851,9 @@ function SectionBlock({
                   Move down
                 </MenuItem>
               )}
+              <MenuItem icon={<Download size={14} />} onSelect={() => openExport("section", section.id)}>
+                Export…
+              </MenuItem>
               <MenuSeparator />
               <MenuItem
                 danger
@@ -1046,6 +1054,9 @@ function PageItem({
               );
             })}
           <MenuSeparator />
+          <MenuItem icon={<Download size={14} />} onSelect={() => openExport("page", page.id)}>
+            Export…
+          </MenuItem>
           <MenuItem
             danger
             icon={<Trash2 size={14} />}
