@@ -39,6 +39,7 @@ Newest first. Later instructions narrow or pause the approved plan; they don't e
 
 | When (UTC) | Owner instruction | Effect |
 |---|---|---|
+| 2026-10-28 14:29:40 | "Just leave them now" (the two old `Notaya.lnk` shortcuts that cannot be deleted) | Leave them. The shortcut create/remove check stays not run; no further deletion attempt. |
 | 2026-10-28 14:04:13 | "Rerun everything again cause if there’s problems" | Rerun all PC checks from scratch in the new test folder. Done 14:06-14:27 UTC (see EX-2026-10-28-33). |
 | 2026-10-28 14:03:51 | "E:\Project\Notaya Tests Excluded" (the folder he made on E: and excluded from Bitdefender) | **Standing test rule for the PC:** every build, clone, throwaway vault and test install of Notaya runs only inside `E:\Project\Notaya Tests Excluded` (the path has spaces: quote it). Same rules as before: throwaway data only, never the real vault or window. No antivirus setting is changed by the agent. |
 | 2026-10-28 13:59:41 | "Okay i will do another folder in another partaion and you will do everything there from now on as tests or like that" | Moves the PC tests to a separate folder on another partition after Bitdefender removed test files in the temp folder. Names the folder at 14:03:51. |
