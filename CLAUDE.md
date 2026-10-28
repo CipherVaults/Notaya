@@ -48,7 +48,7 @@ Most work now runs in cloud threads of the Claude project, not in a PowerShell s
 - works on its own `claude/project-thread-*` branch from the latest `origin/main`, pushes it, opens a **draft** pull request and never merges (the owner merges; push and open PRs freely, but ask before a force-push, deleting branches, making the repository public or adding a licence);
 - has no PowerShell or Windows: it runs `tsc`, `npm run build`, `npm audit` and, for Rust, `cargo test --lib --target x86_64-pc-windows-gnu` under Wine (copy `WebView2Loader.dll` next to the test exe). It reports what it could not run as not run (the PC exe, the real-exe scripts, `cargo clippy` for MSVC);
 - tests the real app only through a Remote Control session on the PC, on throwaway data, following the rules above;
-- after the owner merges, the PC copy `E:\Project\cipherleaf` is fast-forwarded (`git pull --ff-only` on `main`) and checked to equal `origin/main`; never `git add -A` there (untracked `vendor\`).
+- after the owner merges, the PC copy `E:\Project\Notaya\Notaya` (moved there on 2026-10-28, [EX-2026-10-28-37](docs/execution/2026-10-28-v1-3-0-settings-text-rerelease.md)) is fast-forwarded (`git pull --ff-only` on `main`) and checked to equal `origin/main`; never `git add -A` there (untracked `vendor\`).
 
 ## PBS work cycle
 

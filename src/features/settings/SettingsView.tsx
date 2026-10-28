@@ -34,6 +34,7 @@ export default function SettingsView() {
   const [disableOpen, setDisableOpen] = useState(false);
   const securityOn = status?.securityOn ?? false;
   const [shell, setShell] = useState<ShellPrefs | null>(null);
+  const [shellBusy, setShellBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -45,7 +46,9 @@ export default function SettingsView() {
 
   // These switches are saved at once (next to the vault, not in the encrypted settings).
   const updateShell = async (patch: Partial<Pick<ShellPrefs, "closeToTray" | "startWithWindows" | "startMinimized">>) => {
-    if (!shell) return;
+    // One change at a time: a second switch pressed before the first is saved would send the old value of the first.
+    if (!shell || shellBusy) return;
+    setShellBusy(true);
     const next = {
       closeToTray: shell.closeToTray,
       startWithWindows: shell.startWithWindows,

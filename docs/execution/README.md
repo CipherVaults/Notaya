@@ -14,12 +14,12 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
-### 2026-10-28 (owner's messages 17:01:14 to 17:13:59 UTC), EX-2026-10-28-37: PC folder moved to `E:\Project\Notaya\Notaya`; two Settings lines removed for a re-release of V1.3.0
+### 2026-10-28 (owner's messages 17:01:14 to 17:42:06 UTC), EX-2026-10-28-37: PC folder moved to `E:\Project\Notaya\Notaya`; V1.4.0 (tray, start with Windows, uninstaller box, Settings text)
 
 - Report: [2026-10-28-v1-3-0-settings-text-rerelease.md](2026-10-28-v1-3-0-settings-text-rerelease.md)
-- Task / Goal: "remove and re release notaya v 1.3.0", after moving the project folder to `E:\Project\Notaya`
+- Task / Goal: "remove and re release notaya v 1.3.0" which became V1.4.0 ("sorry v1.4"); amendment [A31](../plan/A31-tray-and-start-with-windows.md)
 - Executor: Claude (Claude Code) in a cloud thread; the PC checks run through Remote Control
-- Outcome: produced (source change and records in a draft PR); verified: `tsc` and `npm run build` only; not yet built on the PC, not released
+- Outcome: produced (code and records in draft PR #39); verified in the cloud only (`tsc`, build, 151 Rust tests under Wine, one independent review with findings fixed); not yet built or tested on the PC, not released
 
 ### 2026-10-28 (owner's messages 16:24:57 to 16:43:19 UTC; work 16:27 to 16:45 UTC, PC system clock), EX-2026-10-28-36: test leftovers cleaned up on the PC
 

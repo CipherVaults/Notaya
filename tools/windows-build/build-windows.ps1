@@ -18,7 +18,7 @@
   No vault data, keys or test folders are ever copied. Nothing is published or committed.
 
 .EXAMPLE
-  .\tools\windows-build\build-windows.ps1 -OutDir E:\Project\Notaya-V1.3.0-2026-10-29
+  .\tools\windows-build\build-windows.ps1 -OutDir "E:\Project\Notaya\Notaya Tests Excluded\Notaya-V1.4.0"
 #>
 param(
   [Parameter(Mandatory = $true)][string]$OutDir

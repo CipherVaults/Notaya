@@ -49,7 +49,7 @@ Raised by the owner or by Claude since A12; the struck-through ones are answered
 
 ## Continuation (unaccepted work and how to resume)
 
-- **V1.3.0 re-release in progress (2026-10-28, owner 17:01:14 to 17:13:59 UTC; [EX-2026-10-28-37](execution/2026-10-28-v1-3-0-settings-text-rerelease.md)):** the PC copy is now `E:\Project\Notaya\Notaya` (checked 17:12 UTC: clean, = `origin/main` `42de167`). A draft PR removes two bullets from Settings ("Good to know"). Next permitted action: the owner merges the PR; Claude builds and tests on the PC in `E:\Project\Notaya\Notaya Tests Excluded`; deleting release `v1.3.0` and its tag and publishing the new files waits for the owner's yes. The published V1.3.0 (tag `f970331`) is unchanged until then.
+- **V1.4.0 in progress (2026-10-28, owner 17:01:14 to 17:42:06 UTC; [A31](plan/A31-tray-and-start-with-windows.md), [EX-2026-10-28-37](execution/2026-10-28-v1-3-0-settings-text-rerelease.md)):** the PC copy is now `E:\Project\Notaya\Notaya` (checked 17:12 UTC: clean, = `origin/main` `42de167`); the PC test folder is `E:\Project\Notaya\Notaya Tests Excluded`. Draft [PR #39](https://github.com/AbyssWatcher2/Notaya/pull/39): version 1.4.0, close to the tray (on by default; a vault with a master password is locked first), Settings > Windows (start with Windows, start minimized), the uninstaller's "Delete the application data" box removed, two Settings notes removed. **V1.3.0 stays published and is not deleted.** Verified in the cloud only. Next permitted action: the owner merges the PR; Claude builds and tests on the PC (incl. `tools/real-exe-tests/run-tray.ps1` and the uninstaller); the owner says "publish" for `v1.4.0`.
 
 ### Released and merged, not accepted (moved here from "Current state" on 2026-10-27 under PBS)
 

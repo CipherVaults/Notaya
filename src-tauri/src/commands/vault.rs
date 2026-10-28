@@ -268,7 +268,8 @@ pub fn unlock_vault(
     };
     match Session::unlock(&state.paths.vault, &password, kf.as_deref()) {
         Ok(session) => {
-            state.set_session(session);
+            // Refused (and the session wiped) if the window was closed to the tray meanwhile.
+            state.set_session_unless_hidden(session)?;
             after_unlock(&app, &state);
             Ok(())
         }
@@ -408,8 +409,9 @@ pub fn set_backdrop(window: WebviewWindow, kind: String, dark: bool) -> bool {
 #[tauri::command]
 pub fn window_ready(window: WebviewWindow, state: State<'_, AppState>) {
     state.mark_ready(window.label());
-    // Started hidden by Windows: the main window stays in the tray until it is opened from there.
-    if window.label() == "main" && state.take_start_hidden() {
+    // Hidden in the tray (by the close button, or started hidden by Windows): a reload after a
+    // lock must not bring the window back; opening it from the tray does.
+    if window.label() == "main" && state.tray_hidden() {
         return;
     }
     let _ = window.show();

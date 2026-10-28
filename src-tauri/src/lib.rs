@@ -89,7 +89,7 @@ pub fn run() {
                 Err(e) => eprintln!("no tray icon: {e}"),
             }
             if shell::started_minimized() && state.tray_ready() {
-                state.set_start_hidden(true);
+                state.set_tray_hidden(true);
             }
             state::spawn_monitor(app.handle().clone());
             Ok(())

@@ -79,8 +79,9 @@ pub fn run_command(exe: &Path, minimized: bool) -> String {
 /// starts another copy of Notaya does not count, so a copy never reports or removes another
 /// copy's entry.
 pub fn value_is_for(value: &str, exe: &Path) -> bool {
-    let value = value.trim();
-    value == run_command(exe, false) || value == run_command(exe, true)
+    // Windows paths are not case-sensitive, and the same exe can be reached as `C:\Users\A` or `c:\users\a`.
+    let value = value.trim().to_lowercase();
+    value == run_command(exe, false).to_lowercase() || value == run_command(exe, true).to_lowercase()
 }
 
 /// Whether Windows is set to start this exe at sign-in.
@@ -107,6 +108,7 @@ pub fn started_minimized() -> bool {
 
 /// Brings the main window to the front (from the tray, or from a second start).
 pub fn show_main(app: &AppHandle) {
+    app.state::<state::AppState>().set_tray_hidden(false);
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
         let _ = w.show();
@@ -311,6 +313,7 @@ mod tests {
         assert!(value_is_for(&run_command(here, false), here));
         assert!(value_is_for(&run_command(here, true), here));
         assert!(value_is_for(&format!("  {}  ", run_command(here, true)), here));
+        assert!(value_is_for(r#""c:\apps\notaya\NOTAYA.EXE" --minimized"#, here), "case does not matter");
         assert!(!value_is_for(&run_command(other, true), here));
         assert!(!value_is_for("", here));
         assert!(!value_is_for(r#""C:\Apps\Notaya\Notaya.exe" --other"#, here));

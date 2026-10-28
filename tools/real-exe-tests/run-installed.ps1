@@ -8,7 +8,7 @@
             (2) starts a copy WITH portable.txt and checks that it still keeps its notes in its own data
             folder, leaves the (temp) LOCALAPPDATA alone and refuses the import command.
   Usage   : powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-installed.ps1 `
-              -Exe E:\Project\cipherleaf\src-tauri\target\release\Notaya.exe
+              -Exe E:\Project\Notaya\Notaya\src-tauri\target\release\Notaya.exe
             -Exe is optional; the default is ..\..\src-tauri\target\release\Notaya.exe relative to this script.
   Needs   : Node 24 (global fetch and WebSocket), Windows PowerShell 5.1, WebView2.
   Safety  : never touches a real vault or the real %LOCALAPPDATA%: that variable is changed for the child
@@ -30,6 +30,10 @@ $prog = "$base\program"; $local = "$base\localappdata"
 $prog2 = "$base\portable"; $local2 = "$base\localappdata2"
 New-Item -ItemType Directory $prog, $local, $prog2, $local2 | Out-Null
 Copy-Item $Exe "$prog\Notaya.exe"                    # installed-style: no marker, no data folder
+# Since V1.4.0 the close button hides to the tray; this script closes the window to test the real quit path,
+# so the installed-style copy starts with "close to tray" off (its own notes folder, in the throwaway LOCALAPPDATA).
+New-Item -ItemType Directory -Force -Path "$local\Notaya Notes\data" | Out-Null
+[System.IO.File]::WriteAllText("$local\Notaya Notes\data\shell-prefs.json", '{"closeToTray":false,"startMinimized":true}')
 Copy-TestExe $Exe $prog2                             # portable-style: with portable.txt
 "exe sha256: " + (Get-FileHash "$prog\Notaya.exe" -Algorithm SHA256).Hash
 $realLocal = $env:LOCALAPPDATA
