@@ -14,6 +14,8 @@ export interface VaultStatus {
   headerOk: boolean;
   dataDir: string;
   version: string;
+  /** An installed Notaya with no notes yet: offer starting new notes or importing a portable copy. */
+  offerImport: boolean;
 }
 
 export interface EnableSecurityResult {
@@ -28,6 +30,12 @@ export interface BackupInfo {
   name: string;
   modifiedMs: number;
   size: number;
+}
+
+/** What "Import notes from a portable copy" did. */
+export interface ImportSummary {
+  backupsCopied: number;
+  backupsSkipped: number;
 }
 
 export interface RestoreResult {

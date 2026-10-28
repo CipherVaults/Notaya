@@ -34,6 +34,9 @@ pub struct VaultStatus {
     header_ok: bool,
     data_dir: String,
     version: String,
+    /// An installed Notaya with no notes yet: the first screen offers starting new notes and
+    /// importing the notes of a portable copy (also after a Start over, when earlier copies exist).
+    offer_import: bool,
 }
 
 /// Opens the vault by itself when it has security off, and on a first run creates one,
@@ -47,7 +50,9 @@ fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     }
     if !state.paths.vault.exists() {
         // Earlier copies without a vault look like lost notes: ask first, never start empty.
-        if openvault::has_earlier_copies(&state.paths) {
+        // An installed copy also asks on its first start, so the notes of a portable copy can
+        // be brought in before an empty vault takes their place.
+        if state.paths.installed || openvault::has_earlier_copies(&state.paths) {
             return None;
         }
         return create_open(app, state).err().map(|e| e.to_string());
@@ -96,16 +101,18 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
     } else {
         (false, false, true)
     };
+    let earlier_copies = !exists && openvault::has_earlier_copies(&state.paths);
     Ok(VaultStatus {
         exists,
         unlocked,
         keyfile_required,
         security_on,
-        earlier_copies: !exists && openvault::has_earlier_copies(&state.paths),
+        earlier_copies,
         open_error,
         header_ok,
         data_dir: state.paths.data.display().to_string(),
         version: app.package_info().version.to_string(),
+        offer_import: !exists && state.paths.installed,
     })
 }
 

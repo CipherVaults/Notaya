@@ -14,6 +14,24 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-28 (owner's messages 11:56:21 and 12:24:16 UTC; work 12:25 UTC on, system clock), EX-2026-10-28-33: Windows installer (A30), built in the cloud
+
+- Report: [2026-10-28-windows-installer.md](2026-10-28-windows-installer.md)
+- Task / Goal: "All recommendations" (the 10 installer decisions), then "Ok for all go now" (build it; OK for the NSIS download)
+- Executor: Claude (Claude Code) in a cloud thread; PC tests to follow in a Remote Control session
+- Outcome: per-user NSIS setup settings, `portable.txt` rule, import from a portable copy (copy only), build script and test runner; 145 Rust tests under Wine pass (16 new); the notes folder is `%LOCALAPPDATA%\Notaya Notes` (the program goes in `...\Notaya`)
+- Open dependency / next action: PC tests (build, setup install and uninstall in a temp folder, `run-installed.ps1`, the import dialog); the owner confirms the folder name; a release only on his word
+- Acceptance: pending
+
+### 2026-10-28 (owner's messages 11:19:57, 11:21:06 and 11:56:21 UTC; work 11:20 to about 12:00 UTC, system clock), EX-2026-10-28-32: Windows installer plan re-checked for Notaya
+
+- Report: [2026-10-28-installer-plan-recheck.md](2026-10-28-installer-plan-recheck.md)
+- Task / Goal: "Now continue the setup part"; "So we will do 2 things windows installer and portable version in the release"
+- Executor: Claude (Claude Code) in a cloud thread; docs only
+- Outcome: plan updated for Notaya V1.2.0 on `main` `a4574be`; all 10 decisions recorded as answered (recommended; installer and portable ZIP in every release); nothing built
+- Open dependency / next action: the owner says go; the NSIS tooling download needs his OK
+- Acceptance: pending
+
 ### 2026-10-27 (owner's message 19:40:47 UTC; work 19:41 to about 22:25 UTC, PC clock), EX-2026-10-27-31: Notaya V1.2.0 portable folder and ZIP
 
 - Report: [2026-10-27-notaya-v1-2-0-portable-build.md](2026-10-27-notaya-v1-2-0-portable-build.md)

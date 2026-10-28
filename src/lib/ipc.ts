@@ -7,6 +7,7 @@ import type {
   BackupInfo,
   CalcEntry,
   EnableSecurityResult,
+  ImportSummary,
   NotesTree,
   Page,
   PageMeta,
@@ -50,6 +51,9 @@ export const api = {
   pickBackupFile: () => invoke<string | null>("pick_backup_file"),
   restoreVault: (source: string, password: string, keyfile: string | null, allowSecurityOff = false) =>
     invoke<RestoreResult>("restore_vault", { source, password, keyfile, allowSecurityOff }),
+  // Installed Notaya, first screen: copy the notes of a portable copy (the folder is chosen in a
+  // dialog opened by the backend). Resolves to null if the dialog was cancelled.
+  importPortableNotes: () => invoke<ImportSummary | null>("import_portable_notes"),
   // Start over (only while locked): sets the vault aside and returns its new file name.
   startOver: () => invoke<string>("start_over"),
   // A message the backend wants shown once (for example after a backup failed)

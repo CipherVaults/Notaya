@@ -24,7 +24,7 @@ Assert-PortFree $port
 
 $dir = Join-Path $env:TEMP "clf-optsec-$(Get-Random)"
 New-Item -ItemType Directory $dir | Out-Null
-Copy-Item $Exe "$dir\Notaya.exe"
+Copy-TestExe $Exe $dir
 "exe sha256: " + (Get-FileHash "$dir\Notaya.exe" -Algorithm SHA256).Hash
 $pw = New-PassphraseFile
 $p = $null
