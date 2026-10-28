@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-28 (owner's messages 16:46:38 and 16:48:41 UTC; work 16:47 to about 17:00 UTC, system clock), EX-2026-10-28-35: GitHub repository renamed to Notaya
+
+- Report: [2026-10-28-github-repo-renamed.md](2026-10-28-github-repo-renamed.md)
+- Task / Goal: "Yes please rename" (the repository `AbyssWatcher2/CipherLeaf` becomes `AbyssWatcher2/Notaya`)
+- Executor: Claude (Claude Code) in a cloud thread; the rename itself was done by the owner in GitHub Settings (the cloud proxy blocks it)
+- Outcome: the new name is live; the old address redirects; no code and no old record link was rewritten
+- Integration / release: records PR only; no release
+- Open dependency / next action: the owner points his PC copy at the new address; the repository description and topics are his to paste
+- Acceptance: pending
+
 ### 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:37 to 16:05 UTC, PC and system clock), EX-2026-10-28-34: Notaya V1.3.0 (setup and portable ZIP)
 
 - Report: [2026-10-28-notaya-v1-3-0-release.md](2026-10-28-notaya-v1-3-0-release.md)
