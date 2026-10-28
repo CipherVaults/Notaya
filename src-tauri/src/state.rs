@@ -400,10 +400,11 @@ pub fn quit(app: &AppHandle) -> bool {
 /// open in the tray. With security off nothing is locked, but the windows still save their pending
 /// edits and a backup is made if anything changed (a vault with security off otherwise gets its
 /// ordinary backup only at quit, which may now be rare). Only then is the main window hidden. A
-/// failed backup is told in a message box (the window is hidden, so a toast would go unseen).
+/// failed backup is returned for the caller to tell in a message box (the window is hidden, so a toast would
+/// go unseen).
 ///
 /// Waits for the windows, so call it only from a thread other than the main one.
-pub fn hide_to_tray(app: &AppHandle) {
+pub fn hide_to_tray(app: &AppHandle) -> Option<String> {
     use std::panic::{catch_unwind, AssertUnwindSafe};
     let state = app.state::<AppState>();
     // Set first, under the gate: the lock below reloads the window and its "ready" must not show
@@ -423,12 +424,16 @@ pub fn hide_to_tray(app: &AppHandle) {
     }))
     .ok()
     .flatten();
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.hide();
+    // Hide only if nobody opened the window meanwhile (the tray's Open, or a second start). If hiding
+    // fails, the window stays and the flag is cleared, so it is not left half hidden.
+    if state.tray_hidden() {
+        if let Some(w) = app.get_webview_window("main") {
+            if w.hide().is_err() {
+                state.set_tray_hidden(false);
+            }
+        }
     }
-    if let Some(text) = backup_failure.filter(|_| state.paths.vault.exists()) {
-        let _ = catch_unwind(AssertUnwindSafe(|| show_backup_failure(app, &text)));
-    }
+    backup_failure.filter(|_| state.paths.vault.exists())
 }
 
 /// The ordinary backup of an open vault (security off) when something changed since the last
@@ -450,7 +455,7 @@ fn backup_open_vault(app: &AppHandle, state: &AppState) -> Option<String> {
 
 /// A native message box that waits until it is closed. Call it from a thread other than the
 /// main one (as `quit` is).
-fn show_backup_failure(app: &AppHandle, text: &str) {
+pub(crate) fn show_backup_failure(app: &AppHandle, text: &str) {
     use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
     let _ = app
         .dialog()
@@ -577,6 +582,10 @@ pub fn spawn_monitor(app: AppHandle) {
                     .unwrap_or(false)
             {
                 Some("minimized")
+            } else if state.tray_hidden() {
+                // A protected vault must not stay unlocked behind a hidden window, whatever opened it
+                // (a restore or turning security on that finished after the window was hidden).
+                Some("tray")
             } else {
                 None
             };

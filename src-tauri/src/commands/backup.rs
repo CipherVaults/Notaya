@@ -187,7 +187,13 @@ fn install_and_open(
 
     match Session::unlock_any(&state.paths.vault, password, kf) {
         Ok(session) => {
-            state.set_session(session);
+            // A restored vault with a master password is not stored if the window was closed to the
+            // tray meanwhile (the same rule as an unlock); one with security off is stored as ever.
+            if session.is_open() {
+                state.set_session(session);
+            } else {
+                state.set_session_unless_hidden(session)?;
+            }
             after_unlock(app, state);
             Ok(undo)
         }

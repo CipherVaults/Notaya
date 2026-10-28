@@ -59,6 +59,8 @@ export default function SettingsView() {
       setShell(await api.setShellPrefs(next));
     } catch (e) {
       toast.error(errorText(e));
+    } finally {
+      setShellBusy(false);
     }
   };
 

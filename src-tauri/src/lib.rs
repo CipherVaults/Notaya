@@ -115,7 +115,14 @@ pub fn run() {
                             let mut guard = ClosingGuard { exiting: false };
                             let state = app.state::<state::AppState>();
                             if state.tray_ready() && shell::load_prefs(&state.paths).close_to_tray {
-                                state::hide_to_tray(&app);
+                                let failure = state::hide_to_tray(&app);
+                                // The close button works again before the message box is shown (it waits for a click).
+                                drop(guard);
+                                if let Some(text) = failure {
+                                    // Told now; the stored copy would show up as a stale toast later.
+                                    let _ = state.take_notice();
+                                    state::show_backup_failure(&app, &text);
+                                }
                             } else {
                                 guard.exiting = state::quit(&app);
                             }
