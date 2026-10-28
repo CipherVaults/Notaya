@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-28 (owner's messages 16:24:57 to 16:43:19 UTC; work 16:27 to 16:45 UTC, PC system clock), EX-2026-10-28-36: test leftovers cleaned up on the PC
+
+- Report: [2026-10-28-test-leftovers-cleanup.md](2026-10-28-test-leftovers-cleanup.md)
+- Task / Goal: "yes please" (delete the listed test folders and scan for others); later "delete them" (the `cipherleaf-*` test folders) and "keep everyhting in test folder that we did" (`v130`, `v130b` stay)
+- Executor: Claude (Claude Code) in a cloud thread, deletes run on the PC through Remote Control
+- Outcome: about 12.6 GB of throwaway folders deleted (`%TEMP%` clones and `clf-*` test homes, `run2`, `vendor`); no source change
+- Integration / release: records PR only
+- Open dependency / next action: none; `notaya-installer-2db590ae` was deleted by the owner after a restart, the `cipherleaf-*` test folders at his word (16:39 UTC), and a check at 16:42 UTC found no installed Notaya left on the PC
+- Acceptance: not applicable
+
 ### 2026-10-28 (owner's messages 16:46:38 and 16:48:41 UTC; work 16:47 to about 17:00 UTC, system clock), EX-2026-10-28-35: GitHub repository renamed to Notaya
 
 - Report: [2026-10-28-github-repo-renamed.md](2026-10-28-github-repo-renamed.md)
