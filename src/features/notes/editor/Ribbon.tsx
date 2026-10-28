@@ -39,10 +39,11 @@ import { cn } from "@/lib/utils";
 import { ColorPop, FONT_FAMILIES, FONT_SIZES, LinkPop, Pop, Row, Sep } from "./BubbleToolbar";
 import { pickImages } from "./extensions";
 import { applyTurnInto, BLOCKS, currentBlock, type BlockKey } from "./turnInto";
+import { getKey, setKey } from "@/lib/storage";
 
 type Tab = "home" | "insert" | "table";
 
-const COLLAPSED_KEY = "cipherleaf.ribbonCollapsed";
+const COLLAPSED_KEY = "ribbonCollapsed";
 const s = 16;
 const blockIcon = (key: BlockKey) => BLOCKS.find((b) => b.key === key)!.icon;
 // The ribbon's pop-ups are not inside a floating bar, so they don't need to keep it open.
@@ -52,7 +53,7 @@ export default function Ribbon({ editor }: { editor: Editor }) {
   const [tab, setTab] = useState<Tab>("home");
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(COLLAPSED_KEY) === "1";
+      return getKey(COLLAPSED_KEY) === "1";
     } catch {
       return false;
     }
@@ -68,7 +69,7 @@ export default function Ribbon({ editor }: { editor: Editor }) {
   const setCollapsedSaved = (v: boolean) => {
     setCollapsed(v);
     try {
-      localStorage.setItem(COLLAPSED_KEY, v ? "1" : "0");
+      setKey(COLLAPSED_KEY, v ? "1" : "0");
     } catch {
       /* the ribbon just opens expanded next time */
     }

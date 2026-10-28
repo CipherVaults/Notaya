@@ -59,7 +59,9 @@ fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     }
     match Session::read_header(&state.paths.vault) {
         Ok(h) if h.open => match Session::unlock_open(&state.paths.vault) {
-            Ok(session) => {
+            Ok(mut session) => {
+                // A vault from V1.3.0 or earlier is re-encrypted in the Notaya format (no password needed).
+                session.upgrade_format_quietly("", None);
                 state.set_session(session);
                 after_unlock(app, state);
                 None
@@ -267,7 +269,9 @@ pub fn unlock_vault(
         }
     };
     match Session::unlock(&state.paths.vault, &password, kf.as_deref()) {
-        Ok(session) => {
+        Ok(mut session) => {
+            // A vault from V1.3.0 or earlier is re-encrypted in the Notaya format, with the same password.
+            session.upgrade_format_quietly(&password, kf.as_deref());
             // Refused (and the session wiped) if the window was closed to the tray meanwhile.
             state.set_session_unless_hidden(session)?;
             after_unlock(&app, &state);
@@ -364,8 +368,8 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
         .dialog()
         .file()
         .set_title("Save a backup copy")
-        .set_file_name(format!("notaya-backup-{}.clf", crate::model::now_ms() / 1000))
-        .add_filter("Notaya vault", &["clf"])
+        .set_file_name(format!("notaya-backup-{}.{}", crate::model::now_ms() / 1000, crate::filenames::EXT))
+        .add_filter("Notaya vault", &[crate::filenames::EXT, crate::filenames::OLD_EXT])
         .blocking_save_file()
         .and_then(|f| f.into_path().ok())
     else {

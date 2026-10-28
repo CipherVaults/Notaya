@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api } from "@/lib/ipc";
+import { getKey, setKey } from "@/lib/storage";
 import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
 
 export type View = "notes" | "stickies" | "settings";
@@ -39,10 +40,10 @@ interface AppState {
 }
 
 /** Small, non-secret layout choices kept in the browser storage. */
-const LAYOUT_KEY = "cipherleaf.layout";
+const LAYOUT_KEY = "layout";
 function layout(): { open: boolean; width: number } {
   try {
-    const v = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "{}");
+    const v = JSON.parse(getKey(LAYOUT_KEY) ?? "{}");
     return { open: v.open !== false, width: Math.min(420, Math.max(200, Number(v.width) || 264)) };
   } catch {
     return { open: true, width: 264 };
@@ -50,7 +51,7 @@ function layout(): { open: boolean; width: number } {
 }
 function saveLayout(open: boolean, width: number) {
   try {
-    localStorage.setItem(LAYOUT_KEY, JSON.stringify({ open, width }));
+    setKey(LAYOUT_KEY, JSON.stringify({ open, width }));
   } catch {
     // Not critical.
   }

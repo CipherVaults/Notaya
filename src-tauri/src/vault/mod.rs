@@ -12,7 +12,7 @@ use zeroize::Zeroizing;
 use crate::crypto::{self, KdfParams, Key};
 use crate::error::{Error, Result};
 use crate::model::{Item, Settings, SETTINGS_ID};
-use header::{Header, FORMAT_VERSION};
+use header::{Format, Header};
 use store::{RowId, Store, Table};
 
 /// Largest single item accepted (a long page with lots of text).
@@ -21,6 +21,8 @@ const MAX_ITEM_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_ATTACHMENT_BYTES: usize = 25 * 1024 * 1024;
 
 pub struct Session {
+    /// The format the file is in. A vault from V1.3.0 or earlier is `Legacy` until `upgrade_format` runs.
+    format: Format,
     dek: Key,
     vault_id: [u8; 16],
     store: Store,
@@ -36,11 +38,10 @@ pub struct Session {
 
 /// AAD binds each ciphertext to this vault, its table and its row id, so rows
 /// can't be moved, swapped or copied between vaults without detection.
-fn aad(vault_id: &[u8; 16], table: Table, id: &RowId) -> Vec<u8> {
+fn aad(format: Format, vault_id: &[u8; 16], table: Table, id: &RowId) -> Vec<u8> {
     let mut out = Vec::with_capacity(48);
-    // The old app name stays here after the rename to Notaya: it is part of the file format (A28).
-    out.extend_from_slice(b"cipherleaf");
-    out.extend_from_slice(&FORMAT_VERSION.to_le_bytes());
+    out.extend_from_slice(format.row_binding());
+    out.extend_from_slice(&format.version().to_le_bytes());
     out.extend_from_slice(vault_id);
     out.extend_from_slice(table.tag());
     out.extend_from_slice(id);
@@ -63,6 +64,7 @@ impl Session {
         let (header, dek) = Header::create(password, keyfile, kdf)?;
         let store = Store::create(path, &header)?;
         let mut session = Session {
+            format: header.format,
             dek,
             vault_id: header.vault_id,
             store,
@@ -80,11 +82,44 @@ impl Session {
         let (header, dek) = Header::create_open()?;
         let store = Store::create(path, &header)?;
         let mut session = Session {
+            format: header.format,
             dek,
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
             open: true,
+            dirty: true,
+            hourly_due: true,
+        };
+        session.put(Item::Settings(Settings::default()))?;
+        Ok(session)
+    }
+
+    /// Makes a vault the way V1.3.0 and earlier did (the old file format). Only tests use it, to
+    /// have something to upgrade.
+    #[cfg(test)]
+    pub fn create_legacy(path: &Path, password: &str, keyfile: Option<&[u8; 32]>, kdf: KdfParams) -> Result<Session> {
+        let (header, dek) = Header::create_legacy(password, keyfile, kdf)?;
+        Self::new_in(path, header, dek, false)
+    }
+
+    /// Like [`Session::create_legacy`], with security off.
+    #[cfg(test)]
+    pub fn create_legacy_open(path: &Path) -> Result<Session> {
+        let (header, dek) = Header::create_legacy_open()?;
+        Self::new_in(path, header, dek, true)
+    }
+
+    #[cfg(test)]
+    fn new_in(path: &Path, header: Header, dek: Key, open: bool) -> Result<Session> {
+        let store = Store::create(path, &header)?;
+        let mut session = Session {
+            format: header.format,
+            dek,
+            vault_id: header.vault_id,
+            store,
+            items: HashMap::new(),
+            open,
             dirty: true,
             hourly_due: true,
         };
@@ -114,14 +149,14 @@ impl Session {
     fn load(store: Store, header: Header, dek: Key) -> Result<Session> {
         let mut items = HashMap::new();
         for (id, data) in store.all(Table::Records)? {
-            let plain = crypto::open(&dek, &aad(&header.vault_id, Table::Records, &id), &data)?;
+            let plain = crypto::open(&dek, &aad(header.format, &header.vault_id, Table::Records, &id), &data)?;
             let item: Item = serde_json::from_slice(crypto::unpad(&plain)?).map_err(|_| Error::Corrupt)?;
             if item.id() != hex::encode(id) {
                 return Err(Error::Corrupt);
             }
             items.insert(item.id().to_string(), item);
         }
-        Ok(Session { dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false })
+        Ok(Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false })
     }
 
     /// Opens a vault file whichever way it is protected: a vault with security off needs
@@ -157,7 +192,7 @@ impl Session {
             return Err(Error::invalid("This item is too large to save."));
         }
         let padded = crypto::pad(&json);
-        Ok((id, crypto::seal(&self.dek, &aad(&self.vault_id, Table::Records, &id), &padded)))
+        Ok((id, crypto::seal(&self.dek, &aad(self.format, &self.vault_id, Table::Records, &id), &padded)))
     }
 
     /// Encrypts and stores an item (insert or update).
@@ -226,7 +261,7 @@ impl Session {
         payload.extend_from_slice(mime.as_bytes());
         payload.extend_from_slice(bytes);
         let padded = crypto::pad(&payload);
-        let sealed = crypto::seal(&self.dek, &aad(&self.vault_id, Table::Attachments, &id), &padded);
+        let sealed = crypto::seal(&self.dek, &aad(self.format, &self.vault_id, Table::Attachments, &id), &padded);
         self.store.put(Table::Attachments, &id, &sealed)?;
         self.changed();
         Ok(id_hex)
@@ -235,7 +270,7 @@ impl Session {
     pub fn get_attachment(&self, id_hex: &str) -> Result<(String, Vec<u8>)> {
         let id = parse_id(id_hex)?;
         let data = self.store.get(Table::Attachments, &id)?.ok_or(Error::NotFound)?;
-        let plain = crypto::open(&self.dek, &aad(&self.vault_id, Table::Attachments, &id), &data)?;
+        let plain = crypto::open(&self.dek, &aad(self.format, &self.vault_id, Table::Attachments, &id), &data)?;
         let body = crypto::unpad(&plain)?;
         let mime_len = *body.first().ok_or(Error::Corrupt)? as usize;
         let mime = body.get(1..1 + mime_len).ok_or(Error::Corrupt)?;
@@ -342,22 +377,59 @@ impl Session {
         let new_dek = crypto::random_key();
         let new_id = crypto::random_bytes::<16>();
         let header = header_for(&new_dek, new_id)?;
-        let (old_dek, old_id) = (&self.dek, self.vault_id);
+        let (old_dek, old_id, old_format) = (&self.dek, self.vault_id, self.format);
         self.store.transaction(|s| {
             for table in [Table::Records, Table::Attachments] {
                 for id in s.ids(table)? {
                     let sealed = s.get(table, &id)?.ok_or(Error::Corrupt)?;
-                    let plain = crypto::open(old_dek, &aad(&old_id, table, &id), &sealed)?;
-                    s.put(table, &id, &crypto::seal(&new_dek, &aad(&new_id, table, &id), &plain))?;
+                    let plain = crypto::open(old_dek, &aad(old_format, &old_id, table, &id), &sealed)?;
+                    s.put(table, &id, &crypto::seal(&new_dek, &aad(header.format, &new_id, table, &id), &plain))?;
                 }
             }
             s.write_header(&header)
         })?;
         self.dek = new_dek;
         self.vault_id = new_id;
+        self.format = header.format;
         self.open = open_after;
         self.changed();
         Ok(())
+    }
+
+    /// True when the vault is in the format V1.4.0 and later write.
+    pub fn is_current_format(&self) -> bool {
+        self.format == Format::Current
+    }
+
+    /// Re-encrypts a vault made by V1.3.0 or earlier in the Notaya format: a fresh data key and
+    /// vault id, every record and attachment re-encrypted in one transaction (all or nothing,
+    /// like any other re-key), and the header rewritten with the Notaya names. The master password
+    /// and keyfile are the ones that just unlocked it and stay the same (they are ignored for a vault
+    /// with security off). On any error the vault stays as it was, still readable in its old format, and
+    /// this runs again at the next unlock. Returns whether anything was done.
+    pub fn upgrade_format(&mut self, password: &str, keyfile: Option<&[u8; 32]>) -> Result<bool> {
+        if self.format == Format::Current {
+            return Ok(false);
+        }
+        if self.open {
+            self.rekey(true, |dek, id| Header::open_for(dek, id))?;
+        } else {
+            let kdf = self.store.read_header()?.kdf;
+            self.rekey(false, |dek, id| Header::protected_for(dek, id, password, keyfile, kdf))?;
+        }
+        Ok(true)
+    }
+
+    /// [`Session::upgrade_format`] for the moment right after an unlock: a failure is not an error
+    /// there (the notes are open and readable either way), the upgrade is simply tried again later.
+    pub fn upgrade_format_quietly(&mut self, password: &str, keyfile: Option<&[u8; 32]>) -> bool {
+        match self.upgrade_format(password, keyfile) {
+            Ok(done) => done,
+            Err(e) => {
+                eprintln!("vault: could not upgrade the file format yet ({e}); the notes stay as they are");
+                false
+            }
+        }
     }
 
     pub fn backup_to(&self, dest: &Path) -> Result<()> {
@@ -380,7 +452,7 @@ impl Session {
             }
             for id in ids {
                 let sealed = copy.get(table, &id)?.ok_or(Error::Corrupt)?;
-                let plain = crypto::open(&self.dek, &aad(&self.vault_id, table, &id), &sealed)?;
+                let plain = crypto::open(&self.dek, &aad(self.format, &self.vault_id, table, &id), &sealed)?;
                 crypto::unpad(&plain)?;
             }
         }
@@ -397,9 +469,9 @@ mod tests {
     const FAST: KdfParams = KdfParams { m_kib: 64, t: 1, p: 1 };
 
     fn temp_vault() -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("cipherleaf-test-{}", new_id()));
+        let dir = std::env::temp_dir().join(format!("notaya-test-{}", new_id()));
         std::fs::create_dir_all(&dir).unwrap();
-        dir.join("vault.clf")
+        dir.join("vault.nota")
     }
 
     #[test]
@@ -629,7 +701,7 @@ mod tests {
     #[test]
     fn an_old_header_and_old_password_do_not_open_data_written_after_a_password_change() {
         let path = temp_vault();
-        let old_copy = path.with_file_name("old-copy.clf");
+        let old_copy = path.with_file_name("old-copy.nota");
         let mut s = Session::create(&path, "old-password-1", None, FAST).unwrap();
         s.put(page("before")).unwrap();
         s.backup_to(&old_copy).unwrap(); // an automatic backup lying next to the vault
@@ -639,7 +711,7 @@ mod tests {
         drop(s);
 
         // Put the OLD header into a copy of the CURRENT file.
-        let franken = path.with_file_name("franken.clf");
+        let franken = path.with_file_name("franken.nota");
         std::fs::copy(&path, &franken).unwrap();
         Store::open(&franken).unwrap().write_header(&old_header).unwrap();
         assert!(
@@ -657,22 +729,22 @@ mod tests {
         let mut s = Session::create(&path, "pw", None, FAST).unwrap();
         s.put(page("one")).unwrap();
         s.put_attachment("image/png", b"pixels").unwrap();
-        let good = path.with_file_name("good.clf");
+        let good = path.with_file_name("good.nota");
         s.backup_to(&good).unwrap();
         s.verify_copy(&good).unwrap();
 
         // A zero-byte file, a missing file and some other vault are all refused.
-        let empty = path.with_file_name("empty.clf");
+        let empty = path.with_file_name("empty.nota");
         std::fs::write(&empty, b"").unwrap();
         assert!(s.verify_copy(&empty).is_err());
-        assert!(s.verify_copy(&path.with_file_name("missing.clf")).is_err());
+        assert!(s.verify_copy(&path.with_file_name("missing.nota")).is_err());
         let other = temp_vault();
         drop(Session::create(&other, "pw", None, FAST).unwrap());
         assert!(s.verify_copy(&other).is_err());
 
         // One flipped byte in a record, and in an attachment.
         for table in ["records", "attachments"] {
-            let bad = path.with_file_name(format!("bad-{table}.clf"));
+            let bad = path.with_file_name(format!("bad-{table}.nota"));
             std::fs::copy(&good, &bad).unwrap();
             let conn = Connection::open(&bad).unwrap();
             let (id, mut data): (Vec<u8>, Vec<u8>) = conn
@@ -685,7 +757,7 @@ mod tests {
         }
 
         // A row missing from the copy.
-        let short = path.with_file_name("short.clf");
+        let short = path.with_file_name("short.nota");
         std::fs::copy(&good, &short).unwrap();
         Connection::open(&short).unwrap().execute("DELETE FROM attachments", []).unwrap();
         assert!(s.verify_copy(&short).is_err());
@@ -725,7 +797,7 @@ mod tests {
     #[test]
     fn backup_is_a_valid_encrypted_vault() {
         let path = temp_vault();
-        let backup = path.with_file_name("backup.clf");
+        let backup = path.with_file_name("backup.nota");
         let p = page("backed up");
         let pid = p.id().to_string();
         {
@@ -835,7 +907,7 @@ mod tests {
     #[test]
     fn turning_security_on_or_off_gives_a_fresh_data_key() {
         let path = temp_vault();
-        let old_copy = path.with_file_name("old-open-copy.clf");
+        let old_copy = path.with_file_name("old-open-copy.nota");
         let mut s = Session::create_open(&path).unwrap();
         s.put(page("secret text")).unwrap();
         s.backup_to(&old_copy).unwrap(); // a copy made while security was off: anyone can open it
@@ -851,7 +923,7 @@ mod tests {
         let swapped = std::fs::read(&path).unwrap();
         assert!(!swapped.windows(11).any(|w| w == b"secret text"));
 
-        let protected_copy = path.with_file_name("protected-copy.clf");
+        let protected_copy = path.with_file_name("protected-copy.nota");
         s.backup_to(&protected_copy).unwrap();
         s.make_open("Correct-Horse-Battery-9", None).unwrap();
         let h2 = Session::read_header(&path).unwrap();
@@ -886,5 +958,150 @@ mod tests {
         let again = Session::unlock_open(&path).unwrap();
         assert_eq!(again.items().filter(|i| matches!(i, Item::Page(_))).count(), 1);
         let _ = att;
+    }
+
+    fn header_magic(path: &std::path::Path) -> Vec<u8> {
+        Session::read_header(path).unwrap().to_bytes()[0..4].to_vec()
+    }
+
+    #[test]
+    fn an_open_vault_from_v1_3_0_is_upgraded_in_place_and_keeps_everything() {
+        let path = temp_vault();
+        let (p, att, id_before);
+        {
+            let mut s = Session::create_legacy_open(&path).unwrap();
+            let one = page("old note");
+            p = one.id().to_string();
+            s.put(one).unwrap();
+            s.put(sticky("old sticky")).unwrap();
+            att = s.put_attachment("image/png", b"pixels").unwrap();
+            id_before = Session::read_header(&path).unwrap().vault_id;
+        }
+        assert_eq!(header_magic(&path), b"CLF1");
+        let mut s = Session::unlock_open(&path).unwrap();
+        assert!(!s.is_current_format());
+        s.dirty = false;
+        s.hourly_due = false;
+        assert!(s.upgrade_format("", None).unwrap());
+        assert!(s.is_current_format() && s.dirty && s.hourly_due, "a backup of the upgraded file is due");
+        assert!(!s.upgrade_format("", None).unwrap(), "a second call does nothing");
+        // The session keeps working in the new format.
+        s.put(page("new note")).unwrap();
+        drop(s);
+
+        assert_eq!(header_magic(&path), b"NOTA");
+        let h = Session::read_header(&path).unwrap();
+        assert!(h.open);
+        assert_ne!(h.vault_id, id_before, "the upgraded vault has a fresh data key and id");
+        let s = Session::unlock_open(&path).unwrap();
+        assert!(s.is_current_format());
+        assert!(matches!(s.get(&p), Some(Item::Page(pg)) if pg.text == "old note"));
+        assert_eq!(s.items().filter(|i| matches!(i, Item::Page(_))).count(), 2);
+        assert_eq!(s.items().filter(|i| matches!(i, Item::Sticky(_))).count(), 1);
+        assert_eq!(s.get_attachment(&att).unwrap().1, b"pixels".to_vec());
+        s.verify_attachments().unwrap();
+        // No row of the old format is left: the plain text of the file does not show the old words either.
+        let raw = std::fs::read(&path).unwrap();
+        assert!(!raw.windows(8).any(|w| w == b"old note"));
+    }
+
+    #[test]
+    fn a_protected_vault_from_v1_3_0_is_upgraded_with_its_password_and_keyfile() {
+        let path = temp_vault();
+        let kf = crypto::random_bytes::<32>();
+        let p;
+        {
+            let mut s = Session::create_legacy(&path, "Correct-Horse-Battery-9", Some(&kf), FAST).unwrap();
+            let one = page("private");
+            p = one.id().to_string();
+            s.put(one).unwrap();
+            s.put_attachment("image/png", b"pixels").unwrap();
+        }
+        let kdf_before = Session::read_header(&path).unwrap().kdf;
+        let mut s = Session::unlock(&path, "Correct-Horse-Battery-9", Some(&kf)).unwrap();
+        assert!(s.upgrade_format("Correct-Horse-Battery-9", Some(&kf)).unwrap());
+        drop(s);
+
+        assert_eq!(header_magic(&path), b"NOTA");
+        assert_eq!(Session::read_header(&path).unwrap().kdf, kdf_before, "the password settings stay");
+        let s = Session::unlock(&path, "Correct-Horse-Battery-9", Some(&kf)).unwrap();
+        assert!(matches!(s.get(&p), Some(Item::Page(pg)) if pg.text == "private"));
+        s.verify_attachments().unwrap();
+        drop(s);
+        assert!(matches!(Session::unlock(&path, "Correct-Horse-Battery-9", None), Err(Error::BadCredentials)));
+        assert!(matches!(Session::unlock(&path, "wrong password", Some(&kf)), Err(Error::BadCredentials)));
+    }
+
+    #[test]
+    fn a_legacy_session_saves_in_the_old_format_until_it_is_upgraded() {
+        let path = temp_vault();
+        drop(Session::create_legacy_open(&path).unwrap());
+        let mut s = Session::unlock_open(&path).unwrap();
+        let added = page("added before the upgrade");
+        let id = added.id().to_string();
+        s.put(added).unwrap();
+        drop(s);
+        assert_eq!(header_magic(&path), b"CLF1");
+        let s = Session::unlock_open(&path).unwrap();
+        assert!(s.get(&id).is_some());
+    }
+
+    #[test]
+    fn a_failed_upgrade_changes_nothing_and_the_notes_stay_readable() {
+        let path = temp_vault();
+        {
+            let mut s = Session::create_legacy_open(&path).unwrap();
+            s.put_attachment("image/png", b"pixels").unwrap();
+            s.put(page("keep")).unwrap();
+        }
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute("UPDATE attachments SET data = x'00010203'", []).unwrap();
+        }
+        let before = std::fs::read(&path).unwrap();
+        let mut s = Session::unlock_open(&path).unwrap();
+        assert!(s.upgrade_format("", None).is_err());
+        assert!(!s.upgrade_format_quietly("", None), "the quiet form reports it as not done");
+        assert!(!s.is_current_format());
+        drop(s);
+        assert_eq!(header_magic(&path), b"CLF1");
+        assert_eq!(std::fs::read(&path).unwrap(), before, "the file is byte for byte as it was");
+        let s = Session::unlock_open(&path).unwrap();
+        assert_eq!(s.items().filter(|i| matches!(i, Item::Page(_))).count(), 1);
+    }
+
+    #[test]
+    fn changing_credentials_or_security_also_upgrades_an_old_vault() {
+        let path = temp_vault();
+        drop(Session::create_legacy(&path, "Correct-Horse-Battery-9", None, FAST).unwrap());
+        let mut s = Session::unlock(&path, "Correct-Horse-Battery-9", None).unwrap();
+        s.change_credentials("Correct-Horse-Battery-9", None, "Another-Long-Password-1", None, FAST).unwrap();
+        assert!(s.is_current_format());
+        drop(s);
+        assert_eq!(header_magic(&path), b"NOTA");
+        assert!(Session::unlock(&path, "Another-Long-Password-1", None).is_ok());
+
+        let path = temp_vault();
+        drop(Session::create_legacy_open(&path).unwrap());
+        let mut s = Session::unlock_open(&path).unwrap();
+        s.make_protected("Correct-Horse-Battery-9", None, FAST).unwrap();
+        drop(s);
+        assert_eq!(header_magic(&path), b"NOTA");
+        assert!(Session::unlock(&path, "Correct-Horse-Battery-9", None).is_ok());
+    }
+
+    #[test]
+    fn a_copy_of_an_old_vault_still_verifies_against_its_session() {
+        let path = temp_vault();
+        let mut s = Session::create_legacy_open(&path).unwrap();
+        s.put(page("copy me")).unwrap();
+        let copy = path.with_file_name("legacy-copy.nota");
+        s.backup_to(&copy).unwrap();
+        s.verify_copy(&copy).unwrap();
+        s.upgrade_format("", None).unwrap();
+        assert!(s.verify_copy(&copy).is_err(), "the old copy is not a copy of the upgraded vault");
+        let upgraded = path.with_file_name("upgraded-copy.nota");
+        s.backup_to(&upgraded).unwrap();
+        s.verify_copy(&upgraded).unwrap();
     }
 }

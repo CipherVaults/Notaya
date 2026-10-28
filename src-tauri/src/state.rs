@@ -30,11 +30,12 @@ const OPEN_BACKUP_OVERDUE: Duration = Duration::from_secs(90 * 60);
 
 /// How often the monitor makes the hourly backup of an open vault, how soon it retries after a
 /// failure, and how long the keyboard and mouse must have been still before it starts. The
-/// real-exe test scripts set `CIPHERLEAF_OPEN_BACKUP_SECS` to shorten both waits and to drop the
-/// pause, so the hourly backup can be watched without waiting an hour (like `CIPHERLEAF_HOME`,
-/// it is read in release builds too).
+/// real-exe test scripts set `NOTAYA_OPEN_BACKUP_SECS` (until V1.3.0 `CIPHERLEAF_OPEN_BACKUP_SECS`, still
+/// read) to shorten both waits and to drop the pause, so the hourly backup can be watched without
+/// waiting an hour (like `NOTAYA_HOME`, it is read in release builds too).
 fn open_backup_timing() -> (Duration, Duration, u64) {
-    let secs = std::env::var("CIPHERLEAF_OPEN_BACKUP_SECS").ok().and_then(|v| v.trim().parse::<u64>().ok());
+    let secs = crate::portable::env_var("NOTAYA_OPEN_BACKUP_SECS", "CIPHERLEAF_OPEN_BACKUP_SECS")
+        .and_then(|v| v.to_str().and_then(|v| v.trim().parse::<u64>().ok()));
     match secs.filter(|n| *n > 0) {
         Some(n) => (Duration::from_secs(n), Duration::from_secs(n), 0),
         None => (OPEN_BACKUP_EVERY, OPEN_BACKUP_RETRY, OPEN_BACKUP_IDLE_MS),

@@ -2,7 +2,7 @@
 //!
 //! The rules: the portable copy is never changed, moved or deleted, and nothing is guessed. The
 //! vault is copied to `data/import-check.tmp`, that copy's header is read and checked, and only
-//! then is it renamed to `data/vault.clf`. It is never done over an existing vault. The file is
+//! then is it renamed to `data/vault.nota`. It is never done over an existing vault. The file is
 //! copied as it is, so a vault with a master password keeps the same password and keyfile and
 //! nothing is opened or decrypted here. The automatic backups are copied too, best effort.
 
@@ -13,13 +13,14 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::error::{Error, Result};
+use crate::filenames::{OLD_VAULT_FILE, VAULT_FILE};
 use crate::portable::Paths;
 use crate::restore::{
     check_restore_kdf, copy_file, is_backup_name, list_in, rename_retry, MAX_BACKUP_BYTES, RENAME_ATTEMPTS, RENAME_DELAY,
 };
 use crate::vault::Session;
 
-/// The checked copy of the vault, before it is renamed to `vault.clf`.
+/// The checked copy of the vault, before it is renamed to `vault.nota`.
 const TEMP_NAME: &str = "import-check.tmp";
 /// Backups copied at most (the newest first). The app keeps about this many itself.
 const MAX_IMPORTED_BACKUPS: usize = 20;
@@ -36,10 +37,18 @@ pub struct ImportSummary {
 const NOT_FOUND: &str = "No Notaya notes were found there. Choose the portable Notaya folder (the one with Notaya.exe in it) or its data folder.";
 const NETWORK: &str = "A folder on a network or device path can't be used. Copy the portable folder to this PC first.";
 
-/// Where the vault of a portable copy is: `<dir>\data\vault.clf` (the folder with the program in
-/// it) or `<dir>\vault.clf` (its data folder). Returns the vault file.
+/// Where the vault of a portable copy is: `<dir>\data\vault.nota` (the folder with the program in
+/// it) or `<dir>\vault.nota` (its data folder), or the same with `vault.clf` from V1.3.0 and earlier.
+/// Returns the vault file.
 fn find_vault(dir: &Path) -> Option<PathBuf> {
-    [dir.join("data").join("vault.clf"), dir.join("vault.clf")].into_iter().find(|p| p.is_file())
+    [
+        dir.join("data").join(VAULT_FILE),
+        dir.join(VAULT_FILE),
+        dir.join("data").join(OLD_VAULT_FILE),
+        dir.join(OLD_VAULT_FILE),
+    ]
+    .into_iter()
+    .find(|p| p.is_file())
 }
 
 fn with_journal(path: &Path) -> PathBuf {
@@ -150,7 +159,7 @@ fn stage(source: &Path, tmp: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Copies the newest `vault-*.clf` backups. Each one is a new file; a failure only counts as skipped.
+/// Copies the newest `vault-*.nota` and `vault-*.clf` backups. Each one is a new file; a failure only counts as skipped.
 fn copy_backups(from: &Path, to: &Path) -> (usize, usize) {
     let Ok(list) = list_in(from, is_backup_name) else {
         return (0, 0);

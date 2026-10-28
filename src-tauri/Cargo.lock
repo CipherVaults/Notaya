@@ -559,32 +559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cipherleaf"
-version = "1.4.0"
-dependencies = [
- "argon2",
- "chacha20poly1305",
- "getrandom 0.4.3",
- "hex",
- "hkdf",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-single-instance",
- "thiserror 2.0.21",
- "unicode-normalization",
- "window-vibrancy",
- "windows",
- "zeroize",
- "zxcvbn",
-]
-
-[[package]]
 name = "cmov"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2461,6 +2435,32 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "notaya-app"
+version = "1.4.0"
+dependencies = [
+ "argon2",
+ "chacha20poly1305",
+ "getrandom 0.4.3",
+ "hex",
+ "hkdf",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
+ "thiserror 2.0.21",
+ "unicode-normalization",
+ "window-vibrancy",
+ "windows",
+ "zeroize",
+ "zxcvbn",
+]
 
 [[package]]
 name = "num-conv"

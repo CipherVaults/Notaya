@@ -1,10 +1,10 @@
 //! Helpers for vaults whose security is off (amendment A21): finding the earlier
 //! copies of the vault that are readable by anyone, and removing them on request.
 //!
-//! "Earlier copies" are the automatic and safety backups (`data/backups/vault-*.clf`, which
-//! includes `vault-predelete-*.clf`, the copy made before a notebook or section is deleted) and the
-//! old vaults a restore keeps (`data/restore-undo-*.clf`) and the vaults "Start over"
-//! sets aside (`data/set-aside-*.clf`).
+//! "Earlier copies" are the automatic and safety backups (`data/backups/vault-*.nota` (and `.clf`), which
+//! includes `vault-predelete-*.nota`, the copy made before a notebook or section is deleted) and the
+//! old vaults a restore keeps (`data/restore-undo-*.nota`) and the vaults "Start over"
+//! sets aside (`data/set-aside-*.nota`).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,11 +26,16 @@ fn names_in(dir: &Path, wanted: fn(&str) -> bool) -> Vec<PathBuf> {
 }
 
 fn is_undo_name(name: &str) -> bool {
-    name.starts_with(UNDO_PREFIX) && name.ends_with(".clf")
+    name.starts_with(UNDO_PREFIX) && crate::filenames::has_vault_ext(name)
 }
 
 fn is_set_aside_name(name: &str) -> bool {
-    name.starts_with(SET_ASIDE_PREFIX) && name.ends_with(".clf")
+    name.starts_with(SET_ASIDE_PREFIX) && crate::filenames::has_vault_ext(name)
+}
+
+/// The V1.3.0 vault file that Notaya set aside when it made `vault.nota` from it (`vault-before-notaya.clf`).
+fn is_before_notaya_name(name: &str) -> bool {
+    name.starts_with("vault-before-notaya") && crate::filenames::has_vault_ext(name)
 }
 
 /// Every earlier copy of the vault in the data folder, including a vault the person set
@@ -39,6 +44,7 @@ pub fn earlier_copies(paths: &Paths) -> Vec<PathBuf> {
     let mut all = names_in(&paths.backups, is_backup_name);
     all.extend(names_in(&paths.data, is_undo_name));
     all.extend(names_in(&paths.data, is_set_aside_name));
+    all.extend(names_in(&paths.data, is_before_notaya_name));
     all
 }
 
@@ -48,13 +54,15 @@ pub fn has_earlier_copies(paths: &Paths) -> bool {
     !earlier_copies(paths).is_empty()
 }
 
-/// The backups (automatic and `vault-predelete-*`) whose header says "security off": anyone with the file can read them.
+/// The backups (automatic and `vault-predelete-*`, and the `vault-before-notaya` file) whose header says "security off": anyone with the file can read them.
 /// A file whose header can't be read is left out (it is never touched). The old vaults a
 /// restore keeps (`restore-undo-*.clf`) are NOT included: they hold notes that exist nowhere
 /// else, so the app never deletes them.
 pub fn unprotected_copies(paths: &Paths) -> Vec<PathBuf> {
-    names_in(&paths.backups, is_backup_name)
-        .into_iter()
+    let mut all = names_in(&paths.backups, is_backup_name);
+    // The copy of the notes as V1.3.0 left them is as readable as an unprotected backup, if security was off.
+    all.extend(names_in(&paths.data, is_before_notaya_name));
+    all.into_iter()
         .filter(|p| matches!(Session::read_header(p), Ok(h) if h.open))
         .collect()
 }

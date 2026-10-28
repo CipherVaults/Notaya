@@ -19,9 +19,9 @@ export default function App() {
   useEffect(() => {
     // A message saved just before a reload (for example a restore that failed): show it once.
     try {
-      const notice = sessionStorage.getItem("cipherleaf.notice");
+      const notice = sessionStorage.getItem("notaya.notice");
       if (notice) {
-        sessionStorage.removeItem("cipherleaf.notice");
+        sessionStorage.removeItem("notaya.notice");
         toast.error(notice, { duration: 12000 });
       }
     } catch {
@@ -57,7 +57,7 @@ export default function App() {
       if (payload.startsWith("restore-failed")) {
         const text = payload.replace(/^restore-failed:?\s*/, "");
         try {
-          sessionStorage.setItem("cipherleaf.notice", text || "The restore did not finish.");
+          sessionStorage.setItem("notaya.notice", text || "The restore did not finish.");
         } catch {
           // Storage may be unavailable; the reload still happens.
         }

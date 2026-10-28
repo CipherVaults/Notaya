@@ -2,6 +2,7 @@ mod backup;
 mod commands;
 mod crypto;
 mod error;
+mod filenames;
 mod generator;
 mod import;
 mod model;

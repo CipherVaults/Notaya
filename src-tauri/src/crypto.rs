@@ -67,6 +67,7 @@ pub fn derive_kek(
     keyfile: Option<&[u8; 32]>,
     salt: &[u8; 32],
     params: KdfParams,
+    label: &[u8],
 ) -> Result<Key> {
     params.validate()?;
     // Normalize so the same password typed on different keyboards/OSes matches.
@@ -88,8 +89,8 @@ pub fn derive_kek(
     }
     let hk = Hkdf::<Sha256>::new(Some(salt), &ikm);
     let mut kek = Zeroizing::new([0u8; KEY_LEN]);
-    // The old app name stays in this label after the rename to Notaya: it is part of the key derivation (A28).
-    hk.expand(b"cipherleaf/v1/key-encryption-key", kek.as_mut())
+    // The label belongs to the vault format (`Format::kek_label`): the Notaya format and the older Cipherleaf one differ.
+    hk.expand(label, kek.as_mut())
         .map_err(|_| Error::Other("HKDF expand failed".into()))?;
     Ok(kek)
 }
@@ -220,15 +221,25 @@ mod tests {
         assert!(open(&random_key(), b"row-1", &sealed).is_err());
     }
 
+    const LABEL: &[u8] = b"test/key-encryption-key";
+
+    #[test]
+    fn kek_depends_on_the_label_too() {
+        let salt = random_bytes::<32>();
+        let a = derive_kek("pw", None, &salt, FAST, b"notaya/v2/key-encryption-key").unwrap();
+        let b = derive_kek("pw", None, &salt, FAST, b"cipherleaf/v1/key-encryption-key").unwrap();
+        assert_ne!(*a, *b);
+    }
+
     #[test]
     fn kek_depends_on_password_keyfile_and_salt() {
         let salt = random_bytes::<32>();
         let kf = random_bytes::<32>();
-        let a = derive_kek("correct horse", None, &salt, FAST).unwrap();
-        let b = derive_kek("correct horse", None, &salt, FAST).unwrap();
-        let c = derive_kek("correct horsf", None, &salt, FAST).unwrap();
-        let d = derive_kek("correct horse", Some(&kf), &salt, FAST).unwrap();
-        let e = derive_kek("correct horse", None, &random_bytes::<32>(), FAST).unwrap();
+        let a = derive_kek("correct horse", None, &salt, FAST, LABEL).unwrap();
+        let b = derive_kek("correct horse", None, &salt, FAST, LABEL).unwrap();
+        let c = derive_kek("correct horsf", None, &salt, FAST, LABEL).unwrap();
+        let d = derive_kek("correct horse", Some(&kf), &salt, FAST, LABEL).unwrap();
+        let e = derive_kek("correct horse", None, &random_bytes::<32>(), FAST, LABEL).unwrap();
         assert_eq!(*a, *b);
         assert_ne!(*a, *c);
         assert_ne!(*a, *d);
@@ -239,8 +250,8 @@ mod tests {
     fn unicode_passwords_are_normalized() {
         let salt = random_bytes::<32>();
         // "é" as one code point vs. "e" + combining accent.
-        let a = derive_kek("caf\u{e9}", None, &salt, FAST).unwrap();
-        let b = derive_kek("cafe\u{301}", None, &salt, FAST).unwrap();
+        let a = derive_kek("caf\u{e9}", None, &salt, FAST, LABEL).unwrap();
+        let b = derive_kek("cafe\u{301}", None, &salt, FAST, LABEL).unwrap();
         assert_eq!(*a, *b);
     }
 

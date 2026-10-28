@@ -3,10 +3,10 @@
 //! The rules: check first, never delete. The chosen file is copied to
 //! `data/restore-check.tmp` and that copy is opened with the password (so the
 //! exact bytes that will be installed are the ones that were verified). Only
-//! then is the live vault renamed to `data/restore-undo-<ms>.clf` and the copy
-//! renamed to `data/vault.clf`. The app never deletes or rotates `restore-undo-*`
-//! files; the backup rotations only touch `vault-<digits>.clf` and
-//! `vault-predelete-<digits>.clf` in `data/backups`.
+//! then is the live vault renamed to `data/restore-undo-<ms>.nota` and the copy
+//! renamed to `data/vault.nota`. The app never deletes or rotates `restore-undo-*`
+//! files; the backup rotations only touch `vault-<digits>.nota` and
+//! `vault-predelete-<digits>.nota` in `data/backups`.
 
 use std::ffi::OsString;
 use std::fs::{self, File, OpenOptions};
@@ -33,7 +33,7 @@ const MAX_RESTORE_P: u32 = 16;
 /// closed a moment ago).
 pub(crate) const RENAME_ATTEMPTS: u32 = 6;
 pub(crate) const RENAME_DELAY: Duration = Duration::from_millis(300);
-/// The verified copy, before it is renamed to `vault.clf`.
+/// The verified copy, before it is renamed to `vault.nota`.
 const TEMP_NAME: &str = "restore-check.tmp";
 /// The old vault, kept when a restore replaces it.
 pub(crate) const UNDO_PREFIX: &str = "restore-undo-";
@@ -46,17 +46,17 @@ pub struct BackupInfo {
     pub size: u64,
 }
 
-/// The backups look like `vault-<ms>.clf` (automatic) or `vault-predelete-<ms>.clf` (the safety
+/// The backups look like `vault-<ms>.nota` (automatic) or `vault-predelete-<ms>.nota` (the safety
 /// backup made before a notebook or section is deleted). Both start with `vault-`, so this one
 /// loose rule lists both for a restore and counts both as "earlier copies" (`openvault`), which
 /// is wanted: a safety backup holds what the person deleted and may want back, and it is
 /// readable by anyone when security was off, so turning security on removes it too. (The
 /// rotation in `backup.rs` is stricter: it owns only exact names, one pattern per rotation.)
 pub(crate) fn is_backup_name(name: &str) -> bool {
-    name.starts_with("vault-") && name.ends_with(".clf")
+    name.starts_with("vault-") && crate::filenames::has_vault_ext(name)
 }
 
-/// `path` with `suffix` added to the file name (`vault.clf` -> `vault.clf-journal`).
+/// `path` with `suffix` added to the file name (`vault.nota` -> `vault.nota-journal`).
 fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
     let mut name: OsString = path.file_name().map(OsString::from).unwrap_or_default();
     name.push(suffix);
@@ -67,7 +67,7 @@ fn temp_path(paths: &Paths) -> PathBuf {
     paths.data.join(TEMP_NAME)
 }
 
-/// The regular files `vault-*.clf` in the backups folder (safety backups included), newest first. Reads
+/// The regular files `vault-*.nota` in the backups folder (safety backups included), newest first. Reads
 /// only names, times and sizes, never contents, so it works while locked.
 pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
     list_in(&paths.backups, is_backup_name)
@@ -139,9 +139,8 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
         path
     };
 
-    let is_clf = path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("clf"));
-    if !is_clf {
-        return Err(Error::invalid("A Notaya backup is a file ending in .clf."));
+    if !crate::filenames::path_has_vault_ext(&path) {
+        return Err(Error::invalid("A Notaya backup is a file ending in .nota (or .clf, from before V1.4.0)."));
     }
     let meta = match fs::metadata(&path) {
         Ok(m) => m,
@@ -170,7 +169,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
     if fs::canonicalize(&paths.vault).is_ok_and(|live| live == real) {
         return Err(Error::invalid("That is the vault in use now, not a backup."));
     }
-    // (`restore-check.tmp` can't get here: the .clf extension rule above refuses it.)
+    // (`restore-check.tmp` can't get here: the extension rule above refuses it.)
     Ok(path)
 }
 
@@ -304,7 +303,7 @@ pub(crate) fn install_failure(e: io::Error, rollback_notes: &[String]) -> Error 
 }
 
 /// Replaces the live vault with the checked copy. An existing vault is renamed
-/// to `data/restore-undo-<now_ms>.clf` (with its `-journal` file, if any) and
+/// to `data/restore-undo-<now_ms>.nota` (with its `-journal` file, if any) and
 /// its name is returned; if there was no vault, returns `None` (a stray journal
 /// is still moved aside, so SQLite can't apply it to the new file). If a rename
 /// fails, the old files are put back. Nothing is ever deleted.
@@ -327,7 +326,7 @@ fn install_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) -> R
         // `rename` replaces an existing file on Windows, so pick a name that is free.
         let mut ms = now_ms;
         let base = loop {
-            let p = paths.data.join(format!("{UNDO_PREFIX}{ms}.clf"));
+            let p = paths.data.join(format!("{UNDO_PREFIX}{ms}.{}", crate::filenames::EXT));
             if !p.try_exists()? && !with_suffix(&p, "-journal").try_exists()? {
                 break p;
             }
@@ -367,7 +366,7 @@ fn install_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) -> R
 /// Name prefix of a vault set aside by "Start over".
 pub(crate) const SET_ASIDE_PREFIX: &str = "set-aside-";
 
-/// "Start over": renames the vault to `data/set-aside-<now_ms>.clf` (with its
+/// "Start over": renames the vault to `data/set-aside-<now_ms>.nota` (with its
 /// `-journal` file, if any) so the app shows the first-run screen again, and
 /// returns the new name. Nothing is deleted, and the set-aside file can be
 /// brought back with "Restore from a backup". If a rename fails, the files are
@@ -385,7 +384,7 @@ fn set_aside_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) ->
     // `rename` replaces an existing file on Windows, so pick a name that is free.
     let mut ms = now_ms;
     let base = loop {
-        let p = paths.data.join(format!("{SET_ASIDE_PREFIX}{ms}.clf"));
+        let p = paths.data.join(format!("{SET_ASIDE_PREFIX}{ms}.{}", crate::filenames::EXT));
         if !p.try_exists()? && !with_suffix(&p, "-journal").try_exists()? {
             break p;
         }
@@ -481,7 +480,7 @@ mod tests {
     const NOT_A_NAME: &str = "That is not the name of a Notaya backup.";
     const DIALOG: &str = "Choose the backup file with the file dialog.";
     const NETWORK: &str = "Backups on a network or device path can't be used. Copy the file to this PC first.";
-    const NOT_CLF: &str = "A Notaya backup is a file ending in .clf.";
+    const NOT_CLF: &str = "A Notaya backup is a file ending in .nota (or .clf, from before V1.4.0).";
 
     /// `source` must be refused with exactly `reason`. For an absolute path that
     /// exists, the dialog is taken to have returned it, so the refusal comes from

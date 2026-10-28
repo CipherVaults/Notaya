@@ -2,11 +2,18 @@
 //!
 //! Layout (139 bytes):
 //! ```text
-//! magic "CLF1" (4) | version u16 (2) | argon2 m,t,p u32 (12) | salt (32)
+//! magic "NOTA" (4) | version u16 (2) | argon2 m,t,p u32 (12) | salt (32)
 //! | flags u8 (1) | vault id (16) | wrapped data key: nonce+key+tag (72)
 //! ```
 //! The first 67 bytes are authenticated as AAD when the data key is wrapped.
 //! Changing anything (e.g. lowering the Argon2 cost) makes unlocking fail.
+//!
+//! Two formats exist (see [`Format`]). The current one (magic "NOTA", version 2) is what V1.4.0 and
+//! later write. The older one (magic "CLF1", version 1, from when the app was called Cipherleaf) is
+//! still read, so notes and backups from V1.3.0 and earlier open; `Session::upgrade_format` re-encrypts
+//! such a vault in the current format. Only the names inside the format differ (the magic, the key
+//! derivation label, the built-in password of an open vault, the row binding); the layout and the
+//! algorithms are the same.
 //!
 //! An "open" vault (security off, amendment A21) has the open flag set in `flags`.
 //! Its data key is wrapped under a built-in, public password, so the file is still
@@ -21,15 +28,58 @@ use zeroize::Zeroizing;
 use crate::crypto::{self, KdfParams, Key, KEY_LEN, NONCE_LEN, TAG_LEN};
 use crate::error::{Error, Result};
 
-const MAGIC: &[u8; 4] = b"CLF1";
-pub const FORMAT_VERSION: u16 = 1;
 const FLAG_KEYFILE: u8 = 0b0000_0001;
 const FLAG_OPEN: u8 = 0b0000_0010;
 
-/// The built-in password of an open vault. It is public on purpose: an open vault
-/// is not confidential (see the module comment). It keeps the old app name on purpose:
-/// changing it would stop every open vault made so far from opening (A28).
-pub const OPEN_PASSWORD: &str = "cipherleaf-open-vault-security-off";
+/// Which version of the vault format a file is in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Format {
+    /// V1.3.0 and earlier: magic "CLF1", version 1, and the names of the app when it was called Cipherleaf.
+    Legacy,
+    /// V1.4.0 and later: magic "NOTA", version 2.
+    Current,
+}
+
+impl Format {
+    fn magic(self) -> &'static [u8; 4] {
+        match self {
+            Format::Legacy => b"CLF1",
+            Format::Current => b"NOTA",
+        }
+    }
+
+    pub fn version(self) -> u16 {
+        match self {
+            Format::Legacy => 1,
+            Format::Current => 2,
+        }
+    }
+
+    /// The label of the key derivation that makes the key-encryption key.
+    fn kek_label(self) -> &'static [u8] {
+        match self {
+            Format::Legacy => b"cipherleaf/v1/key-encryption-key",
+            Format::Current => b"notaya/v2/key-encryption-key",
+        }
+    }
+
+    /// The text every ciphertext row is bound to (with the version, vault id, table and row id).
+    pub fn row_binding(self) -> &'static [u8] {
+        match self {
+            Format::Legacy => b"cipherleaf",
+            Format::Current => b"notaya",
+        }
+    }
+
+    /// The built-in password of an open vault. It is public on purpose: an open vault
+    /// is not confidential (see the module comment).
+    fn open_password(self) -> &'static str {
+        match self {
+            Format::Legacy => "cipherleaf-open-vault-security-off",
+            Format::Current => "notaya-open-vault-security-off",
+        }
+    }
+}
 
 /// Cheap key stretching for an open vault: there is no secret to guess, so
 /// spending 256 MiB on every start would only slow down opening the notes.
@@ -39,10 +89,11 @@ const WRAPPED_LEN: usize = NONCE_LEN + KEY_LEN + TAG_LEN;
 
 #[derive(Clone, Debug)]
 pub struct Header {
+    pub format: Format,
     pub kdf: KdfParams,
     pub salt: [u8; 32],
     pub keyfile_required: bool,
-    /// Security is off: the data key is wrapped under [`OPEN_PASSWORD`].
+    /// Security is off: the data key is wrapped under the built-in password (`Format::open_password`).
     pub open: bool,
     pub vault_id: [u8; 16],
     wrapped_key: Vec<u8>,
@@ -52,21 +103,38 @@ impl Header {
     /// Creates a header for a brand-new vault and returns it with the fresh data key.
     pub fn create(password: &str, keyfile: Option<&[u8; 32]>, kdf: KdfParams) -> Result<(Header, Key)> {
         let dek = crypto::random_key();
-        let header = Self::wrap(&dek, password, keyfile, kdf, crypto::random_bytes::<16>(), false)?;
+        let header = Self::wrap(Format::Current, &dek, password, keyfile, kdf, crypto::random_bytes::<16>(), false)?;
         Ok((header, dek))
     }
 
     /// Creates a header for a brand-new open vault (security off).
     pub fn create_open() -> Result<(Header, Key)> {
         let dek = crypto::random_key();
-        let header = Self::wrap(&dek, OPEN_PASSWORD, None, OPEN_KDF, crypto::random_bytes::<16>(), true)?;
+        let header = Self::wrap(Format::Current, &dek, Format::Current.open_password(), None, OPEN_KDF, crypto::random_bytes::<16>(), true)?;
+        Ok((header, dek))
+    }
+
+    /// A brand-new vault in the format of V1.3.0 and earlier. Only tests use it, to make vaults
+    /// that must be upgraded.
+    #[cfg(test)]
+    pub fn create_legacy(password: &str, keyfile: Option<&[u8; 32]>, kdf: KdfParams) -> Result<(Header, Key)> {
+        let dek = crypto::random_key();
+        let header = Self::wrap(Format::Legacy, &dek, password, keyfile, kdf, crypto::random_bytes::<16>(), false)?;
+        Ok((header, dek))
+    }
+
+    /// Like [`Header::create_legacy`], with security off.
+    #[cfg(test)]
+    pub fn create_legacy_open() -> Result<(Header, Key)> {
+        let dek = crypto::random_key();
+        let header = Self::wrap(Format::Legacy, &dek, Format::Legacy.open_password(), None, OPEN_KDF, crypto::random_bytes::<16>(), true)?;
         Ok((header, dek))
     }
 
     /// Re-wraps an existing data key under the built-in key (security off). Only tests use it:
     /// the app never re-wraps a data key (see the module comment); it re-keys the vault.
     pub fn rewrap_open(&self, dek: &Key) -> Result<Header> {
-        Self::wrap(dek, OPEN_PASSWORD, None, OPEN_KDF, self.vault_id, true)
+        Self::wrap(self.format, dek, self.format.open_password(), None, OPEN_KDF, self.vault_id, true)
     }
 
     /// A header for a re-keyed vault (a fresh data key and vault id), under a master password.
@@ -78,15 +146,16 @@ impl Header {
         keyfile: Option<&[u8; 32]>,
         kdf: KdfParams,
     ) -> Result<Header> {
-        Self::wrap(dek, password, keyfile, kdf, vault_id, false)
+        Self::wrap(Format::Current, dek, password, keyfile, kdf, vault_id, false)
     }
 
     /// A header for a re-keyed vault (a fresh data key and vault id), under the built-in key.
     pub fn open_for(dek: &Key, vault_id: [u8; 16]) -> Result<Header> {
-        Self::wrap(dek, OPEN_PASSWORD, None, OPEN_KDF, vault_id, true)
+        Self::wrap(Format::Current, dek, Format::Current.open_password(), None, OPEN_KDF, vault_id, true)
     }
 
     fn wrap(
+        format: Format,
         dek: &Key,
         password: &str,
         keyfile: Option<&[u8; 32]>,
@@ -95,6 +164,7 @@ impl Header {
         open: bool,
     ) -> Result<Header> {
         let mut header = Header {
+            format,
             kdf,
             salt: crypto::random_bytes::<32>(),
             keyfile_required: keyfile.is_some(),
@@ -102,7 +172,7 @@ impl Header {
             vault_id,
             wrapped_key: Vec::new(),
         };
-        let kek = crypto::derive_kek(password, keyfile, &header.salt, kdf)?;
+        let kek = crypto::derive_kek(password, keyfile, &header.salt, kdf, format.kek_label())?;
         header.wrapped_key = crypto::seal(&kek, &header.auth_bytes(), dek.as_ref());
         Ok(header)
     }
@@ -113,7 +183,7 @@ impl Header {
         if self.keyfile_required != keyfile.is_some() {
             return Err(Error::BadCredentials);
         }
-        let kek = crypto::derive_kek(password, keyfile, &self.salt, self.kdf)?;
+        let kek = crypto::derive_kek(password, keyfile, &self.salt, self.kdf, self.format.kek_label())?;
         let raw = crypto::open(&kek, &self.auth_bytes(), &self.wrapped_key)
             .map_err(|_| Error::BadCredentials)?;
         if raw.len() != KEY_LEN {
@@ -129,13 +199,13 @@ impl Header {
         if !self.open {
             return Err(Error::BadCredentials);
         }
-        self.unlock(OPEN_PASSWORD, None)
+        self.unlock(self.format.open_password(), None)
     }
 
     fn auth_bytes(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(AUTH_LEN);
-        out.extend_from_slice(MAGIC);
-        out.extend_from_slice(&FORMAT_VERSION.to_le_bytes());
+        out.extend_from_slice(self.format.magic());
+        out.extend_from_slice(&self.format.version().to_le_bytes());
         out.extend_from_slice(&self.kdf.m_kib.to_le_bytes());
         out.extend_from_slice(&self.kdf.t.to_le_bytes());
         out.extend_from_slice(&self.kdf.p.to_le_bytes());
@@ -156,12 +226,19 @@ impl Header {
     }
 
     pub fn from_bytes(b: &[u8]) -> Result<Header> {
-        if b.len() != AUTH_LEN + WRAPPED_LEN || &b[0..4] != MAGIC {
+        if b.len() != AUTH_LEN + WRAPPED_LEN {
             return Err(Error::Corrupt);
         }
+        let format = if &b[0..4] == Format::Current.magic() {
+            Format::Current
+        } else if &b[0..4] == Format::Legacy.magic() {
+            Format::Legacy
+        } else {
+            return Err(Error::Corrupt);
+        };
         let u32_at = |i: usize| u32::from_le_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]]);
         let version = u16::from_le_bytes([b[4], b[5]]);
-        if version != FORMAT_VERSION {
+        if version != format.version() {
             return Err(Error::invalid(
                 "This vault was made by a newer version of Notaya.",
             ));
@@ -181,6 +258,7 @@ impl Header {
         let mut vault_id = [0u8; 16];
         vault_id.copy_from_slice(&b[51..67]);
         Ok(Header {
+            format,
             kdf,
             salt,
             keyfile_required: flags & FLAG_KEYFILE != 0,
@@ -257,7 +335,7 @@ mod tests {
         assert!(!h.open);
         assert!(matches!(h.unlock_open(), Err(Error::BadCredentials)));
         // Even the built-in password does not open it.
-        assert!(h.unlock(OPEN_PASSWORD, None).is_err());
+        assert!(h.unlock(Format::Current.open_password(), None).is_err());
     }
 
     #[test]
@@ -268,7 +346,7 @@ mod tests {
         let mut b = open.to_bytes();
         b[flags_at] &= !FLAG_OPEN;
         assert!(Header::from_bytes(&b).and_then(|p| p.unlock_open()).is_err());
-        assert!(Header::from_bytes(&b).and_then(|p| p.unlock(OPEN_PASSWORD, None)).is_err());
+        assert!(Header::from_bytes(&b).and_then(|p| p.unlock(Format::Current.open_password(), None)).is_err());
         let mut b = prot.to_bytes();
         b[flags_at] |= FLAG_OPEN;
         assert!(Header::from_bytes(&b).and_then(|p| p.unlock_open()).is_err());
@@ -304,5 +382,47 @@ mod tests {
         let mut b = open.to_bytes();
         b[50] |= FLAG_KEYFILE;
         assert!(matches!(Header::from_bytes(&b), Err(Error::Corrupt)));
+    }
+
+    #[test]
+    fn a_header_from_v1_3_0_still_parses_and_unlocks() {
+        let (h, dek) = Header::create_legacy("pw", None, FAST).unwrap();
+        let bytes = h.to_bytes();
+        assert_eq!(&bytes[0..4], b"CLF1");
+        assert_eq!(&bytes[4..6], &[1, 0]);
+        let parsed = Header::from_bytes(&bytes).unwrap();
+        assert_eq!(parsed.format, Format::Legacy);
+        assert_eq!(*parsed.unlock("pw", None).unwrap(), *dek);
+        let (open, odek) = Header::create_legacy_open().unwrap();
+        let parsed = Header::from_bytes(&open.to_bytes()).unwrap();
+        assert_eq!(parsed.format, Format::Legacy);
+        assert_eq!(*parsed.unlock_open().unwrap(), *odek);
+    }
+
+    #[test]
+    fn new_headers_use_the_notaya_names() {
+        let (h, _) = Header::create("pw", None, FAST).unwrap();
+        let bytes = h.to_bytes();
+        assert_eq!(&bytes[0..4], b"NOTA");
+        assert_eq!(&bytes[4..6], &[2, 0]);
+        assert_eq!(Header::from_bytes(&bytes).unwrap().format, Format::Current);
+        // The two formats never open each other's wrapped key, even with the right password.
+        let mut as_legacy = bytes.clone();
+        as_legacy[0..4].copy_from_slice(b"CLF1");
+        as_legacy[4..6].copy_from_slice(&[1, 0]);
+        assert!(Header::from_bytes(&as_legacy).and_then(|p| p.unlock("pw", None)).is_err());
+        // A magic with the wrong version is refused rather than guessed.
+        let mut odd = bytes;
+        odd[4..6].copy_from_slice(&[1, 0]);
+        assert!(Header::from_bytes(&odd).is_err());
+    }
+
+    #[test]
+    fn the_built_in_passwords_differ_between_formats() {
+        let (current, _) = Header::create_open().unwrap();
+        assert!(current.unlock(Format::Legacy.open_password(), None).is_err());
+        let (legacy, _) = Header::create_legacy_open().unwrap();
+        assert!(legacy.unlock(Format::Current.open_password(), None).is_err());
+        assert!(legacy.unlock_open().is_ok());
     }
 }

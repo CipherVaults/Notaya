@@ -3,7 +3,12 @@
 //! Windows setup): `%LOCALAPPDATA%\Notaya Notes\data`, because the program folder is not a
 //! place to keep notes. The uninstaller never touches that folder.
 
+use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
+
+use crate::filenames::{BEFORE_NOTAYA_FILE, OLD_VAULT_FILE, VAULT_FILE};
+use crate::vault::store::Store;
+use crate::vault::Session;
 
 /// A file next to the executable that makes it portable. The portable ZIP carries one.
 pub const PORTABLE_MARKER: &str = "portable.txt";
@@ -16,7 +21,11 @@ pub const INSTALLED_FOLDER: &str = "Notaya Notes";
 #[derive(Clone, Debug)]
 pub struct Paths {
     pub data: PathBuf,
+    /// The vault: `data/vault.nota`. While the notes could not be moved from V1.3.0's `vault.clf` yet
+    /// (see [`Paths::adopt_old_vault`]) this is that file instead, so nothing is ever started empty.
     pub vault: PathBuf,
+    /// The vault file of V1.3.0 and earlier, `data/vault.clf`.
+    pub old_vault: PathBuf,
     pub backups: PathBuf,
     /// WebView2 profile folder (cache, local storage) kept with the app, not in AppData.
     pub webview: PathBuf,
@@ -24,25 +33,81 @@ pub struct Paths {
     pub installed: bool,
 }
 
+/// Reads an environment variable by its Notaya name, or by the name it had until V1.3.0 (so scripts and
+/// shortcuts that still set the old one keep working). An empty value counts as not set.
+pub fn env_var(name: &str, old_name: &str) -> Option<std::ffi::OsString> {
+    [name, old_name].iter().filter_map(|n| std::env::var_os(n)).find(|v| !v.is_empty())
+}
+
 impl Paths {
     pub fn resolve() -> Paths {
         // Tests and tools point the app at a throwaway folder with this.
-        if let Some(root) = std::env::var_os("CIPHERLEAF_HOME") {
-            return Paths::at(&PathBuf::from(root));
+        if let Some(root) = env_var("NOTAYA_HOME", "CIPHERLEAF_HOME") {
+            let mut paths = Paths::at(&PathBuf::from(root));
+            paths.adopt_old_vault();
+            return paths;
         }
         let (root, installed) = default_root();
-        Paths { installed, ..Paths::at(&root) }
+        let mut paths = Paths { installed, ..Paths::at(&root) };
+        paths.adopt_old_vault();
+        paths
     }
 
     pub fn at(root: &Path) -> Paths {
         let data = root.join("data");
         Paths {
-            vault: data.join("vault.clf"),
+            vault: data.join(VAULT_FILE),
+            old_vault: data.join(OLD_VAULT_FILE),
             backups: data.join("backups"),
             webview: data.join("webview"),
             data,
             installed: false,
         }
+    }
+
+    /// V1.4.0 renamed the vault file from `vault.clf` to `vault.nota`. When only the old file exists, this
+    /// copies it to `vault.nota` (a checked copy, renamed into place only when complete) and keeps the old
+    /// file as `vault-before-notaya.clf`. It is never deleted. The notes inside are upgraded to the new
+    /// format at the next unlock (`Session::upgrade_format`), because that needs the password. If the copy
+    /// cannot be made (a read-only drive, a damaged file), the old file stays the vault, so the notes are
+    /// still opened and no empty vault is started; it is tried again at the next start.
+    pub fn adopt_old_vault(&mut self) {
+        if let Err(e) = self.try_adopt_old_vault() {
+            eprintln!("vault: could not make {VAULT_FILE} from {OLD_VAULT_FILE} yet ({e}); using {OLD_VAULT_FILE} for now");
+            self.vault = self.old_vault.clone();
+        }
+    }
+
+    fn try_adopt_old_vault(&self) -> Result<(), String> {
+        if self.vault == self.old_vault || self.vault.exists() || !self.old_vault.is_file() {
+            return Ok(());
+        }
+        let part = with_suffix(&self.vault, ".part");
+        let _ = fs::remove_file(with_suffix(&part, "-journal"));
+        let _ = fs::remove_file(&part); // a leftover from an interrupted start
+        let copied = (|| -> Result<(), String> {
+            // SQLite makes the copy, so a write that was cut short is rolled back first.
+            Store::open(&self.old_vault).and_then(|s| s.backup_to(&part)).map_err(|e| e.to_string())?;
+            Session::read_header(&part).map_err(|e| e.to_string())?;
+            OpenOptions::new().write(true).open(&part).and_then(|f| f.sync_all()).map_err(|e| e.to_string())?;
+            fs::rename(&part, &self.vault).map_err(|e| e.to_string())
+        })();
+        if let Err(e) = copied {
+            let _ = fs::remove_file(&part);
+            return Err(e);
+        }
+        // The notes are safe in the new file; the old one is only set aside. A failure here is harmless.
+        let mut aside = self.data.join(BEFORE_NOTAYA_FILE);
+        let mut n = 1;
+        while aside.exists() {
+            n += 1;
+            aside = self.data.join(format!("vault-before-notaya-{n}.clf"));
+        }
+        let journal = with_suffix(&self.old_vault, "-journal");
+        if fs::rename(&self.old_vault, &aside).is_ok() && journal.exists() {
+            let _ = fs::rename(&journal, with_suffix(&aside, "-journal"));
+        }
+        Ok(())
     }
 
     /// Creates the folders the app keeps its data in, and checks that they can be written to.
@@ -56,6 +121,13 @@ impl Paths {
         let _ = std::fs::remove_file(&probe);
         Ok(())
     }
+}
+
+/// `path` with `suffix` added to the file name (`vault.nota` -> `vault.nota-journal`).
+fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
+    let mut name = path.as_os_str().to_os_string();
+    name.push(suffix);
+    PathBuf::from(name)
 }
 
 /// The folder that holds `data`, and whether it is the installed location.
@@ -152,7 +224,7 @@ mod tests {
         // to `%LOCALAPPDATA%\Notaya`, and the "delete app data" box removes the identifier's folder.
         assert_ne!(root.file_name().unwrap(), "Notaya");
         assert_ne!(root.file_name().unwrap(), "app.cipherleaf.vault");
-        assert_eq!(Paths::at(&root).vault, local.join("Notaya Notes").join("data").join("vault.clf"));
+        assert_eq!(Paths::at(&root).vault, local.join("Notaya Notes").join("data").join("vault.nota"));
     }
 
     #[test]

@@ -7,6 +7,7 @@ import type { NotesTree } from "@/lib/types";
 import { timeAgo } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, EmptyState, useConfirm } from "@/components/ui";
+import { getKey, setKey } from "@/lib/storage";
 import PageEditor from "./PageEditor";
 
 /** The main area of the Notes view. The notebook tree lives in the sidebar. */
@@ -30,13 +31,13 @@ export default function NotesView() {
   );
 }
 
-const OPEN_NOTE_KEY = "cipherleaf.openVaultNoteDismissed";
+const OPEN_NOTE_KEY = "openVaultNoteDismissed";
 
 /** One-time reminder, shown only while security is off. Remembers the dismissal in this browser profile only. */
 function OpenVaultNote() {
   const [dismissed, setDismissed] = useState(() => {
     try {
-      return localStorage.getItem(OPEN_NOTE_KEY) === "1";
+      return getKey(OPEN_NOTE_KEY) === "1";
     } catch {
       return false;
     }
@@ -45,7 +46,7 @@ function OpenVaultNote() {
   const dismiss = () => {
     setDismissed(true);
     try {
-      localStorage.setItem(OPEN_NOTE_KEY, "1");
+      setKey(OPEN_NOTE_KEY, "1");
     } catch {
       /* the note simply shows again next time */
     }
