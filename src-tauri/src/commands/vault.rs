@@ -34,8 +34,8 @@ pub struct VaultStatus {
     header_ok: bool,
     data_dir: String,
     version: String,
-    /// The first screen of an installed Notaya: no notes yet, so the person chooses between
-    /// starting new notes and importing the notes of a portable copy.
+    /// An installed Notaya with no notes yet: the first screen offers starting new notes and
+    /// importing the notes of a portable copy (also after a Start over, when earlier copies exist).
     offer_import: bool,
 }
 
@@ -112,7 +112,7 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
         header_ok,
         data_dir: state.paths.data.display().to_string(),
         version: app.package_info().version.to_string(),
-        offer_import: !exists && state.paths.installed && !earlier_copies,
+        offer_import: !exists && state.paths.installed,
     })
 }
 

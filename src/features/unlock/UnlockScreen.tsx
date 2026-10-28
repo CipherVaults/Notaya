@@ -193,6 +193,7 @@ function StartCard() {
   const earlierCopies = useApp((s) => s.status?.earlierCopies ?? false);
   const openError = useApp((s) => s.status?.openError ?? null);
   const offerImport = useApp((s) => s.status?.offerImport ?? false);
+  const dataDir = useApp((s) => s.status?.dataDir ?? "");
   const [importing, setImporting] = useState(false);
 
   const importNotes = async () => {
@@ -226,6 +227,28 @@ function StartCard() {
     }
   };
 
+  const startLabel = busy ? (
+    <>
+      <Loader2 size={17} className="animate-spin" /> Starting…
+    </>
+  ) : (
+    <>
+      <NotebookPen size={17} /> Start new notes
+    </>
+  );
+  const importLabel = importing ? (
+    <>
+      <Loader2 size={17} className="animate-spin" /> Copying…
+    </>
+  ) : (
+    <>
+      <FolderInput size={17} /> Import notes from a portable copy…
+    </>
+  );
+  // Earlier copies of the notes make Restore the main choice, as before. A fresh installed copy
+  // (nothing to restore) leads with Start new notes.
+  const restoreFirst = earlierCopies || !offerImport;
+
   return (
     <Card>
       <div className="mb-6 flex flex-col items-center text-center">
@@ -233,62 +256,41 @@ function StartCard() {
           <Logo size={34} />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {offerImport ? "Welcome to Notaya" : earlierCopies ? "No notes found here" : "Notes could not be started"}
+          {earlierCopies ? "No notes found here" : offerImport ? "Welcome to Notaya" : "Notes could not be started"}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          {offerImport
-            ? "Start new notes, or bring in the notes you already keep in a portable Notaya folder. Importing makes a copy; the portable folder is not changed. Close the portable Notaya first."
-            : earlierCopies
-              ? "This folder has earlier copies of your notes (backups or a vault that was set aside) but no current notes file. Restore a backup to get your notes back, or start new notes."
+          {earlierCopies
+            ? "This folder has earlier copies of your notes (backups or a vault that was set aside) but no current notes file. Restore a backup to get your notes back, start new notes" +
+              (offerImport ? ", or import the notes of a portable Notaya folder (a copy is made; the portable folder is not changed; close the portable Notaya first)." : ".")
+            : offerImport
+              ? "Start new notes, or bring in the notes you already keep in a portable Notaya folder. Importing makes a copy; the portable folder is not changed. Close the portable Notaya first."
               : (openError ?? "A new notes file could not be created in this folder. Check that the folder can be written to.")}
         </p>
       </div>
       <div className="space-y-3">
-        {offerImport ? (
-          <Button variant="primary" size="lg" className="w-full" onClick={start} disabled={busy || importing}>
-            {busy ? (
-              <>
-                <Loader2 size={17} className="animate-spin" /> Starting…
-              </>
-            ) : (
-              <>
-                <NotebookPen size={17} /> Start new notes
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)}>
+        {restoreFirst ? (
+          <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)} disabled={importing}>
             Restore from a backup…
           </Button>
-        )}
-        {offerImport ? (
-          <Button variant="outline" size="lg" className="w-full" onClick={importNotes} disabled={busy || importing}>
-            {importing ? (
-              <>
-                <Loader2 size={17} className="animate-spin" /> Copying…
-              </>
-            ) : (
-              <>
-                <FolderInput size={17} /> Import notes from a portable copy…
-              </>
-            )}
-          </Button>
         ) : (
-          <Button variant="outline" size="lg" className="w-full" onClick={start} disabled={busy}>
-            {busy ? (
-              <>
-                <Loader2 size={17} className="animate-spin" /> Starting…
-              </>
-            ) : (
-              <>
-                <NotebookPen size={17} /> Start new notes
-              </>
-            )}
+          <Button variant="primary" size="lg" className="w-full" onClick={start} disabled={busy || importing}>
+            {startLabel}
           </Button>
         )}
-        {offerImport ? (
+        {offerImport && (
+          <Button variant="outline" size="lg" className="w-full" onClick={importNotes} disabled={busy || importing}>
+            {importLabel}
+          </Button>
+        )}
+        {restoreFirst && (
+          <Button variant="outline" size="lg" className="w-full" onClick={start} disabled={busy || importing}>
+            {startLabel}
+          </Button>
+        )}
+        {offerImport && !earlierCopies ? (
           <p className="text-center text-xs text-faint">
-            Restore from a backup is also in Settings once you have notes.
+            Your notes will be kept in <span className="selectable break-all font-mono">{dataDir}</span>. Restore from a backup is
+            also in Settings once you have notes.
           </p>
         ) : (
           <p className="text-center text-xs text-faint">Your backups are not deleted either way.</p>

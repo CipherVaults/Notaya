@@ -94,7 +94,7 @@ pub fn import_portable(paths: &Paths, chosen: &Path) -> Result<ImportSummary> {
     // A journal next to the vault means a program is writing to it (or crashed while doing so).
     if with_journal(&source).exists() {
         return Err(Error::invalid(
-            "The portable Notaya seems to be open (or closed in the middle of saving). Close it, open and close it once more, then try again.",
+            "The portable Notaya seems to be open (or closed in the middle of saving). Close it (it cannot run next to an installed Notaya, so close this one first, start the portable one, close it, and start this one again), then try again.",
         ));
     }
     let meta = fs::metadata(&source).map_err(|_| Error::invalid("That notes file can't be read."))?;

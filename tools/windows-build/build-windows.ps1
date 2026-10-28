@@ -25,11 +25,15 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# .NET resolves relative paths against the process folder, not the PowerShell location: make it absolute.
+$OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location $root
 
-$pkg = Get-Content (Join-Path $root 'package.json') -Raw | ConvertFrom-Json
-$ver = $pkg.version
+# The setup's file name comes from tauri.conf.json; package.json must agree.
+$ver = (Get-Content (Join-Path $root 'src-tauri\tauri.conf.json') -Raw | ConvertFrom-Json).version
+$pkgVer = (Get-Content (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
+if ($ver -ne $pkgVer) { throw "Versions differ: tauri.conf.json $ver, package.json $pkgVer" }
 $commit = (git rev-parse HEAD).Trim()
 $dirty = (git status --porcelain --untracked-files=no)
 if ($dirty) { Write-Warning "Tracked files have changes; the build does not match commit $commit exactly." }

@@ -14,7 +14,7 @@ export interface VaultStatus {
   headerOk: boolean;
   dataDir: string;
   version: string;
-  /** First screen of an installed Notaya: no notes yet, so offer starting new notes or importing a portable copy. */
+  /** An installed Notaya with no notes yet: offer starting new notes or importing a portable copy. */
   offerImport: boolean;
 }
 
