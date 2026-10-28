@@ -22,7 +22,7 @@ Before deleting, each target was checked: the git clones had no unpushed work (t
 
 **Not deleted, and why:**
 
-- `%TEMP%\notaya-installer-2db590ae` (4.2 GB): access denied (Bitdefender, as before); not forced.
+- `%TEMP%\notaya-installer-2db590ae` (4.2 GB): access denied (Bitdefender, as before); not forced. **Addendum (coordinator relay 16:38:24 UTC, owner's message 16:38:19 UTC):** the owner restarted his PC and deleted it himself; `Test-Path` on the PC confirmed it is gone.
 - `E:\Project\Notaya Tests Excluded\v130b`: the owner is testing the setup from it. `v130` was not on the list and was left.
 - The registry key `HKCU\Software\Notaya` and the two `Notaya.lnk` shortcuts (Desktop, Start menu): the owner is installing the V1.3.0 setup now, which recreates them. `%LOCALAPPDATA%\Notaya` and `%LOCALAPPDATA%\Notaya Notes` changed at about 19:27 local time during his test, so they were not touched.
 - The `%TEMP%\cipherleaf-backup-*`, `-open-*`, `-restore-*`, `-test-*`, `-store-*`, `-pwbackup-*`, `-kpxc-*`, `-portable-*` and `notaya-import-*` folders (about 3,000 small folders, roughly 55 MB, left by `cargo test` runs) and the `cipherleaf-dev*.log` / `cipherleaf-release*.log` files in `%TEMP%`: they look like test output but were not on the list, so they are listed here for the owner to decide.
@@ -35,4 +35,4 @@ Observation only: the existence and file counts of the targets before the delete
 ## 4. Result and open points
 
 - **Result state: produced** (the deletes happened on the owner's PC; this record is a docs-only change). Not verified beyond the output above; not accepted.
-- **Open:** (1) delete `notaya-installer-2db590ae` (needs the owner to let Bitdefender allow it, or to delete it himself); (2) after his setup test: the registry key, the two shortcuts, and whether to delete `v130b`, `v130` and the `cipherleaf-*` test folders; (3) the `Notaya Notes` folder from [FI-05](../failure-intelligence.md) stays unless he says to delete it.
+- **Open:** (1) ~~delete `notaya-installer-2db590ae`~~ done by the owner (see the addendum above); (2) after his setup test: the registry key, the two shortcuts, and whether to delete `v130b`, `v130` and the `cipherleaf-*` test folders; (3) the `Notaya Notes` folder from [FI-05](../failure-intelligence.md) stays unless he says to delete it.

@@ -21,7 +21,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Executor: Claude (Claude Code) in a cloud thread, deletes run on the PC through Remote Control
 - Outcome: about 12.6 GB of throwaway folders deleted (`%TEMP%` clones and `clf-*` test homes, `run2`, `vendor`); no source change
 - Integration / release: records PR only
-- Open dependency / next action: `notaya-installer-2db590ae` (Bitdefender denied access); after his setup test, the registry key, two shortcuts, `v130b`, `v130` and the `cipherleaf-*` test folders
+- Open dependency / next action: after his setup test (`notaya-installer-2db590ae` was deleted by the owner after a restart), the registry key, two shortcuts, `v130b`, `v130` and the `cipherleaf-*` test folders
 - Acceptance: not applicable
 
 ### 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:37 to 16:05 UTC, PC and system clock), EX-2026-10-28-34: Notaya V1.3.0 (setup and portable ZIP)
