@@ -291,8 +291,6 @@ export default function SettingsView() {
             <ul className="list-disc space-y-1 pl-5">
               <li>With security on, there is no password reset. A forgotten master password or lost keyfile means the data cannot be recovered.</li>
               <li>Malware or a keylogger already on a PC can capture what you type while the vault is unlocked. Only unlock on PCs you trust.</li>
-              <li>Notaya was called Cipherleaf up to version 1.1.0. Notes, backups and settings made with Cipherleaf open in Notaya unchanged.</li>
-              <li>Notaya no longer includes KeePassXC. A passwords file made with an earlier version (a .kdbx file in the data folder, and its copies in data\backups) is left as it is and still opens in KeePassXC itself.</li>
               <li>Equations are drawn by KaTeX 0.19.0 (MIT licence, fonts under the SIL Open Font License), running on this device only.</li>
             </ul>
           </div>
