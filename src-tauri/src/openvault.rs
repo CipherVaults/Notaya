@@ -163,4 +163,16 @@ mod tests {
         assert_eq!(delete_unprotected(&paths), 0);
         assert!(paths.data.join("set-aside-9.clf").exists());
     }
+
+    #[test]
+    fn the_file_kept_from_v1_3_0_counts_as_an_earlier_copy() {
+        let paths = paths();
+        drop(Session::create_legacy_open(&paths.data.join("vault-before-notaya.clf")).unwrap());
+        drop(Session::create_legacy(&paths.data.join("vault-before-notaya-2.clf"), "pw", None, FAST).unwrap());
+        assert!(has_earlier_copies(&paths));
+        assert_eq!(unprotected_copies(&paths).len(), 1, "only the one with security off");
+        assert_eq!(delete_unprotected(&paths), 1);
+        assert!(!paths.data.join("vault-before-notaya.clf").exists());
+        assert!(paths.data.join("vault-before-notaya-2.clf").exists(), "a protected one stays");
+    }
 }

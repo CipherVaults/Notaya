@@ -1038,4 +1038,40 @@ mod tests {
         assert!(r.is_err());
         assert!(started.elapsed() < Duration::from_millis(250));
     }
+
+    #[test]
+    fn a_backup_from_v1_3_0_restores_and_upgrades_after_the_restore() {
+        let paths = temp_paths();
+        // A real protected vault made by V1.3.0 (see `vault::tests` for how the fixtures were made).
+        let src = paths.backups.join("vault-1700000000000.clf");
+        std::fs::write(&src, include_bytes!("../test-data/v1.3.0/protected.vault")).unwrap();
+        drop(Session::create(&paths.vault, "password-B", None, FAST).unwrap());
+
+        let source = resolve_source(&paths, "vault-1700000000000.clf", None).unwrap();
+        verify_and_stage(&paths, &source, "Fixture-Pass-1", None).unwrap();
+        install(&paths, 5).unwrap().expect("the old vault is kept");
+        assert!(paths.data.join("restore-undo-5.nota").is_file());
+
+        let mut s = Session::unlock_any(&paths.vault, "Fixture-Pass-1", None).unwrap();
+        assert!(!s.is_current_format(), "the restored file is exactly the backup until it is unlocked");
+        assert!(s.upgrade_format("Fixture-Pass-1", None).unwrap());
+        drop(s);
+        assert!(Session::unlock(&paths.vault, "Fixture-Pass-1", None).unwrap().is_current_format());
+        // The backup itself is untouched and still a V1.3.0 file.
+        assert!(!Session::unlock(&src, "Fixture-Pass-1", None).unwrap().is_current_format());
+    }
+
+    #[test]
+    fn nota_and_clf_backups_are_both_listed() {
+        let paths = temp_paths();
+        write(&paths.backups.join("vault-100.clf"), b"old");
+        write(&paths.backups.join("vault-200.nota"), b"new");
+        write(&paths.backups.join("vault-300.txt"), b"no");
+        set_age(&paths.backups.join("vault-100.clf"), 300);
+        set_age(&paths.backups.join("vault-200.nota"), 100);
+        let names: Vec<_> = list_backups(&paths).unwrap().into_iter().map(|b| b.name).collect();
+        assert_eq!(names, ["vault-200.nota", "vault-100.clf"]);
+        assert!(resolve_source(&paths, "vault-100.clf", None).is_ok());
+        assert!(resolve_source(&paths, "vault-200.nota", None).is_ok());
+    }
 }

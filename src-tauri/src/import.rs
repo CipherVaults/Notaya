@@ -330,4 +330,27 @@ mod tests {
         assert!(import_portable(&target, Path::new(r"\\server\share\Notaya")).is_err());
         assert!(!target.vault.exists());
     }
+
+    #[test]
+    fn a_vault_nota_and_a_vault_from_v1_3_0_are_both_found() {
+        let (target, portable) = setup();
+        make_open(&portable.join("data").join("vault.nota"));
+        assert_eq!(find_vault(&portable), Some(portable.join("data").join("vault.nota")));
+        let (target2, portable2) = setup();
+        fs::write(portable2.join("data").join("vault.clf"), include_bytes!("../test-data/v1.3.0/open.vault")).unwrap();
+        assert_eq!(find_vault(&portable2), Some(portable2.join("data").join("vault.clf")));
+        import_portable(&target2, &portable2).unwrap();
+        let mut s = Session::unlock_any(&target2.vault, "", None).unwrap();
+        assert!(!s.is_current_format(), "copied byte for byte; upgraded at the first unlock");
+        assert!(s.upgrade_format("", None).unwrap());
+        let _ = target;
+    }
+
+    #[test]
+    fn the_new_name_wins_when_both_exist() {
+        let (_, portable) = setup();
+        make_open(&portable.join("data").join("vault.nota"));
+        make_open(&portable.join("data").join("vault.clf"));
+        assert_eq!(find_vault(&portable), Some(portable.join("data").join("vault.nota")));
+    }
 }
