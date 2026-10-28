@@ -14,6 +14,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-28 (owner's messages 11:19:57 and 11:21:06 UTC; work 11:20 to about 11:45 UTC, system clock), EX-2026-10-28-32: Windows installer plan re-checked for Notaya
+
+- Report: [2026-10-28-installer-plan-recheck.md](2026-10-28-installer-plan-recheck.md)
+- Task / Goal: "Now continue the setup part"; "So we will do 2 things windows installer and portable version in the release"
+- Executor: Claude (Claude Code) in a cloud thread; docs only
+- Outcome: plan updated for Notaya V1.2.0 on `main` `a4574be`; decision 9 recorded as answered (installer and portable ZIP in every release); nothing built
+- Open dependency / next action: the owner answers decisions 1 to 8 and 10, then says go; the NSIS tooling download needs his OK
+- Acceptance: pending
+
 ### 2026-10-27 (owner's message 19:40:47 UTC; work 19:41 to about 22:25 UTC, PC clock), EX-2026-10-27-31: Notaya V1.2.0 portable folder and ZIP
 
 - Report: [2026-10-27-notaya-v1-2-0-portable-build.md](2026-10-27-notaya-v1-2-0-portable-build.md)
