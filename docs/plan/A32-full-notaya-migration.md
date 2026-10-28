@@ -13,7 +13,7 @@
 
 ## How an old vault is brought across
 
-1. **At start** (`Paths::adopt_old_vault`): if there is no `data/vault.nota` and there is a `data/vault.clf`, SQLite makes a checked copy (`vault.nota.part`, header read, synced), which is renamed to `vault.nota`. The old file is then set aside as `data/vault-before-notaya.clf` (`-2`, `-3` if that name is taken). It is **never deleted**. If the copy fails (read-only drive, damaged file), the old file stays the live vault for that run, so an empty vault is never started beside the old notes; it is tried again at the next start.
+1. **At start** (`Paths::adopt_old_vault`): if there is no `data/vault.nota` and there is a `data/vault.clf`, SQLite makes a checked copy (`vault.nota.part`, header read, synced), which is renamed to `vault.nota`. The old file is then set aside as `data/vault-before-notaya.clf` (`-2`, `-3` if that name is taken). Notaya **never deletes it on its own**; only the person's own choice when turning security on (see below) can. If the copy fails (read-only drive, damaged file), the old file stays the live vault for that run, so an empty vault is never started beside the old notes; it is tried again at the next start.
 2. **At the first unlock** (`Session::upgrade_format`): the vault is re-keyed in one transaction (a fresh data key and vault id, every record and attachment re-encrypted with the Notaya names, header rewritten), with the same password and keyfile (or none for a vault with security off). All or nothing: on any error the file is unchanged, still readable in the old format, and it is tried again at the next unlock. The upgrade also runs after a restore of an old backup. A backup file is never changed by being looked at; only the live vault is upgraded.
 3. Older backups (`*.clf`) stay as they are and open with the password they had; they rotate out together with new ones.
 
@@ -21,10 +21,14 @@
 
 An old Notaya guards against a second copy with a mutex `app.cipherleaf.vault-sim` and a hidden window of class `app.cipherleaf.vault-sic` and title `-siw`. With a new identifier, the new version would not meet them and two copies could open one vault. `src-tauri/src/legacy_guard.rs` takes the old mutex and window too: a copy that starts later (old or new) finds them, sends the same "show your window" message the old guard sends, and exits. Cloud test: two claims in one process under Wine (with `xvfb-run`). **Not tested on Windows:** an installed V1.3.0 running while the new exe starts (and the reverse).
 
+## Review of 2026-10-28 (independent read-only agent) and what was done
+
+No data-loss or cryptographic fault found. Fixed after it: a `vault.clf` left behind by an interrupted start now counts as an earlier copy (listed, and removed on the person's choice when security was off); the wording "never deleted" now says what is true (never on its own); an older Notaya that is already running now gets a message box from the new exe instead of a silent exit; the message loop stops on an error; a failed upgrade is not repeated until restart; `#[cfg_attr(mobile ...)]` is back on `run()`. **Left as it is:** a failed upgrade is only written to the error stream (a release build has nowhere to show it; the notes stay readable in the old format); if the guard window cannot be created the app logs it and starts anyway; backup failure messages always say `data\vault.nota`.
+
 ## What is not covered, said plainly
 
 - Older Notaya cannot open the new files (`vault.nota` or an upgraded vault). Going back to V1.3.0 means using `vault-before-notaya.clf` renamed back to `vault.clf`; notes written in V1.4.0 are not in it.
-- `vault-before-notaya.clf` and old `.clf` backups keep their old protection: if security was off, anyone with the file can read them. Turning security on offers to delete earlier unprotected copies; that now includes `vault-before-notaya*.clf` when its header says security was off. Nothing else deletes it.
+- `vault-before-notaya.clf` and old `.clf` backups keep their old protection: if security was off, anyone with the file can read them. Turning security on offers to delete earlier unprotected copies; that now includes `vault-before-notaya*.clf` (and a left-over `vault.clf`) when its header says security was off. Nothing else deletes it.
 - The older real-vault folder `E:\Project\Notaya\Cipherleaf-portable\data` is not touched by any test.
 
 ## Verified in the cloud (2026-10-28, `cargo test --lib --target x86_64-pc-windows-gnu` under Wine)

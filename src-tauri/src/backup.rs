@@ -951,4 +951,15 @@ mod tests {
         make_in(&backups, &s, 300, PREDELETE, 5).unwrap();
         assert!(names(&backups).contains(&"vault-hourly-1.clf".to_string()));
     }
+
+    #[test]
+    fn nota_names_parse_like_clf_names() {
+        assert_eq!(number_with_vault_ext("vault-123.nota", AUTOMATIC), Some(123));
+        assert_eq!(number_with_vault_ext("vault-123.clf", AUTOMATIC), Some(123));
+        assert_eq!(number_with_vault_ext("vault-hourly-5.nota", HOURLY), Some(5));
+        assert_eq!(number_with_vault_ext("vault-hourly-5.nota", AUTOMATIC), None);
+        assert_eq!(number_with_vault_ext("vault-predelete-9.nota", PREDELETE), Some(9));
+        assert_eq!(number_with_vault_ext("vault-12.nota.bak", AUTOMATIC), None);
+        assert_eq!(number_with_vault_ext("vault-.nota", AUTOMATIC), None);
+    }
 }

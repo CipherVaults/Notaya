@@ -8,7 +8,7 @@
 //! same "show your window" message the old guard sends (`WM_COPYDATA`), and exits.
 
 #[cfg(windows)]
-pub use imp::{claim, Claim, OLD_ID};
+pub use imp::{claim, mutex_exists, tell, Claim, OLD_ID};
 
 #[cfg(windows)]
 mod imp {
@@ -20,12 +20,12 @@ mod imp {
     use windows::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS, HWND, LPARAM, LRESULT, WPARAM};
     use windows::Win32::System::DataExchange::COPYDATASTRUCT;
     use windows::Win32::System::LibraryLoader::GetModuleHandleW;
-    use windows::Win32::System::Threading::CreateMutexW;
+    use windows::Win32::System::Threading::{CreateMutexW, OpenMutexW, SYNCHRONIZATION_SYNCHRONIZE};
     use windows::Win32::UI::WindowsAndMessaging::{
         AllowSetForegroundWindow, CreateWindowExW, DefWindowProcW, DispatchMessageW, FindWindowW, GetMessageW,
-        GetWindowLongPtrW, GetWindowThreadProcessId, RegisterClassExW, SendMessageTimeoutW, SetWindowLongPtrW,
-        TranslateMessage, CREATESTRUCTW, GWLP_USERDATA, MSG, SMTO_NORMAL, WM_COPYDATA, WM_CREATE, WNDCLASSEXW,
-        WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP,
+        GetWindowLongPtrW, GetWindowThreadProcessId, MessageBoxW, RegisterClassExW, SendMessageTimeoutW,
+        SetWindowLongPtrW, TranslateMessage, CREATESTRUCTW, GWLP_USERDATA, MB_ICONINFORMATION, MB_OK, MSG, SMTO_NORMAL,
+        WM_COPYDATA, WM_CREATE, WNDCLASSEXW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP,
     };
 
     /// The identifier of Notaya V1.3.0 and earlier.
@@ -79,7 +79,8 @@ mod imp {
             let _ = tx.send(created);
             if ok {
                 let mut msg = MSG::default();
-                while unsafe { GetMessageW(&mut msg, None, 0, 0) }.as_bool() {
+                // GetMessageW gives 0 for WM_QUIT and -1 for an error: stop on both.
+                while unsafe { GetMessageW(&mut msg, None, 0, 0) }.0 > 0 {
                     unsafe {
                         let _ = TranslateMessage(&msg);
                         DispatchMessageW(&msg);
@@ -91,6 +92,28 @@ mod imp {
             Ok(Ok(())) => Ok(Claim::Held),
             Ok(Err(e)) => Err(format!("the guard window could not be created: {e}")),
             Err(_) => Err("the guard window was not created in time".into()),
+        }
+    }
+
+    /// True if a mutex of that name exists (some copy of Notaya holds it).
+    pub fn mutex_exists(name: &str) -> bool {
+        let name = HSTRING::from(name);
+        // SAFETY: a plain Win32 call with a valid name; the handle it returns is closed at once.
+        match unsafe { OpenMutexW(SYNCHRONIZATION_SYNCHRONIZE, false, &name) } {
+            Ok(handle) => {
+                let _ = unsafe { windows::Win32::Foundation::CloseHandle(handle) };
+                true
+            }
+            Err(_) => false,
+        }
+    }
+
+    /// A message box with an OK button, for the rare case where a copy must exit before it has a window.
+    pub fn tell(title: &str, text: &str) {
+        let (title, text) = (HSTRING::from(title), HSTRING::from(text));
+        // SAFETY: valid NUL-terminated strings that outlive the call.
+        unsafe {
+            MessageBoxW(None, PCWSTR(text.as_ptr()), PCWSTR(title.as_ptr()), MB_OK | MB_ICONINFORMATION);
         }
     }
 
@@ -191,6 +214,8 @@ mod imp {
             // The same process asking again behaves like a second program: the mutex exists.
             assert_eq!(claim(&id, || panic!("the second copy must not hold the names")).unwrap(), Claim::Handed);
             assert_eq!(woken.load(Ordering::SeqCst), 1, "the first copy was asked to show its window");
+            assert!(mutex_exists(&format!("{id}-sim")));
+            assert!(!mutex_exists(&format!("{id}-nobody")));
         }
     }
 }

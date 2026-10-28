@@ -67,7 +67,7 @@ impl Paths {
 
     /// V1.4.0 renamed the vault file from `vault.clf` to `vault.nota`. When only the old file exists, this
     /// copies it to `vault.nota` (a checked copy, renamed into place only when complete) and keeps the old
-    /// file as `vault-before-notaya.clf`. It is never deleted. The notes inside are upgraded to the new
+    /// file as `vault-before-notaya.clf`. Notaya never deletes it on its own (only the person's choice to delete earlier unprotected copies does). The notes inside are upgraded to the new
     /// format at the next unlock (`Session::upgrade_format`), because that needs the password. If the copy
     /// cannot be made (a read-only drive, a damaged file), the old file stays the vault, so the notes are
     /// still opened and no empty vault is started; it is tried again at the next start.

@@ -423,9 +423,16 @@ impl Session {
     /// [`Session::upgrade_format`] for the moment right after an unlock: a failure is not an error
     /// there (the notes are open and readable either way), the upgrade is simply tried again later.
     pub fn upgrade_format_quietly(&mut self, password: &str, keyfile: Option<&[u8; 32]>) -> bool {
+        // After one failure the upgrade is not tried again until the program is restarted: it costs a full
+        // re-encryption (and one more password stretch), and the same fault would only repeat.
+        static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
+            return false;
+        }
         match self.upgrade_format(password, keyfile) {
             Ok(done) => done,
             Err(e) => {
+                FAILED.store(true, std::sync::atomic::Ordering::Relaxed);
                 eprintln!("vault: could not upgrade the file format yet ({e}); the notes stay as they are");
                 false
             }

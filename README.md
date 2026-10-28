@@ -1,6 +1,6 @@
 # Notaya
 
-*Formerly Cipherleaf.* The app was renamed after version 1.1.0, when it became a notes app first. Your notes, backups and settings from Cipherleaf and from Notaya up to 1.3.0 open in Notaya 1.4.0. The first time it starts, it makes `data\vault.nota` from your old `data\vault.clf` (the old file is kept as `data\vault-before-notaya.clf` and never deleted), and re-encrypts the notes in the Notaya format when you first unlock them. Old `.clf` backups still open. Older versions of Notaya cannot open the new files.
+*Formerly Cipherleaf.* The app was renamed after version 1.1.0, when it became a notes app first. Your notes, backups and settings from Cipherleaf and from Notaya up to 1.3.0 open in Notaya 1.4.0. The first time it starts, it makes `data\vault.nota` from your old `data\vault.clf` (the old file is kept as `data\vault-before-notaya.clf`; Notaya does not delete it on its own, and if security was off, turning security on offers to delete it with the other earlier unprotected copies), and re-encrypts the notes in the Notaya format when you first unlock them. Old `.clf` backups still open. Older versions of Notaya cannot open the new files.
 
 Notaya is a portable Windows notes app. You write notes in notebooks, sections and pages, keep sticky notes on the desktop, and keep everything in one `data` folder, so the app can run from a folder or a USB stick.
 

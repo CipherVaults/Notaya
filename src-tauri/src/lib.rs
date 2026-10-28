@@ -39,10 +39,10 @@ impl Drop for ClosingGuard {
     }
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 /// The app handle, for the guard against an older Notaya (it may be asked to show the window).
 static APP: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // An older Notaya (V1.3.0 and earlier) and this one must not open the same notes together:
     // take the names the old copy's guard uses, or hand over to a copy that holds them.
@@ -53,7 +53,17 @@ pub fn run() {
         }
     }) {
         Ok(legacy_guard::Claim::Held) => {}
-        Ok(legacy_guard::Claim::Handed) => std::process::exit(0),
+        Ok(legacy_guard::Claim::Handed) => {
+            // A copy of this version that is already running was asked to show itself. If the copy that
+            // holds the names is an OLDER Notaya, say so: its window would otherwise look like the update.
+            if !legacy_guard::mutex_exists("app.notaya.notes-sim") {
+                legacy_guard::tell(
+                    "Notaya",
+                    "An older version of Notaya is already running. Close it first (use Quit from its window or its tray icon), then start Notaya again. Your notes were not changed.",
+                );
+            }
+            std::process::exit(0)
+        }
         Err(e) => eprintln!("start: could not set up the guard against an older Notaya ({e})"),
     }
 

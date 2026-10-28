@@ -11,7 +11,7 @@ pub const OLD_EXT: &str = "clf";
 pub const VAULT_FILE: &str = "vault.nota";
 /// The vault in the data folder until V1.3.0.
 pub const OLD_VAULT_FILE: &str = "vault.clf";
-/// Where the V1.3.0 vault file is kept after Notaya made its `vault.nota` from it. It is never deleted.
+/// Where the V1.3.0 vault file is kept after Notaya made its `vault.nota` from it. Notaya never deletes it on its own; the only thing that removes it is the person's own choice to delete earlier unprotected copies when turning security on.
 pub const BEFORE_NOTAYA_FILE: &str = "vault-before-notaya.clf";
 
 /// The file name without a vault extension (`.nota` or `.clf`, any case), or `None`.

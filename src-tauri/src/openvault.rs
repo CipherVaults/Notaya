@@ -38,6 +38,16 @@ fn is_before_notaya_name(name: &str) -> bool {
     name.starts_with("vault-before-notaya") && crate::filenames::has_vault_ext(name)
 }
 
+/// A `vault.clf` that stayed behind next to a `vault.nota` (if the start stopped between copying the notes
+/// and setting the old file aside): it holds the notes as V1.3.0 left them, so it counts as an earlier copy.
+fn left_over_old_vault(paths: &Paths) -> Vec<PathBuf> {
+    if paths.vault != paths.old_vault && paths.vault.is_file() && paths.old_vault.is_file() {
+        vec![paths.old_vault.clone()]
+    } else {
+        Vec::new()
+    }
+}
+
 /// Every earlier copy of the vault in the data folder, including a vault the person set
 /// aside with "Start over" (it is never deleted either).
 pub fn earlier_copies(paths: &Paths) -> Vec<PathBuf> {
@@ -45,6 +55,7 @@ pub fn earlier_copies(paths: &Paths) -> Vec<PathBuf> {
     all.extend(names_in(&paths.data, is_undo_name));
     all.extend(names_in(&paths.data, is_set_aside_name));
     all.extend(names_in(&paths.data, is_before_notaya_name));
+    all.extend(left_over_old_vault(paths));
     all
 }
 
@@ -62,6 +73,7 @@ pub fn unprotected_copies(paths: &Paths) -> Vec<PathBuf> {
     let mut all = names_in(&paths.backups, is_backup_name);
     // The copy of the notes as V1.3.0 left them is as readable as an unprotected backup, if security was off.
     all.extend(names_in(&paths.data, is_before_notaya_name));
+    all.extend(left_over_old_vault(paths));
     all.into_iter()
         .filter(|p| matches!(Session::read_header(p), Ok(h) if h.open))
         .collect()
@@ -174,5 +186,17 @@ mod tests {
         assert_eq!(delete_unprotected(&paths), 1);
         assert!(!paths.data.join("vault-before-notaya.clf").exists());
         assert!(paths.data.join("vault-before-notaya-2.clf").exists(), "a protected one stays");
+    }
+
+    #[test]
+    fn a_left_over_vault_clf_next_to_vault_nota_counts_as_an_earlier_copy() {
+        let paths = paths();
+        drop(Session::create_open(&paths.vault).unwrap());
+        assert!(!has_earlier_copies(&paths), "the live vault alone is not an earlier copy");
+        drop(Session::create_legacy_open(&paths.old_vault).unwrap());
+        assert!(has_earlier_copies(&paths));
+        assert_eq!(unprotected_copies(&paths), vec![paths.old_vault.clone()]);
+        assert_eq!(delete_unprotected(&paths), 1);
+        assert!(paths.vault.exists() && !paths.old_vault.exists());
     }
 }
