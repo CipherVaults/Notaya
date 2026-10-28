@@ -17,7 +17,7 @@ Short form (4 sections). Times are UTC: the owner's message timestamps and the c
 - `tauri.conf.json`: bundle on, NSIS only, per-user, WebView2 download if missing, `allowDowngrades` false, installer icon, hooks file (a message after an interactive uninstall that the notes were kept).
 - `tools/windows-build/build-windows.ps1` (setup, portable folder with `portable.txt`, ZIP, hashes) and `tools/real-exe-tests/run-installed.ps1` + `installed.mjs`; the three older runners now copy the exe with `portable.txt` (a bare temp folder would now count as installed and use the real `%LOCALAPPDATA%`).
 - Records: A30 and an authority row in `approval-and-amendments.md`, P22 and P9 in `docs/security-design.md`, the README install section, STATUS question 19, the plan.
-- **Found while building:** the setup's default install folder for a per-user install is `%LOCALAPPDATA%\Notaya` (read from the `tauri-bundler` 2.10.4 template), so notes in `...\Notaya\data` would share the program folder and, once `data` exists next to the exe, be taken for a portable copy. The notes folder was therefore named `Notaya Notes`. This departs from the wording of decision 3 and is for the owner to confirm.
+- **Found while building:** the setup's default install folder for a per-user install is `%LOCALAPPDATA%\Notaya` (read from the `tauri-bundler` 2.10.4 template), so notes in `...\Notaya\data` would share the program folder and, once `data` exists next to the exe, be taken for a portable copy. The notes folder was therefore named `Notaya Notes`. This departs from the wording of decision 3; the owner confirmed it ("Yes", 12:37:12).
 
 ## 3. Checks
 
@@ -28,5 +28,5 @@ Short form (4 sections). Times are UTC: the owner's message timestamps and the c
 ## 4. Open items
 
 - PC tests on throwaway data through a Remote Control session (the owner's approval prompt applies): build with `build-windows.ps1`, run `run-installed.ps1` and the older runners, install the setup to a temp folder with `/S /D=...` (registry, Start menu and shortcut entries are checked and removed by the uninstall), and import through the folder dialog.
-- The owner confirms the notes folder name `Notaya Notes`, merges PR #23 when he wants, and decides on the release (V1.3.0 planned; the version bump is not done).
+- The owner merges PR #23 when he wants, and decides on the release (V1.3.0 planned; the version bump is not done).
 - The README has an install section that talks about "releases that include the setup": true only once a release has it.
