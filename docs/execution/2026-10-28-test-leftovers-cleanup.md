@@ -30,6 +30,8 @@ Before deleting, each target was checked: the git clones had no unpushed work (t
 
 **Addendum (owner "delete them", 16:39:05 UTC):** the 3,037 `cipherleaf-*` / `notaya-import-*` test folders and 25 `cipherleaf-dev*` / `-release*` / `-mock` log files in `%TEMP%` were deleted (no process used them, 0 failures). Left: `notaya-v120-release-build.log` and `notaya-v120-release-build-e25f804.log` (not in that group).
 
+**Addendum (owner, 16:43:19 UTC):** "keep everyhting in test folder that we did": `v130` and `v130b` stay in `E:\Project\Notaya Tests Excluded`; nothing more is deleted there. (`run2` had already been deleted at 16:27 UTC, before this message.) A check at 16:42 UTC found no installed Notaya left on the PC (no process, Uninstall entry, registry key, `Notaya` / `Notaya Notes` folder or shortcut).
+
 ## 3. Checks
 
 Observation only: the existence and file counts of the targets before the delete, and the delete results printed by PowerShell. One broad wildcard delete in `%TEMP%` was blocked by the session's safety check and was not run; the same folders were then deleted by exact name. Free space on the system drive was 57.5 GB after.
