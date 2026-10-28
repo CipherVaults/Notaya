@@ -30,7 +30,7 @@ An entry belongs here if the problem reached, or could plausibly have reached, o
 
 **Classification:** Near-miss (the owner's real profile, contained)
 
-**Status:** contained; the owner decides about the folder it created
+**Status:** resolved; the folder was deleted with the owner's word
 
 #### Context
 
@@ -48,7 +48,7 @@ The test script passed both Finish-page options as false in the wrong form, so "
 
 #### Resolution
 
-Reported at once; nothing deleted (deleting needs the owner's OK). The rest of the run kept both Finish boxes unticked.
+Reported at once; nothing deleted until the owner said "Delete it" (16:07:53 UTC). The PC session then re-checked the folder (172 WebView2 cache files, no vault or backup) and deleted only that folder (16:09:31 UTC). The rest of the run kept both Finish boxes unticked.
 
 #### Prevention Rule
 
