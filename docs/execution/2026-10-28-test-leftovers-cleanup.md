@@ -28,6 +28,8 @@ Before deleting, each target was checked: the git clones had no unpushed work (t
 - The `%TEMP%\cipherleaf-backup-*`, `-open-*`, `-restore-*`, `-test-*`, `-store-*`, `-pwbackup-*`, `-kpxc-*`, `-portable-*` and `notaya-import-*` folders (about 3,000 small folders, roughly 55 MB, left by `cargo test` runs) and the `cipherleaf-dev*.log` / `cipherleaf-release*.log` files in `%TEMP%`: they look like test output but were not on the list, so they are listed here for the owner to decide.
 - `E:\Project\Cipherleaf-*` release folders, `E:\Project\Cipherleaf-portable`, the NSIS tool cache, `%LOCALAPPDATA%\tauri`: never touched.
 
+**Addendum (owner "delete them", 16:39:05 UTC):** the 3,037 `cipherleaf-*` / `notaya-import-*` test folders and 25 `cipherleaf-dev*` / `-release*` / `-mock` log files in `%TEMP%` were deleted (no process used them, 0 failures). Left: `notaya-v120-release-build.log` and `notaya-v120-release-build-e25f804.log` (not in that group).
+
 ## 3. Checks
 
 Observation only: the existence and file counts of the targets before the delete, and the delete results printed by PowerShell. One broad wildcard delete in `%TEMP%` was blocked by the session's safety check and was not run; the same folders were then deleted by exact name. Free space on the system drive was 57.5 GB after.
