@@ -1,4 +1,4 @@
-# EX-2026-10-28-35: GitHub repository renamed to Notaya
+# EX-2026-10-28-36: GitHub repository renamed to Notaya
 
 Short form (4 sections). Times are UTC: the owner's message timestamps and the cloud container's clock.
 
@@ -28,3 +28,7 @@ Short form (4 sections). Times are UTC: the owner's message timestamps and the c
 - PC: `git -C E:\Project\cipherleaf remote set-url origin https://github.com/AbyssWatcher2/Notaya.git`, then `git fetch` to confirm; after the owner merges the records PR, fast-forward `main` there and confirm it equals `origin/main`.
 - Owner: the repository description and topics (suggested text was given in the project chat; the old text still says Cipherleaf and KeePassXC).
 - The coordinator updates the project's repository setting and memory.
+
+## Correction (2026-10-28, after the merge of PR #37)
+
+This report was first numbered EX-2026-10-28-35, but draft [PR #36](https://github.com/AbyssWatcher2/Notaya/pull/36) (test leftovers cleaned up on the PC) already used that number. This report is **EX-2026-10-28-36**; EX-2026-10-28-35 stays with the cleanup report. PR #36's index row sits at the same place in `docs/execution/README.md` as this one, so that branch needs `main` merged in before it can merge.

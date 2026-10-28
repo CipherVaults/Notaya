@@ -14,7 +14,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
-### 2026-10-28 (owner's messages 16:46:38 and 16:48:41 UTC; work 16:47 to about 17:00 UTC, system clock), EX-2026-10-28-35: GitHub repository renamed to Notaya
+### 2026-10-28 (owner's messages 16:46:38 and 16:48:41 UTC; work 16:47 to about 17:00 UTC, system clock), EX-2026-10-28-36: GitHub repository renamed to Notaya
 
 - Report: [2026-10-28-github-repo-renamed.md](2026-10-28-github-repo-renamed.md)
 - Task / Goal: "Yes please rename" (the repository `AbyssWatcher2/CipherLeaf` becomes `AbyssWatcher2/Notaya`)
