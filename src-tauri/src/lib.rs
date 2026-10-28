@@ -3,6 +3,7 @@ mod commands;
 mod crypto;
 mod error;
 mod generator;
+mod import;
 mod model;
 mod openvault;
 mod portable;
@@ -133,6 +134,7 @@ pub fn run() {
             backup_cmd::pick_backup_file,
             backup_cmd::restore_vault,
             backup_cmd::start_over,
+            backup_cmd::import_portable_notes,
             notes::list_notes,
             notes::create_notebook,
             notes::update_notebook,

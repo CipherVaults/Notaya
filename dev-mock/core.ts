@@ -5,6 +5,8 @@ const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
 // | start = no vault but earlier copies exist (create is an alias of start)
 const startState = params.get("s") ?? "app";
+// `?s=start&installed` shows the first screen of an installed copy (no notes, nothing to restore).
+const installedMock = params.has("installed");
 let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
@@ -100,11 +102,17 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
         keyfileRequired: false,
         headerOk: true,
         securityOn,
-        earlierCopies: !exists,
+        earlierCopies: !exists && !installedMock,
         openError: null,
         dataDir: "E:\\Notaya\\data",
         version: "1.0.0",
+        offerImport: !exists && installedMock,
       });
+    case "import_portable_notes":
+      exists = true;
+      unlocked = true;
+      securityOn = false;
+      return ok({ backupsCopied: 3, backupsSkipped: 0 });
     case "start_notes":
       exists = true;
       unlocked = true;

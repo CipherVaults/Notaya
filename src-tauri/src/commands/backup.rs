@@ -9,6 +9,7 @@ use zeroize::Zeroizing;
 
 use super::vault::{after_unlock, read_keyfile};
 use crate::error::{Error, Result};
+use crate::import::{self, ImportSummary};
 use crate::restore::{self, BackupInfo};
 use crate::state::{self, AppState};
 use crate::vault::Session;
@@ -46,6 +47,33 @@ pub fn pick_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Op
     // `restore_vault` accepts an absolute path only if it is this one.
     state.set_picked_backup(std::fs::canonicalize(&path)?);
     Ok(Some(path.display().to_string()))
+}
+
+/// "Import notes from a portable copy" on the first screen of an installed Notaya: the person
+/// chooses the portable Notaya folder in a folder dialog (the UI never passes a path) and its
+/// notes file and backups are copied here. Copy only: the portable copy is not changed. Only
+/// while there are no notes yet. `None` if the dialog was cancelled.
+#[tauri::command(async)]
+pub fn import_portable_notes(app: AppHandle, state: State<'_, AppState>) -> Result<Option<ImportSummary>> {
+    if !state.paths.installed {
+        return Err(Error::invalid("Importing is offered only by the installed Notaya."));
+    }
+    let Some(dir) = app
+        .dialog()
+        .file()
+        .set_title("Choose your portable Notaya folder")
+        .blocking_pick_folder()
+        .and_then(|f| f.into_path().ok())
+    else {
+        return Ok(None);
+    };
+    // Not while a restore moves the same files, and not while a vault is being opened or created.
+    let _gate = RESTORE_GATE.lock().unwrap_or_else(|e| e.into_inner());
+    let _open_gate = state.open_gate();
+    if state.is_unlocked() {
+        return Err(Error::invalid("This Notaya already has notes open."));
+    }
+    import::import_portable(&state.paths, &dir).map(Some)
 }
 
 /// "Start over" on the lock screen: sets the vault aside as

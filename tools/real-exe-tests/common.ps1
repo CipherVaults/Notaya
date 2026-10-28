@@ -52,6 +52,15 @@ function Resolve-TestExe([string]$Exe) {
   return (Resolve-Path -LiteralPath $Exe).Path
 }
 
+# Copies the exe into the fresh test folder as a PORTABLE copy: with the portable.txt marker next to it,
+# like the portable ZIP, so the vault is made in "$Dir\data". Without the marker a bare folder counts as an
+# INSTALLED copy, which keeps its notes under %LOCALAPPDATA% (see run-installed.ps1). Never leave the marker out
+# for a test that is not about installed mode: it would write into the real profile.
+function Copy-TestExe([string]$Exe, [string]$Dir) {
+  Copy-Item $Exe "$Dir\Notaya.exe"
+  [System.IO.File]::WriteAllText("$Dir\portable.txt", "test copy (portable)")
+}
+
 function Get-ListenerCount([int]$Port) {
   @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue).Count
 }
@@ -62,13 +71,18 @@ function Assert-PortFree([int]$Port) {
 }
 
 # Starts the copied exe with the WebView2 debug port set ONLY for that child process.
-function Start-TestApp([string]$ExePath, [int]$Port, [string]$StdoutFile = '', [string]$StderrFile = '') {
+# -ExtraEnv sets more environment variables for that child only (for example LOCALAPPDATA, to keep an
+# installed-mode test out of the real profile); they are put back afterwards.
+function Start-TestApp([string]$ExePath, [int]$Port, [string]$StdoutFile = '', [string]$StderrFile = '', [hashtable]$ExtraEnv = @{}) {
+  $saved = @{}
   try {
+    foreach ($k in $ExtraEnv.Keys) { $saved[$k] = [Environment]::GetEnvironmentVariable($k, 'Process'); [Environment]::SetEnvironmentVariable($k, $ExtraEnv[$k], 'Process') }
     $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=$Port"
     if ($StdoutFile -and $StderrFile) { $p = Start-Process $ExePath -PassThru -RedirectStandardOutput $StdoutFile -RedirectStandardError $StderrFile }
     else { $p = Start-Process $ExePath -PassThru }
   } finally {
     Remove-Item Env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS -ErrorAction SilentlyContinue
+    foreach ($k in $saved.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k], 'Process') }
   }
   return $p
 }

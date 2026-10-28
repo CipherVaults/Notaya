@@ -22,7 +22,7 @@ use crate::portable::Paths;
 use crate::vault::Session;
 
 /// Largest backup file accepted.
-const MAX_BACKUP_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+pub(crate) const MAX_BACKUP_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 /// A backup's password-stretching settings must stay within these limits, which
 /// are tighter than what `KdfParams::validate` accepts when opening the live
 /// vault: a restore must not be made to allocate several GiB by a crafted file.
@@ -75,7 +75,7 @@ pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
 
 /// The regular files in `dir` whose names satisfy `is_name`, newest first. A missing
 /// folder is an empty list.
-fn list_in(dir: &Path, is_name: fn(&str) -> bool) -> Result<Vec<BackupInfo>> {
+pub(crate) fn list_in(dir: &Path, is_name: fn(&str) -> bool) -> Result<Vec<BackupInfo>> {
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -181,7 +181,7 @@ pub(crate) fn is_picked(path: &Path, picked: Option<&Path>) -> bool {
 
 /// Copies `from` to the new file `to` and syncs it. A fresh file, not
 /// `fs::copy`, so a read-only source doesn't make a read-only vault.
-fn copy_file(from: &Path, to: &Path) -> Result<()> {
+pub(crate) fn copy_file(from: &Path, to: &Path) -> Result<()> {
     let mut src = File::open(from)?;
     let mut dst = OpenOptions::new().write(true).create_new(true).open(to)?;
     let copied = io::copy(&mut (&mut src).take(MAX_BACKUP_BYTES + 1), &mut dst)?;
@@ -250,7 +250,7 @@ fn stage(paths: &Paths, source: &Path, password: &str, keyfile: Option<&[u8; 32]
 }
 
 /// Refuses password-stretching settings that would need too much memory or time.
-fn check_restore_kdf(kdf: &KdfParams) -> Result<()> {
+pub(crate) fn check_restore_kdf(kdf: &KdfParams) -> Result<()> {
     if kdf.m_kib > MAX_RESTORE_M_KIB || kdf.t > MAX_RESTORE_T || kdf.p > MAX_RESTORE_P {
         return Err(Error::invalid("This backup uses unusual password settings and can't be restored here."));
     }
@@ -277,7 +277,7 @@ const NO_SPACE: &str = "There is not enough free space on the drive to restore t
 
 /// Turns a raw file error from the copy or rename steps into one plain message
 /// (the original goes to stderr). Other errors pass through unchanged.
-fn plain_io(e: Error) -> Error {
+pub(crate) fn plain_io(e: Error) -> Error {
     plain_io_with(e, IN_USE)
 }
 

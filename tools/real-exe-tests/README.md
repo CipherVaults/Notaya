@@ -9,7 +9,7 @@ Scripts that start a **copy of the built `Notaya.exe`** with a **throwaway vault
 
 ## Safety rules
 
-- **Never** run these against a real vault or `E:\Project\Cipherleaf-portable\data` (the owner's real vault; also any future `Notaya-portable\data`). The runners copy the exe into `%TEMP%\clf-*` and create a new vault there. Never test on the owner's live window.
+- **Never** run these against a real vault or `E:\Project\Cipherleaf-portable\data` (the owner's real vault; also any future `Notaya-portable\data`). The runners copy the exe into `%TEMP%\clf-*` (with a `portable.txt` marker, via `Copy-TestExe` in `common.ps1`, so the vault stays in that folder; without the marker a bare folder counts as an installed copy and would use `%LOCALAPPDATA%`) and create a new vault there. Never test on the owner's live window.
 - The debug port is **9335**, set (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`) for the test process only, never left set. After a run, the runner prints `port 9335 listening after test: 0`. If it is not 0, find out why and close it.
 - The passphrase is generated fresh for each run from a cryptographic RNG, written to a temp file and deleted at the end. It is never printed or stored. Do not hard-code one.
 - Only the Notaya the script started is stopped.
@@ -30,6 +30,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-r
 # Unsaved edits survive a lock or a window close (a few minutes)
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-lockflow.ps1 -Exe $exe -Scenarios page,sticky,close
 
+# Where the notes live: installed copy vs portable copy (about 1 minute; LOCALAPPDATA is changed for the test process only)
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-installed.ps1 -Exe $exe
+
 ```
 
 Every runner first prints the **SHA-256 of the exe it tests**, and at the end the cleanup lines: port closed, env var not set, no process left, temp folder and passphrase file removed. `-Exe` is optional; it defaults to the release exe relative to the scripts.
@@ -38,6 +41,8 @@ Every runner first prints the **SHA-256 of the exe it tests**, and at the end th
 
 **run-restoreflow.ps1** (`restoreflow.mjs`):
 list_backups works while locked, newest first; live vault has CHANGED text; absolute path that was not picked is refused; UNC path refused; path traversal name refused; wrong password refused; vault unchanged after the failed restore; restore while locked succeeded and returned an undo file; restored vault is open with the ORIGINAL text; restore while unlocked succeeded; second restored vault is open with the CHANGED text; vault is unlocked after restore.
+
+**run-installed.ps1** (`installed.mjs`): an exe copy with no `portable.txt` and no `data` folder (what the setup installs) shows the first screen (Welcome, Start new notes, Import), keeps its notes in `<LOCALAPPDATA>\Notaya Notes\data` (a temp folder here) and not next to the exe, and opens them by itself on the second start; a copy with `portable.txt` keeps its notes in its own `data` folder, leaves LOCALAPPDATA alone and refuses the import command. Not covered: the native folder dialog of the import and the NSIS setup itself.
 
 **run-lockflow.ps1** (`lockflow.mjs`): for each scenario it prints `page contains "FLUSHTEST-<scenario>": true/false` and `sticky contains ...: true/false`. The text typed in that scenario must be saved: the page line must be true for `page` and `close`, the sticky line true for `sticky` (the other line is false by design). Scenario `close` closes the window, restarts the exe and checks again.
 
