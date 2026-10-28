@@ -6,6 +6,20 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-24 to 2026-10-28 (owner's messages 2026-10-24 08:59:52 to 2026-10-28 14:34:32 UTC), Notaya: plan for a native Windows app, then dropped, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC), draft PR #11.
+
+## What happened
+
+1. The owner asked for a plan so the app does not need WebView2 or Edge, then for a truly native Windows app, self-contained, any Windows 10 or 11, "exactly as we did". Draft PR #11 held a proposal (plan only, no code, nothing built or run): parity inventory, toolkit comparison, editor rebuild, vault compatibility, phases of about 7 to 10 months.
+2. On 2026-10-27 (07:21:42 and 07:39:51 UTC) he postponed an alternative: keep the WebView2 app but cut its network traffic. Not built.
+3. On 2026-10-28 at 14:34:32 UTC he said to delete the native proposal and resolve the thread. PR #11 was closed without merging; this records the decision as **dropped**. The branch could not be deleted from the cloud (the proxy refuses ref deletes).
+
+Where to resume: nothing open for the native idea. The postponed items are in STATUS question 26.
+
+---
+
 # 📘 Session: 2026-10-27 (owner's messages 19:40:47 to 22:28:11 UTC; work 19:41 to about 22:30 UTC, system clock and PC clock), Notaya: release V1.2.0, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests ran in Remote Control sessions on the owner's PC. **Record basis:** the thread messages (UTC timestamps), the PC sessions' reports, the GitHub API, the repository at `main` `49cd9de` then `4e40d1a`. **Reconstructed:** nothing; written at the end. **Big stop:** a release.
