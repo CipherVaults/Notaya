@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-22
 
-**Last substantive update:** 2026-10-23 (FI-04 entered; FI-01 to FI-03 entered on 2026-10-22, FI-01 moved here from STATUS)
+**Last substantive update:** 2026-10-28 (FI-05 entered; FI-04 entered 2026-10-23; FI-01 to FI-03 entered on 2026-10-22, FI-01 moved here from STATUS)
 
 **Maintainer:** Claude (Claude Code), for the owner
 
@@ -21,6 +21,42 @@ To record what materially went wrong or nearly went wrong, why, the actual impac
 An entry belongs here if the problem reached, or could plausibly have reached, one of: the owner's data or vault; the security posture of the app or the PC; the integrity of the project's records; or work the owner would have had to redo. Ordinary friction (a tool limit, a failed first attempt that was fixed in the same step) stays in the session or execution records. For example, the refusal of `SetParent` on KeePassXC and KeePassXC's resistance to being force-stopped are tool limits, noted in [sessions.md](sessions.md) and [`CLAUDE.md`](../CLAUDE.md), not incidents.
 
 ## Incidents
+
+### FI-05 — A setup test started the app in the owner's real Windows session
+
+**Occurrence / observation date:** 2026-10-28 15:54:06 UTC, found and reported by the test session at about 15:55 (V1.3.0 retest, [EX-2026-10-28-34](execution/2026-10-28-notaya-v1-3-0-release.md)).
+
+**Last resolution update:** 2026-10-28
+
+**Classification:** Near-miss (the owner's real profile, contained)
+
+**Status:** contained; the owner decides about the folder it created
+
+#### Context
+
+An interactive setup test drove the Finish page of the setup. The "Run Notaya" box is ticked by default and the setup starts the app through the Explorer session, which uses the real `%LOCALAPPDATA%`, not the throwaway one set for the test process.
+
+#### Mistake / Gap
+
+The test script passed both Finish-page options as false in the wrong form, so "Run Notaya" stayed ticked. The earlier plan had said to untick it; the script did not do it.
+
+#### Impact
+
+**Actual impact:** the app ran for a moment and was closed politely. It created `C:\Users\moham\AppData\Local\Notaya Notes\` with `data\backups` (empty) and `data\webview\EBWebView` (172 WebView2 files), and no `vault.clf`. The real `%APPDATA%` and the two old shortcuts were unchanged. No notes were read or changed.
+
+**Potential impact:** had the owner's real notes folder existed, the test copy could have opened it (it was a throwaway copy of the same program) and made a backup or a new vault there.
+
+#### Resolution
+
+Reported at once; nothing deleted (deleting needs the owner's OK). The rest of the run kept both Finish boxes unticked.
+
+#### Prevention Rule
+
+**When:** a test drives the Finish page of a setup, or any step that can start the app.
+**Do:** untick "Run Notaya" before pressing Finish, check the box state in the script's log before the click, and compare the real `%LOCALAPPDATA%` before and after.
+**Adoption:** proposed here; not in `CLAUDE.md` (the owner decides on rule changes).
+
+---
 
 ### FI-04 — Edits typed just before Lock or close were lost
 
