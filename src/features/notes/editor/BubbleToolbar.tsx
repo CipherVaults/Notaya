@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Code,
   Eraser,
+  Highlighter,
   Italic,
   Link2,
   Minus,
@@ -94,7 +95,6 @@ function TextTools({ editor, track }: { editor: Editor; track: (open: boolean) =
       block: currentBlock(e),
       fontSize: (e.getAttributes("textStyle").fontSize as string | undefined) ?? "",
       fontFamily: (e.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
-      color: (e.getAttributes("textStyle").color as string | undefined) ?? "",
       align: e.isActive({ textAlign: "center" }) ? "center" : e.isActive({ textAlign: "right" }) ? "right" : "left",
     }),
   });
@@ -189,7 +189,7 @@ function TextTools({ editor, track }: { editor: Editor; track: (open: boolean) =
         <Sep />
 
         <LinkPop editor={editor} active={s.link} track={track} />
-        <ColorPop editor={editor} color={s.color} track={track} />
+        <ColorPop editor={editor} track={track} />
         <Btn label="Make the selected text an equation (TeX)" onClick={() => c().insertMathInline().run()}>
           <Radical size={15} />
         </Btn>
@@ -333,6 +333,7 @@ export function Pop({
   track,
   onOpen,
   onClose,
+  shouldFocus,
   align = "start",
 }: {
   trigger: React.ReactNode;
@@ -342,6 +343,8 @@ export function Pop({
   onOpen?: () => void;
   /** Where focus goes when the pop-up closes; without it, focus returns to the trigger. */
   onClose?: () => void;
+  /** Asked when the pop-up opens: true moves focus to its first control (for keyboard users). */
+  shouldFocus?: () => boolean;
   align?: "start" | "center" | "end";
 }) {
   const host = useContext(HostContext);
@@ -360,7 +363,9 @@ export function Pop({
           collisionPadding={8}
           style={{ width, maxHeight: "min(60vh, 420px)" }}
           className={cn(panel, "overflow-y-auto")}
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          onOpenAutoFocus={(e) => {
+            if (!shouldFocus?.()) e.preventDefault();
+          }}
           onCloseAutoFocus={
             onClose
               ? (e) => {
@@ -377,17 +382,60 @@ export function Pop({
   );
 }
 
-export function ColorPop({ editor, color, track, onClose }: { editor: Editor; color: string; track: (o: boolean) => void; onClose?: () => void }) {
+/** Arrow keys move between the swatches of a palette (Left/Right by one, Up/Down by a row of five). */
+function onSwatchKeys(e: React.KeyboardEvent<HTMLDivElement>) {
+  const delta = ({ ArrowRight: 1, ArrowLeft: -1, ArrowDown: 5, ArrowUp: -5 } as Record<string, number>)[e.key];
+  if (!delta) return;
+  const all = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button"));
+  const at = all.indexOf(document.activeElement as HTMLButtonElement);
+  if (at < 0) return;
+  e.preventDefault();
+  all[Math.min(all.length - 1, Math.max(0, at + delta))]?.focus();
+}
+
+function Swatches({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div role="group" aria-label={label} onKeyDown={onSwatchKeys} className="grid grid-cols-5 gap-1.5 p-1">
+      {children}
+    </div>
+  );
+}
+
+const swatch = "grid h-9 place-items-center rounded-lg border text-sm font-bold outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-fg/60";
+
+/** Opens a color pop-up with the keyboard: Enter, Space or Down on the button moves focus to the first swatch. */
+function useKeyboardOpen() {
+  const flag = useRef(false);
+  return {
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") flag.current = true;
+    },
+    onMouseDown: () => {
+      flag.current = false;
+    },
+    shouldFocus: () => flag.current,
+  };
+}
+
+/** Text color: a palette of colors and "Default" to take the color off. */
+export function TextColorPop({ editor, track, onClose }: { editor: Editor; track: (o: boolean) => void; onClose?: () => void }) {
+  const color = useEditorState({ editor, selector: ({ editor: e }) => ((e.getAttributes("textStyle").color as string | undefined) ?? "").toLowerCase() });
+  const kb = useKeyboardOpen();
   return (
     <Pop
       track={track}
       onClose={onClose}
       width={236}
+      shouldFocus={kb.shouldFocus}
       trigger={
         <button
-          onMouseDown={(e) => e.preventDefault()}
-          title="Text color and highlight"
-          aria-label="Text color and highlight"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            kb.onMouseDown();
+          }}
+          onKeyDown={kb.onKeyDown}
+          title="Text color"
+          aria-label="Text color"
           className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-fg"
         >
           <span className="text-sm font-bold" style={{ color: color || undefined, borderBottom: `2px solid ${color || "currentColor"}`, lineHeight: 1 }}>
@@ -397,42 +445,97 @@ export function ColorPop({ editor, color, track, onClose }: { editor: Editor; co
       }
     >
       <div className="px-1.5 pb-1 pt-0.5 text-xs font-medium text-faint">Text color</div>
-      <div className="grid grid-cols-5 gap-1.5 p-1">
-        {TEXT_COLORS.map((t) => (
-          <button
-            key={t.name}
-            title={t.name}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => (t.value ? editor.chain().focus().setColor(t.value).run() : editor.chain().focus().unsetColor().run())}
-            className="grid h-9 place-items-center rounded-lg border border-line text-sm font-bold hover:bg-surface-2"
-            style={{ color: t.value || "var(--text)" }}
-          >
-            A
-          </button>
-        ))}
-      </div>
-      <div className="px-1.5 pb-1 pt-2 text-xs font-medium text-faint">Highlight</div>
-      <div className="grid grid-cols-5 gap-1.5 p-1">
+      <Swatches label="Text colors">
+        {TEXT_COLORS.map((t) => {
+          const on = color === t.value.toLowerCase();
+          const name = t.value ? `${t.name} text` : "Default text color (remove the color)";
+          return (
+            <button
+              key={t.name}
+              title={t.value ? t.name : "Default (remove the color)"}
+              aria-label={name}
+              aria-pressed={on}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => (t.value ? editor.chain().focus().setColor(t.value).run() : editor.chain().focus().unsetColor().run())}
+              className={cn(swatch, on ? "border-fg" : "border-line")}
+              style={{ color: t.value || "var(--text)" }}
+            >
+              A
+            </button>
+          );
+        })}
+      </Swatches>
+    </Pop>
+  );
+}
+
+/** Highlight: a palette of matte background colors and "No highlight" to take it off. */
+export function HighlightPop({ editor, track, onClose }: { editor: Editor; track: (o: boolean) => void; onClose?: () => void }) {
+  const color = useEditorState({ editor, selector: ({ editor: e }) => (e.isActive("highlight") ? ((e.getAttributes("highlight").color as string | undefined) ?? "") : "") });
+  const kb = useKeyboardOpen();
+  const norm = (v: string) => v.replace(/\s/g, "").toLowerCase();
+  return (
+    <Pop
+      track={track}
+      onClose={onClose}
+      width={236}
+      shouldFocus={kb.shouldFocus}
+      trigger={
+        <button
+          onMouseDown={(e) => {
+            e.preventDefault();
+            kb.onMouseDown();
+          }}
+          onKeyDown={kb.onKeyDown}
+          title="Highlight color"
+          aria-label="Highlight color"
+          className="relative grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        >
+          <Highlighter size={15} />
+          <span className="absolute bottom-1 left-2 right-2 h-[3px] rounded-full" style={{ background: color || "var(--line)" }} />
+        </button>
+      }
+    >
+      <div className="px-1.5 pb-1 pt-0.5 text-xs font-medium text-faint">Highlight</div>
+      <Swatches label="Highlight colors">
         <button
           title="No highlight"
+          aria-label="No highlight (remove the highlight)"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().unsetHighlight().run()}
-          className="grid h-9 place-items-center rounded-lg border border-line text-xs text-muted hover:bg-surface-2"
+          className={cn(swatch, "border-line text-xs font-normal text-muted")}
         >
           ✕
         </button>
-        {HIGHLIGHTS.map((h) => (
-          <button
-            key={h.name}
-            title={h.name}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().setHighlight({ color: h.value }).run()}
-            className="h-9 rounded-lg border border-line"
-            style={{ background: h.value }}
-          />
-        ))}
-      </div>
+        {HIGHLIGHTS.map((h) => {
+          const on = !!color && norm(color) === norm(h.value);
+          return (
+            <button
+              key={h.name}
+              title={h.name}
+              aria-label={`${h.name} highlight`}
+              aria-pressed={on}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setHighlight({ color: h.value }).run()}
+              className={cn(swatch, on ? "border-fg" : "border-line")}
+              style={{ background: h.value }}
+            >
+              {on && <Check size={14} className="text-fg" />}
+            </button>
+          );
+        })}
+      </Swatches>
     </Pop>
+  );
+}
+
+/** Both pop-ups side by side: text color, then highlight. */
+export function ColorPop({ editor, track, onClose }: { editor: Editor; track: (o: boolean) => void; onClose?: () => void }) {
+  return (
+    <>
+      <TextColorPop editor={editor} track={track} onClose={onClose} />
+      <HighlightPop editor={editor} track={track} onClose={onClose} />
+    </>
   );
 }
 

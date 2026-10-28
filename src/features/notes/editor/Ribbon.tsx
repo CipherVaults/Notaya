@@ -136,7 +136,6 @@ function HomeTab({ editor }: { editor: Editor }) {
       canRedo: e.can().redo(),
       fontSize: (e.getAttributes("textStyle").fontSize as string | undefined) ?? "",
       fontFamily: (e.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
-      color: (e.getAttributes("textStyle").color as string | undefined) ?? "",
       align: e.isActive({ textAlign: "center" }) ? "center" : e.isActive({ textAlign: "right" }) ? "right" : "left",
     }),
   });
@@ -233,7 +232,7 @@ function HomeTab({ editor }: { editor: Editor }) {
             <Btn small label="Code" active={st.code} onClick={() => c().toggleCode().run()}>
               <Code size={15} />
             </Btn>
-            <ColorPop editor={editor} color={st.color} track={noTrack} onClose={refocus} />
+            <ColorPop editor={editor} track={noTrack} onClose={refocus} />
             <LinkPop editor={editor} active={st.link} track={noTrack} onClose={refocus} />
             <Btn small label="Remove formatting" onClick={() => c().unsetAllMarks().run()}>
               <Eraser size={15} />

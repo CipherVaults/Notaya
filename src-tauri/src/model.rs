@@ -172,7 +172,7 @@ pub struct Settings {
 }
 
 /// How many calculations the history keeps.
-pub const CALC_HISTORY_MAX: usize = 200;
+pub const CALC_HISTORY_MAX: usize = 500;
 
 /// One line of the calculator history: what was typed and the answer shown.
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize)]
@@ -281,6 +281,7 @@ mod tests {
     #[test]
     fn sanitized_caps_the_calc_history() {
         let mut s = Settings::default();
+        assert_eq!(CALC_HISTORY_MAX, 500, "V1.4.0: the history keeps 500 calculations");
         s.calc_history = vec![CalcEntry::default(); CALC_HISTORY_MAX + 20];
         assert_eq!(s.sanitized().calc_history.len(), CALC_HISTORY_MAX);
     }

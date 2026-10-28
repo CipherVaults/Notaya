@@ -43,30 +43,38 @@ export function stickyColor(name: string) {
 
 export const NOTEBOOK_ICONS = ["📓", "📘", "📗", "📕", "📙", "🗂️", "💼", "🏠", "✈️", "💡", "🎓", "🧪", "🎨", "💰", "❤️", "🔒"];
 
-/** Highlight colors are translucent, so they read well on every theme. */
+/**
+ * Highlight colors for text. They are matte: soft, low-saturation tints, and translucent, so the
+ * same saved value looks right on every light and dark theme and the text stays readable on top.
+ * (Older pages may hold other values; they still show, only these are offered.)
+ */
 export const HIGHLIGHTS = [
-  { name: "Gray", value: "rgba(155, 154, 151, 0.35)" },
-  { name: "Brown", value: "rgba(160, 115, 90, 0.38)" },
-  { name: "Orange", value: "rgba(224, 123, 57, 0.36)" },
-  { name: "Yellow", value: "rgba(236, 189, 40, 0.38)" },
-  { name: "Green", value: "rgba(79, 157, 105, 0.36)" },
-  { name: "Blue", value: "rgba(59, 130, 196, 0.36)" },
-  { name: "Purple", value: "rgba(144, 101, 176, 0.38)" },
-  { name: "Pink", value: "rgba(193, 76, 138, 0.36)" },
-  { name: "Red", value: "rgba(229, 72, 77, 0.36)" },
+  { name: "Stone", value: "rgba(140, 142, 148, 0.30)" },
+  { name: "Clay", value: "rgba(176, 130, 105, 0.32)" },
+  { name: "Peach", value: "rgba(214, 140, 90, 0.32)" },
+  { name: "Butter", value: "rgba(206, 178, 80, 0.34)" },
+  { name: "Sage", value: "rgba(110, 160, 125, 0.32)" },
+  { name: "Mist", value: "rgba(100, 150, 190, 0.32)" },
+  { name: "Lavender", value: "rgba(150, 125, 190, 0.32)" },
+  { name: "Blush", value: "rgba(200, 120, 150, 0.32)" },
+  { name: "Brick", value: "rgba(200, 105, 100, 0.32)" },
 ];
 
+/**
+ * Text colors: mid-tones with at least about 3.5:1 contrast on the light themes and 4.4:1 on the dark
+ * ones, so a color chosen on one theme stays legible on the others. "Default" removes the color.
+ */
 export const TEXT_COLORS = [
   { name: "Default", value: "" },
-  { name: "Gray", value: "#9b9a97" },
-  { name: "Brown", value: "#b0805f" },
-  { name: "Orange", value: "#e07b39" },
-  { name: "Yellow", value: "#d9a21b" },
-  { name: "Green", value: "#4f9d69" },
-  { name: "Blue", value: "#3b82c4" },
-  { name: "Purple", value: "#9065b0" },
-  { name: "Pink", value: "#c14c8a" },
-  { name: "Red", value: "#e5484d" },
+  { name: "Slate", value: "#78838f" },
+  { name: "Clay", value: "#a8765a" },
+  { name: "Terracotta", value: "#c8683a" },
+  { name: "Mustard", value: "#a67c1c" },
+  { name: "Sage", value: "#43905f" },
+  { name: "Ocean", value: "#4a8bc2" },
+  { name: "Lavender", value: "#8d6bc2" },
+  { name: "Rose", value: "#c9557f" },
+  { name: "Brick", value: "#d04f4f" },
 ];
 
 export const COVER_GRADIENTS = [
