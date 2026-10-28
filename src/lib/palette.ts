@@ -58,6 +58,17 @@ export const HIGHLIGHTS = [
   { name: "Lavender", value: "rgba(150, 125, 190, 0.32)" },
   { name: "Blush", value: "rgba(200, 120, 150, 0.32)" },
   { name: "Brick", value: "rgba(200, 105, 100, 0.32)" },
+  // A second, slightly stronger row. The importer for pages from other apps writes exactly these values
+  // (keep both in step with `src-tauri/src/importers`), so imported colors show as selected here.
+  { name: "Ash", value: "rgba(120, 119, 116, 0.28)" },
+  { name: "Cocoa", value: "rgba(159, 107, 83, 0.28)" },
+  { name: "Amber", value: "rgba(217, 115, 13, 0.28)" },
+  { name: "Honey", value: "rgba(203, 145, 47, 0.30)" },
+  { name: "Moss", value: "rgba(68, 131, 97, 0.28)" },
+  { name: "Denim", value: "rgba(51, 126, 169, 0.28)" },
+  { name: "Plum", value: "rgba(144, 101, 176, 0.28)" },
+  { name: "Orchid", value: "rgba(193, 76, 138, 0.28)" },
+  { name: "Cherry", value: "rgba(212, 76, 71, 0.28)" },
 ];
 
 /**
@@ -75,36 +86,16 @@ export const TEXT_COLORS = [
   { name: "Lavender", value: "#8d6bc2" },
   { name: "Rose", value: "#c9557f" },
   { name: "Brick", value: "#d04f4f" },
-];
-
-/**
- * An extra set of colors for pages that come from Notion: the same names Notion uses, so an imported
- * page keeps its colors exactly (the importer writes exactly these values; keep both in step with
- * `src-tauri/src/importers`). The backgrounds are translucent tints of the text colors so they read on every theme.
- * They are offered after Notaya's own colors; Notaya's own set stays the first and main one.
- */
-export const NOTION_TEXT_COLORS = [
-  { name: "Gray", value: "#787774" },
-  { name: "Brown", value: "#9f6b53" },
-  { name: "Orange", value: "#d9730d" },
-  { name: "Yellow", value: "#cb912f" },
-  { name: "Green", value: "#448361" },
-  { name: "Blue", value: "#337ea9" },
-  { name: "Purple", value: "#9065b0" },
-  { name: "Pink", value: "#c14c8a" },
-  { name: "Red", value: "#d44c47" },
-];
-
-export const NOTION_HIGHLIGHTS = [
-  { name: "Gray", value: "rgba(120, 119, 116, 0.28)" },
-  { name: "Brown", value: "rgba(159, 107, 83, 0.28)" },
-  { name: "Orange", value: "rgba(217, 115, 13, 0.28)" },
-  { name: "Yellow", value: "rgba(203, 145, 47, 0.30)" },
-  { name: "Green", value: "rgba(68, 131, 97, 0.28)" },
-  { name: "Blue", value: "rgba(51, 126, 169, 0.28)" },
-  { name: "Purple", value: "rgba(144, 101, 176, 0.28)" },
-  { name: "Pink", value: "rgba(193, 76, 138, 0.28)" },
-  { name: "Red", value: "rgba(212, 76, 71, 0.28)" },
+  // A second row, used by the importer for pages from other apps (see HIGHLIGHTS).
+  { name: "Ash", value: "#787774" },
+  { name: "Cocoa", value: "#9f6b53" },
+  { name: "Amber", value: "#d9730d" },
+  { name: "Honey", value: "#cb912f" },
+  { name: "Moss", value: "#448361" },
+  { name: "Denim", value: "#337ea9" },
+  { name: "Plum", value: "#9065b0" },
+  { name: "Orchid", value: "#c14c8a" },
+  { name: "Cherry", value: "#d44c47" },
 ];
 
 export const COVER_GRADIENTS = [

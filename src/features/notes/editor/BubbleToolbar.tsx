@@ -21,7 +21,7 @@ import {
   Trash2,
   Underline,
 } from "lucide-react";
-import { HIGHLIGHTS, NOTION_HIGHLIGHTS, NOTION_TEXT_COLORS, TEXT_COLORS } from "@/lib/palette";
+import { HIGHLIGHTS, TEXT_COLORS } from "@/lib/palette";
 import { Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { applyTurnInto, BLOCKS, currentBlock, type BlockKey } from "./turnInto";
@@ -445,34 +445,26 @@ export function TextColorPop({ editor, track, onClose }: { editor: Editor; track
       }
     >
       <div className="px-1.5 pb-1 pt-0.5 text-xs font-medium text-faint">Text color</div>
-      {[
-        { label: "Notaya colors", colors: TEXT_COLORS },
-        { label: "Notion colors", colors: NOTION_TEXT_COLORS },
-      ].map((group) => (
-        <div key={group.label}>
-          {group.label !== "Notaya colors" && <div className="px-1.5 pb-1 pt-1 text-[0.68rem] text-faint">{group.label}</div>}
-          <Swatches label={`${group.label}, text`}>
-            {group.colors.map((t) => {
-              const on = color === t.value.toLowerCase();
-              const name = t.value ? `${t.name} text (${group.label})` : "Default text color (remove the color)";
-              return (
-                <button
-                  key={t.name}
-                  title={t.value ? t.name : "Default (remove the color)"}
-                  aria-label={name}
-                  aria-pressed={on}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => (t.value ? editor.chain().focus().setColor(t.value).run() : editor.chain().focus().unsetColor().run())}
-                  className={cn(swatch, on ? "border-fg" : "border-line")}
-                  style={{ color: t.value || "var(--text)" }}
-                >
-                  A
-                </button>
-              );
-            })}
-          </Swatches>
-        </div>
-      ))}
+      <Swatches label="Text colors">
+        {TEXT_COLORS.map((t) => {
+          const on = color === t.value.toLowerCase();
+          const name = t.value ? `${t.name} text` : "Default text color (remove the color)";
+          return (
+            <button
+              key={t.name}
+              title={t.value ? t.name : "Default (remove the color)"}
+              aria-label={name}
+              aria-pressed={on}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => (t.value ? editor.chain().focus().setColor(t.value).run() : editor.chain().focus().unsetColor().run())}
+              className={cn(swatch, on ? "border-fg" : "border-line")}
+              style={{ color: t.value || "var(--text)" }}
+            >
+              A
+            </button>
+          );
+        })}
+      </Swatches>
     </Pop>
   );
 }
@@ -505,44 +497,34 @@ export function HighlightPop({ editor, track, onClose }: { editor: Editor; track
       }
     >
       <div className="px-1.5 pb-1 pt-0.5 text-xs font-medium text-faint">Highlight</div>
-      {[
-        { label: "Notaya colors", colors: HIGHLIGHTS },
-        { label: "Notion colors", colors: NOTION_HIGHLIGHTS },
-      ].map((group, g) => (
-        <div key={group.label}>
-          {g > 0 && <div className="px-1.5 pb-1 pt-1 text-[0.68rem] text-faint">{group.label}</div>}
-          <Swatches label={`${group.label}, highlight`}>
-            {g === 0 && (
-              <button
-                title="No highlight"
-                aria-label="No highlight (remove the highlight)"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => editor.chain().focus().unsetHighlight().run()}
-                className={cn(swatch, "border-line text-xs font-normal text-muted")}
-              >
-                ✕
-              </button>
-            )}
-            {group.colors.map((h) => {
-              const on = !!color && norm(color) === norm(h.value);
-              return (
-                <button
-                  key={h.name}
-                  title={h.name}
-                  aria-label={`${h.name} highlight (${group.label})`}
-                  aria-pressed={on}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => editor.chain().focus().setHighlight({ color: h.value }).run()}
-                  className={cn(swatch, on ? "border-fg" : "border-line")}
-                  style={{ background: h.value }}
-                >
-                  {on && <Check size={14} className="text-fg" />}
-                </button>
-              );
-            })}
-          </Swatches>
-        </div>
-      ))}
+      <Swatches label="Highlight colors">
+        <button
+          title="No highlight"
+          aria-label="No highlight (remove the highlight)"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus().unsetHighlight().run()}
+          className={cn(swatch, "border-line text-xs font-normal text-muted")}
+        >
+          ✕
+        </button>
+        {HIGHLIGHTS.map((h) => {
+          const on = !!color && norm(color) === norm(h.value);
+          return (
+            <button
+              key={h.name}
+              title={h.name}
+              aria-label={`${h.name} highlight`}
+              aria-pressed={on}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setHighlight({ color: h.value }).run()}
+              className={cn(swatch, on ? "border-fg" : "border-line")}
+              style={{ background: h.value }}
+            >
+              {on && <Check size={14} className="text-fg" />}
+            </button>
+          );
+        })}
+      </Swatches>
     </Pop>
   );
 }
