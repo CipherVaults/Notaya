@@ -1,35 +1,32 @@
 # A32: Full Cipherleaf-to-Notaya migration inside the program (V1.4.0)
 
-**Status:** requested by the owner on 2026-10-28 17:56:41 and 17:57:43 UTC ("why there's cipherleaf everywhere in the codes it's Notaya now" / "i want full migration in this version"). This is the plan and the choices; the parts marked **Do now** are in draft [PR #39](https://github.com/AbyssWatcher2/Notaya/pull/39), the parts marked **Choice** wait for the owner. It reverses the A28 decision "internal names kept on purpose" for everything that can change without risk to anyone's notes.
+**Status:** requested by the owner on 2026-10-28 ("why there's cipherleaf everywhere in the codes it's Notaya now" 17:56:41, "i want full migration in this version" 17:57:43). At 18:00:22 UTC he chose **option C, "Everything incl. encryption"** on the decision card, and named the file: "valut.not" (18:01:07), "nota" (18:01:32), "no nothing else" (18:03:03), so the vault file is **`vault.nota`**. Built in draft [PR #39](https://github.com/AbyssWatcher2/Notaya/pull/39). Not accepted.
 
-## Inventory (live code only, `git grep -i cipherleaf`, 2026-10-28, head `7df0004`)
+## What changed
 
-| Group | Where | What depends on it |
+| Group | Before (V1.3.0 and earlier) | Now (V1.4.0) |
 |---|---|---|
-| 1. **Part of the encrypted file format** | `OPEN_PASSWORD "cipherleaf-open-vault-security-off"` (`vault/header.rs`), the AAD prefix `b"cipherleaf"` (`vault/mod.rs`), the HKDF label `cipherleaf/v1/key-encryption-key` (`crypto.rs`) | Every existing vault, backup and open vault is encrypted with these. Changing a byte makes the notes unreadable. Nobody sees these strings. |
-| 2. **Data file names** | `vault.clf`, backups `vault-<time>.clf`, `vault-hourly-…`, `vault-predelete-…`, the `.clf` file dialogs, the magic `CLF1` | Users' files, their backups, restore and import code, every older Notaya. |
-| 3. **The app identifier** | `app.cipherleaf.vault` in `tauri.conf.json` | The single-instance guard (a Windows mutex named from it). Not used by the installer (it keys on the product name `Notaya`, so V1.3.0 upgrades cleanly either way). |
-| 4. **Safe to rename now** | crate `cipherleaf` and library `cipherleaf_lib`; npm package `cipherleaf`; environment variables `CIPHERLEAF_HOME` and `CIPHERLEAF_OPEN_BACKUP_SECS`; browser-profile keys `cipherleaf.appearance`, `.layout`, `.ribbonCollapsed`, `.openVaultNoteDismissed`, `.notice`; comments; the password-strength word list; README and test script wording | Nothing in the encrypted data. Old environment variable names and old browser keys are still read (fallback), so nothing the owner or the test scripts set stops working. |
+| Format names | header magic `CLF1` version 1; key label `cipherleaf/v1/key-encryption-key`; row binding `cipherleaf`; open-vault built-in password `cipherleaf-open-vault-security-off` | magic `NOTA` version 2; `notaya/v2/key-encryption-key`; `notaya`; `notaya-open-vault-security-off`. Same algorithms and layout. Both formats are read; only the new one is written. |
+| Data files | `data/vault.clf`, `*.clf` backups, `restore-undo-*.clf`, `set-aside-*.clf` | `data/vault.nota`, `*.nota`, `restore-undo-*.nota`, `set-aside-*.nota`. Every place that lists, restores, imports or rotates accepts both `.nota` and `.clf`. |
+| App identifier | `app.cipherleaf.vault` | `app.notaya.notes`, plus a guard (below). The installer keys on the product name, so updates from V1.3.0 are not affected. |
+| Names in code | crate `cipherleaf`, `CIPHERLEAF_HOME`, `CIPHERLEAF_OPEN_BACKUP_SECS`, browser keys `cipherleaf.*` | crate `notaya-app` (lib `notaya_lib`), `NOTAYA_HOME`, `NOTAYA_OPEN_BACKUP_SECS`, keys `notaya.*`. The old environment variables are still read; old browser values are copied to the new keys once. The word stays in the password-strength "do not use" list. |
 
-## Do now (no risk to notes)
+## How an old vault is brought across
 
-Group 4: renamed, with fallbacks (`NOTAYA_HOME` first, then `CIPHERLEAF_HOME`; the new browser keys first, the old ones read once and copied). Comments and the README say Notaya. The word `cipherleaf` stays in the password-strength "do not use" list next to `notaya`. Older release notes and records keep their old names (they describe what was true then).
+1. **At start** (`Paths::adopt_old_vault`): if there is no `data/vault.nota` and there is a `data/vault.clf`, SQLite makes a checked copy (`vault.nota.part`, header read, synced), which is renamed to `vault.nota`. The old file is then set aside as `data/vault-before-notaya.clf` (`-2`, `-3` if that name is taken). It is **never deleted**. If the copy fails (read-only drive, damaged file), the old file stays the live vault for that run, so an empty vault is never started beside the old notes; it is tried again at the next start.
+2. **At the first unlock** (`Session::upgrade_format`): the vault is re-keyed in one transaction (a fresh data key and vault id, every record and attachment re-encrypted with the Notaya names, header rewritten), with the same password and keyfile (or none for a vault with security off). All or nothing: on any error the file is unchanged, still readable in the old format, and it is tried again at the next unlock. The upgrade also runs after a restore of an old backup. A backup file is never changed by being looked at; only the live vault is upgraded.
+3. Older backups (`*.clf`) stay as they are and open with the password they had; they rotate out together with new ones.
 
-## Choice 1: the encrypted-format names (group 1)
+## Guard against an older Notaya
 
-- **A. Keep them (recommended).** Invisible in the app and in the files; changing them needs a re-encryption of every vault, and a mistake loses notes. They stay documented as "format names, `cipherleaf` on purpose" in one place (`docs/security-design.md`).
-- **B. Migrate.** New vaults and backups use Notaya labels (a new format version in the header); an existing vault is opened with the old labels and re-encrypted once on the first unlock, with the old file kept as a copy. Needs two code paths for old and new, a new round of review and tests, and older Notaya cannot open the new vaults. Security-sensitive; about a day of work with reviews.
+An old Notaya guards against a second copy with a mutex `app.cipherleaf.vault-sim` and a hidden window of class `app.cipherleaf.vault-sic` and title `-siw`. With a new identifier, the new version would not meet them and two copies could open one vault. `src-tauri/src/legacy_guard.rs` takes the old mutex and window too: a copy that starts later (old or new) finds them, sends the same "show your window" message the old guard sends, and exits. Cloud test: two claims in one process under Wine (with `xvfb-run`). **Not tested on Windows:** an installed V1.3.0 running while the new exe starts (and the reverse).
 
-## Choice 2: file names (group 2)
+## What is not covered, said plainly
 
-- **A. Keep `vault.clf` (recommended).** The data folder looks the same as it always did; any older Notaya or your own copies keep working; restore and import need no change.
-- **B. Rename to `vault.notaya` and backups to `.notaya`.** The first start copies (never moves) `vault.clf` and the backups to the new names, keeps the old files, reads both in restore and import. Older Notaya cannot open the new file; the real portable vault would be copied on its first start in V1.4.0.
+- Older Notaya cannot open the new files (`vault.nota` or an upgraded vault). Going back to V1.3.0 means using `vault-before-notaya.clf` renamed back to `vault.clf`; notes written in V1.4.0 are not in it.
+- `vault-before-notaya.clf` and old `.clf` backups keep their old protection: if security was off, anyone with the file can read them. Turning security on offers to delete earlier unprotected copies; that now includes `vault-before-notaya*.clf` when its header says security was off. Nothing else deletes it.
+- The older real-vault folder `E:\Project\Notaya\Cipherleaf-portable\data` is not touched by any test.
 
-## Choice 3: the app identifier (group 3)
+## Verified in the cloud (2026-10-28, `cargo test --lib --target x86_64-pc-windows-gnu` under Wine)
 
-- **A. Keep `app.cipherleaf.vault` (recommended).** An old and a new Notaya on the same notes still block each other.
-- **B. Change to a Notaya identifier,** and add a guard of our own: the new version also takes the old mutex name and a hidden window class the old versions look for, so an older Notaya cannot start beside it on the same notes. Without that guard a V1.3.0 and a V1.4.0 could open the same vault at once.
-
-## Tests for any choice that touches data
-
-Throwaway data only, in `E:\Project\Notaya\Notaya Tests Excluded`: a portable V1.3.0 folder opened by the new exe (notes, backups and settings identical, old files untouched), an installed V1.3.0 updated by the new setup, a fresh install, a restore of a V1.3.0 backup, import from a portable copy, and an older exe refusing or ignoring the new files as designed. The owner's real portable vault is never touched.
+178 tests pass. New: header formats (round trip, the two formats do not open each other, every header byte is protected), upgrade of open, protected and keyfile vaults, a failed upgrade changes nothing (file byte for byte), upgrade on change of credentials or security, **three real files made by the V1.3.0 code** (`src-tauri/test-data/v1.3.0/`: open, protected, keyfile; they open and upgrade), adoption (copy, kept file, second kept file, leftover `.part`, failure fallback, an existing `vault.nota` never replaced), mixed `.clf`/`.nota` rotation, restore of a V1.3.0 backup, import of a V1.3.0 portable copy, the guard. **Not run:** everything on the PC (upgrade of a copy of a V1.3.0 portable folder, installed update, restore, import, old exe beside the new one).
