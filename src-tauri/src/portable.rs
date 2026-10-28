@@ -223,6 +223,7 @@ mod tests {
         // The notes folder must not be one the setup or the uninstaller works in: the program goes
         // to `%LOCALAPPDATA%\Notaya`, and the "delete app data" box removes the identifier's folder.
         assert_ne!(root.file_name().unwrap(), "Notaya");
+        assert_ne!(root.file_name().unwrap(), "app.notaya.notes");
         assert_ne!(root.file_name().unwrap(), "app.cipherleaf.vault");
         assert_eq!(Paths::at(&root).vault, local.join("Notaya Notes").join("data").join("vault.nota"));
     }

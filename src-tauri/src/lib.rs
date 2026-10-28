@@ -5,6 +5,7 @@ mod error;
 mod filenames;
 mod generator;
 mod import;
+mod legacy_guard;
 mod model;
 mod openvault;
 mod portable;
@@ -39,7 +40,23 @@ impl Drop for ClosingGuard {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// The app handle, for the guard against an older Notaya (it may be asked to show the window).
+static APP: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
+
 pub fn run() {
+    // An older Notaya (V1.3.0 and earlier) and this one must not open the same notes together:
+    // take the names the old copy's guard uses, or hand over to a copy that holds them.
+    #[cfg(windows)]
+    match legacy_guard::claim(legacy_guard::OLD_ID, || {
+        if let Some(app) = APP.get() {
+            shell::show_main(app);
+        }
+    }) {
+        Ok(legacy_guard::Claim::Held) => {}
+        Ok(legacy_guard::Claim::Handed) => std::process::exit(0),
+        Err(e) => eprintln!("start: could not set up the guard against an older Notaya ({e})"),
+    }
+
     let paths = portable::Paths::resolve();
 
     tauri::Builder::default()
@@ -68,6 +85,7 @@ pub fn run() {
             response.unwrap_or_else(|_| http::Response::new(Vec::new()))
         })
         .setup(move |app| {
+            let _ = APP.set(app.handle().clone());
             if let Err(e) = paths.ensure_dirs() {
                 // The folder next to the app can't be written (a read-only drive or folder).
                 // The release exe has no console, so without a message it would just vanish.

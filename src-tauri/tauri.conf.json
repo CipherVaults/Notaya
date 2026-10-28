@@ -3,7 +3,7 @@
   "productName": "Notaya",
   "mainBinaryName": "Notaya",
   "version": "1.4.0",
-  "identifier": "app.cipherleaf.vault",
+  "identifier": "app.notaya.notes",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
