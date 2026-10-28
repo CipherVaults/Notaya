@@ -6,6 +6,26 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:36 to about 16:10 UTC), Notaya: prepare V1.3.0 with the Windows setup, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests in one Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC), the PC report, the repository at `main` `52841f1` then `37774c6`. **Reconstructed:** nothing; written at the end. **Big stop:** a release prepared, not published.
+
+## What happened
+
+1. The owner wrote "Release". Claude bumped the five version files to 1.3.0 (`6f582dd`), opened draft PR #34 and had the PC build and test it in `E:\Project\Notaya Tests Excluded`, including the upgrade from the V1.2.0 ZIP and the interactive setup, which no earlier test had run.
+2. Everything passed except one cosmetic flaw: updating through the setup window shows "Notaya was removed from this PC" in the middle of the update (nothing lost). Claude put the choice to the owner on a decision card (recommended: ship and list it); he chose "Fix first" (15:27:09).
+3. The cause was found in the Tauri NSIS template (the setup runs the old uninstaller without `/UPDATE`). The hook now stays silent while a "Notaya Setup" window exists (`f970331`). The fix lives in the installed uninstaller, so it works for upgrades from V1.3.0 on. The first build was dropped; the second was built and fully retested, and the fix was proved with a 1.2.9-numbered copy of the same commit (no box).
+4. During the retest the setup's Finish page was left with "Run Notaya" ticked and the app started in the owner's real session, creating an empty `Notaya Notes` folder (no vault). Recorded as FI-05; nothing deleted.
+5. Main moved (PR #33, the native app dropped); it was merged into the branch.
+
+## What changed in understanding
+
+Tests of a setup can reach the real profile through the Finish page, not only through the app. A fix in an uninstaller hook only helps later upgrades, so it had to go into the first release that has a setup.
+
+Where to resume: the owner merges PR #34 ("Create a merge commit") and runs the `gh release create` command in [EX-2026-10-28-34](execution/2026-10-28-notaya-v1-3-0-release.md); then the release is checked and the PC copy fast-forwarded. Nothing is accepted.
+
+---
+
 # 📘 Session: 2026-10-24 to 2026-10-28 (owner's messages 2026-10-24 08:59:52 to 2026-10-28 14:34:32 UTC), Notaya: plan for a native Windows app, then dropped, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC), draft PR #11.
