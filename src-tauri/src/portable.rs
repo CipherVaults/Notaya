@@ -241,4 +241,86 @@ mod tests {
         std::fs::create_dir_all(bare.join(PORTABLE_MARKER)).unwrap();
         assert!(choose_root(&bare, Some(&local)).1);
     }
+
+    fn temp_paths() -> Paths {
+        let root = temp_root();
+        let paths = Paths::at(&root);
+        std::fs::create_dir_all(&paths.data).unwrap();
+        paths
+    }
+
+    #[test]
+    fn the_old_vault_file_becomes_vault_nota_and_is_kept_aside() {
+        let mut paths = temp_paths();
+        {
+            let mut s = Session::create_legacy_open(&paths.old_vault).unwrap();
+            s.put(crate::model::Item::Settings(crate::model::Settings::default())).unwrap();
+        }
+        let original = std::fs::read(&paths.old_vault).unwrap();
+        paths.adopt_old_vault();
+        assert_eq!(paths.vault, paths.data.join("vault.nota"));
+        assert!(paths.vault.is_file() && !paths.old_vault.exists());
+        assert_eq!(std::fs::read(paths.data.join("vault-before-notaya.clf")).unwrap(), original, "the old file is kept untouched");
+        assert!(!with_suffix(&paths.vault, ".part").exists());
+        // The copy is still in the old format until the first unlock upgrades it.
+        let mut s = Session::unlock_open(&paths.vault).unwrap();
+        assert!(!s.is_current_format());
+        assert!(s.upgrade_format("", None).unwrap());
+        drop(s);
+        assert!(Session::unlock_open(&paths.vault).unwrap().is_current_format());
+        // A second start does nothing more.
+        paths.adopt_old_vault();
+        assert_eq!(std::fs::read_dir(&paths.data).unwrap().count(), 2, "vault.nota and the kept file only");
+    }
+
+    #[test]
+    fn an_existing_vault_nota_is_never_replaced() {
+        let mut paths = temp_paths();
+        drop(Session::create_open(&paths.vault).unwrap());
+        drop(Session::create_legacy_open(&paths.old_vault).unwrap());
+        let (new_bytes, old_bytes) = (std::fs::read(&paths.vault).unwrap(), std::fs::read(&paths.old_vault).unwrap());
+        paths.adopt_old_vault();
+        assert_eq!(paths.vault, paths.data.join("vault.nota"));
+        assert_eq!(std::fs::read(&paths.vault).unwrap(), new_bytes);
+        assert_eq!(std::fs::read(&paths.old_vault).unwrap(), old_bytes, "an old file next to a new one is left alone");
+    }
+
+    #[test]
+    fn a_second_old_file_is_kept_under_a_free_name() {
+        let mut paths = temp_paths();
+        std::fs::write(paths.data.join("vault-before-notaya.clf"), b"EARLIER").unwrap();
+        drop(Session::create_legacy_open(&paths.old_vault).unwrap());
+        paths.adopt_old_vault();
+        assert_eq!(std::fs::read(paths.data.join("vault-before-notaya.clf")).unwrap(), b"EARLIER");
+        assert!(paths.data.join("vault-before-notaya-2.clf").is_file());
+        assert!(paths.vault.is_file());
+    }
+
+    #[test]
+    fn when_the_copy_fails_the_old_file_stays_the_vault() {
+        let mut paths = temp_paths();
+        std::fs::write(&paths.old_vault, b"this is not a vault").unwrap();
+        paths.adopt_old_vault();
+        assert_eq!(paths.vault, paths.old_vault, "no empty vault is started beside the old notes");
+        assert_eq!(std::fs::read(&paths.old_vault).unwrap(), b"this is not a vault");
+        assert!(!paths.data.join("vault.nota").exists() && !paths.data.join("vault.nota.part").exists());
+    }
+
+    #[test]
+    fn a_leftover_part_file_is_replaced() {
+        let mut paths = temp_paths();
+        std::fs::write(paths.data.join("vault.nota.part"), b"half a copy").unwrap();
+        drop(Session::create_legacy_open(&paths.old_vault).unwrap());
+        paths.adopt_old_vault();
+        assert!(Session::unlock_open(&paths.vault).is_ok());
+        assert!(!paths.data.join("vault.nota.part").exists());
+    }
+
+    #[test]
+    fn nothing_happens_without_an_old_file() {
+        let mut paths = temp_paths();
+        paths.adopt_old_vault();
+        assert_eq!(paths.vault, paths.data.join("vault.nota"));
+        assert_eq!(std::fs::read_dir(&paths.data).unwrap().count(), 0);
+    }
 }

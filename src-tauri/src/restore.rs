@@ -444,7 +444,7 @@ mod tests {
     const FAST: KdfParams = KdfParams { m_kib: 64, t: 1, p: 1 };
 
     fn temp_paths() -> Paths {
-        let root = std::env::temp_dir().join(format!("cipherleaf-restore-{}", new_id()));
+        let root = std::env::temp_dir().join(format!("notaya-restore-{}", new_id()));
         std::fs::create_dir_all(&root).unwrap();
         let paths = Paths::at(&root);
         std::fs::create_dir_all(&paths.backups).unwrap();
@@ -574,7 +574,7 @@ mod tests {
     #[test]
     fn an_absolute_path_with_any_clf_name_resolves() {
         let paths = temp_paths();
-        let f = paths.data.join("cipherleaf-backup-1.CLF");
+        let f = paths.data.join("notaya-backup-1.CLF");
         write(&f, b"data");
         let picked = fs::canonicalize(&f).unwrap();
         assert_eq!(resolve_source(&paths, &f.display().to_string(), Some(&picked)).unwrap(), f);
@@ -651,7 +651,7 @@ mod tests {
         // The live vault, spelled plainly and spelled with `..` inside.
         let live = "That is the vault in use now, not a backup.";
         rejected(&paths, &abs(paths.vault.clone()), live);
-        rejected(&paths, &abs(b.join("..").join("vault.clf")), live);
+        rejected(&paths, &abs(b.join("..").join("vault.nota")), live);
         // The temporary copy has the wrong extension, so it never gets further.
         rejected(&paths, &abs(paths.data.join(TEMP_NAME)), NOT_CLF);
         // Absolute paths: wrong extension, a folder, and a missing file (never picked).
@@ -670,10 +670,10 @@ mod tests {
         write(&temp_path(&paths), b"NEW");
 
         let undo = install(&paths, 1234).unwrap().expect("an undo file");
-        assert_eq!(undo, "restore-undo-1234.clf");
+        assert_eq!(undo, "restore-undo-1234.nota");
         assert_eq!(std::fs::read(&paths.vault).unwrap(), b"NEW");
         assert_eq!(std::fs::read(paths.data.join(&undo)).unwrap(), b"OLD");
-        assert_eq!(std::fs::read(paths.data.join("restore-undo-1234.clf-journal")).unwrap(), b"OLDJ");
+        assert_eq!(std::fs::read(paths.data.join("restore-undo-1234.nota-journal")).unwrap(), b"OLDJ");
         assert!(!temp_path(&paths).exists());
         assert!(!with_suffix(&paths.vault, "-journal").exists());
     }
@@ -681,12 +681,12 @@ mod tests {
     #[test]
     fn install_never_overwrites_an_earlier_undo_file() {
         let paths = temp_paths();
-        write(&paths.data.join("restore-undo-50.clf"), b"EARLIER");
+        write(&paths.data.join("restore-undo-50.nota"), b"EARLIER");
         write(&paths.vault, b"OLD");
         write(&temp_path(&paths), b"NEW");
         let undo = install(&paths, 50).unwrap().unwrap();
-        assert_eq!(undo, "restore-undo-51.clf");
-        assert_eq!(std::fs::read(paths.data.join("restore-undo-50.clf")).unwrap(), b"EARLIER");
+        assert_eq!(undo, "restore-undo-51.nota");
+        assert_eq!(std::fs::read(paths.data.join("restore-undo-50.nota")).unwrap(), b"EARLIER");
         assert_eq!(std::fs::read(paths.data.join(undo)).unwrap(), b"OLD");
     }
 
@@ -714,8 +714,8 @@ mod tests {
         assert!(install(&paths, 7).is_err());
         assert_eq!(std::fs::read(&paths.vault).unwrap(), b"OLD");
         assert_eq!(std::fs::read(with_suffix(&paths.vault, "-journal")).unwrap(), b"OLDJ");
-        assert!(!paths.data.join("restore-undo-7.clf").exists());
-        assert!(!paths.data.join("restore-undo-7.clf-journal").exists());
+        assert!(!paths.data.join("restore-undo-7.nota").exists());
+        assert!(!paths.data.join("restore-undo-7.nota-journal").exists());
     }
 
     /// A vault with `password` and one sticky note, saved as a backup in the backups folder.
@@ -790,7 +790,7 @@ mod tests {
         assert!(s.is_open());
         assert!(s.get(&item_id).is_some());
         // The protected vault it replaced is kept and still needs its password.
-        assert!(Session::unlock(&paths.data.join("restore-undo-77.clf"), "password-B", None).is_ok());
+        assert!(Session::unlock(&paths.data.join("restore-undo-77.nota"), "password-B", None).is_ok());
     }
 
     #[test]
@@ -901,7 +901,7 @@ mod tests {
         assert_eq!(install(&paths, 5).unwrap(), None, "no old vault, so no undo vault file");
         assert_eq!(std::fs::read(&paths.vault).unwrap(), b"NEW");
         assert!(!with_suffix(&paths.vault, "-journal").exists());
-        assert_eq!(std::fs::read(paths.data.join("restore-undo-5.clf-journal")).unwrap(), b"STRAY");
+        assert_eq!(std::fs::read(paths.data.join("restore-undo-5.nota-journal")).unwrap(), b"STRAY");
     }
 
     #[test]
@@ -910,7 +910,7 @@ mod tests {
         write(&with_suffix(&paths.vault, "-journal"), b"STRAY");
         assert!(install(&paths, 5).is_err()); // no temp file
         assert_eq!(std::fs::read(with_suffix(&paths.vault, "-journal")).unwrap(), b"STRAY");
-        assert!(!paths.data.join("restore-undo-5.clf-journal").exists());
+        assert!(!paths.data.join("restore-undo-5.nota-journal").exists());
         assert!(!paths.vault.exists());
     }
 
@@ -918,9 +918,9 @@ mod tests {
     fn a_failed_rollback_is_reported_in_the_error() {
         // Making the rollback itself fail is hard to arrange, so this checks the message.
         let e = io::Error::new(io::ErrorKind::PermissionDenied, "access denied");
-        let notes = ["Your previous vault could not be put back; it is saved as restore-undo-9.clf in the data folder.".to_string()];
+        let notes = ["Your previous vault could not be put back; it is saved as restore-undo-9.nota in the data folder.".to_string()];
         let text = install_failure(e, &notes).to_string();
-        assert!(text.contains("could not be put back") && text.contains("restore-undo-9.clf"), "{text}");
+        assert!(text.contains("could not be put back") && text.contains("restore-undo-9.nota"), "{text}");
         assert!(!text.contains("access denied"), "raw error text stays out of the UI: {text}");
         assert!(matches!(install_failure(io::Error::other("x"), &[]), Error::Io(_)));
     }
@@ -931,14 +931,14 @@ mod tests {
         write(&paths.vault, b"VAULT");
         write(&with_suffix(&paths.vault, "-journal"), b"J");
         // A name already taken is skipped, not replaced.
-        write(&paths.data.join("set-aside-7.clf"), b"EARLIER");
+        write(&paths.data.join("set-aside-7.nota"), b"EARLIER");
         let name = set_aside_with(&paths, 7, 1, Duration::ZERO).unwrap();
-        assert_eq!(name, "set-aside-8.clf");
+        assert_eq!(name, "set-aside-8.nota");
         assert!(!paths.vault.exists());
         assert!(!with_suffix(&paths.vault, "-journal").exists());
-        assert_eq!(std::fs::read(paths.data.join("set-aside-8.clf")).unwrap(), b"VAULT");
-        assert_eq!(std::fs::read(paths.data.join("set-aside-8.clf-journal")).unwrap(), b"J");
-        assert_eq!(std::fs::read(paths.data.join("set-aside-7.clf")).unwrap(), b"EARLIER");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-8.nota")).unwrap(), b"VAULT");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-8.nota-journal")).unwrap(), b"J");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-7.nota")).unwrap(), b"EARLIER");
     }
 
     #[test]

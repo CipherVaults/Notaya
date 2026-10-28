@@ -1104,4 +1104,61 @@ mod tests {
         s.backup_to(&upgraded).unwrap();
         s.verify_copy(&upgraded).unwrap();
     }
+
+    // Real files made by the code of V1.3.0 (the vault format did not change between V1.3.0 and the commit
+    // they were made at), kept as test data in `test-data/v1.3.0`. They prove that vaults written before
+    // the Notaya format open and upgrade, not just vaults the current code made to look old.
+    const FIXTURE_OPEN: &[u8] = include_bytes!("../../test-data/v1.3.0/open.vault");
+    const FIXTURE_PROTECTED: &[u8] = include_bytes!("../../test-data/v1.3.0/protected.vault");
+    const FIXTURE_KEYFILE: &[u8] = include_bytes!("../../test-data/v1.3.0/keyfile.vault");
+    const PAGE_ID: &str = "00000000000000000000000000000001";
+
+    fn fixture(bytes: &[u8]) -> std::path::PathBuf {
+        let path = temp_vault();
+        std::fs::write(&path, bytes).unwrap();
+        path
+    }
+
+    #[test]
+    fn a_vault_made_by_v1_3_0_opens_and_upgrades() {
+        let path = fixture(FIXTURE_OPEN);
+        assert_eq!(header_magic(&path), b"CLF1");
+        let mut s = Session::unlock_any(&path, "", None).unwrap();
+        assert!(matches!(s.get(PAGE_ID), Some(Item::Page(p)) if p.text == "open fixture page"));
+        assert_eq!(s.get_attachment("4af92f06f769c38a27e8123570ed4ab3").unwrap().1, b"open-pixels".to_vec());
+        assert!(s.upgrade_format("", None).unwrap());
+        drop(s);
+        assert_eq!(header_magic(&path), b"NOTA");
+        let s = Session::unlock_any(&path, "", None).unwrap();
+        assert!(matches!(s.get(PAGE_ID), Some(Item::Page(p)) if p.text == "open fixture page"));
+        assert_eq!(s.items().count(), 3, "settings, page and sticky");
+        assert_eq!(s.get_attachment("4af92f06f769c38a27e8123570ed4ab3").unwrap().1, b"open-pixels".to_vec());
+    }
+
+    #[test]
+    fn a_protected_vault_made_by_v1_3_0_opens_and_upgrades_with_its_password() {
+        let path = fixture(FIXTURE_PROTECTED);
+        assert!(matches!(Session::unlock(&path, "Wrong-Fixture-Pass", None), Err(Error::BadCredentials)));
+        let mut s = Session::unlock(&path, "Fixture-Pass-1", None).unwrap();
+        assert!(matches!(s.get(PAGE_ID), Some(Item::Page(p)) if p.text == "protected fixture page"));
+        assert!(s.upgrade_format("Fixture-Pass-1", None).unwrap());
+        drop(s);
+        assert_eq!(header_magic(&path), b"NOTA");
+        let s = Session::unlock(&path, "Fixture-Pass-1", None).unwrap();
+        assert_eq!(s.get_attachment("96eb9b45f4e2f18bd93eab13c15910ed").unwrap().1, b"protected-pixels".to_vec());
+        assert!(matches!(Session::unlock(&path, "Wrong-Fixture-Pass", None), Err(Error::BadCredentials)));
+    }
+
+    #[test]
+    fn a_keyfile_vault_made_by_v1_3_0_upgrades_and_still_needs_its_keyfile() {
+        let path = fixture(FIXTURE_KEYFILE);
+        let kf = [7u8; 32];
+        assert!(Session::unlock(&path, "Fixture-Pass-2", None).is_err());
+        let mut s = Session::unlock(&path, "Fixture-Pass-2", Some(&kf)).unwrap();
+        assert!(s.upgrade_format("Fixture-Pass-2", Some(&kf)).unwrap());
+        drop(s);
+        assert!(Session::unlock(&path, "Fixture-Pass-2", None).is_err());
+        let s = Session::unlock(&path, "Fixture-Pass-2", Some(&kf)).unwrap();
+        assert!(matches!(s.get(PAGE_ID), Some(Item::Page(p)) if p.text == "keyfile fixture page"));
+    }
 }

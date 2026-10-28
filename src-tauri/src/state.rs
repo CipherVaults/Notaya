@@ -658,7 +658,7 @@ mod tests {
 
     #[test]
     fn the_picked_backup_is_remembered_replaced_and_cleared() {
-        let root = std::env::temp_dir().join(format!("cipherleaf-state-{}", crate::model::new_id()));
+        let root = std::env::temp_dir().join(format!("notaya-state-{}", crate::model::new_id()));
         let state = AppState::new(Paths::at(&root));
         assert_eq!(state.picked_backup(), None);
         state.set_picked_backup(PathBuf::from("a.clf"));
@@ -671,7 +671,7 @@ mod tests {
 
     #[test]
     fn a_notice_is_returned_once() {
-        let root = std::env::temp_dir().join(format!("cipherleaf-state-{}", crate::model::new_id()));
+        let root = std::env::temp_dir().join(format!("notaya-state-{}", crate::model::new_id()));
         let state = AppState::new(Paths::at(&root));
         assert_eq!(state.take_notice(), None);
         state.set_notice("first".into());

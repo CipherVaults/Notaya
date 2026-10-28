@@ -264,7 +264,7 @@ mod tests {
     use super::*;
 
     fn temp_paths() -> Paths {
-        let root = std::env::temp_dir().join(format!("cipherleaf-shell-{}", crate::model::new_id()));
+        let root = std::env::temp_dir().join(format!("notaya-shell-{}", crate::model::new_id()));
         let paths = Paths::at(&root);
         paths.ensure_dirs().unwrap();
         paths

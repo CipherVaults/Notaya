@@ -483,9 +483,9 @@ mod subpage_tests {
     use crate::crypto::KdfParams;
 
     fn vault() -> Session {
-        let dir = std::env::temp_dir().join(format!("cipherleaf-test-{}", new_id()));
+        let dir = std::env::temp_dir().join(format!("notaya-test-{}", new_id()));
         std::fs::create_dir_all(&dir).unwrap();
-        Session::create(&dir.join("vault.clf"), "pw", None, KdfParams { m_kib: 64, t: 1, p: 1 }).unwrap()
+        Session::create(&dir.join("vault.nota"), "pw", None, KdfParams { m_kib: 64, t: 1, p: 1 }).unwrap()
     }
 
     fn page_in(s: &mut Session, section_id: &str, title: &str) -> Page {

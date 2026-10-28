@@ -1,3 +1,4 @@
 # Keep the approved plan snapshot byte-identical (no line-ending conversion),
 # so its SHA-256 in docs/plan/approval-and-amendments.md stays valid.
 docs/plan/approved-plan-2026-10-22.md -text
+src-tauri/test-data/** binary

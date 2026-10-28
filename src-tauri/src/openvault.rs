@@ -91,7 +91,7 @@ mod tests {
     const FAST: KdfParams = KdfParams { m_kib: 64, t: 1, p: 1 };
 
     fn paths() -> Paths {
-        let root = std::env::temp_dir().join(format!("cipherleaf-open-{}", new_id()));
+        let root = std::env::temp_dir().join(format!("notaya-open-{}", new_id()));
         let paths = Paths::at(&root);
         fs::create_dir_all(&paths.backups).unwrap();
         paths
