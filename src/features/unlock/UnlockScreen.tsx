@@ -398,7 +398,7 @@ function StartOverDialog({
       <div className="space-y-4 text-sm leading-relaxed">
         <ul className="list-disc space-y-1.5 pl-5 text-muted">
           <li>
-            Nothing is deleted. The current vault is renamed to <span className="font-mono text-fg">set-aside-….clf</span>{" "}
+            Nothing is deleted. The current vault is renamed to <span className="font-mono text-fg">set-aside-….nota</span>{" "}
             in <span className="break-all font-mono text-fg">{dataDir}</span>.
           </li>
           <li>

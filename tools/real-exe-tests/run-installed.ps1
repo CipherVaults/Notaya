@@ -44,7 +44,7 @@ try {
   Start-Sleep 6
   node "$PSScriptRoot\installed.mjs" $port first "$local\Notaya Notes\data"
   Stop-TestApp $p $prog
-  "vault.clf under LOCALAPPDATA\Notaya Notes\data: " + (Test-Path "$local\Notaya Notes\data\vault.clf")
+  "vault.nota under LOCALAPPDATA\Notaya Notes\data: " + (Test-Path "$local\Notaya Notes\data\vault.nota")
   "data folder next to the exe (must be False): " + (Test-Path "$prog\data")
 
   "== installed copy, second start"
@@ -59,7 +59,7 @@ try {
   Start-Sleep 6
   node "$PSScriptRoot\installed.mjs" $port portable "$prog2\data"
   Stop-TestApp $p $prog2
-  "vault.clf next to the portable exe: " + (Test-Path "$prog2\data\vault.clf")
+  "vault.nota next to the portable exe: " + (Test-Path "$prog2\data\vault.nota")
   "portable copy wrote into LOCALAPPDATA (must be 0 items; Windows own Microsoft\ cache ignored): " + @(Get-ChildItem $local2 -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'Microsoft' }).Count
 } finally {
   Stop-TestApp $p $base

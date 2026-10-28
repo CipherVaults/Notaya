@@ -50,7 +50,7 @@ export function PasswordInput({
 }
 
 /** Files that change on their own or belong to an app: a keyfile like that stops working once it changes. */
-const CHANGING_FILE = /\.(clf|kdbx|ini|exe|dll|tmp|log|lnk|db|journal)$/i;
+const CHANGING_FILE = /\.(nota|clf|kdbx|ini|exe|dll|tmp|log|lnk|db|journal)$/i;
 
 /**
  * A warning for a keyfile choice that is likely a mistake, or null. Any file can be a

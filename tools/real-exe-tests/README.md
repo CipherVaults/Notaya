@@ -15,7 +15,7 @@ Scripts that start a **copy of the built `Notaya.exe`** with a **throwaway vault
 - The debug port is **9335**, set (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`) for the test process only, never left set. After a run, the runner prints `port 9335 listening after test: 0`. If it is not 0, find out why and close it.
 - The passphrase is generated fresh for each run from a cryptographic RNG, written to a temp file and deleted at the end. It is never printed or stored. Do not hard-code one.
 - Only the Notaya the script started is stopped.
-- Never commit vault data or secrets (`*.clf`, `*.key`, `.devdata/`).
+- Never commit vault data or secrets (`*.nota`, `*.clf`, `*.key`, `.devdata/`).
 - Run only after the work is approved. In `docs/STATUS.md` a paused mission means ask the owner first.
 
 ## How to run

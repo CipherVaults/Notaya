@@ -15,6 +15,7 @@ dist-ssr
 # Local development vault (never commit vault data or keyfiles)
 .devdata
 *.clf
+
 *.key
 release
 
@@ -40,3 +41,4 @@ release
 *.njsproj
 *.sln
 *.sw?
+*.nota

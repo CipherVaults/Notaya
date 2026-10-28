@@ -15,7 +15,7 @@ These are this repository's working rules for Claude Code. This file doesn't hol
 
 - **Stable releases only.** No alpha, beta, rc, preview or nightly packages. npm versions are exact (`.npmrc` sets `save-exact=true`); Rust versions are locked in `src-tauri/Cargo.lock`.
 - **Never edit `docs/plan/approved-plan-2026-10-22.md`.** Git keeps it byte-for-byte (`.gitattributes`). Record plan changes in the amendments record.
-- **Never commit vault data or secrets:** `.devdata/`, `*.clf`, `*.key`, password CSV exports or `.env` files. Check `git status` before every commit.
+- **Never commit vault data or secrets:** `.devdata/`, `*.nota`, `*.clf`, `*.key`, password CSV exports or `.env` files. Check `git status` before every commit.
 - **Ask the owner first** before: installing tools or dependencies, deleting files, making Git commits, adding a remote or pushing, changing security behavior, or resuming development while `docs/STATUS.md` says it's paused.
 - **Keep keys and secrets in the Rust core.** The UI receives only what it displays.
 - **Never test on the owner's live window or vault.** UI automation (for example a WebView2 debug port) uses a throwaway vault in a separate process, with `CIPHERLEAF_HOME` pointing at a temp folder. Close the debug port afterwards and confirm that nothing listens on it (see `docs/failure-intelligence.md`, FI-01). Never leave `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` set.

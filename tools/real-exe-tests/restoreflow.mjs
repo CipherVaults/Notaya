@@ -71,7 +71,7 @@ const abs = await m.inv("restore_vault", { source: "C:\\Windows\\win.ini", passw
 check("absolute path that was not picked is refused", !!abs.err, JSON.stringify(abs));
 const unc = await m.inv("restore_vault", { source: "\\\\127.0.0.1\\c$\\x.clf", password, keyfile: null });
 check("UNC path refused", !!unc.err, JSON.stringify(unc));
-const trav = await m.inv("restore_vault", { source: "vault-..\\..\\vault.clf", password, keyfile: null });
+const trav = await m.inv("restore_vault", { source: "vault-..\\..\\vault.nota", password, keyfile: null });
 check("path traversal name refused", !!trav.err, JSON.stringify(trav));
 
 const wrong = await m.inv("restore_vault", { source: oldest, password: password.split("").reverse().join("") + "x", keyfile: null });
