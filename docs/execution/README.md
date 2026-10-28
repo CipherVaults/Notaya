@@ -20,7 +20,8 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Task / Goal: "Release" (V1.3.0 with the Windows setup and the portable ZIP); "Fix first" (the update message of the setup window)
 - Executor: Claude (Claude Code) in a cloud thread; build and tests in a Remote Control session on the owner's PC, throwaway data, only in `E:\Project\Notaya Tests Excluded`
 - Outcome: version 1.3.0 and one installer-hook fix (`f970331`); 145 of 145 tests, `npm audit` 0; setup 4,974,334 bytes (`5A16FD0C…BE4C1`), ZIP 5,924,682 bytes (`494ACE82…2A1C9`); runners, silent and interactive install, update, uninstall, import from the V1.2.0 ZIP pass; a first build (`6f582dd`) was superseded. Not run: SmartScreen, WebView2 download, ticked desktop shortcut, build exit code
-- Open dependency / next action: the owner merges PR #34 and runs `gh release create`; then the release check and the PC fast-forward are recorded
+- Integration / release: PR #34 merged `9a982da` (16:07:47); [v1.3.0](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.3.0) published 16:11:23 UTC (tag `f970331`, digests equal)
+- Open dependency / next action: the owner's acceptance; the PC copy is fast-forwarded after the records PR
 - Acceptance: pending
 
 ### 2026-10-28 (owner's messages 11:56:21 and 12:24:16 UTC; work 12:25 UTC on, system clock), EX-2026-10-28-33: Windows installer (A30), built in the cloud

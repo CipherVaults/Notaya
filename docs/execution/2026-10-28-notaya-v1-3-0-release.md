@@ -44,3 +44,15 @@
 - Known and listed in the release notes: the old-hook box on the first upgrade from a build before V1.3.0 (none was released as a setup); "Uninstall Notaya" then re-installing; the stock side picture; the empty registry key; no signing.
 - The `v130` folder (superseded first build) and `v130b` stay in the test folder; deleting them needs his OK.
 - Nothing is accepted.
+
+## Addendum: merge and release (2026-10-28 16:07 to 16:12 UTC)
+
+- **Merge:** the owner marked PR #34 ready and merged it with "Create a merge commit" at 16:07:47 UTC (`main` `9a982da`; parents `37774c6` and `b960b46`). The build commit `f970331` is in `main`'s history (`git merge-base --is-ancestor`). `package.json` on `main` says 1.3.0. His PC copy `E:\Project\cipherleaf` was fast-forwarded `52841f1` to `9a982da` (PC clock 16:08:25 UTC; `HEAD` equals `origin/main`; `git status` only `?? vendor/`; nothing built or run there). This PC pull is logged here; the PC will be fast-forwarded again after the records PR that carries this addendum.
+- **Stray folder (FI-05):** the owner said "Delete it" (16:07:53). Before deleting, the PC session re-checked: created 15:54:06, 172 files, 10,054,175 bytes, all under `data\webview\EBWebView`, no `.clf`, `.key` or backup, no Notaya process. It deleted only that folder (16:09:31); `%APPDATA%` and the rest of `%LOCALAPPDATA%` unchanged against its baseline (one unrelated old file, `resmon.resmoncfg`, dated 2026-10-11); `HKCU\Software\Notaya` absent.
+- **Release:** the owner wrote "Publish" (16:10:23). The PC session re-hashed the setup, the ZIP and the notes (all equal), checked `gh auth status` and that `v1.3.0` did not exist, then ran the `gh release create` command of section 4 in a normal PowerShell: exit 0, no permission block, 16:11 UTC. Checked afterwards through the PC's `gh release view` and again through the GitHub API from the cloud:
+  - [Release v1.3.0](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.3.0), "Notaya V1.3.0", published 2026-10-28 16:11:23 UTC, not a draft, not a prerelease, and the latest release (`releases/latest` returns `v1.3.0`).
+  - Tag `v1.3.0` points at `f970331cb9724142e07c926d04e339eaf4b9d6e9`, the commit the files were built from.
+  - Two assets, both `uploaded`: `Notaya-V1.3.0-setup.exe` 4,974,334 bytes, digest `sha256:5a16fd0c…52be4c1`; `Notaya-V1.3.0-portable.zip` 5,924,682 bytes, digest `sha256:494ace82…e32a1c9`. Both digests equal the built files' SHA-256 of section 2.
+  - The release text is the file `docs/release-notes/v1.3.0.md` (read back from the API).
+  - `gh release list` on the PC shows v1.2.0, v1.1.0, v1.0.1 and v1.0 still there; their assets were not touched.
+- Not checked: the downloaded assets (not downloaded and re-hashed), SmartScreen on a downloaded copy. **Released; not accepted.** Result state: *produced*, *verified*, *integrated*, *released*; the owner has not accepted it.
