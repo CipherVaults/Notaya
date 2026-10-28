@@ -8,7 +8,7 @@ export const ACCENTS = [
   { name: "Green", value: "#22c55e" },
   { name: "Amber", value: "#f59e0b" },
   { name: "Orange", value: "#f97316" },
-  { name: "Rose", value: "#f43f5e" },
+  { name: "Pink", value: "#f43f5e" },
   { name: "Violet", value: "#8b5cf6" },
 ];
 
@@ -32,7 +32,7 @@ export const STICKY_COLORS: Record<string, { paper: string; ink: string; bar: st
   green: { paper: "#c9f5d4", ink: "#123b22", bar: "#a6ebba", label: "Mint" },
   blue: { paper: "#cfe6ff", ink: "#12304d", bar: "#aed3ff", label: "Sky" },
   purple: { paper: "#e3d6ff", ink: "#2b1a52", bar: "#cdb8ff", label: "Lavender" },
-  orange: { paper: "#ffdcbf", ink: "#4a2510", bar: "#ffc497", label: "Peach" },
+  orange: { paper: "#ffdcbf", ink: "#4a2510", bar: "#ffc497", label: "Orange" },
   gray: { paper: "#e9e9ef", ink: "#25252e", bar: "#d6d6de", label: "Cloud" },
   charcoal: { paper: "#2a2a33", ink: "#ececf3", bar: "#36363f", label: "Charcoal" },
 };
@@ -46,18 +46,19 @@ export const NOTEBOOK_ICONS = ["📓", "📘", "📗", "📕", "📙", "🗂️"
 /**
  * Highlight colors for text. They are matte: soft, low-saturation tints, and translucent, so the
  * same saved value looks right on every light and dark theme and the text stays readable on top.
- * (Older pages may hold other values; they still show, only these are offered.)
+ * The names and the order are Notion's (Gray, Brown, Orange, Yellow, Green, Blue, Purple, Pink, Red), so a page
+ * imported from Notion maps color for color. (Older pages may hold other values; they still show, only these are offered.)
  */
 export const HIGHLIGHTS = [
-  { name: "Stone", value: "rgba(140, 142, 148, 0.30)" },
-  { name: "Clay", value: "rgba(176, 130, 105, 0.32)" },
+  { name: "Gray", value: "rgba(140, 142, 148, 0.30)" },
+  { name: "Brown", value: "rgba(176, 130, 105, 0.32)" },
   { name: "Peach", value: "rgba(214, 140, 90, 0.32)" },
-  { name: "Butter", value: "rgba(206, 178, 80, 0.34)" },
-  { name: "Sage", value: "rgba(110, 160, 125, 0.32)" },
-  { name: "Mist", value: "rgba(100, 150, 190, 0.32)" },
-  { name: "Lavender", value: "rgba(150, 125, 190, 0.32)" },
-  { name: "Blush", value: "rgba(200, 120, 150, 0.32)" },
-  { name: "Brick", value: "rgba(200, 105, 100, 0.32)" },
+  { name: "Yellow", value: "rgba(206, 178, 80, 0.34)" },
+  { name: "Green", value: "rgba(110, 160, 125, 0.32)" },
+  { name: "Blue", value: "rgba(100, 150, 190, 0.32)" },
+  { name: "Purple", value: "rgba(150, 125, 190, 0.32)" },
+  { name: "Pink", value: "rgba(200, 120, 150, 0.32)" },
+  { name: "Red", value: "rgba(200, 105, 100, 0.32)" },
 ];
 
 /**
@@ -66,15 +67,15 @@ export const HIGHLIGHTS = [
  */
 export const TEXT_COLORS = [
   { name: "Default", value: "" },
-  { name: "Slate", value: "#78838f" },
-  { name: "Clay", value: "#a8765a" },
-  { name: "Terracotta", value: "#c8683a" },
-  { name: "Mustard", value: "#a67c1c" },
-  { name: "Sage", value: "#43905f" },
-  { name: "Ocean", value: "#4a8bc2" },
-  { name: "Lavender", value: "#8d6bc2" },
-  { name: "Rose", value: "#c9557f" },
-  { name: "Brick", value: "#d04f4f" },
+  { name: "Gray", value: "#78838f" },
+  { name: "Brown", value: "#a8765a" },
+  { name: "Orange", value: "#c8683a" },
+  { name: "Yellow", value: "#a67c1c" },
+  { name: "Green", value: "#43905f" },
+  { name: "Blue", value: "#4a8bc2" },
+  { name: "Purple", value: "#8d6bc2" },
+  { name: "Pink", value: "#c9557f" },
+  { name: "Red", value: "#d04f4f" },
 ];
 
 export const COVER_GRADIENTS = [
