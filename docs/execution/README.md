@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-28 (owner's message 16:24:57 UTC; work 16:27 to 16:35 UTC, PC system clock), EX-2026-10-28-35: test leftovers cleaned up on the PC
+
+- Report: [2026-10-28-test-leftovers-cleanup.md](2026-10-28-test-leftovers-cleanup.md)
+- Task / Goal: "yes please" (delete the listed test folders and scan for others); `v130b` kept because he is testing the setup from it
+- Executor: Claude (Claude Code) in a cloud thread, deletes run on the PC through Remote Control
+- Outcome: about 12.6 GB of throwaway folders deleted (`%TEMP%` clones and `clf-*` test homes, `run2`, `vendor`); no source change
+- Integration / release: records PR only
+- Open dependency / next action: `notaya-installer-2db590ae` (Bitdefender denied access); after his setup test, the registry key, two shortcuts, `v130b`, `v130` and the `cipherleaf-*` test folders
+- Acceptance: not applicable
+
 ### 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:37 to 16:05 UTC, PC and system clock), EX-2026-10-28-34: Notaya V1.3.0 (setup and portable ZIP)
 
 - Report: [2026-10-28-notaya-v1-3-0-release.md](2026-10-28-notaya-v1-3-0-release.md)
