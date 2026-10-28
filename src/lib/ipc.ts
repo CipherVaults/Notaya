@@ -5,8 +5,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { flushAll } from "./flush";
 import type {
   BackupInfo,
+  CalcEntry,
   EnableSecurityResult,
-  KeePassXCStatus,
+  ImportSummary,
   NotesTree,
   Page,
   PageMeta,
@@ -28,8 +29,6 @@ export const api = {
     invoke<EnableSecurityResult>("enable_security", { password, keyfile, removeUnprotectedCopies }),
   disableSecurity: (currentPassword: string, currentKeyfile: string | null) =>
     invoke<void>("disable_security", { currentPassword, currentKeyfile }),
-  // The Passwords (KeePassXC) feature is optional too
-  setPasswordsEnabled: (enabled: boolean) => invoke<Settings>("set_passwords_enabled", { enabled }),
   unlockVault: (password: string, keyfile: string | null) =>
     invoke<void>("unlock_vault", { password, keyfile }),
   lockVault: async () => {
@@ -52,13 +51,12 @@ export const api = {
   pickBackupFile: () => invoke<string | null>("pick_backup_file"),
   restoreVault: (source: string, password: string, keyfile: string | null, allowSecurityOff = false) =>
     invoke<RestoreResult>("restore_vault", { source, password, keyfile, allowSecurityOff }),
+  // Installed Notaya, first screen: copy the notes of a portable copy (the folder is chosen in a
+  // dialog opened by the backend). Resolves to null if the dialog was cancelled.
+  importPortableNotes: () => invoke<ImportSummary | null>("import_portable_notes"),
   // Start over (only while locked): sets the vault aside and returns its new file name.
   startOver: () => invoke<string>("start_over"),
-  // Restore the KeePassXC passwords file (only while unlocked). `source` is a backup name or a full path.
-  listPasswordBackups: () => invoke<BackupInfo[]>("list_password_backups"),
-  pickPasswordsBackupFile: () => invoke<string | null>("pick_passwords_backup_file"),
-  restorePasswords: (source: string) => invoke<RestoreResult>("restore_passwords", { source }),
-  // A message the backend wants shown once (for example after Quit was cancelled)
+  // A message the backend wants shown once (for example after a backup failed)
   takeNotice: () => invoke<string | null>("take_notice"),
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
@@ -111,16 +109,13 @@ export const api = {
   openSticky: (id: string) => invoke<void>("open_sticky", { id }),
   closeSticky: (id: string) => invoke<void>("close_sticky", { id }),
   deleteSticky: (id: string) => invoke<void>("delete_sticky", { id }),
+  deleteStickies: (ids: string[]) => invoke<void>("delete_stickies", { ids }),
 
-  // Passwords live in the bundled KeePassXC (amendment A9)
-  keepassxcStatus: () => invoke<KeePassXCStatus>("keepassxc_status"),
-  keepassxcOpen: () => invoke<void>("keepassxc_open"),
-  keepassxcLock: () => invoke<void>("keepassxc_lock"),
-  // Shows KeePassXC inside this window; rectangles are in physical pixels (A10)
-  keepassxcEmbed: (x: number, y: number, w: number, h: number) => invoke<void>("keepassxc_embed", { x, y, w, h }),
-  keepassxcPlace: (x: number, y: number, w: number, h: number) => invoke<void>("keepassxc_place", { x, y, w, h }),
-  keepassxcHide: () => invoke<void>("keepassxc_hide"),
-  keepassxcDetach: () => invoke<void>("keepassxc_detach"),
+  // Calculators pop out in their own windows; all of them share one saved history
+  openCalculator: () => invoke<void>("open_calculator"),
+  calcHistory: () => invoke<CalcEntry[]>("calc_history"),
+  addCalcEntry: (expr: string, result: string) => invoke<CalcEntry[]>("add_calc_entry", { expr, result }),
+  clearCalcHistory: () => invoke<void>("clear_calc_history"),
 
   // Tools
   openUrl: (url: string) => invoke<void>("open_url", { url }),

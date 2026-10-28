@@ -1,14 +1,15 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State, WebviewWindow};
+use tauri::{AppHandle, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
+use crate::backup;
 use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
-use crate::model::{resolve_passwords, Item, Settings, Sticky};
+use crate::model::{Item, Settings, Sticky};
 use crate::openvault;
 use crate::state::{self, AppState};
 use crate::ui;
@@ -33,20 +34,25 @@ pub struct VaultStatus {
     header_ok: bool,
     data_dir: String,
     version: String,
+    /// An installed Notaya with no notes yet: the first screen offers starting new notes and
+    /// importing the notes of a portable copy (also after a Start over, when earlier copies exist).
+    offer_import: bool,
 }
 
 /// Opens the vault by itself when it has security off, and on a first run creates one,
-/// so Cipherleaf starts straight in the notes (A21). A vault with a master password is
+/// so Notaya starts straight in the notes (A21). A vault with a master password is
 /// left alone for the lock screen. Returns why a vault with security off could not be opened.
 fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
     let _gate = state.open_gate();
-    // A quit in progress must not bring the notes back to life while KeePassXC closes.
+    // A quit in progress must not bring the notes back to life.
     if state.is_unlocked() || state.is_quitting() {
         return None;
     }
     if !state.paths.vault.exists() {
         // Earlier copies without a vault look like lost notes: ask first, never start empty.
-        if openvault::has_earlier_copies(&state.paths) {
+        // An installed copy also asks on its first start, so the notes of a portable copy can
+        // be brought in before an empty vault takes their place.
+        if state.paths.installed || openvault::has_earlier_copies(&state.paths) {
             return None;
         }
         return create_open(app, state).err().map(|e| e.to_string());
@@ -63,12 +69,6 @@ fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
         // A master password, or a header that can't be read: the lock screen deals with it.
         _ => None,
     }
-}
-
-/// Opens a vault that has security off again after a cancelled quit had closed it.
-pub(crate) fn reopen_open_vault(app: &AppHandle) {
-    let state = app.state::<AppState>();
-    let _ = auto_open(app, &state);
 }
 
 /// Creates a new vault with security off and opens it.
@@ -101,16 +101,18 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
     } else {
         (false, false, true)
     };
+    let earlier_copies = !exists && openvault::has_earlier_copies(&state.paths);
     Ok(VaultStatus {
         exists,
         unlocked,
         keyfile_required,
         security_on,
-        earlier_copies: !exists && openvault::has_earlier_copies(&state.paths),
+        earlier_copies,
         open_error,
         header_ok,
         data_dir: state.paths.data.display().to_string(),
         version: app.package_info().version.to_string(),
+        offer_import: !exists && state.paths.installed,
     })
 }
 
@@ -126,7 +128,7 @@ fn check_new_password(password: &str) -> Result<()> {
             "Use at least {MIN_PASSWORD_CHARS} characters for your master password."
         )));
     }
-    if generator::strength(password, &["cipherleaf"]).score < 3 {
+    if generator::strength(password, &["cipherleaf", "notaya"]).score < 3 {
         return Err(Error::invalid(
             "That master password is too easy to guess. Try a longer passphrase.",
         ));
@@ -176,10 +178,13 @@ pub struct EnableSecurityResult {
     backup_failed: bool,
 }
 
-/// Turns security on: the notes get a master password (and an optional keyfile). Only
-/// the key that protects them changes, so nothing is re-encrypted or lost. If asked, the
-/// earlier copies that were made while security was off (readable by anyone) are deleted,
-/// but only after a fresh backup under the new password has been saved.
+/// Turns security on: the notes get a master password (and an optional keyfile). The vault is
+/// re-keyed (a fresh data key and vault id, every record and attachment re-encrypted in one
+/// all-or-nothing step), so a copy made while security was off can't open data written later.
+/// Nothing is lost. If asked, the earlier copies that were made while security was off
+/// (readable by anyone, safety backups made before a delete included) are deleted, but only
+/// after a fresh backup under the new password has been saved. Restore-undo and set-aside
+/// vaults are never deleted.
 #[tauri::command(async)]
 pub fn enable_security(
     app: AppHandle,
@@ -199,8 +204,8 @@ pub fn enable_security(
     let mut removed_copies = 0;
     let mut backup_failed = false;
     if remove_unprotected_copies {
-        match state.with(|s| state::rotate_backup(&state.paths, s)) {
-            Ok(()) => removed_copies = openvault::delete_unprotected(&state.paths),
+        match state.with(|s| backup::make_backup(&state.paths, s)) {
+            Ok(_) => removed_copies = openvault::delete_unprotected(&state.paths),
             // No fresh backup: keep the old copies rather than leave none.
             Err(e) => {
                 eprintln!("backup after turning security on failed: {e}");
@@ -212,7 +217,8 @@ pub fn enable_security(
 }
 
 /// Turns security off. The current master password (and keyfile) are required, and a
-/// wrong one counts as a failed attempt like on the lock screen. Nothing else changes.
+/// wrong one counts as a failed attempt like on the lock screen. The vault is re-keyed (like
+/// turning security on) and no note changes.
 #[tauri::command(async)]
 pub fn disable_security(
     app: AppHandle,
@@ -239,29 +245,6 @@ pub fn disable_security(
         Err(_) => {}
     }
     result
-}
-
-/// Switches the Passwords (KeePassXC) feature on or off. Turning it off first asks a
-/// running KeePassXC to close; if it stays open the switch stays on.
-#[tauri::command(async)]
-pub fn set_passwords_enabled(state: State<'_, AppState>, enabled: bool) -> Result<Settings> {
-    if !state.is_unlocked() {
-        return Err(Error::Locked);
-    }
-    if !enabled {
-        if !crate::keepassxc::close_gracefully(&state.keepassxc, &state.paths, state::KEEPASSXC_CLOSE_TIMEOUT) {
-            // Give it its own window back, so any "save changes?" question can be seen.
-            let _ = crate::keepassxc::detach();
-            return Err(Error::invalid(state::KEEPASSXC_STILL_OPEN));
-        }
-        crate::embed::hide();
-    }
-    state.with_mut(|s| {
-        let mut settings = s.settings();
-        settings.passwords_enabled = Some(enabled);
-        s.put(Item::Settings(settings))
-    })?;
-    get_settings(state)
 }
 
 #[tauri::command(async)]
@@ -305,8 +288,13 @@ pub fn lock_vault(app: AppHandle) {
     state::lock(&app, "manual");
 }
 
+/// Changes the master password and/or keyfile. The vault is re-keyed (a fresh data key and vault
+/// id, see `Session::change_credentials`), so an old password with an old header or backup can't
+/// open data written afterwards. A fresh backup follows; older backups still open with the old
+/// password. If that backup fails the change stands and the owner gets the usual backup notice.
 #[tauri::command(async)]
 pub fn change_master(
+    app: AppHandle,
     state: State<'_, AppState>,
     current_password: String,
     current_keyfile: Option<String>,
@@ -331,6 +319,11 @@ pub fn change_master(
     if matches!(result, Err(Error::BadCredentials)) {
         state.record_failure();
     }
+    if result.is_ok() {
+        if let Err(e) = state.with(|s| backup::make_backup(&state.paths, s)) {
+            state::report_backup_failure(&app, &state, &e);
+        }
+    }
     result
 }
 
@@ -350,7 +343,7 @@ pub fn create_keyfile(app: AppHandle) -> Result<Option<String>> {
         .dialog()
         .file()
         .set_title("Save your new keyfile (keep it somewhere other than the vault)")
-        .set_file_name("cipherleaf.key")
+        .set_file_name("notaya.key")
         .add_filter("Keyfile", &["key"])
         .blocking_save_file()
         .and_then(|f| f.into_path().ok())
@@ -369,23 +362,25 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
     let Some(path) = app
         .dialog()
         .file()
-        .set_title("Save an encrypted backup")
-        .set_file_name(format!("cipherleaf-backup-{}.clf", crate::model::now_ms() / 1000))
-        .add_filter("Cipherleaf vault", &["clf"])
+        .set_title("Save a backup copy")
+        .set_file_name(format!("notaya-backup-{}.clf", crate::model::now_ms() / 1000))
+        .add_filter("Notaya vault", &["clf"])
         .blocking_save_file()
         .and_then(|f| f.into_path().ok())
     else {
         return Ok(None);
     };
-    state.with(|s| s.backup_to(&path))?;
+    // Written next to the chosen file and checked first; an existing file is replaced only
+    // by a copy that passed, and the live vault is refused.
+    state.with(|s| backup::save_copy(s, &path, &state.paths.vault))?;
     Ok(Some(path.display().to_string()))
 }
 
-/// The settings as the UI sees them: the Passwords switch is always a definite on/off.
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
     let mut settings = state.with(|s| Ok(s.settings()))?;
-    settings.passwords_enabled = Some(resolve_passwords(settings.passwords_enabled, state::passwords_in_use(&state.paths)));
+    // The calculator history has its own commands; the settings screen doesn't need it.
+    settings.calc_history.clear();
     Ok(settings)
 }
 
@@ -393,9 +388,8 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
 pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> Result<Settings> {
     let mut settings = settings.sanitized();
     let protect = state.with_mut(|s| {
-        // The Passwords switch changes only through `set_passwords_enabled` (it has to close
-        // KeePassXC first), so a late or stale save from a window can't flip it.
-        settings.passwords_enabled = s.settings().passwords_enabled;
+        // The calculator history changes only through the calculator commands.
+        settings.calc_history = s.settings().calc_history;
         s.put(Item::Settings(settings.clone()))?;
         Ok(s.protects_capture())
     })?;
@@ -428,9 +422,7 @@ pub fn flush_done(window: WebviewWindow, state: State<'_, AppState>, round: u64)
 }
 
 /// Runs on a worker thread, like `lock_vault`, so the windows can answer.
-/// Locks, asks KeePassXC to close and exits. If KeePassXC is still open (it may be
-/// asking to save) it does NOT exit and never ends KeePassXC: the owner gets the
-/// `app-notice` event instead, and the command still returns normally.
+/// Locks and exits.
 #[tauri::command(async)]
 pub fn quit_app(app: AppHandle) {
     state::quit(&app);

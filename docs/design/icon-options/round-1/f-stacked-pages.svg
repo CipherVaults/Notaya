@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option F: three stacked pages (pages and sub-pages), the top one marked with a leaf. Keeps today's black-and-white look. -->
+  <rect width="1024" height="1024" rx="230" fill="#0b0b0b"/>
+  <rect x="302" y="222" width="420" height="560" rx="56" fill="#5c5c5c" transform="rotate(-15 512 512)"/>
+  <rect x="302" y="222" width="420" height="560" rx="56" fill="#a8a8a8" transform="rotate(-6 512 512)"/>
+  <rect x="302" y="232" width="420" height="560" rx="56" fill="#ffffff" transform="rotate(3 512 512)"/>
+  <g transform="rotate(3 512 512)">
+    <g transform="translate(512 512) rotate(35)">
+      <path d="M0 -170C112 -112 128 56 0 170C-128 56 -112 -112 0 -170Z" fill="#0b0b0b"/>
+      <path d="M0 -118V140" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

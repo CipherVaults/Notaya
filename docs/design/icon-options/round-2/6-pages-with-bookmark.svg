@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option 6: stacked pages (pages and sub-pages) with a red bookmark. Keeps today's black-and-white look. -->
+  <rect width="1024" height="1024" rx="230" fill="#0b0b0b"/>
+  <rect x="330" y="200" width="420" height="560" rx="48" fill="#5c5c5c"/>
+  <rect x="302" y="232" width="420" height="560" rx="48" fill="#a8a8a8"/>
+  <rect x="274" y="264" width="420" height="560" rx="48" fill="#ffffff"/>
+  <path d="M560 264H640V470L600 436L560 470Z" fill="#e5484d"/>
+  <rect x="330" y="540" width="300" height="32" rx="16" fill="#cfcfcf"/>
+  <rect x="330" y="616" width="240" height="32" rx="16" fill="#cfcfcf"/>
+  <rect x="330" y="692" width="170" height="32" rx="16" fill="#cfcfcf"/>
+</svg>

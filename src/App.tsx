@@ -28,13 +28,18 @@ export default function App() {
       // Storage may be unavailable; nothing to show then.
     }
 
-    // A message the backend wants shown once (for example after Quit was cancelled).
-    api
-      .takeNotice()
-      .then((text) => {
-        if (text) toast.info(text, { duration: 15000 });
-      })
-      .catch(() => {});
+    // A message the backend wants shown once (for example after a backup failed).
+    // A failed backup is shown as an error; the other messages are information.
+    const showNotice = () =>
+      api
+        .takeNotice()
+        .then((text) => {
+          if (!text) return;
+          if (text.startsWith("Notaya could not")) toast.error(text, { duration: 15000 });
+          else toast.info(text, { duration: 15000 });
+        })
+        .catch(() => {});
+    showNotice();
 
     applyAppearance(cachedAppearance(), true).finally(() => {
       refreshStatus().finally(() => {
@@ -70,13 +75,10 @@ export default function App() {
     // The backend can also send a notice while the app is running.
     // The payload is ignored on purpose: taking the stored copy shows the message once and clears it.
     const unlistenNotice = listen<string>("app-notice", () => {
-      api
-        .takeNotice()
-        .then((text) => {
-          if (text) toast.info(text, { duration: 15000 });
-        })
-        .catch(() => {});
+      showNotice();
     });
+    // A notice set before the listener existed (while the window was reloading) would be missed: look once more now.
+    unlistenNotice.then(() => showNotice());
     return () => {
       unlistenNotice.then((f) => f());
       unlisten.then((f) => f());

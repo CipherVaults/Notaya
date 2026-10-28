@@ -1,4 +1,4 @@
-// shot.mjs - save one PNG screenshot of the Cipherleaf MOCK UI (fake data, plain browser; development only).
+// shot.mjs - save one PNG screenshot of the Notaya MOCK UI (fake data, plain browser; development only).
 // Purpose: documentation and review screenshots without the real app or any real vault.
 // Usage:   node shot.mjs <out.png> <url> [js-before] [waitMs] [width] [height]
 //          e.g. node shot.mjs home.png http://127.0.0.1:1421/ "" 900 1360 860

@@ -1,9 +1,8 @@
 # common.ps1 - helpers shared by the real-exe test runners (dot-sourced, not run on its own).
 #
 # Purpose : one place for the safety-relevant helpers: a fresh random throwaway passphrase,
-#           a check that the debug port is free, and "stop only the Cipherleaf I started".
+#           a check that the debug port is free, and "stop only the Notaya I started".
 # Usage   : . (Join-Path $PSScriptRoot 'common.ps1')          # from run-*.ps1 in this folder
-#           . (Join-Path $PSScriptRoot '..\common.ps1')       # from the passwords\ folder
 # Needs   : Windows PowerShell 5.1. Nothing is installed or changed outside $env:TEMP.
 
 $script:WordList = @(
@@ -46,11 +45,20 @@ function New-PassphraseFile {
   return $path
 }
 
-# Resolves and checks the path to the Cipherleaf.exe that will be tested.
+# Resolves and checks the path to the Notaya.exe that will be tested.
 function Resolve-TestExe([string]$Exe) {
-  if (-not $Exe) { throw 'Pass -Exe <path to Cipherleaf.exe> (a release build from npm run tauri build).' }
-  if (-not (Test-Path -LiteralPath $Exe -PathType Leaf)) { throw "Cipherleaf.exe not found: $Exe" }
+  if (-not $Exe) { throw 'Pass -Exe <path to Notaya.exe> (a release build from npm run tauri build).' }
+  if (-not (Test-Path -LiteralPath $Exe -PathType Leaf)) { throw "Notaya.exe not found: $Exe" }
   return (Resolve-Path -LiteralPath $Exe).Path
+}
+
+# Copies the exe into the fresh test folder as a PORTABLE copy: with the portable.txt marker next to it,
+# like the portable ZIP, so the vault is made in "$Dir\data". Without the marker a bare folder counts as an
+# INSTALLED copy, which keeps its notes under %LOCALAPPDATA% (see run-installed.ps1). Never leave the marker out
+# for a test that is not about installed mode: it would write into the real profile.
+function Copy-TestExe([string]$Exe, [string]$Dir) {
+  Copy-Item $Exe "$Dir\Notaya.exe"
+  [System.IO.File]::WriteAllText("$Dir\portable.txt", "test copy (portable)")
 }
 
 function Get-ListenerCount([int]$Port) {
@@ -63,19 +71,24 @@ function Assert-PortFree([int]$Port) {
 }
 
 # Starts the copied exe with the WebView2 debug port set ONLY for that child process.
-function Start-TestApp([string]$ExePath, [int]$Port, [string]$StdoutFile = '', [string]$StderrFile = '') {
+# -ExtraEnv sets more environment variables for that child only (for example LOCALAPPDATA, to keep an
+# installed-mode test out of the real profile); they are put back afterwards.
+function Start-TestApp([string]$ExePath, [int]$Port, [string]$StdoutFile = '', [string]$StderrFile = '', [hashtable]$ExtraEnv = @{}) {
+  $saved = @{}
   try {
+    foreach ($k in $ExtraEnv.Keys) { $saved[$k] = [Environment]::GetEnvironmentVariable($k, 'Process'); [Environment]::SetEnvironmentVariable($k, $ExtraEnv[$k], 'Process') }
     $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=$Port"
     if ($StdoutFile -and $StderrFile) { $p = Start-Process $ExePath -PassThru -RedirectStandardOutput $StdoutFile -RedirectStandardError $StderrFile }
     else { $p = Start-Process $ExePath -PassThru }
   } finally {
     Remove-Item Env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS -ErrorAction SilentlyContinue
+    foreach ($k in $saved.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k], 'Process') }
   }
   return $p
 }
 
 # Closes the test app politely; force-stops ONLY the process this script started (never another
-# Cipherleaf, such as the owner's real window), plus any leftover process running from $Dir.
+# Notaya, such as the owner's real window), plus any leftover process running from $Dir.
 function Stop-TestApp($p, [string]$Dir) {
   if ($p) {
     $p.Refresh()
@@ -83,7 +96,7 @@ function Stop-TestApp($p, [string]$Dir) {
     if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
   }
   if ($Dir) {
-    Get-Process Cipherleaf -ErrorAction SilentlyContinue |
+    Get-Process Notaya -ErrorAction SilentlyContinue |
       Where-Object { $_.Path -and $_.Path.StartsWith($Dir, [System.StringComparison]::OrdinalIgnoreCase) } |
       Stop-Process -Force
   }

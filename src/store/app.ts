@@ -2,9 +2,7 @@ import { create } from "zustand";
 import { api } from "@/lib/ipc";
 import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
 
-// Passwords are managed in the bundled KeePassXC (amendment A9), so there is no
-// password or generator view here, only a "passwords" panel that opens it.
-export type View = "notes" | "passwords" | "stickies" | "settings";
+export type View = "notes" | "stickies" | "settings";
 
 /** A one-shot request for a view to do something once it is shown (e.g. from the command palette). */
 export type Intent = "new-page" | "new-notebook" | null;

@@ -12,7 +12,7 @@ export type Appearance = Pick<
 const KEY = "cipherleaf.appearance";
 
 export const DEFAULT_APPEARANCE: Appearance = {
-  theme: "paper",
+  theme: "sunrise",
   accent: "mono",
   backdrop: "none",
   font: "inter",
@@ -52,23 +52,32 @@ export function cachedAppearance(): Appearance {
   return DEFAULT_APPEARANCE;
 }
 
+export type ResolvedTheme = Exclude<Appearance["theme"], "system">;
+
+const LOOKS: readonly ResolvedTheme[] = ["sunrise", "sunrise-dark", "black", "graphite", "white", "paper"];
+
 /** The look that is actually shown ("system" follows Windows). */
-export function resolveTheme(theme: Appearance["theme"]): "black" | "graphite" | "white" | "paper" {
+export function resolveTheme(theme: Appearance["theme"]): ResolvedTheme {
   if (theme === "system") return window.matchMedia("(prefers-color-scheme: dark)").matches ? "black" : "white";
-  return theme === "graphite" || theme === "white" || theme === "paper" ? theme : "black";
+  return LOOKS.includes(theme) ? theme : "black";
 }
+
+/** The coral accent of the Sunrise looks. */
+export const SUNRISE_ACCENT = "#e8553f";
 
 export function isDark(theme: Appearance["theme"]): boolean {
   const t = resolveTheme(theme);
-  return t === "black" || t === "graphite";
+  return t === "black" || t === "graphite" || t === "sunrise-dark";
 }
 
 /**
- * "mono" is the default black-and-white look: white accents on dark, black on light.
+ * "mono" is the theme's own accent: coral in the two Sunrise looks, and otherwise
+ * black and white (white accents on dark, black on light).
  * Any other value is a color, and the text on it is chosen for contrast.
  */
-export function resolveAccent(value: string, dark: boolean): { accent: string; onAccent: string } {
+export function resolveAccent(value: string, dark: boolean, look?: ResolvedTheme): { accent: string; onAccent: string } {
   if (value === "mono" || !/^#[0-9a-f]{6}$/i.test(value)) {
+    if (look === "sunrise" || look === "sunrise-dark") return { accent: SUNRISE_ACCENT, onAccent: "#ffffff" };
     return dark ? { accent: "#ffffff", onAccent: "#000000" } : { accent: "#0a0a0a", onAccent: "#ffffff" };
   }
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16) / 255);
@@ -81,11 +90,12 @@ export function resolveAccent(value: string, dark: boolean): { accent: string; o
 export async function applyAppearance(a: Appearance, applyBackdrop: boolean) {
   const root = document.documentElement;
   const dark = isDark(a.theme);
-  root.dataset.theme = resolveTheme(a.theme);
+  const look = resolveTheme(a.theme);
+  root.dataset.theme = look;
   root.dataset.mode = dark ? "dark" : "light";
   root.dataset.density = a.density;
   root.dataset.accent = a.accent === "mono" ? "mono" : "color";
-  const { accent, onAccent } = resolveAccent(a.accent, dark);
+  const { accent, onAccent } = resolveAccent(a.accent, dark, look);
   root.style.setProperty("--accent", accent);
   root.style.setProperty("--accent-fg", onAccent);
   root.style.setProperty("--app-font", FONTS[a.font] ?? FONTS.inter);

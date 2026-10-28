@@ -39,7 +39,7 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
       return;
     }
     const t = setTimeout(async () => {
-      const s = await api.passwordStrength(password, ["cipherleaf"]);
+      const s = await api.passwordStrength(password, ["cipherleaf", "notaya"]);
       if (id === seq.current) setStrength(s);
     }, 120);
     return () => clearTimeout(t);
@@ -123,7 +123,7 @@ export function EnableSecurityDialog({ open, onOpenChange }: { open: boolean; on
           />
           <span className="text-muted">
             <strong className="text-fg">Delete earlier backups made while security was off.</strong> Anyone with the
-            folder can open those without a password. A new backup under your new password is saved first. Old vaults that a restore kept (restore-undo files) are never deleted.
+            folder can open those without a password. This includes the safety copies saved before a notebook or section was deleted, so a notebook deleted earlier can no longer be brought back from them. A new backup under your new password is saved first. Old vaults that a restore kept (restore-undo files) are never deleted.
           </span>
         </label>
 
@@ -203,7 +203,7 @@ export function DisableSecurityDialog({
         onOpenChange(o);
       }}
       title="Turn off security"
-      description="Your notes are kept, with a new key (this takes a moment). Cipherleaf will then open them without asking for a password."
+      description="Your notes are kept, with a new key (this takes a moment). Notaya will then open them without asking for a password."
       width={500}
     >
       <div className="space-y-4">
@@ -213,7 +213,6 @@ export function DisableSecurityDialog({
             <li>Anyone who can open this folder, or copy the notes file, will be able to read your notes.</li>
             <li>Nothing locks automatically any more, and screenshots are no longer blocked.</li>
             <li>Earlier backups keep the password they were made with. New backups will have no password.</li>
-            <li>Your KeePassXC passwords file is not changed. It keeps its own master password.</li>
           </ul>
         </div>
         <PasswordInput value={current} onChange={setCurrent} placeholder="Current master password" autoFocus onEnter={submit} />

@@ -5,15 +5,19 @@ const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
 // | start = no vault but earlier copies exist (create is an alias of start)
 const startState = params.get("s") ?? "app";
+// `?s=start&installed` shows the first screen of an installed copy (no notes, nothing to restore).
+const installedMock = params.has("installed");
 let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
+let noticeTaken = false;
+const calcHistory: { expr: string; result: string }[] = [{ expr: "12.5 × (3 + 4)", result: "87.5" }];
 
 const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
 
 const settings: Record<string, unknown> = {
-  theme: params.get("theme") ?? "paper",
+  theme: params.get("theme") ?? "sunrise",
   accent: params.get("accent") ?? "mono",
   backdrop: "none",
   font: "inter",
@@ -25,7 +29,6 @@ const settings: Record<string, unknown> = {
   lockOnMinimize: false,
   screenCaptureProtection: false,
   stickyDefaultColor: "yellow",
-  passwordsEnabled: params.get("pw") === "1",
 };
 
 const tree = {
@@ -42,6 +45,8 @@ const tree = {
     { id: "p1", sectionId: "s1", title: "Morning pages", preview: "Slept badly, but the plan for the week is clear: finish the vault, then the editor polish.", words: 212, order: 0, favorite: true, parent: "", icon: "☀️", trashedAt: null, created: ago(300), updated: ago(5) },
     { id: "p2", sectionId: "s1", title: "Trip notes", preview: "Flights, hotel confirmation numbers and a rough itinerary for the first three days.", words: 96, order: 1, favorite: false, icon: "✈️", trashedAt: null, created: ago(500), updated: ago(120) },
     { id: "p4", sectionId: "s1", parent: "p1", title: "Weekly goals", preview: "Three things for this week.", words: 12, order: 0, favorite: false, icon: "🎯", trashedAt: null, created: ago(200), updated: ago(40) },
+    { id: "p5", sectionId: "s2", title: "Old draft", preview: "", words: 3, order: 0, favorite: false, parent: "", icon: "", trashedAt: ago(30), created: ago(700), updated: ago(30) },
+    { id: "p6", sectionId: "s2", title: "App ideas", preview: "A list.", words: 8, order: 1, favorite: false, parent: "", icon: "", trashedAt: null, created: ago(600), updated: ago(60) },
     { id: "p3", sectionId: "s1", title: "Reading list", preview: "Books to get through before the end of the year.", words: 41, order: 2, favorite: false, icon: "", trashedAt: null, created: ago(900), updated: ago(1500) },
   ],
 };
@@ -84,16 +89,6 @@ const stickies = [
   { id: "k3", content: "", text: "Buy: coffee, batteries, USB stick", color: "pink", x: 180, y: 180, w: 320, h: 320, onTop: false, open: false, created: ago(300), updated: ago(240) },
 ];
 
-const kpxc = {
-  installed: true,
-  verified: true,
-  version: "2.8.0",
-  database: params.get("db") === "none" ? null : "E:\\Cipherleaf\\data\\passwords.kdbx",
-  dataDir: "E:\\Cipherleaf\\data",
-  running: false,
-  embedded: false,
-};
-
 type Args = Record<string, unknown>;
 
 export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise<T> {
@@ -107,11 +102,17 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
         keyfileRequired: false,
         headerOk: true,
         securityOn,
-        earlierCopies: !exists,
+        earlierCopies: !exists && !installedMock,
         openError: null,
-        dataDir: "E:\\Cipherleaf\\data",
+        dataDir: "E:\\Notaya\\data",
         version: "1.0.0",
+        offerImport: !exists && installedMock,
       });
+    case "import_portable_notes":
+      exists = true;
+      unlocked = true;
+      securityOn = false;
+      return ok({ backupsCopied: 3, backupsSkipped: 0 });
     case "start_notes":
       exists = true;
       unlocked = true;
@@ -125,11 +126,8 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       if (args.currentPassword === "wrong") throw "Wrong password or keyfile.";
       securityOn = false;
       return ok(null);
-    case "set_passwords_enabled":
-      settings.passwordsEnabled = !!args.enabled;
-      return ok({ ...settings });
     case "unlock_vault":
-      if (args.password === "wrong") throw "Wrong master password or keyfile for this Cipherleaf vault.";
+      if (args.password === "wrong") throw "Wrong master password or keyfile for this Notaya vault.";
       unlocked = true;
       return ok(null);
     case "start_over":
@@ -155,19 +153,13 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       securityOn = !!args.password;
       return ok({ undoFile });
     }
-    case "list_password_backups":
-      return ok([
-        { name: "passwords-1792700000000.kdbx", modifiedMs: ago(60 * 20), size: 24_576 },
-        { name: "passwords-1792600000000.kdbx", modifiedMs: ago(60 * 44), size: 22_528 },
-      ]);
-    case "pick_passwords_backup_file":
-      return ok("E:\\Backups\\my-old-passwords.kdbx");
-    case "restore_passwords":
-      if (String(args.source ?? "").endsWith("busy.kdbx"))
-        throw "KeePassXC is still open. Finish there (it may be asking to save), close it, and try again.";
-      return ok({ undoFile: "passwords-undo-1792800000000.kdbx" });
-    case "take_notice":
-      return ok(null);
+    case "take_notice": {
+      // ?notice=<text> shows that message once, as the backend would after a failed backup.
+      const text = params.get("notice");
+      if (!text || noticeTaken) return ok(null);
+      noticeTaken = true;
+      return ok(text);
+    }
     case "flush_done":
       return ok(null);
     case "get_settings":
@@ -178,7 +170,35 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "set_backdrop":
       return ok(false);
     case "list_notes":
-      return ok(tree);
+      return ok(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree);
+    // The real app makes a verified backup first and fails the delete if that fails; ?failDelete=1 mimics that.
+    case "delete_notebook":
+    case "delete_section": {
+      if (params.get("failDelete") === "1") throw "Could not make a backup copy first (the drive is full), so nothing was deleted.";
+      const secs = new Set(cmd === "delete_notebook" ? tree.sections.filter((x) => x.notebookId === args.id).map((x) => x.id) : [String(args.id)]);
+      tree.pages = tree.pages.filter((p) => !secs.has(p.sectionId));
+      tree.sections = tree.sections.filter((x) => !secs.has(x.id));
+      if (cmd === "delete_notebook") tree.notebooks = tree.notebooks.filter((n) => n.id !== args.id);
+      return ok({ ...tree });
+    }
+    case "update_section": {
+      const sec = tree.sections.find((x) => x.id === args.id);
+      if (sec) sec.name = String(args.name);
+      return ok({ ...tree, sections: [...tree.sections] });
+    }
+    case "set_page_favorite": {
+      const pg = tree.pages.find((x) => x.id === args.id);
+      if (pg) pg.favorite = !!args.favorite;
+      return ok({ ...tree, pages: [...tree.pages] });
+    }
+    case "reorder": {
+      (args.ids as string[]).forEach((id, i) => {
+        const item = [...tree.notebooks, ...tree.sections, ...tree.pages].find((x) => x.id === id);
+        if (item) item.order = i;
+      });
+      for (const k of ["notebooks", "sections", "pages"] as const) (tree[k] as { order: number }[]).sort((a, b) => a.order - b.order);
+      return ok({ ...tree });
+    }
     case "get_page":
       return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk" });
     case "create_subpage":
@@ -188,16 +208,34 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "save_page":
       return ok({ ...tree.pages[0] });
     case "list_stickies":
-      return ok(stickies);
+      return ok([...stickies]);
     case "get_sticky":
       return ok(stickies[0]);
+    case "delete_sticky":
+    case "delete_stickies": {
+      const gone = new Set((args.ids as string[] | undefined) ?? [String(args.id)]);
+      for (let i = stickies.length - 1; i >= 0; i--) if (gone.has(stickies[i].id)) stickies.splice(i, 1);
+      return ok(null);
+    }
+    // The real app opens a calculator window; here, open ?label=calc-1 in a new tab to see one.
+    case "open_calculator":
+      return ok(null);
+    case "calc_history":
+      return ok([...calcHistory]);
+    case "add_calc_entry": {
+      const expr = String(args.expr), result = String(args.result);
+      if (!(calcHistory[0]?.expr === expr && calcHistory[0]?.result === result)) calcHistory.unshift({ expr, result });
+      calcHistory.length = Math.min(calcHistory.length, 200);
+      return ok([...calcHistory]);
+    }
+    case "clear_calc_history":
+      calcHistory.length = 0;
+      return ok(null);
     case "password_strength": {
       const len = String(args.password ?? "").length;
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;
       return ok({ score, guessesLog10: len, crackTime: score > 2 ? "centuries" : "2 minutes", warning: null, suggestions: [] });
     }
-    case "keepassxc_status":
-      return ok({ ...kpxc });
     case "search":
       return ok([
         { kind: "page", id: "p1", title: "Morning pages", subtitle: "", snippet: "Slept badly, but the plan for the week is clear", score: 3 },

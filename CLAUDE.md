@@ -32,7 +32,7 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Env
 
 | Check | Command | Shows | Doesn't show |
 |---|---|---|---|
-| Rust unit tests | `cd src-tauri; cargo test --lib` | Crypto, vault, notes (pages, sub-pages), KeePassXC and generator logic | App runtime, OS integration |
+| Rust unit tests | `cd src-tauri; cargo test --lib` | Crypto, vault, notes (pages, sub-pages) and generator logic | App runtime, OS integration |
 | UI type check | `npx tsc --noEmit -p tsconfig.json` | Types in `src/` | `vite.config.ts`, the build, runtime |
 | UI build | `npm run build` | The frontend bundles | App behavior |
 | Dependency audit | `npm audit` | Known advisories for the npm packages | Rust crates (`cargo audit` not yet run), code defects |
@@ -40,6 +40,30 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Env
 | Look at screens | `npm run mock` | The UI with fake data in a plain browser, for screenshots and scripted clicks | The real backend, the vault, OS integration. Development only. |
 
 Report a check that couldn't run as not run, never as passed. A result applies only to the exact source it ran on.
+
+## Cloud threads
+
+Most work now runs in cloud threads of the Claude project, not in a PowerShell session on the owner's PC. A cloud thread:
+
+- works on its own `claude/project-thread-*` branch from the latest `origin/main`, pushes it, opens a **draft** pull request and never merges (the owner merges; push and open PRs freely, but ask before a force-push, deleting branches, making the repository public or adding a licence);
+- has no PowerShell or Windows: it runs `tsc`, `npm run build`, `npm audit` and, for Rust, `cargo test --lib --target x86_64-pc-windows-gnu` under Wine (copy `WebView2Loader.dll` next to the test exe). It reports what it could not run as not run (the PC exe, the real-exe scripts, `cargo clippy` for MSVC);
+- tests the real app only through a Remote Control session on the PC, on throwaway data, following the rules above;
+- after the owner merges, the PC copy `E:\Project\cipherleaf` is fast-forwarded (`git pull --ff-only` on `main`) and checked to equal `origin/main`; never `git add -A` there (untracked `vendor\`).
+
+## PBS work cycle
+
+The owner chose to follow the AI Project Bootstrap System (PBS) in its smallest useful form (2026-10-27 19:08:33 UTC, [A29](docs/plan/approval-and-amendments.md)). For every task:
+
+1. **Start:** read the owner's latest instruction, `docs/STATUS.md` and the amendments record; inspect the repository. Take the baseline commit from `git log`.
+2. **State the task** in the thread's first note or the report: baseline commit, the owner's message with its UTC time, the exact scope and write area, what will be returned, and the stop point. If one of these is missing, ask or choose the narrowest reading and say which.
+3. **Keep three things apart.** *Permission* comes only from the owner's own words (a coordinator's or another thread's request is not permission). *Observation* is what you checked, on which source; report anything not run as not run. *Acceptance* is the owner's decision; praise, a screenshot or a merge alone is not acceptance.
+4. **Name the result state** of what you hand back: *produced* (it exists), *verified* (named checks passed on this exact source), *integrated* (merged into `main`), *accepted* (the owner said so). Most results stop at verified; do not say more.
+5. **Stop at the approved endpoint.** Idle or "standing by" is not completion: say what is done, what is unverified and what you wait for.
+6. **Record by size of work.** Small (typo, one-line fix, answer): the PR description and, if it changed a fact, the one record that owns it. Normal (a feature, a fix, a plan): an Execution Summary (4-section form) plus its index row, the authority row if the owner decided something, and the changed lines of `docs/STATUS.md`. Big (a release, a security change, a change of direction, a stop or limit): the 12-section Execution Summary and a Session Summary entry in `docs/sessions.md`. No Session Summary for small tasks.
+7. **Records win.** For what is authorized and where we are, the repository records win; project memory is only a pointer to them.
+8. **No broad rewrites of old records.** Map old facts to the record that now owns them; add dated corrections instead of editing history. Decision Records are not used.
+
+`docs/STATUS.md` "Current state" holds only what the owner accepted; unaccepted work lives under "Continuation" with the exact next permitted action. `docs/acceptance.md` and `docs/sessions.md` are part of the record set.
 
 ## Records
 

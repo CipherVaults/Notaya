@@ -5,7 +5,8 @@
 //! exact bytes that will be installed are the ones that were verified). Only
 //! then is the live vault renamed to `data/restore-undo-<ms>.clf` and the copy
 //! renamed to `data/vault.clf`. The app never deletes or rotates `restore-undo-*`
-//! files; the backup rotation only touches `vault-*.clf` in `data/backups`.
+//! files; the backup rotations only touch `vault-<digits>.clf` and
+//! `vault-predelete-<digits>.clf` in `data/backups`.
 
 use std::ffi::OsString;
 use std::fs::{self, File, OpenOptions};
@@ -21,7 +22,7 @@ use crate::portable::Paths;
 use crate::vault::Session;
 
 /// Largest backup file accepted.
-const MAX_BACKUP_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+pub(crate) const MAX_BACKUP_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 /// A backup's password-stretching settings must stay within these limits, which
 /// are tighter than what `KdfParams::validate` accepts when opening the live
 /// vault: a restore must not be made to allocate several GiB by a crafted file.
@@ -45,7 +46,12 @@ pub struct BackupInfo {
     pub size: u64,
 }
 
-/// The automatic backups look like `vault-<ms>.clf` (same rule as the rotation).
+/// The backups look like `vault-<ms>.clf` (automatic) or `vault-predelete-<ms>.clf` (the safety
+/// backup made before a notebook or section is deleted). Both start with `vault-`, so this one
+/// loose rule lists both for a restore and counts both as "earlier copies" (`openvault`), which
+/// is wanted: a safety backup holds what the person deleted and may want back, and it is
+/// readable by anyone when security was off, so turning security on removes it too. (The
+/// rotation in `backup.rs` is stricter: it owns only exact names, one pattern per rotation.)
 pub(crate) fn is_backup_name(name: &str) -> bool {
     name.starts_with("vault-") && name.ends_with(".clf")
 }
@@ -61,14 +67,14 @@ fn temp_path(paths: &Paths) -> PathBuf {
     paths.data.join(TEMP_NAME)
 }
 
-/// The regular files `vault-*.clf` in the backups folder, newest first. Reads
+/// The regular files `vault-*.clf` in the backups folder (safety backups included), newest first. Reads
 /// only names, times and sizes, never contents, so it works while locked.
 pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
     list_in(&paths.backups, is_backup_name)
 }
 
-/// The regular files in `dir` whose names satisfy `is_name`, newest first (shared
-/// with the passwords-file backups). A missing folder is an empty list.
+/// The regular files in `dir` whose names satisfy `is_name`, newest first. A missing
+/// folder is an empty list.
 pub(crate) fn list_in(dir: &Path, is_name: fn(&str) -> bool) -> Result<Vec<BackupInfo>> {
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
@@ -113,7 +119,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
     }
     let path = if !source.contains(['/', '\\']) {
         if source.contains("..") || source.contains(':') || !is_backup_name(source) {
-            return Err(Error::invalid("That is not the name of a Cipherleaf backup."));
+            return Err(Error::invalid("That is not the name of a Notaya backup."));
         }
         paths.backups.join(source)
     } else {
@@ -135,7 +141,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
 
     let is_clf = path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("clf"));
     if !is_clf {
-        return Err(Error::invalid("A Cipherleaf backup is a file ending in .clf."));
+        return Err(Error::invalid("A Notaya backup is a file ending in .clf."));
     }
     let meta = match fs::metadata(&path) {
         Ok(m) => m,
@@ -151,7 +157,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
         return Err(Error::invalid("That backup file is empty."));
     }
     if meta.len() > MAX_BACKUP_BYTES {
-        return Err(Error::invalid("That file is too large to be a Cipherleaf backup."));
+        return Err(Error::invalid("That file is too large to be a Notaya backup."));
     }
 
     // A link could still lead somewhere else, so look at where the file really is.
@@ -175,7 +181,7 @@ pub(crate) fn is_picked(path: &Path, picked: Option<&Path>) -> bool {
 
 /// Copies `from` to the new file `to` and syncs it. A fresh file, not
 /// `fs::copy`, so a read-only source doesn't make a read-only vault.
-fn copy_file(from: &Path, to: &Path) -> Result<()> {
+pub(crate) fn copy_file(from: &Path, to: &Path) -> Result<()> {
     let mut src = File::open(from)?;
     let mut dst = OpenOptions::new().write(true).create_new(true).open(to)?;
     let copied = io::copy(&mut (&mut src).take(MAX_BACKUP_BYTES + 1), &mut dst)?;
@@ -183,7 +189,7 @@ fn copy_file(from: &Path, to: &Path) -> Result<()> {
         return Err(Error::invalid("That backup file is empty."));
     }
     if copied > MAX_BACKUP_BYTES {
-        return Err(Error::invalid("That file is too large to be a Cipherleaf backup."));
+        return Err(Error::invalid("That file is too large to be a Notaya backup."));
     }
     dst.sync_all()?;
     Ok(())
@@ -244,7 +250,7 @@ fn stage(paths: &Paths, source: &Path, password: &str, keyfile: Option<&[u8; 32]
 }
 
 /// Refuses password-stretching settings that would need too much memory or time.
-fn check_restore_kdf(kdf: &KdfParams) -> Result<()> {
+pub(crate) fn check_restore_kdf(kdf: &KdfParams) -> Result<()> {
     if kdf.m_kib > MAX_RESTORE_M_KIB || kdf.t > MAX_RESTORE_T || kdf.p > MAX_RESTORE_P {
         return Err(Error::invalid("This backup uses unusual password settings and can't be restored here."));
     }
@@ -271,7 +277,7 @@ const NO_SPACE: &str = "There is not enough free space on the drive to restore t
 
 /// Turns a raw file error from the copy or rename steps into one plain message
 /// (the original goes to stderr). Other errors pass through unchanged.
-fn plain_io(e: Error) -> Error {
+pub(crate) fn plain_io(e: Error) -> Error {
     plain_io_with(e, IN_USE)
 }
 
@@ -441,7 +447,7 @@ mod tests {
     fn temp_paths() -> Paths {
         let root = std::env::temp_dir().join(format!("cipherleaf-restore-{}", new_id()));
         std::fs::create_dir_all(&root).unwrap();
-        let paths = Paths::at(&root, root.join("kp"));
+        let paths = Paths::at(&root);
         std::fs::create_dir_all(&paths.backups).unwrap();
         paths
     }
@@ -472,10 +478,10 @@ mod tests {
         OpenOptions::new().write(true).open(path).unwrap().set_modified(t).unwrap();
     }
 
-    const NOT_A_NAME: &str = "That is not the name of a Cipherleaf backup.";
+    const NOT_A_NAME: &str = "That is not the name of a Notaya backup.";
     const DIALOG: &str = "Choose the backup file with the file dialog.";
     const NETWORK: &str = "Backups on a network or device path can't be used. Copy the file to this PC first.";
-    const NOT_CLF: &str = "A Cipherleaf backup is a file ending in .clf.";
+    const NOT_CLF: &str = "A Notaya backup is a file ending in .clf.";
 
     /// `source` must be refused with exactly `reason`. For an absolute path that
     /// exists, the dialog is taken to have returned it, so the refusal comes from
@@ -508,6 +514,42 @@ mod tests {
         assert_eq!(names, ["vault-300.clf", "vault-200.clf", "vault-100.clf"]);
         assert_eq!(list[0].size, 7);
         assert!(list[0].modified_ms > list[1].modified_ms && list[1].modified_ms > list[2].modified_ms);
+    }
+
+    #[test]
+    fn safety_backups_are_listed_and_can_be_restored_from() {
+        let paths = temp_paths();
+        let b = &paths.backups;
+        write(&b.join("vault-100.clf"), b"old");
+        write(&b.join("vault-predelete-200.clf"), b"before a delete");
+        write(&b.join("vault-predelete-5.tmp"), b"half"); // a stray temp file is not a backup
+        set_age(&b.join("vault-100.clf"), 300);
+        set_age(&b.join("vault-predelete-200.clf"), 100);
+        let list = list_backups(&paths).unwrap();
+        let names: Vec<&str> = list.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["vault-predelete-200.clf", "vault-100.clf"]);
+        assert_eq!(
+            resolve_source(&paths, "vault-predelete-200.clf", None).unwrap(),
+            paths.backups.join("vault-predelete-200.clf")
+        );
+    }
+
+    #[test]
+    fn hourly_backups_are_listed_and_can_be_restored_from() {
+        let paths = temp_paths();
+        let b = &paths.backups;
+        write(&b.join("vault-100.clf"), b"old");
+        write(&b.join("vault-hourly-200.clf"), b"hourly");
+        write(&b.join("vault-hourly-5.tmp"), b"half"); // a stray temp file is not a backup
+        set_age(&b.join("vault-100.clf"), 300);
+        set_age(&b.join("vault-hourly-200.clf"), 100);
+        let list = list_backups(&paths).unwrap();
+        let names: Vec<&str> = list.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["vault-hourly-200.clf", "vault-100.clf"]);
+        assert_eq!(
+            resolve_source(&paths, "vault-hourly-200.clf", None).unwrap(),
+            paths.backups.join("vault-hourly-200.clf")
+        );
     }
 
     #[test]

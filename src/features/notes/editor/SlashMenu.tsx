@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
 import { CalendarDays, ImagePlus, Minus, Radical, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useApp } from "@/store/app";
 import { pickImages } from "./extensions";
 import { applyTurnInto, BLOCKS, type BlockKey } from "./turnInto";
 import type { SlashState } from "./slash";
@@ -34,7 +35,7 @@ const ITEMS: Item[] = [
   { group: "Insert", title: "Code block", hint: "Monospaced code with colors", keywords: "code snippet pre", icon: icon("code"), run: turn("code") },
   { group: "Insert", title: "Divider line", hint: "A thin line across the page", keywords: "divider line rule separator hr", icon: <Minus size={s} />, run: (e) => e.chain().focus().setHorizontalRule().run() },
   { group: "Insert", title: "Table", hint: "Rows and columns", keywords: "table grid rows columns", icon: <Table2 size={s} />, run: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
-  { group: "Insert", title: "Picture", hint: "Add an image from your PC (it is encrypted)", keywords: "picture image photo upload png jpg", icon: <ImagePlus size={s} />, run: (e) => pickImages(e) },
+  { group: "Insert", title: "Picture", hint: "Add an image from your PC", keywords: "picture image photo upload png jpg", icon: <ImagePlus size={s} />, run: (e) => pickImages(e) },
   { group: "Insert", title: "Equation", hint: "Maths written in TeX", keywords: "equation math formula tex latex block", icon: icon("equation"), run: turn("equation") },
   { group: "Insert", title: "Inline equation", hint: "Maths inside a line (or type $x^2$)", keywords: "equation math formula tex latex inline", icon: <Radical size={s} />, run: (e) => e.chain().focus().insertMathInline().run() },
   { group: "Insert", title: "Sub-page", hint: "A new page inside this one", keywords: "page subpage sub-page child inside", icon: icon("page"), run: turn("page") },
@@ -63,6 +64,7 @@ export default function SlashMenu({
   slash: SlashState | null;
   controller: React.MutableRefObject<SlashController>;
 }) {
+  const securityOn = useApp((s) => s.status?.securityOn ?? false);
   const [index, setIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const [placement, setPlacement] = useState<{ left: number; top: number } | null>(null);
@@ -134,7 +136,7 @@ export default function SlashMenu({
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-bg text-muted">{item.icon}</span>
               <span className="min-w-0">
                 <span className="block text-sm text-fg">{item.title}</span>
-                <span className="block truncate text-xs text-faint">{item.hint}</span>
+                <span className="block truncate text-xs text-faint">{item.title === "Picture" && securityOn ? `${item.hint} (it is encrypted)` : item.hint}</span>
               </span>
             </button>
           </div>

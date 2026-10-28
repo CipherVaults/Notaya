@@ -6,6 +6,7 @@ import "@fontsource-variable/jetbrains-mono";
 import "./styles/app.css";
 import App from "./App";
 import StickyWindow from "./features/sticky/StickyWindow";
+import CalculatorWindow from "./features/sticky/Calculator";
 
 // In the shipped app, block browser shortcuts that make no sense here
 // (reload, print, view source, find, dev tools) and the default context menu.
@@ -34,6 +35,13 @@ if (label.startsWith("sticky-")) {
   root.render(
     <React.StrictMode>
       <StickyWindow id={label.slice("sticky-".length)} />
+    </React.StrictMode>,
+  );
+} else if (label.startsWith("calc-")) {
+  document.documentElement.dataset.window = "calc";
+  root.render(
+    <React.StrictMode>
+      <CalculatorWindow />
     </React.StrictMode>,
   );
 } else {

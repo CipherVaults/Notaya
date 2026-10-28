@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 3: a pencil writing a line. Simple, bold, readable when small. -->
+  <defs><linearGradient id="t" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffd65c"/><stop offset="1" stop-color="#f2a516"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#t)"/>
+  <g transform="rotate(-45 512 512)">
+    <rect x="262" y="432" width="440" height="160" fill="#2d3142"/>
+    <rect x="702" y="432" width="90" height="160" rx="0" fill="#9aa0b4"/>
+    <path d="M792 432H812Q842 432 842 462V562Q842 592 812 592H792Z" fill="#f28fa0"/>
+    <path d="M262 432L132 512L262 592Z" fill="#f6dcb0"/>
+    <path d="M176 485L132 512L176 539Z" fill="#2d3142"/>
+    <rect x="262" y="496" width="440" height="32" fill="#454a5e"/>
+  </g>
+</svg>

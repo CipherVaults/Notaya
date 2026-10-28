@@ -2,7 +2,7 @@
 //! the UI general file-system or network access.
 
 pub mod backup;
-pub mod keepassxc;
+pub mod calculator;
 pub mod notes;
 pub mod stickies;
 pub mod tools;

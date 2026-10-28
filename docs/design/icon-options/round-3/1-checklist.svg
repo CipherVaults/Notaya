@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 1: a page with ticked checkboxes. Notes and to-dos. -->
+  <defs><linearGradient id="t" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff8a5b"/><stop offset="1" stop-color="#d9433a"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#t)"/>
+  <rect x="262" y="190" width="500" height="644" rx="56" fill="#ffffff"/>
+  <g fill="none" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="326" y="290" width="92" height="92" rx="20" stroke="#d9433a"/><path d="M346 336L366 358L402 312" stroke="#d9433a"/>
+    <rect x="326" y="466" width="92" height="92" rx="20" stroke="#d9433a"/><path d="M346 512L366 534L402 488" stroke="#d9433a"/>
+    <rect x="326" y="642" width="92" height="92" rx="20" stroke="#e6c3be"/>
+  </g>
+  <rect x="460" y="320" width="240" height="32" rx="16" fill="#f0d4cf"/>
+  <rect x="460" y="496" width="200" height="32" rx="16" fill="#f0d4cf"/>
+  <rect x="460" y="672" width="220" height="32" rx="16" fill="#f0d4cf"/>
+</svg>

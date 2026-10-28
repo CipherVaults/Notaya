@@ -73,6 +73,15 @@ function factorial(n: number): number {
 /** Tiny floating-point noise from trigonometry (cos 90° = 6e-17) is shown as zero. */
 const clean = (v: number) => (Math.abs(v) < 1e-14 ? 0 : v);
 
+/**
+ * True if switching between degrees and radians can change the answer: the expression has sin, cos or
+ * tan (or an inverse of them). An expression that uses "ans" is left out, because "ans" is the answer
+ * it would be recalled from.
+ */
+export function dependsOnAngleUnit(expr: string): boolean {
+  return /sin|cos|tan/i.test(expr) && !/ans/i.test(expr);
+}
+
 export function evaluate(src: string, opts: CalcOptions): number {
   const toks = tokenize(src);
   if (toks.length === 0) throw new CalcError("Type something to calculate");

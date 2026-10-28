@@ -1,7 +1,8 @@
 //! Helpers for vaults whose security is off (amendment A21): finding the earlier
 //! copies of the vault that are readable by anyone, and removing them on request.
 //!
-//! "Earlier copies" are the automatic backups (`data/backups/vault-*.clf`) and the
+//! "Earlier copies" are the automatic and safety backups (`data/backups/vault-*.clf`, which
+//! includes `vault-predelete-*.clf`, the copy made before a notebook or section is deleted) and the
 //! old vaults a restore keeps (`data/restore-undo-*.clf`) and the vaults "Start over"
 //! sets aside (`data/set-aside-*.clf`).
 
@@ -47,7 +48,7 @@ pub fn has_earlier_copies(paths: &Paths) -> bool {
     !earlier_copies(paths).is_empty()
 }
 
-/// The automatic backups whose header says "security off": anyone with the file can read them.
+/// The backups (automatic and `vault-predelete-*`) whose header says "security off": anyone with the file can read them.
 /// A file whose header can't be read is left out (it is never touched). The old vaults a
 /// restore keeps (`restore-undo-*.clf`) are NOT included: they hold notes that exist nowhere
 /// else, so the app never deletes them.
@@ -58,7 +59,7 @@ pub fn unprotected_copies(paths: &Paths) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Deletes the unprotected automatic backups (and their `-journal` files) and returns how
+/// Deletes the unprotected backups, safety backups included (and their `-journal` files) and returns how
 /// many were removed. Protected backups, restore-undo files and anything unreadable stay.
 pub fn delete_unprotected(paths: &Paths) -> usize {
     let mut removed = 0;
@@ -83,7 +84,7 @@ mod tests {
 
     fn paths() -> Paths {
         let root = std::env::temp_dir().join(format!("cipherleaf-open-{}", new_id()));
-        let paths = Paths::at(&root, root.join("kp"));
+        let paths = Paths::at(&root);
         fs::create_dir_all(&paths.backups).unwrap();
         paths
     }
@@ -105,6 +106,37 @@ mod tests {
         assert!(paths.backups.join("vault-3.clf").exists(), "an unreadable file stays");
         assert!(paths.backups.join("notes.txt").exists());
         assert_eq!(delete_unprotected(&paths), 0);
+    }
+
+    #[test]
+    fn safety_backups_made_with_security_off_are_deleted_too_but_nothing_else_is() {
+        let paths = paths();
+        drop(Session::create_open(&paths.backups.join("vault-predelete-1.clf")).unwrap());
+        drop(Session::create(&paths.backups.join("vault-predelete-2.clf"), "pw", None, FAST).unwrap());
+        drop(Session::create_open(&paths.backups.join("vault-3.clf")).unwrap());
+        fs::write(paths.backups.join("vault-predelete-4.clf"), b"not a vault").unwrap();
+        drop(Session::create_open(&paths.data.join("restore-undo-5.clf")).unwrap());
+        drop(Session::create_open(&paths.data.join("set-aside-6.clf")).unwrap());
+        assert_eq!(earlier_copies(&paths).len(), 6);
+        assert_eq!(unprotected_copies(&paths).len(), 2);
+        assert_eq!(delete_unprotected(&paths), 2);
+        assert!(!paths.backups.join("vault-predelete-1.clf").exists());
+        assert!(!paths.backups.join("vault-3.clf").exists());
+        assert!(paths.backups.join("vault-predelete-2.clf").exists(), "a protected safety backup stays");
+        assert!(paths.backups.join("vault-predelete-4.clf").exists(), "an unreadable file stays");
+        assert!(paths.data.join("restore-undo-5.clf").exists());
+        assert!(paths.data.join("set-aside-6.clf").exists());
+    }
+
+    #[test]
+    fn hourly_copies_made_with_security_off_are_deleted_too() {
+        let paths = paths();
+        drop(Session::create_open(&paths.backups.join("vault-hourly-1.clf")).unwrap());
+        drop(Session::create(&paths.backups.join("vault-hourly-2.clf"), "pw", None, FAST).unwrap());
+        assert_eq!(unprotected_copies(&paths).len(), 1);
+        assert_eq!(delete_unprotected(&paths), 1);
+        assert!(!paths.backups.join("vault-hourly-1.clf").exists());
+        assert!(paths.backups.join("vault-hourly-2.clf").exists(), "a protected hourly copy stays");
     }
 
     #[test]

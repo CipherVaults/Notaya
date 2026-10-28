@@ -147,7 +147,7 @@ pub struct Sticky {
 #[derive(Clone, Serialize, Deserialize, Zeroize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
-    /// "black" | "graphite" | "white" | "paper" | "system"
+    /// "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system"
     pub theme: String,
     pub accent: String,
     /// "mica" | "acrylic" | "none"
@@ -165,26 +165,28 @@ pub struct Settings {
     pub lock_on_minimize: bool,
     pub screen_capture_protection: bool,
     pub sticky_default_color: String,
-    /// The Passwords (KeePassXC) feature is switched on (A21). `None` in a vault saved
-    /// before A21: the app then treats it as on only if a passwords file already exists.
-    #[serde(default = "passwords_unset")]
-    pub passwords_enabled: Option<bool>,
+    /// The calculator history, newest first, shared by every calculator window. It is kept
+    /// here (not as its own record) so an older version (Cipherleaf 1.x) can still open the vault: it
+    /// ignores the field. The UI reads and changes it only through the calculator commands.
+    pub calc_history: Vec<CalcEntry>,
 }
 
-fn passwords_unset() -> Option<bool> {
-    None
-}
+/// How many calculations the history keeps.
+pub const CALC_HISTORY_MAX: usize = 200;
 
-/// Whether the Passwords feature is on. A vault saved before A21 has no choice yet;
-/// it counts as on only if a passwords file already exists, so nobody loses the panel.
-pub fn resolve_passwords(flag: Option<bool>, passwords_file_exists: bool) -> bool {
-    flag.unwrap_or(passwords_file_exists)
+/// One line of the calculator history: what was typed and the answer shown.
+#[derive(Clone, Default, Serialize, Deserialize, Zeroize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CalcEntry {
+    pub expr: String,
+    pub result: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            theme: "paper".into(),
+            // Sunrise is the default look (A28). Sunrise dark and the others are chosen in Settings.
+            theme: "sunrise".into(),
             accent: "mono".into(),
             backdrop: "none".into(),
             font: "inter".into(),
@@ -198,7 +200,7 @@ impl Default for Settings {
             // only has an effect while security is on.
             screen_capture_protection: false,
             sticky_default_color: "yellow".into(),
-            passwords_enabled: Some(false),
+            calc_history: Vec::new(),
         }
     }
 }
@@ -215,11 +217,12 @@ impl Settings {
         self.theme = match self.theme.as_str() {
             "dark" => "black".into(),
             "light" => "white".into(),
-            "black" | "graphite" | "white" | "paper" | "system" => self.theme.clone(),
+            "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system" => self.theme.clone(),
             _ => "black".into(),
         };
         self.font_size = self.font_size.clamp(12, 22);
         self.idle_lock_minutes = self.idle_lock_minutes.clamp(1, 240);
+        self.calc_history.truncate(CALC_HISTORY_MAX);
         self
     }
 }
@@ -229,24 +232,56 @@ mod tests {
     use super::*;
 
     #[test]
-    fn passwords_default_to_off_for_new_vaults_and_on_for_old_ones_with_a_file() {
-        assert_eq!(Settings::default().passwords_enabled, Some(false));
-        assert!(!Settings::default().screen_capture_protection);
-        assert!(!resolve_passwords(Some(false), true));
-        assert!(resolve_passwords(Some(true), false));
-        assert!(resolve_passwords(None, true));
-        assert!(!resolve_passwords(None, false));
+    fn sunrise_is_the_default_look_and_both_sunrise_looks_are_kept() {
+        assert_eq!(Settings::default().theme, "sunrise");
+        for look in ["sunrise", "sunrise-dark", "paper", "system"] {
+            let s = Settings { theme: look.into(), ..Settings::default() }.sanitized();
+            assert_eq!(s.theme, look);
+        }
+        let s = Settings { theme: "neon".into(), ..Settings::default() }.sanitized();
+        assert_eq!(s.theme, "black", "an unknown look falls back as before");
     }
 
     #[test]
-    fn a_settings_record_saved_before_a20_loads_with_the_choice_unset() {
-        let old = r#"{"kind":"settings","theme":"paper","screenCaptureProtection":true}"#;
+    fn screenshot_protection_is_off_by_default() {
+        assert!(!Settings::default().screen_capture_protection);
+    }
+
+    #[test]
+    fn a_settings_record_with_the_removed_passwords_switch_still_loads() {
+        // Vaults saved by 1.0 and 1.0.1 have `passwordsEnabled` (the KeePassXC switch, now
+        // removed). It is ignored, and the other choices are kept.
+        let old = r#"{"kind":"settings","theme":"paper","screenCaptureProtection":true,"passwordsEnabled":true}"#;
         match serde_json::from_str::<Item>(old).unwrap() {
             Item::Settings(s) => {
-                assert_eq!(s.passwords_enabled, None);
+                assert_eq!(s.theme, "paper");
                 assert!(s.screen_capture_protection, "a saved choice is kept");
             }
             _ => panic!("expected settings"),
         }
+    }
+
+    #[test]
+    fn calc_history_defaults_to_empty_and_round_trips() {
+        let old = r#"{"kind":"settings","theme":"paper"}"#;
+        match serde_json::from_str::<Item>(old).unwrap() {
+            Item::Settings(s) => assert!(s.calc_history.is_empty()),
+            _ => panic!("expected settings"),
+        }
+        let mut s = Settings::default();
+        s.calc_history.push(CalcEntry { expr: "2+2".into(), result: "4".into() });
+        let json = serde_json::to_string(&Item::Settings(s)).unwrap();
+        assert!(json.contains(r#""calcHistory":[{"expr":"2+2","result":"4"}]"#));
+        match serde_json::from_str::<Item>(&json).unwrap() {
+            Item::Settings(s) => assert_eq!(s.calc_history[0].result, "4"),
+            _ => panic!("expected settings"),
+        }
+    }
+
+    #[test]
+    fn sanitized_caps_the_calc_history() {
+        let mut s = Settings::default();
+        s.calc_history = vec![CalcEntry::default(); CALC_HISTORY_MAX + 20];
+        assert_eq!(s.sanitized().calc_history.len(), CALC_HISTORY_MAX);
     }
 }

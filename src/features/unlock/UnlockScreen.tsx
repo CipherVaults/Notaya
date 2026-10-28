@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimationControls } from "motion/react";
-import { ArrowRight, FileKey2, Loader2, NotebookPen, TriangleAlert } from "lucide-react";
+import { ArrowRight, FileKey2, FolderInput, Loader2, NotebookPen, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { cachedAppearance } from "@/lib/theme";
@@ -123,7 +123,7 @@ function UnlockCard({
           )}
           {!headerOk && (
             <p className="text-xs text-warn">
-              The vault file couldn't be read, so Cipherleaf can't tell whether it needs a keyfile. It may be damaged, or
+              The vault file couldn't be read, so Notaya can't tell whether it needs a keyfile. It may be damaged, or
               another program (antivirus or a sync tool) may be using it.{" "}
               <button type="button" onClick={() => void refreshStatus().catch(() => {})} className="font-medium underline">
                 Check again
@@ -141,8 +141,7 @@ function UnlockCard({
                 {error}
                 {error.startsWith(BAD_CREDENTIALS) && (
                   <span className="mt-1 block text-xs text-muted">
-                    This is the Cipherleaf master password. The KeePassXC passwords file has its own password, which
-                    may be different.{keyfileRequired ? " The keyfile must be the exact file chosen when the vault was made." : ""}
+                    This is the Notaya master password.{keyfileRequired ? " The keyfile must be the exact file chosen when the vault was made." : ""}
                   </span>
                 )}
               </motion.p>
@@ -193,6 +192,28 @@ function StartCard() {
   const refreshStatus = useApp((s) => s.refreshStatus);
   const earlierCopies = useApp((s) => s.status?.earlierCopies ?? false);
   const openError = useApp((s) => s.status?.openError ?? null);
+  const offerImport = useApp((s) => s.status?.offerImport ?? false);
+  const dataDir = useApp((s) => s.status?.dataDir ?? "");
+  const [importing, setImporting] = useState(false);
+
+  const importNotes = async () => {
+    setImporting(true);
+    try {
+      const result = await api.importPortableNotes();
+      if (result) {
+        const n = result.backupsCopied;
+        toast.success(
+          `Your notes were copied here${n > 0 ? `, with ${n} backup${n === 1 ? "" : "s"}` : ""}. Your portable Notaya folder was not changed.`,
+          { duration: 12000 },
+        );
+        await refreshStatus();
+      }
+    } catch (e) {
+      toast.error(errorText(e), { duration: 15000 });
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const start = async () => {
     setBusy(true);
@@ -206,35 +227,74 @@ function StartCard() {
     }
   };
 
+  const startLabel = busy ? (
+    <>
+      <Loader2 size={17} className="animate-spin" /> Starting…
+    </>
+  ) : (
+    <>
+      <NotebookPen size={17} /> Start new notes
+    </>
+  );
+  const importLabel = importing ? (
+    <>
+      <Loader2 size={17} className="animate-spin" /> Copying…
+    </>
+  ) : (
+    <>
+      <FolderInput size={17} /> Import notes from a portable copy…
+    </>
+  );
+  // Earlier copies of the notes make Restore the main choice, as before. A fresh installed copy
+  // (nothing to restore) leads with Start new notes.
+  const restoreFirst = earlierCopies || !offerImport;
+
   return (
     <Card>
       <div className="mb-6 flex flex-col items-center text-center">
         <div className="mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft">
           <Logo size={34} />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">{earlierCopies ? "No notes found here" : "Notes could not be started"}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {earlierCopies ? "No notes found here" : offerImport ? "Welcome to Notaya" : "Notes could not be started"}
+        </h1>
         <p className="mt-1 text-sm text-muted">
           {earlierCopies
-            ? "This folder has earlier copies of your notes (backups or a vault that was set aside) but no current notes file. Restore a backup to get your notes back, or start new notes."
-            : (openError ?? "A new notes file could not be created in this folder. Check that the folder can be written to.")}
+            ? "This folder has earlier copies of your notes (backups or a vault that was set aside) but no current notes file. Restore a backup to get your notes back, start new notes" +
+              (offerImport ? ", or import the notes of a portable Notaya folder (a copy is made; the portable folder is not changed; close the portable Notaya first)." : ".")
+            : offerImport
+              ? "Start new notes, or bring in the notes you already keep in a portable Notaya folder. Importing makes a copy; the portable folder is not changed. Close the portable Notaya first."
+              : (openError ?? "A new notes file could not be created in this folder. Check that the folder can be written to.")}
         </p>
       </div>
       <div className="space-y-3">
-        <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)}>
-          Restore from a backup…
-        </Button>
-        <Button variant="outline" size="lg" className="w-full" onClick={start} disabled={busy}>
-          {busy ? (
-            <>
-              <Loader2 size={17} className="animate-spin" /> Starting…
-            </>
-          ) : (
-            <>
-              <NotebookPen size={17} /> Start new notes
-            </>
-          )}
-        </Button>
-        <p className="text-center text-xs text-faint">Your backups are not deleted either way.</p>
+        {restoreFirst ? (
+          <Button variant="primary" size="lg" className="w-full" onClick={() => setRestoreOpen(true)} disabled={importing}>
+            Restore from a backup…
+          </Button>
+        ) : (
+          <Button variant="primary" size="lg" className="w-full" onClick={start} disabled={busy || importing}>
+            {startLabel}
+          </Button>
+        )}
+        {offerImport && (
+          <Button variant="outline" size="lg" className="w-full" onClick={importNotes} disabled={busy || importing}>
+            {importLabel}
+          </Button>
+        )}
+        {restoreFirst && (
+          <Button variant="outline" size="lg" className="w-full" onClick={start} disabled={busy || importing}>
+            {startLabel}
+          </Button>
+        )}
+        {offerImport && !earlierCopies ? (
+          <p className="text-center text-xs text-faint">
+            Your notes will be kept in <span className="selectable break-all font-mono">{dataDir}</span>. Restore from a backup is
+            also in Settings once you have notes.
+          </p>
+        ) : (
+          <p className="text-center text-xs text-faint">Your backups are not deleted either way.</p>
+        )}
       </div>
       <RestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} vaultExists={false} />
     </Card>
@@ -349,7 +409,7 @@ function StartOverDialog({
             To get the old vault back later, use "Restore from a backup…", choose that file and enter its old master
             password (and keyfile).
           </li>
-          <li>The KeePassXC passwords file is not touched and keeps its own password.</li>
+          <li>Other files in the data folder are not touched.</li>
         </ul>
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-faint">Type START OVER to confirm</span>

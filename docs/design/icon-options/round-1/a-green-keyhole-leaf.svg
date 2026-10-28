@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option A: the current mark (leaf with a keyhole vein), in green on a deep green tile. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#123b2a"/><stop offset="1" stop-color="#06140e"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="150" y1="880" x2="880" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2fb56f"/><stop offset="1" stop-color="#9af0c0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <g transform="translate(146 146) scale(23.5)">
+    <path d="M27 5C15 5 5 11.5 5 22.5c0 2 .4 3.4.9 4.5C7 25 9.5 21.5 13 19c-3 3.4-5 6.6-6.1 9C21 27 27 18 27 5Z" fill="url(#leaf)"/>
+    <circle cx="18.2" cy="13.2" r="2.6" fill="#0b2419"/>
+    <path d="M17.3 14.6h1.8l.9 4.4h-3.6l.9-4.4Z" fill="#0b2419"/>
+  </g>
+</svg>

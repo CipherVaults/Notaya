@@ -14,14 +14,143 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
-### 2026-10-24 (after the owner's message of 08:59:52 UTC; work times not recorded), EX-2026-10-24-N1: Proposal for a native Windows Cipherleaf with no browser engine
+### 2026-10-28 (owner's messages 11:56:21 and 12:24:16 UTC; work 12:25 UTC on, system clock), EX-2026-10-28-33: Windows installer (A30), built in the cloud
 
-- Report: [2026-10-24-no-webview2-proposal.md](2026-10-24-no-webview2-proposal.md)
-- Task / Goal: a plan (not code) for a native Windows app with no WebView2 or other browser engine, matching the current app
-- Executor: Claude (Claude Code), cloud thread (model output)
-- Outcome: proposal with a parity inventory, toolkit comparison and recommendation, editor rebuild plan, vault compatibility, phases and owner decisions, in `docs/plan/proposal-2026-10-24-no-webview2.md`; nothing built or run
+- Report: [2026-10-28-windows-installer.md](2026-10-28-windows-installer.md)
+- Task / Goal: "All recommendations" (the 10 installer decisions), then "Ok for all go now" (build it; OK for the NSIS download)
+- Executor: Claude (Claude Code) in a cloud thread; PC tests to follow in a Remote Control session
+- Outcome: per-user NSIS setup settings, `portable.txt` rule, import from a portable copy (copy only), build script and test runner; 145 Rust tests under Wine pass (16 new); the notes folder is `%LOCALAPPDATA%\Notaya Notes` (the program goes in `...\Notaya`)
+- Open dependency / next action: PC tests (build, setup install and uninstall in a temp folder, `run-installed.ps1`, the import dialog); the owner confirms the folder name; a release only on his word
+- Acceptance: pending
+
+### 2026-10-28 (owner's messages 11:19:57, 11:21:06 and 11:56:21 UTC; work 11:20 to about 12:00 UTC, system clock), EX-2026-10-28-32: Windows installer plan re-checked for Notaya
+
+- Report: [2026-10-28-installer-plan-recheck.md](2026-10-28-installer-plan-recheck.md)
+- Task / Goal: "Now continue the setup part"; "So we will do 2 things windows installer and portable version in the release"
+- Executor: Claude (Claude Code) in a cloud thread; docs only
+- Outcome: plan updated for Notaya V1.2.0 on `main` `a4574be`; all 10 decisions recorded as answered (recommended; installer and portable ZIP in every release); nothing built
+- Open dependency / next action: the owner says go; the NSIS tooling download needs his OK
+- Acceptance: pending
+
+### 2026-10-27 (owner's message 19:40:47 UTC; work 19:41 to about 22:25 UTC, PC clock), EX-2026-10-27-31: Notaya V1.2.0 portable folder and ZIP
+
+- Report: [2026-10-27-notaya-v1-2-0-portable-build.md](2026-10-27-notaya-v1-2-0-portable-build.md)
+- Task / Goal: "Release one" (the first release as Notaya, version 1.2.0)
+- Executor: Claude (Claude Code) in a cloud thread; build and tests in Remote Control sessions on the owner's PC, throwaway data only
+- Outcome: version bump merged onto `main` `49cd9de` (`e25f804`); `cargo test --lib` 129 of 129, `npm audit` 0, ZIP 5,915,148 bytes (`A7FDD822…CC77D`), exe `D04D42F5…F705C2`; real-exe runners 13 PASS, lock flow ok, 47 of 47; Cipherleaf 1.1.0 vault opens unchanged. The owner's own runs from an Administrator shell failed to find the window (no check ran). Not run: `cargo audit`, password-vault migration, lock events
+- Open dependency / next action: none for the release: PR #30 merged (`4e40d1a`), the owner published [v1.2.0](https://github.com/AbyssWatcher2/CipherLeaf/releases/tag/v1.2.0) at 22:28:04 UTC and it was verified on GitHub (tag `e25f804`, one asset, digest equal; report addendum)
+- Acceptance: pending
+
+### 2026-10-27 (owner's messages 16:59:11 and 17:03:39 UTC; work from about 17:00 UTC, system clock), EX-2026-10-30: renamed to Notaya, sticky-notes icon, Sunrise theme
+
+- Report: [2026-10-27-notaya-rename.md](2026-10-27-notaya-rename.md)
+- Task / Goal: "proceed with this and The app name is Notaya"; Sunrise the default, Sunrise dark optional ([A28](../plan/A28-rename-notaya-icon-sunrise.md))
+- Executor: Claude (Claude Code) in a cloud thread; PC checks in a Remote Control session
+- Outcome: code `6003e81` plus review and exe-metadata fixes (latest code commit `d4933ef`) in draft PR #24; on the owner's PC: `cargo test --lib` 129 of 129, release build, real-exe test and old Cipherleaf 1.1.0 vaults opening in `Notaya.exe`, all on throwaway data; exe properties say Notaya (addenda 4 to 6). Not run: the repo's runner scripts, a restore from the 1.1.0 backup, keyboard-only use
+- Acceptance: pending
+
+### 2026-10-27 (owner's messages 19:05:05 and 19:08:33 UTC; work 19:10 to about 19:45 UTC, system clock), EX-2026-10-27-29: PBS adopted in its smallest useful form
+
+- Report: [2026-10-27-pbs-adoption.md](2026-10-27-pbs-adoption.md)
+- Task / Goal: "That's really goo just want to to follow / that's my answer" (follow PBS; the recommended answers to the review's four questions)
+- Executor: Claude (Claude Code) in a cloud thread, docs only
+- Outcome: amendment A29, `CLAUDE.md` gains "Cloud threads" and "PBS work cycle", STATUS "Current state" holds only accepted items, questions 8 and 22 answered
+- Open dependency / next action: the owner merges the PR; then the PC copy is fast-forwarded; the skill refresh is a separate review card; nothing is accepted
+
+### 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), EX-2026-10-27-28: live audit (PR #10) compared with V1.1.0
+
+- Report: [2026-10-27-live-audit-comparison.md](2026-10-27-live-audit-comparison.md) (table: [docs/audit/2026-10-27-live-checks-vs-v1-1-0.md](../audit/2026-10-27-live-checks-vs-v1-1-0.md))
+- Task / Goal: "check the live audit" / "compare the current verison with this thread to see if everthign got fixed"
+- Executor: Claude (Claude Code) in a cloud thread, docs only, read-only code check
+- Outcome: PR #10 is merged and its PC session is finished; of the live-check findings 5 are fixed, 3 partly, 1 no longer relevant, 15 still open
+- Open dependency / next action: the owner decides whether to plan a fix release; nothing is accepted
+
+### 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), EX-2026-10-27-27: record every step; PC copy on `main`
+
+- Report: [2026-10-27-record-every-step.md](2026-10-27-record-every-step.md)
+- Task / Goal: the owner's standing rule "record on both github and the pc ... with everything" / "and everystep", and the update of his PC copy after PR #25
+- Executor: Claude (Claude Code) in a cloud thread, docs only; the PC step in a Remote Control session
+- Outcome: PC copy switched from `feat/a9-keepassxc` to `main` and fast-forwarded to `2c8c2e6`; the rule recorded in the authority table and STATUS; untracked `vendor\` folder found (STATUS question 24)
+
+### 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), EX-2026-10-27-26: records catch-up
+
+- Report: [2026-10-27-records-catch-up.md](2026-10-27-records-catch-up.md)
+- Task / Goal: the owner's "okay so document them commits and ammedments and the records" / "till this moment": bring the records up to date with what happened from 2026-10-23 20:34 to 2026-10-27 16:36 UTC
+- Executor: Claude (Claude Code) in a cloud thread, docs only
+- Outcome: authority table filled in from the project chat; A24 and A25 status; A26 (sticky multi-delete) and A27 (ribbon) numbered; 27 Oct commits and merges named; the combined test recorded (EX-2026-10-27-25); sessions log, STATUS and acceptance ledger updated
+- Acceptance: pending (the owner merges the docs PR)
+
+### 2026-10-27 (owner's "Yes test" 07:21:42 UTC; work 07:22 to 08:20 UTC, PC system clock), EX-2026-10-27-25: combined test of PRs #17 to #20, then `main` after the merges
+
+- Report: [2026-10-27-combined-test.md](2026-10-27-combined-test.md) (written afterwards, in the records catch-up, from the thread's messages)
+- Task / Goal: test A24 to A27 together in the real app on throwaway data and give a merge order; then check `main` `4600561` after the owner's merges
+- Executor: a Claude Code session on the owner's PC (model output)
+- Outcome: combined build 128/128 Rust tests, existing scripts passed, 23/23 new checks; merge commits `e589baf`, `ef548eb`, `996ae34` pushed to the PR branches; `main` `4600561` 128/128 and 27/27 (200-line history survives a restart)
+- Acceptance: pending
+
+### 2026-10-27 (08:22 to 08:34 UTC), EX-2026-10-27-24: V1.1.0 portable folder and ZIP
+
+- Report: [2026-10-27-v1-1-0-portable-build.md](2026-10-27-v1-1-0-portable-build.md)
+- Task / Goal: the owner's "Yes please" of 08:21:52 UTC to a release of `main` with A24 (KeePassXC removed), the ribbon, sticky multi-delete and pop-out calculators
+- Executor: Claude (Claude Code) in a thread session on the owner's PC, throwaway worktree and data
+- Outcome: version 1.1.0 (`70d38a1`); 128/128 Rust tests; ZIP 5,916,923 bytes, SHA-256 `2E0B94B1…A890`; restore 12/12, lock flow 3/3, optional security 47/47 on the shipped exe; released by the owner as v1.1.0 at 08:39:05 UTC, checked on GitHub
+- Commits and merges: `70d38a1`, `b090533` (PR #21, merged 08:37:53 UTC as `350c3a2`), `8eb8497` (PR #22, merged 08:42:07 UTC as `87eb7ff`)
+- Acceptance: pending
+
+### 2026-10-27 (about 06:45 to 06:55 UTC), EX-2026-10-27-ribbon: OneNote-style ribbon over the page editor
+
+- Report: [2026-10-27-ribbon-editor.md](2026-10-27-ribbon-editor.md)
+- Task / Goal: the owner's item 4 of 06:45:11 UTC: a ribbon editor on top like OneNote, keeping the "/" menu
+- Executor: Claude (Claude Code) in a cloud thread, with an independent review agent (model output)
+- Outcome: Home, Insert and a contextual Table tab; `tsc`, build and 24/24 mock UI checks passed; review findings fixed
+- Acceptance: pending
+- Open dependency / next action: owner merge of the draft PR; real-exe check on the PC. **Update (records catch-up):** amendment **A27**; code `0e9d626`; checked in the real app in EX-2026-10-27-25; merged by the owner (PR #18, 08:04:20 UTC, `b523df8`); released in V1.1.0
+
+### 2026-10-27 (owner's message 06:45:11 UTC), EX-2026-10-27-sticky-multi-select: select several sticky notes and delete them together
+
+- Report: [2026-10-27-sticky-multi-select.md](2026-10-27-sticky-multi-select.md)
+- Task / Goal: tick several sticky notes and delete them with one confirmation
+- Executor: Claude (Claude Code) with an independent review agent (model output)
+- Outcome: implemented; UI type check, build and a scripted mock test passed; Rust not compiled and the real exe not run
+- Acceptance: pending
+- Open dependency / next action: `cargo test --lib` and a real-exe try on Windows; the owner merges the PR. **Update (records catch-up):** amendment **A26**; code `31dc920`; Rust tests and a real-exe try done in EX-2026-10-27-25; merged by the owner (PR #17, 08:04:39 UTC, `d69a3f7`); released in V1.1.0
+
+### 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), EX-2026-10-27-23: KeePassXC removed (A24)
+
+- Report: [2026-10-27-keepassxc-removed.md](2026-10-27-keepassxc-removed.md)
+- Task / Goal: remove KeePassXC from Cipherleaf entirely (code, UI, settings switch, docs, notices, test scripts), keeping notes and the optional security layer
+- Executor: Claude (Claude Code) with a documentation agent and an independent review agent (model output)
+- Outcome: implemented; `tsc`, UI build and 124 of 124 Rust tests (Windows GNU target under Wine) pass in the cloud; not yet run on the owner's PC
 - Acceptance: pending (the owner has not reviewed it)
-- Open dependency / next action: the owner's answers to the decisions at the end of the proposal
+- Open dependency / next action: the owner reviews and merges the draft PR; a PC pass on throwaway data before the next release. **Update (records catch-up):** code `4104557`; the PC pass was done in EX-2026-10-27-25; merged by the owner (PR #20, 08:04:55 UTC, `7f64b86`); released in V1.1.0
+
+### EX-23: Pop-out calculators with a shared saved history (A24; renumbered A25 in `996ae34`)
+
+- File: [2026-10-27-pop-out-calculator.md](2026-10-27-pop-out-calculator.md)
+- Executor: Claude (Claude Code) in a cloud thread session, with an independent review agent
+- Outcome: built; `tsc` and `npm run build` passed in the cloud; on the PC (commit `f35acb2`) `cargo test --lib` 171 passed, `tsc` and the build passed
+- Integration / review: draft PR into `main`; independent review done (see the record)
+- Acceptance: pending
+- Open dependency / next action: the owner's review (real exe at `58c299c`: 20 of 20 checks, history survives a restart, 200-line limit)
+- Update (records catch-up): the amendment is **A25**; commits `f35acb2`, `5ddd4ec`, `996ae34`, `58c299c`, `b995e4a`; merged by the owner (PR #19, 08:05:20 UTC, `4600561`); released in V1.1.0. This report and EX-2026-10-27-23 share the short id EX-23; ids are not renumbered
+
+### 2026-10-24 (merge 10:44:26 UTC; build about 11:07 to 11:12 UTC), EX-2026-10-24-22: V1.0.1 portable folder and ZIP
+
+- Report: [2026-10-24-v1-0-1-portable-build.md](2026-10-24-v1-0-1-portable-build.md)
+- Task / Goal: build the V1.0.1 folder and ZIP from the merged PR #9 (`1e7afe5`) and test the exe in it, for the owner's own testing before the release
+- Executor: Claude (Claude Code) with a PC remote session for the build and the real-exe checks (model output)
+- Outcome: first folder and ZIP (SHA-256 `9AD3F863…B209`) built and tested, then superseded after the owner's Deg/Rad finding (PR #12, #13); the final build from `6fa9ee5` (ZIP SHA-256 `863500C6…E321`) was released by the owner as GitHub release `v1.0.1` (published 2026-10-24 12:09:45 UTC; tag on `6fa9ee5`; asset digest equal to the ZIP hash; see the report's last addendum)
+- Acceptance: pending (the owner said his tests were good and, at 12:16:47 UTC, that USB removal, Win+L, sleep and idle lock passed; those are test reports, not an acceptance)
+- Open dependency / next action: the owner's decision on acceptance; the corrected release notes are applied (12:22:01 UTC; see the report's last addendum)
+
+### 2026-10-23 (owner approval 22:25:50 UTC; work times not recorded), EX-2026-10-23-21: V1.0.1 audit fixes (A23)
+
+- Report: [2026-10-23-v1-0-1-audit-fixes.md](2026-10-23-v1-0-1-audit-fixes.md)
+- Task / Goal: password change re-keys; safer backups; safety backup and counts before deleting a notebook or section; honest wording with security off; keyboard sidebar; `ctutils` update; updated `Licenses` folder
+- Executor: Claude (Claude Code), agents and an independent review (model output), a PC session for the compile and real-exe checks
+- Outcome: implemented and reviewed; PC results see the report
+- Acceptance: pending (the owner has not reviewed it)
+- Open dependency / next action: the owner merges the PR, then the V1.0.1 folder, ZIP and release
 
 ### 2026-10-23 (after the owner's message of 21:37:43 UTC; work times not recorded), EX-2026-10-23-20: Notices gaps (WebView2 loader licence, KeePassXC library sources)
 

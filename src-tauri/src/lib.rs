@@ -1,13 +1,12 @@
+mod backup;
 mod commands;
 mod crypto;
-mod embed;
 mod error;
 mod generator;
-mod keepassxc;
+mod import;
 mod model;
 mod openvault;
 mod portable;
-mod pwbackup;
 mod restore;
 mod state;
 mod system;
@@ -18,7 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, keepassxc as keepassxc_cmd, notes, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, calculator, notes, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -71,12 +70,21 @@ pub fn run() {
             response.unwrap_or_else(|_| http::Response::new(Vec::new()))
         })
         .setup(move |app| {
-            paths.ensure_dirs()?;
+            if let Err(e) = paths.ensure_dirs() {
+                // The folder next to the app can't be written (a read-only drive or folder).
+                // The release exe has no console, so without a message it would just vanish.
+                report_startup_failure(app.handle().clone(), data_folder_message(&paths, &e));
+                return Ok(());
+            }
             // Hidden from screenshots only if the vault has a master password: its lock screen
             // comes first. A vault with security off, or none yet, is never hidden (A21).
             let protect = paths.vault.exists()
                 && vault::Session::read_header(&paths.vault).map(|h| !h.open).unwrap_or(true);
-            ui::build_main(app.handle(), &paths, protect)?;
+            if let Err(e) = ui::build_main(app.handle(), &paths, protect) {
+                // Usually the Microsoft WebView2 component is missing or its folder can't be used.
+                report_startup_failure(app.handle().clone(), window_message(&paths, &e));
+                return Ok(());
+            }
             state::spawn_monitor(app.handle().clone());
             Ok(())
         })
@@ -87,10 +95,6 @@ pub fn run() {
                 window.app_handle().state::<state::AppState>().unmark_ready(window.label());
             }
             if window.label() == "main" {
-                // Keep the embedded KeePassXC glued to the Passwords area (amendment A10).
-                if matches!(event, tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_)) {
-                    embed::follow();
-                }
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     // Don't close yet: the windows must save their edits first, and that
                     // needs this (event-loop) thread to stay free. Finish on another thread.
@@ -98,9 +102,8 @@ pub fn run() {
                     if !CLOSING.swap(true, Ordering::SeqCst) {
                         let app = window.app_handle().clone();
                         std::thread::spawn(move || {
-                            // Locks, asks KeePassXC to close, and exits. If KeePassXC is still
-                            // open (it may be asking to save), or anything panics, the app stays
-                            // open and the next close request may try again (see the guard).
+                            // Locks and exits. If this thread panics before the exit, the app
+                            // stays open and the next close request may try again (see the guard).
                             let mut guard = ClosingGuard { exiting: false };
                             guard.exiting = state::quit(&app);
                         });
@@ -113,7 +116,6 @@ pub fn run() {
             vault_cmd::start_notes,
             vault_cmd::enable_security,
             vault_cmd::disable_security,
-            vault_cmd::set_passwords_enabled,
             vault_cmd::unlock_vault,
             vault_cmd::lock_vault,
             vault_cmd::change_master,
@@ -132,9 +134,7 @@ pub fn run() {
             backup_cmd::pick_backup_file,
             backup_cmd::restore_vault,
             backup_cmd::start_over,
-            backup_cmd::list_password_backups,
-            backup_cmd::pick_passwords_backup_file,
-            backup_cmd::restore_passwords,
+            backup_cmd::import_portable_notes,
             notes::list_notes,
             notes::create_notebook,
             notes::update_notebook,
@@ -164,17 +164,60 @@ pub fn run() {
             stickies::open_sticky,
             stickies::close_sticky,
             stickies::delete_sticky,
-            keepassxc_cmd::keepassxc_status,
-            keepassxc_cmd::keepassxc_open,
-            keepassxc_cmd::keepassxc_embed,
-            keepassxc_cmd::keepassxc_place,
-            keepassxc_cmd::keepassxc_hide,
-            keepassxc_cmd::keepassxc_detach,
-            keepassxc_cmd::keepassxc_lock,
+            stickies::delete_stickies,
+            calculator::open_calculator,
+            calculator::calc_history,
+            calculator::add_calc_entry,
+            calculator::clear_calc_history,
             tools::password_strength,
             tools::open_url,
             tools::search,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Cipherleaf");
+        .unwrap_or_else(|e| {
+            // No window and no console to tell the owner: leave without a crash report.
+            eprintln!("Notaya could not start: {e}");
+            std::process::exit(1);
+        });
+}
+
+/// The text shown when the data folder next to the app cannot be written to.
+fn data_folder_message(paths: &portable::Paths, e: &std::io::Error) -> String {
+    format!(
+        "Notaya could not start because it cannot save its data in {}. The folder may be \
+         read-only (a locked USB stick, a CD, or a protected location such as Program Files).\n\n\
+         Move the whole Notaya folder somewhere you can write to, for example your \
+         Documents folder, and start it again.\n\n({e})",
+        paths.data.display()
+    )
+}
+
+/// The text shown when the window itself could not be opened.
+fn window_message(paths: &portable::Paths, e: &tauri::Error) -> String {
+    format!(
+        "Notaya could not open its window. The usual cause is that the Microsoft WebView2 \
+         Runtime is missing (Windows normally has it; if not, install the \"Evergreen\" runtime \
+         from Microsoft's website, search for \"WebView2 Runtime\"). Notaya also needs a \
+         folder it can write to: {}. If that folder is read-only, move the whole Notaya \
+         folder somewhere you can write to, for example your Documents folder.\n\n\
+         Then start Notaya again.\n\n({e})",
+        paths.data.display()
+    )
+}
+
+/// Tells the owner, in a native message box, why Notaya cannot start, then exits. It runs
+/// on its own thread because the box needs the (already starting) event loop, which setup is
+/// still holding.
+fn report_startup_failure(app: tauri::AppHandle, text: String) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+    eprintln!("Notaya could not start: {text}");
+    std::thread::spawn(move || {
+        let _ = app
+            .dialog()
+            .message(text)
+            .title("Notaya could not start")
+            .kind(MessageDialogKind::Error)
+            .blocking_show();
+        std::process::exit(1);
+    });
 }

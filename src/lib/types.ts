@@ -14,6 +14,8 @@ export interface VaultStatus {
   headerOk: boolean;
   dataDir: string;
   version: string;
+  /** An installed Notaya with no notes yet: offer starting new notes or importing a portable copy. */
+  offerImport: boolean;
 }
 
 export interface EnableSecurityResult {
@@ -30,12 +32,18 @@ export interface BackupInfo {
   size: number;
 }
 
+/** What "Import notes from a portable copy" did. */
+export interface ImportSummary {
+  backupsCopied: number;
+  backupsSkipped: number;
+}
+
 export interface RestoreResult {
   /** File name of the old vault that was kept in the data folder, if there was one. */
   undoFile: string | null;
 }
 
-export type ThemeMode = "black" | "graphite" | "white" | "paper" | "system";
+export type ThemeMode = "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system";
 export type Backdrop = "mica" | "acrylic" | "none";
 
 export interface Settings {
@@ -51,8 +59,12 @@ export interface Settings {
   lockOnMinimize: boolean;
   screenCaptureProtection: boolean;
   stickyDefaultColor: string;
-  /** The Passwords (KeePassXC) feature is on. Changed only through `setPasswordsEnabled`. */
-  passwordsEnabled: boolean | null;
+}
+
+/** One line of the shared calculator history. */
+export interface CalcEntry {
+  expr: string;
+  result: string;
 }
 
 export interface Notebook {
@@ -146,18 +158,3 @@ export interface SearchHit {
   score: number;
 }
 
-/** The bundled KeePassXC, which holds the passwords (amendment A9). */
-export interface KeePassXCStatus {
-  /** KeePassXC is present next to Cipherleaf. */
-  installed: boolean;
-  /** Its executable matches the verified 2.8.0 release. */
-  verified: boolean;
-  version: string;
-  /** The password database that will be opened, if one exists. */
-  database: string | null;
-  dataDir: string;
-  /** KeePassXC was started by Cipherleaf and is still running. */
-  running: boolean;
-  /** Its window is shown inside Cipherleaf's window. */
-  embedded: boolean;
-}

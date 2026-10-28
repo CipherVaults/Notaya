@@ -1,12 +1,12 @@
 // optionalsecurity.mjs - real-exe test of "notes first, security optional" (amendment A21).
-// Purpose: one phase of the test. The runner (run-optionalsecurity.ps1) starts a COPY of Cipherleaf.exe in
+// Purpose: one phase of the test. The runner (run-optionalsecurity.ps1) starts a COPY of Notaya.exe in
 //          a temp folder, runs this script once per phase, closes the app by its window close button between
 //          phases (the real quit path) and starts it again. Each phase prints PASS / FAIL lines.
 // Usage:   normally started by run-optionalsecurity.ps1:  node optionalsecurity.mjs <port> <password-file> <data-dir> <phase>
 //          phase is p1 .. p5 (see below). <data-dir> is the test copy's data folder (read-only here).
-// Needs:   Node 24 (global fetch and WebSocket, node:sqlite) and a Cipherleaf window started with the debug port.
+// Needs:   Node 24 (global fetch and WebSocket, node:sqlite) and a Notaya window started with the debug port.
 //          Throwaway data only: it creates a new vault in the test folder, so never point it at a real one.
-// Phases:  p1 first run opens straight to notes (security off), nothing locks, passwords refused, text saved
+// Phases:  p1 first run opens straight to notes (security off), nothing locks, text saved
 //          p2 restart opens by itself; turn security on (weak password refused, earlier open backups deleted),
 //             lock and unlock, wrong password refused, turn security off (wrong password refused)
 //          p3 restart opens straight to notes; turn security on, keeping earlier backups; lock and unlock
@@ -73,23 +73,14 @@ if (phase === "p1") {
   check("the vault file is flagged as having security off", existsSync(vaultPath) && isOpenFile(vaultPath));
   const s = (await m.inv("get_settings")).ok;
   check("screenshot protection is off by default", s?.screenCaptureProtection === false, JSON.stringify(s?.screenCaptureProtection));
-  check("the Passwords feature is off by default", s?.passwordsEnabled === false, JSON.stringify(s?.passwordsEnabled));
   const lockRes = await m.inv("lock_vault");
   await sleep(1500);
   st = await status();
   check("Lock does nothing while security is off", st?.unlocked === true && !lockRes.err, JSON.stringify(lockRes));
-  const kp = await m.inv("keepassxc_open");
-  check("KeePassXC refuses to start while Passwords is off", !!kp.err && /turned off/i.test(kp.err), JSON.stringify(kp));
   const nb = await m.inv("create_notebook", { name: "T", color: "#888888", icon: "N" });
   const pg = await m.inv("create_page", { sectionId: nb.ok.sections[0].id, title: "Open note" });
   await m.inv("save_page", { id: pg.ok.id, title: "Open note", content: doc(TEXT), text: TEXT });
   check("text saved", (await pageText()) === TEXT);
-  const on = await m.inv("set_passwords_enabled", { enabled: true });
-  check("Passwords can be switched on", on.ok?.passwordsEnabled === true, JSON.stringify(on));
-  const off = await m.inv("set_passwords_enabled", { enabled: false });
-  check("Passwords can be switched off again", off.ok?.passwordsEnabled === false, JSON.stringify(off));
-  const stale = await m.inv("save_settings", { settings: { ...(await m.inv("get_settings")).ok, passwordsEnabled: true } });
-  check("a settings save cannot flip the Passwords switch", stale.ok?.passwordsEnabled === false, JSON.stringify(stale));
   const chg = await m.inv("change_master", { currentPassword: "x", currentKeyfile: null, newPassword: password, newKeyfile: null });
   check("changing a master password is refused while security is off", !!chg.err, JSON.stringify(chg));
   const dis = await m.inv("disable_security", { currentPassword: password, currentKeyfile: null });
