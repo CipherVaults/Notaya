@@ -2,7 +2,7 @@
 
 - **Date:** written 2026-10-27 about 09:35 UTC; re-checked against `main` `a4574be` (Notaya V1.2.0) on 2026-10-28 at 11:20 to 11:40 UTC (system clock). The app was called Cipherleaf when this was first written; it is Notaya now ([A28](A28-rename-notaya-icon-sunrise.md)).
 - **Asked by:** Mohamed, 2026-10-27 09:29 UTC ("Plan an installer setup in the windows so that people can do setup") and 09:30:09 UTC ("Planning now, let's discuss"); and again 2026-10-28 11:19:57 UTC ("Now continue the setup part"), which continues the planning, it is not a go to build.
-- **State:** plan only. Nothing is built. Result state: *produced* (this document), not verified by any build and not accepted. It is not an amendment: the owner decides the questions at the end, and building starts only when he says so.
+- **State:** plan decided, not built. All 10 decisions are answered (the recommended ones). Nothing is built. Result state: *produced* (this document), not verified by any build and not accepted. It is not an amendment: the owner decides the questions at the end, and building starts only when he says so.
 
 ## What changed since the first version (2026-10-27 to 2026-10-28)
 
@@ -11,7 +11,7 @@
 - `src-tauri/src/portable.rs` is unchanged: a release build still always uses the folder of the exe. The one real code change below is still needed.
 - Installed notes would now go in **`%LOCALAPPDATA%\Notaya\data`**, not `Cipherleaf`. There is no old installed Cipherleaf folder to worry about, because no installer ever existed.
 - The "download WebView2 only if missing" choice does not touch the paused "keep app, no network" plan (still paused).
-- **One decision is answered:** each release ships **both** a Windows installer and the portable ZIP (decision 9, owner 2026-10-28 11:21:06 UTC). It also means the plan to build an installer is wanted in principle; the other 9 decisions are still **open**, and no build is approved yet.
+- **One decision is answered:** each release ships **both** a Windows installer and the portable ZIP (decision 9, owner 2026-10-28 11:21:06 UTC). It also means the plan to build an installer is wanted in principle; the other 9 were answered "All recommendations" (owner, 2026-10-28 11:56:21 UTC). **All 10 decisions are now answered, but no build is approved yet:** the owner has not said go, and the NSIS tooling download still needs his OK.
 
 ## Where we start
 
@@ -97,13 +97,13 @@ Building on the PC downloads the NSIS tooling the first time (Tauri does this). 
 
 | # | Question | Recommended | Owner's answer |
 |---|---|---|---|
-| 1 | setup.exe (NSIS), MSI, or both? | setup.exe only | open |
-| 2 | Per-user, all-users, or let the person choose? | Per-user | open |
-| 3 | Installed notes folder | `%LOCALAPPDATA%\Notaya` | open |
-| 4 | First-start "Import from portable copy" button, or README steps only? | Button (copy only) | open |
-| 5 | WebView2: download if missing, bundle offline (+~130 MB), or skip? | Download if missing | open |
-| 6 | Uninstall: always keep notes, or offer a delete box? | Always keep | open |
-| 7 | Desktop shortcut ticked by default? | Yes | open |
-| 8 | Code signing now, or unsigned for now? | Unsigned for now | open |
+| 1 | setup.exe (NSIS), MSI, or both? | setup.exe only | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
+| 2 | Per-user, all-users, or let the person choose? | Per-user | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
+| 3 | Installed notes folder | `%LOCALAPPDATA%\Notaya` | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
+| 4 | First-start "Import from portable copy" button, or README steps only? | Button (copy only) | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
+| 5 | WebView2: download if missing, bundle offline (+~130 MB), or skip? | Download if missing | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
+| 6 | Uninstall: always keep notes, or offer a delete box? | Always keep | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
+| 7 | Desktop shortcut ticked by default? | Yes | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
+| 8 | Code signing now, or unsigned for now? | Unsigned for now | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
 | 9 | Keep the portable ZIP in each release? | Yes | **Decided: yes.** Owner, 2026-10-28 11:21:06 UTC: "So we will do 2 things windows installer and portable version in the release". Each release ships both. |
-| 10 | Which version ships the installer? | V1.3.0 (V1.2.0 is already released) | open |
+| 10 | Which version ships the installer? | V1.3.0 (V1.2.0 is already released) | **Decided: recommended.** Owner, 2026-10-28 11:56:21 UTC: "All recommendations". |
