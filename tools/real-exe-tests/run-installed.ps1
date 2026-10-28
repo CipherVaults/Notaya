@@ -56,7 +56,7 @@ try {
   node "$PSScriptRoot\installed.mjs" $port portable "$prog2\data"
   Stop-TestApp $p $prog2
   "vault.clf next to the portable exe: " + (Test-Path "$prog2\data\vault.clf")
-  "portable copy wrote into LOCALAPPDATA (must be 0 items): " + @(Get-ChildItem $local2 -Force -ErrorAction SilentlyContinue).Count
+  "portable copy wrote into LOCALAPPDATA (must be 0 items; Windows own Microsoft\ cache ignored): " + @(Get-ChildItem $local2 -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'Microsoft' }).Count
 } finally {
   Stop-TestApp $p $base
   "port $port listening after test: " + (Get-ListenerCount $port)

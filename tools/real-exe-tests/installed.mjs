@@ -66,3 +66,4 @@ if (phase === "first") {
 } else {
   throw new Error("phase must be first, second or portable");
 }
+process.exit(0); // the open DevTools socket would keep node (and run-installed.ps1) waiting for ever
