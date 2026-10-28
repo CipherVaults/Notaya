@@ -88,6 +88,7 @@ pub fn derive_kek(
     }
     let hk = Hkdf::<Sha256>::new(Some(salt), &ikm);
     let mut kek = Zeroizing::new([0u8; KEY_LEN]);
+    // The old app name stays in this label after the rename to Notaya: it is part of the key derivation (A28).
     hk.expand(b"cipherleaf/v1/key-encryption-key", kek.as_mut())
         .map_err(|_| Error::Other("HKDF expand failed".into()))?;
     Ok(kek)

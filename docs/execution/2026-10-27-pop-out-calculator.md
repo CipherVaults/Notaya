@@ -30,3 +30,7 @@ Reading used: the panel under the Sticky notes list becomes a **Calculator** but
 - Closing on lock with security on: not run in the real app.
 - The owner's review. Nothing is accepted.
 - The amendment number A24 may clash with another thread working at the same time; renumber on merge if so.
+
+## Addendum (2026-10-27, records catch-up)
+
+**Correction:** the title and section 1 say A24; the amendment is **A25** (renumbered in `996ae34` when the KeePassXC removal kept A24). Commits on branch `claude/project-thread-covvd6` ([PR #19](https://github.com/AbyssWatcher2/CipherLeaf/pull/19)): code `f35acb2`, records `5ddd4ec`, the merge of PR #20 into the branch `996ae34`, 200 lines `58c299c`, records `b995e4a`. Closing the calculators on a lock was seen in the combined test ([EX-2026-10-27-25](2026-10-27-combined-test.md)), and the check of `main` `4600561` passed 27/27 (200 lines, restart). The owner merged PR #19 at 08:05:20 UTC (GitHub; merge commit `4600561`), and it was released in V1.1.0 (tag `v1.1.0` on `70d38a1`). Still open: the owner's acceptance.

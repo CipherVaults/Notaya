@@ -1,18 +1,18 @@
 # Real-exe tests
 
-Scripts that start a **copy of the built `Cipherleaf.exe`** with a **throwaway vault** in a temp folder, drive it through the WebView2 debug port, print PASS/FAIL lines and clean up. They test the real program (Rust core, WebView, file system), which `cargo test` and the mock UI cannot.
+Scripts that start a **copy of the built `Notaya.exe`** with a **throwaway vault** in a temp folder, drive it through the WebView2 debug port, print PASS/FAIL lines and clean up. They test the real program (Rust core, WebView, file system), which `cargo test` and the mock UI cannot.
 
 ## Prerequisites
 
-- A release build: `npm run tauri build` (the default exe is `src-tauri\target\release\Cipherleaf.exe`).
+- A release build: `npm run tauri build` (the default exe is `src-tauri\target\release\Notaya.exe`).
 - Node 24 (global `fetch` and `WebSocket`), Windows PowerShell 5.1, WebView2.
 
 ## Safety rules
 
-- **Never** run these against a real vault or `E:\Project\Cipherleaf-portable\data`. The runners copy the exe into `%TEMP%\clf-*` and create a new vault there. Never test on the owner's live window.
+- **Never** run these against a real vault or `E:\Project\Cipherleaf-portable\data` (the owner's real vault; also any future `Notaya-portable\data`). The runners copy the exe into `%TEMP%\clf-*` and create a new vault there. Never test on the owner's live window.
 - The debug port is **9335**, set (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`) for the test process only, never left set. After a run, the runner prints `port 9335 listening after test: 0`. If it is not 0, find out why and close it.
 - The passphrase is generated fresh for each run from a cryptographic RNG, written to a temp file and deleted at the end. It is never printed or stored. Do not hard-code one.
-- Only the Cipherleaf the script started is stopped.
+- Only the Notaya the script started is stopped.
 - Never commit vault data or secrets (`*.clf`, `*.key`, `.devdata/`).
 - Run only after the work is approved. In `docs/STATUS.md` a paused mission means ask the owner first.
 
@@ -22,7 +22,7 @@ From the project root:
 
 ```powershell
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-$exe = "E:\Project\cipherleaf\src-tauri\target\release\Cipherleaf.exe"
+$exe = "E:\Project\cipherleaf\src-tauri\target\release\Notaya.exe"
 
 # Restore from backup (about 1 minute)
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-restoreflow.ps1 -Exe $exe

@@ -36,7 +36,7 @@ export default function TitleBar() {
       <div data-tauri-drag-region className="flex items-center gap-2">
         <Logo size={18} />
         <span data-tauri-drag-region className="text-[0.8rem] font-semibold tracking-tight">
-          Cipherleaf
+          Notaya
         </span>
       </div>
 

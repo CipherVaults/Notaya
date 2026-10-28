@@ -333,7 +333,7 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     backup_failure
 }
 
-/// Quits Cipherleaf: locks (saving the windows' edits and making the backup) and exits.
+/// Quits Notaya: locks (saving the windows' edits and making the backup) and exits.
 ///
 /// Waits for the windows, so call it only from a thread other than the main one.
 pub fn quit(app: &AppHandle) -> bool {
@@ -360,7 +360,7 @@ fn show_backup_failure(app: &AppHandle, text: &str) {
     let _ = app
         .dialog()
         .message(text.to_string())
-        .title("Cipherleaf could not make a backup")
+        .title("Notaya could not make a backup")
         .kind(MessageDialogKind::Warning)
         .blocking_show();
 }

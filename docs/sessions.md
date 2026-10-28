@@ -6,6 +6,108 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 19:40:47 to 22:28:11 UTC; work 19:41 to about 22:30 UTC, system clock and PC clock), Notaya: release V1.2.0, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests ran in Remote Control sessions on the owner's PC. **Record basis:** the thread messages (UTC timestamps), the PC sessions' reports, the GitHub API, the repository at `main` `49cd9de` then `4e40d1a`. **Reconstructed:** nothing; written at the end. **Big stop:** a release.
+
+## What happened
+
+1. At 19:40:47 the owner wrote "Release one" right after merging PR #24. Claude proposed V1.2.0 "Notaya", bumped the five version files (`7e84cdc`) and had the PC build it. When main moved (records PR #29, `49cd9de`), the branch was merged with main (`e25f804`) and the build redone from it; the first build was discarded.
+2. Build and unit tests passed (129 of 129, `npm audit` 0). The real-exe runners were then blocked three times by the PC session's automatic permission check, even after a decision card (19:56:25) and after the owner saved a full PowerShell allow rule (20:08:44). He ran the runners himself at 22:10 from an Administrator shell; they found no window, so no check ran. A fresh non-elevated PC session then ran them: restore 13 PASS, lock flow ok, optional security 47 of 47, and a throwaway Cipherleaf 1.1.0 vault opened unchanged in the shipped `Notaya.exe`.
+3. Understanding changed: a test script that cannot find the window is "not run", not a failure of the app, and an automatic permission layer on the PC session is separate from the owner's settings file. The elevated shell is the probable cause of the 22:10 failure but is unproven.
+4. PR #30 (bump and records) was merged by the owner with a merge commit; the PC copy was fast-forwarded to `4e40d1a`; he published `v1.2.0` at 22:28:04 and it was verified on GitHub (tag, one asset, digest equal).
+
+## Where to resume
+
+Nothing is accepted. Open for the owner: acceptance of V1.2.0 (and earlier releases), the PowerShell allow rule he saved (remove when he wants), STATUS questions 11, 19, 20 (not-tested upgrade of a real V1.0.1 data folder) and 25 (a fix release). Not run for V1.2.0: `cargo audit`, a password-vault migration, lock events. Details: [EX-2026-10-27-31](execution/2026-10-27-notaya-v1-2-0-portable-build.md).
+
+---
+
+# 📘 Session: 2026-10-27 (owner's messages 16:29:35 to 19:08:33 UTC; work 16:30 to about 19:45 UTC, system clock), Cipherleaf: PBS review, then adoption in its smallest form, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC timestamps), the Notion hub and every page and file that could be opened, the repository at `main` `5013244`. **Reconstructed:** nothing; written at the end of the work. **Big stop:** a change of direction (a new way of working), so this entry has the fuller form.
+
+## What happened
+
+1. At 16:29:35 the owner asked for a read-only understanding review of PBS and how it fits CipherLeaf, with no changes until his word. The review was delivered as a Claude Doc (outside the repo, as asked).
+2. At 17:07:25 he asked why some pages were not opened. They were reachable and had been skipped by choice; they were read and the doc updated. At 19:05:05 he said "read them all"; every reachable page and all 56 files of the ZIP were read (manifest hashes match). Four Notion pages and the Drive originals could not be opened (probably not shared).
+3. Understanding changed in two places. PBS had already been adopted in a compact form on 2026-10-22 (EX-06), and the records had drifted from it (STATUS "Current state" held unaccepted items; the work method for cloud threads was not written down). So the adoption is small: fix those, not start over.
+4. At 19:08:33 the owner wrote "just want to follow / that's my answer". That was read as approval to follow PBS and to take the recommended answer to each of the four questions (records win over memory; one docs PR plus a skill card; full session entries only at big stops; `acceptance.md` and `sessions.md` are in the record set, no Decision Records). Implemented in a draft docs PR: A29, `CLAUDE.md` sections "Cloud threads" and "PBS work cycle", the STATUS restructure, [EX-2026-10-27-29](execution/2026-10-27-pbs-adoption.md).
+
+Not changed: code, the security design, the plan snapshot. Not run: anything (docs only). Nothing is accepted. Where to resume: the owner merges the PR, the PC copy is fast-forwarded, the skill refresh card is saved by him if he agrees.
+
+---
+
+# 📘 Session: 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), Cipherleaf: live audit (PR #10) compared with V1.1.0, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** GitHub PR #10, the "Live PC audit checks" thread (read in full), `git log` and the code of `main` `6981442`.
+
+## What happened
+
+1. The owner asked to check the idle "Live PC audit checks" session. It was found to be finished: PR #10 was merged by the owner on 2026-10-24 at 09:23:51 UTC and its temp folder deleted by him the same morning.
+2. He then asked whether everything in that thread got fixed. The code was compared item by item. At 17:13:39 UTC he said stop; the partial result was saved outside the repo. At 18:56:19 UTC he said "Resume" and the comparison was finished and put in a docs PR.
+3. Understanding changed in one place: the first quick answer to the owner ("PR #10 is merged, the session is finished") covered only the main items. The full comparison shows that not everything is fixed: 15 rows are still open, including the WebView2 traffic, F-04, F-10, SE-03 and CR-02.
+
+Not changed: code, the security design (no promise changed), the plan snapshot. Not run: anything on Windows, `cargo audit`, tests. Nothing is accepted. Where to resume: the owner merges the PR, then the PC copy is fast-forwarded; a fix release only on his word.
+
+---
+
+# 📘 Session: 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), Cipherleaf: record every step, PC copy on `main`, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in the records thread; the PC step in a Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC timestamps), `git log` after fetching `main`, the PC session's `git` output.
+
+## What happened
+
+1. The owner merged records PR #25 (16:52:41 UTC, `2c8c2e6`) and said "do it" to updating his PC copy. It was on the stale `feat/a9-keepassxc` branch with a clean tree, so it was switched to `main` and fast-forwarded to `2c8c2e6`; nothing forced, the old branch kept. An untracked `vendor\` folder of old KeePassXC files showed up (it was ignored until A24) and was left alone (STATUS question 24).
+2. The owner set a standing rule: record every step, on GitHub and on the PC (16:57:24, 16:57:39 UTC). From now on each step goes into the records through a docs PR, and after his merge the PC copy is fast-forwarded. Recorded in the authority table, STATUS and [EX-2026-10-30](execution/2026-10-27-record-every-step.md).
+
+Not changed: code. Nothing is accepted.
+
+> **Added 2026-10-27 19:45 UTC (system clock):** the owner tried the real window ("Okay looks good", 19:39:24 UTC, informal), marked PR #24 ready and merged it at 19:40:27 UTC (`9510b54`); his PC copy was fast-forwarded and checked equal to `origin/main` at 19:40:56 UTC ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) addendum 9). Integrated, not accepted, not released.
+>
+> **Added 2026-10-27 19:20 UTC (system clock):** the owner said "Resume" (18:56:19 UTC). The PC checks of `91d7068` passed (129 of 129 Rust tests, release build, real-exe test, old 1.1.0 vault opens); details in addendum 4 of [EX-2026-10-30](execution/2026-10-27-notaya-rename.md). The owner asked why tests still say cipherleaf (19:10:41 UTC): addendum 3. The exe metadata fixes were rebuilt and checked (addenda 5 and 6, publisher `d4933ef`). Left: the owner's merge.
+>
+> **Added 2026-10-27 17:16 UTC (system clock):** the independent review found no blockers; its two should-fix items and the swatch nit were fixed and pushed. The owner said "stop now at resume point" at 17:13:39 UTC; work stopped before the PC tests. Resume point: the addendum of [EX-2026-10-30](execution/2026-10-27-notaya-rename.md).
+
+# 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in the cloud thread "Design new app icon and name" (branch `claude/project-thread-669o55`, draft PR #24). **Record basis:** the thread's messages (UTC timestamps), the system clock and `git log`. Written at the time.
+
+## What happened
+
+1. **Options (13:31 to 15:51 UTC):** three icon rounds (leaf ideas turned down at 13:46:09, "I don't need leaf"), six themes, six rounds of names screened on the web. The owner picked icon 5 (two sticky notes, 14:00:13) and Sunrise (14:29:43). His own names PocketNote and MicroNote were found to clash with existing apps and a trademark record, and he was told. All of it is in `docs/design/`.
+2. **Effort (16:16:23):** "From now every thread is opus with high effort"; this thread switched to high and told the coordinator.
+3. **Go (16:59:11):** "proceed with this and The app name is Notaya". The name was screened (no exact match; "Nota" is common) and the owner told. **17:03:39:** Sunrise is the default, the dark one optional.
+4. **Built (`6003e81`):** the rename, the icon and the two Sunrise looks ([A28](plan/A28-rename-notaya-icon-sunrise.md)). The identifier, data paths, vault format constants, environment variables and browser-profile keys were kept on purpose so existing notes open; existing vaults keep the look they saved (a judgement call, stated to the owner).
+5. Checked in the cloud: `tsc`, build, mock screens, an independent review. Not run: Rust tests, release build, real-exe test (they need the PC).
+
+## Where to resume
+
+Run the PC checks on throwaway data ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) section 4), then the owner merges PR #24 and his PC copy is fast-forwarded. Nothing is accepted.
+
+# 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the project chat and thread messages (UTC timestamps), `git log` of `main` at `87eb7ff`, the GitHub pull request list, the read-only PBS review thread's gap list. **Reconstructed:** items 1 and 2 below come from the project chat, not from a session that recorded them at the time.
+
+## What happened
+
+1. **After the V1.1.0 release (08:42 to 16:36 UTC, from the project chat):** the owner asked for a Windows installer plan (09:29:31; plan only, draft PR #23), set the rule that plans and reports go into the repo under `docs/` (09:35:37), asked for new icons, names and themes (13:31:51 onwards; draft PR #24; he picked icon 5, two sticky notes, at 14:00:13 and the Sunrise theme at 14:29:43; the name is still open), said every new thread runs on Opus at high effort (16:16), and asked for a read-only PBS understanding review (16:29:35; done in another thread as an artifact, nothing adopted).
+2. **Earlier gap, also reconstructed:** the combined test of PRs #17 to #20 and the check of `main` after the merges (07:21 to 08:20 UTC) had no record; it is now [EX-2026-10-27-25](execution/2026-10-27-combined-test.md).
+3. **The catch-up itself** (the owner's "okay so document them commits and ammedments and the records" and "till this moment"): the authority table now runs from 2026-10-23 20:34 to 2026-10-27 16:36 UTC; A24 and A25 have their merge and release status; sticky multi-delete is A26 and the ribbon A27; the 27 Oct commits and merges are named in the execution records; STATUS and the acceptance ledger describe the state after V1.1.0. Details: [EX-2026-10-27-26](execution/2026-10-27-records-catch-up.md).
+
+Not changed: code, the security design (no promise changed), the handoff files, the plan snapshot. Outside the repo and not changed here: the GitHub About text and the three saved skills still mention KeePassXC. Nothing is accepted.
+
+# 📘 Session: 2026-10-27 (owner's "Yes test" 07:21:42 UTC; work 07:22 to 08:20 UTC, PC system clock), Cipherleaf: combined test of the four changes, PC thread session
+
+**Executor:** a Claude Code session on the owner's PC (model output). **Record basis:** that thread's messages. **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
+
+## What happened
+
+1. The owner paused the no-network plan and said "Yes test" (07:21:42 UTC). The four draft PRs (#17 to #20) were combined in a throwaway copy in the order 18, 17, 20, 19; the code conflicts were the sticky notes toolbar (#17 and #19) and KeePassXC code left in #19. The calculator amendment was renumbered A25. Merge commits `e589baf`, `ef548eb` and `996ae34` were pushed to the PR branches (no force push).
+2. Combined: 128/128 Rust tests, optional security 47/47, restore 13/13, lock flow as designed, 23/23 new checks. The owner merged #18, #17, #20 and #19 at 08:04:20 to 08:05:20 UTC; `main` `4600561` then passed 128/128 and 27/27 (200-line history survives a restart). Details: [EX-2026-10-27-25](execution/2026-10-27-combined-test.md).
+
+Not run: a hand click-through, the release ZIP (made next, EX-2026-10-27-24). Nothing is accepted.
+
 # 📘 Session: 2026-10-27 (owner "Yes please" 08:21:52 UTC; work about 08:22 to 08:40 UTC, system clock), Cipherleaf: V1.1.0 portable build, thread session on the owner's PC
 
 **Executor:** Claude (Claude Code) in a thread session on the owner's PC, in a throwaway worktree. **Record basis:** the project-thread timestamps, the system clock and the repository.
@@ -53,6 +155,20 @@ Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts),
 4. 2026-10-27 07:50:00 UTC (transcript): the owner asked for a history of 200 lines and a check that it survives a full restart. The limit was raised to 200; the restart check runs on the PC with a throwaway vault (EX-23). (The amendment was renumbered A25 when the KeePassXC removal took A24.)
 
 Resume: draft PR into `main`; the PC check and the owner's review. Nothing is accepted.
+
+**Correction (2026-10-27, records catch-up):** the heading and item 2 of this entry say A24; the amendment is **A25** since `996ae34` (item 4 already says so). This entry is not rewritten. The PR (#19) was merged by the owner at 08:05:20 UTC (`4600561`) and released in V1.1.0.
+
+# 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work until about 06:53 UTC, system clock), Cipherleaf: select several sticky notes and delete them together (A26), cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** [EX-2026-10-27-sticky-multi-select](execution/2026-10-27-sticky-multi-select.md), the commit (`31dc920`, 06:53:05 UTC) and the project chat (draft PR #17 announced 06:53:36 UTC). **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
+
+## What happened
+
+1. This thread got item 3 of the owner's message of 06:45:11 UTC, "select multiple sticky notes to delete".
+2. Built a Select mode on the Sticky notes screen and a `delete_stickies` command that removes the ticked notes in one transaction after one confirmation (`31dc920`, draft PR #17). An independent review found no blocking issue; its low findings were fixed.
+3. `tsc`, the build and a scripted mock test passed in the cloud; the Rust side was not compiled there. It was compiled, tested and tried in the real app later in the combined test (EX-2026-10-27-25). The owner merged PR #17 at 08:04:39 UTC (`d69a3f7`). Numbered A26 in the records catch-up.
+
+Nothing is accepted.
 
 ---
 

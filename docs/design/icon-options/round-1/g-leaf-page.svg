@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Option G: the leaf is the page. A big white leaf with lines of writing on it. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3fbf7f"/><stop offset="1" stop-color="#0f5a3a"/>
+    </linearGradient>
+    <clipPath id="leaf"><path d="M0 -330C220 -220 250 110 0 330C-250 110 -220 -220 0 -330Z"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <g transform="translate(512 512) rotate(40)">
+    <path d="M0 -330C220 -220 250 110 0 330C-250 110 -220 -220 0 -330Z" fill="#fbfaf5"/>
+    <g clip-path="url(#leaf)" transform="rotate(-40)">
+      <rect x="-150" y="-120" width="300" height="30" rx="15" fill="#bcd9c8"/>
+      <rect x="-170" y="-40" width="340" height="30" rx="15" fill="#bcd9c8"/>
+      <rect x="-150" y="40" width="250" height="30" rx="15" fill="#bcd9c8"/>
+    </g>
+    <path d="M0 230V380" stroke="#fbfaf5" stroke-width="34" stroke-linecap="round"/>
+  </g>
+</svg>

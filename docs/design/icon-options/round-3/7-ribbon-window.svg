@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 7: an app window with a ribbon toolbar over a page. The editor itself. -->
+  <defs><linearGradient id="t" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2f6df6"/><stop offset="1" stop-color="#1238a8"/></linearGradient></defs><rect width="1024" height="1024" rx="230" fill="url(#t)"/>
+  <rect x="190" y="230" width="644" height="564" rx="56" fill="#ffffff"/>
+  <path d="M246 230H778Q834 230 834 286V360H190V286Q190 230 246 230Z" fill="#dfe7fb"/>
+  <rect x="250" y="268" width="60" height="56" rx="14" fill="#2f6df6"/>
+<rect x="340" y="268" width="60" height="56" rx="14" fill="#2f6df6"/>
+<rect x="430" y="268" width="60" height="56" rx="14" fill="#2f6df6"/>
+  <rect x="270" y="440" width="420" height="34" rx="17" fill="#c9d6f5"/>
+  <rect x="270" y="520" width="340" height="34" rx="17" fill="#c9d6f5"/>
+  <rect x="270" y="600" width="380" height="34" rx="17" fill="#c9d6f5"/>
+  <rect x="270" y="680" width="220" height="34" rx="17" fill="#c9d6f5"/>
+</svg>

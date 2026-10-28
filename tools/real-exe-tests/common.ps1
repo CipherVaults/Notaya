@@ -1,7 +1,7 @@
 # common.ps1 - helpers shared by the real-exe test runners (dot-sourced, not run on its own).
 #
 # Purpose : one place for the safety-relevant helpers: a fresh random throwaway passphrase,
-#           a check that the debug port is free, and "stop only the Cipherleaf I started".
+#           a check that the debug port is free, and "stop only the Notaya I started".
 # Usage   : . (Join-Path $PSScriptRoot 'common.ps1')          # from run-*.ps1 in this folder
 # Needs   : Windows PowerShell 5.1. Nothing is installed or changed outside $env:TEMP.
 
@@ -45,10 +45,10 @@ function New-PassphraseFile {
   return $path
 }
 
-# Resolves and checks the path to the Cipherleaf.exe that will be tested.
+# Resolves and checks the path to the Notaya.exe that will be tested.
 function Resolve-TestExe([string]$Exe) {
-  if (-not $Exe) { throw 'Pass -Exe <path to Cipherleaf.exe> (a release build from npm run tauri build).' }
-  if (-not (Test-Path -LiteralPath $Exe -PathType Leaf)) { throw "Cipherleaf.exe not found: $Exe" }
+  if (-not $Exe) { throw 'Pass -Exe <path to Notaya.exe> (a release build from npm run tauri build).' }
+  if (-not (Test-Path -LiteralPath $Exe -PathType Leaf)) { throw "Notaya.exe not found: $Exe" }
   return (Resolve-Path -LiteralPath $Exe).Path
 }
 
@@ -74,7 +74,7 @@ function Start-TestApp([string]$ExePath, [int]$Port, [string]$StdoutFile = '', [
 }
 
 # Closes the test app politely; force-stops ONLY the process this script started (never another
-# Cipherleaf, such as the owner's real window), plus any leftover process running from $Dir.
+# Notaya, such as the owner's real window), plus any leftover process running from $Dir.
 function Stop-TestApp($p, [string]$Dir) {
   if ($p) {
     $p.Refresh()
@@ -82,7 +82,7 @@ function Stop-TestApp($p, [string]$Dir) {
     if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
   }
   if ($Dir) {
-    Get-Process Cipherleaf -ErrorAction SilentlyContinue |
+    Get-Process Notaya -ErrorAction SilentlyContinue |
       Where-Object { $_.Path -and $_.Path.StartsWith($Dir, [System.StringComparison]::OrdinalIgnoreCase) } |
       Stop-Process -Force
   }

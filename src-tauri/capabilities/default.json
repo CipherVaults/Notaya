@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal permissions: window controls and events only. No file system, shell, dialog, opener or HTTP access is given to the UI; those run in Rust behind Cipherleaf's own checked commands.",
+  "description": "Minimal permissions: window controls and events only. No file system, shell, dialog, opener or HTTP access is given to the UI; those run in Rust behind Notaya's own checked commands.",
   "windows": ["main", "sticky-*", "calc-*"],
   "permissions": [
     "core:event:default",

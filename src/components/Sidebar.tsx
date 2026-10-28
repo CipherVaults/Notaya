@@ -49,7 +49,7 @@ function contents(tree: NotesTree, sectionIds: string[], withSections: boolean):
 }
 
 const DELETE_NOTE =
-  "This can't be undone from inside the app. Cipherleaf first saves a backup copy of all your notes. To get this back, use Restore from a backup in Settings: it replaces your notes with that copy, and your current notes are kept in a restore-undo file.";
+  "This can't be undone from inside the app. Notaya first saves a backup copy of all your notes. To get this back, use Restore from a backup in Settings: it replaces your notes with that copy, and your current notes are kept in a restore-undo file.";
 
 const rowByKey = (key: string) => document.querySelector<HTMLElement>(`[data-rowkey="${window.CSS.escape(key)}"]`);
 

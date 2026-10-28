@@ -15,7 +15,7 @@ const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
 
 const settings: Record<string, unknown> = {
-  theme: params.get("theme") ?? "paper",
+  theme: params.get("theme") ?? "sunrise",
   accent: params.get("accent") ?? "mono",
   backdrop: "none",
   font: "inter",
@@ -102,7 +102,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
         securityOn,
         earlierCopies: !exists,
         openError: null,
-        dataDir: "E:\\Cipherleaf\\data",
+        dataDir: "E:\\Notaya\\data",
         version: "1.0.0",
       });
     case "start_notes":
@@ -119,7 +119,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       securityOn = false;
       return ok(null);
     case "unlock_vault":
-      if (args.password === "wrong") throw "Wrong master password or keyfile for this Cipherleaf vault.";
+      if (args.password === "wrong") throw "Wrong master password or keyfile for this Notaya vault.";
       unlocked = true;
       return ok(null);
     case "start_over":

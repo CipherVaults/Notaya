@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui";
 
 /**
- * Credits and licenses for the open source software Cipherleaf includes or runs.
+ * Credits and licenses for the open source software Notaya includes or runs.
  * The full text is THIRD-PARTY-NOTICES.md (also in the Licenses folder of the portable copy).
  * It is loaded only when this dialog opens, so it does not slow down the app's start.
  */
@@ -26,7 +26,7 @@ export default function OpenSourceDialog({ open, onOpenChange }: { open: boolean
       open={open}
       onOpenChange={onOpenChange}
       title="Open source licenses"
-      description="Cipherleaf is built on open source software. Thank you to everyone who made it."
+      description="Notaya is built on open source software. Thank you to everyone who made it."
       width={760}
     >
       <div className="space-y-3 text-sm leading-relaxed">
@@ -35,7 +35,7 @@ export default function OpenSourceDialog({ open, onOpenChange }: { open: boolean
             The app is built with Tauri, Rust crates and npm packages (React, TipTap, ProseMirror, KaTeX and others),
             and fonts under the SIL Open Font License.
           </li>
-          <li>The license for Cipherleaf itself has not been chosen yet. This list is attribution, not legal advice.</li>
+          <li>The license for Notaya itself has not been chosen yet. This list is attribution, not legal advice.</li>
         </ul>
         <pre
           tabIndex={0}

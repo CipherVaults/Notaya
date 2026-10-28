@@ -147,7 +147,7 @@ pub struct Sticky {
 #[derive(Clone, Serialize, Deserialize, Zeroize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
-    /// "black" | "graphite" | "white" | "paper" | "system"
+    /// "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system"
     pub theme: String,
     pub accent: String,
     /// "mica" | "acrylic" | "none"
@@ -166,7 +166,7 @@ pub struct Settings {
     pub screen_capture_protection: bool,
     pub sticky_default_color: String,
     /// The calculator history, newest first, shared by every calculator window. It is kept
-    /// here (not as its own record) so an older Cipherleaf can still open the vault: it
+    /// here (not as its own record) so an older version (Cipherleaf 1.x) can still open the vault: it
     /// ignores the field. The UI reads and changes it only through the calculator commands.
     pub calc_history: Vec<CalcEntry>,
 }
@@ -185,7 +185,8 @@ pub struct CalcEntry {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            theme: "paper".into(),
+            // Sunrise is the default look (A28). Sunrise dark and the others are chosen in Settings.
+            theme: "sunrise".into(),
             accent: "mono".into(),
             backdrop: "none".into(),
             font: "inter".into(),
@@ -216,7 +217,7 @@ impl Settings {
         self.theme = match self.theme.as_str() {
             "dark" => "black".into(),
             "light" => "white".into(),
-            "black" | "graphite" | "white" | "paper" | "system" => self.theme.clone(),
+            "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system" => self.theme.clone(),
             _ => "black".into(),
         };
         self.font_size = self.font_size.clamp(12, 22);
@@ -229,6 +230,17 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sunrise_is_the_default_look_and_both_sunrise_looks_are_kept() {
+        assert_eq!(Settings::default().theme, "sunrise");
+        for look in ["sunrise", "sunrise-dark", "paper", "system"] {
+            let s = Settings { theme: look.into(), ..Settings::default() }.sanitized();
+            assert_eq!(s.theme, look);
+        }
+        let s = Settings { theme: "neon".into(), ..Settings::default() }.sanitized();
+        assert_eq!(s.theme, "black", "an unknown look falls back as before");
+    }
 
     #[test]
     fn screenshot_protection_is_off_by_default() {

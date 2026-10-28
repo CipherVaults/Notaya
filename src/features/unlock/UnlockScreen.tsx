@@ -123,7 +123,7 @@ function UnlockCard({
           )}
           {!headerOk && (
             <p className="text-xs text-warn">
-              The vault file couldn't be read, so Cipherleaf can't tell whether it needs a keyfile. It may be damaged, or
+              The vault file couldn't be read, so Notaya can't tell whether it needs a keyfile. It may be damaged, or
               another program (antivirus or a sync tool) may be using it.{" "}
               <button type="button" onClick={() => void refreshStatus().catch(() => {})} className="font-medium underline">
                 Check again
@@ -141,7 +141,7 @@ function UnlockCard({
                 {error}
                 {error.startsWith(BAD_CREDENTIALS) && (
                   <span className="mt-1 block text-xs text-muted">
-                    This is the Cipherleaf master password.{keyfileRequired ? " The keyfile must be the exact file chosen when the vault was made." : ""}
+                    This is the Notaya master password.{keyfileRequired ? " The keyfile must be the exact file chosen when the vault was made." : ""}
                   </span>
                 )}
               </motion.p>

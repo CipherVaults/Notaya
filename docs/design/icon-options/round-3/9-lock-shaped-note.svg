@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Round 3, option 9: a padlock whose body is a lined note. -->
+  <rect width="1024" height="1024" rx="230" fill="#111111"/>
+  <path d="M352 470V360A160 160 0 0 1 672 360V470" fill="none" stroke="#9fe0c0" stroke-width="64"/>
+  <rect x="242" y="440" width="540" height="420" rx="64" fill="#ffffff"/>
+  <rect x="312" y="540" width="400" height="34" rx="17" fill="#c8c8c8"/>
+  <rect x="312" y="620" width="330" height="34" rx="17" fill="#c8c8c8"/>
+  <rect x="312" y="700" width="370" height="34" rx="17" fill="#c8c8c8"/>
+</svg>
