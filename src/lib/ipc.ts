@@ -14,6 +14,7 @@ import type {
   RestoreResult,
   SearchHit,
   Settings,
+  ShellPrefs,
   Sticky,
   Strength,
   VaultStatus,
@@ -67,6 +68,10 @@ export const api = {
     return invoke<void>("quit_app");
   },
   openDataFolder: () => invoke<void>("open_data_folder"),
+  // Close to the tray and start with Windows (saved next to the vault, not in the encrypted settings)
+  getShellPrefs: () => invoke<ShellPrefs>("get_shell_prefs"),
+  setShellPrefs: (prefs: Pick<ShellPrefs, "closeToTray" | "startWithWindows" | "startMinimized">) =>
+    invoke<ShellPrefs>("set_shell_prefs", { prefs }),
 
   // Notes
   listNotes: () => invoke<NotesTree>("list_notes"),

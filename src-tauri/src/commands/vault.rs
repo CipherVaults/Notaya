@@ -408,6 +408,10 @@ pub fn set_backdrop(window: WebviewWindow, kind: String, dark: bool) -> bool {
 #[tauri::command]
 pub fn window_ready(window: WebviewWindow, state: State<'_, AppState>) {
     state.mark_ready(window.label());
+    // Started hidden by Windows: the main window stays in the tray until it is opened from there.
+    if window.label() == "main" && state.take_start_hidden() {
+        return;
+    }
     let _ = window.show();
     if window.label() == "main" {
         let _ = window.set_focus();

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, LockOpen, Palette, RotateCcw, ShieldCheck } from "lucide-react";
+import { AppWindow, Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, LockOpen, Palette, RotateCcw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
 import { ACCENTS, STICKY_COLORS } from "@/lib/palette";
 import { isDark, resolveAccent, resolveTheme } from "@/lib/theme";
-import type { Settings, ThemeMode } from "@/lib/types";
+import type { Settings, ShellPrefs, ThemeMode } from "@/lib/types";
 import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
@@ -33,6 +33,31 @@ export default function SettingsView() {
   const [enableOpen, setEnableOpen] = useState(false);
   const [disableOpen, setDisableOpen] = useState(false);
   const securityOn = status?.securityOn ?? false;
+  const [shell, setShell] = useState<ShellPrefs | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    api.getShellPrefs().then((p) => alive && setShell(p), () => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // These switches are saved at once (next to the vault, not in the encrypted settings).
+  const updateShell = async (patch: Partial<Pick<ShellPrefs, "closeToTray" | "startWithWindows" | "startMinimized">>) => {
+    if (!shell) return;
+    const next = {
+      closeToTray: shell.closeToTray,
+      startWithWindows: shell.startWithWindows,
+      startMinimized: shell.startMinimized,
+      ...patch,
+    };
+    try {
+      setShell(await api.setShellPrefs(next));
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+  };
 
   const persist = useMemo(
     () =>
@@ -194,6 +219,37 @@ export default function SettingsView() {
             </div>
           </Row>
         </Section>
+
+        {shell && (
+          <Section icon={<AppWindow size={16} />} title="Windows">
+            <Row
+              label="Close button hides Notaya to the tray"
+              hint={
+                shell.trayAvailable
+                  ? `Notaya keeps running in the tray (the arrow next to the clock) and its sticky notes stay where they are${securityOn ? ", but your notes lock when the window is hidden" : ""}. Right-click the tray icon and choose Quit Notaya to close it completely. When this is off, the close button quits.`
+                  : "Windows gave Notaya no tray icon this time, so the close button quits."
+              }
+            >
+              <Switch checked={shell.closeToTray} onChange={(v) => updateShell({ closeToTray: v })} label="Close button hides Notaya to the tray" />
+            </Row>
+            <Row
+              label="Start with Windows"
+              hint={
+                shell.installed
+                  ? "Notaya starts when you sign in to Windows."
+                  : "Notaya starts when you sign in to Windows. This portable copy starts from the folder it is in now: if you move the folder, turn this off and on again."
+              }
+            >
+              <Switch checked={shell.startWithWindows} onChange={(v) => updateShell({ startWithWindows: v })} label="Start with Windows" />
+            </Row>
+            <Row
+              label="Start minimized to the tray"
+              hint="When Windows starts Notaya, it stays hidden in the tray until you open it (you still unlock a protected vault when you open it)."
+            >
+              <Switch checked={shell.startMinimized} onChange={(v) => updateShell({ startMinimized: v })} label="Start minimized to the tray" />
+            </Row>
+          </Section>
+        )}
 
         <Section icon={<ShieldCheck size={16} />} title="Security (optional)">
           {securityOn ? (

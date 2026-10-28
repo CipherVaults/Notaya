@@ -107,6 +107,11 @@ pub struct AppState {
     open_gate: Mutex<()>,
     /// A quit is in progress: nothing may reopen a vault that has security off meanwhile.
     quitting: AtomicBool,
+    /// The tray icon exists. Without it nothing may hide the window: there would be no way back.
+    tray_ready: AtomicBool,
+    /// Windows started Notaya hidden in the tray: the main window stays hidden when it is ready
+    /// (once; later it is shown as usual).
+    start_hidden: AtomicBool,
 }
 
 fn guard<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -128,7 +133,26 @@ impl AppState {
             notice: Mutex::new(None),
             open_gate: Mutex::new(()),
             quitting: AtomicBool::new(false),
+            tray_ready: AtomicBool::new(false),
+            start_hidden: AtomicBool::new(false),
         }
+    }
+
+    pub fn tray_ready(&self) -> bool {
+        self.tray_ready.load(Ordering::SeqCst)
+    }
+
+    pub fn set_tray_ready(&self, on: bool) {
+        self.tray_ready.store(on, Ordering::SeqCst);
+    }
+
+    pub fn set_start_hidden(&self, on: bool) {
+        self.start_hidden.store(on, Ordering::SeqCst);
+    }
+
+    /// True once if the main window should stay hidden when it reports ready.
+    pub fn take_start_hidden(&self) -> bool {
+        self.start_hidden.swap(false, Ordering::SeqCst)
     }
 
     pub fn open_gate(&self) -> MutexGuard<'_, ()> {
@@ -353,6 +377,26 @@ pub fn quit(app: &AppHandle) -> bool {
     true
 }
 
+/// The close button with "close to tray" on: the window goes away but Notaya keeps running.
+/// With a master password the vault locks first (every window saves, sticky notes and
+/// calculators close, the lock screen is shown, the backup is made), so the notes are not left
+/// open in the tray. With security off nothing is locked, but the windows still save their pending
+/// edits first. Only then is the main window hidden.
+///
+/// Waits for the windows, so call it only from a thread other than the main one.
+pub fn hide_to_tray(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let protected = state.with(|s| Ok(!s.is_open())).unwrap_or(false);
+    if protected {
+        lock(app, "tray");
+    } else {
+        request_flush(app, FLUSH_TIMEOUT);
+    }
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.hide();
+    }
+}
+
 /// A native message box that waits until it is closed. Call it from a thread other than the
 /// main one (as `quit` is).
 fn show_backup_failure(app: &AppHandle, text: &str) {
@@ -541,7 +585,7 @@ mod tests {
 
     #[test]
     fn only_a_restore_lock_skips_the_vault_locked_event() {
-        for reason in ["manual", "idle", "sleep", "screen-locked", "minimized", "drive-removed", "quit"] {
+        for reason in ["manual", "idle", "sleep", "screen-locked", "minimized", "drive-removed", "quit", "tray"] {
             assert!(emits_vault_locked(reason, false), "{reason}");
         }
         assert!(!emits_vault_locked("restore", false));

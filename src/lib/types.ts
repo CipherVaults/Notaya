@@ -61,6 +61,20 @@ export interface Settings {
   stickyDefaultColor: string;
 }
 
+/** The Windows section of Settings (kept next to the vault, readable while it is locked). */
+export interface ShellPrefs {
+  /** The close button hides Notaya to the tray instead of quitting. */
+  closeToTray: boolean;
+  /** Windows starts this copy of Notaya when you sign in. */
+  startWithWindows: boolean;
+  /** When Windows starts it, Notaya stays hidden in the tray. */
+  startMinimized: boolean;
+  /** False for a portable copy (its start-up entry names the folder it is in now). */
+  installed: boolean;
+  /** False when no tray icon could be made; the close button then quits. */
+  trayAvailable: boolean;
+}
+
 /** One line of the shared calculator history. */
 export interface CalcEntry {
   expr: string;

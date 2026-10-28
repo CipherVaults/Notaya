@@ -8,6 +8,7 @@ mod model;
 mod openvault;
 mod portable;
 mod restore;
+mod shell;
 mod state;
 mod system;
 mod ui;
@@ -17,7 +18,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, calculator, notes, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, calculator, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -43,11 +44,7 @@ pub fn run() {
     tauri::Builder::default()
         // Only one copy may run at a time, so two windows can't edit the vault at once.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.unminimize();
-                let _ = w.show();
-                let _ = w.set_focus();
-            }
+            shell::show_main(app);
         }))
         // Dialog and opener are used only from Rust. The UI gets no permission for them.
         .plugin(tauri_plugin_dialog::init())
@@ -85,11 +82,22 @@ pub fn run() {
                 report_startup_failure(app.handle().clone(), window_message(&paths, &e));
                 return Ok(());
             }
+            // The tray icon comes first: the window may only hide itself while there is a way back.
+            let state = app.state::<state::AppState>();
+            match shell::build_tray(app.handle()) {
+                Ok(()) => state.set_tray_ready(true),
+                Err(e) => eprintln!("no tray icon: {e}"),
+            }
+            if shell::started_minimized() && state.tray_ready() {
+                state.set_start_hidden(true);
+            }
             state::spawn_monitor(app.handle().clone());
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the main window locks the vault and quits, sticky notes included.
+            // Closing the main window hides Notaya to the tray (the default; locking a vault that
+            // has a master password first), or locks the vault and quits, sticky notes included,
+            // when "close to tray" is off or there is no tray icon.
             if let tauri::WindowEvent::Destroyed = event {
                 // A closed window can't answer a flush request any more.
                 window.app_handle().state::<state::AppState>().unmark_ready(window.label());
@@ -105,7 +113,12 @@ pub fn run() {
                             // Locks and exits. If this thread panics before the exit, the app
                             // stays open and the next close request may try again (see the guard).
                             let mut guard = ClosingGuard { exiting: false };
-                            guard.exiting = state::quit(&app);
+                            let state = app.state::<state::AppState>();
+                            if state.tray_ready() && shell::load_prefs(&state.paths).close_to_tray {
+                                state::hide_to_tray(&app);
+                            } else {
+                                guard.exiting = state::quit(&app);
+                            }
                         });
                     }
                 }
@@ -130,6 +143,8 @@ pub fn run() {
             vault_cmd::quit_app,
             vault_cmd::take_notice,
             vault_cmd::open_data_folder,
+            shell_cmd::get_shell_prefs,
+            shell_cmd::set_shell_prefs,
             backup_cmd::list_backups,
             backup_cmd::pick_backup_file,
             backup_cmd::restore_vault,

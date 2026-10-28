@@ -16,6 +16,14 @@ const calcHistory: { expr: string; result: string }[] = [{ expr: "12.5 × (3 + 4
 const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
 
+const shellPrefs: Record<string, unknown> = {
+  closeToTray: true,
+  startWithWindows: false,
+  startMinimized: true,
+  installed: params.get("portable") !== "1",
+  trayAvailable: true,
+};
+
 const settings: Record<string, unknown> = {
   theme: params.get("theme") ?? "sunrise",
   accent: params.get("accent") ?? "mono",
@@ -169,6 +177,11 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok({ ...settings });
     case "set_backdrop":
       return ok(false);
+    case "get_shell_prefs":
+      return ok({ ...shellPrefs });
+    case "set_shell_prefs":
+      Object.assign(shellPrefs, args.prefs as Args);
+      return ok({ ...shellPrefs });
     case "list_notes":
       return ok(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree);
     // The real app makes a verified backup first and fails the delete if that fails; ?failDelete=1 mimics that.

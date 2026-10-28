@@ -56,9 +56,15 @@ function Resolve-TestExe([string]$Exe) {
 # like the portable ZIP, so the vault is made in "$Dir\data". Without the marker a bare folder counts as an
 # INSTALLED copy, which keeps its notes under %LOCALAPPDATA% (see run-installed.ps1). Never leave the marker out
 # for a test that is not about installed mode: it would write into the real profile.
-function Copy-TestExe([string]$Exe, [string]$Dir) {
+#
+# Since V1.4.0 the close button hides Notaya to the tray by default. The older scripts close the window to test the
+# real quit path, so the test copy starts with "close to tray" OFF (data\shell-prefs.json); run-tray.ps1 turns it on.
+function Copy-TestExe([string]$Exe, [string]$Dir, [bool]$CloseToTray = $false) {
   Copy-Item $Exe "$Dir\Notaya.exe"
   [System.IO.File]::WriteAllText("$Dir\portable.txt", "test copy (portable)")
+  New-Item -ItemType Directory -Force -Path "$Dir\data" | Out-Null
+  $flag = if ($CloseToTray) { 'true' } else { 'false' }
+  [System.IO.File]::WriteAllText("$Dir\data\shell-prefs.json", "{`"closeToTray`":$flag,`"startMinimized`":true}")
 }
 
 function Get-ListenerCount([int]$Port) {

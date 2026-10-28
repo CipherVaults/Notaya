@@ -19,7 +19,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # App shell
-tauri = { version = "2.12.5", features = [] }
+tauri = { version = "2.12.5", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2.8.3"
 tauri-plugin-single-instance = "2.5.4"
@@ -43,6 +43,7 @@ hex = "0.4.3"
 zxcvbn = "3.1.1"
 windows = { version = "0.62.2", features = [
   "Win32_Foundation",
+  "Win32_System_Registry",
   "Win32_System_StationsAndDesktops",
   "Win32_System_SystemInformation",
   "Win32_UI_Input_KeyboardAndMouse",
