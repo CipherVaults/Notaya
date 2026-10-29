@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-10-29 (owner's messages 07:55:55, 08:33:01, 08:38:36, 08:39:33 and 08:40:02 UTC; work started 07:56 UTC, system clock), EX-2026-10-29-38: guide for two partners and their two Claudes
+
+- Report: [2026-10-29-shared-work-with-a-friend.md](2026-10-29-shared-work-with-a-friend.md)
+- Task / Goal: "so now i want me and my freind work on the same project and his claude code and my claude code can continiu flawless and can be picked uped where it lefts"; then "i want him to have the full work acess" / "from the beginegn to after finishing V1.4.0"; amendment [A34](../plan/approval-and-amendments.md) (proposed)
+- Executor: Claude (Claude Code) in a cloud thread; docs only
+- Outcome: produced (guide, claim board, friend setup, owner invite steps, `CLAUDE.md` section, records); links and the ID commands checked; no code, nothing built
+- Integration / release: draft docs PR; V1.4.0 (PR #39) untouched
+- Open dependency / next action: the owner's own clicks (invite, optional settings) and his answer to STATUS question 27; after he merges, send the friend the setup link
+- Acceptance: not applicable
+
 ### 2026-10-28 (owner's messages 16:24:57 to 16:43:19 UTC; work 16:27 to 16:45 UTC, PC system clock), EX-2026-10-28-36: test leftovers cleaned up on the PC
 
 - Report: [2026-10-28-test-leftovers-cleanup.md](2026-10-28-test-leftovers-cleanup.md)

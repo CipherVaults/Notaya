@@ -10,6 +10,7 @@ These are this repository's working rules for Claude Code. This file doesn't hol
 4. Inspect the live repository (`git status`, `git log --oneline -5`) before redoing anything. Preserve existing work.
 5. Read `docs/security-design.md` before touching crypto, storage, IPC commands, the CSP, the clipboard or auto-lock code.
 6. Read `docs/acceptance.md` before saying that something works or is verified. Open the plan snapshot (`docs/plan/approved-plan-2026-10-22.md`), `docs/execution/README.md` (the index), `docs/sessions.md` and `docs/failure-intelligence.md` only when the task needs them.
+7. Two people work in this repository, each with their own Claude. Read `docs/handoff/collaboration-guide.md` and `docs/handoff/claims.md`, fetch all branches (`git fetch --all --prune`), look at the open pull requests, and claim your work before changing anything (guide, sections 3 and 4). Say which partner your person is.
 
 ## Rules
 
@@ -64,6 +65,18 @@ The owner chose to follow the AI Project Bootstrap System (PBS) in its smallest 
 8. **No broad rewrites of old records.** Map old facts to the record that now owns them; add dated corrections instead of editing history. Decision Records are not used.
 
 `docs/STATUS.md` "Current state" holds only what the owner accepted; unaccepted work lives under "Continuation" with the exact next permitted action. `docs/acceptance.md` and `docs/sessions.md` are part of the record set.
+
+## Working with more than one person
+
+Full rules: [`docs/handoff/collaboration-guide.md`](docs/handoff/collaboration-guide.md) (status: proposed, [A34](docs/plan/approval-and-amendments.md), until Mohamed confirms). The short form:
+
+- **The repository is the only memory two Claudes share.** The claude.ai project, its chat and each account's memory are not shared. Anything the next Claude needs goes into a committed file.
+- **Two partners, equal work access.** Mohamed (GitHub `AbyssWatcher2`) and the friend (named in `docs/handoff/claims.md`) are partners (Mohamed, 2026-10-29 08:39:33 and 08:40:02 UTC: full work access, from the beginning to after V1.4.0). In these rules "the owner" means **either partner**: either one's own words give permission, including for the "Ask the owner first" list, and either one merges, releases and accepts. A Claude never merges or releases by itself. Making the repository public and adding a licence need **both** partners. Changing GitHub repository settings is Mohamed's click only (he owns the account). If the partners' instructions conflict, stop and tell both; the later message does not win between two people.
+- **Claim before you start.** Fetch all branches, read `docs/handoff/claims.md`, check the open PRs, then push a branch `<github-login>/<topic>` (Mohamed's cloud threads keep their `claude/project-thread-*` names) whose first commit adds your claims row, and open the draft PR. Take the next free `EX-` and `A` numbers after checking `origin/main` and every open branch. Don't push to another person's branch unless its row says `shared branch` (V1.4.0 is one; follow guide section 5b: merge before every push, no force-push, mark items "taken by").
+- **Stop cleanly.** Before any stop, commit and push everything (a WIP branch is fine), keep the draft PR titled `WIP:` while unfinished, write `docs/handoff/YYYY-MM-DD-<topic>-resume-note.md`, update your claims row, and tell your partner what is done, unverified and next.
+- **Pick up with care.** Read the other side's resume note, treat its claims as claims to re-check on the exact commit, and never rewrite history on a branch you didn't create.
+- **Test safety applies to both PCs.** Throwaway data only, in a test folder outside the repository; never anyone's real vault or notes. The PC paths in this file are Mohamed's; the friend uses their own.
+- **Security review** applies to every code PR (see the Security Guidance plugin and the built-in `security-review` rule in the guide, section 9).
 
 ## Records
 
