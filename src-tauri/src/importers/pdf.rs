@@ -376,13 +376,13 @@ impl<'a> Pdf<'a> {
 }
 
 fn inflate(data: &[u8], limit: usize) -> Option<Vec<u8>> {
-    use miniz_oxide::inflate::{decompress_to_vec_with_limit, decompress_to_vec_zlib_with_limit};
-    match decompress_to_vec_zlib_with_limit(data, limit) {
-        Ok(v) => Some(v),
-        // A damaged stream: keep what came out, or try it without the zlib header.
-        Err(e) if !e.output.is_empty() => Some(e.output),
-        Err(_) => decompress_to_vec_with_limit(data, limit).ok().or_else(|| decompress_to_vec_with_limit(data.get(2..)?, limit).ok()),
-    }
+    use crate::export::deflate::{inflate_raw, zlib_decompress};
+    // A zlib stream; if its checksum or header is damaged, try the bare data after the 2-byte header,
+    // then the data as it is.
+    zlib_decompress(data, limit)
+        .ok()
+        .or_else(|| inflate_raw(data.get(2..)?, limit).ok())
+        .or_else(|| inflate_raw(data, limit).ok())
 }
 
 fn ascii_hex(data: &[u8]) -> Vec<u8> {
@@ -1448,7 +1448,7 @@ pub(crate) mod tests {
 
     fn stream(content: &str, flate: bool) -> String {
         if flate {
-            let z = miniz_oxide::deflate::compress_to_vec_zlib(content.as_bytes(), 6);
+            let z = crate::export::deflate::zlib_compress(content.as_bytes());
             // Binary bytes as Latin-1 chars round-trip through the byte buffer below.
             let body: String = z.iter().map(|b| char::from(*b)).collect();
             format!("<< /Length {} /Filter /FlateDecode >>\nstream\n{}\nendstream", z.len(), body)
@@ -1509,7 +1509,7 @@ pub(crate) mod tests {
     fn honest_failures() {
         let enc = String::from_utf8_lossy(&pdf_bytes(&["<< /Type /Catalog /Pages 2 0 R >>".into(), "<< /Type /Pages /Kids [] >>".into()]))
             .replace("/Root 1 0 R", "/Root 1 0 R /Encrypt << /Filter /Standard >>");
-        assert!(extract(enc.as_bytes()).unwrap_err().contains("encrypted"));
+        assert!(extract(enc.as_bytes()).err().unwrap().contains("encrypted"));
 
         let scanned = pdf_bytes(&[
             "<< /Type /Catalog /Pages 2 0 R >>".into(),
@@ -1517,7 +1517,7 @@ pub(crate) mod tests {
             "<< /Type /Page /Contents 4 0 R >>".into(),
             stream("q 612 0 0 792 0 0 cm /Im1 Do Q", false),
         ]);
-        assert!(extract(&scanned).unwrap_err().contains("scanned"));
+        assert!(extract(&scanned).err().unwrap().contains("scanned"));
 
         let no_map = pdf_bytes(&[
             "<< /Type /Catalog /Pages 2 0 R >>".into(),
@@ -1526,8 +1526,8 @@ pub(crate) mod tests {
             stream("BT /F1 12 Tf 72 700 Td <0012003400560078009a00bc> Tj ET", false),
             "<< /Type /Font /Subtype /Type0 /Encoding /Identity-H >>".into(),
         ]);
-        assert!(extract(&no_map).unwrap_err().contains("character map"));
-        assert!(extract(b"hello").unwrap_err().contains("not a PDF"));
+        assert!(extract(&no_map).err().unwrap().contains("character map"));
+        assert!(extract(b"hello").err().unwrap().contains("not a PDF"));
     }
 
     #[test]

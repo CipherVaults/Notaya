@@ -1,7 +1,7 @@
 //! A ZIP reader for imports (Notion exports and Word files), written for hostile input.
 //!
 //! It reads the central directory, never writes anything to disk, and inflates an entry
-//! only when it is asked for, with `miniz_oxide`. Limits: the number of entries, the size of
+//! only when it is asked for, with the inflate code of the exporter. Limits: the number of entries, the size of
 //! each entry, the total of everything inflated during one import (a shared budget), and the
 //! compression ratio of large entries (zip bombs). Entry names are cleaned: `..`, absolute
 //! paths, drive letters, `:` and control characters are refused (no zip-slip, even though
@@ -202,7 +202,7 @@ impl Archive {
         } else {
             // The declared size is the limit, so a lying header cannot inflate further.
             let limit = usize::try_from(e.size).map_err(|_| "Too large.")?;
-            miniz_oxide::inflate::decompress_to_vec_with_limit(raw, limit).map_err(|_| "Damaged or oversized entry.".to_string())?
+            crate::export::deflate::inflate_raw(raw, limit).map_err(|_| "Damaged or oversized entry.".to_string())?
         };
         if out.len() as u64 != e.size {
             return Err("Damaged entry (wrong size).".into());
@@ -236,14 +236,14 @@ pub fn crc32(data: &[u8]) -> u32 {
     c ^ 0xFFFF_FFFF
 }
 
-/// Builds a ZIP in memory (tests only). `deflate`: compress with miniz_oxide.
+/// Builds a ZIP in memory (tests only). `deflate`: compress with the exporter.
 #[cfg(test)]
 pub fn build(files: &[(&str, &[u8])], deflate: bool) -> Vec<u8> {
     let mut out = Vec::new();
     let mut cd = Vec::new();
     for (name, data) in files {
         let (method, body) = if deflate {
-            (8u16, miniz_oxide::deflate::compress_to_vec(data, 6))
+            (8u16, crate::export::deflate::deflate_raw(data))
         } else {
             (0u16, data.to_vec())
         };

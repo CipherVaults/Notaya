@@ -4,6 +4,7 @@ mod crypto;
 mod error;
 mod export;
 mod filenames;
+mod importers;
 mod generator;
 mod import;
 mod legacy_guard;
