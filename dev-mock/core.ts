@@ -246,18 +246,28 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok(null);
     // The real app opens a save dialog and writes the file; here it pretends the file was saved.
     case "export_notes": {
-      const req = args.request as { scope: string; ids: string[]; format: string; includeSubpages: boolean };
+      const req = args.request as { scope: string; ids: string[]; format: string; includeSubpages: boolean; output?: string };
       await new Promise((r) => setTimeout(r, 400));
-      const ext = req.format === "docx" ? "docx" : req.format === "pdf" ? "pdf" : "md";
-      const pages = req.scope === "pages" ? req.ids.length : tree.pages.filter((p) => p.trashedAt === null).length;
+      const zip = req.output === "zip";
+      const ext = req.format === "docx" ? "docx" : req.format === "pdf" ? "pdf" : req.format === "html" ? "html" : "md";
+      const live = tree.pages.filter((p) => p.trashedAt === null);
+      const inSections = (ids: string[]) => live.filter((p) => ids.includes(p.sectionId)).length;
+      const pages =
+        req.scope === "pages"
+          ? req.ids.length
+          : req.scope === "section" || req.scope === "sections"
+            ? inSections(req.ids)
+            : inSections(tree.sections.filter((s) => req.ids.includes(s.notebookId)).map((s) => s.id));
       return ok({
-        path: `C:\\Users\\you\\Documents\\Notaya export.${ext}`,
+        path: `C:\\Users\\you\\Documents\\Notaya export.${zip ? "zip" : ext}`,
         pages,
         images: 1,
         missingImages: 0,
         imagesLeftOut: 0,
         charsReplaced: req.format === "pdf" ? 2 : 0,
-        assetsFolder: ext === "md" ? "C:\\Users\\you\\Documents\\Notaya export.assets" : null,
+        assetsFolder: !zip && ext === "md" ? "C:\\Users\\you\\Documents\\Notaya export.assets" : null,
+        files: zip ? pages + (ext === "md" ? 1 : 0) : 1,
+        archive: zip,
       });
     }
     // The real app opens a file dialog and imports the files; here it pretends two files were picked.

@@ -163,14 +163,16 @@ export interface Strength {
   suggestions: string[];
 }
 
-export type ExportFormat = "markdown" | "pdf" | "docx";
+export type ExportFormat = "html" | "markdown" | "pdf" | "docx";
 
 /** What to export. The backend opens the save dialog and writes the file itself. */
 export interface ExportRequest {
-  scope: "pages" | "section" | "notebook";
+  scope: "pages" | "section" | "sections" | "notebook" | "notebooks";
   ids: string[];
   format: ExportFormat;
   includeSubpages: boolean;
+  /** "single" (the default): one document. "zip": one file per page, in folders, in a ZIP. */
+  output?: "single" | "zip";
 }
 
 /** What an export wrote (mirrors `ExportSummary` in src-tauri/src/export/mod.rs). */
@@ -186,6 +188,10 @@ export interface ExportSummary {
   charsReplaced: number;
   /** Markdown: the folder the pictures went to. */
   assetsFolder: string | null;
+  /** ZIP: how many files the ZIP holds (pages and Markdown pictures). */
+  files: number;
+  /** True when the export is a ZIP of separate files. */
+  archive: boolean;
 }
 
 /** Where an import comes from. The backend opens the dialog itself. */

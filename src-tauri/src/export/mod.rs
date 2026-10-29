@@ -1,4 +1,5 @@
-//! Exporting pages, a section or a notebook to Markdown, PDF or Word (V1.4.0).
+//! Exporting pages, sections or notebooks to HTML, Markdown, PDF or Word (V1.4.0), as one
+//! document or as separate files in a ZIP.
 //!
 //! Everything happens in the Rust core: the UI sends only ids and a format, the core decrypts
 //! the pages, builds the file and writes it where the person chose in the save dialog. The
@@ -10,17 +11,24 @@
 //! as a heading (on a new page in PDF and Word), sections and the notebook get headings of
 //! their own, and sub-pages follow their page one heading level lower. Pages in the trash are
 //! left out unless `include_trashed` is set.
+//!
+//! "Separate files in a ZIP" writes one file per page instead (see [`collect_zip`] and
+//! [`write_zip`]): folders `Notebook/Section/` (only the levels the choice spans), the file
+//! `Page.<ext>`, and the sub-pages of a page in a folder named like the page, next to it
+//! (`Section/Page.md` and `Section/Page/Sub-page.md`). Names are made safe for Windows and made
+//! unique within their folder without regard to capitals (`Name (2).md`).
 
 pub mod deflate;
 pub mod doc;
 pub mod docx;
+pub mod html;
 pub mod image;
 pub mod markdown;
 pub mod pdf;
 mod pdf_fonts;
 pub mod zip;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -28,12 +36,13 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::error::{Error, Result};
-use crate::model::{Item, Page};
+use crate::model::{Item, Notebook, Page, Section};
 use doc::{Block, Cell};
 use image::Kind;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Format {
+    Html,
     Markdown,
     Pdf,
     Docx,
@@ -42,6 +51,7 @@ pub enum Format {
 impl Format {
     pub fn parse(s: &str) -> Result<Format> {
         match s {
+            "html" => Ok(Format::Html),
             "markdown" => Ok(Format::Markdown),
             "pdf" => Ok(Format::Pdf),
             "docx" => Ok(Format::Docx),
@@ -50,6 +60,7 @@ impl Format {
     }
     pub fn ext(self) -> &'static str {
         match self {
+            Format::Html => "html",
             Format::Markdown => "md",
             Format::Pdf => "pdf",
             Format::Docx => "docx",
@@ -57,6 +68,7 @@ impl Format {
     }
     pub fn label(self) -> &'static str {
         match self {
+            Format::Html => "HTML page",
             Format::Markdown => "Markdown",
             Format::Pdf => "PDF document",
             Format::Docx => "Word document",
@@ -70,12 +82,29 @@ pub enum Scope {
     Pages(Vec<String>),
     Section(String),
     Notebook(String),
+    /// Several sections, whole (with their pages), in the order of the sidebar.
+    Sections(Vec<String>),
+    /// Several notebooks, whole, in the order of the sidebar.
+    Notebooks(Vec<String>),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+/// The most sections or notebooks one export may name.
+pub const MAX_CHOSEN: usize = 1_000;
+/// The most picture data one export holds in memory (the vault allows 25 MB for each picture).
+pub const MAX_IMAGE_BYTES: u64 = 1024 * 1024 * 1024;
+
+#[derive(Clone, Copy, Debug)]
 pub struct Options {
     pub include_subpages: bool,
     pub include_trashed: bool,
+    /// More picture data than this in one document is refused with a message.
+    pub max_image_bytes: u64,
+}
+
+impl Default for Options {
+    fn default() -> Options {
+        Options { include_subpages: false, include_trashed: false, max_image_bytes: MAX_IMAGE_BYTES }
+    }
 }
 
 /// One picture from the vault, as stored.
@@ -135,13 +164,16 @@ pub struct ExportSummary {
     pub chars_replaced: usize,
     /// The folder the Markdown pictures were written to, if any.
     pub assets_folder: Option<String>,
+    /// "Separate files in a ZIP": how many files the ZIP holds (pages and Markdown pictures).
+    pub files: usize,
+    /// Whether the export is a ZIP of separate files.
+    pub archive: bool,
 }
 
 /* ---------- Choosing the pages ---------- */
 
 struct Tree<'a> {
     pages: Vec<&'a Page>,
-    item_name: BTreeMap<&'a str, (&'a str, i64, i64)>,
 }
 
 fn sorted_pages<'a>(items: &[&'a Item], opts: &Options) -> Tree<'a> {
@@ -153,19 +185,7 @@ fn sorted_pages<'a>(items: &[&'a Item], opts: &Options) -> Tree<'a> {
         })
         .collect();
     pages.sort_by_key(|p| (p.order, p.created));
-    let mut item_name = BTreeMap::new();
-    for i in items {
-        match i {
-            Item::Notebook(n) => {
-                item_name.insert(n.id.as_str(), (n.name.as_str(), n.order, n.created));
-            }
-            Item::Section(s) => {
-                item_name.insert(s.id.as_str(), (s.name.as_str(), s.order, s.created));
-            }
-            _ => {}
-        }
-    }
-    Tree { pages, item_name }
+    Tree { pages }
 }
 
 impl<'a> Tree<'a> {
@@ -193,17 +213,30 @@ impl<'a> Tree<'a> {
     }
 }
 
-/// The name of a notebook or section, and the file name the save dialog suggests.
+/// The name of a notebook, section or page, and the file name the save dialog suggests.
 pub fn suggested_name(items: &[&Item], scope: &Scope) -> Result<String> {
+    let nb_name = |id: &str| {
+        items.iter().find_map(|i| match i {
+            Item::Notebook(n) if n.id == id => Some(n.name.clone()),
+            _ => None,
+        })
+    };
+    let sec_name = |id: &str| {
+        items.iter().find_map(|i| match i {
+            Item::Section(s) if s.id == id => Some(s.name.clone()),
+            _ => None,
+        })
+    };
+    let several = |ids: &[String], name: &dyn Fn(&str) -> Option<String>| -> Result<String> {
+        let first = ids.first().ok_or_else(|| Error::invalid("Choose what to export."))?;
+        let title = name(first).ok_or(Error::NotFound)?;
+        Ok(if ids.len() > 1 { format!("{} and {} more", page_title(&title), ids.len() - 1) } else { title })
+    };
     let title = match scope {
-        Scope::Notebook(id) | Scope::Section(id) => items
-            .iter()
-            .find_map(|i| match i {
-                Item::Notebook(n) if &n.id == id && matches!(scope, Scope::Notebook(_)) => Some(n.name.clone()),
-                Item::Section(s) if &s.id == id && matches!(scope, Scope::Section(_)) => Some(s.name.clone()),
-                _ => None,
-            })
-            .ok_or(Error::NotFound)?,
+        Scope::Notebook(id) => nb_name(id).ok_or(Error::NotFound)?,
+        Scope::Section(id) => sec_name(id).ok_or(Error::NotFound)?,
+        Scope::Notebooks(ids) => several(ids, &nb_name)?,
+        Scope::Sections(ids) => several(ids, &sec_name)?,
         Scope::Pages(ids) => {
             let first = ids.first().ok_or_else(|| Error::invalid("Choose at least one page to export."))?;
             let title = items
@@ -223,82 +256,120 @@ fn page_title(t: &str) -> String {
     if t.trim().is_empty() { "Untitled".to_string() } else { t.trim().to_string() }
 }
 
-/// Builds the document for an export. `attachment` reads one picture from the vault.
-pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn Fn(&str) -> Option<(String, Vec<u8>)>) -> Result<ExportDoc> {
+/// How a choice is laid out: with notebook and section headings (or folders), with section
+/// headings only, or as pages alone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Shape {
+    Notebooks,
+    Sections,
+    Pages,
+}
+
+/// The chosen pages of one section, in order, each with its depth below the chosen page.
+struct Group<'a> {
+    notebook_id: &'a str,
+    notebook: &'a str,
+    section_id: &'a str,
+    section: &'a str,
+    pages: Vec<(&'a Page, u8)>,
+}
+
+struct Selection<'a> {
+    shape: Shape,
+    groups: Vec<Group<'a>>,
+    /// The document's title (file properties, PDF title).
+    title: String,
+}
+
+/// What `scope` names, in the order of the sidebar. Sections and notebooks must exist; pages that
+/// are gone or in the trash are left out. Nothing selected is an error.
+fn select<'a>(items: &[&'a Item], scope: &Scope, opts: &Options) -> Result<Selection<'a>> {
     let tree = sorted_pages(items, opts);
-    let title_of = |id: &str| items.iter().find_map(|i| match i {
-        Item::Page(p) if p.id == id && (opts.include_trashed || p.trashed_at.is_none()) => Some(page_title(&p.title)),
-        _ => None,
-    });
-    let mut parts = Vec::new();
-    let mut seen = HashSet::new();
-    let push_pages = |list: Vec<(&Page, u8)>, base: u8, parts: &mut Vec<Part>| {
-        for (p, depth) in list {
-            let level = base.saturating_add(depth).min(6);
-            parts.push(Part::Page { level, title: page_title(&p.title), blocks: doc::parse(&p.content, &title_of) });
-        }
-    };
-    let sections_of = |notebook: &str| -> Vec<(&str, &str)> {
-        let mut v: Vec<(&str, &str, i64, i64)> = items
+    let mut notebooks: Vec<&'a Notebook> = items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Notebook(n) => Some(n),
+            _ => None,
+        })
+        .collect();
+    notebooks.sort_by_key(|n| (n.order, n.created));
+    let sections_of = |notebook: &str| -> Vec<&'a Section> {
+        let mut v: Vec<&'a Section> = items
             .iter()
             .filter_map(|i| match i {
-                Item::Section(s) if s.notebook_id == notebook => Some((s.id.as_str(), s.name.as_str(), s.order, s.created)),
+                Item::Section(s) if s.notebook_id == notebook => Some(s),
                 _ => None,
             })
             .collect();
-        v.sort_by_key(|x| (x.2, x.3));
-        v.into_iter().map(|x| (x.0, x.1)).collect()
+        v.sort_by_key(|s| (s.order, s.created));
+        v
     };
-    let doc_title;
-    match scope {
-        Scope::Notebook(id) => {
-            let (name, _, _) = *tree.item_name.get(id.as_str()).ok_or(Error::NotFound)?;
-            if !items.iter().any(|i| matches!(i, Item::Notebook(n) if &n.id == id)) {
+    let mut seen = HashSet::new();
+    let section_group = |nb: &'a Notebook, sec: &'a Section, seen: &mut HashSet<String>| -> Group<'a> {
+        let mut list = Vec::new();
+        for r in tree.roots(&sec.id) {
+            tree.subtree(r, 0, opts.include_subpages, &mut list, seen);
+        }
+        Group { notebook_id: &nb.id, notebook: &nb.name, section_id: &sec.id, section: &sec.name, pages: list }
+    };
+    let counted = |n: usize, one: &str, word: &str| if n == 1 { one.to_string() } else { format!("{n} {word}") };
+    let (shape, groups, title) = match scope {
+        Scope::Notebook(_) | Scope::Notebooks(_) => {
+            let ids: Vec<String> = match scope {
+                Scope::Notebook(id) => vec![id.clone()],
+                Scope::Notebooks(ids) => ids.clone(),
+                _ => Vec::new(),
+            };
+            if ids.is_empty() || ids.len() > MAX_CHOSEN {
+                return Err(Error::invalid("Choose what to export."));
+            }
+            let wanted: HashSet<&str> = ids.iter().map(String::as_str).collect();
+            let chosen: Vec<&Notebook> = notebooks.iter().copied().filter(|n| wanted.contains(n.id.as_str())).collect();
+            if chosen.len() != wanted.len() {
                 return Err(Error::NotFound);
             }
-            doc_title = name.to_string();
-            parts.push(Part::Heading { level: 1, text: name.to_string() });
-            for (sid, sname) in sections_of(id) {
-                let mut list = Vec::new();
-                for r in tree.roots(sid) {
-                    tree.subtree(r, 0, opts.include_subpages, &mut list, &mut seen);
+            let mut groups = Vec::new();
+            for nb in &chosen {
+                for sec in sections_of(&nb.id) {
+                    groups.push(section_group(nb, sec, &mut seen));
                 }
-                parts.push(Part::Heading { level: 2, text: sname.to_string() });
-                push_pages(list, 3, &mut parts);
             }
+            (Shape::Notebooks, groups, counted(chosen.len(), &chosen[0].name, "notebooks"))
         }
-        Scope::Section(id) => {
-            let name = items
-                .iter()
-                .find_map(|i| match i {
-                    Item::Section(s) if &s.id == id => Some(s.name.clone()),
-                    _ => None,
-                })
-                .ok_or(Error::NotFound)?;
-            doc_title = name.clone();
-            parts.push(Part::Heading { level: 1, text: name });
-            let mut list = Vec::new();
-            for r in tree.roots(id) {
-                tree.subtree(r, 0, opts.include_subpages, &mut list, &mut seen);
+        Scope::Section(_) | Scope::Sections(_) => {
+            let ids: Vec<String> = match scope {
+                Scope::Section(id) => vec![id.clone()],
+                Scope::Sections(ids) => ids.clone(),
+                _ => Vec::new(),
+            };
+            if ids.is_empty() || ids.len() > MAX_CHOSEN {
+                return Err(Error::invalid("Choose what to export."));
             }
-            push_pages(list, 2, &mut parts);
+            let wanted: HashSet<&str> = ids.iter().map(String::as_str).collect();
+            let mut groups = Vec::new();
+            let mut first = None;
+            for nb in &notebooks {
+                for sec in sections_of(&nb.id) {
+                    if wanted.contains(sec.id.as_str()) {
+                        first.get_or_insert(sec.name.as_str());
+                        groups.push(section_group(nb, sec, &mut seen));
+                    }
+                }
+            }
+            if groups.len() != wanted.len() {
+                return Err(Error::NotFound);
+            }
+            let title = counted(groups.len(), first.unwrap_or(""), "sections");
+            (Shape::Sections, groups, title)
         }
         Scope::Pages(ids) => {
             // In the sidebar's order: notebook, section, then position in the page tree.
             let mut position: BTreeMap<&str, usize> = BTreeMap::new();
-            let mut notebooks: Vec<(&str, i64, i64)> = items
-                .iter()
-                .filter_map(|i| match i {
-                    Item::Notebook(n) => Some((n.id.as_str(), n.order, n.created)),
-                    _ => None,
-                })
-                .collect();
-            notebooks.sort_by_key(|n| (n.1, n.2));
             let mut all = Vec::new();
             let mut walk_seen = HashSet::new();
-            for (nb, _, _) in &notebooks {
-                for (sid, _) in sections_of(nb) {
-                    for r in tree.roots(sid) {
+            for nb in &notebooks {
+                for sec in sections_of(&nb.id) {
+                    for r in tree.roots(&sec.id) {
                         tree.subtree(r, 0, true, &mut all, &mut walk_seen);
                     }
                 }
@@ -313,35 +384,333 @@ pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn 
             for p in &chosen {
                 tree.subtree(p, 0, opts.include_subpages, &mut list, &mut seen);
             }
-            doc_title = match chosen.as_slice() {
+            let title = match chosen.as_slice() {
                 [one] => page_title(&one.title),
                 _ => format!("{} pages", list.len()),
             };
-            push_pages(list, 1, &mut parts);
+            // Group the pages by the section they are in (neighbours in the same section share a group).
+            let section_of = |id: &str| {
+                items.iter().find_map(|i| match i {
+                    Item::Section(s) if s.id == id => Some(s),
+                    _ => None,
+                })
+            };
+            let mut groups: Vec<Group<'a>> = Vec::new();
+            for (p, depth) in list {
+                if groups.last().is_none_or(|g| g.section_id != p.section_id) {
+                    let sec = section_of(&p.section_id);
+                    let nb = sec.and_then(|s| notebooks.iter().copied().find(|n| n.id == s.notebook_id));
+                    groups.push(Group {
+                        notebook_id: nb.map_or("", |n| n.id.as_str()),
+                        notebook: nb.map_or("", |n| n.name.as_str()),
+                        section_id: &p.section_id,
+                        section: sec.map_or("", |s| s.name.as_str()),
+                        pages: Vec::new(),
+                    });
+                }
+                if let Some(g) = groups.last_mut() {
+                    g.pages.push((p, depth));
+                }
+            }
+            (Shape::Pages, groups, title)
         }
-    }
-    let mut out = ExportDoc { title: doc_title, parts, images: BTreeMap::new(), missing_images: 0 };
-    if out.page_count() == 0 {
+    };
+    if groups.iter().all(|g| g.pages.is_empty()) {
         return Err(Error::invalid(match scope {
             Scope::Pages(_) => "There is nothing to export: the chosen pages are in the trash or no longer exist.",
             _ => "There is nothing to export: there are no pages here (pages in the trash are left out).",
         }));
     }
+    Ok(Selection { shape, groups, title })
+}
+
+fn title_lookup<'a>(items: &'a [&'a Item], opts: &'a Options) -> impl Fn(&str) -> Option<String> + 'a {
+    move |id: &str| {
+        items.iter().find_map(|i| match i {
+            Item::Page(p) if p.id == id && (opts.include_trashed || p.trashed_at.is_none()) => Some(page_title(&p.title)),
+            _ => None,
+        })
+    }
+}
+
+/// Builds the document for an export. `attachment` reads one picture from the vault.
+pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn Fn(&str) -> Option<(String, Vec<u8>)>) -> Result<ExportDoc> {
+    let sel = select(items, scope, opts)?;
+    let title_of = title_lookup(items, opts);
+    let mut parts = Vec::new();
+    let mut last_notebook: Option<&str> = None;
+    for g in &sel.groups {
+        let base: u8 = match sel.shape {
+            Shape::Notebooks => {
+                if last_notebook != Some(g.notebook_id) {
+                    parts.push(Part::Heading { level: 1, text: g.notebook.to_string() });
+                    last_notebook = Some(g.notebook_id);
+                }
+                parts.push(Part::Heading { level: 2, text: g.section.to_string() });
+                3
+            }
+            Shape::Sections => {
+                parts.push(Part::Heading { level: 1, text: g.section.to_string() });
+                2
+            }
+            Shape::Pages => 1,
+        };
+        for (p, depth) in &g.pages {
+            let level = base.saturating_add(*depth).min(6);
+            parts.push(Part::Page { level, title: page_title(&p.title), blocks: doc::parse(&p.content, &title_of) });
+        }
+    }
+    let mut out = ExportDoc { title: sel.title, parts, images: BTreeMap::new(), missing_images: 0 };
     let mut ids = Vec::new();
     for part in &out.parts {
         if let Part::Page { blocks, .. } = part {
             doc::attachments(blocks, &mut ids);
         }
     }
+    let mut total = 0u64;
     for id in ids {
         match attachment(&id).and_then(|(mime, bytes)| Kind::from_mime(&mime).map(|kind| Picture { kind, bytes })) {
             Some(p) => {
+                total += p.bytes.len() as u64;
+                if total > opts.max_image_bytes {
+                    return Err(Error::invalid(format!(
+                        "The pictures in these pages add up to more than {} MB, which is too much for one file. Choose fewer pages, or export them as separate files in a ZIP.",
+                        opts.max_image_bytes / (1024 * 1024)
+                    )));
+                }
                 out.images.insert(id, p);
             }
             None => out.missing_images += 1,
         }
     }
     Ok(out)
+}
+
+/* ---------- Separate files in a ZIP ---------- */
+
+/// One page of a ZIP export: where it goes and what it says (pictures are read when it is written).
+pub struct ZipFile {
+    /// The folders above the file (safe names, unique at their level).
+    pub dir: Vec<String>,
+    /// The file name without extension (unique in its folder).
+    pub stem: String,
+    pub title: String,
+    pub blocks: Vec<Block>,
+}
+
+pub struct ZipDoc {
+    pub files: Vec<ZipFile>,
+}
+
+/// A name for a folder or file, made safe for Windows. An empty name becomes `fallback`.
+fn safe_part(name: &str, fallback: &str) -> String {
+    let t = name.trim();
+    if t.is_empty() {
+        return fallback.to_string();
+    }
+    let s = safe_file_name(t);
+    if s == "Notaya export" && t != "Notaya export" { fallback.to_string() } else { s }
+}
+
+/// Hands out names that are unique inside a folder, ignoring capitals (Windows treats `A` and `a`
+/// as one name), by adding ` (2)`, ` (3)`…
+#[derive(Default)]
+struct Namer {
+    used: HashMap<String, HashSet<String>>,
+    next: HashMap<String, usize>,
+}
+
+impl Namer {
+    /// `occupies` lists every name in the folder that the choice `base` would take.
+    fn claim(&mut self, dir: &[String], base: &str, occupies: &dyn Fn(&str) -> Vec<String>) -> String {
+        let key = dir.join("/").to_lowercase();
+        let hint_key = format!("{key}\u{0}{}", base.to_lowercase());
+        let set = self.used.entry(key).or_default();
+        let mut n = self.next.get(&hint_key).copied().unwrap_or(1);
+        loop {
+            let cand = if n == 1 { base.to_string() } else { format!("{base} ({n})") };
+            let names: Vec<String> = occupies(&cand).into_iter().map(|s| s.to_lowercase()).collect();
+            if names.iter().all(|x| !set.contains(x)) {
+                set.extend(names);
+                self.next.insert(hint_key, n + 1);
+                return cand;
+            }
+            n += 1;
+        }
+    }
+}
+
+/// Deepest folder level for sub-pages; pages below it share the folder of the level above.
+const MAX_SUBPAGE_FOLDERS: usize = 4;
+/// A ZIP holds at most this many files (the format's own limit, without ZIP64).
+pub const MAX_ZIP_ENTRIES: usize = 65_535;
+/// The most bytes one ZIP export is built from in memory.
+pub const MAX_ZIP_BYTES: u64 = 1024 * 1024 * 1024;
+
+/// Lays out the files of a ZIP export for the pages `scope` names.
+pub fn collect_zip(items: &[&Item], scope: &Scope, opts: &Options, format: Format) -> Result<ZipDoc> {
+    let sel = select(items, scope, opts)?;
+    let page_total: usize = sel.groups.iter().map(|g| g.pages.len()).sum();
+    if page_total > MAX_ZIP_ENTRIES {
+        return Err(Error::invalid(format!("A ZIP can hold at most {MAX_ZIP_ENTRIES} files. Choose fewer pages.")));
+    }
+    let title_of = title_lookup(items, opts);
+    let mut namer = Namer::default();
+    let ext = format.ext();
+    let folder = |namer: &mut Namer, parent: &[String], name: &str, fallback: &str| -> String {
+        namer.claim(parent, &safe_part(name, fallback), &|c| vec![c.to_string()])
+    };
+    // Folders already handed out: by notebook id and by section id.
+    let mut nb_dirs: HashMap<String, Vec<String>> = HashMap::new();
+    let mut sec_dirs: HashMap<String, Vec<String>> = HashMap::new();
+    let multi_section = sel.groups.iter().filter(|g| !g.pages.is_empty()).map(|g| g.section_id).collect::<HashSet<_>>().len() > 1;
+    // The folder where the sub-pages of a page go, by page id.
+    let mut child_dirs: HashMap<&str, Vec<String>> = HashMap::new();
+    let mut files = Vec::new();
+    for g in &sel.groups {
+        if g.pages.is_empty() {
+            continue;
+        }
+        let mut base: Vec<String> = Vec::new();
+        if sel.shape == Shape::Notebooks {
+            base = match nb_dirs.get(g.notebook_id) {
+                Some(d) => d.clone(),
+                None => {
+                    let d = vec![folder(&mut namer, &[], g.notebook, "Notebook")];
+                    nb_dirs.insert(g.notebook_id.to_string(), d.clone());
+                    d
+                }
+            };
+        }
+        if sel.shape != Shape::Pages || multi_section {
+            base = match sec_dirs.get(g.section_id) {
+                Some(d) => d.clone(),
+                None => {
+                    let mut d = base.clone();
+                    d.push(folder(&mut namer, &base, g.section, "Section"));
+                    sec_dirs.insert(g.section_id.to_string(), d.clone());
+                    d
+                }
+            };
+        }
+        for (p, _) in &g.pages {
+            let dir = match child_dirs.get(p.parent.as_str()) {
+                Some(d) if !p.parent.is_empty() => d.clone(),
+                _ => base.clone(),
+            };
+            let title = page_title(&p.title);
+            let stem = namer.claim(&dir, &safe_part(&title, "Untitled"), &|c| {
+                let mut v = vec![format!("{c}.{ext}"), c.to_string()];
+                if format == Format::Markdown {
+                    v.push(format!("{c}.assets"));
+                }
+                v
+            });
+            // Sub-pages go in a folder named like the page; very deep ones stay in the folder above.
+            let mut child = dir.clone();
+            if dir.len() < base.len() + MAX_SUBPAGE_FOLDERS {
+                child.push(stem.clone());
+            }
+            child_dirs.insert(p.id.as_str(), child);
+            files.push(ZipFile { dir, stem, title, blocks: doc::parse(&p.content, &title_of) });
+        }
+    }
+    Ok(ZipDoc { files })
+}
+
+/// What a ZIP export may hold; the defaults are the limits above (tests use smaller ones).
+#[derive(Clone, Copy, Debug)]
+pub struct ZipLimits {
+    pub max_bytes: u64,
+    pub max_entries: usize,
+}
+
+impl Default for ZipLimits {
+    fn default() -> ZipLimits {
+        ZipLimits { max_bytes: MAX_ZIP_BYTES, max_entries: MAX_ZIP_ENTRIES }
+    }
+}
+
+/// Builds the ZIP in memory, one page at a time (a page's pictures are read, used and dropped
+/// before the next page), and writes it to `dest` in one step. `attachment` reads one picture.
+pub fn write_zip(dest: &Path, format: Format, zdoc: ZipDoc, attachment: &dyn Fn(&str) -> Option<(String, Vec<u8>)>, limits: ZipLimits) -> Result<ExportSummary> {
+    let too_big = || {
+        Error::invalid(format!(
+            "The export would be larger than {} MB. Choose fewer pages or export in parts.",
+            limits.max_bytes / (1024 * 1024)
+        ))
+    };
+    let too_many = || Error::invalid(format!("A ZIP can hold at most {} files. Choose fewer pages or export in parts.", limits.max_entries));
+    let mut zip = zip::ZipWriter::new(crate::model::now_ms());
+    let mut summary = ExportSummary { path: dest.display().to_string(), archive: true, ..ExportSummary::default() };
+    let join = |dir: &[String], name: &str| -> String {
+        let mut p = dir.join("/");
+        if !p.is_empty() {
+            p.push('/');
+        }
+        p.push_str(name);
+        p
+    };
+    for f in zdoc.files {
+        let mut ids = Vec::new();
+        doc::attachments(&f.blocks, &mut ids);
+        let mut images = BTreeMap::new();
+        let mut page_bytes = 0u64;
+        for id in ids {
+            match attachment(&id).and_then(|(mime, bytes)| Kind::from_mime(&mime).map(|kind| Picture { kind, bytes })) {
+                Some(p) => {
+                    page_bytes += p.bytes.len() as u64;
+                    if zip.byte_len() as u64 + page_bytes > limits.max_bytes {
+                        return Err(too_big());
+                    }
+                    images.insert(id, p);
+                }
+                None => summary.missing_images += 1,
+            }
+        }
+        summary.images += images.len();
+        let page = ExportDoc {
+            title: f.title.clone(),
+            parts: vec![Part::Page { level: 1, title: f.title, blocks: f.blocks }],
+            images,
+            missing_images: 0,
+        };
+        // (path, bytes, compress)
+        let mut entries: Vec<(String, Vec<u8>, bool)> = Vec::new();
+        let file_name = format!("{}.{}", f.stem, format.ext());
+        match format {
+            Format::Markdown => {
+                let assets = format!("{}.assets", f.stem);
+                let out = markdown::render(&page, &assets);
+                entries.push((join(&f.dir, &file_name), out.text.into_bytes(), true));
+                for (name, bytes) in out.images {
+                    entries.push((join(&f.dir, &format!("{assets}/{name}")), bytes, false));
+                }
+            }
+            Format::Html => entries.push((join(&f.dir, &file_name), html::render(&page)?.into_bytes(), true)),
+            Format::Docx => entries.push((join(&f.dir, &file_name), docx::render(&page)?, false)),
+            Format::Pdf => {
+                let out = pdf::render(&page);
+                summary.images_left_out += out.images_left_out;
+                summary.chars_replaced += out.chars_replaced;
+                entries.push((join(&f.dir, &file_name), out.bytes, false));
+            }
+        }
+        for (path, bytes, compress) in entries {
+            if zip.entries() >= limits.max_entries {
+                return Err(too_many());
+            }
+            zip.add(&path, &bytes, compress)?;
+            summary.files += 1;
+            if zip.byte_len() as u64 > limits.max_bytes {
+                return Err(too_big());
+            }
+        }
+        summary.pages += 1;
+    }
+    let bytes = zip.finish()?;
+    write_atomic(dest, &bytes)?;
+    Ok(summary)
 }
 
 /* ---------- Tables (shared by the writers) ---------- */
@@ -407,13 +776,15 @@ pub fn safe_file_name(title: &str) -> String {
     if s.is_empty() {
         return "Notaya export".to_string();
     }
-    let stem = s.split('.').next().unwrap_or("").to_ascii_uppercase();
+    // Windows treats "NUL.txt" like "NUL": the base name before the first dot decides.
+    let stem = s.split('.').next().unwrap_or("").trim_end().to_ascii_uppercase();
     const RESERVED: [&str; 26] = [
         "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "COM0", "LPT0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
         "LPT9",
     ];
     if RESERVED.contains(&stem.as_str()) {
-        s.push('_');
+        let at = s.find('.').unwrap_or(s.len());
+        s.insert(at, '_');
     }
     s
 }
@@ -430,18 +801,18 @@ pub(crate) fn resolve(p: &Path) -> PathBuf {
         .unwrap_or_else(|_| p.to_path_buf())
 }
 
-/// Checks the place the person chose. The file gets the format's extension (added when the
+/// Checks the place the person chose. The file gets the extension `ext` (the format's, or `zip`; added when the
 /// name has another one; an existing file with the longer name is then refused, because the
 /// save dialog asked about a different file). Nothing inside the app's data folder is allowed,
 /// so an export can never replace the vault or a backup.
-pub fn checked_destination(chosen: &Path, format: Format, data_dir: &Path) -> Result<PathBuf> {
-    let has_ext = chosen.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case(format.ext()));
+pub fn checked_destination(chosen: &Path, ext: &str, data_dir: &Path) -> Result<PathBuf> {
+    let has_ext = chosen.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case(ext));
     let dest = if has_ext {
         chosen.to_path_buf()
     } else {
         let mut name = chosen.file_name().ok_or_else(|| Error::invalid("Choose a file name for the export."))?.to_os_string();
         name.push(".");
-        name.push(format.ext());
+        name.push(ext);
         let longer = chosen.with_file_name(name);
         if longer.exists() {
             return Err(Error::invalid(format!(
@@ -566,6 +937,7 @@ pub fn write(dest: &Path, format: Format, doc: &ExportDoc, data_dir: &Path) -> R
                 write_atomic(dest, out.text.as_bytes())?;
             }
         }
+        Format::Html => write_atomic(dest, html::render(doc)?.as_bytes())?,
         Format::Docx => write_atomic(dest, &docx::render(doc)?)?,
         Format::Pdf => {
             let out = pdf::render(doc);
@@ -643,7 +1015,7 @@ pub mod tests {
     fn run(scope: Scope, subpages: bool, trashed: bool) -> Result<ExportDoc> {
         let items = sample_items();
         let refs: Vec<&Item> = items.iter().collect();
-        collect(&refs, &scope, &Options { include_subpages: subpages, include_trashed: trashed }, &|_| None)
+        collect(&refs, &scope, &Options { include_subpages: subpages, include_trashed: trashed, ..Options::default() }, &|_| None)
     }
 
     #[test]
@@ -699,6 +1071,8 @@ pub mod tests {
         assert_eq!(safe_file_name("My: notes / 2026?"), "My notes 2026");
         assert_eq!(safe_file_name("  ..  "), "Notaya export");
         assert_eq!(safe_file_name("con"), "con_");
+        assert_eq!(safe_file_name("NUL.txt"), "NUL_.txt", "the base name before the first dot is what Windows reads");
+        assert_eq!(safe_file_name("Com1 .x"), "Com1 _.x");
         assert_eq!(safe_file_name("Trip. "), "Trip");
         assert_eq!(safe_file_name(&"x".repeat(200)).len(), 80);
     }
@@ -716,15 +1090,15 @@ pub mod tests {
         fs::create_dir_all(data.join("backups")).unwrap();
         fs::write(data.join("vault.nota"), b"vault").unwrap();
         for bad in [data.join("vault.nota"), data.join("notes.pdf"), data.join("backups").join("x.md"), data.join("sub").join("..").join("y.docx")] {
-            assert!(checked_destination(&bad, Format::Pdf, &data).is_err(), "{bad:?}");
+            assert!(checked_destination(&bad, "pdf", &data).is_err(), "{bad:?}");
         }
         assert_eq!(fs::read(data.join("vault.nota")).unwrap(), b"vault");
-        let ok = checked_destination(&root.join("notes.PDF"), Format::Pdf, &data).unwrap();
+        let ok = checked_destination(&root.join("notes.PDF"), "pdf", &data).unwrap();
         assert_eq!(ok, root.join("notes.PDF"));
-        assert_eq!(checked_destination(&root.join("notes"), Format::Docx, &data).unwrap(), root.join("notes.docx"));
-        assert_eq!(checked_destination(&root.join("notes.txt"), Format::Markdown, &data).unwrap(), root.join("notes.txt.md"));
+        assert_eq!(checked_destination(&root.join("notes"), "docx", &data).unwrap(), root.join("notes.docx"));
+        assert_eq!(checked_destination(&root.join("notes.txt"), "md", &data).unwrap(), root.join("notes.txt.md"));
         fs::write(root.join("old.txt.md"), b"keep").unwrap();
-        assert!(checked_destination(&root.join("old.txt"), Format::Markdown, &data).is_err(), "never overwrites a file the dialog did not ask about");
+        assert!(checked_destination(&root.join("old.txt"), "md", &data).is_err(), "never overwrites a file the dialog did not ask about");
         let _ = fs::remove_dir_all(root);
     }
 
@@ -767,7 +1141,7 @@ pub mod tests {
     fn writing_replaces_the_file_and_leaves_no_temp_files() {
         let root = temp_dir();
         let doc = sample_doc(doc::parse(&doc::tests::every_node_json(), &doc::tests::titles));
-        for format in [Format::Markdown, Format::Pdf, Format::Docx] {
+        for format in [Format::Markdown, Format::Pdf, Format::Docx, Format::Html] {
             let dest = root.join(format!("My notes.{}", format.ext()));
             fs::write(&dest, b"old").unwrap();
             let s = write(&dest, format, &doc, &root.join("data")).unwrap();
@@ -781,16 +1155,423 @@ pub mod tests {
         if let Some(dir) = std::env::var_os("NOTAYA_EXPORT_SAMPLES") {
             let dir = PathBuf::from(dir);
             fs::create_dir_all(&dir).unwrap();
-            for format in [Format::Markdown, Format::Pdf, Format::Docx] {
+            for format in [Format::Markdown, Format::Pdf, Format::Docx, Format::Html] {
                 write(&dir.join(format!("sample.{}", format.ext())), format, &doc, &dir.join("data")).unwrap();
             }
             let items = sample_items();
             let refs: Vec<&Item> = items.iter().collect();
-            let nb = collect(&refs, &Scope::Notebook("nb".into()), &Options { include_subpages: true, include_trashed: false }, &|_| None).unwrap();
+            let nb = collect(&refs, &Scope::Notebook("nb".into()), &Options { include_subpages: true, ..Options::default() }, &|_| None).unwrap();
             for format in [Format::Pdf, Format::Docx] {
                 write(&dir.join(format!("notebook.{}", format.ext())), format, &nb, &dir.join("data")).unwrap();
             }
         }
+        let _ = fs::remove_dir_all(root);
+    }
+
+    /* ---------- Several sections and notebooks, and separate files in a ZIP ---------- */
+
+    use super::zip::tests::read_zip;
+
+    fn page_with(id: &str, section: &str, parent: &str, title: &str, order: i64, content: String) -> Item {
+        Item::Page(Page {
+            id: id.into(),
+            section_id: section.into(),
+            title: title.into(),
+            content,
+            text: String::new(),
+            order,
+            favorite: false,
+            icon: String::new(),
+            cover: String::new(),
+            parent: parent.into(),
+            trashed_at: None,
+            created: order,
+            updated: order,
+        })
+    }
+
+    fn with_picture() -> String {
+        format!(
+            r#"{{"type":"doc","content":[{{"type":"paragraph","content":[{{"type":"text","text":"Look"}}]}},{{"type":"image","attrs":{{"src":"http://clatt.localhost/{}","caption":"Pic"}}}}]}}"#,
+            doc::tests::IMG_ID
+        )
+    }
+
+    fn vault_picture(id: &str) -> Option<(String, Vec<u8>)> {
+        (id == doc::tests::IMG_ID).then(|| ("image/png".to_string(), image::tests::PILLOW_RGBA.to_vec()))
+    }
+
+    fn zip_of(items: &[Item], scope: Scope, format: Format, subpages: bool, trashed: bool) -> Result<(Vec<(String, Vec<u8>)>, ExportSummary)> {
+        let refs: Vec<&Item> = items.iter().collect();
+        let opts = Options { include_subpages: subpages, include_trashed: trashed, ..Options::default() };
+        let zdoc = collect_zip(&refs, &scope, &opts, format)?;
+        let root = temp_dir();
+        let dest = root.join("out.zip");
+        let summary = write_zip(&dest, format, zdoc, &vault_picture, ZipLimits::default())?;
+        let entries = read_zip(&fs::read(&dest).unwrap());
+        let _ = fs::remove_dir_all(root);
+        Ok((entries, summary))
+    }
+
+    fn names(entries: &[(String, Vec<u8>)]) -> Vec<&str> {
+        entries.iter().map(|(n, _)| n.as_str()).collect()
+    }
+
+    fn text<'a>(entries: &'a [(String, Vec<u8>)], name: &str) -> &'a str {
+        std::str::from_utf8(&entries.iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("no {name} in {:?}", names(entries))).1).unwrap()
+    }
+
+    #[test]
+    fn several_notebooks_and_sections_are_joined_in_sidebar_order() {
+        let d = run(Scope::Notebooks(vec!["nb2".into(), "nb".into()]), true, false).unwrap();
+        assert_eq!(
+            outline(&d),
+            ["H1 Personal", "H2 Journal", "P3 First", "P4 Inside first", "P3 Second", "H2 Ideas", "P3 Idea", "H1 Work", "H2 Projects", "P3 Other notebook"]
+        );
+        assert_eq!(d.title, "2 notebooks");
+        let d = run(Scope::Sections(vec!["s3".into(), "s2".into(), "s1".into()]), false, false).unwrap();
+        assert_eq!(outline(&d), ["H1 Journal", "P2 First", "P2 Second", "H1 Ideas", "P2 Idea", "H1 Projects", "P2 Other notebook"]);
+        assert_eq!(d.title, "3 sections");
+        let d = run(Scope::Sections(vec!["s2".into()]), true, false).unwrap();
+        assert_eq!(outline(&d), ["H1 Ideas", "P2 Idea"]);
+        assert_eq!(d.title, "Ideas");
+        // A single section or notebook still gives what it always did.
+        assert_eq!(outline(&run(Scope::Section("s2".into()), true, false).unwrap()), ["H1 Ideas", "P2 Idea"]);
+    }
+
+    #[test]
+    fn unknown_or_empty_choices_are_refused() {
+        for scope in [
+            Scope::Notebooks(vec!["nb".into(), "nope".into()]),
+            Scope::Sections(vec!["nope".into()]),
+            Scope::Sections(vec!["nb".into()]), // a notebook id is not a section id
+            Scope::Notebooks(vec!["s1".into()]),
+        ] {
+            assert!(matches!(run(scope.clone(), true, false), Err(Error::NotFound)), "{scope:?}");
+        }
+        assert!(run(Scope::Notebooks(vec![]), true, false).is_err());
+        assert!(run(Scope::Sections((0..=MAX_CHOSEN).map(|i| i.to_string()).collect()), true, false).is_err(), "counts are capped");
+        // A repeated id counts once.
+        let d = run(Scope::Notebooks(vec!["nb2".into(), "nb2".into()]), true, false).unwrap();
+        assert_eq!(outline(&d), ["H1 Work", "H2 Projects", "P3 Other notebook"]);
+        let items = sample_items();
+        let refs: Vec<&Item> = items.iter().collect();
+        assert_eq!(suggested_name(&refs, &Scope::Notebooks(vec!["nb".into(), "nb2".into()])).unwrap(), "Personal and 1 more");
+        assert_eq!(suggested_name(&refs, &Scope::Sections(vec!["s2".into()])).unwrap(), "Ideas");
+        assert!(suggested_name(&refs, &Scope::Sections(vec!["zzz".into()])).is_err());
+    }
+
+    #[test]
+    fn a_zip_has_notebook_section_page_folders_and_sub_pages_in_a_folder_of_their_page() {
+        let items = sample_items();
+        let (entries, summary) = zip_of(&items, Scope::Notebook("nb".into()), Format::Markdown, true, false).unwrap();
+        assert_eq!(names(&entries), ["Personal/Journal/First.md", "Personal/Journal/First/Inside first.md", "Personal/Journal/Second.md", "Personal/Ideas/Idea.md"]);
+        assert_eq!(summary.pages, 4);
+        assert_eq!(summary.files, 4);
+        assert!(summary.archive);
+        assert!(text(&entries, "Personal/Journal/First.md").contains("# First") && text(&entries, "Personal/Journal/First.md").contains("Body of First"));
+        assert!(!text(&entries, "Personal/Journal/First.md").contains("Inside first"), "each page is its own file");
+        // Without sub-pages the folder is not made.
+        let (entries, _) = zip_of(&items, Scope::Notebook("nb".into()), Format::Html, false, false).unwrap();
+        assert_eq!(names(&entries), ["Personal/Journal/First.html", "Personal/Journal/Second.html", "Personal/Ideas/Idea.html"]);
+        // Trashed pages are left out, and come back when asked for.
+        let (entries, _) = zip_of(&items, Scope::Section("s1".into()), Format::Markdown, true, true).unwrap();
+        assert_eq!(
+            names(&entries),
+            ["Journal/First.md", "Journal/First/Inside first.md", "Journal/First/Inside first/Trashed child.md", "Journal/Second.md", "Journal/Thrown away.md"]
+        );
+        let (entries, _) = zip_of(&items, Scope::Section("s1".into()), Format::Markdown, true, false).unwrap();
+        assert!(names(&entries).iter().all(|n| !n.contains("Thrown away") && !n.contains("Trashed")));
+        assert!(zip_of(&items, Scope::Pages(vec!["t".into()]), Format::Markdown, true, false).is_err());
+    }
+
+    #[test]
+    fn a_zip_of_several_notebooks_has_one_top_folder_each() {
+        let items = sample_items();
+        let (entries, summary) = zip_of(&items, Scope::Notebooks(vec!["nb2".into(), "nb".into()]), Format::Pdf, true, false).unwrap();
+        assert_eq!(
+            names(&entries),
+            [
+                "Personal/Journal/First.pdf",
+                "Personal/Journal/First/Inside first.pdf",
+                "Personal/Journal/Second.pdf",
+                "Personal/Ideas/Idea.pdf",
+                "Work/Projects/Other notebook.pdf"
+            ]
+        );
+        assert_eq!(summary.pages, 5);
+        for (n, bytes) in &entries {
+            assert!(bytes.starts_with(b"%PDF-"), "{n}");
+        }
+        let (entries, _) = zip_of(&items, Scope::Sections(vec!["s3".into(), "s2".into()]), Format::Docx, true, false).unwrap();
+        assert_eq!(names(&entries), ["Ideas/Idea.docx", "Projects/Other notebook.docx"]);
+        for (n, bytes) in &entries {
+            assert!(bytes.starts_with(b"PK"), "{n}");
+        }
+    }
+
+    #[test]
+    fn chosen_pages_go_into_section_folders_only_when_they_come_from_several_sections() {
+        let items = sample_items();
+        let (entries, _) = zip_of(&items, Scope::Pages(vec!["b".into(), "a".into()]), Format::Markdown, false, false).unwrap();
+        assert_eq!(names(&entries), ["First.md", "Second.md"]);
+        let (entries, _) = zip_of(&items, Scope::Pages(vec!["z".into(), "c".into(), "child".into(), "a".into()]), Format::Markdown, true, false).unwrap();
+        assert_eq!(names(&entries), ["Journal/First.md", "Journal/First/Inside first.md", "Ideas/Idea.md", "Projects/Other notebook.md"]);
+        // A sub-page chosen without its page stands alone; with its page it goes in the page's folder.
+        let (entries, _) = zip_of(&items, Scope::Pages(vec!["child".into()]), Format::Markdown, false, false).unwrap();
+        assert_eq!(names(&entries), ["Inside first.md"]);
+        let (entries, _) = zip_of(&items, Scope::Pages(vec!["child".into(), "a".into()]), Format::Markdown, false, false).unwrap();
+        assert_eq!(names(&entries), ["First.md", "First/Inside first.md"]);
+    }
+
+    /// Every path of a ZIP is a plain relative path with safe parts, and no two paths differ only by capitals.
+    fn assert_safe_paths(entries: &[(String, Vec<u8>)]) {
+        let mut seen = HashSet::new();
+        for (path, _) in entries {
+            assert!(seen.insert(path.to_lowercase()), "{path} repeats (ignoring capitals)");
+            assert!(crate::importers::zip::clean_name(path).as_deref() == Some(path.as_str()), "{path} is not a clean relative path");
+            assert!(path.len() < 600);
+            for part in path.split('/') {
+                assert!(!part.is_empty() && part != "." && part != "..", "{path}");
+                assert!(!part.contains(['\\', ':', '*', '?', '"', '<', '>', '|']) && !part.chars().any(char::is_control), "{path}");
+                assert!(!part.ends_with(['.', ' ']) && !part.starts_with(' '), "{path}");
+                let stem = part.split('.').next().unwrap().to_ascii_uppercase();
+                assert!(!["CON", "PRN", "AUX", "NUL", "COM1", "LPT1"].contains(&stem.as_str()), "{path} is a reserved Windows name");
+                assert!(part.chars().count() <= 90, "{path}");
+            }
+        }
+    }
+
+    #[test]
+    fn names_are_safe_and_unique() {
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "A/B:C".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "..".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let body = || r#"{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"x"}]}]}"#.to_string();
+        let titles = [
+            "CON", "con", "NUL.txt", "..", "...", "../../etc/passwd", "a\\b", "x".repeat(200).as_str(), "", "   ", "Dup", "dup", "DUP", "Dup ", "Page", "Page.assets", "Trailing dot.", "Question? *", "ÄÖÜ", "äöü",
+            "عربي",
+        ]
+        .map(String::from);
+        let mut items = vec![nb, sec];
+        for (i, t) in titles.iter().enumerate() {
+            items.push(page_with(&format!("p{i}"), "s", "", t, i as i64, body()));
+        }
+        for format in [Format::Markdown, Format::Html] {
+            let (entries, summary) = zip_of(&items, Scope::Notebook("n".into()), format, true, false).unwrap();
+            assert_eq!(summary.pages, titles.len());
+            assert_safe_paths(&entries);
+            let all = names(&entries);
+            assert!(all.iter().all(|n| n.starts_with("A B C/Section/")), "{all:?}");
+            let ext = format.ext();
+            for expected in [
+                format!("A B C/Section/CON_.{ext}"),
+                format!("A B C/Section/con_ (2).{ext}"),
+                format!("A B C/Section/Dup.{ext}"),
+                format!("A B C/Section/dup (2).{ext}"),
+                format!("A B C/Section/DUP (3).{ext}"),
+                format!("A B C/Section/Dup (4).{ext}"),
+                format!("A B C/Section/Untitled.{ext}"),
+                format!("A B C/Section/Untitled (2).{ext}"),
+                format!("A B C/Section/ÄÖÜ.{ext}"),
+                format!("A B C/Section/äöü (2).{ext}"),
+            ] {
+                assert!(all.contains(&expected.as_str()), "{expected} missing from {all:?}");
+            }
+            // "Page" keeps its pictures folder name for itself in Markdown only.
+            let page_assets = format!("A B C/Section/Page.assets.{ext}");
+            let page_assets_2 = format!("A B C/Section/Page.assets (2).{ext}");
+            assert_eq!(all.contains(&page_assets_2.as_str()), format == Format::Markdown, "{all:?}");
+            assert_eq!(all.contains(&page_assets.as_str()), format == Format::Html);
+            // Long names are cut.
+            assert!(all.iter().any(|n| n.ends_with(&format!("{}.{ext}", "x".repeat(80)))));
+        }
+    }
+
+    #[test]
+    fn a_deep_chain_of_sub_pages_stops_nesting() {
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let mut items = vec![nb, sec];
+        for i in 0..9 {
+            let parent = if i == 0 { String::new() } else { format!("p{}", i - 1) };
+            items.push(page_with(&format!("p{i}"), "s", &parent, &format!("Level {i}"), i, "{}".into()));
+        }
+        let (entries, _) = zip_of(&items, Scope::Section("s".into()), Format::Html, true, false).unwrap();
+        assert_eq!(entries.len(), 9);
+        assert_safe_paths(&entries);
+        let deepest = names(&entries).iter().map(|n| n.matches('/').count()).max().unwrap();
+        assert_eq!(deepest, 1 + MAX_SUBPAGE_FOLDERS, "section folder plus {MAX_SUBPAGE_FOLDERS} sub-page folders");
+    }
+
+    #[test]
+    fn markdown_pictures_sit_next_to_each_page_and_the_links_match() {
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "Trip".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "Day 1".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let items = vec![
+            nb,
+            sec,
+            page_with("a", "s", "", "Beach day", 0, with_picture()),
+            page_with("b", "s", "a", "More", 1, with_picture()),
+            page_with("c", "s", "", "No picture", 2, "{}".into()),
+        ];
+        let (entries, summary) = zip_of(&items, Scope::Notebook("n".into()), Format::Markdown, true, false).unwrap();
+        assert_eq!(
+            names(&entries),
+            [
+                "Trip/Day 1/Beach day.md",
+                "Trip/Day 1/Beach day.assets/image-001.png",
+                "Trip/Day 1/Beach day/More.md",
+                "Trip/Day 1/Beach day/More.assets/image-001.png",
+                "Trip/Day 1/No picture.md"
+            ]
+        );
+        assert!(text(&entries, "Trip/Day 1/Beach day.md").contains("![Pic](Beach%20day.assets/image-001.png)"));
+        assert!(text(&entries, "Trip/Day 1/Beach day/More.md").contains("![Pic](More.assets/image-001.png)"));
+        assert_eq!(entries[1].1, image::tests::PILLOW_RGBA, "the picture bytes are the original");
+        assert_eq!((summary.pages, summary.images, summary.files, summary.missing_images), (3, 2, 5, 0));
+        // HTML carries its pictures inside, PDF and Word too: no separate picture files.
+        let (entries, _) = zip_of(&items, Scope::Notebook("n".into()), Format::Html, true, false).unwrap();
+        assert_eq!(entries.len(), 3);
+        assert!(text(&entries, "Trip/Day 1/Beach day.html").contains("src=\"data:image/png;base64,"));
+    }
+
+    #[test]
+    fn pictures_are_read_one_page_at_a_time_and_missing_ones_are_counted() {
+        let items = vec![
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            page_with("a", "s", "", "A", 0, with_picture()),
+            page_with("b", "s", "", "B", 1, with_picture()),
+        ];
+        let refs: Vec<&Item> = items.iter().collect();
+        let zdoc = collect_zip(&refs, &Scope::Section("s".into()), &Options::default(), Format::Html).unwrap();
+        // Collecting the layout reads no pictures at all.
+        let root = temp_dir();
+        let calls = std::cell::RefCell::new(Vec::new());
+        let summary = write_zip(
+            &root.join("x.zip"),
+            Format::Html,
+            zdoc,
+            &|id| {
+                calls.borrow_mut().push(id.to_string());
+                if calls.borrow().len() == 2 { None } else { vault_picture(id) }
+            },
+            ZipLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(calls.borrow().len(), 2, "one read for each page that shows the picture");
+        assert_eq!((summary.images, summary.missing_images), (1, 1));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn the_zip_reads_back_with_the_importers_reader() {
+        let items = sample_items();
+        let refs: Vec<&Item> = items.iter().collect();
+        let zdoc = collect_zip(&refs, &Scope::Notebooks(vec!["nb".into(), "nb2".into()]), &Options { include_subpages: true, ..Options::default() }, Format::Markdown).unwrap();
+        let root = temp_dir();
+        let dest = root.join("n.zip");
+        write_zip(&dest, Format::Markdown, zdoc, &vault_picture, ZipLimits::default()).unwrap();
+        let archive = crate::importers::zip::Archive::open(fs::read(&dest).unwrap()).unwrap();
+        assert!(archive.rejected.is_empty(), "{:?}", archive.rejected);
+        let listed: Vec<&str> = archive.entries.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(
+            listed,
+            [
+                "Personal/Journal/First.md",
+                "Personal/Journal/First/Inside first.md",
+                "Personal/Journal/Second.md",
+                "Personal/Ideas/Idea.md",
+                "Work/Projects/Other notebook.md"
+            ]
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn a_zip_is_written_atomically_and_a_failure_changes_nothing() {
+        let items = sample_items();
+        let refs: Vec<&Item> = items.iter().collect();
+        let opts = Options { include_subpages: true, ..Options::default() };
+        let root = temp_dir();
+        let dest = root.join("out.zip");
+        fs::write(&dest, b"old").unwrap();
+        // Too many files: refused with a clear message, the old file stays, nothing else is left.
+        let zdoc = collect_zip(&refs, &Scope::Notebook("nb".into()), &opts, Format::Markdown).unwrap();
+        let err = write_zip(&dest, Format::Markdown, zdoc, &vault_picture, ZipLimits { max_entries: 2, ..ZipLimits::default() }).unwrap_err().to_string();
+        assert!(err.contains("at most 2 files"), "{err}");
+        assert_eq!(fs::read(&dest).unwrap(), b"old");
+        // Too many bytes: the same.
+        let zdoc = collect_zip(&refs, &Scope::Notebook("nb".into()), &opts, Format::Pdf).unwrap();
+        let err = write_zip(&dest, Format::Pdf, zdoc, &vault_picture, ZipLimits { max_bytes: 3000, ..ZipLimits::default() }).unwrap_err().to_string();
+        assert!(err.contains("larger than") && err.contains("Choose fewer pages"), "{err}");
+        assert_eq!(fs::read(&dest).unwrap(), b"old");
+        let names_now: Vec<String> = fs::read_dir(&root).unwrap().filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        assert_eq!(names_now, ["out.zip"], "no temporary files");
+        // Within the limits it replaces the file.
+        let zdoc = collect_zip(&refs, &Scope::Notebook("nb".into()), &opts, Format::Markdown).unwrap();
+        let s = write_zip(&dest, Format::Markdown, zdoc, &vault_picture, ZipLimits::default()).unwrap();
+        assert_eq!(s.pages, 4);
+        assert_eq!(read_zip(&fs::read(&dest).unwrap()).len(), 4);
+        let leftovers = fs::read_dir(&root).unwrap().filter_map(|e| e.ok()).filter(|e| e.file_name().to_string_lossy().ends_with(".tmp")).count();
+        assert_eq!(leftovers, 0);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn the_size_limit_counts_pictures_before_they_are_kept() {
+        let items = vec![
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            page_with("a", "s", "", "A", 0, with_picture()),
+        ];
+        let refs: Vec<&Item> = items.iter().collect();
+        let zdoc = collect_zip(&refs, &Scope::Section("s".into()), &Options::default(), Format::Markdown).unwrap();
+        let root = temp_dir();
+        let big = |_: &str| Some(("image/png".to_string(), vec![0u8; 5000]));
+        let err = write_zip(&root.join("x.zip"), Format::Markdown, zdoc, &big, ZipLimits { max_bytes: 4000, ..ZipLimits::default() }).unwrap_err().to_string();
+        assert!(err.contains("larger than"), "{err}");
+        assert!(!root.join("x.zip").exists());
+        // The same for one combined document.
+        let opts = Options { max_image_bytes: 4000, ..Options::default() };
+        let err = collect(&refs, &Scope::Section("s".into()), &opts, &big).err().unwrap().to_string();
+        assert!(err.contains("too much for one file"), "{err}");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn zip_destinations_are_checked_like_the_others() {
+        let root = temp_dir();
+        let data = root.join("data");
+        fs::create_dir_all(data.join("backups")).unwrap();
+        for bad in [data.join("x.zip"), data.join("backups").join("x.zip"), data.join("a").join("..").join("y.zip"), ] {
+            assert!(checked_destination(&bad, "zip", &data).is_err(), "{bad:?}");
+        }
+        // A vault name never survives: the file always ends in .zip.
+        assert_eq!(checked_destination(&root.join("vault.nota"), "zip", &data).unwrap(), root.join("vault.nota.zip"));
+        assert_eq!(checked_destination(&root.join("notes.ZIP"), "zip", &data).unwrap(), root.join("notes.ZIP"));
+        assert_eq!(checked_destination(&root.join("notes"), "zip", &data).unwrap(), root.join("notes.zip"));
+        assert_eq!(checked_destination(&root.join("notes.pdf"), "zip", &data).unwrap(), root.join("notes.pdf.zip"));
+        fs::write(root.join("old.pdf.zip"), b"keep").unwrap();
+        assert!(checked_destination(&root.join("old.pdf"), "zip", &data).is_err(), "never overwrites a file the dialog did not ask about");
+        fs::create_dir_all(root.join("folder.zip")).unwrap();
+        assert!(checked_destination(&root.join("folder.zip"), "zip", &data).is_err(), "a folder is no file");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn html_is_a_format_of_its_own() {
+        assert_eq!(Format::parse("html").unwrap(), Format::Html);
+        assert_eq!(Format::Html.ext(), "html");
+        assert!(Format::parse("htm").is_err());
+        let root = temp_dir();
+        let doc = sample_doc(doc::parse(&doc::tests::every_node_json(), &doc::tests::titles));
+        let dest = root.join("page.html");
+        let s = write(&dest, Format::Html, &doc, &root.join("data")).unwrap();
+        assert_eq!((s.pages, s.assets_folder, s.archive), (1, None, false));
+        let html = fs::read_to_string(&dest).unwrap();
+        assert!(html.starts_with("<!DOCTYPE html>") && html.contains("data:image/png;base64,"));
+        assert!(!root.join("page.assets").exists(), "pictures are inside the file");
         let _ = fs::remove_dir_all(root);
     }
 }

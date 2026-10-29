@@ -1,4 +1,4 @@
-//! A minimal ZIP writer (enough for a .docx file): DEFLATE-compressed or stored entries,
+//! A minimal ZIP writer (enough for a .docx file and for "separate files in a ZIP"): DEFLATE-compressed or stored entries,
 //! UTF-8 names, no ZIP64 (an export larger than 4 GB is refused).
 
 use super::deflate::{crc32, deflate_raw};
@@ -17,6 +17,16 @@ impl ZipWriter {
     pub fn new(ms: i64) -> ZipWriter {
         let (time, date) = dos_time(ms);
         ZipWriter { out: Vec::new(), central: Vec::new(), count: 0, time, date }
+    }
+
+    /// How many files have been added.
+    pub fn entries(&self) -> usize {
+        self.count as usize
+    }
+
+    /// How many bytes the archive holds so far (without the directory at the end).
+    pub fn byte_len(&self) -> usize {
+        self.out.len() + self.central.len()
     }
 
     /// Adds a file. Pictures, which are compressed already, are stored as they are.
