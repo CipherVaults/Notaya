@@ -1,0 +1,4 @@
+interface:
+  display_name: "PBS Start, Resume & Handoff"
+  short_description: "Start, recover, and hand off PBS project work"
+  default_prompt: "Use $pbs-start-resume-handoff to recover this project and identify the next permitted action."
