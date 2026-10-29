@@ -1,0 +1,6 @@
+interface:
+  display_name: "Personalized Notion Hubs"
+  short_description: "Ahmed-style hubs, boards and purposeful working pages"
+  default_prompt: "Use $personalized-notion-hubs to inspect and improve my Notion project hub with a compact home, native Board cards and purposeful child pages, preserving facts, history and privacy."
+policy:
+  allow_implicit_invocation: true

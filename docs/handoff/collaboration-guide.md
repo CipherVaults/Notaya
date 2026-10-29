@@ -35,8 +35,17 @@ Do this before anything else, in this order. It extends "At the start of every s
 1. Read the person's latest instruction. State which partner they are.
 2. Sync and look: `git fetch --all --prune`, then `git status -sb`, `git log --oneline -5 origin/main`, `git branch -r`, and the open PRs (`gh pr list`, or the GitHub connector). Open PRs and remote branches are the **live board** of who is doing what.
 3. Read `CLAUDE.md`, [docs/STATUS.md](../STATUS.md), [docs/plan/approval-and-amendments.md](../plan/approval-and-amendments.md), [claims.md](claims.md) and the newest resume note in `docs/handoff/` that matches your task.
-4. Write the **thread-start note** (PBS, from `CLAUDE.md`): baseline commit, the person's message and UTC time, exact scope and write area, what you will return, the stop point, and the work size. If one is missing, ask or take the narrowest reading and say which.
-5. **Claim the work** (section 4) before you change anything.
+4. Load the project skills in `.claude/skills/` (list below) and use the ones that apply; the change workflow applies to every change, the PBS start/resume/handoff skill to starting, resuming and handing over.
+5. Write the **thread-start note** (PBS, from `CLAUDE.md`): baseline commit, the person's message and UTC time, exact scope and write area, what you will return, the stop point, and the work size. If one is missing, ask or take the narrowest reading and say which.
+6. **Claim the work** (section 4) before you change anything.
+
+Project skills (`.claude/skills/`, Mohamed's exports, unedited; `CLAUDE.md` wins where they differ):
+
+- `cipherleaf-change-workflow`: for any code or docs change (plan, build, review, test on throwaway data, push, draft PR, report). Use it for every change.
+- `pbs-start-resume-handoff`: at the start of a session, when resuming paused work, and when handing over (PBS records, resume notes).
+- `cipherleaf-real-exe-test`: whenever the built Windows app must be tested, on throwaway data only, never real notes.
+- `cipherleaf-project-coordination`: only if your Claude acts as the coordinator that routes work between threads.
+- `notion-native-artwork`, `personalized-notion-hubs`, `personalized-charts`: not Notaya work; they are Mohamed's own Notion and chart skills (written for "Ahmed"). Ignore them unless you are asked for that kind of task.
 
 ## 4. Claims: two people must not take the same work or the same ID
 
@@ -154,12 +163,12 @@ Paste these as the first message of a session. Replace the bits in angle bracket
 
 **Start (new session):**
 
-> You are Claude Code working on Notaya with two people, each with their own Claude. I am <my name> (GitHub <login>), a partner. Read CLAUDE.md, docs/handoff/collaboration-guide.md, docs/STATUS.md, docs/plan/approval-and-amendments.md and docs/handoff/claims.md. Run `git fetch --all --prune`, list the open PRs and remote branches, and tell me in plain words: the baseline commit, what is in flight and who owns it, what is free, and what you suggest. Do not change anything until I tell you what to work on, and follow the claim steps in section 4 of the guide before you start.
+> You are Claude Code working on Notaya with two people, each with their own Claude. I am <my name> (GitHub <login>), a partner. Load the skills in .claude/skills/ and use the ones that apply (change workflow for every change, PBS start/resume/handoff for session start and handover). Read CLAUDE.md, docs/handoff/collaboration-guide.md, docs/STATUS.md, docs/plan/approval-and-amendments.md and docs/handoff/claims.md. Run `git fetch --all --prune`, list the open PRs and remote branches, and tell me in plain words: the baseline commit, what is in flight and who owns it, what is free, and what you suggest. Do not change anything until I tell you what to work on, and follow the claim steps in section 4 of the guide before you start.
 
 **Resume (pick up a branch):**
 
-> Continue the work on <branch / PR link>. Read the resume note it points to, the PR description, claims.md and the last commits. Re-check what matters on the exact commit, tell me what is done, unverified and next, and ask me before pushing to a branch I didn't create (follow section 7 of the guide).
+> Continue the work on <branch / PR link>. Load the skills in .claude/skills/ and use the ones that apply. Read the resume note it points to, the PR description, claims.md and the last commits. Re-check what matters on the exact commit, tell me what is done, unverified and next, and ask me before pushing to a branch I didn't create (follow section 7 of the guide).
 
 **Hand over (end of session):**
 
-> I am stopping. Follow section 6 of docs/handoff/collaboration-guide.md: commit and push everything, update the draft PR, write the resume note, update my claims row, and tell me in plain words what the next Claude must do first. Do not start anything new.
+> I am stopping. Use the pbs-start-resume-handoff skill and follow section 6 of docs/handoff/collaboration-guide.md: commit and push everything, update the draft PR, write the resume note, update my claims row, and tell me in plain words what the next Claude must do first. Do not start anything new.
