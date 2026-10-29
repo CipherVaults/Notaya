@@ -12,6 +12,8 @@ mod model;
 mod openvault;
 mod portable;
 mod restore;
+#[cfg(test)]
+mod roundtrip_tests;
 mod shell;
 mod state;
 mod system;
