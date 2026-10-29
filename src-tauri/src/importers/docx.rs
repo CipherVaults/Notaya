@@ -174,8 +174,10 @@ fn shading_highlight(fill: &str) -> Option<String> {
     let v = u32::from_str_radix(fill, 16).ok()?;
     let rgb = [((v >> 16) & 0xFF) as f64, ((v >> 8) & 0xFF) as f64, (v & 0xFF) as f64];
     let (max, min) = (rgb.iter().cloned().fold(0.0, f64::max), rgb.iter().cloned().fold(255.0, f64::min));
-    // Near-gray or white: no color to speak of. Dark: not a highlighter.
-    if max - min < 24.0 || min < 150.0 {
+    // Dark: not a highlighter. Near-gray: only the mid light grays that Notaya's own gray highlights
+    // (Stone, Ash) come out as; white and the very light gray of inline code are not highlights.
+    let gray = max - min < 24.0;
+    if min < 150.0 || (gray && !(200.0..=236.0).contains(&min)) {
         return None;
     }
     let mut best: Option<(f64, usize)> = None;
@@ -695,6 +697,7 @@ pub(crate) mod tests {
         let body = concat!(
             r#"<w:p><w:r><w:rPr><w:shd w:val="clear" w:color="auto" w:fill="F8E6AD"/></w:rPr><w:t>marked</w:t></w:r>"#,
             r#"<w:r><w:rPr><w:shd w:val="clear" w:color="auto" w:fill="F1F3F5"/></w:rPr><w:t>code</w:t></w:r>"#,
+            r#"<w:r><w:rPr><w:shd w:fill="D9D9D8"/></w:rPr><w:t>gray</w:t></w:r>"#,
             r#"<w:r><w:rPr><w:shd w:fill="auto"/></w:rPr><w:t>auto</w:t></w:r>"#,
             r#"<w:r><w:rPr><w:shd w:fill="FFFFFF"/></w:rPr><w:t>white</w:t></w:r>"#,
             r#"<w:r><w:rPr><w:shd w:fill="1F2937"/></w:rPr><w:t>dark</w:t></w:r></w:p>"#,
@@ -714,6 +717,9 @@ pub(crate) mod tests {
         };
         let hl = marks("marked").unwrap().highlight;
         assert!(hl.as_deref().is_some_and(|h| HIGHLIGHTS.contains(&h)), "{hl:?}");
+        // The light gray Notaya's own gray highlights are written as comes back as a gray highlight.
+        let gray = marks("gray").unwrap().highlight;
+        assert!(gray.as_deref().is_some_and(|h| HIGHLIGHTS.contains(&h)), "{gray:?}");
         for w in ["code", "auto", "white", "dark", "paragraph", "cell"] {
             assert_eq!(marks(w).unwrap().highlight, None, "{w}");
         }

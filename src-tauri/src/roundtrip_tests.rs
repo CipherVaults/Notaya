@@ -119,7 +119,6 @@ fn scope_of(ids: &Ids, name: &str) -> Scope {
 }
 
 #[test]
-#[ignore = "work in progress: the matrix run did not finish within 10 minutes under Wine, cause not found yet (see the resume note)"]
 fn every_format_scope_and_output_comes_back_in() {
     let root = temp();
     let src = new_vault(&root.join("src-data"));
@@ -160,7 +159,7 @@ fn every_format_scope_and_output_comes_back_in() {
                     continue;
                 }
                 let dst = new_vault(&root.join(format!("dst-{}-{}-{}", format.ext(), scope_name.replace(' ', "_"), out)));
-                let summary = match import_from(&dst, &[dest.clone()], false, &root.join("src-data"), 1_700_000_000_000) {
+                let summary = match import_from(&dst, &[dest.clone()], false, &root.join("src-data"), 1_700_000_000_000, &crate::importers::Control::standard()) {
                     Ok(s) => s,
                     Err(e) => {
                         failures.push(format!("{label}: import failed: {e}"));
