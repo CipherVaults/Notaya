@@ -10,6 +10,7 @@ These are this repository's working rules for Claude Code. This file doesn't hol
 4. Inspect the live repository (`git status`, `git log --oneline -5`) before redoing anything. Preserve existing work.
 5. Read `docs/security-design.md` before touching crypto, storage, IPC commands, the CSP, the clipboard or auto-lock code.
 6. Read `docs/acceptance.md` before saying that something works or is verified. Open the plan snapshot (`docs/plan/approved-plan-2026-10-22.md`), `docs/execution/README.md` (the index), `docs/sessions.md` and `docs/failure-intelligence.md` only when the task needs them.
+7. Two people work in this repository, each with their own Claude. Read `docs/handoff/collaboration-guide.md` and `docs/handoff/claims.md`, fetch all branches (`git fetch --all --prune`), look at the open pull requests, and claim your work before changing anything (guide, sections 3 and 4). Say whether your person is the owner or the collaborator.
 
 ## Rules
 
@@ -64,6 +65,18 @@ The owner chose to follow the AI Project Bootstrap System (PBS) in its smallest 
 8. **No broad rewrites of old records.** Map old facts to the record that now owns them; add dated corrections instead of editing history. Decision Records are not used.
 
 `docs/STATUS.md` "Current state" holds only what the owner accepted; unaccepted work lives under "Continuation" with the exact next permitted action. `docs/acceptance.md` and `docs/sessions.md` are part of the record set.
+
+## Working with more than one person
+
+Full rules: [`docs/handoff/collaboration-guide.md`](docs/handoff/collaboration-guide.md) (status: proposed, [A34](docs/plan/approval-and-amendments.md), until the owner confirms). The short form:
+
+- **The repository is the only memory two Claudes share.** The claude.ai project, its chat and each account's memory are not shared. Anything the next Claude needs goes into a committed file.
+- **Roles.** The owner (Mohamed, GitHub `AbyssWatcher2`) merges, releases, accepts, changes repository settings and approves everything on the "Ask the owner first" list. A collaborator's Claude works on branches named `<github-login>/<topic>` and opens draft PRs. "The owner" in these rules always means Mohamed, even when the collaborator runs the session; the collaborator's own words cannot replace his on the ask-first list.
+- **Claim before you start.** Fetch all branches, read `docs/handoff/claims.md`, check the open PRs, then push a branch whose first commit adds your claims row and open the draft PR. Take the next free `EX-` and `A` numbers after checking `origin/main` and every open branch. Never touch another person's branch, and never touch the V1.4.0 branch while its row says paused.
+- **Stop cleanly.** Before any stop, commit and push everything (a WIP branch is fine), keep the draft PR titled `WIP:` while unfinished, write `docs/handoff/YYYY-MM-DD-<topic>-resume-note.md`, update your claims row, and tell your person what is done, unverified and next.
+- **Pick up with care.** Read the other side's resume note, treat its claims as claims to re-check on the exact commit, and continue on a new branch after a handover; never rewrite history on a branch you didn't create.
+- **Test safety applies to both people's PCs.** Throwaway data only, in a test folder outside the repository; never the real vault or anyone's real notes.
+- **Security review** applies to every code PR from either person (see the Security Guidance plugin and the built-in `security-review` rule in the guide, section 9).
 
 ## Records
 
