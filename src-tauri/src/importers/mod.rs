@@ -245,6 +245,22 @@ pub fn safe_link(href: &str) -> Option<String> {
     }
 }
 
+/// Marks a link to another page of the same import (a relative `.md`, `.html` or `.htm` address that
+/// names a file in the source) for the renderer, which turns it into an internal Notaya link once the
+/// page ids are known, or drops it when that page was not imported.
+pub const PAGE_HREF: &str = "notaya-src:";
+
+impl Ctx<'_> {
+    pub fn page_href(&self, href: &str) -> Option<String> {
+        let lower = href.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
+        if !(lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".html") || lower.ends_with(".htm")) {
+            return None;
+        }
+        let path = resolve_rel(&self.dir, href).and_then(|p| self.vfs.find(&p))?;
+        Some(format!("{PAGE_HREF}{path}"))
+    }
+}
+
 /// Decodes `%xx` escapes (invalid ones are kept as they are).
 pub fn percent_decode(s: &str) -> String {
     let b = s.as_bytes();

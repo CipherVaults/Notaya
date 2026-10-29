@@ -421,7 +421,7 @@ impl Conv<'_, '_> {
                 out.inl.push(inl);
             }
             "a" => {
-                if let Some(href) = e.attr("href").and_then(super::safe_link) {
+                if let Some(href) = e.attr("href").and_then(|h| super::safe_link(h).or_else(|| self.ctx.page_href(h))) {
                     m.link = Some(href);
                 }
                 self.walk(&e.children, &m, out);

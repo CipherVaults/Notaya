@@ -792,6 +792,23 @@ mod tests {
     }
 
     #[test]
+    fn a_link_inside_a_sentence_to_another_imported_page_becomes_an_internal_link() {
+        let all: Vec<(&str, &[u8])> = vec![
+            ("One.md", b"# One\n\nSee [the second page](Two.md) and [a missing one](Nope.md) and [the web](https://example.com/x)."),
+            ("Two.md", b"# Two\n\nback"),
+        ];
+        let v = vfs(&all);
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let (items, _) = finish(&mut plan, &v);
+        let two = page(&items, "Two").id.clone();
+        let one = page(&items, "One").content.clone();
+        assert!(one.contains(&format!("\"href\":\"notaya:page/{two}\"")), "{one}");
+        assert!(one.contains("https://example.com/x"));
+        assert!(!one.contains("notaya-src") && !one.contains("Nope.md"), "no marker or dead link is left: {one}");
+        assert!(one.contains("a missing one"), "the text stays");
+    }
+
+    #[test]
     fn markdown_folders_become_sections_and_notion_markdown_nests() {
         let top = format!("Top {ID}.md");
         let mut all: Vec<(&str, &[u8])> = vec![

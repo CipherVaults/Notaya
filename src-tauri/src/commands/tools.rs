@@ -19,6 +19,10 @@ pub fn password_strength(password: String, hints: Vec<String>) -> Strength {
 pub fn open_url(app: AppHandle, url: String) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;
     let u = url.trim();
+    if u.to_ascii_lowercase().starts_with("notaya:") {
+        // A link to a page inside Notaya is followed by the editor, never by the browser.
+        return Err(Error::invalid("That link points inside Notaya, not to a web address."));
+    }
     let u = if u.contains("://") { u.to_string() } else { format!("https://{u}") };
     if !(u.starts_with("https://") || u.starts_with("http://")) {
         return Err(Error::invalid("Only web links can be opened."));

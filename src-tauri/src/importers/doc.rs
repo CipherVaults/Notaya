@@ -431,7 +431,7 @@ impl Renderer<'_> {
         if self.over {
             return;
         }
-        let (content, text) = inline_nodes(run);
+        let (content, text) = inline_nodes(run, self.page);
         if content.is_empty() {
             return;
         }
@@ -442,7 +442,7 @@ impl Renderer<'_> {
     }
 }
 
-fn mark_list(m: &Marks) -> Vec<Value> {
+fn mark_list(m: &Marks, page: &dyn Fn(&str) -> Option<String>) -> Vec<Value> {
     let mut v = Vec::new();
     if m.code {
         // The editor's code mark excludes every other mark.
@@ -450,7 +450,15 @@ fn mark_list(m: &Marks) -> Vec<Value> {
         return v;
     }
     if let Some(href) = &m.link {
-        v.push(json!({ "type": "link", "attrs": { "href": href, "target": null, "rel": "noopener noreferrer nofollow", "class": null } }));
+        // A link to another imported page becomes an internal Notaya link (`notaya:page/<id>`); when that
+        // page was not imported the text stays without a link.
+        let target = match href.strip_prefix(super::PAGE_HREF) {
+            Some(path) => page(path).map(|id| format!("notaya:page/{id}")),
+            None => Some(href.clone()),
+        };
+        if let Some(href) = target {
+            v.push(json!({ "type": "link", "attrs": { "href": href, "target": null, "rel": "noopener noreferrer nofollow", "class": null } }));
+        }
     }
     if m.bold {
         v.push(json!({ "type": "bold" }));
@@ -476,7 +484,7 @@ fn mark_list(m: &Marks) -> Vec<Value> {
 
 /// Text nodes for a run of inline content: whitespace at the edges trimmed, neighbours with
 /// the same marks merged, never an empty text node. Returns the nodes and their plain text.
-fn inline_nodes(run: &[&Inline]) -> (Vec<Value>, String) {
+fn inline_nodes(run: &[&Inline], page: &dyn Fn(&str) -> Option<String>) -> (Vec<Value>, String) {
     // Merge first, so trimming works on whole strings.
     // (None, "") is a line break, (None, latex) an inline equation.
     let mut parts: Vec<(Option<Marks>, String)> = Vec::new();
@@ -538,7 +546,7 @@ fn inline_nodes(run: &[&Inline]) -> (Vec<Value>, String) {
                 let mut n = Map::new();
                 n.insert("type".into(), json!("text"));
                 n.insert("text".into(), json!(t));
-                let marks = mark_list(&m);
+                let marks = mark_list(&m, page);
                 if !marks.is_empty() {
                     n.insert("marks".into(), Value::Array(marks));
                 }

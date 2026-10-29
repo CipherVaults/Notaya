@@ -668,7 +668,7 @@ impl Parser<'_, '_> {
                     Some((label, dest, end)) => {
                         flush(&mut buf, out);
                         let mut lm = m.clone();
-                        lm.link = safe_link(&dest);
+                        lm.link = safe_link(&dest).or_else(|| self.ctx.page_href(&dest));
                         if depth < MAX_DEPTH {
                             self.inline_into(&label, &lm, out, depth + 1);
                         } else {
