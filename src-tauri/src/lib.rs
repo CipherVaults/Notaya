@@ -8,6 +8,7 @@ mod importers;
 mod generator;
 mod import;
 mod legacy_guard;
+mod logging;
 mod model;
 mod openvault;
 mod portable;
@@ -24,7 +25,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, calculator, export as export_cmd, import_notes as import_notes_cmd, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, calculator, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -48,6 +49,9 @@ static APP: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // First of all: a panic anywhere after this line is written to the error log before the process aborts.
+    logging::install_panic_hook();
+
     // An older Notaya (V1.3.0 and earlier) and this one must not open the same notes together:
     // take the names the old copy's guard uses, or hand over to a copy that holds them.
     #[cfg(windows)]
@@ -100,9 +104,12 @@ pub fn run() {
         })
         .setup(move |app| {
             let _ = APP.set(app.handle().clone());
+            // After the single-instance check (a second copy never gets here), so a second start can't look like a crash.
+            logging::start(&paths);
             if let Err(e) = paths.ensure_dirs() {
                 // The folder next to the app can't be written (a read-only drive or folder).
                 // The release exe has no console, so without a message it would just vanish.
+                logging::start_failed(true, Some(e.kind()));
                 report_startup_failure(app.handle().clone(), data_folder_message(&paths, &e));
                 return Ok(());
             }
@@ -112,6 +119,7 @@ pub fn run() {
                 && vault::Session::read_header(&paths.vault).map(|h| !h.open).unwrap_or(true);
             if let Err(e) = ui::build_main(app.handle(), &paths, protect) {
                 // Usually the Microsoft WebView2 component is missing or its folder can't be used.
+                logging::start_failed(false, None);
                 report_startup_failure(app.handle().clone(), window_message(&paths, &e));
                 return Ok(());
             }
@@ -183,6 +191,9 @@ pub fn run() {
             vault_cmd::quit_app,
             vault_cmd::take_notice,
             vault_cmd::open_data_folder,
+            errorlog::log_frontend_error,
+            errorlog::log_info,
+            errorlog::open_log_folder,
             shell_cmd::get_shell_prefs,
             shell_cmd::set_shell_prefs,
             backup_cmd::list_backups,
@@ -230,11 +241,17 @@ pub fn run() {
             tools::open_url,
             tools::search,
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .unwrap_or_else(|e| {
             // No window and no console to tell the owner: leave without a crash report.
             eprintln!("Notaya could not start: {e}");
             std::process::exit(1);
+        })
+        .run(|_app, event| {
+            // Every normal end (the Quit button, the tray's Quit, the last window closing) passes here.
+            if let tauri::RunEvent::Exit = event {
+                logging::clean_exit();
+            }
         });
 }
 
@@ -275,6 +292,7 @@ fn report_startup_failure(app: tauri::AppHandle, text: String) {
             .title("Notaya could not start")
             .kind(MessageDialogKind::Error)
             .blocking_show();
+        logging::clean_exit();
         std::process::exit(1);
     });
 }

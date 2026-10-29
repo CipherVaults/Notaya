@@ -3,6 +3,7 @@
 
 pub mod backup;
 pub mod calculator;
+pub mod errorlog;
 pub mod export;
 pub mod import_notes;
 pub mod notes;

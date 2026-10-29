@@ -7,6 +7,11 @@ import "./styles/app.css";
 import App from "./App";
 import StickyWindow from "./features/sticky/StickyWindow";
 import CalculatorWindow from "./features/sticky/Calculator";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { installErrorLog } from "./lib/errorlog";
+
+// Before anything is drawn: errors of this window go to the local error log (a file on this computer).
+installErrorLog();
 
 // In the shipped app, block browser shortcuts that make no sense here
 // (reload, print, view source, find, dev tools) and the default context menu.
@@ -34,20 +39,26 @@ if (label.startsWith("sticky-")) {
   document.documentElement.dataset.window = "sticky";
   root.render(
     <React.StrictMode>
-      <StickyWindow id={label.slice("sticky-".length)} />
+      <ErrorBoundary>
+        <StickyWindow id={label.slice("sticky-".length)} />
+      </ErrorBoundary>
     </React.StrictMode>,
   );
 } else if (label.startsWith("calc-")) {
   document.documentElement.dataset.window = "calc";
   root.render(
     <React.StrictMode>
-      <CalculatorWindow />
+      <ErrorBoundary>
+        <CalculatorWindow />
+      </ErrorBoundary>
     </React.StrictMode>,
   );
 } else {
   root.render(
     <React.StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </React.StrictMode>,
   );
 }

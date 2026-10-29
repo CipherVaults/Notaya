@@ -61,6 +61,13 @@ export interface Settings {
   stickyDefaultColor: string;
 }
 
+/** The local error log: its folder, the size of its files and the time of the newest entry (UTC, ISO). */
+export interface LogInfo {
+  folder: string;
+  bytes: number;
+  lastEntry: string | null;
+}
+
 /** The Windows section of Settings (kept next to the vault, readable while it is locked). */
 export interface ShellPrefs {
   /** The close button hides Notaya to the tray instead of quitting. */

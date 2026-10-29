@@ -11,6 +11,7 @@ import type {
   ExportSummary,
   ImportSource,
   ImportSummary,
+  LogInfo,
   NotesImportSummary,
   NotesTree,
   Page,
@@ -72,6 +73,9 @@ export const api = {
     return invoke<void>("quit_app");
   },
   openDataFolder: () => invoke<void>("open_data_folder"),
+  // The error log (a text file in the logs folder): where it is, and open that folder in Explorer
+  logInfo: () => invoke<LogInfo>("log_info"),
+  openLogFolder: () => invoke<void>("open_log_folder"),
   // Close to the tray and start with Windows (saved next to the vault, not in the encrypted settings)
   getShellPrefs: () => invoke<ShellPrefs>("get_shell_prefs"),
   setShellPrefs: (prefs: Pick<ShellPrefs, "closeToTray" | "startWithWindows" | "startMinimized">) =>

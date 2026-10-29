@@ -123,6 +123,16 @@ impl Paths {
     }
 }
 
+/// The `data` folder as `Paths::resolve` would pick it, without any of its side effects. The error log's
+/// panic hook uses it when a panic comes before the paths were resolved.
+#[cfg_attr(test, allow(dead_code))] // tests never fall back to the real folder
+pub fn early_data_dir() -> PathBuf {
+    match env_var("NOTAYA_HOME", "CIPHERLEAF_HOME") {
+        Some(root) => PathBuf::from(root).join("data"),
+        None => default_root().0.join("data"),
+    }
+}
+
 /// `path` with `suffix` added to the file name (`vault.nota` -> `vault.nota-journal`).
 fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
     let mut name = path.as_os_str().to_os_string();

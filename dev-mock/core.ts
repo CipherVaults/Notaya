@@ -177,6 +177,13 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok({ ...settings });
     case "set_backdrop":
       return ok(false);
+    // The error log: nothing is recorded in the mock; the numbers are made up.
+    case "log_frontend_error":
+      return ok(null);
+    case "log_info":
+      return ok({ folder: "E:\\Notaya\\data\\logs", bytes: 18432, lastEntry: "2026-10-29T07:45:00Z" });
+    case "open_log_folder":
+      return ok(null);
     case "get_shell_prefs":
       return ok({ ...shellPrefs });
     case "set_shell_prefs":

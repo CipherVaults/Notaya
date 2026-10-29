@@ -226,6 +226,7 @@ impl AppState {
 
     pub fn set_session(&self, session: Session) {
         *guard(&self.session) = Some(session);
+        crate::logging::unlocked_event();
     }
 
     /// Stores the session of a finished unlock, unless the main window is hidden in the tray
@@ -359,6 +360,9 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     }
     let session = state.take_session();
     let was_open = session.as_ref().is_some_and(|s| s.is_open());
+    if session.is_some() {
+        crate::logging::locked_event(reason);
+    }
     // The UI comes first: close stickies, reset the windows.
     ui::close_stickies(app);
     ui::close_calculators(app);

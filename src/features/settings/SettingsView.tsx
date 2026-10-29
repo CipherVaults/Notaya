@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AppWindow, Archive, FileKey2, FolderOpen, Info, KeyRound, Lock, LockOpen, Palette, RotateCcw, ShieldCheck } from "lucide-react";
+import { AppWindow, Archive, FileKey2, FileWarning, FolderOpen, Info, KeyRound, Lock, LockOpen, Palette, RotateCcw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
@@ -10,6 +10,7 @@ import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
 import RestoreDialog from "@/features/unlock/RestoreDialog";
+import ErrorLogPanel from "./ErrorLogPanel";
 import OpenSourceDialog from "./OpenSourceDialog";
 import { DisableSecurityDialog, EnableSecurityDialog } from "./SecurityDialogs";
 
@@ -255,6 +256,10 @@ export default function SettingsView() {
             </Row>
           </Section>
         )}
+
+        <Section icon={<FileWarning size={16} />} title="Error log">
+          <ErrorLogPanel />
+        </Section>
 
         <Section icon={<ShieldCheck size={16} />} title="Security (optional)">
           {securityOn ? (
