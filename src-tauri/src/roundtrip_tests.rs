@@ -136,7 +136,15 @@ fn every_format_scope_and_output_comes_back_in() {
                 let dest = dir.join(if zip { "export.zip" } else { "export" }).with_extension(if zip { "zip" } else { format.ext() });
                 let scope = scope_of(&ids, scope_name);
                 let opts = Options { include_subpages: true, ..Options::default() };
-                let attachment = |id: &str| src.with(|s| s.get_attachment(id)).ok();
+                // The pictures are read before the vault is held (its lock is not re-entrant).
+                let picture_ids: Vec<String> = src
+                    .with(|s| Ok(s.items().filter_map(|i| if let Item::Page(p) = i { Some(p.content.clone()) } else { None }).collect::<Vec<_>>()))
+                    .unwrap()
+                    .iter()
+                    .filter_map(|c| c.split("http://clatt.localhost/").nth(1).map(|r| r.split('"').next().unwrap_or("").to_string()))
+                    .collect();
+                let pictures: Vec<(String, (String, Vec<u8>))> = picture_ids.into_iter().map(|id| { let pic = src.with(|s| s.get_attachment(&id)).unwrap(); (id, pic) }).collect();
+                let attachment = |id: &str| pictures.iter().find(|(i, _)| i == id).map(|(_, p)| p.clone());
                 let exported = src.with(|s| {
                     let items: Vec<&Item> = s.items().collect();
                     if zip {
