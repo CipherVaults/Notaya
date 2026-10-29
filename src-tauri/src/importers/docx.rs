@@ -8,6 +8,11 @@
 //! mailto), embedded pictures (PNG, JPEG, GIF, WebP) and line breaks. Dropped: tracked
 //! deletions, field codes (their shown result stays), comments, footnotes, headers and
 //! footers, text boxes' position, fonts and sizes, and pictures in other formats (EMF, WMF).
+//!
+//! Limits (the file is hostile): tables nested deeper than [`MAX_TABLE_DEPTH`] are read flat (their
+//! text stays, as paragraphs of the cell around them), paragraphs and hyperlinks nest at most
+//! [`MAX_NEST`] deep, a document keeps at most [`doc::MAX_PAGE_CELLS`] table cells, and what is
+//! inflated counts against the import's shared budget (`Vfs::budget`).
 
 use std::cell::Cell as Counter;
 use std::collections::HashMap;
@@ -18,7 +23,11 @@ use super::zip::Archive;
 use super::{safe_link, Ctx};
 
 const MAX_XML: u64 = 64 * 1024 * 1024;
-const BUDGET: u64 = 768 * 1024 * 1024;
+/// Tables inside tables inside cells: deeper ones are read flat.
+const MAX_TABLE_DEPTH: usize = 8;
+/// Paragraphs inside paragraphs (text boxes) and hyperlinks inside hyperlinks.
+const MAX_NEST: usize = 32;
+const MAX_ENTRIES: usize = 100_000;
 
 pub struct DocxDoc {
     pub title: Option<String>,
@@ -43,7 +52,7 @@ fn styles(xml: &str) -> HashMap<String, Style> {
     for t in Tokenizer::xml(xml) {
         match t {
             Token::Start { name, attrs, .. } => match local(&name) {
-                "style" => cur = attr(&attrs, "w:styleId").map(|id| (id.to_string(), Style::default())),
+                "style" => cur = attr(&attrs, "w:styleId").filter(|_| map.len() < MAX_ENTRIES).map(|id| (id.to_string(), Style::default())),
                 "name" => {
                     if let Some((_, s)) = cur.as_mut() {
                         s.name = attr(&attrs, "w:val").unwrap_or("").to_ascii_lowercase();
@@ -72,9 +81,12 @@ fn styles(xml: &str) -> HashMap<String, Style> {
     map
 }
 
-/// numId -> (level -> ordered?).
-fn numbering(xml: &str) -> HashMap<String, HashMap<u32, bool>> {
-    let mut abstracts: HashMap<String, HashMap<u32, bool>> = HashMap::new();
+/// Levels 0 to 8 of a list: ordered (`Some(true)`), bullets (`Some(false)`) or not defined.
+type Levels = [Option<bool>; 9];
+
+/// numId -> levels.
+fn numbering(xml: &str) -> HashMap<String, Levels> {
+    let mut abstracts: HashMap<String, Levels> = HashMap::new();
     let mut nums: HashMap<String, String> = HashMap::new();
     let mut cur_abs: Option<String> = None;
     let mut cur_lvl: Option<u32> = None;
@@ -87,13 +99,17 @@ fn numbering(xml: &str) -> HashMap<String, HashMap<u32, bool>> {
                 "numFmt" => {
                     if let (Some(a), Some(l)) = (&cur_abs, cur_lvl) {
                         let ordered = attr(&attrs, "w:val").is_some_and(|v| v != "bullet" && v != "none");
-                        abstracts.entry(a.clone()).or_default().insert(l, ordered);
+                        if (l as usize) < 9 && (abstracts.len() < MAX_ENTRIES || abstracts.contains_key(a)) {
+                            abstracts.entry(a.clone()).or_default()[l as usize] = Some(ordered);
+                        }
                     }
                 }
                 "num" => cur_num = attr(&attrs, "w:numId").map(str::to_string),
                 "abstractNumId" => {
                     if let (Some(n), Some(v)) = (&cur_num, attr(&attrs, "w:val")) {
-                        nums.insert(n.clone(), v.to_string());
+                        if nums.len() < MAX_ENTRIES {
+                            nums.insert(n.clone(), v.to_string());
+                        }
                     }
                 }
                 _ => {}
@@ -107,7 +123,7 @@ fn numbering(xml: &str) -> HashMap<String, HashMap<u32, bool>> {
             _ => {}
         }
     }
-    nums.into_iter().filter_map(|(n, a)| abstracts.get(&a).map(|l| (n, l.clone()))).collect()
+    nums.into_iter().filter_map(|(n, a)| abstracts.get(&a).map(|l| (n, *l))).collect()
 }
 
 /// Relationship id -> (target, external?).
@@ -115,7 +131,7 @@ fn rels(xml: &str) -> HashMap<String, (String, bool)> {
     let mut map = HashMap::new();
     for t in Tokenizer::xml(xml) {
         if let Token::Start { name, attrs, .. } = t {
-            if local(&name) == "Relationship" {
+            if local(&name) == "Relationship" && map.len() < MAX_ENTRIES {
                 if let (Some(id), Some(target)) = (attr(&attrs, "Id"), attr(&attrs, "Target")) {
                     let external = attr(&attrs, "TargetMode").is_some_and(|m| m.eq_ignore_ascii_case("external"));
                     map.insert(id.to_string(), (target.to_string(), external));
@@ -147,6 +163,34 @@ fn word_highlight(v: &str) -> Option<String> {
     Some(HIGHLIGHTS[i].to_string())
 }
 
+/// A run's shading fill (`<w:shd w:fill="RRGGBB"/>`, how Notaya's own Word export writes a
+/// highlight: the color blended onto white) as the nearest Notaya highlight. Fills that are
+/// not a highlight are left out: `auto`, white, grays and near-grays (the light gray Notaya uses
+/// for inline code, Word's light shading), and dark fills. `None` for those.
+fn shading_highlight(fill: &str) -> Option<String> {
+    if fill.len() != 6 || !fill.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let v = u32::from_str_radix(fill, 16).ok()?;
+    let rgb = [((v >> 16) & 0xFF) as f64, ((v >> 8) & 0xFF) as f64, (v & 0xFF) as f64];
+    let (max, min) = (rgb.iter().cloned().fold(0.0, f64::max), rgb.iter().cloned().fold(255.0, f64::min));
+    // Near-gray or white: no color to speak of. Dark: not a highlighter.
+    if max - min < 24.0 || min < 150.0 {
+        return None;
+    }
+    let mut best: Option<(f64, usize)> = None;
+    for (i, h) in HIGHLIGHTS.iter().enumerate() {
+        let nums: Vec<f64> = h.trim_start_matches("rgba(").trim_end_matches(')').split(',').filter_map(|x| x.trim().parse().ok()).collect();
+        let [r, g, b, a] = nums[..] else { continue };
+        let blended = [255.0 + (r - 255.0) * a, 255.0 + (g - 255.0) * a, 255.0 + (b - 255.0) * a];
+        let d: f64 = blended.iter().zip(rgb).map(|(x, y)| (x - y) * (x - y)).sum::<f64>().sqrt();
+        if best.is_none_or(|(bd, _)| d < bd) {
+            best = Some((d, i));
+        }
+    }
+    best.filter(|(d, _)| *d <= 80.0).map(|(_, i)| HIGHLIGHTS[i].to_string())
+}
+
 #[derive(Default)]
 struct Para {
     style: Option<String>,
@@ -175,12 +219,13 @@ struct CellState {
 
 pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String> {
     let a = Archive::open(bytes).map_err(|_| "This is not a Word document (.docx), or it is damaged. Older .doc files are not supported; save them as .docx first.".to_string())?;
-    let budget = Counter::new(BUDGET);
-    let document = xml_of(&a, "word/document.xml", &budget).ok_or("This is not a Word document (.docx), or it is damaged.")?;
-    let styles = xml_of(&a, "word/styles.xml", &budget).map(|x| styles(&x)).unwrap_or_default();
-    let numbering = xml_of(&a, "word/numbering.xml", &budget).map(|x| numbering(&x)).unwrap_or_default();
-    let rels = xml_of(&a, "word/_rels/document.xml.rels", &budget).map(|x| rels(&x)).unwrap_or_default();
-    let core_title = xml_of(&a, "docProps/core.xml", &budget).and_then(|x| {
+    // One allowance for the whole import, shared with every other file in it.
+    let budget = ctx.vfs.budget();
+    let document = xml_of(&a, "word/document.xml", budget).ok_or("This is not a Word document (.docx), or it is damaged.")?;
+    let styles = xml_of(&a, "word/styles.xml", budget).map(|x| styles(&x)).unwrap_or_default();
+    let numbering = xml_of(&a, "word/numbering.xml", budget).map(|x| numbering(&x)).unwrap_or_default();
+    let rels = xml_of(&a, "word/_rels/document.xml.rels", budget).map(|x| rels(&x)).unwrap_or_default();
+    let core_title = xml_of(&a, "docProps/core.xml", budget).and_then(|x| {
         let mut in_title = false;
         let mut t = String::new();
         for tok in Tokenizer::xml(&x) {
@@ -199,7 +244,16 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
     let mut tables: Vec<TableState> = Vec::new();
     let mut cells: Vec<CellState> = Vec::new();
     let mut paras: Vec<Para> = Vec::new();
+    // The link in force at each hyperlink level (a level with no link of its own keeps the one
+    // around it, so a run finds its link in one step however deep the hyperlinks nest).
     let mut links: Vec<Option<String>> = Vec::new();
+    let mut link_over = 0usize;
+    let mut para_over = 0usize;
+    // Tables deeper than MAX_TABLE_DEPTH: their rows and cells are not structure, only their text counts.
+    let mut flat = 0usize;
+    let mut cell_count = 0usize;
+    let mut cells_cut = false;
+    let mut pics: HashMap<String, Inline> = HashMap::new();
     let mut run: Option<Marks> = None;
     let (mut in_t, mut in_ppr, mut in_rpr) = (false, false, false);
     // Inside a tracked deletion or another part whose text is not shown.
@@ -215,6 +269,9 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
     }
 
     for tok in Tokenizer::xml(&document) {
+        if ctx.ctl.stopped() {
+            break;
+        }
         match tok {
             Token::Start { name, attrs, self_closing } => {
                 let n = local(&name);
@@ -230,6 +287,7 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                             skip = 1;
                         }
                     }
+                    "p" if paras.len() >= MAX_NEST => para_over += 1,
                     "p" => paras.push(Para::default()),
                     "pPr" => in_ppr = !self_closing,
                     "rPr" => in_rpr = !self_closing,
@@ -257,15 +315,17 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                             p.num = Some((id, lvl));
                         }
                     }
+                    "hyperlink" if links.len() >= MAX_NEST => link_over += 1,
                     "hyperlink" => {
                         let target = attr(&attrs, "r:id")
                             .and_then(|id| rels.get(id))
                             .filter(|(_, external)| *external)
-                            .and_then(|(t, _)| safe_link(t));
+                            .and_then(|(t, _)| safe_link(t))
+                            .or_else(|| links.last().cloned().flatten());
                         links.push(target);
                     }
                     "r" if !in_ppr => {
-                        run = Some(Marks { link: links.iter().rev().flatten().next().cloned(), ..Marks::default() });
+                        run = Some(Marks { link: links.last().cloned().flatten(), ..Marks::default() });
                     }
                     "b" | "bCs" if in_rpr => {
                         if let Some(m) = run.as_mut() {
@@ -285,6 +345,14 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                     "strike" | "dstrike" if in_rpr => {
                         if let Some(m) = run.as_mut() {
                             m.strike = on(&attrs);
+                        }
+                    }
+                    // Run shading only (inside run properties); paragraph and cell shading are not read.
+                    "shd" if in_rpr => {
+                        if let Some(m) = run.as_mut() {
+                            if m.highlight.is_none() {
+                                m.highlight = attr(&attrs, "w:fill").and_then(shading_highlight);
+                            }
                         }
                     }
                     "highlight" if in_rpr => {
@@ -322,17 +390,27 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                         if let Some((target, false)) = id.and_then(|id| rels.get(id)).cloned() {
                             let path = super::resolve_rel("word", &target).unwrap_or_default();
                             let label = target.rsplit('/').next().unwrap_or("picture").to_string();
-                            let inl = match a.find(&path).map(|i| a.read(i, super::MAX_IMAGE, &budget)) {
-                                Some(Ok(bytes)) => match ctx.images.bytes(&format!("{key}:{path}"), bytes, &label) {
-                                    Some(i) => Inline::Image(i),
-                                    None => {
-                                        ctx.problem(&label, "Only PNG, JPEG, GIF and WebP pictures are imported (this one is another format or too large).");
-                                        Inline::Text(format!("[Picture not imported: {label}]"), Marks { italic: true, ..Marks::default() })
+                            // A picture used again and again is read (and reported) once.
+                            let inl = match pics.get(&path) {
+                                Some(known) => known.clone(),
+                                None => {
+                                    let made = match a.find(&path).map(|i| a.read(i, super::MAX_IMAGE, budget)) {
+                                        Some(Ok(bytes)) => match ctx.images.bytes(&format!("{key}:{path}"), bytes, &label) {
+                                            Some(i) => Inline::Image(i),
+                                            None => {
+                                                ctx.problem(&label, "Only PNG, JPEG, GIF and WebP pictures are imported (this one is another format or too large).");
+                                                Inline::Text(format!("[Picture not imported: {label}]"), Marks { italic: true, ..Marks::default() })
+                                            }
+                                        },
+                                        _ => {
+                                            ctx.problem(&label, "The picture could not be read from the document.");
+                                            Inline::Text(format!("[Picture not imported: {label}]"), Marks { italic: true, ..Marks::default() })
+                                        }
+                                    };
+                                    if pics.len() < MAX_ENTRIES {
+                                        pics.insert(path.clone(), made.clone());
                                     }
-                                },
-                                _ => {
-                                    ctx.problem(&label, "The picture could not be read from the document.");
-                                    Inline::Text(format!("[Picture not imported: {label}]"), Marks { italic: true, ..Marks::default() })
+                                    made
                                 }
                             };
                             if let Some(p) = paras.last_mut() {
@@ -340,7 +418,9 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                             }
                         }
                     }
+                    "tbl" if flat > 0 || tables.len() >= MAX_TABLE_DEPTH => flat += 1,
                     "tbl" => tables.push(TableState::default()),
+                    "tr" | "tc" | "tblHeader" | "gridSpan" if flat > 0 => {}
                     "tr" => {
                         if let Some(t) = tables.last_mut() {
                             t.row.clear();
@@ -379,19 +459,25 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                     "pPr" => in_ppr = false,
                     "rPr" => in_rpr = false,
                     "r" => run = None,
+                    "hyperlink" if link_over > 0 => link_over -= 1,
                     "hyperlink" => {
                         links.pop();
                     }
+                    "p" if para_over > 0 => para_over -= 1,
                     "p" => {
                         if let Some(p) = paras.pop() {
                             push_item(Item::Para(p), &mut cells, &mut body);
                         }
                     }
+                    "tc" | "tr" if flat > 0 => {}
                     "tc" => {
                         if let (Some(c), Some(t)) = (cells.pop(), tables.last_mut()) {
-                            let header = t.header_row || t.row_count == 0 && false;
-                            let blocks = finish(c.items, &styles, &numbering, &mut None);
-                            if t.row.len() < 100 {
+                            let header = t.header_row;
+                            if cell_count >= doc::MAX_PAGE_CELLS {
+                                cells_cut = true;
+                            } else if t.row.len() < 100 {
+                                cell_count += 1;
+                                let blocks = finish(c.items, &styles, &numbering, &mut None);
                                 t.row.push(Cell { header, colspan: c.colspan, blocks });
                             }
                         }
@@ -405,6 +491,7 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                             t.row_count += 1;
                         }
                     }
+                    "tbl" if flat > 0 => flat -= 1,
                     "tbl" => {
                         if let Some(t) = tables.pop() {
                             if !t.rows.is_empty() {
@@ -418,6 +505,9 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
         }
     }
 
+    if cells_cut {
+        ctx.problem("Tables", "This document has more table cells than are imported; the rest were left out.");
+    }
     let mut title = None;
     let blocks = finish(body, &styles, &numbering, &mut title);
     Ok(DocxDoc { title: title.or(core_title), blocks })
@@ -455,7 +545,7 @@ fn is_quote(p: &Para, styles: &HashMap<String, Style>) -> bool {
 }
 
 /// Paragraph records to blocks: headings, quotes and nested lists.
-fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap<String, HashMap<u32, bool>>, title: &mut Option<String>) -> Vec<Block> {
+fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap<String, Levels>, title: &mut Option<String>) -> Vec<Block> {
     let mut out = Vec::new();
     let mut list: Vec<(u32, bool, Vec<Inline>)> = Vec::new();
     let flush_list = |list: &mut Vec<(u32, bool, Vec<Inline>)>, out: &mut Vec<Block>| {
@@ -473,7 +563,7 @@ fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap
             }
             Item::Para(p) => {
                 if let Some((id, lvl)) = p.num.as_ref().filter(|(id, _)| id != "0" && !id.is_empty()) {
-                    let ordered = numbering.get(id).and_then(|l| l.get(lvl)).copied().unwrap_or(false);
+                    let ordered = numbering.get(id).and_then(|l| l.get(*lvl as usize)).copied().flatten().unwrap_or(false);
                     if list.len() < 10_000 {
                         list.push((*lvl, ordered, p.inl));
                     }
@@ -601,10 +691,124 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn run_shading_from_notaya_s_own_export_is_a_highlight() {
+        let body = concat!(
+            r#"<w:p><w:r><w:rPr><w:shd w:val="clear" w:color="auto" w:fill="F8E6AD"/></w:rPr><w:t>marked</w:t></w:r>"#,
+            r#"<w:r><w:rPr><w:shd w:val="clear" w:color="auto" w:fill="F1F3F5"/></w:rPr><w:t>code</w:t></w:r>"#,
+            r#"<w:r><w:rPr><w:shd w:fill="auto"/></w:rPr><w:t>auto</w:t></w:r>"#,
+            r#"<w:r><w:rPr><w:shd w:fill="FFFFFF"/></w:rPr><w:t>white</w:t></w:r>"#,
+            r#"<w:r><w:rPr><w:shd w:fill="1F2937"/></w:rPr><w:t>dark</w:t></w:r></w:p>"#,
+            r#"<w:p><w:pPr><w:shd w:val="clear" w:fill="F8E6AD"/></w:pPr><w:r><w:t>paragraph</w:t></w:r></w:p>"#,
+            r#"<w:tbl><w:tr><w:tc><w:tcPr><w:shd w:fill="F8E6AD"/></w:tcPr><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"#
+        );
+        let (d, _, _) = with_ctx(&[], |ctx| parse(docx_with_body(body), ctx, "a.docx").unwrap());
+        let marks = |word: &str| -> Option<Marks> {
+            fn find(inl: &[Inline], word: &str) -> Option<Marks> {
+                inl.iter().find_map(|i| if let Inline::Text(t, m) = i { (t == word).then(|| m.clone()) } else { None })
+            }
+            d.blocks.iter().find_map(|b| match b {
+                Block::Paragraph(i) => find(i, word),
+                Block::Table(rows) => rows.iter().flatten().flat_map(|c| &c.blocks).find_map(|b| if let Block::Paragraph(i) = b { find(i, word) } else { None }),
+                _ => None,
+            })
+        };
+        let hl = marks("marked").unwrap().highlight;
+        assert!(hl.as_deref().is_some_and(|h| HIGHLIGHTS.contains(&h)), "{hl:?}");
+        for w in ["code", "auto", "white", "dark", "paragraph", "cell"] {
+            assert_eq!(marks(w).unwrap().highlight, None, "{w}");
+        }
+    }
+
+    #[test]
     fn not_a_docx() {
         let (r, _, _) = with_ctx(&[], |ctx| parse(b"not a zip".to_vec(), ctx, "x").err());
         assert!(r.unwrap().contains("not a Word document"));
         let (r, _, _) = with_ctx(&[], |ctx| parse(zip::build(&[("a.txt", b"x")], false), ctx, "x").err());
         assert!(r.is_some());
+    }
+
+    fn depth(b: &Block) -> usize {
+        1 + match b {
+            Block::Bullets(items) | Block::Numbered(_, items) => items.iter().flatten().map(depth).max().unwrap_or(0),
+            Block::Tasks(items) => items.iter().flat_map(|(_, i)| i).map(depth).max().unwrap_or(0),
+            Block::Quote(i) | Block::Toggle(i) | Block::Callout(_, i) => i.iter().map(depth).max().unwrap_or(0),
+            Block::Table(rows) => rows.iter().flatten().flat_map(|c| &c.blocks).map(depth).max().unwrap_or(0),
+            Block::Columns(cols) => cols.iter().flatten().map(depth).max().unwrap_or(0),
+            _ => 0,
+        }
+    }
+
+    fn docx_with_body(body: &str) -> Vec<u8> {
+        let xml = format!(r#"<w:document xmlns:w="w" xmlns:r="r"><w:body>{body}</w:body></w:document>"#);
+        zip::build(&[("word/document.xml", xml.as_bytes())], false)
+    }
+
+    fn text_of(blocks: &[Block]) -> String {
+        json(blocks).to_string()
+    }
+
+    #[test]
+    fn deeply_nested_tables_are_read_flat_beyond_eight_levels() {
+        let _heavy = crate::importers::heavy();
+        let start = std::time::Instant::now();
+        // A million nested <w:tbl> (the reviewer's probe was millions): nothing recursive,
+        // nothing deeper than the cap, and the text inside survives.
+        let n = 500_000;
+        let body = format!("{}<w:p><w:r><w:t>deep text</w:t></w:r></w:p>{}", "<w:tbl><w:tr><w:tc>".repeat(n / 5), "</w:tc></w:tr></w:tbl>".repeat(n / 5));
+        let (d, _, _) = with_ctx(&[], |ctx| parse(docx_with_body(&body), ctx, "a.docx").unwrap());
+        let max = d.blocks.iter().map(depth).max().unwrap_or(0);
+        assert!(max <= 2 * MAX_TABLE_DEPTH + 2, "{max}");
+        assert!(text_of(&d.blocks).contains("deep text"));
+        let body = format!("{}<w:p><w:r><w:t>x</w:t></w:r></w:p>{}", "<w:tbl>".repeat(n), "</w:tbl>".repeat(n));
+        let _ = with_ctx(&[], |ctx| parse(docx_with_body(&body), ctx, "a.docx").unwrap());
+        // Paragraphs, hyperlinks, structured tags and simple fields nested without end.
+        let link = r#"<w:hyperlink r:id="nope">"#;
+        for open_close in [("<w:p>", "</w:p>"), (link, "</w:hyperlink>"), ("<w:sdt><w:sdtContent>", "</w:sdtContent></w:sdt>"), ("<w:fldSimple w:instr=\"x\">", "</w:fldSimple>")] {
+            let body = format!("<w:p>{}<w:r><w:t>kept</w:t></w:r>{}</w:p>", open_close.0.repeat(100_000), open_close.1.repeat(100_000));
+            let (d, _, _) = with_ctx(&[], |ctx| parse(docx_with_body(&body), ctx, "a.docx").unwrap());
+            assert!(text_of(&d.blocks).contains("kept"), "{}", open_close.0);
+        }
+        // Many runs inside many hyperlinks that have no link of their own: linear, not quadratic.
+        let body = format!("<w:p>{}{}</w:p>", link.repeat(30), "<w:r><w:t>a</w:t></w:r>".repeat(100_000));
+        let _ = with_ctx(&[], |ctx| parse(docx_with_body(&body), ctx, "a.docx").unwrap());
+        assert!(start.elapsed().as_secs() < 180, "{:?}", start.elapsed());
+    }
+
+    #[test]
+    fn a_word_document_keeps_at_most_the_page_limit_of_table_cells() {
+        let row = format!("<w:tr>{}</w:tr>", "<w:tc><w:p><w:r><w:t>c</w:t></w:r></w:p></w:tc>".repeat(100));
+        let body = format!("<w:tbl>{}</w:tbl>", row.repeat(1_500));
+        let (d, _, problems) = with_ctx(&[], |ctx| parse(docx_with_body(&body), ctx, "a.docx").unwrap());
+        let cells: usize = d.blocks.iter().map(|b| if let Block::Table(rows) = b { rows.iter().map(Vec::len).sum() } else { 0 }).sum();
+        assert!(cells <= doc::MAX_PAGE_CELLS, "{cells}");
+        assert!(problems.iter().any(|p| p.item.starts_with("Tables")), "{problems:?}");
+    }
+
+    #[test]
+    fn word_files_draw_on_the_shared_import_budget() {
+        let ((spent, left), _, _) = with_ctx(&[], |ctx| {
+            let before = ctx.vfs.budget().get();
+            parse(sample_docx(), ctx, "a.docx").unwrap();
+            (before - ctx.vfs.budget().get(), ctx.vfs.budget().get())
+        });
+        assert!(spent > 0 && left > 0);
+        // With the allowance used up the document cannot be read at all.
+        let (r, _, _) = with_ctx(&[], |ctx| {
+            ctx.vfs.budget().set(10);
+            parse(sample_docx(), ctx, "a.docx").err()
+        });
+        assert!(r.unwrap().contains("not a Word document"));
+    }
+
+    #[test]
+    fn a_stopped_import_stops_the_word_converter() {
+        let body = "<w:p><w:r><w:t>a</w:t></w:r></w:p>".repeat(100_000);
+        let vfs = crate::importers::source::Vfs::from_zip_bytes(zip::build(&[("a.md", b"x")], false)).unwrap();
+        let ctl = crate::importers::Control::expired();
+        let mut images = crate::importers::Images::default();
+        let mut problems = Vec::new();
+        let mut ctx = Ctx { vfs: &vfs, ctl: &ctl, dir: String::new(), images: &mut images, problems: &mut problems, name: "t".into() };
+        let d = parse(docx_with_body(&body), &mut ctx, "a.docx").unwrap();
+        assert!(d.blocks.len() < 100_000, "{}", d.blocks.len());
     }
 }

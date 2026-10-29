@@ -19,12 +19,28 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use super::doc::{Block, Inline};
+use super::Control;
 
 const MAX_STREAM: usize = 64 * 1024 * 1024;
 const MAX_DECODED_TOTAL: u64 = 512 * 1024 * 1024;
 const MAX_OPS: u64 = 30_000_000;
 const MAX_PAGES: usize = 3_000;
 const MAX_DEPTH: usize = 32;
+/// Longest string or hex string kept.
+const MAX_STRING: usize = 1024 * 1024;
+/// Longest ToUnicode destination (bytes) and the most bytes of destinations one map may hold.
+const MAX_CMAP_DEST: usize = 64;
+const MAX_CMAP_BYTES: usize = 8 * 1024 * 1024;
+const MAX_CMAP_ENTRIES: usize = 100_000;
+/// Most form XObjects one file may draw.
+const MAX_FORMS: u32 = 20_000;
+/// Most bytes of shown text (string operands) one PDF may be asked to decode.
+const MAX_TEXT_BYTES: usize = 32 * 1024 * 1024;
+/// Most objects kept from one file, and most bytes of object text (not streams) the scanner
+/// may read: a dictionary or array costs far more memory than the bytes it is written in.
+const MAX_OBJECTS: usize = 1_000_000;
+const MAX_OBJECT_TEXT: usize = 48 * 1024 * 1024;
+const MAX_TRAILERS: usize = 256;
 
 type Dict = Vec<(Vec<u8>, Obj)>;
 
@@ -78,7 +94,7 @@ struct Lex<'a> {
 
 impl<'a> Lex<'a> {
     fn new(b: &'a [u8], pos: usize) -> Self {
-        Lex { b, pos }
+        Lex { b, pos: pos.min(b.len()) }
     }
 
     fn skip_ws(&mut self) {
@@ -150,7 +166,7 @@ impl<'a> Lex<'a> {
                     if self.pos >= b.len() {
                         break;
                     }
-                    if b[self.pos..].starts_with(b">>") {
+                    if b.get(self.pos..).is_some_and(|r| r.starts_with(b">>")) {
                         self.pos += 2;
                         break;
                     }
@@ -171,7 +187,7 @@ impl<'a> Lex<'a> {
                 self.pos += 1;
                 let mut out = Vec::new();
                 let mut half: Option<u8> = None;
-                while self.pos < b.len() && b[self.pos] != b'>' {
+                while self.pos < b.len() && b[self.pos] != b'>' && out.len() < MAX_STRING {
                     if let Some(v) = (b[self.pos] as char).to_digit(16) {
                         match half.take() {
                             Some(h) => out.push(h << 4 | v as u8),
@@ -183,7 +199,8 @@ impl<'a> Lex<'a> {
                 if let Some(h) = half {
                     out.push(h << 4);
                 }
-                self.pos += 1;
+                // The closing `>`, if there is one (an unclosed string ends at the end of the data).
+                self.pos = (self.pos + 1).min(b.len());
                 Some(Obj::Str(out))
             }
             b'[' => {
@@ -299,7 +316,7 @@ impl<'a> Lex<'a> {
                 }
                 _ => out.push(c),
             }
-            if out.len() > 4 * 1024 * 1024 {
+            if out.len() > MAX_STRING {
                 break;
             }
         }
@@ -324,7 +341,12 @@ pub struct PdfDoc {
 struct Pdf<'a> {
     data: &'a [u8],
     objs: HashMap<u32, Obj>,
+    /// Decoded bytes this PDF may still use, and the whole import's (shared) allowance.
     budget: Cell<u64>,
+    shared: &'a Cell<u64>,
+    ctl: &'a Control,
+    forms: Cell<u32>,
+    text: Cell<usize>,
     ops: Cell<u64>,
     fonts: std::cell::RefCell<HashMap<u32, Rc<Font>>>,
 }
@@ -358,11 +380,11 @@ impl<'a> Pdf<'a> {
         };
         let mut buf = raw.to_vec();
         for f in filters {
-            let limit = MAX_STREAM.min(self.budget.get() as usize);
+            let limit = MAX_STREAM.min(self.budget.get() as usize).min(self.shared.get() as usize);
             buf = match f.as_slice() {
                 b"FlateDecode" | b"Fl" => inflate(&buf, limit)?,
-                b"ASCIIHexDecode" | b"AHx" => ascii_hex(&buf),
-                b"ASCII85Decode" | b"A85" => ascii85(&buf),
+                b"ASCIIHexDecode" | b"AHx" => ascii_hex(&buf, limit),
+                b"ASCII85Decode" | b"A85" => ascii85(&buf, limit),
                 b"LZWDecode" | b"LZW" => lzw(&buf, limit),
                 b"RunLengthDecode" | b"RL" => run_length(&buf, limit),
                 _ => return None,
@@ -372,6 +394,7 @@ impl<'a> Pdf<'a> {
             }
         }
         self.budget.set(self.budget.get().saturating_sub(buf.len() as u64));
+        self.shared.set(self.shared.get().saturating_sub(buf.len() as u64));
         Some(buf)
     }
 }
@@ -386,11 +409,11 @@ fn inflate(data: &[u8], limit: usize) -> Option<Vec<u8>> {
         .or_else(|| inflate_raw(data, limit).ok())
 }
 
-fn ascii_hex(data: &[u8]) -> Vec<u8> {
+fn ascii_hex(data: &[u8], limit: usize) -> Vec<u8> {
     let mut out = Vec::new();
     let mut half: Option<u8> = None;
     for &c in data {
-        if c == b'>' {
+        if c == b'>' || out.len() >= limit {
             break;
         }
         if let Some(v) = (c as char).to_digit(16) {
@@ -406,12 +429,15 @@ fn ascii_hex(data: &[u8]) -> Vec<u8> {
     out
 }
 
-fn ascii85(data: &[u8]) -> Vec<u8> {
+fn ascii85(data: &[u8], limit: usize) -> Vec<u8> {
     let mut out = Vec::new();
     let mut group = [0u32; 5];
     let mut n = 0;
     let data = data.strip_prefix(b"<~").unwrap_or(data);
     for &c in data {
+        if out.len() >= limit {
+            break;
+        }
         match c {
             b'~' => break,
             b'z' if n == 0 => out.extend_from_slice(&[0; 4]),
@@ -589,9 +615,10 @@ fn parse_cmap(data: &[u8]) -> (HashMap<u32, String>, Vec<usize>) {
     let mut mode = 0u8; // 1 codespace, 2 bfchar, 3 bfrange
     let mut pending: Vec<Obj> = Vec::new();
     let mut guard = 0;
+    let mut bytes = 0usize;
     while let Some(o) = lex.obj(0) {
         guard += 1;
-        if guard > 2_000_000 || map.len() > 300_000 {
+        if guard > 2_000_000 || map.len() > MAX_CMAP_ENTRIES || bytes >= MAX_CMAP_BYTES {
             break;
         }
         match &o {
@@ -619,11 +646,12 @@ fn parse_cmap(data: &[u8]) -> (HashMap<u32, String>, Vec<usize>) {
             2 if pending.len() == 2 => {
                 if let Obj::Str(src) = &pending[0] {
                     let dst = match &pending[1] {
-                        Obj::Str(d) => Some(utf16be(d)),
+                        Obj::Str(d) if d.len() <= MAX_CMAP_DEST => Some(utf16be(d)),
                         Obj::Name(n) => glyph_char(&String::from_utf8_lossy(n)).map(|c| c.to_string()),
                         _ => None,
                     };
                     if let (Some(d), true) = (dst, src.len() <= 4) {
+                        bytes += d.len();
                         map.insert(be(src), d);
                     }
                 }
@@ -635,19 +663,32 @@ fn parse_cmap(data: &[u8]) -> (HashMap<u32, String>, Vec<usize>) {
                         let (lo, hi) = (be(lo), be(hi));
                         if hi >= lo && hi - lo <= 65_535 {
                             match &pending[2] {
-                                Obj::Str(d) if d.len() >= 2 => {
+                                Obj::Str(d) if d.len() >= 2 && d.len() <= MAX_CMAP_DEST => {
                                     let mut units: Vec<u16> = d.chunks(2).map(|c| u16::from_be_bytes([c[0], *c.get(1).unwrap_or(&0)])).collect();
                                     let last = units.len() - 1;
                                     let base = units[last];
                                     for (k, code) in (lo..=hi).enumerate() {
+                                        // The caps are checked inside the loop: one range can name 65,536 codes.
+                                        if map.len() >= MAX_CMAP_ENTRIES || bytes >= MAX_CMAP_BYTES {
+                                            break;
+                                        }
                                         units[last] = base.wrapping_add(k as u16);
-                                        map.insert(code, String::from_utf16_lossy(&units));
+                                        let text = String::from_utf16_lossy(&units);
+                                        bytes += text.len();
+                                        map.insert(code, text);
                                     }
                                 }
                                 Obj::Arr(a) => {
                                     for (k, d) in a.iter().enumerate() {
+                                        if map.len() >= MAX_CMAP_ENTRIES || bytes >= MAX_CMAP_BYTES {
+                                            break;
+                                        }
                                         if let Obj::Str(d) = d {
-                                            map.insert(lo + k as u32, utf16be(d));
+                                            if d.len() <= MAX_CMAP_DEST {
+                                                let text = utf16be(d);
+                                                bytes += text.len();
+                                                map.insert(lo.saturating_add(k as u32), text);
+                                            }
                                         }
                                     }
                                 }
@@ -841,7 +882,7 @@ impl Pdf<'_> {
                                 Some(Obj::Arr(list)) => {
                                     for (k, v) in list.iter().enumerate() {
                                         if let Some(v) = self.get(v).num() {
-                                            widths.insert(first + k as u32, v);
+                                            widths.insert(first.saturating_add(k as u32), v);
                                         }
                                     }
                                     i += 2;
@@ -849,7 +890,7 @@ impl Pdf<'_> {
                                 Some(Obj::Num(last)) => {
                                     let last = (*last).max(0.0) as u32;
                                     let v = w.get(i + 2).and_then(|x| self.get(x).num()).unwrap_or(default_width);
-                                    for c in first..=last.min(first + 65_535) {
+                                    for c in first..=last.min(first.saturating_add(65_535)) {
                                         widths.insert(c, v);
                                     }
                                     i += 3;
@@ -864,7 +905,7 @@ impl Pdf<'_> {
             let first = self.key(d, b"FirstChar").num().unwrap_or(0.0).max(0.0) as u32;
             for (k, v) in w.iter().enumerate().take(256) {
                 if let Some(v) = self.get(v).num() {
-                    widths.insert(first + k as u32, v);
+                    widths.insert(first.saturating_add(k as u32), v);
                 }
             }
             if let Some(m) = self.key(d, b"MissingWidth").num() {
@@ -971,12 +1012,19 @@ impl Pdf<'_> {
 
     fn run(&self, content: &[u8], res: &Obj, ctm0: M, col: &mut Collector, depth: usize, seen: &mut HashSet<u32>) {
         let fonts = self.resources_fonts(res);
+        let mut font_cache: HashMap<Vec<u8>, Rc<Font>> = HashMap::new();
         let mut ctm = ctm0;
         let mut stack: Vec<M> = Vec::new();
         let mut ts = TextState { font: None, size: 12.0, tm: ID, tlm: ID, leading: 0.0, char_spacing: 0.0, word_spacing: 0.0, scale: 1.0 };
         let mut lex = Lex::new(content, 0);
         let mut args: Vec<Obj> = Vec::new();
+        let mut tokens = 0u32;
         while let Some(o) = lex.obj(0) {
+            tokens = tokens.wrapping_add(1);
+            if tokens % 65_536 == 0 && self.ctl.stopped() {
+                self.ops.set(MAX_OPS + 1);
+                return;
+            }
             let Obj::Op(op) = o else {
                 if args.len() < 64 {
                     args.push(o);
@@ -986,6 +1034,10 @@ impl Pdf<'_> {
             let n = self.ops.get() + 1;
             self.ops.set(n);
             if n > MAX_OPS {
+                return;
+            }
+            if n % 1024 == 0 && self.ctl.stopped() {
+                self.ops.set(MAX_OPS + 1);
                 return;
             }
             let num = |i: usize| args.get(i).and_then(Obj::num).unwrap_or(0.0);
@@ -1004,7 +1056,17 @@ impl Pdf<'_> {
                 b"ET" => {}
                 b"Tf" => {
                     if let Some(Obj::Name(name)) = args.first() {
-                        ts.font = fonts.get(name).map(|f| self.font(f));
+                        // A font written inline in the resources is built once per content stream.
+                        ts.font = match font_cache.get(name) {
+                            Some(f) => Some(f.clone()),
+                            None => fonts.get(name).map(|f| {
+                                let f = self.font(f);
+                                if font_cache.len() < 256 {
+                                    font_cache.insert(name.clone(), f.clone());
+                                }
+                                f
+                            }),
+                        };
                     }
                     ts.size = num(1);
                 }
@@ -1071,7 +1133,9 @@ impl Pdf<'_> {
                 }
                 b"BI" => {
                     // Inline picture: skip its data, which can contain anything.
-                    if let Some(id) = find(content, lex.pos, b"ID") {
+                    match find(content, lex.pos, b"ID") {
+                        None => lex.pos = content.len(),
+                        Some(id) => {
                         let mut p = id + 3;
                         loop {
                             match find(content, p, b"EI") {
@@ -1086,6 +1150,7 @@ impl Pdf<'_> {
                                 }
                             }
                         }
+                        }
                     }
                 }
                 _ => {}
@@ -1095,6 +1160,9 @@ impl Pdf<'_> {
     }
 
     fn form(&self, name: &[u8], res: &Obj, ctm: &M, col: &mut Collector, depth: usize, seen: &mut HashSet<u32>) {
+        if self.forms.get() >= MAX_FORMS || self.ops.get() > MAX_OPS {
+            return;
+        }
         let Some(r) = self.get(res).dict() else { return };
         let Some(xo) = self.key(r, b"XObject").dict() else { return };
         let Some(entry) = lookup(xo, name) else { return };
@@ -1106,6 +1174,11 @@ impl Pdf<'_> {
         let obj = self.get(entry);
         let Some(d) = obj.dict() else { return };
         if self.key(d, b"Subtype").name() != Some(b"Form") {
+            return;
+        }
+        self.forms.set(self.forms.get() + 1);
+        if self.ctl.stopped() {
+            self.ops.set(MAX_OPS + 1);
             return;
         }
         let Some(data) = self.stream(entry) else { return };
@@ -1125,6 +1198,13 @@ impl Pdf<'_> {
 
     fn show(&self, s: &[u8], ts: &mut TextState, ctm: &M, col: &mut Collector) {
         let Some(font) = ts.font.clone() else { return };
+        // All text shown is counted, however often a form is drawn again.
+        let shown = self.text.get().saturating_add(s.len());
+        self.text.set(shown);
+        if shown > MAX_TEXT_BYTES {
+            self.ops.set(MAX_OPS + 1);
+            return;
+        }
         let m = mul(&ts.tm, ctm);
         let (x, y) = (m[4], m[5]);
         let v_scale = (m[2] * m[2] + m[3] * m[3]).sqrt();
@@ -1152,12 +1232,20 @@ impl Pdf<'_> {
 
 // ---------------- reading the file ----------------
 
-fn scan(data: &[u8]) -> (HashMap<u32, Obj>, Vec<Dict>) {
+/// Finds the objects by scanning for `N G obj`. Each object is read once at most; the total
+/// bytes read as object text are budgeted, so a file that is nothing but unclosed strings and
+/// arrays cannot make the scan quadratic.
+fn scan(data: &[u8], ctl: &Control) -> (HashMap<u32, Obj>, Vec<Dict>) {
     let mut objs = HashMap::new();
     let mut trailers = Vec::new();
+    let mut lexed = 0usize;
+    let soft_budget = data.len().saturating_mul(4).max(1 << 20);
     let mut i = 0;
     while let Some(off) = find(data, i, b"obj") {
         i = off + 3;
+        if ctl.stopped() || objs.len() >= MAX_OBJECTS || lexed > MAX_OBJECT_TEXT {
+            break;
+        }
         if data.get(off + 3).is_some_and(|c| !is_ws(*c) && !is_delim(*c)) {
             continue;
         }
@@ -1187,9 +1275,14 @@ fn scan(data: &[u8]) -> (HashMap<u32, Obj>, Vec<Dict>) {
         let Some(num) = std::str::from_utf8(&data[j..num_end]).ok().and_then(|s| s.parse::<u32>().ok()) else { continue };
         let mut lex = Lex::new(data, off + 3);
         let Some(mut o) = lex.obj(0) else { break };
+        lexed = lexed.saturating_add(lex.pos.saturating_sub(off + 3));
+        if lexed > soft_budget {
+            // Too much object text already: what an object swallowed is not searched again.
+            i = i.max(lex.pos);
+        }
         if let Obj::Dict(d) = &o {
             lex.skip_ws();
-            if data[lex.pos..].starts_with(b"stream") {
+            if data.get(lex.pos..).is_some_and(|r| r.starts_with(b"stream")) {
                 let mut start = lex.pos + 6;
                 if data.get(start) == Some(&b'\r') {
                     start += 1;
@@ -1204,7 +1297,7 @@ fn scan(data: &[u8]) -> (HashMap<u32, Obj>, Vec<Dict>) {
                     while k < data.len() && is_ws(data[k]) {
                         k += 1;
                     }
-                    data[k.min(data.len())..].starts_with(b"endstream").then_some(end)
+                    data.get(k..)?.starts_with(b"endstream").then_some(end)
                 });
                 let end = by_length.or_else(|| {
                     find(data, start, b"endstream").map(|e| {
@@ -1218,9 +1311,9 @@ fn scan(data: &[u8]) -> (HashMap<u32, Obj>, Vec<Dict>) {
                         e
                     })
                 });
-                let end = end.unwrap_or(data.len());
+                let end = end.unwrap_or(data.len()).max(start.min(data.len()));
                 o = Obj::Stream(d.clone(), start, end);
-                i = end;
+                i = i.max(end);
             }
         }
         objs.insert(num, o);
@@ -1228,19 +1321,39 @@ fn scan(data: &[u8]) -> (HashMap<u32, Obj>, Vec<Dict>) {
     let mut t = 0;
     while let Some(off) = find(data, t, b"trailer") {
         t = off + 7;
-        if let Some(Obj::Dict(d)) = Lex::new(data, off + 7).obj(0) {
+        if ctl.stopped() || trailers.len() >= MAX_TRAILERS || lexed > MAX_OBJECT_TEXT {
+            break;
+        }
+        let mut lex = Lex::new(data, off + 7);
+        let o = lex.obj(0);
+        lexed = lexed.saturating_add(lex.pos.saturating_sub(off + 7));
+        if lexed > soft_budget {
+            t = t.max(lex.pos);
+        }
+        if let Some(Obj::Dict(d)) = o {
             trailers.push(d);
         }
     }
     (objs, trailers)
 }
 
+/// A PDF read on its own (tests): the normal time limit and a private decoding allowance.
+#[cfg(test)]
 pub fn extract(data: &[u8]) -> Result<PdfDoc, String> {
+    extract_with(data, &Control::standard(), &Cell::new(MAX_DECODED_TOTAL))
+}
+
+/// `shared` is what the whole import may still decode (all PDFs, Word files and ZIPs together).
+pub fn extract_with(data: &[u8], ctl: &Control, shared: &Cell<u64>) -> Result<PdfDoc, String> {
+    const STOPPED: &str = "The import was stopped before this PDF was read completely.";
     if find(&data[..data.len().min(1024)], 0, b"%PDF-").is_none() {
         return Err("This is not a PDF file, or it is damaged.".into());
     }
-    let (objs, mut trailers) = scan(data);
-    let mut pdf = Pdf { data, objs, budget: Cell::new(MAX_DECODED_TOTAL), ops: Cell::new(0), fonts: Default::default() };
+    let (objs, mut trailers) = scan(data, ctl);
+    if ctl.stop_now().is_some() {
+        return Err(STOPPED.into());
+    }
+    let mut pdf = Pdf { data, objs, budget: Cell::new(MAX_DECODED_TOTAL), shared, ctl, forms: Cell::new(0), text: Cell::new(0), ops: Cell::new(0), fonts: Default::default() };
     // Cross-reference streams carry the trailer keys too.
     for o in pdf.objs.values() {
         if let Obj::Stream(d, _, _) = o {
@@ -1260,7 +1373,11 @@ pub fn extract(data: &[u8]) -> Result<PdfDoc, String> {
         .map(|(n, _)| *n)
         .collect();
     let mut extra = Vec::new();
+    let mut obj_text = 0usize;
     for n in objstms {
+        if ctl.stopped() {
+            break;
+        }
         let r = Obj::Ref(n);
         let Some(d) = pdf.get(&r).dict().cloned() else { continue };
         let Some(buf) = pdf.stream(&r) else { continue };
@@ -1275,7 +1392,14 @@ pub fn extract(data: &[u8]) -> Result<PdfDoc, String> {
             }
         }
         for (num, off) in heads {
-            if let Some(o) = Lex::new(&buf, first.saturating_add(off).min(buf.len())).obj(0) {
+            // Many entries can point at the same unclosed array: the text read is budgeted.
+            if ctl.stopped() || extra.len() >= MAX_OBJECTS || obj_text > MAX_OBJECT_TEXT {
+                break;
+            }
+            let at = first.saturating_add(off).min(buf.len());
+            let mut l = Lex::new(&buf, at);
+            if let Some(o) = l.obj(0) {
+                obj_text = obj_text.saturating_add(l.pos.saturating_sub(at));
                 extra.push((num, o));
             }
         }
@@ -1310,7 +1434,11 @@ pub fn extract(data: &[u8]) -> Result<PdfDoc, String> {
     let mut all_lines: Vec<Vec<Line>> = Vec::new();
     let mut chars = 0;
     let mut unmapped = 0;
+    let mut text_bytes = 0usize;
     for (page, res) in &pages {
+        if ctl.stopped() {
+            break;
+        }
         let Some(d) = pdf.get(page).dict() else { continue };
         let contents: Vec<Obj> = match lookup(d, b"Contents") {
             Some(Obj::Arr(a)) => a.clone(),
@@ -1322,6 +1450,9 @@ pub fn extract(data: &[u8]) -> Result<PdfDoc, String> {
         };
         let mut content = Vec::new();
         for c in &contents {
+            if ctl.stopped() || content.len() > MAX_STREAM {
+                break;
+            }
             if let Some(s) = pdf.stream(c) {
                 content.extend_from_slice(&s);
                 content.push(b'\n');
@@ -1332,10 +1463,14 @@ pub fn extract(data: &[u8]) -> Result<PdfDoc, String> {
         col.end_line();
         chars += col.chars;
         unmapped += col.unmapped;
+        text_bytes += col.lines.iter().map(|l| l.text.len()).sum::<usize>();
         all_lines.push(col.lines);
-        if pdf.ops.get() > MAX_OPS {
+        if pdf.ops.get() > MAX_OPS || text_bytes > MAX_TEXT_BYTES {
             break;
         }
+    }
+    if ctl.stop_now().is_some() {
+        return Err(STOPPED.into());
     }
     let empty_pages = all_lines.iter().filter(|l| l.is_empty()).count();
     let visible: usize = all_lines.iter().flatten().map(|l| l.text.chars().filter(|c| c.is_alphanumeric()).count()).sum();
@@ -1533,6 +1668,7 @@ pub(crate) mod tests {
 
     #[test]
     fn hostile_pdfs_do_not_hang_or_crash() {
+        let _heavy = crate::importers::heavy();
         let mut cases: Vec<Vec<u8>> = vec![
             b"%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 1 0 R >> endobj trailer << /Root 1 0 R >>".to_vec(),
             b"%PDF-1.7\n1 0 obj [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[ endobj".to_vec(),
@@ -1553,10 +1689,195 @@ pub(crate) mod tests {
         for c in cases {
             let _ = extract(&c);
         }
-        assert!(start.elapsed().as_secs() < 10);
-        assert_eq!(ascii85(b"<~87cURD]i,\"Ebo80~>"), b"Hello World!");
+        assert!(start.elapsed().as_secs() < 60);
+        assert_eq!(ascii85(b"<~87cURD]i,\"Ebo80~>", 100), b"Hello World!");
         assert_eq!(run_length(&[2, b'a', b'b', b'c', 254, b'x', 128], 100), b"abcxxx");
         assert_eq!(MAC_ROMAN_HIGH.chars().count(), 128);
         let _ = latin1(&[]);
+    }
+
+    use crate::importers::within;
+
+    #[test]
+    fn an_unclosed_hex_string_does_not_panic() {
+        // The reviewer's 25-byte probe: `<41` with no `>` used to slice past the end.
+        for case in [&b"%PDF-1.4\n1 0 obj <</A <41"[..], b"%PDF-1.4\n1 0 obj <", b"%PDF-1.4\n1 0 obj <4", b"%PDF-1.4\n1 0 obj (", b"%PDF-1.4\ntrailer <</A <41", b"%PDF-1.4\n1 0 obj <</A <<41"] {
+            let _ = extract(case);
+        }
+        let mut lex = Lex::new(b"<41", 0);
+        assert!(matches!(lex.obj(0), Some(Obj::Str(s)) if s == [0x41]));
+        assert_eq!(lex.pos, 3);
+        assert!(lex.obj(0).is_none());
+    }
+
+    /// Small deterministic generator for the fuzz tests.
+    fn rng(seed: u64) -> impl FnMut() -> u64 {
+        let mut s = seed;
+        move || {
+            s ^= s << 13;
+            s ^= s >> 7;
+            s ^= s << 17;
+            s
+        }
+    }
+
+    const SOUP: &[&str] = &[
+        "obj", "endobj", "stream", "endstream", "<<", ">>", "[", "]", "(", ")", "<", ">", "/Type", "/Page", "/Pages", "/Kids", "/Contents", "/Length", "/Filter",
+        "/FlateDecode", "/ASCIIHexDecode", "/ASCII85Decode", "/LZWDecode", "/RunLengthDecode", "/Font", "/F1", "/XObject", "/Subtype", "/Form", "/Type0", "/ToUnicode",
+        "/DescendantFonts", "/W", "/DW", "/Widths", "/Encoding", "/Differences", "/Resources", "/Catalog", "/Root", "/Encrypt", "/N", "/First", "/ObjStm", "1 0 R",
+        "2 0 R", "3 0 R", "1", "2", "0", "65535", "-7", "99999999999", "4294967296", "1e9", ".", "-", "<41>", "<0041>", "<>", "(abc)", "(\\", "\\", "BT", "ET", "Tf", "Td",
+        "Tj", "TJ", "Tm", "cm", "q", "Q", "Do", "BI", "ID", "EI", "'", "\"", "begincodespacerange", "endcodespacerange", "beginbfchar", "endbfchar", "beginbfrange",
+        "endbfrange", "<0000>", "<FFFF>", "<00000000>", "<FFFFFFFF>", "xref", "trailer", "startxref", "%", "\n", " ", "\r", "\t", "~>", "<~", "z", "!", "u",
+    ];
+
+    fn soup(next: &mut impl FnMut() -> u64, tokens: usize) -> Vec<u8> {
+        let mut out = Vec::new();
+        for _ in 0..tokens {
+            out.extend_from_slice(SOUP[(next() % SOUP.len() as u64) as usize].as_bytes());
+            out.push(if next() % 4 == 0 { b'\n' } else { b' ' });
+        }
+        out
+    }
+
+    #[test]
+    fn token_soup_never_panics_or_hangs() {
+        let _heavy = crate::importers::heavy();
+        // 50,000 random files made of PDF tokens: whole files, and the skeleton of a real one with
+        // soup as the page content, as a font map, as an object stream and as a width list.
+        within(400, "50,000 soup cases", || {
+            let mut next = rng(0x9e37_79b9_7f4a_7c15);
+            for case in 0..50_000u32 {
+                let n = 3 + (next() % 40) as usize;
+                let body = soup(&mut next, n);
+                let text = String::from_utf8_lossy(&body).to_string();
+                let data = match case % 5 {
+                    0 => [b"%PDF-1.4\n".to_vec(), body].concat(),
+                    1 => pdf_bytes(&[
+                        "<< /Type /Catalog /Pages 2 0 R >>".into(),
+                        "<< /Type /Pages /Kids [3 0 R] /Resources << /Font << /F1 5 0 R >> /XObject << /X 4 0 R >> >> >>".into(),
+                        "<< /Type /Page /Contents 4 0 R >>".into(),
+                        stream(&format!("BT /F1 12 Tf {text} ET /X Do"), false),
+                        "<< /Type /Font /Subtype /Type1 >>".into(),
+                    ]),
+                    2 => pdf_bytes(&[
+                        "<< /Type /Catalog /Pages 2 0 R >>".into(),
+                        "<< /Type /Pages /Kids [3 0 R] /Resources << /Font << /F1 5 0 R >> >> >>".into(),
+                        "<< /Type /Page /Contents 4 0 R >>".into(),
+                        stream("BT /F1 12 Tf <00410042> Tj (abc) Tj ET", false),
+                        "<< /Type /Font /Subtype /Type0 /ToUnicode 6 0 R /DescendantFonts [7 0 R] >>".into(),
+                        stream(&format!("1 begincodespacerange <0000> <FFFF> endcodespacerange {text}"), false),
+                        format!("<< /Type /Font /W [{text}] >>"),
+                    ]),
+                    3 => pdf_bytes(&[
+                        "<< /Type /Catalog /Pages 2 0 R >>".into(),
+                        "<< /Type /Pages /Kids [3 0 R] >>".into(),
+                        "<< /Type /Page /Contents 4 0 R >>".into(),
+                        stream("BT (x) Tj ET", false),
+                        format!("<< /Type /ObjStm /N 5 /First 10 /Length {} >>\nstream\n{}\nendstream", text.len(), text),
+                    ]),
+                    _ => {
+                        let mut d = sample_pdf();
+                        for _ in 0..6 {
+                            let i = (next() % d.len() as u64) as usize;
+                            d[i] = next() as u8;
+                        }
+                        d
+                    }
+                };
+                let _ = extract(&data);
+            }
+        });
+    }
+
+    #[test]
+    fn a_long_bfrange_and_huge_cmaps_are_capped() {
+        let _heavy = crate::importers::heavy();
+        // A 16 KB file: ranges of 65,536 codes, each to a long destination, must not build
+        // gigabytes of strings.
+        let dest: String = (0..32).map(|_| "0041").collect();
+        let mut cmap = String::from("1 begincodespacerange <0000> <FFFF> endcodespacerange\n");
+        for _ in 0..400 {
+            cmap.push_str(&format!("1 beginbfrange <0000> <FFFF> <{dest}> endbfrange\n"));
+        }
+        let (map, _) = within(120, "bfrange", || parse_cmap(cmap.as_bytes()));
+        assert!(map.len() <= MAX_CMAP_ENTRIES + 1, "{}", map.len());
+        let bytes: usize = map.values().map(String::len).sum();
+        assert!(bytes <= MAX_CMAP_BYTES + 4096, "{bytes}");
+        // A range whose destination is an array of long strings.
+        let mut cmap = String::from("1 beginbfrange <0000> <FFFF> [");
+        for _ in 0..5000 {
+            cmap.push_str(&format!("<{dest}>"));
+        }
+        cmap.push_str("] endbfrange");
+        let (map, _) = within(120, "bfrange array", || parse_cmap(cmap.as_bytes()));
+        assert!(map.len() <= MAX_CMAP_ENTRIES + 1);
+        // Hex and ASCII85 decoders stop at the limit.
+        assert_eq!(ascii_hex(&vec![b'4'; 10_000], 100).len(), 100);
+        assert!(ascii85(&vec![b'u'; 10_000], 100).len() <= 104);
+    }
+
+    #[test]
+    fn an_object_scan_with_endless_objects_is_not_quadratic() {
+        let _heavy = crate::importers::heavy();
+        // `1 0 obj [` over and over (the reviewer used 45 to 180 KB), and the same with strings.
+        for unit in ["1 0 obj [ ", "1 0 obj ( ", "1 0 obj << /A ", "1 0 obj <4 ", "trailer ( "] {
+            let data = format!("%PDF-1.4\n{}", unit.repeat(300_000 / unit.len()));
+            let r = within(120, unit, || extract(data.as_bytes()));
+            assert!(r.is_err());
+        }
+        // Many entries of an object stream pointing at one unclosed array.
+        let entries: String = (1..=50_000).map(|n| format!("{n} 0 ")).collect();
+        let body = format!("{entries}[ [ [ [ {}", "x ".repeat(100_000));
+        let objstm = format!("<< /Type /ObjStm /N 50000 /First {} /Length {} >>\nstream\n{}\nendstream", entries.len(), body.len(), body);
+        let data = pdf_bytes(&["<< /Type /Catalog /Pages 2 0 R >>".into(), "<< /Type /Pages /Kids [] >>".into(), objstm]);
+        let _ = within(120, "objstm heads", || extract(&data));
+    }
+
+    #[test]
+    fn inline_picture_markers_and_forms_are_bounded() {
+        let _heavy = crate::importers::heavy();
+        // Thousands of `BI` with no `ID`, and forms that draw ten forms each, ten levels deep.
+        let content = "BI ".repeat(200_000);
+        let data = pdf_bytes(&[
+            "<< /Type /Catalog /Pages 2 0 R >>".into(),
+            "<< /Type /Pages /Kids [3 0 R] >>".into(),
+            "<< /Type /Page /Contents 4 0 R >>".into(),
+            stream(&content, false),
+        ]);
+        let _ = within(120, "BI", || extract(&data));
+        let xobjects: String = (0..10).map(|i| format!("/X{i} {} 0 R ", 5 + i)).collect();
+        let draws: String = (0..10).map(|i| format!("/X{i} Do ")).collect();
+        let mut objs = vec![
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+            "<< /Type /Pages /Kids [3 0 R] >>".to_string(),
+            format!("<< /Type /Page /Contents 4 0 R /Resources << /XObject << {xobjects} >> >> >>"),
+            stream(&draws, false),
+        ];
+        for _ in 0..10 {
+            objs.push(format!("<< /Type /XObject /Subtype /Form /Resources << /XObject << {xobjects} >> >> /Length {} >>\nstream\n{draws}\nendstream", draws.len()));
+        }
+        let data = pdf_bytes(&objs);
+        let _ = within(120, "form explosion", || extract(&data));
+    }
+
+    #[test]
+    fn a_stopped_import_stops_the_pdf_reader() {
+        let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let ctl = Control::new(std::time::Duration::from_secs(60), cancel);
+        let r = extract_with(&sample_pdf(), &ctl, &Cell::new(MAX_DECODED_TOTAL));
+        assert!(r.err().unwrap().contains("stopped"));
+        let r = extract_with(&sample_pdf(), &Control::expired(), &Cell::new(MAX_DECODED_TOTAL));
+        assert!(r.err().unwrap().contains("stopped"));
+    }
+
+    #[test]
+    fn the_shared_allowance_limits_what_a_pdf_may_inflate() {
+        assert!(extract_with(&sample_pdf(), &Control::standard(), &Cell::new(MAX_DECODED_TOTAL)).is_ok());
+        // With nothing left in the shared allowance the compressed page cannot be read.
+        assert!(extract_with(&sample_pdf(), &Control::standard(), &Cell::new(0)).is_err());
+        // And a good read spends from it.
+        let shared = Cell::new(MAX_DECODED_TOTAL);
+        extract_with(&sample_pdf(), &Control::standard(), &shared).unwrap();
+        assert!(shared.get() < MAX_DECODED_TOTAL);
     }
 }

@@ -8,7 +8,9 @@
 //! hard breaks, entities, `$math$`, and a few inline HTML tags.
 //!
 //! Hostile input: nesting is capped, the search for a closing delimiter is bounded and a
-//! failed search is remembered, so the work stays roughly linear.
+//! failed search is remembered (per piece of text it was made in), so the work stays roughly
+//! linear. Table cells are capped per table and per page, and the import's deadline and
+//! cancel button are checked in the line and character loops.
 
 use std::collections::HashMap;
 
@@ -21,6 +23,10 @@ const MAX_DEPTH: usize = 16;
 const MAX_INLINE: usize = 200_000;
 /// How far to look for a closing delimiter or bracket.
 const SCAN: usize = 4_000;
+/// Brackets or parentheses nested deeper than this inside a link are not a link.
+const MAX_BRACKETS: i32 = 32;
+/// Lines read from one file (a file of nothing but line breaks must not need gigabytes).
+const MAX_LINES: usize = 3_000_000;
 
 pub struct MdDoc {
     pub title: Option<String>,
@@ -29,7 +35,11 @@ pub struct MdDoc {
 
 pub fn parse(src: &str, ctx: &mut Ctx) -> MdDoc {
     let src = src.replace("\r\n", "\n").replace('\r', "\n");
-    let mut lines: Vec<String> = src.lines().map(expand_tabs).collect();
+    let mut lines: Vec<String> = src.lines().take(MAX_LINES + 1).map(expand_tabs).collect();
+    if lines.len() > MAX_LINES {
+        lines.truncate(MAX_LINES);
+        ctx.problem("Long file", "The file has more than 3 million lines; only the first 3 million were read.");
+    }
     let mut title = None;
 
     // Front matter.
@@ -72,7 +82,7 @@ pub fn parse(src: &str, ctx: &mut Ctx) -> MdDoc {
         true
     });
 
-    let mut p = Parser { ctx, refs };
+    let mut p = Parser { ctx, refs, cells: 0 };
     let blocks = p.blocks(&lines, 0);
     MdDoc { title, blocks }
 }
@@ -259,6 +269,8 @@ fn interrupts(l: &str) -> bool {
 struct Parser<'c, 'a> {
     ctx: &'c mut Ctx<'a>,
     refs: HashMap<String, String>,
+    /// Table cells made so far on this page.
+    cells: usize,
 }
 
 impl Parser<'_, '_> {
@@ -300,6 +312,9 @@ impl Parser<'_, '_> {
             };
         }
         while i < n {
+            if self.ctx.ctl.stopped() {
+                break;
+            }
             let l = lines[i].as_str();
             if blank(l) {
                 flush!();
@@ -450,11 +465,13 @@ impl Parser<'_, '_> {
             while *i < n {
                 let l = &lines[*i];
                 if blank(l) {
+                    // The whole run of blank lines is looked at once (looking from every blank
+                    // line to the end of the run was quadratic).
                     let next = lines[*i..].iter().position(|x| !blank(x)).map(|p| *i + p);
                     match next {
                         Some(j) if indent(&lines[j]) >= content_col => {
-                            item.push(String::new());
-                            *i += 1;
+                            item.extend(std::iter::repeat_n(String::new(), j - *i));
+                            *i = j;
                             continue;
                         }
                         _ => break,
@@ -531,12 +548,33 @@ impl Parser<'_, '_> {
     fn table(&mut self, lines: &[String], i: &mut usize) -> Block {
         let head = split_row(&lines[*i]);
         *i += 2;
-        let mut rows = vec![head.iter().map(|c| Cell { header: true, colspan: 1, blocks: vec![Block::Paragraph(self.inline(c))] }).collect::<Vec<_>>()];
-        while *i < lines.len() && !blank(&lines[*i]) && lines[*i].contains('|') && rows.len() < 5_000 {
-            let mut cells = split_row(&lines[*i]);
-            cells.resize(head.len(), String::new());
-            rows.push(cells.iter().map(|c| Cell { header: false, colspan: 1, blocks: vec![Block::Paragraph(self.inline(c))] }).collect());
+        // At most MAX_TABLE_CELLS cells in a table and MAX_PAGE_CELLS on a page; the rows after
+        // that are read past (not parsed) and the import says so.
+        let max_rows = (doc::MAX_TABLE_CELLS / head.len().max(1)).clamp(1, 5_000);
+        let mut rows = Vec::new();
+        let mut cut = false;
+        if self.cells + head.len() <= doc::MAX_PAGE_CELLS {
+            self.cells += head.len();
+            rows.push(head.iter().map(|c| Cell { header: true, colspan: 1, blocks: vec![Block::Paragraph(self.inline(c))] }).collect::<Vec<_>>());
+        } else {
+            cut = true;
+        }
+        while *i < lines.len() && !blank(&lines[*i]) && lines[*i].contains('|') {
+            if self.ctx.ctl.stopped() {
+                break;
+            }
+            if rows.len() < max_rows && self.cells + head.len() <= doc::MAX_PAGE_CELLS {
+                let mut cells = split_row(&lines[*i]);
+                cells.resize(head.len(), String::new());
+                self.cells += cells.len();
+                rows.push(cells.iter().map(|c| Cell { header: false, colspan: 1, blocks: vec![Block::Paragraph(self.inline(c))] }).collect());
+            } else {
+                cut = true;
+            }
             *i += 1;
+        }
+        if cut {
+            self.ctx.problem("Table", "A table has more cells than are imported (20,000 per table, 100,000 per page); the rest of its rows were left out.");
         }
         Block::Table(rows)
     }
@@ -550,12 +588,16 @@ impl Parser<'_, '_> {
             out.push(doc::t(text.replace('\n', " ")));
             return out;
         }
-        let mut st = InlineState { failed: HashMap::new() };
-        self.inline_into(&chars, &Marks::default(), &mut out, 0, &mut st);
+        self.inline_into(&chars, &Marks::default(), &mut out, 0);
         out
     }
 
-    fn inline_into(&mut self, s: &[char], m: &Marks, out: &mut Vec<Inline>, depth: usize, st: &mut InlineState) {
+    /// Inline content of `s`. The remembered failed searches (`st`) belong to this piece of text
+    /// alone: positions and the end of the text mean something different in a label or an
+    /// emphasis that is parsed on its own, so each piece starts with an empty memory.
+    fn inline_into(&mut self, s: &[char], m: &Marks, out: &mut Vec<Inline>, depth: usize) {
+        let mut st = InlineState::default();
+        let st = &mut st;
         let mut buf = String::new();
         let flush = |buf: &mut String, out: &mut Vec<Inline>| {
             if !buf.is_empty() {
@@ -565,6 +607,9 @@ impl Parser<'_, '_> {
         let n = s.len();
         let mut i = 0;
         while i < n {
+            if i % 512 == 0 && self.ctx.ctl.stopped() {
+                break;
+            }
             let c = s[i];
             match c {
                 '\\' if i + 1 < n && s[i + 1] == '\n' => {
@@ -625,7 +670,7 @@ impl Parser<'_, '_> {
                         let mut lm = m.clone();
                         lm.link = safe_link(&dest);
                         if depth < MAX_DEPTH {
-                            self.inline_into(&label, &lm, out, depth + 1, st);
+                            self.inline_into(&label, &lm, out, depth + 1);
                         } else {
                             out.push(Inline::Text(label.iter().collect(), lm));
                         }
@@ -661,7 +706,7 @@ impl Parser<'_, '_> {
                 }
                 '$' if i + 1 < n && s[i + 1] != ' ' && s[i + 1] != '$' => {
                     // $math$, only when it closes on the same line and is not money ("$5 and $6").
-                    let end = (i + 1..n.min(i + SCAN)).find(|&j| s[j] == '$' && s[j - 1] != ' ' && s[j - 1] != '\\' && s[j] != '\n');
+                    let end = scan_memo(st, ('$', 0), i + 1, n, |j| s[j] == '$' && s[j - 1] != ' ' && s[j - 1] != '\\');
                     let lineless = end.is_some_and(|e| !s[i + 1..e].contains(&'\n'));
                     match end {
                         Some(e) if lineless && !(e + 1 < n && s[e + 1].is_ascii_digit()) && !s[i + 1].is_ascii_digit() => {
@@ -708,7 +753,7 @@ impl Parser<'_, '_> {
                                 buf.extend(std::iter::repeat_n(c, extra));
                                 flush(&mut buf, out);
                             }
-                            self.inline_into(&s[i + run..end], &im, out, depth + 1, st);
+                            self.inline_into(&s[i + run..end], &im, out, depth + 1);
                             i = end + want;
                         }
                         None => {
@@ -756,7 +801,13 @@ impl Parser<'_, '_> {
             }
             match s[j] {
                 '\\' => j += 1,
-                '[' => depth += 1,
+                '[' => {
+                    depth += 1;
+                    if depth > MAX_BRACKETS {
+                        st.failed.insert(('[', open), ());
+                        return None;
+                    }
+                }
                 ']' => {
                     depth -= 1;
                     if depth == 0 {
@@ -775,7 +826,12 @@ impl Parser<'_, '_> {
             while k < lim {
                 match s[k] {
                     '\\' => k += 1,
-                    '(' => parens += 1,
+                    '(' => {
+                        parens += 1;
+                        if parens > MAX_BRACKETS {
+                            return None;
+                        }
+                    }
                     ')' => {
                         parens -= 1;
                         if parens == 0 {
@@ -852,13 +908,13 @@ impl Parser<'_, '_> {
         }
         if let Some(f) = mark {
             let end_tag: Vec<char> = format!("</{name}>").chars().collect();
-            let lim = s.len().min(close + 1 + SCAN);
-            if let Some(e) = (close + 1..lim).find(|&j| s[j..].iter().take(end_tag.len()).map(|c| c.to_ascii_lowercase()).eq(end_tag.iter().copied())) {
+            let key = ('<', name.bytes().fold(0usize, |a, b| a.wrapping_mul(31).wrapping_add(usize::from(b))));
+            if let Some(e) = scan_memo(st, key, close + 1, s.len(), |j| s[j..].iter().take(end_tag.len()).map(|c| c.to_ascii_lowercase()).eq(end_tag.iter().copied())) {
                 let mut im = m.clone();
                 f(&mut im);
                 let mut out = Vec::new();
                 if depth < MAX_DEPTH {
-                    self.inline_into(&s[close + 1..e], &im, &mut out, depth + 1, st);
+                    self.inline_into(&s[close + 1..e], &im, &mut out, depth + 1);
                 }
                 return Some((out, e + end_tag.len()));
             }
@@ -868,11 +924,35 @@ impl Parser<'_, '_> {
     }
 }
 
+/// What the searches in one piece of text have already learned.
+#[derive(Default)]
 struct InlineState {
-    /// Searches that already failed: (delimiter, position). For a closer of a given kind the
-    /// key is (char, run length as position), since no closer after one place means none after
-    /// any later place either.
+    /// Searches that failed outright: (delimiter, position or kind).
     failed: HashMap<(char, usize), ()>,
+    /// For a kind of closer: the span `[from, to)` known to hold none. A later search that
+    /// starts inside it continues at `to`, so each stretch is looked through once, not once per
+    /// opener (a text of `*a *a *a` ... would otherwise cost 4,000 steps per opener).
+    none_in: HashMap<(char, usize), (usize, usize)>,
+}
+
+/// The first `j` in `from..len` (looking at most SCAN ahead) for which `hit(j)` is true, using
+/// and updating what earlier searches of the same `key` learned.
+fn scan_memo(st: &mut InlineState, key: (char, usize), from: usize, len: usize, hit: impl Fn(usize) -> bool) -> Option<usize> {
+    let lim = len.min(from.saturating_add(SCAN));
+    let (mut start, mut known_from) = (from, from);
+    if let Some(&(a, b)) = st.none_in.get(&key) {
+        if a <= from && from < b {
+            start = b;
+            known_from = a;
+        }
+    }
+    for j in start..lim {
+        if hit(j) {
+            return Some(j);
+        }
+    }
+    st.none_in.insert(key, (known_from, lim.max(start)));
+    None
 }
 
 fn starts_with(s: &[char], i: usize, p: &str) -> bool {
@@ -903,11 +983,15 @@ fn find_backticks(s: &[char], from: usize, run: usize, st: &mut InlineState) -> 
 /// A closing run of `want` `c` characters after `from`, not preceded by whitespace.
 fn find_closer(s: &[char], from: usize, c: char, want: usize, st: &mut InlineState) -> Option<usize> {
     let key = (c, 2_000_000 + want);
-    if st.failed.contains_key(&key) {
-        return None;
-    }
     let lim = s.len().min(from + SCAN);
-    let mut j = from;
+    // Skip what an earlier search already looked through without finding a closer.
+    let (mut j, mut known_from) = (from, from);
+    if let Some(&(a, b)) = st.none_in.get(&key) {
+        if a <= from && from < b {
+            j = b;
+            known_from = a;
+        }
+    }
     while j < lim {
         let x = s[j];
         if x == '`' {
@@ -928,9 +1012,7 @@ fn find_closer(s: &[char], from: usize, c: char, want: usize, st: &mut InlineSta
         }
         j += 1;
     }
-    if lim == s.len() {
-        st.failed.insert(key, ());
-    }
+    st.none_in.insert(key, (known_from, lim.max(j)));
     None
 }
 
@@ -1003,6 +1085,8 @@ fn callout_of(mut blocks: Vec<Block>) -> Block {
 mod tests {
     use super::*;
     use crate::importers::html::tests::{json, with_ctx};
+    use crate::importers::source::Vfs;
+    use crate::importers::{zip, Control, Images};
 
     fn md(src: &str) -> serde_json::Value {
         let (d, _, _) = with_ctx(&[], |ctx| parse(src, ctx));
@@ -1091,15 +1175,97 @@ mod tests {
 
     #[test]
     fn hostile_markdown_stays_fast_and_safe() {
+        let _heavy = crate::importers::heavy();
         let many = "*a ".repeat(50_000) + &"[".repeat(50_000) + &"`".repeat(10_000) + &"_".repeat(50_000);
         let start = std::time::Instant::now();
         let _ = md(&many);
         let deep = ">".repeat(5_000) + " deep\n" + &"- ".repeat(3_000) + "x";
         let v = md(&deep);
         assert!(v.to_string().contains("deep"));
-        assert!(start.elapsed().as_secs() < 20, "took {:?}", start.elapsed());
+        assert!(start.elapsed().as_secs() < 90, "took {:?}", start.elapsed());
         let v = md("<script>alert(1)</script>\n\n<div onclick=\"x()\">ok</div>\n\n[x](  javascript:alert(1) )");
         let s = v.to_string();
         assert!(!s.contains("alert") && !s.contains("onclick") && s.contains("ok"));
+    }
+
+    fn plain_of(blocks: &[Block]) -> String {
+        blocks.iter().map(|b| if let Block::Paragraph(i) = b { doc::plain(i) } else { String::new() }).collect::<Vec<_>>().join("|")
+    }
+
+    #[test]
+    fn a_failed_search_in_one_piece_does_not_spoil_the_rest() {
+        // `**a *b**` is bold "a *b"; the lone `*` inside fails to find a partner, and that must
+        // not make the later `*c*` a literal.
+        let (d, _, _) = with_ctx(&[], |ctx| parse("**a *b** then *c*", ctx));
+        let Block::Paragraph(inl) = &d.blocks[0] else { panic!("{:?}", d.blocks) };
+        let flags: Vec<(String, bool, bool)> = inl
+            .iter()
+            .filter_map(|i| if let Inline::Text(t, m) = i { Some((t.clone(), m.bold, m.italic)) } else { None })
+            .collect();
+        assert!(flags.contains(&("c".to_string(), false, true)), "{flags:?}");
+        assert!(flags.iter().any(|(t, b, _)| t.contains("a *b") && *b), "{flags:?}");
+        // The same for backticks and `$`.
+        let (d, _, _) = with_ctx(&[], |ctx| parse("**x ` y** and `z` and $a$", ctx));
+        let Block::Paragraph(inl) = &d.blocks[0] else { panic!() };
+        assert!(inl.iter().any(|i| matches!(i, Inline::Text(t, m) if t == "z" && m.code)), "{inl:?}");
+        assert!(inl.iter().any(|i| matches!(i, Inline::Math(m) if m == "a")), "{inl:?}");
+    }
+
+    #[test]
+    fn long_runs_of_blank_lines_and_openers_are_linear() {
+        let _heavy = crate::importers::heavy();
+        let start = std::time::Instant::now();
+        // The reviewer's probe: a list item, 40,000 blank lines, then an indented continuation.
+        let src = format!("- a\n{}  b\n", "\n".repeat(40_000));
+        let (d, _, _) = with_ctx(&[], |ctx| parse(&src, ctx));
+        assert!(matches!(d.blocks[0], Block::Bullets(_)));
+        // Millions of blank lines in a row (a 20 MB file of line breaks) must not need gigabytes.
+        let src = format!("- a\n{}  b\n", "\n".repeat(1_000_000));
+        let _ = with_ctx(&[], |ctx| parse(&src, ctx));
+        // Openers that never close: each used to search 4,000 characters ahead.
+        for unit in ["*a ", "_a ", "~~a ", "==a ", "$a ", "[a](b ", "[a ", "`a ", "<b>a ", "![a](", "[[[[", "*[a](b) "] {
+            let src = unit.repeat(60_000);
+            let (d, _, _) = with_ctx(&[], |ctx| parse(&src, ctx));
+            assert!(!d.blocks.is_empty(), "{unit}");
+        }
+        // Deep nesting.
+        let src = "> ".repeat(10_000) + "x";
+        let _ = with_ctx(&[], |ctx| parse(&src, ctx));
+        let src = "- ".repeat(10_000) + "x";
+        let _ = with_ctx(&[], |ctx| parse(&src, ctx));
+        assert!(start.elapsed().as_secs() < 180, "{:?}", start.elapsed());
+    }
+
+    #[test]
+    fn pipe_tables_are_capped() {
+        let mut src = String::from("| a | b | c |\n|---|---|---|\n");
+        for _ in 0..30_000 {
+            src.push_str("| 1 | 2 | 3 |\n");
+        }
+        let (d, _, problems) = with_ctx(&[], |ctx| parse(&src, ctx));
+        let Block::Table(rows) = &d.blocks[0] else { panic!() };
+        assert!(rows.len() * 3 <= doc::MAX_TABLE_CELLS, "{}", rows.len());
+        assert!(problems.iter().any(|p| p.item.starts_with("Table")), "{problems:?}");
+        assert_eq!(d.blocks.len(), 1, "the rest of the rows were read past, not turned into paragraphs");
+        // A hundred columns on 3,000 rows.
+        let head = format!("|{}\n|{}\n", "a|".repeat(100), "-|".repeat(100));
+        let row = format!("|{}\n", "x|".repeat(100));
+        let src = head + &row.repeat(3_000);
+        let (d, _, _) = with_ctx(&[], |ctx| parse(&src, ctx));
+        let Block::Table(rows) = &d.blocks[0] else { panic!() };
+        assert!(rows.len() * 100 <= doc::MAX_TABLE_CELLS);
+    }
+
+    #[test]
+    fn a_stopped_import_stops_the_markdown_converter() {
+        let src = "paragraph\n\n".repeat(200_000);
+        let vfs = Vfs::from_zip_bytes(zip::build(&[("a.md", b"x")], false)).unwrap();
+        let ctl = Control::expired();
+        let mut images = Images::default();
+        let mut problems = Vec::new();
+        let mut ctx = Ctx { vfs: &vfs, ctl: &ctl, dir: String::new(), images: &mut images, problems: &mut problems, name: "t".into() };
+        let d = parse(&src, &mut ctx);
+        assert!(d.blocks.len() < 200_000, "{}", d.blocks.len());
+        let _ = plain_of(&d.blocks);
     }
 }

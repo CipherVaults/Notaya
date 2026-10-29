@@ -2,7 +2,7 @@
 // Notion export) become one new notebook. The dialog only chooses the kind of source; the backend
 // opens the file dialog, reads and converts the files, and saves everything in one step.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -35,12 +35,15 @@ export default function ImportDialog() {
   const setOpen = useApp((s) => s.setImportOpen);
   const [source, setSource] = useState<ImportSource>("files");
   const [busy, setBusy] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [result, setResult] = useState<NotesImportSummary | null>(null);
+  const cancelRequested = useRef(false);
 
   useEffect(() => {
     if (open) {
       setResult(null);
       setBusy(false);
+      setCancelling(false);
     }
   }, [open]);
 
@@ -49,7 +52,11 @@ export default function ImportDialog() {
     setBusy(true);
     try {
       const done = await api.importNotes(source);
-      if (!done) return; // the file dialog was cancelled
+      if (!done) {
+        // The file dialog was cancelled, or the Cancel button stopped the import (nothing was added).
+        if (cancelling || cancelRequested.current) toast.message("Import cancelled. Nothing was added.");
+        return;
+      }
       const app = useApp.getState();
       app.setTree(await api.listNotes());
       app.setView("notes");
@@ -59,6 +66,21 @@ export default function ImportDialog() {
       toast.error(errorText(e));
     } finally {
       setBusy(false);
+      setCancelling(false);
+      cancelRequested.current = false;
+    }
+  };
+
+  // Asks the backend to stop. It finishes what it is doing within moments, takes back anything it
+  // stored, and answers the import call with "nothing".
+  const cancel = async () => {
+    if (!busy || cancelRequested.current) return;
+    cancelRequested.current = true;
+    setCancelling(true);
+    try {
+      await api.importCancel();
+    } catch (e) {
+      toast.error(errorText(e));
     }
   };
 
@@ -140,9 +162,15 @@ export default function ImportDialog() {
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
+            {busy ? (
+              <Button type="button" variant="ghost" onClick={cancel} disabled={cancelling}>
+                {cancelling ? "Cancelling…" : "Cancel import"}
+              </Button>
+            ) : (
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+            )}
             <Button type="button" variant="primary" onClick={run} disabled={busy}>
               {busy && <Loader2 size={15} className="animate-spin" />}
               {busy ? "Importing…" : source === "folder" ? "Choose folder…" : "Choose files…"}

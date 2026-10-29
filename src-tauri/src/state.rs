@@ -355,6 +355,9 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     if !matches!(reason, "quit" | "restore") && state.with(|s| Ok(s.is_open())).unwrap_or(false) {
         return None;
     }
+    // An import in progress stops at once: it must not go on reading and converting files for
+    // minutes after the notes were locked (it ends as a failure and adds nothing).
+    crate::commands::import_notes::cancel_running();
     if reason != "drive-removed" && state.is_unlocked() {
         request_flush(app, FLUSH_TIMEOUT);
     }

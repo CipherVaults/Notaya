@@ -13,18 +13,19 @@
 //! (`http://clatt.localhost/<id>`), and a page cover the same way.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
 use super::doc::{self, Block, ImageOut, Inline};
 use super::source::Vfs;
-use super::{clean_title, decode_text, docx, html, markdown, pdf, sniff, strip_notion_id, Ctx, ImgSrc, Images, Skipped};
+use super::{clean_title, decode_text, docx, html, markdown, pdf, sniff, strip_notion_id, Control, Ctx, ImgSrc, Images, Skipped, Stop};
 use super::{MAX_BINARY_FILE, MAX_IMAGE, MAX_PAGES, MAX_TEXT_FILE};
 use crate::model::{new_id, Item, Notebook, Page, Section};
 
-/// Longest a conversion may run before the remaining documents are left out.
-const MAX_TIME: Duration = Duration::from_secs(15 * 60);
+/// What the person is told when they cancel.
+pub const CANCELLED: &str = "The import was cancelled. Nothing was added.";
+/// What the person is told when nothing at all could be read before the time ran out.
+pub const TOO_SLOW: &str = "The import took too long (more than 15 minutes) and was stopped. Nothing was added. Import fewer files at a time.";
 /// Folders nested deeper than this are not imported.
 const MAX_FOLDERS: usize = 40;
 /// Most skipped items listed.
@@ -181,12 +182,13 @@ pub struct PlanPage {
 
 struct Builder<'a> {
     vfs: &'a Vfs,
+    ctl: &'a Control,
     pages: Vec<PlanPage>,
     images: Images,
     skipped: Vec<Skipped>,
     unlisted: usize,
-    started: Instant,
-    timed_out: bool,
+    /// Set when the import was cancelled or ran out of time: no more documents are read.
+    stopped: Option<Stop>,
     pdfs: usize,
 }
 
@@ -205,6 +207,11 @@ impl Builder<'_> {
         let mut used = HashSet::new();
         let mut files = d.files.clone();
         files.sort_by(|a, b| natural_cmp(&a.0, &b.0));
+        // Folders by lower-case name, made once (a long list of files must not search them all each time).
+        let mut lower: HashMap<String, &String> = HashMap::new();
+        for k in d.dirs.keys() {
+            lower.entry(k.to_lowercase()).or_insert(k);
+        }
         for (name, path) in files {
             let Some(index) = self.document(&name, &path, section, parent) else { continue };
             let stem = stem_of(&name);
@@ -212,7 +219,7 @@ impl Builder<'_> {
                 .dirs
                 .get_key_value(stem)
                 .filter(|(k, _)| !used.contains(*k))
-                .or_else(|| d.dirs.iter().find(|(k, _)| !used.contains(*k) && k.to_lowercase() == stem.to_lowercase()));
+                .or_else(|| lower.get(&stem.to_lowercase()).filter(|k| !used.contains(**k)).and_then(|k| d.dirs.get_key_value(*k)));
             if let Some((key, sub)) = sub {
                 used.insert(key.clone());
                 self.folder(sub, section, Some(index), "");
@@ -253,11 +260,13 @@ impl Builder<'_> {
         if self.pages.len() >= MAX_PAGES + 1 {
             return None;
         }
-        if self.timed_out || self.started.elapsed() > MAX_TIME {
-            if !self.timed_out {
-                self.timed_out = true;
+        if self.stopped.is_none() {
+            self.stopped = self.ctl.stop_now();
+            if self.stopped == Some(Stop::TimedOut) {
                 self.skip(path, "The import took too long (more than 15 minutes). Pages from here on were left out; import them separately.");
             }
+        }
+        if self.stopped.is_some() {
             return None;
         }
         let vfs = self.vfs;
@@ -275,7 +284,7 @@ impl Builder<'_> {
         let mut cover = None;
         let mut blocks;
         {
-            let mut ctx = Ctx { vfs, dir, images: &mut self.images, problems: &mut self.skipped, name: path.to_string() };
+            let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images: &mut self.images, problems: &mut self.skipped, name: path.to_string() };
             match kind {
                 Kind::Markdown => {
                     let d = markdown::parse(&decode_text(&bytes), &mut ctx);
@@ -303,7 +312,7 @@ impl Builder<'_> {
                 },
                 Kind::Pdf => {
                     drop(ctx);
-                    match pdf::extract(&bytes) {
+                    match pdf::extract_with(&bytes, self.ctl, vfs.budget()) {
                         Ok(d) => {
                             if d.empty_pages > 0 {
                                 self.skip(path, format!("{} of {} PDF pages had no text (scanned pages and pictures are not read).", d.empty_pages, d.pages));
@@ -322,6 +331,14 @@ impl Builder<'_> {
                     }
                 }
             }
+        }
+        // A converter that was stopped part way hands back what it had: not a whole page, so it is left out.
+        if let Some(stop) = self.ctl.stop_now() {
+            self.stopped = Some(stop);
+            if stop == Stop::TimedOut {
+                self.skip(path, "The import took too long (more than 15 minutes) while this file was being read. It and the pages after it were left out.");
+            }
+            return None;
         }
         let title = take_title(declared, &mut blocks, name);
         self.pages.push(PlanPage {
@@ -394,7 +411,7 @@ fn date_text(now_ms: i64) -> String {
 
 /// Builds the plan. `name_hint` is the name of the chosen folder, ZIP file or single file (the
 /// notebook is named after it). `now_ms` only names an unnamed notebook ("Imported <date>").
-pub fn build(vfs: &Vfs, name_hint: Option<&str>, now_ms: i64) -> Result<Plan, String> {
+pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> Result<Plan, String> {
     let mut skipped: Vec<Skipped> = Vec::new();
     let mut unlisted = 0usize;
     let mut note_skip = |skipped: &mut Vec<Skipped>, item: String, reason: String| {
@@ -457,7 +474,7 @@ pub fn build(vfs: &Vfs, name_hint: Option<&str>, now_ms: i64) -> Result<Plan, St
         top = sub;
     }
 
-    let mut b = Builder { vfs, pages: Vec::new(), images: Images::default(), skipped, unlisted, started: Instant::now(), timed_out: false, pdfs: 0 };
+    let mut b = Builder { vfs, ctl, pages: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0 };
     let mut sections: Vec<String> = Vec::new();
     let used = if top.files.is_empty() {
         HashSet::new()
@@ -472,6 +489,11 @@ pub fn build(vfs: &Vfs, name_hint: Option<&str>, now_ms: i64) -> Result<Plan, St
         sections.push(clean_title(name, false).chars().take(MAX_NAME).collect());
         let section = sections.len() - 1;
         b.folder(sub, section, None, name);
+    }
+    match b.stopped {
+        Some(Stop::Cancelled) => return Err(CANCELLED.into()),
+        Some(Stop::TimedOut) if b.pages.is_empty() => return Err(TOO_SLOW.into()),
+        _ => {}
     }
     if b.pages.len() > MAX_PAGES {
         return Err(format!("This import has more than {MAX_PAGES} pages. Import it in smaller parts (for example one top-level folder at a time)."));
@@ -516,6 +538,15 @@ pub fn build(vfs: &Vfs, name_hint: Option<&str>, now_ms: i64) -> Result<Plan, St
     Ok(Plan { notebook, sections, pages: b.pages, images: b.images, skipped: b.skipped, notes })
 }
 
+/// `Err` with the message for the person when the import was cancelled or ran out of time.
+pub fn check(ctl: &Control) -> Result<(), String> {
+    match ctl.stop_now() {
+        None => Ok(()),
+        Some(Stop::Cancelled) => Err(CANCELLED.into()),
+        Some(Stop::TimedOut) => Err(TOO_SLOW.into()),
+    }
+}
+
 /// The editor's address for a picture in the vault.
 pub fn picture_url(id: &str) -> String {
     format!("http://clatt.localhost/{id}")
@@ -525,10 +556,11 @@ impl Plan {
     /// Stores every picture the pages use. `put` stores one (mime type, bytes) and returns the
     /// vault's id for it; an error from it stops the import. Returns, for each picture, its
     /// editor address, or `None` when it could not be used (it is then listed as skipped).
-    pub fn store_images(&mut self, vfs: &Vfs, put: &mut dyn FnMut(&str, &[u8]) -> Result<String, String>) -> Result<Vec<Option<String>>, String> {
+    pub fn store_images(&mut self, vfs: &Vfs, ctl: &Control, put: &mut dyn FnMut(&str, &[u8]) -> Result<String, String>) -> Result<Vec<Option<String>>, String> {
         let mut urls = Vec::with_capacity(self.images.list.len());
         let mut total = 0u64;
         for i in 0..self.images.list.len() {
+            check(ctl)?;
             let label = self.images.list[i].1.clone();
             let bytes = match std::mem::replace(&mut self.images.list[i].0, ImgSrc::Bytes(Vec::new())) {
                 ImgSrc::Bytes(b) => Ok(b),
@@ -558,23 +590,42 @@ impl Plan {
 
     /// Renders the pages and returns the new notebook, its sections and pages as vault items,
     /// with the summary. Pages too large to save are left out (their sub-pages move up).
-    pub fn items(&mut self, urls: &[Option<String>], now: i64, notebook_order: i64) -> Result<(Vec<Item>, ImportSummary), String> {
+    pub fn items(&mut self, ctl: &Control, urls: &[Option<String>], now: i64, notebook_order: i64) -> Result<(Vec<Item>, ImportSummary), String> {
         let image_out = |n: usize| match urls.get(n) {
             Some(Some(u)) => ImageOut::Url(u.clone()),
             _ => ImageOut::Text(format!("[Picture not imported: {}]", self.images.list.get(n).map_or("picture", |x| x.1.as_str()))),
         };
         let mut dropped: HashSet<usize> = HashSet::new();
         let mut rendered: Vec<Option<(String, String)>> = Vec::new();
+        let mut cut_rows = 0usize;
         for _ in 0..3 {
             let ids: HashMap<&str, &str> = self.pages.iter().enumerate().filter(|(i, _)| !dropped.contains(i)).map(|(_, p)| (p.key.as_str(), p.id.as_str())).collect();
-            rendered = self
-                .pages
-                .iter()
-                .enumerate()
-                .map(|(i, p)| (!dropped.contains(&i)).then(|| doc::render(&p.blocks, &image_out, &|k| ids.get(k).map(|s| s.to_string()))))
-                .collect();
-            let too_big: Vec<usize> =
-                rendered.iter().enumerate().filter(|(_, r)| r.as_ref().is_some_and(|(c, t)| c.len() > MAX_PAGE_BYTES || t.len() > MAX_PAGE_BYTES)).map(|(i, _)| i).collect();
+            let page_id = |k: &str| ids.get(k).map(|s| s.to_string());
+            rendered = Vec::with_capacity(self.pages.len());
+            let mut too_big: Vec<usize> = Vec::new();
+            let mut total = 0usize;
+            cut_rows = 0;
+            for (i, p) in self.pages.iter().enumerate() {
+                check(ctl)?;
+                if dropped.contains(&i) {
+                    rendered.push(None);
+                    continue;
+                }
+                match doc::render_limited(&p.blocks, &image_out, &page_id, doc::MAX_RENDER_BYTES) {
+                    Ok(r) if r.content.len() <= MAX_PAGE_BYTES && r.text.len() <= MAX_PAGE_BYTES => {
+                        total = total.saturating_add(r.content.len() + r.text.len());
+                        if total > MAX_TOTAL_BYTES {
+                            return Err("This import is too large (more than 512 MB of text). Import it in smaller parts.".into());
+                        }
+                        cut_rows += r.cut_rows;
+                        rendered.push(Some((r.content, r.text)));
+                    }
+                    _ => {
+                        too_big.push(i);
+                        rendered.push(None);
+                    }
+                }
+            }
             if too_big.is_empty() {
                 break;
             }
@@ -582,14 +633,9 @@ impl Plan {
         }
         for i in &dropped {
             if self.skipped.len() < MAX_LISTED {
-                self.skipped.push(Skipped { item: self.pages[*i].title.clone(), reason: "The page is too large to store (over 20 MB of text).".into() });
+                self.skipped.push(Skipped { item: self.pages[*i].title.clone(), reason: "The page is too large to store (over 20 MB of text), so it was not imported.".into() });
             }
         }
-        let total: usize = rendered.iter().flatten().map(|(c, t)| c.len() + t.len()).sum();
-        if total > MAX_TOTAL_BYTES {
-            return Err("This import is too large (more than 512 MB of text). Import it in smaller parts.".into());
-        }
-
         let notebook_id = new_id();
         let mut items = vec![Item::Notebook(Notebook {
             id: notebook_id.clone(),
@@ -636,6 +682,15 @@ impl Plan {
             }));
         }
         let images = urls.iter().flatten().count();
+        let mut notes = self.notes.clone();
+        if cut_rows > 0 {
+            notes.push(format!(
+                "{cut_rows} table rows were left out because a table was too large (tables keep at most {} columns and {} cells; a page at most {}).",
+                doc::MAX_TABLE_COLS,
+                doc::MAX_TABLE_CELLS,
+                doc::MAX_PAGE_CELLS
+            ));
+        }
         let mut skipped = self.skipped.clone();
         skipped.truncate(MAX_LISTED);
         let summary = ImportSummary {
@@ -645,7 +700,7 @@ impl Plan {
             pages: kept,
             images,
             skipped,
-            notes: self.notes.clone(),
+            notes,
         };
         Ok((items, summary))
     }
@@ -669,7 +724,7 @@ mod tests {
     /// Stores nothing: hands out numbered ids.
     fn fake_store(plan: &mut Plan, v: &Vfs) -> Vec<Option<String>> {
         let mut n = 0;
-        plan.store_images(v, &mut |_, _| {
+        plan.store_images(v, &Control::standard(), &mut |_, _| {
             n += 1;
             Ok(format!("{n:032x}"))
         })
@@ -678,7 +733,7 @@ mod tests {
 
     fn finish(plan: &mut Plan, v: &Vfs) -> (Vec<Item>, ImportSummary) {
         let urls = fake_store(plan, v);
-        plan.items(&urls, NOW, 0).unwrap()
+        plan.items(&Control::standard(), &urls, NOW, 0).unwrap()
     }
 
     fn page<'a>(items: &'a [Item], title: &str) -> &'a Page {
@@ -711,7 +766,7 @@ mod tests {
         ];
         let refs: Vec<(&str, &[u8])> = files.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
         let v = vfs(&refs);
-        let mut plan = build(&v, Some("Export-4a9d6e1c-0123-4567-89ab-cdef01234567"), NOW).unwrap();
+        let mut plan = build(&v, &Control::standard(), Some("Export-4a9d6e1c-0123-4567-89ab-cdef01234567"), NOW).unwrap();
         assert_eq!(plan.notebook, "Notion import", "a generic ZIP name is not used");
         assert_eq!(plan.sections, [LOOSE_SECTION]);
         assert_eq!(plan.pages.len(), 2);
@@ -754,7 +809,7 @@ mod tests {
         all.push((child.as_str(), b"# Child\n\nbody"));
         all.push((other.as_str(), b"x"));
         let v = vfs(&all);
-        let mut plan = build(&v, None, NOW).unwrap();
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
         assert_eq!(plan.notebook, "Imported 2023-11-14", "no name to use: the date");
         assert_eq!(plan.sections, [LOOSE_SECTION, "Work"]);
         assert!(plan.notes.iter().any(|n| n.contains("no text colors")), "{:?}", plan.notes);
@@ -786,7 +841,7 @@ mod tests {
         let docx = crate::importers::docx::tests::sample_docx();
         let pdf = crate::importers::pdf::tests::sample_pdf();
         let v = vfs(&[("Reports/q1.docx", &docx), ("Reports/paper.pdf", &pdf), ("Reports/broken.docx", b"not a zip"), ("Reports/blank.pdf", b"%PDF-1.4 nothing")]);
-        let mut plan = build(&v, Some("Reports"), NOW).unwrap();
+        let mut plan = build(&v, &Control::standard(), Some("Reports"), NOW).unwrap();
         assert_eq!(plan.notebook, "Reports");
         assert!(plan.notes.iter().any(|n| n.contains("text only")), "{:?}", plan.notes);
         let (items, summary) = finish(&mut plan, &v);
@@ -802,7 +857,7 @@ mod tests {
     #[test]
     fn a_failed_picture_is_a_note_in_the_page_and_in_the_list() {
         let v = vfs(&[("a.md", b"# A\n\n![ok](ok.png)\n\n![fake](fake.png)\n\n![gone](gone.png)"), ("ok.png", PNG), ("fake.png", b"GIF is a lie, this is text")]);
-        let mut plan = build(&v, Some("a.md"), NOW).unwrap();
+        let mut plan = build(&v, &Control::standard(), Some("a.md"), NOW).unwrap();
         let (items, summary) = finish(&mut plan, &v);
         assert_eq!(summary.images, 1);
         let p = page(&items, "A");
@@ -814,17 +869,17 @@ mod tests {
     #[test]
     fn nothing_to_import_and_too_much_are_refused_with_a_message() {
         let v = vfs(&[("photo.png", PNG), ("data.json", b"{}")]);
-        let e = build(&v, None, NOW).err().unwrap();
+        let e = build(&v, &Control::standard(), None, NOW).err().unwrap();
         assert!(e.contains("No pages were found"), "{e}");
         let names: Vec<String> = (0..=MAX_PAGES).map(|i| format!("p{i}.md")).collect();
         let files: Vec<(&str, &[u8])> = names.iter().map(|n| (n.as_str(), b"x" as &[u8])).collect();
         let v = vfs(&files);
-        let e = build(&v, None, NOW).err().unwrap();
+        let e = build(&v, &Control::standard(), None, NOW).err().unwrap();
         assert!(e.contains("more than 5000 pages"), "{e}");
         // Folders nested too deeply are left out, not followed.
         let deep = vec!["d"; MAX_FOLDERS + 2].join("/") + "/x.md";
         let v = vfs(&[(deep.as_str(), b"x"), ("ok.md", b"y")]);
-        let plan = build(&v, None, NOW).unwrap();
+        let plan = build(&v, &Control::standard(), None, NOW).unwrap();
         assert_eq!(plan.pages.len(), 1);
         assert!(plan.skipped.iter().any(|s| s.reason.contains("nested too deeply")));
     }
@@ -845,9 +900,9 @@ mod tests {
         };
         let run = |name: &str, data: &[u8]| {
             let v = vfs(&[(name, data)]);
-            if let Ok(mut p) = build(&v, None, NOW) {
+            if let Ok(mut p) = build(&v, &Control::standard(), None, NOW) {
                 let none = vec![None; p.images.list.len()];
-                let _ = p.items(&none, NOW, 0);
+                let _ = p.items(&Control::standard(), &none, NOW, 0);
             }
         };
         let samples: [(&str, &[u8]); 4] = [("f.docx", &docx), ("f.pdf", &pdf), ("f.html", html), ("f.md", md)];
@@ -885,5 +940,70 @@ mod tests {
         assert_eq!(natural_cmp("Page 2", "Page 10"), std::cmp::Ordering::Less);
         assert_eq!(natural_cmp("a", "B"), std::cmp::Ordering::Less);
         assert_eq!(date_text(NOW), "2023-11-14");
+    }
+
+    fn cancelled() -> Control {
+        Control::new(std::time::Duration::from_secs(60), std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)))
+    }
+
+    #[test]
+    fn cancel_and_deadline_stop_every_stage_with_a_clear_message() {
+        let v = vfs(&[("a.md", b"# A\n\n![x](x.png)"), ("b.md", b"b"), ("x.png", PNG)]);
+        assert_eq!(build(&v, &cancelled(), None, NOW).err().unwrap(), CANCELLED);
+        assert_eq!(build(&v, &Control::expired(), None, NOW).err().unwrap(), TOO_SLOW);
+        // Later stages: picture storing and page writing.
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let e = plan.store_images(&v, &cancelled(), &mut |_, _| Ok("0".repeat(32))).err().unwrap();
+        assert_eq!(e, CANCELLED);
+        let e = plan.store_images(&v, &Control::expired(), &mut |_, _| Ok("0".repeat(32))).err().unwrap();
+        assert_eq!(e, TOO_SLOW);
+        let urls = fake_store(&mut plan, &v);
+        assert_eq!(plan.items(&cancelled(), &urls, NOW, 0).err().unwrap(), CANCELLED);
+        assert_eq!(plan.items(&Control::expired(), &urls, NOW, 0).err().unwrap(), TOO_SLOW);
+        assert!(plan.items(&Control::standard(), &urls, NOW, 0).is_ok());
+    }
+
+    #[test]
+    fn a_page_too_large_to_write_is_skipped_and_the_others_kept() {
+        let v = vfs(&[("big.md", b"# Big\n\nx"), ("small.md", b"# Small\n\ny")]);
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let big = plan.pages.iter().position(|p| p.title == "Big").unwrap();
+        // 60 MB of text is over the page budget (which counts what the JSON will take).
+        plan.pages[big].blocks = (0..60).map(|_| Block::Paragraph(vec![doc::t("z".repeat(1_000_000))])).collect();
+        let (items, summary) = finish(&mut plan, &v);
+        assert_eq!(summary.pages, 1);
+        assert!(summary.skipped.iter().any(|s| s.item == "Big" && s.reason.contains("too large")), "{:?}", summary.skipped);
+        assert!(items.iter().any(|i| matches!(i, Item::Page(p) if p.title == "Small")));
+        assert!(!items.iter().any(|i| matches!(i, Item::Page(p) if p.title == "Big")));
+    }
+
+    #[test]
+    fn rows_cut_from_a_huge_table_are_reported() {
+        let mut src = String::from("| a | b |\n|---|---|\n");
+        for _ in 0..15_000 {
+            src.push_str("| 1 | 2 |\n");
+        }
+        let v = vfs(&[("t.md", src.as_bytes())]);
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        // The Markdown reader already stops at 20,000 cells; a wider table from another reader is cut by the writer.
+        plan.pages[0].blocks = vec![Block::Table((0..3_000).map(|_| (0..100).map(|_| doc::Cell { header: false, colspan: 1, blocks: vec![] }).collect()).collect())];
+        let (_, summary) = finish(&mut plan, &v);
+        assert!(summary.notes.iter().any(|n| n.contains("table rows were left out")), "{:?}", summary.notes);
+    }
+
+    #[test]
+    fn many_files_with_folders_named_like_pages_are_matched_quickly() {
+        let _heavy = crate::importers::heavy();
+        let start = std::time::Instant::now();
+        let mut owned: Vec<(String, Vec<u8>)> = Vec::new();
+        for i in 0..2_000 {
+            owned.push((format!("Page {i}.md"), b"x".to_vec()));
+            owned.push((format!("PAGE {i} extra/sub.md"), b"y".to_vec()));
+        }
+        let files: Vec<(&str, &[u8])> = owned.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let v = vfs(&files);
+        let plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        assert!(plan.pages.len() >= 2_000);
+        assert!(start.elapsed().as_secs() < 180, "{:?}", start.elapsed());
     }
 }

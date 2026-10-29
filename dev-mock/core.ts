@@ -11,6 +11,8 @@ let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
 let noticeTaken = false;
+let importRunning = false;
+let importCancelled = false;
 const calcHistory: { expr: string; result: string }[] = [{ expr: "12.5 × (3 + 4)", result: "87.5" }];
 
 const now = Date.now();
@@ -277,11 +279,25 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
         archive: zip,
       });
     }
+    case "import_cancel": {
+      const running = importRunning;
+      importCancelled = running;
+      return ok(running);
+    }
     // The real app opens a file dialog and imports the files; here it pretends two files were picked.
     // ?importFail=1 makes it fail, ?importCancel=1 cancels the dialog.
     case "import_notes": {
       if (params.get("importFail") === "1") throw "No pages were found. Choose Markdown (.md), HTML, Word (.docx) or PDF files, a folder of them, or a ZIP file made by Notion.";
-      await new Promise((r) => setTimeout(r, 600));
+      // The import takes a moment (longer with ?importSlow=1) and stops at once when "import_cancel" arrives.
+      importCancelled = false;
+      importRunning = true;
+      const steps = params.get("importSlow") === "1" ? 100 : 15;
+      for (let i = 0; i < steps && !importCancelled; i++) await new Promise((r) => setTimeout(r, 100));
+      importRunning = false;
+      if (importCancelled) {
+        importCancelled = false;
+        return ok(null);
+      }
       if (params.get("importCancel") === "1") return ok(null);
       const n = tree.notebooks.length + 1;
       const nb = { id: `n${n + 10}`, name: "Notion import", color: "#6366f1", icon: "📓", order: n, created: ago(0), updated: ago(0) };

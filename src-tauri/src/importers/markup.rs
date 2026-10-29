@@ -52,9 +52,10 @@ impl<'a> Tokenizer<'a> {
 
     fn raw_text(&mut self, name: &str, keep: bool) -> Option<Token> {
         let rest = self.rest();
-        let lower = rest.to_ascii_lowercase();
+        // Searched in place, ignoring case. (Lower-casing a copy of everything that follows, once
+        // per script element, made a page of many small scripts quadratic.)
         let close = format!("</{name}");
-        let end = lower.find(&close).unwrap_or(rest.len());
+        let end = find_ignore_case(rest, close.as_bytes()).unwrap_or(rest.len());
         let body = &rest[..end];
         self.pos += end;
         if keep && !body.is_empty() {
@@ -201,6 +202,24 @@ impl Iterator for Tokenizer<'_> {
             return Some(Token::Text(decode_entities(&rest[..end])));
         }
     }
+}
+
+/// The byte position of `needle` (lower case ASCII) in `hay`, ignoring ASCII case. No copy is made.
+fn find_ignore_case(hay: &str, needle: &[u8]) -> Option<usize> {
+    let b = hay.as_bytes();
+    if needle.is_empty() || b.len() < needle.len() {
+        return None;
+    }
+    let first = needle[0];
+    let last_start = b.len() - needle.len();
+    let mut i = 0;
+    while i <= last_start {
+        if b[i].to_ascii_lowercase() == first && b[i..i + needle.len()].eq_ignore_ascii_case(needle) {
+            return Some(i);
+        }
+        i += 1;
+    }
+    None
 }
 
 /// Looks up an attribute by name. In XML, `w:val` also matches a lookup for `val` when
@@ -373,5 +392,20 @@ mod tests {
         assert!(toks.contains(&Token::Text(" Hi ".into())));
         let attrs = vec![("w:val".to_string(), "Heading1".to_string())];
         assert_eq!(attr(&attrs, "val"), Some("Heading1"));
+    }
+
+    #[test]
+    fn many_raw_text_elements_are_linear() {
+        let _heavy = crate::importers::heavy();
+        let start = std::time::Instant::now();
+        for unit in ["<title></title>", "<script></script>", "<STYLE></STYLE>", "<textarea></textarea>"] {
+            let src = unit.repeat(40_000);
+            let n = Tokenizer::html(&src).count();
+            assert!(n >= 40_000, "{unit} {n}");
+        }
+        // The end tag is found whatever its case, and a missing one swallows the rest once.
+        let toks: Vec<Token> = Tokenizer::html("<script>a</SCRIPT>b<script>c").collect();
+        assert!(toks.contains(&Token::Text("b".into())));
+        assert!(start.elapsed().as_secs() < 90, "{:?}", start.elapsed());
     }
 }

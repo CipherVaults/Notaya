@@ -114,6 +114,16 @@ pub enum Block {
 
 /// Containers nested deeper than this are flattened into their parent.
 const MAX_DEPTH: usize = 24;
+/// Widest table written; wider cells (colspan) and rows are cut to it.
+pub const MAX_TABLE_COLS: usize = 100;
+/// Most cells (padding included) in one table, and in all tables of one page. Rows beyond the
+/// limit are left out, and the import says so.
+pub const MAX_TABLE_CELLS: usize = 20_000;
+pub const MAX_PAGE_CELLS: usize = 100_000;
+/// The editor document of one page may take about this many bytes of JSON while it is built.
+/// A page over the limit is not imported ("page too large"); the check runs while the page is
+/// written, so a small file cannot make the program allocate gigabytes.
+pub const MAX_RENDER_BYTES: usize = 48 * 1024 * 1024;
 
 /// What a stored picture turned into when the page was written.
 pub enum ImageOut {
@@ -123,16 +133,40 @@ pub enum ImageOut {
     Text(String),
 }
 
+/// A page written as an editor document.
+pub struct Rendered {
+    pub content: String,
+    pub text: String,
+    /// Table rows left out because a table or the page had too many cells.
+    pub cut_rows: usize,
+}
+
+/// The page needs more than [`MAX_RENDER_BYTES`].
+#[derive(Debug, PartialEq)]
+pub struct TooLarge;
+
 /// Writes the blocks as an editor document. `image` says what each image index became, and
 /// `page` gives the id of an imported page from its source path.
-pub fn render(blocks: &[Block], image: &dyn Fn(usize) -> ImageOut, page: &dyn Fn(&str) -> Option<String>) -> (String, String) {
-    let mut r = Renderer { image, page, text: Vec::new() };
+pub fn render_limited(blocks: &[Block], image: &dyn Fn(usize) -> ImageOut, page: &dyn Fn(&str) -> Option<String>, limit: usize) -> Result<Rendered, TooLarge> {
+    let mut r = Renderer { image, page, text: Vec::new(), used: 0, limit, over: false, cells: 0, cut_rows: 0 };
     let mut content = r.blocks(blocks, 0);
+    if r.over {
+        return Err(TooLarge);
+    }
     if content.is_empty() {
         content.push(json!({ "type": "paragraph" }));
     }
     let doc = json!({ "type": "doc", "content": content });
-    (doc.to_string(), r.text.join("\n\n"))
+    Ok(Rendered { content: doc.to_string(), text: r.text.join("\n\n"), cut_rows: r.cut_rows })
+}
+
+/// Like [`render_limited`] with the normal limit; a page that is too large comes out empty.
+#[cfg(test)]
+pub fn render(blocks: &[Block], image: &dyn Fn(usize) -> ImageOut, page: &dyn Fn(&str) -> Option<String>) -> (String, String) {
+    match render_limited(blocks, image, page, MAX_RENDER_BYTES) {
+        Ok(r) => (r.content, r.text),
+        Err(TooLarge) => ("{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\"}]}".into(), String::new()),
+    }
 }
 
 struct Renderer<'a> {
@@ -140,12 +174,30 @@ struct Renderer<'a> {
     page: &'a dyn Fn(&str) -> Option<String>,
     /// Plain text of every text block, in order (joined like the editor's getText()).
     text: Vec<String>,
+    /// Estimated bytes of JSON written so far, the most allowed, and whether it was passed.
+    used: usize,
+    limit: usize,
+    over: bool,
+    /// Table cells written on this page, and rows left out.
+    cells: usize,
+    cut_rows: usize,
 }
 
 impl Renderer<'_> {
+    /// Counts `n` bytes against the page's budget. Once it is spent nothing more is written.
+    fn charge(&mut self, n: usize) {
+        self.used = self.used.saturating_add(n);
+        if self.used > self.limit {
+            self.over = true;
+        }
+    }
+
     fn blocks(&mut self, blocks: &[Block], depth: usize) -> Vec<Value> {
         let mut out = Vec::new();
         for b in blocks {
+            if self.over {
+                break;
+            }
             self.block(b, depth, &mut out);
         }
         out
@@ -170,6 +222,10 @@ impl Renderer<'_> {
     }
 
     fn block(&mut self, b: &Block, depth: usize, out: &mut Vec<Value>) {
+        if self.over {
+            return;
+        }
+        self.charge(100);
         let deep = depth >= MAX_DEPTH;
         if deep && is_container(b) {
             // Too deep: the container's content is written one level up, in order. This walks
@@ -177,6 +233,9 @@ impl Renderer<'_> {
             let mut leaves = Vec::new();
             flatten(b, &mut leaves);
             for leaf in leaves {
+                if self.over {
+                    break;
+                }
                 self.block(leaf, depth, out);
             }
             return;
@@ -233,6 +292,7 @@ impl Renderer<'_> {
             }
             Block::Code(lang, code) => {
                 let code = code.trim_end_matches('\n');
+                self.charge(code.len().saturating_mul(2));
                 let lang: String = lang.chars().filter(|c| c.is_ascii_alphanumeric() || "+#-_".contains(*c)).take(32).collect();
                 let mut node = json!({ "type": "codeBlock", "attrs": { "language": if lang.is_empty() { Value::Null } else { Value::String(lang.to_ascii_lowercase()) } } });
                 if !code.is_empty() {
@@ -251,16 +311,29 @@ impl Renderer<'_> {
                     }
                     return;
                 }
-                let width = rows.iter().map(|r| r.iter().map(|c| c.colspan.max(1) as usize).sum::<usize>()).max().unwrap_or(0);
+                // Columns, cells per table and cells per page are capped: a colspan of four
+                // billion would otherwise ask for four billion padding cells.
+                let span_of = |c: &Cell| (c.colspan.max(1) as usize).min(MAX_TABLE_COLS);
+                let width = rows.iter().map(|r| r.iter().map(span_of).sum::<usize>().min(MAX_TABLE_COLS)).max().unwrap_or(0);
                 if width == 0 {
                     return;
                 }
+                let room = MAX_TABLE_CELLS.min(MAX_PAGE_CELLS.saturating_sub(self.cells));
+                let max_rows = room / width;
+                if rows.len() > max_rows {
+                    self.cut_rows += rows.len() - max_rows;
+                }
                 let mut trs = Vec::new();
-                for row in rows {
+                for row in rows.iter().take(max_rows) {
+                    if self.over {
+                        break;
+                    }
+                    self.cells += width;
+                    self.charge(width.saturating_mul(150));
                     let mut cells = Vec::new();
                     let mut used = 0;
                     for c in row {
-                        let span = (c.colspan.max(1) as usize).min(width - used);
+                        let span = span_of(c).min(width - used);
                         if span == 0 {
                             break;
                         }
@@ -278,7 +351,9 @@ impl Renderer<'_> {
                     }
                     trs.push(json!({ "type": "tableRow", "content": cells }));
                 }
-                out.push(json!({ "type": "table", "content": trs }));
+                if !trs.is_empty() {
+                    out.push(json!({ "type": "table", "content": trs }));
+                }
             }
             Block::Image(index, caption) => self.image(*index, caption, out),
             Block::Math(latex) => {
@@ -306,6 +381,7 @@ impl Renderer<'_> {
     }
 
     fn image(&mut self, index: usize, caption: &str, out: &mut Vec<Value>) {
+        self.charge(400 + caption.len().min(500) * 2);
         match (self.image)(index) {
             ImageOut::Url(src) => {
                 let caption: String = caption.chars().take(500).collect();
@@ -349,6 +425,12 @@ impl Renderer<'_> {
     }
 
     fn flush_run(&mut self, node: &Value, run: &[&Inline], out: &mut Vec<Value>) {
+        // Every inline item becomes a JSON node of a few hundred bytes; counted before it is built.
+        let estimate = run.iter().map(|i| if let Inline::Text(t, _) = i { 160 + t.len().saturating_mul(2) } else { 24 }).fold(0usize, usize::saturating_add);
+        self.charge(estimate);
+        if self.over {
+            return;
+        }
         let (content, text) = inline_nodes(run);
         if content.is_empty() {
             return;
@@ -421,9 +503,9 @@ fn inline_nodes(run: &[&Inline]) -> (Vec<Value>, String) {
         }
     }
     // Trim the start and end of the whole run, and drop breaks at the edges.
-    while matches!(parts.first(), Some((None, t)) if t.is_empty()) {
-        parts.remove(0);
-    }
+    // (One drain, not one remove(0) per break: a page of a million line breaks must stay fast.)
+    let lead = parts.iter().position(|(m, t)| !(m.is_none() && t.is_empty())).unwrap_or(parts.len());
+    parts.drain(..lead);
     while matches!(parts.last(), Some((None, t)) if t.is_empty()) {
         parts.pop();
     }
@@ -615,5 +697,62 @@ mod tests {
         let (json, text) = render(&[b], &no_images, &|_| None);
         assert!(json.matches("blockquote").count() <= MAX_DEPTH + 1);
         assert_eq!(text, "deep");
+    }
+
+    fn cell(span: u32) -> Cell {
+        Cell { header: false, colspan: span, blocks: vec![Block::Paragraph(vec![t("x")])] }
+    }
+
+    fn count_nodes(v: &Value, kind: &str) -> usize {
+        let own = usize::from(v["type"] == kind);
+        own + v["content"].as_array().map_or(0, |c| c.iter().map(|x| count_nodes(x, kind)).sum())
+    }
+
+    #[test]
+    fn huge_colspans_and_tables_are_capped() {
+        let _heavy = crate::importers::heavy();
+        let start = std::time::Instant::now();
+        // A colspan of four billion used to ask for four billion padding cells.
+        let t1 = Block::Table(vec![vec![cell(u32::MAX)], vec![cell(1)]]);
+        let r = render_limited(&[t1], &no_images, &|_| None, MAX_RENDER_BYTES).unwrap();
+        let v: Value = serde_json::from_str(&r.content).unwrap();
+        assert_eq!(count_nodes(&v, "tableCell"), 101, "one wide cell, then a row of 100 columns");
+        // The reviewer's HTML probe: 100 cells of colspan 50 in each of 2,000 rows.
+        let rows: Vec<Vec<Cell>> = (0..2_000).map(|_| (0..100).map(|_| cell(50)).collect()).collect();
+        let r = render_limited(&[Block::Table(rows)], &no_images, &|_| None, MAX_RENDER_BYTES).unwrap();
+        let v: Value = serde_json::from_str(&r.content).unwrap();
+        let cells = count_nodes(&v, "tableCell");
+        assert!(cells <= MAX_TABLE_CELLS, "{cells}");
+        assert_eq!(r.cut_rows, 2_000 - MAX_TABLE_CELLS / MAX_TABLE_COLS);
+        // Many tables on one page share the page limit.
+        let tables: Vec<Block> = (0..15).map(|_| Block::Table((0..200).map(|_| (0..100).map(|_| cell(1)).collect()).collect())).collect();
+        let r = render_limited(&tables, &no_images, &|_| None, MAX_RENDER_BYTES).unwrap();
+        let v: Value = serde_json::from_str(&r.content).unwrap();
+        assert!(count_nodes(&v, "tableCell") <= MAX_PAGE_CELLS + MAX_TABLE_CELLS);
+        assert!(r.cut_rows > 0);
+        assert!(start.elapsed().as_secs() < 120, "{:?}", start.elapsed());
+    }
+
+    #[test]
+    fn a_page_over_the_byte_budget_is_refused_while_it_is_written() {
+        let _heavy = crate::importers::heavy();
+        let blocks: Vec<Block> = (0..2_000).map(|_| Block::Paragraph(vec![t("x".repeat(1_000))])).collect();
+        // Small budget: refused early, nothing big was built.
+        assert_eq!(render_limited(&blocks, &no_images, &|_| None, 100_000).err(), Some(TooLarge));
+        assert!(render_limited(&blocks, &no_images, &|_| None, MAX_RENDER_BYTES).is_ok());
+        // Millions of tiny inline pieces count too.
+        let inl: Vec<Inline> = (0..400_000).map(|i| Inline::Text("a".into(), Marks { bold: i % 2 == 0, ..Marks::default() })).collect();
+        assert_eq!(render_limited(&[Block::Paragraph(inl)], &no_images, &|_| None, 10_000_000).err(), Some(TooLarge));
+    }
+
+    #[test]
+    fn leading_line_breaks_are_linear() {
+        let _heavy = crate::importers::heavy();
+        let mut inl: Vec<Inline> = vec![Inline::Break; 1_000_000];
+        inl.push(t("end"));
+        let start = std::time::Instant::now();
+        let (_, text) = render(&[Block::Paragraph(inl)], &no_images, &|_| None);
+        assert_eq!(text, "end");
+        assert!(start.elapsed().as_secs() < 60, "{:?}", start.elapsed());
     }
 }

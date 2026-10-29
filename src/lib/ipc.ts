@@ -112,6 +112,8 @@ export const api = {
   exportNotes: (request: ExportRequest) => invoke<ExportSummary | null>("export_notes", { request }),
   // Import: the backend asks what to import (resolves to null if cancelled) and makes one new notebook
   importNotes: (source: ImportSource) => invoke<NotesImportSummary | null>("import_notes", { request: { source } }),
+  // Asks the import in progress to stop; it then resolves to null and nothing is added
+  importCancel: () => invoke<boolean>("import_cancel"),
 
   // Sticky notes
   listStickies: () => invoke<Sticky[]>("list_stickies"),

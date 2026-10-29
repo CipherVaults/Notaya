@@ -223,6 +223,7 @@ pub fn run() {
             notes::add_attachment,
             export_cmd::export_notes,
             import_notes_cmd::import_notes,
+            import_notes_cmd::import_cancel,
             stickies::list_stickies,
             stickies::create_sticky,
             stickies::get_sticky,

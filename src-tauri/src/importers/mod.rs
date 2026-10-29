@@ -16,6 +16,9 @@ pub mod source;
 pub mod zip;
 
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
@@ -33,6 +36,76 @@ pub const MAX_PAGES: usize = 5_000;
 pub const MAX_IMAGES: usize = 5_000;
 /// Pictures held in memory before they are stored (Word media, data: URIs).
 const MAX_IMAGE_MEMORY: u64 = 512 * 1024 * 1024;
+
+/// The whole import may run this long; after that the converters stop and report it.
+pub const MAX_TIME: Duration = Duration::from_secs(15 * 60);
+
+/// Why an import was stopped early.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Stop {
+    Cancelled,
+    TimedOut,
+}
+
+/// A deadline plus a cancel flag, checked inside every long loop of every converter. The
+/// checks are cheap (one atomic load; the clock is read only every few calls).
+pub struct Control {
+    deadline: Instant,
+    cancel: Arc<AtomicBool>,
+    ticks: AtomicU32,
+}
+
+impl Control {
+    pub fn new(limit: Duration, cancel: Arc<AtomicBool>) -> Control {
+        Control { deadline: Instant::now() + limit, cancel, ticks: AtomicU32::new(0) }
+    }
+
+    /// No cancel button and the normal time limit (tests).
+    #[cfg(test)]
+    pub fn standard() -> Control {
+        Control::new(MAX_TIME, Arc::new(AtomicBool::new(false)))
+    }
+
+    /// A control that is already past its deadline (tests).
+    #[cfg(test)]
+    pub fn expired() -> Control {
+        Control { deadline: Instant::now(), cancel: Arc::new(AtomicBool::new(false)), ticks: AtomicU32::new(0) }
+    }
+
+    /// A control with a given deadline (tests).
+    #[cfg(test)]
+    pub fn with_deadline(deadline: Instant) -> Control {
+        Control { deadline, cancel: Arc::new(AtomicBool::new(false)), ticks: AtomicU32::new(0) }
+    }
+
+    /// Why the import must stop now, if it must. Reads the clock only on every 64th call,
+    /// except that a cancel is seen at once.
+    pub fn stop(&self) -> Option<Stop> {
+        if self.cancel.load(Ordering::Relaxed) {
+            return Some(Stop::Cancelled);
+        }
+        let n = self.ticks.fetch_add(1, Ordering::Relaxed);
+        if n % 64 == 0 && Instant::now() >= self.deadline {
+            return Some(Stop::TimedOut);
+        }
+        None
+    }
+
+    /// Like `stop` but always reads the clock (between documents).
+    pub fn stop_now(&self) -> Option<Stop> {
+        if self.cancel.load(Ordering::Relaxed) {
+            return Some(Stop::Cancelled);
+        }
+        if Instant::now() >= self.deadline {
+            return Some(Stop::TimedOut);
+        }
+        None
+    }
+
+    pub fn stopped(&self) -> bool {
+        self.stop().is_some()
+    }
+}
 
 /// One thing that was not imported, and why.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -93,6 +166,7 @@ pub fn sniff(bytes: &[u8]) -> Option<&'static str> {
 /// What a converter needs while it reads one document.
 pub struct Ctx<'a> {
     pub vfs: &'a Vfs,
+    pub ctl: &'a Control,
     /// The document's folder inside the source (`""` = the top).
     pub dir: String,
     pub images: &'a mut Images,
@@ -308,6 +382,41 @@ pub fn decode_text(bytes: &[u8]) -> String {
         // Not UTF-8: read it as Windows-1252, the usual alternative for old files.
         Err(_) => bytes.iter().map(|&b| pdf::win_ansi(b)).collect(),
     }
+}
+
+/// Runs `f`, and stops the whole test run with a message if it has not finished after `secs`
+/// seconds (a hang in a regression test must fail fast, not stall the suite). Also fails when
+/// it finished but took longer.
+/// Heavy hostile-input tests take this lock so only one of them runs at a time: together they
+/// are many times slower than one after the other (allocator contention, notably under Wine),
+/// and a time limit would then measure the machine and not the code.
+#[cfg(test)]
+pub fn heavy() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+#[cfg(test)]
+pub fn within<T>(secs: u64, what: &str, f: impl FnOnce() -> T) -> T {
+    let done = Arc::new(AtomicBool::new(false));
+    let watch = done.clone();
+    let label = what.to_string();
+    std::thread::spawn(move || {
+        let start = Instant::now();
+        while start.elapsed().as_secs() < secs.saturating_mul(2) {
+            if watch.load(Ordering::SeqCst) {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        eprintln!("HANG: {label} did not finish in {}s", secs * 2);
+        std::process::exit(99);
+    });
+    let start = Instant::now();
+    let r = f();
+    done.store(true, Ordering::SeqCst);
+    assert!(start.elapsed().as_secs() < secs, "{what} took {:?}", start.elapsed());
+    r
 }
 
 #[cfg(test)]

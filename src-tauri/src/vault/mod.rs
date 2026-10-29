@@ -34,6 +34,10 @@ pub struct Session {
     /// True once anything changed since the last hourly backup of an open vault. It is kept
     /// apart from `dirty` so an hourly copy never stands in for the backup made at lock or quit.
     pub hourly_due: bool,
+    /// Pictures an import has stored but not yet saved in a page. `collect_garbage` leaves them
+    /// alone, so a cleanup that runs while an import is working cannot take them away. Held in
+    /// memory only: after a lock or a crash they are ordinary unused pictures.
+    held: std::collections::HashSet<String>,
 }
 
 /// AAD binds each ciphertext to this vault, its table and its row id, so rows
@@ -72,6 +76,7 @@ impl Session {
             open: false,
             dirty: true,
             hourly_due: true,
+            held: Default::default(),
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -90,6 +95,7 @@ impl Session {
             open: true,
             dirty: true,
             hourly_due: true,
+            held: Default::default(),
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -122,6 +128,7 @@ impl Session {
             open,
             dirty: true,
             hourly_due: true,
+            held: Default::default(),
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -156,7 +163,7 @@ impl Session {
             }
             items.insert(item.id().to_string(), item);
         }
-        Ok(Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false })
+        Ok(Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default() })
     }
 
     /// Opens a vault file whichever way it is protected: a vault with security off needs
@@ -289,6 +296,25 @@ impl Session {
         Ok(())
     }
 
+    /// Keeps a stored picture safe from `collect_garbage` until [`Session::release_attachments`].
+    pub fn hold_attachment(&mut self, id: &str) {
+        self.held.insert(id.to_string());
+    }
+
+    /// True when every one of these pictures is still held by this session. A lock (which ends
+    /// the session) loses them, which tells an import that the vault was locked in between.
+    pub fn holds(&self, ids: &[String]) -> bool {
+        ids.iter().all(|id| self.held.contains(id))
+    }
+
+    /// Ends the protection of [`Session::hold_attachment`] (the pictures are now in a saved page,
+    /// or were deleted).
+    pub fn release_attachments(&mut self, ids: &[String]) {
+        for id in ids {
+            self.held.remove(id);
+        }
+    }
+
     /// Deletes the given attachments (by id) in one transaction. An import that failed after
     /// storing its pictures uses it to take back exactly the pictures it stored.
     pub fn delete_attachments(&mut self, ids: &[String]) -> Result<()> {
@@ -299,6 +325,7 @@ impl Session {
             }
             Ok(())
         })?;
+        self.release_attachments(ids);
         self.changed();
         Ok(())
     }
@@ -318,7 +345,8 @@ impl Session {
         }
         let mut removed = 0;
         for id in self.store.ids(Table::Attachments)? {
-            if !referenced.contains(&hex::encode(id)) {
+            let hex_id = hex::encode(id);
+            if !referenced.contains(&hex_id) && !self.held.contains(&hex_id) {
                 self.store.delete(Table::Attachments, &id)?;
                 removed += 1;
             }

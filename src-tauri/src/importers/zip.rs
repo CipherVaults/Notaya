@@ -35,15 +35,15 @@ pub struct Archive {
 }
 
 fn u16_at(b: &[u8], at: usize) -> Option<u16> {
-    Some(u16::from_le_bytes(b.get(at..at + 2)?.try_into().ok()?))
+    Some(u16::from_le_bytes(b.get(at..at.checked_add(2)?)?.try_into().ok()?))
 }
 
 fn u32_at(b: &[u8], at: usize) -> Option<u32> {
-    Some(u32::from_le_bytes(b.get(at..at + 4)?.try_into().ok()?))
+    Some(u32::from_le_bytes(b.get(at..at.checked_add(4)?)?.try_into().ok()?))
 }
 
 fn u64_at(b: &[u8], at: usize) -> Option<u64> {
-    Some(u64::from_le_bytes(b.get(at..at + 8)?.try_into().ok()?))
+    Some(u64::from_le_bytes(b.get(at..at.checked_add(8)?)?.try_into().ok()?))
 }
 
 const NOT_ZIP: &str = "This is not a ZIP file, or it is damaged.";
@@ -93,9 +93,10 @@ impl Archive {
             if u32_at(b, rec) != Some(0x0606_4b50) {
                 return Err(NOT_ZIP.into());
             }
-            count = u64_at(b, rec + 32).ok_or(NOT_ZIP)?;
-            cd_size = u64_at(b, rec + 40).ok_or(NOT_ZIP)?;
-            cd_offset = u64_at(b, rec + 48).ok_or(NOT_ZIP)?;
+            let at64 = |extra: usize| rec.checked_add(extra).and_then(|p| u64_at(b, p)).ok_or(NOT_ZIP);
+            count = at64(32)?;
+            cd_size = at64(40)?;
+            cd_offset = at64(48)?;
         }
         if count > MAX_ENTRIES as u64 {
             return Err(format!("This ZIP file has more than {MAX_ENTRIES} entries."));
@@ -120,9 +121,11 @@ impl Archive {
             let name_len = usize::from(u16_at(b, at + 28).ok_or(NOT_ZIP)?);
             let extra_len = usize::from(u16_at(b, at + 30).ok_or(NOT_ZIP)?);
             let comment_len = usize::from(u16_at(b, at + 32).ok_or(NOT_ZIP)?);
-            let mut local_offset = u64::from(u32_at(b, at + 42).ok_or(NOT_ZIP)?);
-            let name_bytes = b.get(at + 46..at + 46 + name_len).ok_or(NOT_ZIP)?;
-            let extra = b.get(at + 46 + name_len..at + 46 + name_len + extra_len).ok_or(NOT_ZIP)?;
+            let mut local_offset = u64::from(at.checked_add(42).and_then(|p| u32_at(b, p)).ok_or(NOT_ZIP)?);
+            let name_at = at.checked_add(46).ok_or(NOT_ZIP)?;
+            let extra_at = name_at.checked_add(name_len).ok_or(NOT_ZIP)?;
+            let name_bytes = b.get(name_at..extra_at).ok_or(NOT_ZIP)?;
+            let extra = b.get(extra_at..extra_at.checked_add(extra_len).ok_or(NOT_ZIP)?).ok_or(NOT_ZIP)?;
             // ZIP64 sizes and offset, in that order, only for the fields that overflowed.
             let mut e = 0;
             while e + 4 <= extra.len() {
@@ -140,7 +143,7 @@ impl Archive {
                 }
                 e += 4 + len;
             }
-            at += 46 + name_len + extra_len + comment_len;
+            at = extra_at.saturating_add(extra_len).saturating_add(comment_len);
 
             let raw = String::from_utf8(name_bytes.to_vec()).unwrap_or_else(|_| String::from_utf8_lossy(name_bytes).into_owned());
             if raw.ends_with('/') || raw.ends_with('\\') {
@@ -192,9 +195,9 @@ impl Archive {
         if u32_at(b, lo) != Some(0x0403_4b50) {
             return Err("Damaged entry.".into());
         }
-        let name_len = usize::from(u16_at(b, lo + 26).ok_or("Damaged entry.")?);
-        let extra_len = usize::from(u16_at(b, lo + 28).ok_or("Damaged entry.")?);
-        let start = lo + 30 + name_len + extra_len;
+        let name_len = usize::from(lo.checked_add(26).and_then(|p| u16_at(b, p)).ok_or("Damaged entry.")?);
+        let extra_len = usize::from(lo.checked_add(28).and_then(|p| u16_at(b, p)).ok_or("Damaged entry.")?);
+        let start = lo.checked_add(30 + name_len + extra_len).ok_or("Damaged entry.")?;
         let len = usize::try_from(e.comp_size).map_err(|_| "Damaged entry.")?;
         let raw = b.get(start..start.checked_add(len).ok_or("Damaged entry.")?).ok_or("Damaged entry.")?;
         let out = if e.method == 0 {
@@ -354,5 +357,46 @@ mod tests {
         z[n - 6..n - 2].copy_from_slice(&0xFFFF_FF00u32.to_le_bytes()); // central directory offset out of range
         assert!(Archive::open(z).is_err());
         assert_eq!(crc32(b"123456789"), 0xCBF4_3926);
+    }
+
+    #[test]
+    fn hostile_offsets_and_sizes_never_overflow() {
+        let base = build(&[("a.md", b"hello world, hello world"), ("b/c.md", b"second")], true);
+        let eocd = base.windows(4).rposition(|w| w == 0x0605_4b50u32.to_le_bytes()).unwrap();
+        // A ZIP64 locator that points at the very end of the address space.
+        for rec in [u64::MAX, u64::MAX - 8, u64::MAX - 40, 0xFFFF_FFFF_FFFF_FFF0, i64::MAX as u64, 1 << 40] {
+            let mut z = base[..eocd].to_vec();
+            z.extend_from_slice(&0x0706_4b50u32.to_le_bytes());
+            z.extend_from_slice(&0u32.to_le_bytes());
+            z.extend_from_slice(&rec.to_le_bytes());
+            z.extend_from_slice(&1u32.to_le_bytes());
+            let mut end = base[eocd..].to_vec();
+            end[10..12].copy_from_slice(&0xFFFFu16.to_le_bytes());
+            z.extend_from_slice(&end);
+            assert!(Archive::open(z).is_err(), "{rec:#x}");
+        }
+        // Every byte of the central directory and the end record, set to a few extreme values.
+        let cd = base.windows(4).position(|w| w == 0x0201_4b50u32.to_le_bytes()).unwrap();
+        for i in cd..base.len() {
+            for v in [0x00u8, 0x7F, 0x80, 0xFF] {
+                let mut z = base.clone();
+                z[i] = v;
+                if let Ok(a) = Archive::open(z) {
+                    for k in 0..a.entries.len() {
+                        let _ = a.read(k, 1 << 20, &Cell::new(1 << 20));
+                    }
+                }
+            }
+        }
+        // A local-header offset and sizes at their largest.
+        let mut z = base.clone();
+        z[cd + 42..cd + 46].copy_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+        let a = Archive::open(z).unwrap();
+        assert!(a.read(0, 1 << 20, &Cell::new(1 << 20)).is_err());
+        let mut z = base.clone();
+        z[cd + 20..cd + 24].copy_from_slice(&0xFFFF_FFF0u32.to_le_bytes());
+        if let Ok(a) = Archive::open(z) {
+            let _ = a.read(0, u64::MAX, &Cell::new(u64::MAX));
+        }
     }
 }

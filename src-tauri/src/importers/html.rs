@@ -1,7 +1,7 @@
 //! HTML (and Notion's HTML export) to the import document model.
 //!
 //! The HTML is first built into a small tree (a forgiving builder: implied end tags for `p`,
-//! `li`, table cells; at most 200 levels deep; at most a million tokens), then walked. The
+//! `li`, table cells; at most 100 levels deep; at most a million tokens), then walked. The
 //! walk keeps only known blocks and marks: scripts, styles, frames, forms, SVG and every
 //! attribute except a few (href, src, alt, class, start, colspan, checked, style for bold,
 //! italic, underline and strike) are dropped, so nothing active can reach the editor. Links
@@ -12,7 +12,7 @@
 
 use super::doc::{self, Block, Cell, Inline, Marks, FONT_MONO, FONT_SERIF};
 use super::markup::{attr, Token, Tokenizer};
-use super::Ctx;
+use super::{Control, Ctx};
 
 pub struct El {
     pub name: String,
@@ -26,7 +26,7 @@ pub enum Node {
 }
 
 const MAX_TOKENS: usize = 1_000_000;
-const MAX_TREE_DEPTH: usize = 200;
+const MAX_TREE_DEPTH: usize = 100;
 
 const VOID: &[&str] = &["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
 
@@ -102,8 +102,9 @@ impl El {
     }
 }
 
-/// Builds the tree. Never fails.
-pub fn build(src: &str) -> El {
+/// Builds the tree. Never fails; stops early (with what it has) when the import is cancelled or
+/// out of time.
+pub fn build(src: &str, ctl: &Control) -> El {
     let mut stack = vec![El::new("#root", Vec::new())];
     fn pop(stack: &mut Vec<El>) {
         if stack.len() > 1 {
@@ -127,7 +128,7 @@ pub fn build(src: &str) -> El {
         }
     }
     for (count, tok) in Tokenizer::html(src).enumerate() {
-        if count > MAX_TOKENS {
+        if count > MAX_TOKENS || ctl.stopped() {
             break;
         }
         match tok {
@@ -185,8 +186,8 @@ pub struct HtmlDoc {
 }
 
 pub fn parse_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
-    let root = build(src);
-    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0 };
+    let root = build(src, ctx.ctl);
+    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0 };
     if let Some(t) = root.find(&|e| e.name == "title") {
         let t = doc::collapse_ws(&t.text());
         if !t.is_empty() {
@@ -201,8 +202,8 @@ pub fn parse_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
 
 /// HTML inside a Markdown file (Notion's `<aside>` callouts, `<img>`, `<details>`...).
 pub fn parse_fragment(src: &str, ctx: &mut Ctx) -> Vec<Block> {
-    let root = build(src);
-    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0 };
+    let root = build(src, ctx.ctl);
+    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0 };
     let mut out = Out::default();
     c.walk(&root.children, &Marks::default(), &mut out);
     out.finish()
@@ -270,6 +271,8 @@ struct Conv<'c, 'a> {
     ctx: &'c mut Ctx<'a>,
     doc: HtmlDoc,
     depth: usize,
+    /// Table cells made so far on this page (the renderer keeps at most `doc::MAX_PAGE_CELLS`).
+    cells: usize,
 }
 
 /// Bold, italic, underline and strike from a `style` attribute (Google Docs, Word HTML, Notion).
@@ -341,6 +344,9 @@ fn tex_of(e: &El) -> Option<String> {
 impl Conv<'_, '_> {
     fn walk(&mut self, nodes: &[Node], m: &Marks, out: &mut Out) {
         for n in nodes {
+            if self.ctx.ctl.stopped() {
+                return;
+            }
             match n {
                 Node::Text(t) => out.text(t, m, false),
                 Node::El(e) => {
@@ -599,7 +605,15 @@ impl Conv<'_, '_> {
         for (tr, head) in acc.into_iter().take(2_000) {
             let mut row = Vec::new();
             for td in tr.elements().filter(|x| x.name == "td" || x.name == "th").take(100) {
-                let colspan = td.attr("colspan").and_then(|s| s.trim().parse::<u32>().ok()).unwrap_or(1).clamp(1, 50);
+                if self.cells >= doc::MAX_PAGE_CELLS {
+                    if self.cells == doc::MAX_PAGE_CELLS {
+                        self.cells += 1;
+                        self.ctx.problem("Tables", "Some table cells beyond the limit for one page were left out.");
+                    }
+                    break;
+                }
+                self.cells += 1;
+                let colspan = td.attr("colspan").and_then(|s| s.trim().parse::<u32>().ok()).unwrap_or(1).clamp(1, doc::MAX_TABLE_COLS as u32);
                 let mut cm = m.clone();
                 color_marks(td, &mut cm);
                 row.push(Cell { header: head || td.name == "th", colspan, blocks: self.blocks(&td.children, &cm) });
@@ -689,7 +703,7 @@ impl Conv<'_, '_> {
 pub(crate) mod tests {
     use super::*;
     use crate::importers::source::Vfs;
-    use crate::importers::{zip, Images};
+    use crate::importers::{zip, Control, Images};
     use serde_json::Value;
 
     pub fn with_ctx<T>(files: &[(&str, &[u8])], f: impl FnOnce(&mut Ctx) -> T) -> (T, Images, Vec<crate::importers::Skipped>) {
@@ -697,7 +711,8 @@ pub(crate) mod tests {
         let mut images = Images::default();
         let mut problems = Vec::new();
         let r = {
-            let mut ctx = Ctx { vfs: &vfs, dir: String::new(), images: &mut images, problems: &mut problems, name: "test".into() };
+            let ctl = Control::standard();
+            let mut ctx = Ctx { vfs: &vfs, ctl: &ctl, dir: String::new(), images: &mut images, problems: &mut problems, name: "test".into() };
             f(&mut ctx)
         };
         (r, images, problems)
@@ -844,5 +859,49 @@ x++;</code></pre>
         let table = c.iter().find(|b| b["type"] == "table").unwrap();
         assert_eq!(table["content"][0]["content"][0]["type"], "tableHeader");
         assert!(table.to_string().contains(doc::HIGHLIGHTS[4]) && table.to_string().contains(doc::TEXT_COLORS[8]), "cell colors");
+    }
+
+    #[test]
+    fn hostile_tables_and_many_tags_stay_small_and_fast() {
+        let _heavy = crate::importers::heavy();
+        let start = std::time::Instant::now();
+        // The reviewer's probe: 100 cells of colspan 50 in each of 2,000 rows.
+        let mut h = String::from("<table>");
+        for _ in 0..2_000 {
+            h.push_str("<tr>");
+            for _ in 0..100 {
+                h.push_str("<td colspan=50>x</td>");
+            }
+            h.push_str("</tr>");
+        }
+        let (d, _, problems) = with_ctx(&[], |ctx| parse_document(&h, ctx));
+        let r = doc::render_limited(&d.blocks, &|_| doc::ImageOut::Text("p".into()), &|_| None, doc::MAX_RENDER_BYTES).unwrap();
+        let v: Value = serde_json::from_str(&r.content).unwrap();
+        let cells = v.to_string().matches("\"type\":\"tableCell\"").count();
+        assert!(cells <= doc::MAX_TABLE_CELLS, "{cells}");
+        assert!(r.cut_rows > 0);
+        assert!(problems.iter().any(|p| p.item.starts_with("Tables")), "{problems:?}");
+        // 40,000 empty <title> and <script> elements (the tokenizer lower-cased the whole rest each time).
+        for unit in ["<title></title>", "<script></script>", "<style></style>", "<textarea></textarea>"] {
+            let h = unit.repeat(40_000) + "<p>end</p>";
+            let (d, _, _) = with_ctx(&[], |ctx| parse_document(&h, ctx));
+            assert!(!d.blocks.is_empty(), "{unit}");
+        }
+        // Deep nesting with no boundary elements, then many block starts.
+        let h = "<span>".repeat(150) + &"<div>".repeat(100_000);
+        let _ = with_ctx(&[], |ctx| parse_document(&h, ctx));
+        assert!(start.elapsed().as_secs() < 180, "{:?}", start.elapsed());
+    }
+
+    #[test]
+    fn a_stopped_import_stops_the_html_converter() {
+        let h = "<p>a</p>".repeat(100_000);
+        let vfs = Vfs::from_zip_bytes(zip::build(&[("a.md", b"x")], false)).unwrap();
+        let ctl = Control::expired();
+        let mut images = Images::default();
+        let mut problems = Vec::new();
+        let mut ctx = Ctx { vfs: &vfs, ctl: &ctl, dir: String::new(), images: &mut images, problems: &mut problems, name: "t".into() };
+        let d = parse_document(&h, &mut ctx);
+        assert!(d.blocks.len() < 100_000, "it stopped early: {}", d.blocks.len());
     }
 }

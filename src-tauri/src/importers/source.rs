@@ -5,7 +5,11 @@
 //! On disk: symbolic links and junctions are not followed, hidden files are skipped, and a
 //! picture next to a picked file is read only if it lies inside that file's folder (checked
 //! again after resolving the real path), so a document cannot point the import at any other
-//! file or at a network share.
+//! file or at a network share. Pictures are never read from Notaya's own data folder.
+//!
+//! One budget covers the whole import: the ZIP files that were picked (they are held in memory,
+//! at most [`MAX_ZIP_FILE`] together) and everything read or inflated afterwards, by every
+//! converter (Word and PDF included), at most [`MAX_TOTAL`].
 
 use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap};
@@ -35,6 +39,10 @@ pub struct Vfs {
     lazy_root: Option<PathBuf>,
     archives: Vec<Archive>,
     budget: Cell<u64>,
+    /// Bytes of the picked ZIP files held in memory so far.
+    zip_total: u64,
+    /// Notaya's data folder (canonical): nothing inside it is read as a picture.
+    protected: Option<PathBuf>,
     /// Entries or files that were refused while listing, with the reason.
     pub refused: Vec<(String, String)>,
 }
@@ -50,7 +58,7 @@ fn is_hidden(name: &str) -> bool {
 
 impl Vfs {
     fn empty() -> Vfs {
-        Vfs { files: BTreeMap::new(), lower: HashMap::new(), lazy_root: None, archives: Vec::new(), budget: Cell::new(MAX_TOTAL), refused: Vec::new() }
+        Vfs { files: BTreeMap::new(), lower: HashMap::new(), lazy_root: None, archives: Vec::new(), budget: Cell::new(MAX_TOTAL), zip_total: 0, protected: None, refused: Vec::new() }
     }
 
     fn add(&mut self, path: String, origin: Origin) {
@@ -88,11 +96,38 @@ impl Vfs {
 
     fn mount_zip_file(&mut self, p: &Path) -> Result<(), String> {
         let len = std::fs::metadata(p).map_err(|e| format!("The file could not be read ({e}).")).map(|m| m.len())?;
-        if len > MAX_ZIP_FILE {
-            return Err("This ZIP file is larger than 1 GB. Export it in smaller parts.".into());
-        }
+        self.charge_zip(len)?;
         let data = std::fs::read(p).map_err(|e| format!("The file could not be read ({e})."))?;
+        // The file may have grown since it was measured.
+        self.charge_zip((data.len() as u64).saturating_sub(len))?;
         self.mount(Archive::open(data)?, true)
+    }
+
+    /// Makes room for `len` more bytes of ZIP file in memory. Refused beyond 1 GB together: many
+    /// picked ZIP files must not add up to more than one big one.
+    fn charge_zip(&mut self, len: u64) -> Result<(), String> {
+        let total = self.zip_total.saturating_add(len);
+        if total > MAX_ZIP_FILE {
+            return Err("The ZIP files you chose are larger than 1 GB together. Import them in smaller parts.".into());
+        }
+        self.zip_total = total;
+        Ok(())
+    }
+
+    /// What may still be read or inflated in this import. Word and PDF converters draw from it
+    /// too, so no mix of files can use more than [`MAX_TOTAL`] together.
+    pub fn budget(&self) -> &Cell<u64> {
+        &self.budget
+    }
+
+    /// Marks Notaya's data folder: no picture is ever read from inside it, even when a picked
+    /// document sits in a folder above it and points down into it.
+    pub fn protect(&mut self, data_dir: &Path) {
+        let data = std::fs::canonicalize(data_dir).unwrap_or_else(|_| data_dir.to_path_buf());
+        if self.lazy_root.as_ref().is_some_and(|r| r.starts_with(&data)) {
+            self.lazy_root = None;
+        }
+        self.protected = Some(data);
     }
 
     /// Every file in a folder and its subfolders (not following links).
@@ -209,7 +244,8 @@ impl Vfs {
             return None;
         }
         let real = std::fs::canonicalize(&candidate).ok()?;
-        real.starts_with(root).then_some(real)
+        let outside_data = !self.protected.as_ref().is_some_and(|d| real.starts_with(d));
+        (real.starts_with(root) && outside_data).then_some(real)
     }
 
     /// Reads a file, refused when larger than `max` or beyond the total budget.
@@ -303,5 +339,47 @@ mod tests {
         let paths: Vec<&String> = v.paths().collect();
         assert_eq!(paths, ["Page 0123456789abcdef0123456789abcdef.md"]);
         assert!(v.refused.iter().any(|(n, _)| n == "deeper.zip"));
+    }
+
+    #[test]
+    fn nothing_is_read_from_the_data_folder_as_a_picture() {
+        let d = temp();
+        std::fs::create_dir_all(d.join("data")).unwrap();
+        std::fs::write(d.join("data/pic.png"), b"\x89PNG\r\n\x1a\n").unwrap();
+        std::fs::write(d.join("pic.png"), b"\x89PNG\r\n\x1a\n").unwrap();
+        std::fs::write(d.join("a.md"), "![](data/pic.png)").unwrap();
+        // The picked document sits in a folder ABOVE the data folder and points down into it.
+        let mut v = Vfs::from_files(&[d.join("a.md")]).unwrap();
+        assert_eq!(v.find("data/pic.png").as_deref(), Some("data/pic.png"), "readable before the data folder is marked");
+        v.protect(&d.join("data"));
+        assert_eq!(v.find("data/pic.png"), None);
+        assert!(v.read("data/pic.png", 100).is_err());
+        assert!(v.read("pic.png", 100).is_ok(), "its other pictures still are");
+        // The picked document sits inside the data folder itself: no lazy pictures at all.
+        std::fs::write(d.join("data/n.md"), "![](pic.png)").unwrap();
+        let mut v = Vfs::from_files(&[d.join("data/n.md")]).unwrap();
+        v.protect(&d.join("data"));
+        assert_eq!(v.find("pic.png"), None);
+        // A folder ABOVE: `data` equals the lazy root.
+        let mut v = Vfs::from_files(&[d.join("data/n.md")]).unwrap();
+        v.protect(&d.join("data/"));
+        assert!(v.read("pic.png", 100).is_err());
+    }
+
+    #[test]
+    fn picked_zip_files_share_one_memory_allowance() {
+        let mut v = Vfs::empty();
+        v.zip_total = MAX_ZIP_FILE - 10;
+        assert!(v.charge_zip(11).unwrap_err().contains("larger than 1 GB together"));
+        assert!(v.charge_zip(10).is_ok());
+        assert!(v.charge_zip(1).is_err());
+        // Two real picks each count.
+        let d = temp();
+        let z = zip::build(&[("a.md", b"hello")], false);
+        std::fs::write(d.join("one.zip"), &z).unwrap();
+        std::fs::write(d.join("two.zip"), &z).unwrap();
+        let v = Vfs::from_files(&[d.join("one.zip"), d.join("two.zip")]).unwrap();
+        assert_eq!(v.zip_total, 2 * z.len() as u64);
+        assert!(v.budget().get() <= MAX_TOTAL);
     }
 }
