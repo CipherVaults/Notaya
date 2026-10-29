@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Code,
   Eraser,
+  FileText,
   Highlighter,
   Italic,
   Link2,
@@ -25,6 +26,7 @@ import { HIGHLIGHTS, TEXT_COLORS } from "@/lib/palette";
 import { Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { applyTurnInto, BLOCKS, currentBlock, type BlockKey } from "./turnInto";
+import { requestInternalLinkPicker } from "./internalLinks";
 
 export const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64];
 export const FONT_FAMILIES = [
@@ -583,10 +585,16 @@ function AlignPop({ editor, align, track }: { editor: Editor; align: string; tra
 
 export function LinkPop({ editor, active, track, onClose }: { editor: Editor; active: boolean; track: (o: boolean) => void; onClose?: () => void }) {
   const [url, setUrl] = useState("");
+  // Choosing "Page or section" hands focus to the picker, so closing this pop-up must not take it back.
+  const pickerAsked = useRef(false);
   return (
     <Pop
       track={track}
-      onClose={onClose}
+      onClose={() => {
+        if (pickerAsked.current) pickerAsked.current = false;
+        else if (onClose) onClose();
+        else editor.commands.focus();
+      }}
       width={300}
       onOpen={() => setUrl((editor.getAttributes("link").href as string | undefined) ?? "")}
       trigger={
@@ -616,6 +624,20 @@ export function LinkPop({ editor, active, track, onClose }: { editor: Editor; ac
           </Button>
         </Popover.Close>
       </form>
+      <Popover.Close asChild>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            pickerAsked.current = true;
+            requestInternalLinkPicker(editor);
+          }}
+          className="mt-1 flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-sm text-fg hover:bg-surface-2"
+        >
+          <FileText size={14} className="text-muted" />
+          Link to a page or section…
+        </button>
+      </Popover.Close>
     </Pop>
   );
 }

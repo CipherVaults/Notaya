@@ -100,6 +100,12 @@ export const Toggle = Node.create({
         parseHTML: (el) => el.getAttribute("data-open") !== "false",
         renderHTML: (attrs) => ({ "data-open": String(attrs.open) }),
       },
+      // "Shelf" look: a filled, rounded box. Pages without this attribute keep the plain look.
+      shelf: {
+        default: false,
+        parseHTML: (el) => el.hasAttribute("data-shelf") && el.getAttribute("data-shelf") !== "false",
+        renderHTML: (attrs) => (attrs.shelf ? { "data-shelf": "true" } : {}),
+      },
     };
   },
 
@@ -117,6 +123,7 @@ export const Toggle = Node.create({
       const dom = document.createElement("div");
       dom.className = "toggle";
       dom.dataset.open = String(node.attrs.open);
+      dom.dataset.shelf = String(!!node.attrs.shelf);
       const row = document.createElement("div");
       row.className = "toggle-row";
       const btn = document.createElement("button");
@@ -144,6 +151,7 @@ export const Toggle = Node.create({
           if (updated.type !== current.type) return false;
           current = updated;
           dom.dataset.open = String(updated.attrs.open);
+          dom.dataset.shelf = String(!!updated.attrs.shelf);
           return true;
         },
       };

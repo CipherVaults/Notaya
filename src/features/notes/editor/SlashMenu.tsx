@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
-import { CalendarDays, ImagePlus, Minus, Radical, Table2 } from "lucide-react";
+import { CalendarDays, ImagePlus, Link2, Minus, Radical, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { pickImages } from "./extensions";
 import { applyTurnInto, BLOCKS, type BlockKey } from "./turnInto";
 import type { SlashState } from "./slash";
+import PagePicker, { type PickerPlacement } from "./PagePicker";
 
 interface Item {
   title: string;
@@ -15,6 +16,8 @@ interface Item {
   keywords: string;
   icon: React.ReactNode;
   run: (editor: Editor) => void;
+  /** Opens the page list instead of running right away. */
+  picker?: "page";
 }
 
 const s = 17;
@@ -30,6 +33,7 @@ const ITEMS: Item[] = [
   { group: "Lists", title: "Numbered list", hint: "Items that count up", keywords: "number list ol ordered", icon: icon("ordered"), run: turn("ordered") },
   { group: "Lists", title: "Checklist", hint: "Tick things off", keywords: "checklist todo task checkbox check", icon: icon("task"), run: turn("task") },
   { group: "Lists", title: "Collapsible section", hint: "A line that hides or shows what's under it", keywords: "collapsible toggle fold hide details", icon: icon("toggle"), run: turn("toggle") },
+  { group: "Lists", title: "Shelf", hint: "A shaded box with a title that hides or shows what's in it", keywords: "shelf collapse collapsible box group", icon: icon("shelf"), run: turn("shelf") },
   { group: "Insert", title: "Quote", hint: "Set a passage apart", keywords: "quote citation", icon: icon("quote"), run: turn("quote") },
   { group: "Insert", title: "Highlight box", hint: "A shaded box for a tip or warning", keywords: "highlight box callout note tip warning info", icon: icon("callout"), run: turn("callout") },
   { group: "Insert", title: "Code block", hint: "Monospaced code with colors", keywords: "code snippet pre", icon: icon("code"), run: turn("code") },
@@ -39,6 +43,7 @@ const ITEMS: Item[] = [
   { group: "Insert", title: "Equation", hint: "Maths written in TeX", keywords: "equation math formula tex latex block", icon: icon("equation"), run: turn("equation") },
   { group: "Insert", title: "Inline equation", hint: "Maths inside a line (or type $x^2$)", keywords: "equation math formula tex latex inline", icon: <Radical size={s} />, run: (e) => e.chain().focus().insertMathInline().run() },
   { group: "Insert", title: "Sub-page", hint: "A new page inside this one", keywords: "page subpage sub-page child inside", icon: icon("page"), run: turn("page") },
+  { group: "Insert", title: "Link to page", hint: "A link to a page you already have", keywords: "link page mention existing", icon: <Link2 size={s} />, run: () => {}, picker: "page" },
   {
     group: "Quick",
     title: "Today's date",
@@ -79,11 +84,57 @@ export default function SlashMenu({
 
   useEffect(() => setIndex(0), [slash?.query, slash?.from]);
 
+  const [picker, setPicker] = useState<(PickerPlacement & { anchor: number }) | null>(null);
+
   const choose = (item: Item) => {
     const st = controller.current.state;
     if (!st) return;
     editor.chain().focus().deleteRange({ from: st.from, to: st.to }).run();
-    item.run(editor);
+    if (item.picker) setPicker({ left: st.left, top: st.top, bottom: st.bottom, anchor: editor.state.selection.from });
+    else item.run(editor);
+  };
+
+  const closePicker = () => {
+    setPicker(null);
+    editor.commands.focus();
+  };
+
+  /** Puts a link to the chosen page where the "/" was: in place of an empty line, else below the current block. */
+  const insertPageLink = (pageId: string) => {
+    const anchor = picker?.anchor ?? editor.state.selection.from;
+    setPicker(null);
+    const { doc, schema } = editor.state;
+    const linkType = schema.nodes.pageLink;
+    const $p = doc.resolve(Math.min(anchor, doc.content.size));
+    const nodes = [{ type: "pageLink", attrs: { pageId } }, { type: "paragraph" }];
+    for (let d = $p.depth; d >= 1; d--) {
+      const container = $p.node(d - 1);
+      const at = $p.index(d - 1);
+      if (!container.canReplaceWith(at, at, linkType)) continue;
+      const node = $p.node(d);
+      const empty = d === $p.depth && node.type.name === "paragraph" && node.content.size === 0;
+      // An empty last list item can't hold a link: put the link after the list and drop the empty item.
+      const item = $p.depth >= 2 ? $p.node($p.depth - 1) : null;
+      const itemDepth = $p.depth - 1;
+      if (d < $p.depth && item && ["listItem", "taskItem"].includes(item.type.name) && item.childCount === 1 && $p.parent.content.size === 0 && itemDepth > d) {
+        const list = $p.node(itemDepth - 1);
+        if (itemDepth - 1 === d && list.childCount > 1 && $p.index(itemDepth - 1) === list.childCount - 1) {
+          const tr = editor.state.tr;
+          tr.insert($p.after(d), nodes.map((n) => schema.nodeFromJSON(n)));
+          tr.delete($p.before(itemDepth), $p.after(itemDepth));
+          editor.view.dispatch(tr);
+          editor.commands.focus($p.after(d) - ($p.after(itemDepth) - $p.before(itemDepth)) + 2);
+          return;
+        }
+      }
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(empty ? { from: $p.before(d), to: $p.after(d) } : $p.after(d), nodes)
+        .run();
+      return;
+    }
+    editor.commands.focus();
   };
 
   // Let the slash plugin drive the list with the keyboard.
@@ -111,10 +162,11 @@ export default function SlashMenu({
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
   }, [index]);
 
-  if (!slash || items.length === 0) return null;
+  const pickerView = picker ? <PagePicker placement={picker} onPick={insertPageLink} onClose={closePicker} /> : null;
+  if (!slash || items.length === 0) return pickerView;
 
   let lastGroup = "";
-  return createPortal(
+  const menu = createPortal(
     <div
       ref={listRef}
       style={{ left: placement?.left ?? slash.left, top: placement?.top ?? slash.bottom + 6 }}
@@ -144,5 +196,11 @@ export default function SlashMenu({
       })}
     </div>,
     document.body,
+  );
+  return (
+    <>
+      {pickerView}
+      {menu}
+    </>
   );
 }

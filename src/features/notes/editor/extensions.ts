@@ -9,6 +9,7 @@ import { Column, Columns, Comment, PageLink } from "./more-blocks";
 import { MathBlock, MathInline } from "./math";
 import { ImageBlock } from "./ImageBlock";
 import { SlashCommand, type SlashOptions } from "./slash";
+import { followInternalLink, InternalLinks, isInternalHref, isOwnScheme } from "./internalLinks";
 import { Placeholder } from "@tiptap/extensions";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import TextAlign from "@tiptap/extension-text-align";
@@ -27,10 +28,17 @@ const link = {
   HTMLAttributes: { rel: "noopener noreferrer nofollow", target: null },
 } as const;
 
+// Notebook pages may also hold links to other pages and headings (`notaya:page/...`).
+const pageLinkConfig = {
+  ...link,
+  isAllowedUri: (url: string, ctx: { defaultValidate: (url: string) => boolean }) => isInternalHref(url) || ctx.defaultValidate(url),
+};
+
 /** Full editor for notebook pages: block types, the "/" menu and pictures. */
 export function pageExtensions(slash: SlashOptions) {
   return [
-    StarterKit.configure({ codeBlock: false, heading: { levels: [1, 2, 3, 4] }, link }),
+    StarterKit.configure({ codeBlock: false, heading: { levels: [1, 2, 3, 4] }, link: pageLinkConfig }),
+    InternalLinks,
     TextStyle,
     Color,
     FontSize,
@@ -141,11 +149,26 @@ export function editorProps(getEditor: () => Editor | null) {
       }
       return false;
     },
+    // An internal link must never take the window (or the operating system) anywhere.
+    handleDOMEvents: {
+      click: (_view: unknown, event: Event) => {
+        const a = (event.target as HTMLElement | null)?.closest?.("a");
+        if (a && isOwnScheme(a.getAttribute("href"))) event.preventDefault();
+        return false;
+      },
+    },
     handleClick: (_view: unknown, _pos: number, event: MouseEvent) => {
       const a = (event.target as HTMLElement).closest("a");
-      if (a && event.ctrlKey) {
-        const href = a.getAttribute("href");
-        if (href) api.openUrl(href).catch((e) => toast.error(errorText(e)));
+      const href = a?.getAttribute("href");
+      if (!a || !href) return false;
+      if (isOwnScheme(href)) {
+        // A click goes to the page or heading. Shift/Alt+click or dragging a selection keeps editing the text instead.
+        if (!isInternalHref(href) || event.shiftKey || event.altKey || event.button !== 0 || window.getSelection()?.isCollapsed === false) return false;
+        followInternalLink(href, getEditor());
+        return true;
+      }
+      if (event.ctrlKey) {
+        api.openUrl(href).catch((e) => toast.error(errorText(e)));
         return true;
       }
       return false;

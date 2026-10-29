@@ -2,7 +2,9 @@
 // but pages that already contain them still show them (nothing is dropped from older pages).
 
 import { Mark, Node, mergeAttributes } from "@tiptap/react";
+import { NodeSelection, Plugin } from "@tiptap/pm/state";
 import { useApp } from "@/store/app";
+import { goToPage, livePage } from "./internalLinks";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -67,12 +69,32 @@ export const PageLink = Node.create({
     return ["div", mergeAttributes(HTMLAttributes, { "data-page-link": "", class: "page-link" })];
   },
 
+  // With a page link selected (arrow keys or a click on its edge), Enter or Space opens the page.
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          handleKeyDown(view, event) {
+            if (event.key !== "Enter" && event.key !== " ") return false;
+            if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return false;
+            const sel = view.state.selection;
+            if (!(sel instanceof NodeSelection) || sel.node.type.name !== "pageLink") return false;
+            event.preventDefault();
+            goToPage(sel.node.attrs.pageId as string);
+            return true;
+          },
+        },
+      }),
+    ];
+  },
+
   addNodeView() {
     return ({ node }) => {
       let pageId = node.attrs.pageId as string;
       const dom = document.createElement("div");
       dom.className = "page-link";
       dom.contentEditable = "false";
+      dom.setAttribute("role", "link");
       const icon = document.createElement("span");
       icon.className = "page-link-icon";
       const title = document.createElement("span");
@@ -80,7 +102,7 @@ export const PageLink = Node.create({
       dom.append(icon, title);
 
       const paint = () => {
-        const page = useApp.getState().tree.pages.find((p) => p.id === pageId);
+        const page = livePage(pageId);
         icon.textContent = page?.icon || "📄";
         title.textContent = page ? page.title || "Untitled" : "Page not found";
         dom.dataset.missing = page ? "false" : "true";
@@ -88,9 +110,7 @@ export const PageLink = Node.create({
       paint();
       const unsubscribe = useApp.subscribe(paint);
 
-      dom.addEventListener("click", () => {
-        if (useApp.getState().tree.pages.some((p) => p.id === pageId)) useApp.getState().openPage(pageId);
-      });
+      dom.addEventListener("click", () => goToPage(pageId));
 
       return {
         dom,

@@ -11,6 +11,7 @@ import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/compo
 import BlockHandle from "./editor/BlockHandle";
 import BubbleToolbar from "./editor/BubbleToolbar";
 import Ribbon from "./editor/Ribbon";
+import InternalLinkHost from "./editor/InternalLinkHost";
 import SlashMenu, { type SlashController } from "./editor/SlashMenu";
 import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
@@ -332,6 +333,7 @@ function LoadedEditor({ page }: { page: Page }) {
 
       <BubbleToolbar editor={editor} />
       <SlashMenu editor={editor} slash={slash} controller={slashController} />
+      <InternalLinkHost editor={editor} pageId={page.id} />
     </div>
   );
 }
