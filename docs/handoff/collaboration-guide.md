@@ -93,6 +93,8 @@ A branch can be declared **shared** in its claims row. On a shared branch both p
 
 ## 6. Stopping and handing over (the part that makes "pick up where it left off" work)
 
+**Standing rule:** the resume note is updated and pushed **after every finished step**, not only at the end, and always when work stops for any reason (a person says stop, a limit, a closed laptop), so the other partner's Claude can pick up from it at any time.
+
 A cloud container is thrown away and a laptop is closed; your head is not shared. **Before any stop** (the person says stop, the session ends, a limit is near, the work is handed over):
 
 1. **Commit and push everything**, even if it is half done or red. A broken push on a WIP branch is better than lost work. Use a clear commit message (`WIP: ...`). If a patch is too unfinished to commit on the branch, commit it as a `.patch` file under `docs/handoff/` the way `import-hardening-wip.patch` was done for V1.4.0.
