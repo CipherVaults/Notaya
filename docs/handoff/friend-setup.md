@@ -36,17 +36,48 @@ git log --oneline -5
 
 Git asks you to sign in through the browser the first time; use your own account. Never put a token or password in a file, a prompt or a commit.
 
-## 4. Tools for building the app (path A)
+## 4. What to install: checklist (path A, to build and test on Windows)
 
-Versions the project was built with (stable releases only, no beta or preview):
+Versions are the ones the project was built and tested with (from `docs/STATUS.md`, `package.json`, `src-tauri/Cargo.toml`, `tools/windows-build/build-windows.ps1`). Stable releases only, no beta or preview. A newer patch version is normally fine; if something odd happens, match these. Open a **new** PowerShell after installing, then run the check in the last column; each should print a version, not an error.
 
-- **Node 24** (24.20.0 and npm 11.19.0 were used) from <https://nodejs.org>.
-- **Rust, stable, MSVC** (1.99.1 was used) from <https://rustup.rs>, and **Visual Studio Build Tools 2022** with the workload "Desktop development with C++".
-- **WebView2 runtime** (already on Windows 11 and most updated Windows 10 PCs).
+| # | Program | Version used | Where | Check |
+|---|---|---|---|---|
+| 1 | Windows PowerShell | 5.1 (built into Windows 10 and 11) | already there | `$PSVersionTable.PSVersion` |
+| 2 | Git for Windows | 2.55.0 | <https://git-scm.com/download/win> | `git --version` |
+| 3 | GitHub CLI (`gh`) | 2.103.0 | <https://cli.github.com>, then `gh auth login` and sign in as **your own** account | `gh --version` and `gh auth status` |
+| 4 | Node.js (with npm) | Node 24.20.0, npm 11.19.0 | <https://nodejs.org> (the 24 line, LTS installer) | `node --version`, `npm --version` |
+| 5 | Visual Studio Build Tools 2022 | 2022, workload **Desktop development with C++** (MSVC and a Windows SDK) | <https://visualstudio.microsoft.com/downloads/> (Tools for Visual Studio, Build Tools) | `where cl` in "Developer PowerShell for VS 2022", or `rustc --version --verbose` showing host `x86_64-pc-windows-msvc` |
+| 6 | Rust (rustup, stable, MSVC host) | 1.99.1, edition 2024 (needs a recent stable) | <https://rustup.rs>; no extra targets are needed for Windows builds | `rustc --version`, `cargo --version` |
+| 7 | WebView2 runtime | current (preinstalled on Windows 11 and updated Windows 10) | <https://developer.microsoft.com/microsoft-edge/webview2/> | `Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' \| Select pv` |
+| 8 | Claude Code | current | <https://code.claude.com/docs/en/quickstart>, sign in with your Claude account | `claude --version` |
+| 9 | NSIS (makes the installer) | **nothing to install**: Tauri downloads it on the first `npm run tauri build` | automatic | the build prints the download; the setup appears in `src-tauri\target\release\bundle\nsis\` |
 
-Then in the project folder: `npm ci` (this installs exactly what `package-lock.json` says; never run `npm install` with a changed version, the project pins exact versions). Checks and what they show are listed in `CLAUDE.md` ("Verification commands"). `npm run tauri dev` starts the app with its own development data in `.devdata\` (ignored by Git, **not** your real notes).
+Not needed: Wine (that is the cloud container's way to run Rust tests), `cargo audit` (optional), and any Python.
+
+**Project dependencies** come with the repository, not with a separate install: in the `Notaya` folder run `npm ci` (installs exactly `package-lock.json`, including the Tauri CLI 2.12.4; never run a plain `npm install` that changes versions: `.npmrc` pins exact versions). Rust crates are locked in `src-tauri/Cargo.lock` and downloaded by `cargo`.
+
+**Smoke test, in this order** (each shows what it does not prove, see `CLAUDE.md` "Verification commands"):
+
+```powershell
+npm ci
+npx tsc --noEmit -p tsconfig.json     # types
+npm run build                          # frontend bundles
+cd src-tauri; cargo test --lib; cd ..  # Rust unit tests (the first run compiles for a few minutes)
+npm run tauri dev                      # the app opens with its own dev data in .devdata\ (ignored by Git, not your notes)
+```
+
+If these pass on `main`, your PC matches the build setup. Say so in your first message to Claude and in your first resume note, with the commit you ran them on.
 
 Adding a library or tool **to the project** is your call as a partner, but it changes the lock files and the security review has to cover it, so write the reason in the PR. Making the repository public or adding a licence needs both of you to agree.
+
+### Claude skills and plugins used on this project
+
+| Item | What it is | How you get it |
+|---|---|---|
+| **Security Guidance** plugin (Anthropic) | Required for every code PR (guide section 9); its hooks check edits by pattern | In Claude Code type `/plugin`, find "Security Guidance", install and enable it. Check: `/plugin` lists it as enabled. |
+| **`/security-review`** | Built into Claude Code; run it on the diff before a code PR goes to the other partner | Nothing to install. Check: type `/security-review` in a repo with a change. |
+| **`CLAUDE.md` and `docs/handoff/`** | The project's rules, the PBS work cycle, claims and resume notes | Already in the repository; Claude Code reads `CLAUDE.md` by itself. This is what carries the rules for both of you. |
+| Mohamed's saved skills `cipherleaf-change-workflow`, `cipherleaf-real-exe-test`, `cipherleaf-project-coordination`, `pbs-start-resume-handoff` | Skills saved in **Mohamed's own Claude account**, so they are **not** on your account and cannot be installed from here | You don't need them: their rules are already in `CLAUDE.md` and this folder, and the real-exe test scripts are in `tools/real-exe-tests/`. If you want the skills themselves, ask Mohamed to export them from his Claude settings and commit them into the repository's `.claude/skills/` folder (then both Claudes load them automatically); that is a small PR for the two of you to decide. |
 
 ## 5. Security helpers
 
@@ -64,11 +95,14 @@ Every code PR gets a security review (rule in section 9 of the guide). In Claude
 2. Paste the **Start** prompt from section 12 of [collaboration-guide.md](collaboration-guide.md), with your name and GitHub login filled in (you are a partner).
 3. **Your first task is V1.4.0.** Tell Claude: "Read `docs/handoff/2026-10-28-v1-4-0-resume-note.md` on branch `claude/project-thread-fdn5gx` (draft PR #39) and tell me what is done, what is unverified and what comes next." That note (it exists only on that branch) is where Mohamed's Claude stopped, with the unfinished list in order. Claude reads the records and tells you what is in flight and who owns it. The main job is **V1.4.0** (branch `claude/project-thread-fdn5gx`, draft PR #39, a **shared branch**: both of your Claudes may push to it, following section 5b of the guide). Its resume note, on that branch, lists what is unfinished. Mohamed paused it for the night; either of you says "resume V1.4.0" to restart.
 4. Tell Claude "Start <task>" (or "Resume V1.4.0, take <item>"). It claims the work (a branch `<your-login>/<topic>` with a first commit holding your claims row and a draft PR, or, on V1.4.0, a "taken by" mark in the resume note), does the work, writes down what it checked and what it didn't run, and keeps the PR up to date.
-5. At the end of every session paste the **Hand over** prompt, so the next Claude (yours or Mohamed's) can continue.
+5. **Keep the resume note current.** Your Claude must update the resume note (V1.4.0: `docs/handoff/2026-10-28-v1-4-0-resume-note.md` on its branch; other work: its own `docs/handoff/YYYY-MM-DD-<topic>-resume-note.md`) and **push it every time it finishes a step, and whenever it stops for any reason** (you say stop, a limit, a closed laptop). Mohamed's Claude picks up from that note. At the end of every session also paste the **Hand over** prompt.
 
 ## 8. When something goes wrong
 
-- Claude wants to delete files, add a library, change anything about passwords or encryption, or push to a branch that isn't shared: **stop and decide it yourself as a partner**, and make sure the PR says why. Pushes to someone else's non-shared branch need that person's OK.
-- Claude finds a vault, a `.nota` or `.clf` file or a key in `git status`: do not commit it. Stop and find out why it is there.
-- A push is refused, the repository isn't offered, or `git` asks for a password you don't have: the account isn't accepted yet, or isn't the invited one. Check section 1; then tell Mohamed.
-- Two people appear to be working on the same thing, or you and Mohamed give your Claudes opposite instructions: stop, look at the open PRs and the claims board, and talk to Mohamed before going on.
+You are a full partner: fix it yourself, with your Claude. Mohamed is there if you want a second opinion, but you don't need to wait for him.
+
+- **Claude wants to delete files, add a library, change anything about passwords or encryption:** it's your call as a partner. Decide it, and make sure the PR says why. Pushing to someone else's branch that isn't marked `shared branch` needs that person's OK.
+- **Claude finds a vault, a `.nota` or `.clf` file or a key in `git status`:** do not commit it. Find out why it is there, move or ignore it, and carry on.
+- **A push is refused, the repository isn't offered, or `git` asks for a password you don't have:** check you accepted the invitation (section 1) and are signed in as the invited account, then let Claude retry. If it still fails, tell Mohamed: only he can change GitHub repository settings.
+- **A merge conflict or a red check:** have Claude merge `main` into your branch and fix it. Don't rebase or force-push.
+- **Two people working on the same thing, or opposite instructions to the two Claudes:** look at the open PRs and the claims board, then settle it between the two of you before going on.
