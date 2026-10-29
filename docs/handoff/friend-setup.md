@@ -2,7 +2,7 @@
 
 For the person Mohamed invited to work on Notaya. You need: a GitHub account, a Claude account that can use Claude Code, and (to build and test the Windows app) a Windows PC. About an hour, most of it installing tools. Read [collaboration-guide.md](collaboration-guide.md) afterwards; your Claude will read it too.
 
-You will work on **branches and draft pull requests**. Mohamed reviews and merges everything. You cannot change repository settings, and nothing you do should touch his notes.
+You are a **full partner** on Notaya (Mohamed's words, 2026-10-29 08:39:33 and 08:40:02 UTC: full work access, from the beginning to after V1.4.0). Your words direct your Claude like his do, and you can merge, release and accept like he can. You work on branches and draft pull requests, and you can't change GitHub repository settings (only Mohamed can, because he owns the account). Nothing either of you does should touch the other's real notes or PC.
 
 ## 1. Accept the invitation (GitHub)
 
@@ -46,7 +46,7 @@ Versions the project was built with (stable releases only, no beta or preview):
 
 Then in the project folder: `npm ci` (this installs exactly what `package-lock.json` says; never run `npm install` with a changed version, the project pins exact versions). Checks and what they show are listed in `CLAUDE.md` ("Verification commands"). `npm run tauri dev` starts the app with its own development data in `.devdata\` (ignored by Git, **not** your real notes).
 
-Adding any new library or tool **to the project** needs Mohamed's OK first. Installing the tools above on your own PC doesn't.
+Adding a library or tool **to the project** is your call as a partner, but it changes the lock files and the security review has to cover it, so write the reason in the PR. Making the repository public or adding a licence needs both of you to agree.
 
 ## 5. Security helpers
 
@@ -55,20 +55,20 @@ Every code PR gets a security review (rule in section 9 of the guide). In Claude
 ## 6. Make a safe place for tests
 
 1. Make a folder **outside the repository**, for example `D:\Notaya Tests`. All builds, test copies and throwaway notes go there, not into `%TEMP%`.
-2. If your antivirus deletes unsigned test builds (Mohamed's did), exclude that folder in your antivirus yourself. Ask Mohamed before telling Claude to change any antivirus setting; Claude should never change one.
+2. If your antivirus deletes unsigned test builds (Mohamed's did), exclude that folder in your antivirus yourself. Claude should never change an antivirus setting; do that yourself.
 3. Your own real Notaya notes, if you use the app, are **never** used for tests. When testing an installer, untick "Run Notaya" on the last page.
 
 ## 7. Your first session
 
 1. Open a terminal in the `Notaya` folder and start Claude Code (`claude`), or open the repository in the browser version.
-2. Paste the **Start** prompt from section 12 of [collaboration-guide.md](collaboration-guide.md), with your name and GitHub login filled in and the role `collaborator`.
-3. Claude reads the records and tells you what is in flight and who owns it. **Don't ask it to build anything yet.** Message Mohamed with what you would like to work on (or ask him what is free). V1.4.0 is being built on another branch and shouldn't be touched.
-4. When Mohamed agrees on a task, tell Claude "Start <task>". It claims the work (a branch `<your-login>/<topic>`, a first commit with your claims row, a draft PR), does the work, writes down what it checked and what it didn't run, and opens the draft PR for Mohamed.
+2. Paste the **Start** prompt from section 12 of [collaboration-guide.md](collaboration-guide.md), with your name and GitHub login filled in (you are a partner).
+3. Claude reads the records and tells you what is in flight and who owns it. The main job is **V1.4.0** (branch `claude/project-thread-fdn5gx`, draft PR #39, a **shared branch**: both of your Claudes may push to it, following section 5b of the guide). Its resume note, on that branch, lists what is unfinished. Mohamed paused it for the night; either of you says "resume V1.4.0" to restart.
+4. Tell Claude "Start <task>" (or "Resume V1.4.0, take <item>"). It claims the work (a branch `<your-login>/<topic>` with a first commit holding your claims row and a draft PR, or, on V1.4.0, a "taken by" mark in the resume note), does the work, writes down what it checked and what it didn't run, and keeps the PR up to date.
 5. At the end of every session paste the **Hand over** prompt, so the next Claude (yours or Mohamed's) can continue.
 
 ## 8. When something goes wrong
 
-- Claude wants to delete files, add a library, change anything about passwords or encryption, or push to someone else's branch: **say no and ask Mohamed.**
-- Claude finds a vault, a `.nota` or `.clf` file or a key in `git status`: do not commit it. Stop and ask Mohamed.
+- Claude wants to delete files, add a library, change anything about passwords or encryption, or push to a branch that isn't shared: **stop and decide it yourself as a partner**, and make sure the PR says why. Pushes to someone else's non-shared branch need that person's OK.
+- Claude finds a vault, a `.nota` or `.clf` file or a key in `git status`: do not commit it. Stop and find out why it is there.
 - A push is refused, the repository isn't offered, or `git` asks for a password you don't have: the account isn't accepted yet, or isn't the invited one. Check section 1; then tell Mohamed.
-- Two people appear to be working on the same thing: stop, look at the open PRs, and tell Mohamed.
+- Two people appear to be working on the same thing, or you and Mohamed give your Claudes opposite instructions: stop, look at the open PRs and the claims board, and talk to Mohamed before going on.
