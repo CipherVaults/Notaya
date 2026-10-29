@@ -65,7 +65,15 @@ Every code PR gets a security review (rule in section 9 of the guide). In Claude
 3. **Your first task is V1.4.0.** Tell Claude: "Read `docs/handoff/2026-10-28-v1-4-0-resume-note.md` on branch `claude/project-thread-fdn5gx` (draft PR #39) and tell me what is done, what is unverified and what comes next." That note (it exists only on that branch) is where Mohamed's Claude stopped, with the unfinished list in order. Claude reads the records and tells you what is in flight and who owns it. The main job is **V1.4.0** (branch `claude/project-thread-fdn5gx`, draft PR #39, a **shared branch**: both of your Claudes may push to it, following section 5b of the guide). Its resume note, on that branch, lists what is unfinished. Mohamed paused it for the night; either of you says "resume V1.4.0" to restart.
 4. Tell Claude "Start <task>" (or "Resume V1.4.0, take <item>"). It claims the work (a branch `<your-login>/<topic>` with a first commit holding your claims row and a draft PR, or, on V1.4.0, a "taken by" mark in the resume note), does the work, writes down what it checked and what it didn't run, and keeps the PR up to date.
 5. At the end of every session paste the **Hand over** prompt, so the next Claude (yours or Mohamed's) can continue.
-6. Mohamed's project skills (change workflow, real-exe test, project coordination, PBS start/resume/handoff, plus three Notion/chart skills) live in `.claude/skills/` in the repository, so Claude Code loads them from the repo on its own. They were uploaded as exported and not edited; they still say CipherLeaf and use Mohamed's PC paths, so use your own paths and where they differ from `CLAUDE.md`, `CLAUDE.md` wins.
+6. Mohamed's project skills live in `.claude/skills/` in the repository (uploaded as exported and not edited; they still say CipherLeaf and use Mohamed's PC paths, so use your own paths, and where they differ from `CLAUDE.md`, `CLAUDE.md` wins). They exist on `main` once PR #42 is merged; on a branch made before that, run `git merge origin/main` first. Claude Code loads them from the repo. At the start of every session, tell Claude: "Load the skills in `.claude/skills/` and use the ones that apply." Which to use:
+
+- `cipherleaf-change-workflow`: for any code or docs change (plan, build, review, test on throwaway data, push, draft PR, report). Use it for every change.
+- `pbs-start-resume-handoff`: at the start of a session, when resuming paused work, and when handing over (PBS records, resume notes).
+- `cipherleaf-real-exe-test`: whenever the built Windows app must be tested, on throwaway data only, never real notes.
+- `cipherleaf-project-coordination`: only if your Claude acts as the coordinator that routes work between threads.
+- `notion-native-artwork`, `personalized-notion-hubs`, `personalized-charts`: not Notaya work; they are Mohamed's own Notion and chart skills (written for "Ahmed"). Ignore them unless you are asked for that kind of task.
+
+   The V1.4.0 resume note (on branch `claude/project-thread-fdn5gx`) doesn't mention the skills yet; the first prompt above and this list cover it.
 
 ## 8. When something goes wrong
 
