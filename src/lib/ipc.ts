@@ -9,7 +9,9 @@ import type {
   EnableSecurityResult,
   ExportRequest,
   ExportSummary,
+  ImportSource,
   ImportSummary,
+  NotesImportSummary,
   NotesTree,
   Page,
   PageMeta,
@@ -104,6 +106,8 @@ export const api = {
   addAttachment: (bytes: Uint8Array) => invoke<string>("add_attachment", bytes),
   // Export: the backend asks where to save (resolves to null if cancelled) and writes an unencrypted file
   exportNotes: (request: ExportRequest) => invoke<ExportSummary | null>("export_notes", { request }),
+  // Import: the backend asks what to import (resolves to null if cancelled) and makes one new notebook
+  importNotes: (source: ImportSource) => invoke<NotesImportSummary | null>("import_notes", { request: { source } }),
 
   // Sticky notes
   listStickies: () => invoke<Sticky[]>("list_stickies"),

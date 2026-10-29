@@ -62,6 +62,8 @@ pub fn notion_color(name: &str) -> Option<(bool, &'static str)> {
         Some(b) => (b, true),
         None => (name, false),
     };
+    // Notion's HTML export is understood to call its green "teal" (not checked against a real export); both names work.
+    let base = if base == "teal" { "green" } else { base };
     let i = NOTION_CLASS_NAMES.iter().position(|c| *c == base)?;
     Some(if background { (true, HIGHLIGHTS[i]) } else { (false, TEXT_COLORS[i]) })
 }
@@ -169,6 +171,16 @@ impl Renderer<'_> {
 
     fn block(&mut self, b: &Block, depth: usize, out: &mut Vec<Value>) {
         let deep = depth >= MAX_DEPTH;
+        if deep && is_container(b) {
+            // Too deep: the container's content is written one level up, in order. This walks
+            // the tree with a list, not with calls, so a hostile file cannot overflow the stack.
+            let mut leaves = Vec::new();
+            flatten(b, &mut leaves);
+            for leaf in leaves {
+                self.block(leaf, depth, out);
+            }
+            return;
+        }
         match b {
             Block::Paragraph(inl) => self.textblock(json!({ "type": "paragraph" }), inl, out),
             Block::Heading(level, inl) => {
@@ -460,6 +472,27 @@ fn inline_nodes(run: &[&Inline]) -> (Vec<Value>, String) {
     (nodes, text)
 }
 
+fn is_container(b: &Block) -> bool {
+    matches!(b, Block::Bullets(_) | Block::Numbered(..) | Block::Tasks(_) | Block::Quote(_) | Block::Callout(..) | Block::Toggle(_) | Block::Table(_) | Block::Columns(_))
+}
+
+/// The blocks that are not containers inside `root`, in reading order (no recursion).
+fn flatten<'a>(root: &'a Block, leaves: &mut Vec<&'a Block>) {
+    let mut stack: Vec<&'a Block> = vec![root];
+    while let Some(b) = stack.pop() {
+        let mut kids: Vec<&'a Block> = Vec::new();
+        match b {
+            Block::Bullets(items) | Block::Numbered(_, items) => items.iter().for_each(|i| kids.extend(i.iter())),
+            Block::Tasks(items) => items.iter().for_each(|(_, i)| kids.extend(i.iter())),
+            Block::Quote(i) | Block::Toggle(i) | Block::Callout(_, i) => kids.extend(i.iter()),
+            Block::Table(rows) => rows.iter().flatten().for_each(|c| kids.extend(c.blocks.iter())),
+            Block::Columns(cols) => cols.iter().for_each(|c| kids.extend(c.iter())),
+            leaf => leaves.push(leaf),
+        }
+        stack.extend(kids.into_iter().rev());
+    }
+}
+
 /// Plain text helper used by converters (for titles and captions).
 pub fn plain(inl: &[Inline]) -> String {
     let mut s = String::new();
@@ -563,6 +596,8 @@ mod tests {
         assert_eq!(notion_color("red"), Some((false, "#d44c47")));
         assert_eq!(notion_color("gray_background"), Some((true, "rgba(120, 119, 116, 0.28)")));
         assert_eq!(notion_color("default"), None);
+        assert_eq!(notion_color("teal"), notion_color("green"));
+        assert_eq!(notion_color("teal_background"), notion_color("green_background"));
         let m = Marks { color: Some("#d44c47".into()), highlight: Some(HIGHLIGHTS[3].into()), font: Some(FONT_SERIF.into()), ..Marks::default() };
         let (json, _) = render(&[Block::Paragraph(vec![Inline::Text("x".into(), m)])], &no_images, &|_| None);
         let v: Value = serde_json::from_str(&json).unwrap();

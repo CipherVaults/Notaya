@@ -4,6 +4,7 @@
 pub mod backup;
 pub mod calculator;
 pub mod export;
+pub mod import_notes;
 pub mod notes;
 pub mod shell;
 pub mod stickies;

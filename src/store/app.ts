@@ -32,10 +32,13 @@ interface AppState {
   sidebarOpen: boolean;
   sidebarWidth: number;
   exportTarget: ExportTarget | null;
+  importOpen: boolean;
 
   setIntent: (i: Intent) => void;
   /** Opens the export dialog (null closes it). */
   setExportTarget: (t: ExportTarget | null) => void;
+  /** Opens or closes the import dialog. */
+  setImportOpen: (open: boolean) => void;
   setView: (v: View) => void;
   refreshStatus: () => Promise<VaultStatus>;
   loadVault: () => Promise<void>;
@@ -86,9 +89,11 @@ export const useApp = create<AppState>((set, get) => ({
   sidebarOpen: layout().open,
   sidebarWidth: layout().width,
   exportTarget: null,
+  importOpen: false,
 
   setIntent: (intent) => set({ intent }),
   setExportTarget: (exportTarget) => set({ exportTarget }),
+  setImportOpen: (importOpen) => set({ importOpen }),
   setView: (view) => set({ view }),
 
   refreshStatus: async () => {

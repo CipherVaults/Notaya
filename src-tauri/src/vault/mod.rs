@@ -289,6 +289,20 @@ impl Session {
         Ok(())
     }
 
+    /// Deletes the given attachments (by id) in one transaction. An import that failed after
+    /// storing its pictures uses it to take back exactly the pictures it stored.
+    pub fn delete_attachments(&mut self, ids: &[String]) -> Result<()> {
+        let rows = ids.iter().map(|id| parse_id(id)).collect::<Result<Vec<_>>>()?;
+        self.store.transaction(|s| {
+            for row in &rows {
+                s.delete(Table::Attachments, row)?;
+            }
+            Ok(())
+        })?;
+        self.changed();
+        Ok(())
+    }
+
     /// Deletes attachments no page or sticky note refers to any more.
     pub fn collect_garbage(&mut self) -> Result<usize> {
         let mut referenced = String::new();

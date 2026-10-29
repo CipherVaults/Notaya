@@ -188,6 +188,26 @@ export interface ExportSummary {
   assetsFolder: string | null;
 }
 
+/** Where an import comes from. The backend opens the dialog itself. */
+export type ImportSource = "files" | "folder";
+
+/** One thing an import left out, and why. */
+export interface ImportSkipped {
+  item: string;
+  reason: string;
+}
+
+/** What an import created (mirrors `ImportSummary` in src-tauri/src/importers/plan.rs). */
+export interface NotesImportSummary {
+  notebookId: string;
+  notebookName: string;
+  sections: number;
+  pages: number;
+  images: number;
+  skipped: ImportSkipped[];
+  notes: string[];
+}
+
 export interface SearchHit {
   kind: "page" | "sticky" | "notebook";
   id: string;

@@ -31,6 +31,7 @@ type Dict = Vec<(Vec<u8>, Obj)>;
 #[derive(Clone, Debug)]
 enum Obj {
     Null,
+    #[allow(dead_code)]
     Bool(bool),
     Num(f64),
     Name(Vec<u8>),
@@ -1431,7 +1432,7 @@ pub(crate) mod tests {
 
     /// Builds a small PDF from object bodies (object 1 is the catalog).
     pub fn build_pdf(objects: &[String]) -> Vec<u8> {
-        let mut out = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec();
+        let mut out = "%PDF-1.4\n%\u{e2}\u{e3}\u{cf}\u{d3}\n".as_bytes().to_vec();
         let mut offsets = Vec::new();
         for (i, body) in objects.iter().enumerate() {
             offsets.push(out.len());
@@ -1553,7 +1554,7 @@ pub(crate) mod tests {
             let _ = extract(&c);
         }
         assert!(start.elapsed().as_secs() < 10);
-        assert_eq!(ascii85(b"<~87cURD]i,\"Ebo80~>"), b"Hello world");
+        assert_eq!(ascii85(b"<~87cURD]i,\"Ebo80~>"), b"Hello World!");
         assert_eq!(run_length(&[2, b'a', b'b', b'c', 254, b'x', 128], 100), b"abcxxx");
         assert_eq!(MAC_ROMAN_HIGH.chars().count(), 128);
         let _ = latin1(&[]);

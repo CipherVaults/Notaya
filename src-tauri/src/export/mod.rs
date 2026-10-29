@@ -420,7 +420,7 @@ pub fn safe_file_name(title: &str) -> String {
 
 /// The path with symbolic links and `..` resolved; a file that does not exist yet is
 /// resolved through its folder.
-fn resolve(p: &Path) -> PathBuf {
+pub(crate) fn resolve(p: &Path) -> PathBuf {
     fs::canonicalize(p)
         .or_else(|_| {
             let dir = p.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));

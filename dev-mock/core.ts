@@ -260,6 +260,41 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
         assetsFolder: ext === "md" ? "C:\\Users\\you\\Documents\\Notaya export.assets" : null,
       });
     }
+    // The real app opens a file dialog and imports the files; here it pretends two files were picked.
+    // ?importFail=1 makes it fail, ?importCancel=1 cancels the dialog.
+    case "import_notes": {
+      if (params.get("importFail") === "1") throw "No pages were found. Choose Markdown (.md), HTML, Word (.docx) or PDF files, a folder of them, or a ZIP file made by Notion.";
+      await new Promise((r) => setTimeout(r, 600));
+      if (params.get("importCancel") === "1") return ok(null);
+      const n = tree.notebooks.length + 1;
+      const nb = { id: `n${n + 10}`, name: "Notion import", color: "#6366f1", icon: "📓", order: n, created: ago(0), updated: ago(0) };
+      const secs = [
+        { id: `s${n + 20}`, notebookId: nb.id, name: "Imported pages", color: "", order: 0, created: ago(0), updated: ago(0) },
+        { id: `s${n + 21}`, notebookId: nb.id, name: "Recipes", color: "", order: 1, created: ago(0), updated: ago(0) },
+      ];
+      const mk = (id: string, sectionId: string, title: string, order: number, parent = "", icon = "") => ({
+        id, sectionId, title, preview: "Imported from Notion.", words: 40, order, favorite: false, parent, icon, trashedAt: null, created: ago(0), updated: ago(0),
+      });
+      tree.notebooks.push(nb);
+      tree.sections.push(...secs);
+      tree.pages.push(
+        mk(`p${n + 30}`, secs[0].id, "Project plan", 0, "", "🚀"),
+        mk(`p${n + 31}`, secs[0].id, "Sub page", 1, `p${n + 30}`),
+        mk(`p${n + 32}`, secs[1].id, "Pancakes", 0, "", "🥞"),
+      );
+      return ok({
+        notebookId: nb.id,
+        notebookName: nb.name,
+        sections: 2,
+        pages: 3,
+        images: 2,
+        skipped: [
+          { item: "Tasks 0123abcd.csv", reason: "A Notion database (table) view. Tables are not imported; the pages inside a database are, when they were exported." },
+          { item: "Picture holiday.heic (Project plan 0123abcd.html)", reason: "Not a PNG, JPEG, GIF or WebP picture." },
+        ],
+        notes: ["PDF import reads text only: pictures, scanned pages and the page layout are not imported."],
+      });
+    }
     case "password_strength": {
       const len = String(args.password ?? "").length;
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;

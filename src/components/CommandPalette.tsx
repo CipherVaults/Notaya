@@ -11,6 +11,7 @@ import {
   Palette,
   Settings,
   StickyNote,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -135,6 +136,7 @@ export default function CommandPalette() {
                     }
                     className={itemClass}
                   />
+                  <Action icon={<Upload size={16} />} label="Import pages…" onSelect={() => run(() => { const s = useApp.getState(); s.setView("notes"); s.setImportOpen(true); })} className={itemClass} />
                   <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Backup saved."); })} className={itemClass} />
                   {securityOn && (
                     <Action icon={<Lock size={16} />} label="Lock vault" hint="Ctrl L" onSelect={() => run(() => api.lockVault())} className={itemClass} />

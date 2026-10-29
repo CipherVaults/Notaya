@@ -39,6 +39,11 @@ pub struct Vfs {
     pub refused: Vec<(String, String)>,
 }
 
+/// True for a name that ends in `.zip` (any case).
+pub fn is_zip_name(name: &str) -> bool {
+    name.len() > 4 && name.is_char_boundary(name.len() - 4) && name[name.len() - 4..].eq_ignore_ascii_case(".zip")
+}
+
 fn is_hidden(name: &str) -> bool {
     name.starts_with('.') || name == "__MACOSX" || name.eq_ignore_ascii_case("thumbs.db") || name.eq_ignore_ascii_case("desktop.ini")
 }
@@ -56,18 +61,38 @@ impl Vfs {
         self.files.insert(path, origin);
     }
 
-    /// Files picked in the dialog (all from one folder). Pictures they use are read from
-    /// that folder and below, on demand.
+    /// Files picked in the dialog, in any mix: documents (all from one folder) and ZIP files
+    /// (for example Notion exports; ZIP files inside them are opened one level deep). Pictures a
+    /// picked document uses are read from its folder and below, on demand.
     pub fn from_files(paths: &[PathBuf]) -> Result<Vfs, String> {
         let mut v = Vfs::empty();
+        let mut first_doc: Option<&Path> = None;
         for p in paths {
             let name = p.file_name().and_then(|n| n.to_str()).ok_or("A file name could not be read.")?.to_string();
+            if is_zip_name(&name) {
+                v.mount_zip_file(p)?;
+                continue;
+            }
+            if first_doc.is_none() {
+                first_doc = p.parent();
+            }
+            if v.files.contains_key(&name) {
+                v.refused.push((name, "Another chosen file has the same name.".into()));
+                continue;
+            }
             v.add(name, Origin::Disk(p.clone()));
         }
-        if let Some(parent) = paths.first().and_then(|p| p.parent()) {
-            v.lazy_root = std::fs::canonicalize(parent).ok();
-        }
+        v.lazy_root = first_doc.and_then(|parent| std::fs::canonicalize(parent).ok());
         Ok(v)
+    }
+
+    fn mount_zip_file(&mut self, p: &Path) -> Result<(), String> {
+        let len = std::fs::metadata(p).map_err(|e| format!("The file could not be read ({e}).")).map(|m| m.len())?;
+        if len > MAX_ZIP_FILE {
+            return Err("This ZIP file is larger than 1 GB. Export it in smaller parts.".into());
+        }
+        let data = std::fs::read(p).map_err(|e| format!("The file could not be read ({e})."))?;
+        self.mount(Archive::open(data)?, true)
     }
 
     /// Every file in a folder and its subfolders (not following links).
@@ -110,21 +135,6 @@ impl Vfs {
         Ok(v)
     }
 
-    /// One or more ZIP files (for example a Notion export). ZIP files inside them are opened
-    /// too, one level deep (newer Notion exports put `Export-…-Part-1.zip` inside the ZIP).
-    pub fn from_zips(paths: &[PathBuf]) -> Result<Vfs, String> {
-        let mut v = Vfs::empty();
-        for p in paths {
-            let len = std::fs::metadata(p).map_err(|e| format!("The file could not be read ({e}).")).map(|m| m.len())?;
-            if len > MAX_ZIP_FILE {
-                return Err("This ZIP file is larger than 1 GB. Export it in smaller parts.".into());
-            }
-            let data = std::fs::read(p).map_err(|e| format!("The file could not be read ({e})."))?;
-            v.mount(Archive::open(data)?, true)?;
-        }
-        Ok(v)
-    }
-
     #[cfg(test)]
     pub fn from_zip_bytes(data: Vec<u8>) -> Result<Vfs, String> {
         let mut v = Vfs::empty();
@@ -142,7 +152,7 @@ impl Vfs {
             if e.name.split('/').any(is_hidden) {
                 continue;
             }
-            if e.name.to_ascii_lowercase().ends_with(".zip") {
+            if is_zip_name(&e.name) {
                 if nested_ok {
                     inner.push(i);
                 } else {
@@ -164,6 +174,11 @@ impl Vfs {
             self.mount(a, false)?;
         }
         Ok(())
+    }
+
+    /// True when some files come out of a ZIP file.
+    pub fn has_archives(&self) -> bool {
+        !self.archives.is_empty()
     }
 
     pub fn paths(&self) -> impl Iterator<Item = &String> {

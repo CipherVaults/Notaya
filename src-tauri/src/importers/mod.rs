@@ -258,7 +258,7 @@ pub fn clean_title(name: &str, strip_ext: bool) -> String {
     let mut s = name.trim();
     if strip_ext {
         if let Some(dot) = s.rfind('.') {
-            if dot > 0 && s.len() - dot <= 9 {
+            if s.len() - dot <= 9 {
                 s = &s[..dot];
             }
         }

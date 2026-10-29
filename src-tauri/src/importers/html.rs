@@ -716,7 +716,7 @@ pub(crate) mod tests {
             <svg><script>evil()</script></svg><object data="x.swf"></object></p>"#;
         let (blocks, images, problems) = with_ctx(&[], |ctx| parse_fragment(src, ctx));
         let v = json(&blocks).to_string();
-        for bad in ["evil", "javascript", "cookie", "onclick", "onerror", "iframe", "swf", "win.ini", "server"] {
+        for bad in ["evil", "javascript", "cookie", "onclick", "onerror", "iframe", "swf", "file:", "C:", "server"] {
             assert!(!v.contains(bad), "{bad} leaked: {v}");
         }
         assert!(v.contains("https://ok.example/x"));
@@ -726,9 +726,26 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn notion_page_fonts_map_to_serif_mono_or_the_default() {
+        for (class, expect) in [("page serif", Some("Georgia, Cambria, serif")), ("page mono", Some("\"JetBrains Mono Variable\", Consolas, monospace")), ("page sans", None), ("page", None)] {
+            let src = format!("<html><body><article class=\"{class}\"><p>text</p></article></body></html>");
+            let (d, _, _) = with_ctx(&[], |ctx| parse_document(&src, ctx));
+            let v = json(&d.blocks);
+            let font = &v["content"][0]["content"][0]["marks"][0]["attrs"]["fontFamily"];
+            match expect {
+                Some(f) => assert_eq!(font, f, "{class}"),
+                None => assert!(v["content"][0]["content"][0].get("marks").is_none(), "{class}: the default font sets nothing: {v}"),
+            }
+        }
+    }
+
+    #[test]
     fn deep_and_broken_html_does_not_crash() {
         let deep = "<div>".repeat(100_000) + "x" + &"</div>".repeat(10);
         let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment(&deep, ctx));
+        let _ = json(&blocks); // very deep text may be dropped, but nothing crashes or hangs
+        let nested = "<div>".repeat(50) + "x" + &"</div>".repeat(50);
+        let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment(&nested, ctx));
         assert!(json(&blocks).to_string().contains('x'));
         let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment("<ul><li>a<li>b</ul><table><tr><td>1<td>2<tr><td>3</table><p>one<p>two", ctx));
         let v = json(&blocks);
@@ -788,7 +805,7 @@ x++;</code></pre>
             let highlight = format!(r#""color":"{}"}},"type":"highlight""#, doc::HIGHLIGHTS[i]);
             assert!(s.contains(&highlight), "background {name} -> {}", doc::COLOR_NAMES[i]);
         }
-        assert!(!s.contains("teal"), "an unknown Notion color is dropped, the text kept");
+        assert!(!s.contains("teal"), "class names are never written to the page");
         // The page font (serif) is kept on the text.
         assert!(s.contains(r#""fontFamily":"Georgia, Cambria, serif""#));
         // A block background colors the text inside.

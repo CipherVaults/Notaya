@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 use super::doc::{self, Block, Cell, Inline, Marks};
 use super::markup::decode_one;
-use super::{html, safe_link, Ctx};
+use super::{html, resolve_rel, safe_link, Ctx};
 
 const MAX_DEPTH: usize = 16;
 /// Paragraphs longer than this are taken as plain text (no inline parsing).
@@ -262,6 +262,26 @@ struct Parser<'c, 'a> {
 }
 
 impl Parser<'_, '_> {
+    /// A paragraph that is only `[Title](Other%20page%20<id>.md)`, a link to another Markdown or
+    /// HTML file of the same import (how Notion writes a link to a page), becomes a page link.
+    fn page_link(&mut self, text: &str) -> Option<Block> {
+        let t = text.trim();
+        if t.contains('\n') || t.len() > 2_000 {
+            return None;
+        }
+        let (label, dest) = t.strip_prefix('[')?.strip_suffix(')')?.rsplit_once("](")?;
+        if label.contains("](") || dest.contains(char::is_whitespace) || dest.contains(['(', ')', '<', '>']) {
+            return None;
+        }
+        let lower = dest.to_ascii_lowercase();
+        let lower = lower.split(['?', '#']).next().unwrap_or("");
+        if !(lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".html") || lower.ends_with(".htm")) {
+            return None;
+        }
+        let path = resolve_rel(&self.ctx.dir, dest).and_then(|p| self.ctx.vfs.find(&p))?;
+        Some(Block::PageLink(path, doc::collapse_ws(label)))
+    }
+
     fn blocks(&mut self, lines: &[String], depth: usize) -> Vec<Block> {
         let mut out = Vec::new();
         let mut para: Vec<&str> = Vec::new();
@@ -272,7 +292,10 @@ impl Parser<'_, '_> {
                 if !para.is_empty() {
                     let text = para.join("\n");
                     para.clear();
-                    out.push(Block::Paragraph(self.inline(&text)));
+                    match self.page_link(&text) {
+                        Some(b) => out.push(b),
+                        None => out.push(Block::Paragraph(self.inline(&text))),
+                    }
                 }
             };
         }
@@ -381,7 +404,18 @@ impl Parser<'_, '_> {
             }
             if para.is_empty() && html_block(l) {
                 let mut html_lines = Vec::new();
-                while i < n && !blank(&lines[i]) {
+                // A toggle (<details>) goes on past blank lines until it is closed, so its
+                // content stays inside it (Notion writes toggles this way).
+                let toggle = l.trim_start().to_ascii_lowercase().starts_with("<details");
+                let mut open = 0i32;
+                while i < n && html_lines.len() < 20_000 {
+                    if blank(&lines[i]) && !(toggle && open > 0) {
+                        break;
+                    }
+                    if toggle {
+                        let low = lines[i].to_ascii_lowercase();
+                        open += low.matches("<details").count() as i32 - low.matches("</details>").count() as i32;
+                    }
                     html_lines.push(lines[i].as_str());
                     i += 1;
                 }
@@ -1028,6 +1062,31 @@ mod tests {
         assert_eq!(c[4]["type"], "callout");
         assert_eq!(c[5]["type"], "callout");
         assert_eq!(c[5]["attrs"]["icon"], "⚠️");
+    }
+
+    #[test]
+    fn a_paragraph_that_is_a_link_to_another_page_becomes_a_page_link() {
+        let files: &[(&str, &[u8])] = &[("Sub page 0123456789abcdef0123456789abcdef.md", b"# Sub"), ("notes.txt", b"x")];
+        let src = "[Sub page](Sub%20page%200123456789abcdef0123456789abcdef.md)\n\n[Gone](Gone.md)\n\n[Text](notes.txt)\n\nSee [Sub page](Sub%20page%200123456789abcdef0123456789abcdef.md) here.\n\n[Up](../Sub%20page%200123456789abcdef0123456789abcdef.md)";
+        let (blocks, _, _) = with_ctx(files, |ctx| parse(src, ctx).blocks);
+        assert_eq!(blocks[0], Block::PageLink("Sub page 0123456789abcdef0123456789abcdef.md".into(), "Sub page".into()));
+        assert!(matches!(blocks[1], Block::Paragraph(_)), "a missing page stays text");
+        assert!(matches!(blocks[2], Block::Paragraph(_)), "only Markdown and HTML pages");
+        assert!(matches!(blocks[3], Block::Paragraph(_)), "a link inside a sentence stays a link");
+        assert!(matches!(blocks[4], Block::Paragraph(_)), "never outside the import");
+    }
+
+    #[test]
+    fn notion_markdown_toggles_equations_todos_and_bookmarks() {
+        let src = "- [x] done\n- [ ] open\n\n<details>\n<summary>More</summary>\n\nHidden part\n\n</details>\n\n$$\nE = mc^2\n$$\n\n[An article](https://example.com/a)\n\n> quoted\n\n1. one\n2. two\n";
+        let v = md(src);
+        let c = v["content"].as_array().unwrap();
+        let types: Vec<&str> = c.iter().map(|b| b["type"].as_str().unwrap()).collect();
+        assert_eq!(types, ["taskList", "toggle", "mathBlock", "paragraph", "blockquote", "orderedList"], "{v}");
+        assert_eq!(c[0]["content"][0]["attrs"]["checked"], true);
+        assert_eq!(c[2]["attrs"]["latex"], "E = mc^2");
+        assert!(c[3].to_string().contains("https://example.com/a"));
+        assert!(c[1].to_string().contains("Hidden part"));
     }
 
     #[test]
