@@ -227,7 +227,7 @@ fn page_title(t: &str) -> String {
 pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn Fn(&str) -> Option<(String, Vec<u8>)>) -> Result<ExportDoc> {
     let tree = sorted_pages(items, opts);
     let title_of = |id: &str| items.iter().find_map(|i| match i {
-        Item::Page(p) if p.id == id => Some(page_title(&p.title)),
+        Item::Page(p) if p.id == id && (opts.include_trashed || p.trashed_at.is_none()) => Some(page_title(&p.title)),
         _ => None,
     });
     let mut parts = Vec::new();
@@ -408,8 +408,8 @@ pub fn safe_file_name(title: &str) -> String {
         return "Notaya export".to_string();
     }
     let stem = s.split('.').next().unwrap_or("").to_ascii_uppercase();
-    const RESERVED: [&str; 22] = [
-        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
+    const RESERVED: [&str; 26] = [
+        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "COM0", "LPT0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
         "LPT9",
     ];
     if RESERVED.contains(&stem.as_str()) {
@@ -464,13 +464,56 @@ pub fn checked_destination(chosen: &Path, format: Format, data_dir: &Path) -> Re
     Ok(dest)
 }
 
+/// Makes ready the `<name>.assets` folder for a Markdown export and says whether it was created
+/// here. It must not be a link that leads somewhere else, must not be inside the data folder, and
+/// an existing folder is reused only when it holds nothing but pictures of an earlier export
+/// (`image-001.png` and the like), which are then removed so none are left over.
+fn prepare_assets_dir(dir: &Path, name: &str, data_dir: &Path) -> Result<bool> {
+    let target = resolve(dir);
+    if target.starts_with(resolve(data_dir)) {
+        return Err(Error::invalid("That is the folder where Notaya keeps your notes and backups. Choose another folder for the export."));
+    }
+    let parent = dir.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    match fs::symlink_metadata(dir) {
+        Ok(meta) => {
+            let expected = resolve(parent).join(name);
+            if meta.file_type().is_symlink() || !meta.is_dir() || target != expected {
+                return Err(Error::invalid(format!("{name} exists and is not a plain folder. Choose another name.")));
+            }
+            let mut stale = Vec::new();
+            for entry in fs::read_dir(dir)? {
+                let entry = entry?;
+                let file = entry.file_name().to_string_lossy().into_owned();
+                if !is_export_image_name(&file) || !entry.file_type()?.is_file() {
+                    return Err(Error::invalid(format!("The folder {name} already exists and holds other files. Choose another name.")));
+                }
+                stale.push(entry.path());
+            }
+            for f in stale {
+                fs::remove_file(f)?;
+            }
+            Ok(false)
+        }
+        Err(_) => {
+            fs::create_dir(dir)?;
+            Ok(true)
+        }
+    }
+}
+
+fn is_export_image_name(file: &str) -> bool {
+    let Some((stem, ext)) = file.rsplit_once('.') else { return false };
+    stem.strip_prefix("image-").is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+        && ["png", "jpg", "jpeg", "gif", "webp"].contains(&ext.to_ascii_lowercase().as_str())
+}
+
 /// Writes `bytes` to a temporary file next to `dest`, flushes it to the disk and renames it
 /// into place, so a failed export never leaves a half-written file under the chosen name.
 pub fn write_atomic(dest: &Path, bytes: &[u8]) -> Result<()> {
     let name = dest.file_name().and_then(|n| n.to_str()).ok_or_else(|| Error::invalid("Unsupported file name."))?;
     let tmp = dest.with_file_name(format!("{name}.{}.tmp", crate::model::now_ms()));
     let result = (|| -> Result<()> {
-        let mut f = fs::File::create(&tmp)?;
+        let mut f = fs::OpenOptions::new().write(true).create_new(true).open(&tmp)?;
         f.write_all(bytes)?;
         f.sync_all()?;
         drop(f);
@@ -485,7 +528,7 @@ pub fn write_atomic(dest: &Path, bytes: &[u8]) -> Result<()> {
 
 /// Renders the document in the chosen format and writes it to `dest` (already checked with
 /// [`checked_destination`]). For Markdown the pictures go into `<name>.assets` next to it.
-pub fn write(dest: &Path, format: Format, doc: &ExportDoc) -> Result<ExportSummary> {
+pub fn write(dest: &Path, format: Format, doc: &ExportDoc, data_dir: &Path) -> Result<ExportSummary> {
     let mut summary = ExportSummary {
         path: dest.display().to_string(),
         pages: doc.page_count(),
@@ -500,17 +543,28 @@ pub fn write(dest: &Path, format: Format, doc: &ExportDoc) -> Result<ExportSumma
             let out = markdown::render(doc, &assets_name);
             if !out.images.is_empty() {
                 let dir = dest.with_file_name(&assets_name);
-                if dir.exists() && !dir.is_dir() {
-                    return Err(Error::invalid(format!("{assets_name} exists and is not a folder. Choose another name.")));
-                }
-                fs::create_dir_all(&dir)?;
+                let created = prepare_assets_dir(&dir, &assets_name, data_dir)?;
                 // The pictures first, so the .md file never points at pictures that are not there.
-                for (name, bytes) in &out.images {
-                    write_atomic(&dir.join(name), bytes)?;
+                let written = (|| -> Result<()> {
+                    for (name, bytes) in &out.images {
+                        write_atomic(&dir.join(name), bytes)?;
+                    }
+                    write_atomic(dest, out.text.as_bytes())
+                })();
+                if let Err(e) = written {
+                    // Nothing is left behind: the pictures are plaintext copies of the notes.
+                    for (name, _) in &out.images {
+                        let _ = fs::remove_file(dir.join(name));
+                    }
+                    if created {
+                        let _ = fs::remove_dir(&dir);
+                    }
+                    return Err(e);
                 }
                 summary.assets_folder = Some(dir.display().to_string());
+            } else {
+                write_atomic(dest, out.text.as_bytes())?;
             }
-            write_atomic(dest, out.text.as_bytes())?;
         }
         Format::Docx => write_atomic(dest, &docx::render(doc)?)?,
         Format::Pdf => {
@@ -675,13 +729,48 @@ pub mod tests {
     }
 
     #[test]
+    fn the_markdown_pictures_folder_is_checked_before_anything_is_written() {
+        let root = temp_dir();
+        let data = root.join("data");
+        fs::create_dir_all(&data).unwrap();
+        let doc = sample_doc(doc::parse(&doc::tests::every_node_json(), &doc::tests::titles));
+        // A folder of that name that holds other files is refused and left alone.
+        let other = root.join("other");
+        fs::create_dir_all(other.join("notes.assets")).unwrap();
+        fs::write(other.join("notes.assets").join("mine.txt"), b"mine").unwrap();
+        assert!(write(&other.join("notes.md"), Format::Markdown, &doc, &data).is_err());
+        assert_eq!(fs::read(other.join("notes.assets").join("mine.txt")).unwrap(), b"mine");
+        assert!(!other.join("notes.md").exists());
+        // A folder of that name inside the data folder is refused.
+        assert!(write(&data.join("notes.md"), Format::Markdown, &doc, &data).is_err());
+        assert!(!data.join("notes.assets").exists());
+        // Pictures of an earlier export are replaced, so none are left over.
+        let again = root.join("again");
+        fs::create_dir_all(again.join("notes.assets")).unwrap();
+        fs::write(again.join("notes.assets").join("image-099.png"), b"old").unwrap();
+        write(&again.join("notes.md"), Format::Markdown, &doc, &data).unwrap();
+        assert!(!again.join("notes.assets").join("image-099.png").exists());
+        assert!(again.join("notes.assets").join("image-001.png").is_file());
+        // A link that leads somewhere else is refused.
+        #[cfg(unix)]
+        {
+            let linked = root.join("linked");
+            fs::create_dir_all(&linked).unwrap();
+            std::os::unix::fs::symlink(&data, linked.join("notes.assets")).unwrap();
+            assert!(write(&linked.join("notes.md"), Format::Markdown, &doc, &data).is_err());
+            assert_eq!(fs::read_dir(&data).unwrap().count(), 0);
+        }
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn writing_replaces_the_file_and_leaves_no_temp_files() {
         let root = temp_dir();
         let doc = sample_doc(doc::parse(&doc::tests::every_node_json(), &doc::tests::titles));
         for format in [Format::Markdown, Format::Pdf, Format::Docx] {
             let dest = root.join(format!("My notes.{}", format.ext()));
             fs::write(&dest, b"old").unwrap();
-            let s = write(&dest, format, &doc).unwrap();
+            let s = write(&dest, format, &doc, &root.join("data")).unwrap();
             assert_eq!(s.pages, 1);
             assert_ne!(fs::read(&dest).unwrap(), b"old");
         }
@@ -693,13 +782,13 @@ pub mod tests {
             let dir = PathBuf::from(dir);
             fs::create_dir_all(&dir).unwrap();
             for format in [Format::Markdown, Format::Pdf, Format::Docx] {
-                write(&dir.join(format!("sample.{}", format.ext())), format, &doc).unwrap();
+                write(&dir.join(format!("sample.{}", format.ext())), format, &doc, &dir.join("data")).unwrap();
             }
             let items = sample_items();
             let refs: Vec<&Item> = items.iter().collect();
             let nb = collect(&refs, &Scope::Notebook("nb".into()), &Options { include_subpages: true, include_trashed: false }, &|_| None).unwrap();
             for format in [Format::Pdf, Format::Docx] {
-                write(&dir.join(format!("notebook.{}", format.ext())), format, &nb).unwrap();
+                write(&dir.join(format!("notebook.{}", format.ext())), format, &nb, &dir.join("data")).unwrap();
             }
         }
         let _ = fs::remove_dir_all(root);

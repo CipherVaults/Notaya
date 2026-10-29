@@ -127,8 +127,8 @@ impl Renderer {
             Block::Callout { icon, blocks } => {
                 let mut lines = self.blocks(blocks, shift);
                 match lines.first_mut() {
-                    Some(first) if !icon.is_empty() => *first = format!("{icon} {first}"),
-                    None => lines.push(icon.clone()),
+                    Some(first) if !icon.is_empty() => *first = format!("{} {first}", escape_text(icon)),
+                    None => lines.push(escape_text(icon)),
                     _ => {}
                 }
                 quote(lines)
@@ -293,7 +293,11 @@ impl Mark {
 /// The marks of a run, outermost first.
 fn mark_list(m: &Marks) -> Vec<Mark> {
     let mut v = Vec::new();
-    if let Some(url) = &m.link {
+    // Only web and mail links stay live; anything else (javascript:, file:, data:) is written as plain text.
+    if let Some(url) = m.link.as_ref().filter(|u| {
+        let u = u.trim().to_ascii_lowercase();
+        u.starts_with("http://") || u.starts_with("https://") || u.starts_with("mailto:")
+    }) {
         v.push(Mark::Link(url.clone()));
     }
     if let Some(c) = m.color {

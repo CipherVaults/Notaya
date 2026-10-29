@@ -355,11 +355,19 @@ impl<'a> Layout<'a> {
                         let mut rest = p.bytes.clone();
                         while !rest.is_empty() {
                             let room = ctx.w - line_w;
-                            let mut n = rest.len();
-                            while n > 1 && p.font.width(&rest[..n], p.size) > room {
-                                n -= 1;
+                            // The longest prefix that fits (at least one character), measured in one forward
+                            // pass: widths are per character, so a very long word stays linear.
+                            let mut n = 0;
+                            let mut used = 0.0;
+                            while n < rest.len() {
+                                let w = p.font.width(&rest[n..n + 1], p.size);
+                                if n >= 1 && used + w > room {
+                                    break;
+                                }
+                                used += w;
+                                n += 1;
                             }
-                            if p.font.width(&rest[..n], p.size) > room && !line.is_empty() {
+                            if used > room && !line.is_empty() {
                                 strips.push(self.line_strip(std::mem::take(&mut line), ctx, st));
                                 line_w = 0.0;
                                 continue;
@@ -475,7 +483,13 @@ impl<'a> Layout<'a> {
                     }
                     out.extend(item_strips);
                     out.push(self.space(2.5, ctx));
-                    let first = out.iter_mut().skip(start).find(|s| !s.space).expect("an item strip");
+                    // The strips of an item that holds only spacing (an empty callout, say) get a plain line first,
+                    // so there is always a strip to carry the bullet or number.
+                    if !out.iter().skip(start).any(|s| !s.space) {
+                        let at = start.min(out.len());
+                        out.insert(at, Strip { h: BODY * 1.4, baseline: BODY * 1.2, decor: ctx.decor.clone(), ..Strip::default() });
+                    }
+                    let Some(first) = out.iter_mut().skip(start).find(|s| !s.space) else { continue };
                     let base = if first.baseline > 0.0 { first.baseline } else { BODY };
                     let mx = ctx.x;
                     match kind {

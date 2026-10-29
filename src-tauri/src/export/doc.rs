@@ -231,7 +231,7 @@ fn cell(c: &Value, page_title: &dyn Fn(&str) -> Option<String>) -> Cell {
     let num = |name: &str| attr(c, name).and_then(Value::as_u64).unwrap_or(1).clamp(1, 50) as usize;
     let widths = attr(c, "colwidth")
         .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_f64).map(|w| w as f32).collect())
+        .map(|a| a.iter().filter_map(Value::as_f64).map(|w| w as f32).filter(|w| w.is_finite()).collect())
         .unwrap_or_default();
     Cell { header: node_type(c) == "tableHeader", colspan: num("colspan"), rowspan: num("rowspan"), widths, blocks: blocks(children(c), page_title) }
 }
@@ -282,9 +282,9 @@ fn marks(n: &Value) -> Marks {
                     m.color = Some(c);
                 }
                 let size = attr_str(mark, "fontSize");
-                if let Some(px) = size.strip_suffix("px").and_then(|v| v.trim().parse::<f32>().ok()) {
+                if let Some(px) = size.strip_suffix("px").and_then(|v| v.trim().parse::<f32>().ok()).filter(|v| v.is_finite()) {
                     m.size = Some((px * 0.75).clamp(6.0, 72.0));
-                } else if let Some(pt) = size.strip_suffix("pt").and_then(|v| v.trim().parse::<f32>().ok()) {
+                } else if let Some(pt) = size.strip_suffix("pt").and_then(|v| v.trim().parse::<f32>().ok()).filter(|v| v.is_finite()) {
                     m.size = Some(pt.clamp(6.0, 72.0));
                 }
             }

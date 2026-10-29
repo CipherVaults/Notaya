@@ -462,7 +462,8 @@ impl<'a> Writer<'a> {
                             let rid = match self.links.get(url) {
                                 Some(r) => r.clone(),
                                 None => {
-                                    let r = self.rel(REL_LINK, url.to_string(), true);
+                                    let target = clean_link_target(url);
+                                    let r = self.rel(REL_LINK, target, true);
                                     self.links.insert(url.to_string(), r.clone());
                                     r
                                 }
@@ -541,6 +542,23 @@ impl<'a> Writer<'a> {
 const MATH_RPR: &str = "<w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/><w:i/>";
 
 /// Only web and mail links become clickable; anything else stays plain text.
+/// A link target as a plain ASCII address for the relationships file: trimmed, control characters
+/// removed, and spaces and non-ASCII characters percent-encoded.
+fn clean_link_target(url: &str) -> String {
+    let mut out = String::new();
+    for c in url.trim().chars().filter(|c| !c.is_control()) {
+        if c.is_ascii() && c != ' ' {
+            out.push(c);
+        } else {
+            let mut buf = [0u8; 4];
+            for b in c.encode_utf8(&mut buf).bytes() {
+                let _ = write!(out, "%{b:02X}");
+            }
+        }
+    }
+    out
+}
+
 fn safe_link(url: &str) -> bool {
     let u = url.trim().to_ascii_lowercase();
     u.starts_with("http://") || u.starts_with("https://") || u.starts_with("mailto:")

@@ -74,7 +74,7 @@ pub fn export_notes(app: AppHandle, state: State<'_, AppState>, request: ExportR
         let items: Vec<&Item> = s.items().collect();
         export::collect(&items, &scope, &opts, &|id| s.get_attachment(id).ok())
     })?;
-    export::write(&dest, format, &doc).map(Some)
+    export::write(&dest, format, &doc, &state.paths.data).map(Some)
 }
 
 #[cfg(test)]
