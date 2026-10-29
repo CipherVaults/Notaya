@@ -68,7 +68,10 @@ Every code PR gets a security review (rule in section 9 of the guide). In Claude
 
 ## 8. When something goes wrong
 
-- Claude wants to delete files, add a library, change anything about passwords or encryption, or push to a branch that isn't shared: **stop and decide it yourself as a partner**, and make sure the PR says why. Pushes to someone else's non-shared branch need that person's OK.
-- Claude finds a vault, a `.nota` or `.clf` file or a key in `git status`: do not commit it. Stop and find out why it is there.
-- A push is refused, the repository isn't offered, or `git` asks for a password you don't have: the account isn't accepted yet, or isn't the invited one. Check section 1; then tell Mohamed.
-- Two people appear to be working on the same thing, or you and Mohamed give your Claudes opposite instructions: stop, look at the open PRs and the claims board, and talk to Mohamed before going on.
+You are a full partner: fix it yourself, with your Claude. Mohamed is there if you want a second opinion, but you don't need to wait for him.
+
+- **Claude wants to delete files, add a library, change anything about passwords or encryption:** it's your call as a partner. Decide it, and make sure the PR says why. Pushing to someone else's branch that isn't marked `shared branch` needs that person's OK.
+- **Claude finds a vault, a `.nota` or `.clf` file or a key in `git status`:** do not commit it. Find out why it is there, move or ignore it, and carry on.
+- **A push is refused, the repository isn't offered, or `git` asks for a password you don't have:** check you accepted the invitation (section 1) and are signed in as the invited account, then let Claude retry. If it still fails, tell Mohamed: only he can change GitHub repository settings.
+- **A merge conflict or a red check:** have Claude merge `main` into your branch and fix it. Don't rebase or force-push.
+- **Two people working on the same thing, or opposite instructions to the two Claudes:** look at the open PRs and the claims board, then settle it between the two of you before going on.
