@@ -730,4 +730,6 @@ textarea,
 .db-cell { border-bottom: 1px solid var(--border); border-inline-end: 1px solid var(--border); }
 .db-cell-active { outline: 2px solid color-mix(in oklab, var(--accent) 60%, transparent); outline-offset: -2px; }
 .db-scroll { scrollbar-gutter: stable; }
+/* The table takes the keyboard focus as a whole; the active cell shows where it is, so no ring around the whole table. */
+.db-scroll:focus-visible { outline: none; }
 .db-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

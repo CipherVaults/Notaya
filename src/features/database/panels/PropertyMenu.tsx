@@ -492,7 +492,7 @@ export function NewPropertyPicker({
   return (
     <div>
       <input autoFocus aria-label="Search property types" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search for a type…" className={cn(fieldCls, "mb-2 w-full")} />
-      <div className="grid max-h-[320px] grid-cols-2 gap-0.5 overflow-y-auto">
+      <div className="grid max-h-[min(400px,60vh)] grid-cols-2 gap-0.5 overflow-y-auto">
         {options.map((k) => (
           <button key={k} type="button" onClick={() => pick(k)} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm hover:bg-surface-2">
             <KindIcon kind={k} className="text-muted" /> {KINDS[k].label}
