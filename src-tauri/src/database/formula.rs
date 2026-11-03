@@ -305,6 +305,24 @@ fn tok_text(t: &Tok) -> String {
     }
 }
 
+/// How deep an expression may nest (long chains such as `1 + 1 + 1 + ...` count too), so
+/// evaluating or dropping one cannot overflow the stack.
+const MAX_DEPTH: usize = 120;
+
+fn depth_of(e: &Expr, limit: usize) -> usize {
+    if limit == 0 {
+        return usize::MAX / 2;
+    }
+    1 + match e {
+        Expr::Num(_) | Expr::Str(_) | Expr::Bool(_) | Expr::Ident(_) => 0,
+        Expr::List(v) | Expr::Call(_, v) => v.iter().map(|x| depth_of(x, limit - 1)).max().unwrap_or(0),
+        Expr::Method(r, _, v) => std::iter::once(&**r).chain(v.iter()).map(|x| depth_of(x, limit - 1)).max().unwrap_or(0),
+        Expr::Unary(_, x) => depth_of(x, limit - 1),
+        Expr::Binary(_, a, b) => depth_of(a, limit - 1).max(depth_of(b, limit - 1)),
+        Expr::Ternary(a, b, c) => depth_of(a, limit - 1).max(depth_of(b, limit - 1)).max(depth_of(c, limit - 1)),
+    }
+}
+
 pub fn parse(src: &str) -> Result<Expr, String> {
     if src.trim().is_empty() {
         return Ok(Expr::Str(String::new()));
@@ -314,6 +332,10 @@ pub fn parse(src: &str) -> Result<Expr, String> {
     let e = p.expr()?;
     if p.i < p.t.len() {
         return Err(format!("Unexpected {}", tok_text(&p.t[p.i])));
+    }
+    if depth_of(&e, MAX_DEPTH) > MAX_DEPTH {
+        std::mem::forget(e); // too deep to drop recursively
+        return Err("The formula is nested too deeply".into());
     }
     Ok(e)
 }
@@ -1090,8 +1112,10 @@ mod tests {
             assert!(run(bad, &env()).is_err(), "{bad}");
         }
         // an endless-looking formula stays bounded
-        let long = format!("{}1", "1 + ".repeat(1000));
-        assert!(run(&long, &env()).is_ok());
+        let long = format!("{}1", "1 + ".repeat(100));
+        assert_eq!(run(&long, &env()).unwrap(), Val::Num(101.0));
+        let too_long = format!("{}1", "1 + ".repeat(5000));
+        assert!(run(&too_long, &env()).is_err());
         let deep = format!("{}1{}", "(".repeat(200), ")".repeat(200));
         assert!(run(&deep, &env()).is_err());
     }
