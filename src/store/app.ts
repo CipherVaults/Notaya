@@ -5,6 +5,9 @@ import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
 
 export type View = "notes" | "stickies" | "settings";
 
+/** What the active item of the Notes view is: a page, a database (A35) or a row of a database (a page with cells). */
+export type ActiveKind = "page" | "database" | "row";
+
 /** A one-shot request for a view to do something once it is shown (e.g. from the command palette). */
 export type Intent = "new-page" | "new-notebook" | null;
 
@@ -26,6 +29,8 @@ interface AppState {
   activeNotebookId: string | null;
   activeSectionId: string | null;
   activePageId: string | null;
+  /** What `activePageId` is. Pages, databases and rows share the id space. */
+  activeKind: ActiveKind;
   showTrash: boolean;
   paletteOpen: boolean;
   intent: Intent;
@@ -47,7 +52,10 @@ interface AppState {
   setStickies: (s: Sticky[]) => void;
   openNotebook: (id: string | null) => void;
   openSection: (id: string | null) => void;
+  /** Opens a page, or a database when the id is one (looked up in the tree). */
   openPage: (id: string | null) => void;
+  openDatabase: (id: string) => void;
+  openRow: (id: string) => void;
   setShowTrash: (v: boolean) => void;
   setPaletteOpen: (v: boolean) => void;
   setSidebarOpen: (v: boolean) => void;
@@ -83,6 +91,7 @@ export const useApp = create<AppState>((set, get) => ({
   activeNotebookId: null,
   activeSectionId: null,
   activePageId: null,
+  activeKind: "page",
   showTrash: false,
   paletteOpen: false,
   intent: null,
@@ -125,11 +134,18 @@ export const useApp = create<AppState>((set, get) => ({
 
   openNotebook: (id) => {
     const first = get().tree.sections.find((s) => s.notebookId === id)?.id ?? null;
-    set({ activeNotebookId: id, activeSectionId: first, activePageId: null, showTrash: false });
+    set({ activeNotebookId: id, activeSectionId: first, activePageId: null, activeKind: "page", showTrash: false });
   },
-  openSection: (id) => set({ activeSectionId: id, activePageId: null, showTrash: false }),
-  openPage: (id) => set(id ? { activePageId: id, showTrash: false, view: "notes" } : { activePageId: null }),
-  setShowTrash: (showTrash) => set({ showTrash, activePageId: null }),
+  openSection: (id) => set({ activeSectionId: id, activePageId: null, activeKind: "page", showTrash: false }),
+  openPage: (id) =>
+    set(
+      id
+        ? { activePageId: id, activeKind: get().tree.databases.some((d) => d.id === id) ? "database" : "page", showTrash: false, view: "notes" }
+        : { activePageId: null, activeKind: "page" },
+    ),
+  openDatabase: (id) => set({ activePageId: id, activeKind: "database", showTrash: false, view: "notes" }),
+  openRow: (id) => set({ activePageId: id, activeKind: "row", showTrash: false, view: "notes" }),
+  setShowTrash: (showTrash) => set({ showTrash, activePageId: null, activeKind: "page" }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setSidebarOpen: (sidebarOpen) => {
     set({ sidebarOpen });

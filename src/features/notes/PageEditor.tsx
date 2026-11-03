@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
-import { Check, ChevronRight, Download, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Download, LayoutTemplate, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush, trackSave } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
@@ -17,10 +17,13 @@ import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
 import { PageCover, PageIconAndActions } from "./PageHeader";
 import { openExport } from "./ExportDialog";
+import RowProperties from "@/features/database/RowProperties";
+import { loadRow, saveRowAsTemplate } from "@/features/database/rowOps";
 
 type SaveState = "saved" | "saving" | "error";
 
-export default function PageEditor({ pageId }: { pageId: string }) {
+/** `embedded`: shown in a peek (no breadcrumb, no ribbon). Rows of a database open here too (their `parent` is the database). */
+export default function PageEditor({ pageId, embedded = false }: { pageId: string; embedded?: boolean }) {
   const [page, setPage] = useState<Page | null>(null);
 
   useEffect(() => {
@@ -43,10 +46,10 @@ export default function PageEditor({ pageId }: { pageId: string }) {
     );
   }
   // Remount per page so editor history never leaks between pages.
-  return <LoadedEditor key={page.id} page={page} />;
+  return <LoadedEditor key={page.id} page={page} embedded={embedded} />;
 }
 
-function LoadedEditor({ page }: { page: Page }) {
+function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   const [title, setTitle] = useState(page.title);
   const [icon, setIcon] = useState(page.icon ?? "");
   const [cover, setCover] = useState(page.cover ?? "");
@@ -64,6 +67,7 @@ function LoadedEditor({ page }: { page: Page }) {
   const setTree = useApp((s) => s.setTree);
   const securityOn = useApp((s) => s.status?.securityOn ?? false);
   const readOnly = page.trashedAt !== null;
+  const [rowFavorite, setRowFavorite] = useState(page.favorite);
 
   // Saves run one after another, so an older save can never land after a newer one.
   const doSave = useCallback(() => {
@@ -148,6 +152,10 @@ function LoadedEditor({ page }: { page: Page }) {
   const section = tree.sections.find((s) => s.id === page.sectionId);
   const notebook = tree.notebooks.find((n) => n.id === section?.notebookId);
   const meta = tree.pages.find((p) => p.id === page.id);
+  // A row of a database is a page that is not in the tree; its `parent` is the database.
+  const rowDb = !meta ? tree.databases.find((d) => d.id === page.parent) : undefined;
+  const isRow = !!rowDb;
+  const isFavorite = isRow ? rowFavorite : meta?.favorite;
   // The pages this one sits inside, outermost first.
   const parents: typeof tree.pages = [];
   for (let id = meta?.parent; id && parents.length < 8; ) {
@@ -169,12 +177,28 @@ function LoadedEditor({ page }: { page: Page }) {
     }
   };
   const toggleFavorite = async () => {
+    if (isRow) {
+      setRowFavorite(!rowFavorite);
+      try {
+        setTree(await api.setPageFavorite(page.id, !rowFavorite));
+      } catch (e) {
+        setRowFavorite(rowFavorite);
+        toast.error(errorText(e));
+      }
+      return;
+    }
     setTree(await api.setPageFavorite(page.id, !meta?.favorite));
+  };
+  const asTemplate = async () => {
+    if (!rowDb || !editor) return;
+    const r = await loadRow(rowDb.id, page.id);
+    if (r) await saveRowAsTemplate(rowDb.id, r, titleRef.current, JSON.stringify(editor.getJSON()), editor.getText());
   };
   const trash = async () => {
     save.cancel();
     setTree(await api.trashPage(page.id));
-    useApp.getState().openPage(null);
+    if (isRow && !embedded) useApp.getState().openDatabase(page.parent);
+    else if (!embedded) useApp.getState().openPage(null);
     toast("Moved to trash", {
       action: { label: "Undo", onClick: async () => setTree(await api.restorePage(page.id)) },
     });
@@ -189,7 +213,7 @@ function LoadedEditor({ page }: { page: Page }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center gap-3 px-4">
-        <nav className="flex min-w-0 items-center gap-1 text-[0.8rem] text-muted">
+        <nav className={cn("flex min-w-0 items-center gap-1 text-[0.8rem] text-muted", embedded && "hidden")}>
           {notebook && (
             <>
               <span className="emoji-mono shrink-0">{notebook.icon}</span>
@@ -202,6 +226,15 @@ function LoadedEditor({ page }: { page: Page }) {
               <span className="max-w-[10rem] truncate">{section.name}</span>
               <ChevronRight size={12} className="shrink-0 text-faint" />
             </>
+          )}
+          {rowDb && (
+            <span className="flex items-center gap-1">
+              <button onClick={() => useApp.getState().openDatabase(rowDb.id)} className="max-w-[10rem] truncate hover:text-fg hover:underline" title="Back to the database">
+                {rowDb.icon && <span className="me-1">{rowDb.icon}</span>}
+                {rowDb.title || "Untitled database"}
+              </button>
+              <ChevronRight size={12} className="shrink-0 text-faint" />
+            </span>
           )}
           {parents.map((pp) => (
             <span key={pp.id} className="flex items-center gap-1">
@@ -235,11 +268,11 @@ function LoadedEditor({ page }: { page: Page }) {
           <div className="flex items-center gap-0.5">
             <button
               onClick={toggleFavorite}
-              className={cn("rounded-lg p-1.5 transition-colors hover:bg-surface-2", meta?.favorite ? "text-fg" : "text-faint hover:text-fg")}
+              className={cn("rounded-lg p-1.5 transition-colors hover:bg-surface-2", isFavorite ? "text-fg" : "text-faint hover:text-fg")}
               aria-label="Favorite"
               title="Favorite"
             >
-              <Star size={16} fill={meta?.favorite ? "currentColor" : "none"} />
+              <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
             </button>
             <Menu>
               <MenuTrigger asChild>
@@ -252,9 +285,14 @@ function LoadedEditor({ page }: { page: Page }) {
                   {words} {words === 1 ? "word" : "words"} · edited {formatDate(updated)}
                 </div>
                 <MenuSeparator />
-                <div className="px-2.5 py-1.5 text-xs text-faint">Move to section</div>
+                {isRow && (
+                  <MenuItem icon={<LayoutTemplate size={15} />} onSelect={asTemplate}>
+                    Save as template
+                  </MenuItem>
+                )}
+                {!isRow && <div className="px-2.5 py-1.5 text-xs text-faint">Move to section</div>}
                 {tree.sections
-                  .filter((s) => s.id !== page.sectionId)
+                  .filter((s) => !isRow && s.id !== page.sectionId)
                   .map((s) => {
                     const nb = tree.notebooks.find((n) => n.id === s.notebookId);
                     return (
@@ -266,9 +304,11 @@ function LoadedEditor({ page }: { page: Page }) {
                     );
                   })}
                 <MenuSeparator />
-                <MenuItem icon={<Download size={15} />} onSelect={() => openExport("page", page.id)}>
-                  Export…
-                </MenuItem>
+                {!isRow && (
+                  <MenuItem icon={<Download size={15} />} onSelect={() => openExport("page", page.id)}>
+                    Export…
+                  </MenuItem>
+                )}
                 <MenuItem danger icon={<Trash2 size={15} />} onSelect={trash}>
                   Move to trash
                 </MenuItem>
@@ -278,11 +318,11 @@ function LoadedEditor({ page }: { page: Page }) {
         )}
       </div>
 
-      {!readOnly && <Ribbon editor={editor} />}
+      {!readOnly && !embedded && <Ribbon editor={editor} />}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PageCover cover={cover} readOnly={readOnly} onChange={(c) => setLook(icon, c)} />
-        <div className={cn("mx-auto px-16 pb-10", cover ? "pt-0" : "pt-10")} style={{ maxWidth: "calc(var(--editor-width) + 128px)" }}>
+        <div className={cn("mx-auto pb-10", embedded ? "px-12" : "px-16", cover ? "pt-0" : embedded ? "pt-6" : "pt-10")} style={{ maxWidth: "calc(var(--editor-width) + 128px)" }}>
           {readOnly && (
             <div className="mb-6 flex items-center justify-between rounded-lg border border-warn/30 bg-warn/10 px-4 py-3 text-sm">
               <span>This page is in the trash.</span>
@@ -308,10 +348,11 @@ function LoadedEditor({ page }: { page: Page }) {
             }}
             placeholder="Untitled"
             dir="auto"
-            className="mb-4 w-full min-w-0 bg-transparent text-[2.6rem] font-bold leading-tight tracking-tight text-fg outline-none placeholder:text-faint/70"
+            className={cn("mb-4 w-full min-w-0 bg-transparent font-bold leading-tight tracking-tight text-fg outline-none placeholder:text-faint/70", embedded ? "text-[2rem]" : "text-[2.6rem]")}
           />
+          {isRow && rowDb && <RowProperties dbId={rowDb.id} rowId={page.id} title={title} readOnly={readOnly} />}
 
-          <div ref={wrapRef} className="relative -ml-16 pl-16">
+          <div ref={wrapRef} className={cn("relative", embedded ? "-ml-12 pl-12" : "-ml-16 pl-16")}>
             <BlockHandle editor={editor} container={wrapRef} />
             <EditorContent editor={editor} />
           </div>
