@@ -451,6 +451,53 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   await wait(700);
   yes('the trash lists the database', await p.getByText('Check DB').count());
   await shot('trash');
+
+  // ---------------------------------------------------------------- looks: dark theme, right-to-left, a 900px window
+  const look = async (name, url, size, extra) => {
+    const pg = await ctx.newPage();
+    pg.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
+    await pg.setViewportSize(size);
+    await pg.goto(url);
+    await pg.waitForTimeout(1200);
+    await pg.getByRole('treeitem', { name: 'Tasks' }).click();
+    await pg.waitForTimeout(1000);
+    const noScroll = await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+    yes(`${name}: the page itself does not scroll sideways`, noScroll);
+    if (extra) await extra(pg);
+    if (shots) await pg.screenshot({ path: `${shots}/ui-${name}.png`, caret: 'initial' });
+    await pg.close();
+  };
+  await look('dark-table', 'http://127.0.0.1:1421/?db=1&theme=sunrise-dark', { width: 1400, height: 900 });
+  await look('narrow-table', 'http://127.0.0.1:1421/?db=1', { width: 900, height: 700 });
+  await look('narrow-dark-table', 'http://127.0.0.1:1421/?db=1&theme=sunrise-dark', { width: 900, height: 700 });
+  // The app's own text runs left to right, but text in Arabic or Hebrew must read right to left in titles and cells,
+  // and the layout must hold if the whole window is mirrored.
+  await look('rtl-text', 'http://127.0.0.1:1421/?db=1', { width: 1400, height: 900 }, async (pg) => {
+    await pg.getByRole('button', { name: 'New', exact: true }).first().click();
+    await pg.waitForTimeout(300);
+    await pg.keyboard.type('مهمة جديدة بالعربية');
+    await pg.keyboard.press('Enter');
+    await pg.waitForTimeout(500);
+    const t = pg.getByRole('application', { name: 'Table' }).locator('tbody tr', { hasText: 'مهمة جديدة' }).first();
+    yes('an Arabic row title is saved and shown', await t.count());
+    const dir = await t.locator('td').nth(1).evaluate((td) => { const el = td.querySelector('[dir]'); return el ? getComputedStyle(el).direction : 'none'; });
+    is('the Arabic title reads right to left', dir, 'rtl');
+    // ...and it lines up with the right edge of its cell.
+    const edge = await t.locator('td').nth(1).evaluate((td) => { const el = td.querySelector('[dir=auto]'); const range = document.createRange(); range.selectNodeContents(el); const r = range.getBoundingClientRect(); const c = td.getBoundingClientRect(); return Math.round(c.right - r.right); });
+    yes('the Arabic title ends at the right side of its cell (the space for the row buttons stays free)', edge >= 0 && edge <= 64);
+  });
+  await look('rtl-mirrored', 'http://127.0.0.1:1421/?db=1', { width: 1400, height: 900 }, async (pg) => {
+    await pg.evaluate(() => document.documentElement.setAttribute('dir', 'rtl'));
+    await pg.waitForTimeout(500);
+    const taskRight = await pg.evaluate(() => { const th = [...document.querySelectorAll('thead th')].find((t) => t.textContent.trim() === 'Task'); return th ? Math.round(th.getBoundingClientRect().right) : -1; });
+    yes('mirrored: the Task column sits at the right edge of the table', taskRight > 900);
+    await pg.getByRole('button', { name: 'Filter', exact: true }).click();
+    await pg.waitForTimeout(300);
+    await pg.getByRole('button', { name: 'Add filter', exact: true }).click();
+    await pg.waitForTimeout(300);
+    if (shots) await pg.screenshot({ path: `${shots}/ui-rtl-mirrored-filter.png`, caret: 'initial' });
+    await pg.keyboard.press('Escape');
+  });
   await b.close();
   console.log(fail ? `${fail} FAILED` : 'ALL OK');
   process.exit(fail ? 1 : 0);
