@@ -406,6 +406,51 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   await shot('linked-view');
 
   yes('the inline database is not listed twice in the sidebar tree', (await p.getByRole('treeitem', { name: 'Untitled database' }).count()) === 0);
+
+  // ---------------------------------------------------------------- footers, views, lock
+  await p.getByRole('treeitem', { name: 'Check DB' }).click();
+  await wait(1000);
+  await table().getByRole('button', { name: 'Calculate Number' }).click({ force: true });
+  await p.getByRole('menuitem', { name: 'Sum', exact: true }).click();
+  await wait(700);
+  yes('a footer calculation shows the sum of the column', await table().locator('tfoot').getByText('37').count());
+  await shot('footer-sum');
+  await p.getByRole('button', { name: 'Add a view' }).click();
+  await p.getByRole('menuitem', { name: 'Table', exact: true }).click();
+  await wait(700);
+  is('a second view is added', await p.getByRole('tab').count(), 2);
+  await p.getByRole('tab').nth(0).click();
+  await wait(500);
+  // Lock: the table can be used but its structure cannot change.
+  await p.getByRole('button', { name: 'Database menu' }).click();
+  await wait(300);
+  await p.getByRole('menuitem', { name: 'Lock database' }).click();
+  await wait(700);
+  is('a locked database offers no way to add a property', await p.getByRole('button', { name: 'Add a property' }).count(), 0);
+  await shot('locked');
+  await p.getByRole('button', { name: 'Database menu' }).click();
+  await p.getByRole('menuitem', { name: 'Unlock database' }).click();
+  await wait(700);
+  is('unlocking brings it back', await p.getByRole('button', { name: 'Add a property' }).count(), 1);
+
+  // ---------------------------------------------------------------- search and trash
+  await p.keyboard.press('Control+k');
+  await wait(300);
+  await p.keyboard.type('Check');
+  await wait(600);
+  yes('the palette finds the database', await p.getByRole('option', { name: /Check DB/ }).count());
+  await shot('palette-database');
+  await p.keyboard.press('Escape');
+  await wait(200);
+  await p.getByRole('treeitem', { name: 'Check DB' }).hover();
+  await p.getByRole('treeitem', { name: 'Check DB' }).getByRole('button', { name: 'Database options' }).click();
+  await p.getByRole('menuitem', { name: 'Move to trash' }).click();
+  await wait(700);
+  is('a trashed database leaves the sidebar', await p.getByRole('treeitem', { name: 'Check DB' }).count(), 0);
+  await p.getByRole('button', { name: /^Trash/ }).click();
+  await wait(700);
+  yes('the trash lists the database', await p.getByText('Check DB').count());
+  await shot('trash');
   await b.close();
   console.log(fail ? `${fail} FAILED` : 'ALL OK');
   process.exit(fail ? 1 : 0);

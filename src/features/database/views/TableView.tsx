@@ -687,28 +687,8 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
             <SortableContext items={flat.map((r) => r.id)} strategy={verticalListSortingStrategy}>
               <tbody>{body}</tbody>
             </SortableContext>
-            {hasCalcs && <tfoot>{footerRow(result.calcs)}</tfoot>}
-            {!hasCalcs && !groups && (
-              <tfoot>
-                <tr>
-                  <td colSpan={totalCols} className="p-0">
-                    <Menu>
-                      <MenuTrigger asChild>
-                        <button type="button" className="sticky flex h-7 items-center px-3 text-xs text-faint opacity-0 hover:opacity-100 focus-visible:opacity-100" style={{ insetInlineStart: GUTTER }}>
-                          Add a calculation…
-                        </button>
-                      </MenuTrigger>
-                      <MenuContent align="start">
-                        <div className="px-2.5 py-1 text-xs text-faint">Calculate the title column, or use the footer of another column.</div>
-                        {calcsFor("title").map((k) => (
-                          <MenuItem key={k} onSelect={() => setCalc("title", k)}>{CALC_LABELS[k]}</MenuItem>
-                        ))}
-                      </MenuContent>
-                    </Menu>
-                  </td>
-                </tr>
-              </tfoot>
-            )}
+            {/* Every column offers a calculation at the foot, shown when the row is hovered or the column has one. */}
+            {!groups && <tfoot>{footerRow(result.calcs ?? {})}</tfoot>}
           </table>
         </DndContext>
       </div>
