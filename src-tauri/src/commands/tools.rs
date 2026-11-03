@@ -65,8 +65,32 @@ pub fn search(state: State<'_, AppState>, query: String) -> Result<Vec<SearchHit
     let matches_all = |hay: &str| terms.iter().all(|t| hay.contains(t));
     state.with(|s| {
         let mut hits = Vec::new();
+        let db_titles: std::collections::HashMap<&str, &str> =
+            s.items().filter_map(|i| if let Item::Database(d) = i { if d.trashed_at.is_none() { Some((d.id.as_str(), d.title.as_str())) } else { None } } else { None }).collect();
         for item in s.items() {
             match item {
+                Item::Database(d) if d.trashed_at.is_none() && !d.inline && matches_all(&d.title.to_lowercase()) => hits.push(SearchHit {
+                    kind: "database",
+                    id: d.id.clone(),
+                    title: if d.title.is_empty() { "Untitled database".into() } else { d.title.clone() },
+                    subtitle: String::new(),
+                    snippet: String::new(),
+                    score: 2,
+                }),
+                Item::Row(r) if r.trashed_at.is_none() && db_titles.contains_key(r.db.as_str()) => {
+                    let title = r.title.to_lowercase();
+                    let hay = format!("{title} {}", r.text.to_lowercase());
+                    if matches_all(&hay) {
+                        hits.push(SearchHit {
+                            kind: "row",
+                            id: r.id.clone(),
+                            title: if r.title.is_empty() { "Untitled".into() } else { r.title.clone() },
+                            subtitle: db_titles.get(r.db.as_str()).map(|t| t.to_string()).unwrap_or_default(),
+                            snippet: snippet(&r.text, terms[0]),
+                            score: if matches_all(&title) { 3 } else { 1 },
+                        });
+                    }
+                }
                 Item::Page(p) if p.trashed_at.is_none() => {
                     let title = p.title.to_lowercase();
                     let body = p.text.to_lowercase();

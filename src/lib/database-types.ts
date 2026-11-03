@@ -327,3 +327,12 @@ export const CALC_NAMES = [
   "sum", "avg", "median", "min", "max", "range", "earliest", "latest", "dateRange",
   "checked", "unchecked", "percentChecked", "percentUnchecked", "showOriginal", "showUnique",
 ] as const;
+
+export interface Reminder {
+  key: string;
+  rowId: string;
+  title: string;
+  databaseId: string;
+  databaseTitle: string;
+  when: string;
+}

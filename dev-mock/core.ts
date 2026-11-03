@@ -1,6 +1,8 @@
 // Dev-only stand-in for @tauri-apps/api/core, used by `npm run mock` to preview
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
+import { databaseCommand, databaseMetas, NOT_HANDLED } from "./database";
+
 const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
 // | start = no vault but earlier copies exist (create is an alias of start)
@@ -138,9 +140,13 @@ const stickies = [
 
 type Args = Record<string, unknown>;
 
-export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise<T> {
+export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
+  if (cmd !== "list_notes" && cmd !== "search") {
+    const dbr = databaseCommand(cmd, args, tree, options);
+    if (dbr !== NOT_HANDLED) return ok(dbr);
+  }
   switch (cmd) {
     case "vault_status":
       return ok({
@@ -229,7 +235,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       Object.assign(shellPrefs, args.prefs as Args);
       return ok({ ...shellPrefs });
     case "list_notes":
-      return ok(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree);
+      return ok({ ...(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree), databases: databaseMetas() });
     // The real app makes a verified backup first and fails the delete if that fails; ?failDelete=1 mimics that.
     case "delete_notebook":
     case "delete_section": {
@@ -385,6 +391,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok([
         { kind: "page", id: "p1", title: "Morning pages", subtitle: "", snippet: "Slept badly, but the plan for the week is clear", score: 3 },
         { kind: "sticky", id: "k1", title: "Call the bank before Friday", subtitle: "", snippet: "ask about the card", score: 1 },
+        ...(databaseCommand("search", args, tree) as unknown[]),
       ]);
     default:
       return ok(null);

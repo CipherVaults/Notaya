@@ -4,6 +4,7 @@
 pub mod backup;
 pub mod calculator;
 pub mod database;
+pub mod database_io;
 pub mod errorlog;
 pub mod export;
 pub mod import_notes;
