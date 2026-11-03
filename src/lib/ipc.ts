@@ -33,10 +33,21 @@ import type {
   Reminder,
   FileRef,
   DbRow,
+  FileCell,
   QueryRequest,
   RowHit,
   ViewResult,
 } from "./database-types";
+
+/** What a CSV import did (the backend asks for the file). */
+export interface CsvImportResult {
+  databaseId: string;
+  /** True when a new database was made from the CSV. */
+  created: boolean;
+  rows: number;
+  /** Columns or cells that could not be imported, with the reason. */
+  skipped: string[];
+}
 
 export const api = {
   // Vault
@@ -159,6 +170,20 @@ export const api = {
   openFile: (fileId: string, name: string) => invoke<void>("open_file", { fileId, name }),
   saveFileAs: (fileId: string, name: string) => invoke<string | null>("save_file_as", { fileId, name }),
   // Trash, restore and delete of a row or a database use trashPage / restorePage / deletePage with its id.
+  /** One row with its cell values (Rust command `get_row`, same result as setCells with an empty patch but without touching the row). */
+  getRow: (rowId: string) => invoke<{ row: DbRow }>("get_row", { rowId }),
+  /** The backend opens the file dialog; null databaseId makes a new database from the CSV. Resolves to null if cancelled. */
+  importCsv: (databaseId: string | null) => invoke<CsvImportResult | null>("import_csv", { databaseId }),
+  /** The backend asks where to save (null if cancelled) and writes the rows of the view as an unencrypted CSV. */
+  exportCsv: (databaseId: string, viewId: string) => invoke<{ path: string; rows: number } | null>("export_csv", { databaseId, viewId }),
+  /** Raw body upload like addAttachment; the ids and the (URL-encoded) file name travel in headers. Resolves to the cell's files after adding. */
+  attachFile: (rowId: string, propId: string, name: string, bytes: Uint8Array) =>
+    invoke<FileCell[]>("attach_file", bytes, {
+      headers: { "x-row-id": rowId, "x-prop-id": propId, "x-file-name": encodeURIComponent(name) },
+    }),
+  openFile: (rowId: string, propId: string, fileId: string) => invoke<void>("open_file", { rowId, propId, fileId }),
+  saveFileAs: (rowId: string, propId: string, fileId: string) => invoke<string | null>("save_file_as", { rowId, propId, fileId }),
+  removeFile: (rowId: string, propId: string, fileId: string) => invoke<FileCell[]>("remove_file", { rowId, propId, fileId }),
 
   // Export: the backend asks where to save (resolves to null if cancelled) and writes an unencrypted file
   exportNotes: (request: ExportRequest) => invoke<ExportSummary | null>("export_notes", { request }),
