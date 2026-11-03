@@ -1,0 +1,8 @@
+{
+  "name": "notaya-token-saver",
+  "displayName": "Notaya Token Saver",
+  "version": "0.1.0",
+  "description": "Small, local helpers to use fewer Claude Code tokens: a warning before resuming a stale session, a read-only settings checkup and a short list of working habits.",
+  "author": { "name": "Notaya project" },
+  "keywords": ["tokens", "usage", "context", "cost"]
+}

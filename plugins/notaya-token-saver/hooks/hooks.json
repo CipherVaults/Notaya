@@ -1,0 +1,18 @@
+{
+  "description": "Notaya Token Saver: before a stale session is resumed, tell the person what the first message will re-send.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "resume|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/resume-cost-note.mjs"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

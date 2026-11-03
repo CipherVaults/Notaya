@@ -14,6 +14,16 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-03 (owner's messages 05:48:08 and 05:49:54 UTC; work started 05:52 UTC, system clock), EX-2026-11-03-39: token-saver plugin for Claude Code
+
+- Report: [2026-11-03-token-saver-plugin.md](2026-11-03-token-saver-plugin.md)
+- Task / Goal: "Can you build a token optimizer plugin or skills"; "Check also the github what they do with token optimizer plugin" (microsoft/TokenEconomizer given as an example)
+- Executor: Claude (Claude Code) in a cloud thread; tooling only, no app code
+- Outcome: produced; validated and installed in a throwaway config folder; hook and checkup scripts run by hand; security review by reading the diff, no finding at confidence 8 or higher. Not run: a real Claude Code session, Windows, the PC; no saving measured
+- Integration / release: draft PR #43, not merged
+- Open dependency / next action: the owner merges, then follows the install steps in `plugins/notaya-token-saver/README.md`; his choice on `bashOutputMaxChars` and the CLAUDE.md snippet
+- Acceptance: not applicable
+
 ### 2026-10-29 (owner's messages 07:55:55, 08:33:01, 08:38:36, 08:39:33 and 08:40:02 UTC; work started 07:56 UTC, system clock), EX-2026-10-29-38: guide for two partners and their two Claudes
 
 - Report: [2026-10-29-shared-work-with-a-friend.md](2026-10-29-shared-work-with-a-friend.md)

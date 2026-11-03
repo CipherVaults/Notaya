@@ -1,0 +1,14 @@
+{
+  "name": "notaya-tools",
+  "description": "Tools for working on Notaya with Claude Code.",
+  "owner": {
+    "name": "Notaya project"
+  },
+  "plugins": [
+    {
+      "name": "notaya-token-saver",
+      "source": "./plugins/notaya-token-saver",
+      "description": "Small, local helpers to use fewer Claude Code tokens: a warning before resuming a stale session, a settings checkup and a short list of working habits."
+    }
+  ]
+}
