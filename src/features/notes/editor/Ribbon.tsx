@@ -24,6 +24,8 @@ import {
   ListIndentIncrease,
   Minus,
   PanelTop,
+  PilcrowLeft,
+  PilcrowRight,
   Plus,
   Radical,
   Redo2,
@@ -39,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { ColorPop, FONT_FAMILIES, FONT_SIZES, LinkPop, Pop, Row, Sep } from "./BubbleToolbar";
 import { pickImages } from "./extensions";
 import { applyTurnInto, BLOCKS, currentBlock, type BlockKey } from "./turnInto";
+import { storedDirection } from "./direction";
 import { getKey, setKey } from "@/lib/storage";
 
 type Tab = "home" | "insert" | "table";
@@ -136,6 +139,7 @@ function HomeTab({ editor }: { editor: Editor }) {
       canRedo: e.can().redo(),
       fontSize: (e.getAttributes("textStyle").fontSize as string | undefined) ?? "",
       fontFamily: (e.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
+      dir: storedDirection(e.state),
       align: e.isActive({ textAlign: "center" }) ? "center" : e.isActive({ textAlign: "right" }) ? "right" : "left",
     }),
   });
@@ -272,6 +276,15 @@ function HomeTab({ editor }: { editor: Editor }) {
             </Btn>
           </div>
         </div>
+      </Group>
+
+      <Group label="Direction">
+        <Btn label="Right-to-left (Arabic, Hebrew). Click again for automatic." active={st.dir === "rtl"} onClick={() => c().setBlockDirection(st.dir === "rtl" ? null : "rtl").run()}>
+          <PilcrowLeft size={s} />
+        </Btn>
+        <Btn label="Left-to-right (English). Click again for automatic." active={st.dir === "ltr"} onClick={() => c().setBlockDirection(st.dir === "ltr" ? null : "ltr").run()}>
+          <PilcrowRight size={s} />
+        </Btn>
       </Group>
 
       <Group label="Styles" last>

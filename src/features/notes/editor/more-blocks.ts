@@ -99,6 +99,7 @@ export const PageLink = Node.create({
       icon.className = "page-link-icon";
       const title = document.createElement("span");
       title.className = "page-link-title";
+      title.dir = "auto";
       dom.append(icon, title);
 
       const paint = () => {

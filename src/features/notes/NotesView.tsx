@@ -140,8 +140,8 @@ function Home() {
                     <div className="mb-2 text-xl leading-none">
                       {p.icon ? <span className="emoji-mono">{p.icon}</span> : <FileText size={20} className="text-faint" />}
                     </div>
-                    <div className="truncate font-medium">{p.title || "Untitled"}</div>
-                    <div className="mt-0.5 line-clamp-2 min-h-[2.4em] text-xs leading-relaxed text-muted">{p.preview || "Empty page"}</div>
+                    <div dir="auto" className="truncate font-medium">{p.title || "Untitled"}</div>
+                    <div dir="auto" className="mt-0.5 line-clamp-2 min-h-[2.4em] text-xs leading-relaxed text-muted">{p.preview || "Empty page"}</div>
                     <div className="mt-2 text-[0.7rem] text-faint">
                       {section?.name} · {timeAgo(p.updated)}
                     </div>
@@ -207,7 +207,7 @@ function TrashView() {
                   {p.icon ? <span className="emoji-mono">{p.icon}</span> : <FileText size={17} className="mx-auto text-faint" />}
                 </span>
                 <button onClick={() => openPage(p.id)} className="min-w-0 flex-1 text-left">
-                  <div className="truncate text-sm font-medium">{p.title || "Untitled"}</div>
+                  <div dir="auto" className="truncate text-sm font-medium">{p.title || "Untitled"}</div>
                   <div className="truncate text-xs text-faint">Deleted {timeAgo(p.trashedAt ?? p.updated)}</div>
                 </button>
                 <Button variant="ghost" size="sm" onClick={() => run(() => api.restorePage(p.id))}>

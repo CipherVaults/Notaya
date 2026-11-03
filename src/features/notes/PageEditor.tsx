@@ -212,7 +212,7 @@ function LoadedEditor({ page }: { page: Page }) {
               <ChevronRight size={12} className="shrink-0 text-faint" />
             </span>
           ))}
-          <span className="max-w-[16rem] truncate text-fg">
+          <span dir="auto" className="max-w-[16rem] truncate text-fg">
             {icon && <span className="emoji-mono mr-1">{icon}</span>}
             {title || "Untitled"}
           </span>
@@ -307,6 +307,7 @@ function LoadedEditor({ page }: { page: Page }) {
               }
             }}
             placeholder="Untitled"
+            dir="auto"
             className="mb-4 w-full min-w-0 bg-transparent text-[2.6rem] font-bold leading-tight tracking-tight text-fg outline-none placeholder:text-faint/70"
           />
 
