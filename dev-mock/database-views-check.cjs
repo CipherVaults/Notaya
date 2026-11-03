@@ -152,6 +152,114 @@ tests.board = async (b) => {
   await p.close();
 };
 
+
+/* ------------------------------------------------------------- calendar */
+const addDays = (iso, n) => { const d = new Date(Date.parse(iso.slice(0, 10) + 'T00:00:00Z') + n * 86400000); return d.toISOString().slice(0, 10); };
+const todayIso = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; };
+const dayCell = (p, iso) => p.locator(`[data-day="${Math.floor(Date.parse(iso + 'T00:00:00Z') / 86400000)}"]`);
+
+tests.calendar = async (b) => {
+  let p = await open(b, 'view=calendar');
+  const t0 = todayIso();
+  truthy('calendar: 7 weekday headers starting Monday', (await p.locator('.uppercase > div').allTextContents()).length === 7 && /^mon/i.test((await p.locator('.uppercase > div').first().textContent()) || ''));
+  truthy('calendar: month grid has whole weeks', (await p.locator('[data-week]').count()) >= 4);
+  is('calendar: unscheduled list shows the two rows without a date', await p.locator('[data-unscheduled]').count(), 2);
+  await shot(p, 'calendar-month');
+
+  // Drag a one-day row to the next (or previous) day.
+  const target = (await dayCell(p, addDays(t0, 1)).count()) ? addDays(t0, 1) : addDays(t0, -1);
+  await clear(p);
+  await drag(p, p.locator('[data-bar="r7"]'), dayCell(p, target));
+  let sc = await calls(p, 'setCells');
+  is('calendar: drag to another day calls setCells', sc[0] && sc[0].args, ['r7', { due: { start: target } }]);
+  await p.waitForTimeout(200);
+
+  // Drag the timed row: its time is kept.
+  await clear(p);
+  const r2 = await p.evaluate(() => window.__h.row('r2').values.due.start);
+  const target2 = addDays(r2, 2);
+  if (await dayCell(p, target2).count()) {
+    await drag(p, p.locator('[data-bar="r2"]').first(), dayCell(p, target2));
+    sc = await calls(p, 'setCells');
+    is('calendar: a moved row keeps its time', sc[0] && sc[0].args[1].due.start, target2 + 'T10:00');
+  }
+
+  // Drag a multi-day bar by 7 days: start and end both move, the length stays.
+  await clear(p);
+  const before = await p.evaluate(() => window.__h.row('r4').values.due);
+  const barBox = await p.locator('[data-bar="r4"]').first().boundingBox();
+  const cellsUnder = await p.evaluate(([x, y]) => Number(document.elementsFromPoint(x, y).find((n) => n.dataset && n.dataset.day).dataset.day), [barBox.x + barBox.width / 2, barBox.y + Math.min(barBox.height / 2, 30)]);
+  const targetCell = p.locator(`[data-day="${cellsUnder + 7}"]`);
+  if (await targetCell.count()) {
+    await drag(p, p.locator('[data-bar="r4"]').first(), targetCell);
+    const after = await p.evaluate(() => window.__h.row('r4').values.due);
+    const days = (a, c) => Math.round((Date.parse(c.slice(0, 10)) - Date.parse(a.slice(0, 10))) / 86400000);
+    is('calendar: a range moved by 7 days keeps its length', [days(before.start, after.start), days(before.end, after.end)], [7, 7]);
+  } else console.log('skip calendar range drag: target week not visible');
+
+  // Drag an unscheduled row onto a day.
+  await clear(p);
+  await drag(p, p.locator('[data-unscheduled="r10"]'), dayCell(p, t0));
+  sc = await calls(p, 'setCells');
+  is('calendar: an unscheduled row dropped on a day gets that date', sc[0] && sc[0].args, ['r10', { due: { start: t0 } }]);
+  is('calendar: it leaves the unscheduled list', await p.locator('[data-unscheduled]').count(), 1);
+
+  // Click an empty day: an inline title, Enter creates the row with that date.
+  await clear(p);
+  const cb = await dayCell(p, t0).boundingBox();
+  await p.mouse.click(cb.x + cb.width - 5, cb.y + cb.height - 3);
+  await p.getByLabel('Title of the new row').fill('Dentist');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(200);
+  is('calendar: a click on an empty day creates a row with that date', (await calls(p, 'createRow'))[0] && (await calls(p, 'createRow'))[0].args, [{ due: { start: t0 } }, 'Dentist']);
+
+  // "N more" popover.
+  const moreBtn = p.locator('[data-more]').first();
+  truthy('calendar: a busy day shows "N more"', await moreBtn.count() > 0);
+  await moreBtn.click();
+  truthy('calendar: the popover lists the rows of the day', (await p.locator('[data-more-popover] button').count()) >= 3);
+  await shot(p, 'calendar-more');
+  await clear(p);
+  await p.locator('[data-more-popover] button').first().click();
+  is('calendar: a row in the popover opens', (await calls(p, 'openRow')).length, 1);
+  truthy('calendar: the popover closes after a choice', (await p.locator('[data-more-popover]').count()) === 0);
+
+  // Navigation.
+  const title0 = await p.locator('[data-title]').textContent();
+  await p.getByLabel('Next month').click();
+  const title1 = await p.locator('[data-title]').textContent();
+  truthy('calendar: next month changes the title', title0 !== title1);
+  await p.getByLabel('Previous month').click();
+  is('calendar: previous month goes back', await p.locator('[data-title]').textContent(), title0);
+  await p.getByLabel('Next month').click();
+  await p.getByRole('button', { name: 'Today' }).click();
+  is('calendar: Today returns', await p.locator('[data-title]').textContent(), title0);
+
+  // Week mode.
+  await clear(p);
+  await p.getByRole('button', { name: 'Week' }).click();
+  is('calendar: Week saves calendarMode', (await calls(p, 'updateView'))[0].args[0], { calendarMode: 'week' });
+  await p.waitForTimeout(250);
+  is('calendar: week mode shows one week', await p.locator('[data-week]').count(), 1);
+  await p.getByLabel('Next week').click();
+  await p.getByRole('button', { name: 'Today' }).click();
+  await shot(p, 'calendar-week');
+  await p.close();
+
+  // No date property: prompt.
+  p = await open(b, 'view=calendar&noprop=1');
+  truthy('calendar: prompt when no date property is set', await p.getByText('Choose a date property for the calendar').isVisible());
+  await p.getByLabel('Date property').selectOption('due');
+  await p.waitForTimeout(100);
+  is('calendar: choosing a property saves dateProp', (await calls(p, 'updateView'))[0].args[0], { dateProp: 'due' });
+  await p.close();
+
+  // Dark, right-to-left page.
+  p = await open(b, 'view=calendar&theme=sunrise-dark&rtl=1');
+  await shot(p, 'calendar-dark-rtl');
+  await p.close();
+};
+
 (async () => {
   const b = await chromium.launch();
   for (const [name, fn] of Object.entries(tests)) {
