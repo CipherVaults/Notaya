@@ -146,6 +146,13 @@ tests.board = async (b) => {
   is('board lanes: dropping in another lane changes both properties', sc[0] && sc[0].args, ['r7', { status: 's3', prio: 'hi' }]);
   await p.close();
 
+  // A locked database still lets rows change.
+  p = await open(b, 'view=board&locked=1');
+  await clear(p);
+  await drag(p, p.locator('[data-card="r7"]'), p.locator('[data-cell^="s3"]'));
+  is('board: a locked database still moves cards', (await calls(p, 'setCells')).length, 1);
+  await p.close();
+
   // Dark + RTL
   p = await open(b, 'view=board&theme=sunrise-dark&rtl=1');
   await shot(p, 'board-dark-rtl');
@@ -448,6 +455,93 @@ tests.chart = async (b) => {
   await p.close();
   p = await open(b, 'view=chart&cx=');
   truthy('chart: no X axis asks to choose one', await p.getByText('Choose what to chart').isVisible());
+  await p.close();
+};
+
+/* ------------------------------------------------------------ list, gallery */
+tests.list = async (b) => {
+  let p = await open(b, 'view=list&check=1');
+  is('list: a line per row', await p.locator('[data-list-row]').count(), 20);
+  await shot(p, 'list');
+  await clear(p);
+  await p.getByRole('checkbox', { name: 'Done: Write release notes' }).click();
+  let sc = await calls(p, 'setCells');
+  is('list: a checkbox toggles in place (checked -> unchecked)', sc[0] && sc[0].args, ['r3', { done: false }]);
+  is('list: toggling does not open the row', (await calls(p, 'openRow')).length, 0);
+  await clear(p);
+  await p.getByRole('checkbox', { name: 'Done: Review pull requests' }).click();
+  sc = await calls(p, 'setCells');
+  is('list: unchecked -> checked', sc[0] && sc[0].args, ['r7', { done: true }]);
+  await clear(p);
+  await p.locator('[data-list-row="r5"]').click();
+  is('list: click opens', (await calls(p, 'openRow')).map((c) => c.args[0]), ['r5']);
+  await clear(p);
+  await p.locator('[data-list-row="r1"]').focus();
+  await p.keyboard.press('ArrowDown');
+  is('list: ArrowDown moves focus', await p.evaluate(() => document.activeElement.dataset.listRow), 'r2');
+  await p.keyboard.press('Enter');
+  is('list: Enter opens the focused row', (await calls(p, 'openRow')).map((c) => c.args[0]), ['r2']);
+  await clear(p);
+  await p.getByRole('button', { name: 'New' }).click();
+  await p.getByLabel('Title of the new row').fill('Listed');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(150);
+  is('list: + New creates a row', (await calls(p, 'createRow'))[0].args, [{}, 'Listed']);
+  await p.close();
+
+  p = await open(b, 'view=list&grouped=1&theme=sunrise-dark&rtl=1');
+  is('list grouped: three status groups and none', await p.locator('[data-group]').count(), 4);
+  await clear(p);
+  await p.locator('[data-group="s3"]').getByRole('button', { name: 'New' }).click();
+  await p.getByLabel('Title of the new row').fill('Finished');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(150);
+  is('list grouped: + New in a group sets its value', (await calls(p, 'createRow'))[0].args, [{ status: 's3' }, 'Finished']);
+  await p.keyboard.press('Escape');
+  await clear(p);
+  await p.locator('[data-group="s2"] > button').click();
+  is('list grouped: a group collapses', (await calls(p, 'updateView'))[0].args[0].group.collapsed, ['s2']);
+  await shot(p, 'list-dark-rtl');
+  await p.close();
+  p = await open(b, 'view=list&data=empty');
+  truthy('list: empty state', await p.getByText('No rows yet').isVisible());
+  await p.close();
+};
+
+tests.gallery = async (b) => {
+  let p = await open(b, 'view=gallery');
+  is('gallery: a card per row', await p.locator('[data-card]').count(), 20);
+  is('gallery: covers come from the files property', await p.locator('[data-cover]').count(), 4);
+  truthy('gallery: cards without a picture get a placeholder', (await p.locator('[data-cover-empty]').count()) === 16);
+  const w0 = (await p.locator('[data-card]').first().boundingBox()).width;
+  await clear(p);
+  await p.locator('[data-card="r4"]').click();
+  is('gallery: click opens', (await calls(p, 'openRow')).map((c) => c.args[0]), ['r4']);
+  await p.locator('[data-card="r5"]').focus();
+  await clear(p);
+  await p.keyboard.press('Enter');
+  is('gallery: Enter opens', (await calls(p, 'openRow')).map((c) => c.args[0]), ['r5']);
+  await clear(p);
+  await p.locator('[data-new-card]').click();
+  await p.getByLabel('Title of the new row').fill('Fresh');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(150);
+  is('gallery: the + New card creates a row', (await calls(p, 'createRow'))[0].args, [{}, 'Fresh']);
+  await shot(p, 'gallery');
+  await p.close();
+  p = await open(b, 'view=gallery&cover=none');
+  is('gallery: cover "none" shows no pictures', (await p.locator('[data-cover]').count()) + (await p.locator('[data-cover-empty]').count()), 0);
+  await p.close();
+  p = await open(b, 'view=gallery&grouped=1&theme=sunrise-dark&rtl=1');
+  is('gallery grouped: sections', await p.locator('[data-group]').count(), 4);
+  await shot(p, 'gallery-dark-rtl');
+  await p.close();
+  p = await open(b, 'view=gallery', { width: 500, height: 800 });
+  const ys = await p.locator('[data-card]').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  truthy('gallery: a narrow window has fewer columns', ys.filter((y) => y === ys[0]).length <= 2 && w0 < 260);
+  await p.close();
+  p = await open(b, 'view=gallery&data=empty');
+  truthy('gallery: empty state', await p.getByText('No rows yet').isVisible());
   await p.close();
 };
 

@@ -96,7 +96,7 @@ function sample(): DbRow[] {
   return rows;
 }
 
-const columns: Column[] = ["status", "prio", "tags", "due", "owner", "est"].map((prop) => ({ prop, visible: true, width: 0 }));
+const columns: Column[] = [...(q.has("check") ? ["done"] : []), "status", "prio", "tags", "due", "owner", "est"].map((prop) => ({ prop, visible: true, width: 0 }));
 
 const group = (prop: string, extra: Partial<GroupBy> = {}): GroupBy => ({ prop, sort: "manual", dateBy: "", numberStep: 0, hideEmpty: false, hidden: [], collapsed: [], ...extra });
 
