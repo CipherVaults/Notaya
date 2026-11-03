@@ -17,5 +17,6 @@ Status words: `proposed`, `in progress`, `paused`, `shared branch`, `handed over
 |---|---|---|---|---|---|
 | V1.4.0 release work (tray, Notaya migration, colors, export, import, editor shelf and links) | Both partners' Claudes | `claude/project-thread-fdn5gx`, [PR #39](https://github.com/AbyssWatcher2/Notaya/pull/39) (merged 2026-11-03 as `452212d`) | 2026-10-28 | **done** (released as v1.4.0 on 2026-11-03; waiting for the owner's acceptance). | `docs/handoff/2026-10-28-v1-4-0-resume-note.md` (on that branch). IDs: EX-2026-10-28-37, A31 to A33 |
 | Collaboration setup (this guide, the friend's setup steps, the owner's invite steps) | Mohamed's cloud thread | `claude/project-thread-6bb493` | 2026-10-29 | in progress (draft PR) | IDs: EX-2026-10-29-38, A34 (proposed) |
+| Notion-offline roadmap (plan only, no code) | Mohamed's cloud thread | `claude/project-thread-73zkp7` | 2026-11-03 | in progress (draft PR) | IDs: EX-2026-11-03-41 (A35 is **not** taken: the plan becomes A35 only if the owner picks a phase) |
 
 **Next free IDs when this file was written (2026-10-29 07:58 UTC):** execution report EX-2026-10-29-39, amendment A35, failure entry FI-06. Re-check with the commands in the guide before using them.
