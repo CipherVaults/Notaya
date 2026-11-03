@@ -452,6 +452,32 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   yes('the trash lists the database', await p.getByText('Check DB').count());
   await shot('trash');
 
+  // ---------------------------------------------------------------- panels of the seeded Tasks database (looked at in screenshots)
+  await p.getByRole('treeitem', { name: 'Tasks' }).click();
+  await wait(900);
+  await table().locator('thead th').filter({ hasText: 'Status' }).first().click();
+  await wait(400);
+  await shot('property-status');
+  await p.keyboard.press('Escape');
+  await wait(300);
+  await p.getByRole('button', { name: 'Properties', exact: true }).click();
+  await wait(300);
+  await shot('properties-panel');
+  await p.keyboard.press('Escape');
+  await p.getByRole('button', { name: 'View settings' }).click();
+  await wait(300);
+  await shot('view-settings');
+  await p.keyboard.press('Escape');
+  await p.getByRole('button', { name: 'Database menu' }).click();
+  await wait(300);
+  await shot('database-menu');
+  await p.keyboard.press('Escape');
+  await wait(200);
+  await p.getByRole('button', { name: /^Options for/ }).first().click();
+  await wait(300);
+  await shot('view-menu');
+  await p.keyboard.press('Escape');
+
   // ---------------------------------------------------------------- looks: dark theme, right-to-left, a 900px window
   const look = async (name, url, size, extra) => {
     const pg = await ctx.newPage();
