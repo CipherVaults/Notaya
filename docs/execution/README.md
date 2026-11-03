@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-03 (owner's messages 06:52:53 and 06:54:14 UTC; PC session started after 06:54 UTC and ended before 08:11:56 UTC (thread timestamps)), EX-2026-11-03-40: V1.4.0 features and PC tests
+
+- Report: [2026-11-03-v1-4-0-pc-tests.md](2026-11-03-v1-4-0-pc-tests.md)
+- Task / Goal: finish V1.4.0 and test it on the PC on throwaway data; [A33](../plan/A33-v1-4-0-features.md)
+- Executor: Claude (Claude Code) in a cloud thread; the PC checks run through Remote Control
+- Outcome: produced and verified (350 tests, clippy, runners, migration on copies, error log, export/import in the real exe); not integrated, not released, not accepted
+- Open dependency / next action: the owner merges PR #39 ("Create a merge commit") and says "publish"
+
 ### 2026-10-29 (owner's messages 07:55:55, 08:33:01, 08:38:36, 08:39:33 and 08:40:02 UTC; work started 07:56 UTC, system clock), EX-2026-10-29-38: guide for two partners and their two Claudes
 
 - Report: [2026-10-29-shared-work-with-a-friend.md](2026-10-29-shared-work-with-a-friend.md)
