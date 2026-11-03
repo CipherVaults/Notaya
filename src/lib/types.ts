@@ -145,6 +145,8 @@ export interface NotesTree {
   notebooks: Notebook[];
   sections: Section[];
   pages: PageMeta[];
+  /** Databases (A35). Their rows are not listed here. */
+  databases: import("./database-types").DatabaseMeta[];
 }
 
 export interface Sticky {
@@ -193,6 +195,8 @@ export interface ExportSummary {
   imagesLeftOut: number;
   /** Characters the PDF fonts do not have. */
   charsReplaced: number;
+  /** Chinese, Japanese or Korean characters printed as ? because no font was found on this PC. */
+  charsNoFont: number;
   /** Markdown: the folder the pictures went to. */
   assetsFolder: string | null;
   /** ZIP: how many files the ZIP holds (pages and Markdown pictures). */
@@ -226,7 +230,7 @@ export interface NotesImportSummary {
 }
 
 export interface SearchHit {
-  kind: "page" | "sticky" | "notebook";
+  kind: "page" | "sticky" | "notebook" | "database" | "row";
   id: string;
   title: string;
   subtitle: string;

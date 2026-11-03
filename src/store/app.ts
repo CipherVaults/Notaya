@@ -72,7 +72,7 @@ function saveLayout(open: boolean, width: number) {
   }
 }
 
-const EMPTY_TREE: NotesTree = { notebooks: [], sections: [], pages: [] };
+const EMPTY_TREE: NotesTree = { notebooks: [], sections: [], pages: [], databases: [] };
 
 export const useApp = create<AppState>((set, get) => ({
   status: null,

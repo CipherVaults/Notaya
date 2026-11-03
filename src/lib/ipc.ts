@@ -24,6 +24,16 @@ import type {
   Strength,
   VaultStatus,
 } from "./types";
+import type {
+  ChartData,
+  Database,
+  DatabaseFull,
+  DatabaseMeta,
+  DbRow,
+  QueryRequest,
+  RowHit,
+  ViewResult,
+} from "./database-types";
 
 export const api = {
   // Vault
@@ -108,6 +118,30 @@ export const api = {
   deletePage: (id: string) => invoke<NotesTree>("delete_page", { id }),
   emptyTrash: () => invoke<NotesTree>("empty_trash"),
   addAttachment: (bytes: Uint8Array) => invoke<string>("add_attachment", bytes),
+  // Databases (A35). Rows are pages: open one with getPage/savePage like any page.
+  createDatabase: (sectionId: string, parent: string, inline: boolean, title: string, starterKind: "blank" | "tasks" | "reading" | "projects") =>
+    invoke<DatabaseFull>("create_database", { sectionId, parent, inline, title, starterKind }),
+  getDatabase: (id: string) => invoke<Database>("get_database", { id }),
+  /** The whole database definition as JSON text (properties, views, templates). */
+  saveDatabase: (database: Database) => invoke<Database>("save_database", { databaseJson: JSON.stringify(database) }),
+  queryView: (request: QueryRequest) => invoke<ViewResult>("query_view", { request }),
+  createRow: (databaseId: string, title: string, cells: Record<string, unknown>, templateId = "") =>
+    invoke<{ row: DbRow }>("create_row", { databaseId, title, cells: JSON.stringify(cells), templateId }),
+  setCells: (rowId: string, title: string | null, patch: Record<string, unknown>) =>
+    invoke<{ row: DbRow }>("set_cells", { rowId, title, patch: JSON.stringify(patch) }),
+  duplicateRow: (rowId: string) => invoke<{ row: DbRow }>("duplicate_row", { rowId }),
+  reorderRows: (ids: string[]) => invoke<void>("reorder_rows", { ids }),
+  searchRows: (databaseId: string, query: string, limitN = 50) =>
+    invoke<RowHit[]>("search_rows", { databaseId, query, limitN }),
+  rowTitles: (ids: string[]) => invoke<RowHit[]>("row_titles", { ids }),
+  setDatabaseLook: (id: string, title: string, icon: string, favorite: boolean, locked: boolean) =>
+    invoke<DatabaseMeta>("set_database_look", { id, title, icon, favorite, locked }),
+  moveDatabase: (id: string, sectionId: string) => invoke<void>("move_database", { id, sectionId }),
+  enableSubItems: (id: string) => invoke<Database>("enable_sub_items", { id }),
+  enableDependencies: (id: string) => invoke<Database>("enable_dependencies", { id }),
+  chartData: (request: QueryRequest) => invoke<ChartData>("chart_data", { request }),
+  // Trash, restore and delete of a row or a database use trashPage / restorePage / deletePage with its id.
+
   // Export: the backend asks where to save (resolves to null if cancelled) and writes an unencrypted file
   exportNotes: (request: ExportRequest) => invoke<ExportSummary | null>("export_notes", { request }),
   // Import: the backend asks what to import (resolves to null if cancelled) and makes one new notebook

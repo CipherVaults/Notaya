@@ -11,6 +11,7 @@ import {
   Palette,
   Settings,
   StickyNote,
+  Table2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -77,6 +78,8 @@ export default function CommandPalette() {
       page: <FileText size={16} />,
       sticky: <StickyNote size={16} />,
       notebook: <BookOpen size={16} />,
+      database: <Table2 size={16} />,
+      row: <FileText size={16} />,
     })[kind];
 
   const itemClass =
