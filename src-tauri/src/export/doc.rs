@@ -440,7 +440,7 @@ pub fn anchor_targets(blocks: &[Block], out: &mut std::collections::HashSet<usiz
                 out.insert(*n);
             }
             Block::List { items, .. } => items.iter().for_each(|i| anchor_targets(&i.blocks, out)),
-            Block::Quote(x) | Block::Toggle(x) | Block::Callout { blocks: x, .. } => anchor_targets(x, out),
+            Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout { blocks: x, .. } => anchor_targets(x, out),
             Block::Columns(cols) => cols.iter().for_each(|c| anchor_targets(c, out)),
             Block::Table(rows) => rows.iter().flatten().for_each(|c| anchor_targets(&c.blocks, out)),
             _ => {}
@@ -649,5 +649,12 @@ pub mod tests {
         assert_eq!(attachment_id(&format!("clatt://localhost/{IMG_ID}")).as_deref(), Some(IMG_ID));
         assert_eq!(attachment_id(&format!("https://evil.example/{IMG_ID}")), None);
         assert_eq!(attachment_id("http://clatt.localhost/../etc"), None);
+    }
+    #[test]
+    fn links_inside_a_shelf_count_as_link_targets() {
+        let link = Block::PageLink { title: "Inside".into(), target: Some(PageRef::Anchor(7)) };
+        let mut found = std::collections::HashSet::new();
+        anchor_targets(&[Block::Shelf(vec![link.clone()]), Block::Toggle(vec![Block::Quote(vec![Block::PageLink { title: "Deep".into(), target: Some(PageRef::Anchor(9)) }])])], &mut found);
+        assert!(found.contains(&7) && found.contains(&9), "{found:?}");
     }
 }

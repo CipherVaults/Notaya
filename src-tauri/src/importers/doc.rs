@@ -608,7 +608,7 @@ fn rows_in(blocks: &mut [Block], depth: usize) {
             }
             Block::Bullets(items) | Block::Numbered(_, items) => items.iter_mut().for_each(|i| rows_in(i, depth + 1)),
             Block::Tasks(items) => items.iter_mut().for_each(|(_, i)| rows_in(i, depth + 1)),
-            Block::Quote(x) | Block::Toggle(x) | Block::Callout(_, x) => rows_in(x, depth + 1),
+            Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout(_, x) => rows_in(x, depth + 1),
             Block::Columns(cols) => cols.iter_mut().for_each(|c| rows_in(c, depth + 1)),
             Block::Table(rows) => rows.iter_mut().flatten().for_each(|c| rows_in(&mut c.blocks, depth + 1)),
             _ => {}
