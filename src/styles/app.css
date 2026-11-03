@@ -685,3 +685,49 @@ textarea,
   0%, 35% { background: color-mix(in srgb, var(--accent) 28%, transparent); }
   100% { background: transparent; }
 }
+
+/* ---------- Databases (A35): option colors ---------- */
+/* One base color per name; the chip tints it and mixes the text color in, so it reads on every light and dark theme. */
+:root {
+  --oc-default: rgb(140 140 138);
+  --oc-gray: rgb(120 119 116);
+  --oc-brown: rgb(159 107 83);
+  --oc-orange: rgb(217 115 13);
+  --oc-yellow: rgb(203 145 47);
+  --oc-green: rgb(68 131 97);
+  --oc-blue: rgb(51 126 169);
+  --oc-purple: rgb(144 101 176);
+  --oc-pink: rgb(193 76 138);
+  --oc-red: rgb(212 76 71);
+}
+.oc {
+  --oc-c: 140 140 138;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 0.5em;
+  border-radius: 6px;
+  font-size: 0.86em;
+  line-height: 1.6;
+  white-space: nowrap;
+  background: rgb(var(--oc-c) / 0.2);
+  color: color-mix(in oklab, rgb(var(--oc-c)) 55%, var(--text));
+}
+.oc > span { overflow: hidden; text-overflow: ellipsis; }
+.oc-gray { --oc-c: 120 119 116; }
+.oc-brown { --oc-c: 159 107 83; }
+.oc-orange { --oc-c: 217 115 13; }
+.oc-yellow { --oc-c: 203 145 47; }
+.oc-green { --oc-c: 68 131 97; }
+.oc-blue { --oc-c: 51 126 169; }
+.oc-purple { --oc-c: 144 101 176; }
+.oc-pink { --oc-c: 193 76 138; }
+.oc-red { --oc-c: 212 76 71; }
+
+/* Table cells: a thin grid that follows the theme. */
+.db-table { border-collapse: separate; border-spacing: 0; }
+.db-cell { border-bottom: 1px solid var(--border); border-inline-end: 1px solid var(--border); }
+.db-cell-active { outline: 2px solid color-mix(in oklab, var(--accent) 60%, transparent); outline-offset: -2px; }
+.db-scroll { scrollbar-gutter: stable; }
+.db-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
