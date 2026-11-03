@@ -2,7 +2,7 @@
 // and the active view. Used as a full page and, with `compact`, inside a page (inline database or linked view).
 
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Popover } from "radix-ui";
+import { Dialog, Popover } from "radix-ui";
 import {
   AlertTriangle, ArrowUpDown, ChevronDown, Copy, Download, ExternalLink, FileUp, Filter as FilterIcon, GitBranch, Group, ListTree, Loader2, Lock, LockOpen,
   MoreHorizontal, Plus, Search, SlidersHorizontal, Table as TableIcon, Trash2, X, Settings2, LayoutTemplate,
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "@/components/ui";
 import { DbShellContext, type DbShell } from "./context";
-import { editDatabase, loadDatabase, setDatabase, useDatabase } from "./dbStore";
+import { editDatabase, loadDatabase, setDatabase, useDatabase, useSaveCount } from "./dbStore";
 import { ViewIcon } from "./icons";
 import { VIEW_KINDS, blankView, cellText, countConds, emptyFilter, filterIsEmpty, reorderList } from "./model";
 import { saveCells } from "./ops";
@@ -59,6 +59,7 @@ const ghostBtn = "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 
 
 export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewChange, compact = false }: DatabaseViewProps) {
   const db = useDatabase(databaseId);
+  const saveCount = useSaveCount(databaseId);
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
   const openRowPage = useApp((s) => s.openRow);
@@ -120,7 +121,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     }, 60);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db?.id, viewKey, propsKey, tick]);
+  }, [db?.id, viewKey, propsKey, tick, saveCount]);
 
   const rowById = useMemo(() => new Map((result?.rows ?? []).map((r) => [r.id, r])), [result]);
 
@@ -814,11 +815,17 @@ function PropertyDialog({
   onClose: () => void; editDb: DbShell["editDb"]; editView: DbShell["editView"]; confirm: ReturnType<typeof useConfirm>;
 }) {
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/30 pt-20" onMouseDown={(e) => e.target === e.currentTarget && onClose()} role="presentation">
-      <div role="dialog" aria-label={`Property ${prop.name}`} className="relative max-h-[78vh] w-[min(420px,94vw)] overflow-y-auto rounded-xl border border-line bg-elevated p-4 shadow-float" onKeyDown={(e) => e.key === "Escape" && onClose()}>
-        <button type="button" aria-label="Close" onClick={onClose} className="absolute end-2 top-2 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-fg">
+    <Dialog.Root open onOpenChange={(o) => !o && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[70] bg-black/30" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          className="fixed start-1/2 top-20 z-[70] max-h-[78vh] w-[min(420px,94vw)] -translate-x-1/2 overflow-y-auto rounded-xl border border-line bg-elevated p-4 shadow-float outline-none rtl:translate-x-1/2"
+        >
+        <Dialog.Title className="sr-only">{`Property ${prop.name}`}</Dialog.Title>
+        <Dialog.Close aria-label="Close" className="absolute end-2 top-2 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-fg">
           <X size={15} />
-        </button>
+        </Dialog.Close>
         <PropertyMenu
           db={db}
           prop={prop}
@@ -854,7 +861,8 @@ function PropertyDialog({
             onClose();
           }}
         />
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

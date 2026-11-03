@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Popover } from "radix-ui";
 import type { DateCell, DbRow, FileCell, PlaceCell, Property } from "@/lib/database-types";
 import { cn } from "@/lib/utils";
-import { formatNumber, isComputedKind } from "../model";
+import { isComputedKind } from "../model";
 import CellDisplay, { CheckBox } from "./CellDisplay";
 import { DateEditor } from "./DatePicker";
 import { FilesPicker, OptionPicker, PersonPicker, PlacePicker, RelationPicker } from "./pickers";
@@ -171,8 +171,3 @@ function TextInput({ prop, row, value, setEditing, commit, seed, onEnd }: Editab
     />
   );
 }
-
-/** A plain-language text of a number for tooltips. */
-export const numberTitle = (p: Property, v: number) => formatNumber(v, p.numberFormat);
-
-export type { DbRow };

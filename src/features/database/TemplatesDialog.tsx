@@ -100,7 +100,7 @@ export default function TemplatesDialog({ db: initial, onClose, onSaved }: { db:
               {t.repeat && <p className="text-xs text-muted">A row is added from this template when the database is opened and one is due.</p>}
               <div>
                 <div className="pb-1 text-xs font-semibold uppercase tracking-wider text-faint">Default values</div>
-                <PropertyLines db={live} row={fake} noFiles onCommit={setCell} />
+                <PropertyLines db={live} row={fake} noFiles noComputed onCommit={setCell} />
               </div>
               {t.content && <p className="text-xs text-muted">This template also has a page body.</p>}
               <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={remove}>

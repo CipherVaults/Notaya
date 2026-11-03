@@ -126,13 +126,14 @@ interface Props {
 
 /** The value of one cell as it is shown in tables, cards and the property list of a row. */
 export default function CellDisplay({ prop, value, row, wrap }: Props) {
-  const trunc = wrap ? "whitespace-pre-wrap break-words" : "truncate";
+  // `block`, so the text lines up with its own direction (Arabic and Hebrew start at the right edge of the cell).
+  const trunc = wrap ? "block whitespace-pre-wrap break-words" : "block truncate";
   if (prop.kind === "title") {
     const title = row?.title ?? (typeof value === "string" ? value : "");
     return (
       <span className="flex min-w-0 items-center gap-1.5 font-medium">
         {row?.icon && <span className="emoji-mono shrink-0">{row.icon}</span>}
-        <span dir="auto" className={cn("min-w-0", trunc, !title && "text-faint")}>{title || "Untitled"}</span>
+        <span dir="auto" className={cn("min-w-0 flex-1", trunc, !title && "text-faint")}>{title || "Untitled"}</span>
       </span>
     );
   }
@@ -209,7 +210,8 @@ export default function CellDisplay({ prop, value, row, wrap }: Props) {
 }
 
 function ComputedValue({ prop, cell, wrap }: { prop: Property; cell: { t: string; v: unknown; text: string }; wrap?: boolean }) {
-  const trunc = wrap ? "whitespace-pre-wrap break-words" : "truncate";
+  // `block`, so the text lines up with its own direction (Arabic and Hebrew start at the right edge of the cell).
+  const trunc = wrap ? "block whitespace-pre-wrap break-words" : "block truncate";
   if (cell.t === "error") {
     return <span dir="auto" className={cn("text-danger", trunc)} title={cell.text}>{cell.text}</span>;
   }

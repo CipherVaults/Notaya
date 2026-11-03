@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { KindIcon } from "../icons";
 import {
   COLOR_NAMES, DATE_FORMATS, KINDS, KIND_ORDER, NUMBER_FORMATS, OPTION_COLORS, STATUS_GROUPS, blankOption, blankProperty, calcsFor, CALC_LABELS, colorForNew, hasOptions,
-  isComputedKind, reorderList,
+  reorderList,
 } from "../model";
 import { loadDatabase, useDatabase } from "../dbStore";
 import { PSelect, PanelTitle, PropSelect, Row, SortableList, SortableRow, SwitchRow, fieldCls } from "./ui";
@@ -361,7 +361,6 @@ export function PropertyMenu({ db, prop, databases, locked, sample, onChange, on
           <input aria-label="ID prefix" value={prop.idPrefix} maxLength={20} placeholder="TASK" onChange={(e) => set({ idPrefix: e.target.value })} className={cn(fieldCls, "w-[11rem]")} />
         </Row>
       )}
-      {isComputedKind(prop.kind) && prop.kind !== "formula" && prop.kind !== "rollup" && prop.kind !== "id" && prop.kind.startsWith("created") === false && null}
 
       <div className="border-t border-line pt-1.5">
         {onSort && (
@@ -493,7 +492,7 @@ export function NewPropertyPicker({
   return (
     <div>
       <input autoFocus aria-label="Search property types" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search for a type…" className={cn(fieldCls, "mb-2 w-full")} />
-      <div className="grid max-h-[320px] grid-cols-2 gap-0.5 overflow-y-auto">
+      <div className="grid max-h-[min(400px,60vh)] grid-cols-2 gap-0.5 overflow-y-auto">
         {options.map((k) => (
           <button key={k} type="button" onClick={() => pick(k)} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm hover:bg-surface-2">
             <KindIcon kind={k} className="text-muted" /> {KINDS[k].label}

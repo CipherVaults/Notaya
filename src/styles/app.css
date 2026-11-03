@@ -301,7 +301,7 @@ textarea,
 }
 .ProseMirror > * { margin: 0; }
 .ProseMirror > * + * { margin-top: 0.3em; }
-.ProseMirror p { min-height: 1.65em; }
+.ProseMirror p:not(.database-block *) { min-height: 1.65em; }
 .ProseMirror h1 { font-size: 1.95em; font-weight: 700; letter-spacing: -0.025em; line-height: 1.2; margin-top: 1.5em; }
 .ProseMirror h2 { font-size: 1.5em; font-weight: 650; letter-spacing: -0.02em; line-height: 1.25; margin-top: 1.3em; }
 .ProseMirror h3 { font-size: 1.2em; font-weight: 620; letter-spacing: -0.01em; line-height: 1.3; margin-top: 1.1em; }
@@ -317,7 +317,7 @@ textarea,
 .ProseMirror ul ul { list-style: circle; }
 .ProseMirror li > p { margin: 0; }
 .ProseMirror li + li { margin-top: 0.15em; }
-.ProseMirror a { color: inherit; text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 3px; cursor: pointer; }
+.ProseMirror a:not(.database-block *) { color: inherit; text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 3px; cursor: pointer; }
 .ProseMirror a:hover { text-decoration-color: var(--text); }
 .ProseMirror blockquote {
   border-inline-start: 3px solid var(--text);
@@ -382,16 +382,17 @@ textarea,
 }
 
 /* Tables */
-.ProseMirror table { border-collapse: collapse; width: 100%; table-layout: fixed; overflow: hidden; margin: 0.6em 0; }
-.ProseMirror td,
-.ProseMirror th {
+.ProseMirror table:not(.database-block *) { border-collapse: collapse; width: 100%; table-layout: fixed; overflow: hidden; margin: 0.6em 0; }
+.ProseMirror :is(td, th):not(.database-block *) {
   border: 1px solid var(--border);
   padding: 0.4em 0.65em;
   vertical-align: top;
   position: relative;
   min-width: 60px;
 }
-.ProseMirror th { background: var(--surface); font-weight: 600; text-align: start; }
+.ProseMirror th:not(.database-block *) { background: var(--surface); font-weight: 600; text-align: start; }
+/* A database inside a page keeps its own look: the page's text and table styles above skip it. */
+.ProseMirror > .database-block { margin-top: 0.8em; margin-bottom: 0.8em; font-size: 0.875rem; line-height: 1.45; }
 .ProseMirror .selectedCell::after { content: ""; position: absolute; inset: 0; background: var(--accent-soft); pointer-events: none; }
 .ProseMirror .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background: var(--accent); }
 
@@ -730,4 +731,6 @@ textarea,
 .db-cell { border-bottom: 1px solid var(--border); border-inline-end: 1px solid var(--border); }
 .db-cell-active { outline: 2px solid color-mix(in oklab, var(--accent) 60%, transparent); outline-offset: -2px; }
 .db-scroll { scrollbar-gutter: stable; }
+/* The table takes the keyboard focus as a whole; the active cell shows where it is, so no ring around the whole table. */
+.db-scroll:focus-visible { outline: none; }
 .db-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

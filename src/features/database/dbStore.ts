@@ -10,8 +10,15 @@ import type { Database, Property } from "@/lib/database-types";
 
 interface DbState {
   dbs: Record<string, Database>;
+  /** Counts the saves that reached the backend, per database: what a view shows can change when one lands. */
+  saves: Record<string, number>;
 }
-const useStore = create<DbState>(() => ({ dbs: {} }));
+const useStore = create<DbState>(() => ({ dbs: {}, saves: {} }));
+
+/** Changes whenever a save of this database has reached the backend (the query of a view is then run again). */
+export function useSaveCount(id: string): number {
+  return useStore((s) => s.saves[id] ?? 0);
+}
 
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 const dirty = new Set<string>();
@@ -105,6 +112,7 @@ export function saveNow(id: string): Promise<void> {
     try {
       const saved = await api.saveDatabase(sent);
       put(mergeSaved(get(id) ?? sent, sent, saved));
+      useStore.setState((s) => ({ saves: { ...s.saves, [id]: (s.saves[id] ?? 0) + 1 } }));
       // New relations create a property in the other database too: refresh it if it is open.
       for (const p of sent.props) {
         if (p.kind === "relation" && p.relationBack === "+" && p.relationDb !== id && get(p.relationDb)) void api.getDatabase(p.relationDb).then(put).catch(() => undefined);

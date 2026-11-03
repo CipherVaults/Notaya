@@ -43,6 +43,7 @@ const settings: Record<string, unknown> = {
   stickyDefaultColor: "yellow",
 };
 
+const savedPages = new Map<string, { title: string; content: string; text: string }>();
 const tree = {
   notebooks: [
     { id: "n1", name: "Personal", color: "#a3a3a3", icon: "📓", order: 0, created: ago(900), updated: ago(5) },
@@ -264,13 +265,17 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
       for (const k of ["notebooks", "sections", "pages"] as const) (tree[k] as { order: number }[]).sort((a, b) => a.order - b.order);
       return ok({ ...tree });
     }
-    case "get_page":
-      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk" });
+    case "get_page": {
+      const saved = savedPages.get(String(args.id));
+      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk", ...(saved ?? {}) });
+    }
     case "create_subpage":
       return ok({ ...tree.pages[0], id: "p" + Math.floor(Math.random() * 1e6), parent: args.parentId, title: args.title, content: "", text: "", cover: "" });
     case "set_page_look":
       return ok({ ...tree.pages[0], icon: args.icon });
     case "save_page":
+      // Remember what was saved, so a page keeps its content while the mock runs (the first page is the fixed sample otherwise).
+      savedPages.set(String(args.id), { title: String(args.title ?? ""), content: String(args.content ?? ""), text: String(args.text ?? "") });
       return ok({ ...tree.pages[0] });
     case "list_stickies":
       return ok([...stickies]);
