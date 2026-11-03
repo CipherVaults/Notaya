@@ -27,9 +27,9 @@ function DatabaseBlockView({ node, updateAttributes, deleteNode, editor, selecte
           onClick={deleteNode}
           aria-label="Remove this database from the page"
           title="Remove from page (the database is kept)"
-          className="absolute end-1 top-1 z-10 grid h-6 w-6 place-items-center rounded-md bg-bg/90 text-faint opacity-0 shadow-sm transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/dbblock:opacity-100"
+          className="absolute -top-2.5 end-3 z-10 grid h-5 w-5 place-items-center rounded-full border border-line bg-bg text-faint opacity-0 shadow-sm transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/dbblock:opacity-100"
         >
-          <X size={14} />
+          <X size={12} />
         </button>
       )}
       {databaseId ? (

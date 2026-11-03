@@ -19,7 +19,7 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   const p = await ctx.newPage();
   p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) console.log('console.error', m.text().slice(0, 200)); });
-  const shot = async (name) => { if (shots) await p.screenshot({ path: `${shots}/ui-${name}.png` }); };
+  const shot = async (name) => { if (shots) await p.screenshot({ path: `${shots}/ui-${name}.png`, caret: 'initial' }); }; // (Playwright's default caret hiding redraws the page's React blocks)
   const wait = (ms = 250) => p.waitForTimeout(ms);
   const table = () => p.getByRole('application', { name: 'Table' });
   const cell = (row, col) => table().locator('tbody tr').nth(row).locator('td').nth(col);
@@ -367,10 +367,8 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   // ---------------------------------------------------------------- inline database and linked view inside a page
   await p.getByRole('treeitem', { name: 'Trip notes' }).click();
   await wait(900);
-  const pm = p.locator('.ProseMirror').first();
-  await pm.click();
-  await p.keyboard.press('Control+End');
-  await p.keyboard.press('Enter');
+  const toEnd = () => p.locator('div.cursor-text').last().click(); // the empty space under the text puts the cursor on a new last line
+  await toEnd();
   await p.keyboard.type('/database');
   await wait(300);
   await shot('slash-database');
@@ -394,9 +392,7 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   is('the block is still in the page', await p.locator('[data-database-block]').count(), 1);
   yes('and still has its row', await p.locator('[data-database-block]').getByText('Inline row').count());
   // A linked view of Tasks.
-  await p.locator('.ProseMirror').first().focus();
-  await p.keyboard.press('Control+End');
-  await p.keyboard.press('Enter');
+  await toEnd();
   await p.keyboard.type('/linked');
   await wait(300);
   await p.keyboard.press('Enter');
