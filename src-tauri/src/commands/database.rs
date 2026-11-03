@@ -676,13 +676,19 @@ pub struct RowResult {
     pub row: RowOut,
 }
 
-fn row_result(s: &Session, id: &str) -> Result<RowResult> {
+pub(crate) fn row_result(s: &Session, id: &str) -> Result<RowResult> {
     let r = row(s, id)?;
     let db = database(s, &r.db)?;
     let ctx = ctx_of(s);
     let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
     let rr = ctx.rows_of(&db.id).iter().find(|x| x.id == id).copied().unwrap_or(&r);
     Ok(RowResult { row: ctx.row_out_pub(dbref, rr) })
+}
+
+/// One row with its cell values, unchanged.
+#[tauri::command]
+pub fn get_row(state: State<'_, AppState>, row_id: String) -> Result<RowResult> {
+    state.with(|s| row_result(s, &row_id))
 }
 
 /// Adds a row. `cells` is a JSON object (property id -> value) checked like `set_cells`;

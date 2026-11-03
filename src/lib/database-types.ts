@@ -328,23 +328,6 @@ export const CALC_NAMES = [
   "checked", "unchecked", "percentChecked", "percentUnchecked", "showOriginal", "showUnique",
 ] as const;
 
-export interface FileRef {
-  id: string;
-  name: string;
-  mime: string;
-  size: number;
-}
-
-export interface CsvSummary {
-  databaseId: string;
-  title: string;
-  rows: number;
-  columns: number;
-  skipped: string[];
-  badCells: number;
-  notice: string | null;
-}
-
 export interface Reminder {
   key: string;
   rowId: string;

@@ -29,9 +29,7 @@ import type {
   Database,
   DatabaseFull,
   DatabaseMeta,
-  CsvSummary,
   Reminder,
-  FileRef,
   DbRow,
   FileCell,
   QueryRequest,
@@ -45,8 +43,14 @@ export interface CsvImportResult {
   /** True when a new database was made from the CSV. */
   created: boolean;
   rows: number;
-  /** Columns or cells that could not be imported, with the reason. */
+  title: string;
+  columns: number;
+  /** Columns that could not be imported, with the reason. */
   skipped: string[];
+  /** Values that did not fit their property and were left empty. */
+  badCells: number;
+  /** Shown once: the safety backup made before the first database. */
+  notice: string | null;
 }
 
 export const api = {
@@ -154,28 +158,18 @@ export const api = {
   enableSubItems: (id: string) => invoke<Database>("enable_sub_items", { id }),
   enableDependencies: (id: string) => invoke<Database>("enable_dependencies", { id }),
   chartData: (request: QueryRequest) => invoke<ChartData>("chart_data", { request }),
-  /** Imports a CSV file as a new database in a section, or into an existing one. null = cancelled. */
-  importCsv: (databaseId: string | null, sectionId: string | null) =>
-    invoke<CsvSummary | null>("import_csv", { databaseId, sectionId }),
-  exportCsv: (databaseId: string, viewId: string | null) =>
-    invoke<{ fileName: string; rows: number; columns: number } | null>("export_csv", { databaseId, viewId }),
   /** The database (or one view) as a document with one table. format: html | markdown | pdf | docx. */
   exportDatabase: (databaseId: string, viewId: string | null, format: "html" | "markdown" | "pdf" | "docx") =>
     invoke<ExportSummary | null>("export_database", { databaseId, viewId, format }),
   /** Reminders that came due since the last call (title only). */
   dueReminders: () => invoke<Reminder[]>("due_reminders_now"),
-  /** Stores a file (up to 50 MB) encrypted in the vault; put the result into the row's Files cell. */
-  attachFile: (bytes: Uint8Array, name: string) =>
-    invoke<FileRef>("attach_file", bytes, { headers: { "x-file-name": encodeURIComponent(name) } }),
-  openFile: (fileId: string, name: string) => invoke<void>("open_file", { fileId, name }),
-  saveFileAs: (fileId: string, name: string) => invoke<string | null>("save_file_as", { fileId, name }),
   // Trash, restore and delete of a row or a database use trashPage / restorePage / deletePage with its id.
   /** One row with its cell values (Rust command `get_row`, same result as setCells with an empty patch but without touching the row). */
   getRow: (rowId: string) => invoke<{ row: DbRow }>("get_row", { rowId }),
-  /** The backend opens the file dialog; null databaseId makes a new database from the CSV. Resolves to null if cancelled. */
-  importCsv: (databaseId: string | null) => invoke<CsvImportResult | null>("import_csv", { databaseId }),
+  /** The backend opens the file dialog; null databaseId makes a new database from the CSV in the section sectionId. Resolves to null if cancelled. */
+  importCsv: (databaseId: string | null, sectionId: string | null = null) => invoke<CsvImportResult | null>("import_csv", { databaseId, sectionId }),
   /** The backend asks where to save (null if cancelled) and writes the rows of the view as an unencrypted CSV. */
-  exportCsv: (databaseId: string, viewId: string) => invoke<{ path: string; rows: number } | null>("export_csv", { databaseId, viewId }),
+  exportCsv: (databaseId: string, viewId: string | null) => invoke<{ path: string; rows: number } | null>("export_csv", { databaseId, viewId }),
   /** Raw body upload like addAttachment; the ids and the (URL-encoded) file name travel in headers. Resolves to the cell's files after adding. */
   attachFile: (rowId: string, propId: string, name: string, bytes: Uint8Array) =>
     invoke<FileCell[]>("attach_file", bytes, {

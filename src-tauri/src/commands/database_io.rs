@@ -30,8 +30,10 @@ const COLORS: [&str; 9] = ["blue", "green", "orange", "purple", "pink", "yellow"
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CsvSummary {
+pub struct CsvImportResult {
     pub database_id: String,
+    /// A new database was made from the file.
+    pub created: bool,
     pub title: String,
     pub rows: usize,
     pub columns: usize,
@@ -223,7 +225,7 @@ fn read_picked(path: &PathBuf) -> Result<String> {
 /// Imports a CSV file: as a new database in a section (`database_id` empty), or into an existing
 /// database (matching columns by name). `None` if the dialog was cancelled.
 #[tauri::command(async)]
-pub fn import_csv(app: AppHandle, state: State<'_, AppState>, database_id: Option<String>, section_id: Option<String>) -> Result<Option<CsvSummary>> {
+pub fn import_csv(app: AppHandle, state: State<'_, AppState>, database_id: Option<String>, section_id: Option<String>) -> Result<Option<CsvImportResult>> {
     // Check the target before asking for a file.
     state.with(|s| match (&database_id, &section_id) {
         (Some(id), _) => dbc::database(s, id).map(|_| ()),
@@ -261,8 +263,9 @@ pub fn import_csv(app: AppHandle, state: State<'_, AppState>, database_id: Optio
         };
         let columns = table.header.len();
         let mut built = build_from_table(db, &table, existing, now)?;
-        let summary = CsvSummary {
+        let summary = CsvImportResult {
             database_id: built.db.id.clone(),
+            created: database_id.is_none(),
             title: built.db.title.clone(),
             rows: built.rows.len(),
             columns,
@@ -282,6 +285,7 @@ pub fn import_csv(app: AppHandle, state: State<'_, AppState>, database_id: Optio
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CsvExported {
+    pub path: String,
     pub file_name: String,
     pub rows: usize,
     pub columns: usize,
@@ -426,19 +430,10 @@ pub fn export_csv(app: AppHandle, state: State<'_, AppState>, database_id: Strin
     let dest = checked_destination(&chosen, "csv", &state.paths.data)?;
     let columns = lines.first().map_or(0, |l| l.len());
     std::fs::write(&dest, csv::write(&lines)).map_err(|e| Error::Other(format!("The file could not be saved: {e}")))?;
-    Ok(Some(CsvExported { file_name: dest.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(), rows: lines.len().saturating_sub(1), columns }))
+    Ok(Some(CsvExported { path: dest.display().to_string(), file_name: dest.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(), rows: lines.len().saturating_sub(1), columns }))
 }
 
 // ---------------------------------------------------------------- files in rows
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileRef {
-    pub id: String,
-    pub name: String,
-    pub mime: String,
-    pub size: usize,
-}
 
 fn clean_name(raw: &str) -> String {
     let n: String = raw.chars().filter(|c| !c.is_control() && !"\\/:*?\"<>|".contains(*c)).collect();
@@ -451,24 +446,98 @@ fn clean_name(raw: &str) -> String {
     }
 }
 
-/// Stores a file (raw bytes; the name is sent in the `x-file-name` header, percent-encoded).
-/// Pictures keep their picture type (found from the bytes); everything else is stored as plain
-/// data, so it can never be shown as a web page.
+const MAX_FILES_PER_CELL: usize = 100;
+
+fn header(request: &Request<'_>, name: &str) -> String {
+    request.headers().get(name).and_then(|v| v.to_str().ok()).unwrap_or("").to_string()
+}
+
+/// The row and its Files property, checked.
+fn files_target(s: &crate::vault::Session, row_id: &str, prop_id: &str) -> Result<Row> {
+    let r = dbc::row(s, row_id)?;
+    let db = dbc::database(s, &r.db)?;
+    match db.prop(prop_id) {
+        Some(p) if p.kind == PropKind::Files => Ok(r),
+        _ => Err(Error::NotFound),
+    }
+}
+
+fn file_list(r: &Row, prop_id: &str) -> Vec<Value> {
+    parse_cells(r).get(prop_id).and_then(|v| v.as_array()).cloned().unwrap_or_default()
+}
+
+fn store_files(r: &mut Row, prop_id: &str, files: Vec<Value>) -> Result<()> {
+    let mut m = parse_cells(r);
+    if files.is_empty() {
+        m.remove(prop_id);
+    } else {
+        m.insert(prop_id.to_string(), Value::Array(files));
+    }
+    write_cells(r, &m)?;
+    r.updated = now_ms();
+    Ok(())
+}
+
+/// Stores a file (raw bytes) in the row's Files property. The row, the property and the name
+/// (percent-encoded) travel in the headers `x-row-id`, `x-prop-id` and `x-file-name`. Pictures
+/// keep their picture type (found from the bytes); everything else is stored as plain data, so
+/// it can never be shown as a web page. Returns the property's files.
 #[tauri::command(async)]
-pub fn attach_file(state: State<'_, AppState>, request: Request<'_>) -> Result<FileRef> {
+pub fn attach_file(state: State<'_, AppState>, request: Request<'_>) -> Result<Vec<Value>> {
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err(Error::invalid("Expected file data."));
     };
-    let raw_name = request.headers().get("x-file-name").and_then(|v| v.to_str().ok()).unwrap_or("file");
-    let name = clean_name(&percent_decode(raw_name));
+    let row_id = header(&request, "x-row-id");
+    let prop_id = header(&request, "x-prop-id");
+    let name = clean_name(&percent_decode(&header(&request, "x-file-name")));
+    state.with_mut(|s| attach_to_row(s, &row_id, &prop_id, &name, bytes))
+}
+
+pub fn attach_to_row(s: &mut crate::vault::Session, row_id: &str, prop_id: &str, name: &str, bytes: &[u8]) -> Result<Vec<Value>> {
     let mime = super::notes::sniff_image(bytes).unwrap_or("application/octet-stream");
-    // Held until the vault is locked: a picked file must survive until the row's cell names it.
-    let id = state.with_mut(|s| {
-        let id = s.put_file(mime, bytes)?;
-        s.hold_attachment(&id);
-        Ok(id)
-    })?;
-    Ok(FileRef { id, name, mime: mime.into(), size: bytes.len() })
+    let mut r = files_target(s, row_id, prop_id)?;
+    let mut list = file_list(&r, prop_id);
+    if list.len() >= MAX_FILES_PER_CELL {
+        return Err(Error::invalid("This property already holds the most files it can."));
+    }
+    let id = s.put_file(mime, bytes)?;
+    list.push(json!({"id": id, "name": name, "mime": mime, "size": bytes.len()}));
+    store_files(&mut r, prop_id, list.clone())?;
+    if let Err(e) = s.put(Item::Row(r)) {
+        let _ = s.collect_garbage();
+        return Err(e);
+    }
+    Ok(list)
+}
+
+/// Takes a file out of the row's Files property; the stored copy is removed with it.
+#[tauri::command(async)]
+pub fn remove_file(state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<Vec<Value>> {
+    state.with_mut(|s| {
+        let mut r = files_target(s, &row_id, &prop_id)?;
+        let list: Vec<Value> = file_list(&r, &prop_id).into_iter().filter(|f| f.get("id").and_then(|i| i.as_str()) != Some(file_id.as_str())).collect();
+        store_files(&mut r, &prop_id, list.clone())?;
+        s.put(Item::Row(r))?;
+        s.collect_garbage()?;
+        Ok(list)
+    })
+}
+
+/// The stored name of a file in a row, and its bytes.
+fn file_of(state: &AppState, row_id: &str, prop_id: &str, file_id: &str) -> Result<(String, Vec<u8>)> {
+    if file_id.len() != 32 || !file_id.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(Error::NotFound);
+    }
+    state.with(|s| {
+        let r = files_target(s, row_id, prop_id)?;
+        let name = file_list(&r, prop_id)
+            .iter()
+            .find(|f| f.get("id").and_then(|i| i.as_str()) == Some(file_id))
+            .and_then(|f| f.get("name").and_then(|n| n.as_str()).map(clean_name))
+            .ok_or(Error::NotFound)?;
+        let (_, bytes) = s.get_attachment(file_id)?;
+        Ok((name, bytes))
+    })
 }
 
 fn percent_decode(s: &str) -> String {
@@ -502,18 +571,10 @@ pub fn can_open(name: &str) -> bool {
     OPENABLE.contains(&extension(name).as_str())
 }
 
-fn file_bytes(state: &AppState, id: &str) -> Result<Vec<u8>> {
-    if id.len() != 32 || !id.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Err(Error::NotFound);
-    }
-    state.with(|s| s.get_attachment(id)).map(|(_, b)| b)
-}
-
 /// Asks where to save a file of a row and writes it there. `None` if cancelled.
 #[tauri::command(async)]
-pub fn save_file_as(app: AppHandle, state: State<'_, AppState>, file_id: String, name: String) -> Result<Option<String>> {
-    let name = clean_name(&name);
-    let bytes = file_bytes(&state, &file_id)?;
+pub fn save_file_as(app: AppHandle, state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<Option<String>> {
+    let (name, bytes) = file_of(&state, &row_id, &prop_id, &file_id)?;
     let ext = extension(&name);
     let mut dlg = app.dialog().file().set_title("Save file").set_file_name(&name);
     if !ext.is_empty() {
@@ -534,13 +595,12 @@ pub fn save_file_as(app: AppHandle, state: State<'_, AppState>, file_id: String,
 /// folder in the system's temp folder and removed again after ten minutes (and at the next start).
 /// Only types that cannot run code are opened this way; the rest must be saved first.
 #[tauri::command(async)]
-pub fn open_file(app: AppHandle, state: State<'_, AppState>, file_id: String, name: String) -> Result<()> {
+pub fn open_file(app: AppHandle, state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;
-    let name = clean_name(&name);
+    let (name, bytes) = file_of(&state, &row_id, &prop_id, &file_id)?;
     if !can_open(&name) {
         return Err(Error::invalid("This kind of file is not opened from Notaya, because it could run code. Save it first, then open it yourself."));
     }
-    let bytes = file_bytes(&state, &file_id)?;
     let dir = open_dir().join(format!("{}-{}", OPEN_PREFIX, new_id()));
     std::fs::create_dir_all(&dir).map_err(|e| Error::Other(e.to_string()))?;
     let path = dir.join(&name);
@@ -646,6 +706,31 @@ mod tests {
         assert!(!can_open("page.html"));
         assert!(!can_open("vector.svg"));
         assert!(!can_open("noext"));
+    }
+
+    #[test]
+    fn files_are_attached_to_a_files_property_only() {
+        let dir = std::env::temp_dir().join(format!("notaya-att-{}", new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut s = crate::vault::Session::create_open(&dir.join("vault.nota")).unwrap();
+        let mut db = Database::new(new_id(), "sec".into(), "F".into(), 1);
+        db.props.push(Property { id: "f".into(), name: "Docs".into(), kind: PropKind::Files, ..Property::default() });
+        db.props.push(Property { id: "t".into(), name: "Text".into(), kind: PropKind::Text, ..Property::default() });
+        s.put(Item::Database(db.clone())).unwrap();
+        let r = Row::new(new_id(), &db.id, "r".into(), 1);
+        let rid = r.id.clone();
+        s.put(Item::Row(r)).unwrap();
+        assert!(attach_to_row(&mut s, &rid, "t", "x.pdf", b"data").is_err(), "not a Files property");
+        assert!(attach_to_row(&mut s, "nope", "f", "x.pdf", b"data").is_err());
+        let list = attach_to_row(&mut s, &rid, "f", "x.pdf", b"%PDF data").unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0]["mime"], "application/octet-stream");
+        let id = list[0]["id"].as_str().unwrap().to_string();
+        assert_eq!(s.get_attachment(&id).unwrap().1, b"%PDF data");
+        // A script saved as .html is still plain data.
+        let l2 = attach_to_row(&mut s, &rid, "f", "evil.html", b"<script>alert(1)</script>").unwrap();
+        assert_eq!(l2[1]["mime"], "application/octet-stream");
+        assert_eq!(file_list(&dbc::row(&s, &rid).unwrap(), "f").len(), 2);
     }
 
     #[test]
