@@ -39,11 +39,10 @@ export function SortPanel({ sorts, props, onChange }: { sorts: Sort[]; props: Pr
 
 const GROUPABLE = (p: Property) => p.kind !== "files" && p.kind !== "title";
 
-export function GroupEditor({ group, props, onChange, title, canSub }: { group: GroupBy | null; props: Property[]; onChange: (g: GroupBy | null) => void; title: string; canSub?: boolean }) {
+export function GroupEditor({ group, props, onChange, title }: { group: GroupBy | null; props: Property[]; onChange: (g: GroupBy | null) => void; title: string }) {
   const p = group ? props.find((x) => x.id === group.prop) : undefined;
   const set = (patch: Partial<GroupBy>) => group && onChange({ ...group, ...patch });
   const isDate = p && (p.kind === "date" || p.kind === "createdTime" || p.kind === "lastEditedTime");
-  void canSub;
   return (
     <div>
       <PanelTitle>{title}</PanelTitle>
