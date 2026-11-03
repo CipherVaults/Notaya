@@ -5,7 +5,12 @@
 //! lists, nested by level), the relationships (link targets and media) and the title in
 //! `docProps/core.xml`. Kept: headings 1 to 4 (5 to 9 become 4), bold, italic, underline,
 //! strike, highlight, text color, lists, tables (with merged columns), links (http, https,
-//! mailto), embedded pictures (PNG, JPEG, GIF, WebP) and line breaks. Dropped: tracked
+//! mailto), embedded pictures (PNG, JPEG, GIF, WebP) and line breaks. What Notaya's own Word
+//! export writes comes back too: code blocks (paragraphs in a code style; the language from
+//! Notaya's hidden bookmark), task lists (paragraphs that start with ☐ or ☑), picture captions
+//! (a "Caption" paragraph after the picture), shelves (a one-cell table in the "NotayaShelf"
+//! style) and every palette highlight as itself (the run shading is matched exactly first; see
+//! `palette`). Dropped: tracked
 //! deletions, field codes (their shown result stays), comments, footnotes, headers and
 //! footers, text boxes' position, fonts and sizes, and pictures in other formats (EMF, WMF).
 //!
@@ -20,7 +25,8 @@ use std::collections::HashMap;
 use super::doc::{self, Block, Cell, Inline, Marks, HIGHLIGHTS};
 use super::markup::{attr, local, Token, Tokenizer};
 use super::zip::Archive;
-use super::{safe_link, Ctx};
+use super::{palette, safe_link, Ctx};
+use crate::export::docx::{CODE_BOOKMARK, SHELF_STYLE};
 
 const MAX_XML: u64 = 64 * 1024 * 1024;
 /// Tables inside tables inside cells: deeper ones are read flat.
@@ -152,7 +158,8 @@ fn word_highlight(v: &str) -> Option<String> {
         "none" => return None,
         "lightGray" | "darkGray" | "black" => 0,
         "darkYellow" => 1,
-        "yellow" => 3,
+        // Word's yellow is Butter, the palette's yellow (not Honey, which reads as orange-brown).
+        "yellow" => return Some(palette::HIGHLIGHTS[9].1.to_string()),
         "green" | "darkGreen" => 4,
         "cyan" | "blue" | "darkBlue" | "darkCyan" => 5,
         "darkMagenta" => 6,
@@ -164,33 +171,64 @@ fn word_highlight(v: &str) -> Option<String> {
 }
 
 /// A run's shading fill (`<w:shd w:fill="RRGGBB"/>`, how Notaya's own Word export writes a
-/// highlight: the color blended onto white) as the nearest Notaya highlight. Fills that are
-/// not a highlight are left out: `auto`, white, grays and near-grays (the light gray Notaya uses
-/// for inline code, Word's light shading), and dark fills. `None` for those.
+/// highlight: the palette color blended onto white) as a Notaya highlight: the exact palette entry
+/// for a value Notaya wrote, otherwise the nearest one. Fills that are not a highlight are left
+/// out (`auto`, white, the light gray of inline code and Word's light shading, dark fills); see
+/// `palette::highlight`.
 fn shading_highlight(fill: &str) -> Option<String> {
-    if fill.len() != 6 || !fill.chars().all(|c| c.is_ascii_hexdigit()) {
+    if fill.len() != 6 {
         return None;
     }
-    let v = u32::from_str_radix(fill, 16).ok()?;
-    let rgb = [((v >> 16) & 0xFF) as f64, ((v >> 8) & 0xFF) as f64, (v & 0xFF) as f64];
-    let (max, min) = (rgb.iter().cloned().fold(0.0, f64::max), rgb.iter().cloned().fold(255.0, f64::min));
-    // Dark: not a highlighter. Near-gray: only the mid light grays that Notaya's own gray highlights
-    // (Stone, Ash) come out as; white and the very light gray of inline code are not highlights.
-    let gray = max - min < 24.0;
-    if min < 150.0 || (gray && !(200.0..=236.0).contains(&min)) {
-        return None;
+    palette::parse(fill).and_then(palette::highlight)
+}
+
+/// Paragraph styles that hold a code block (Notaya's own, its older name, and Word's usual ones).
+fn is_code_style(p: &Para, styles: &HashMap<String, Style>) -> bool {
+    style_is(p, styles, &["notayacode", "notaya code", "code", "source code", "html preformatted"])
+}
+
+fn is_caption(p: &Para, styles: &HashMap<String, Style>) -> bool {
+    style_is(p, styles, &["caption"])
+}
+
+/// The paragraph's style id or style name (lower case) is one of `names`.
+fn style_is(p: &Para, styles: &HashMap<String, Style>, names: &[&str]) -> bool {
+    let Some(id) = &p.style else { return false };
+    let id_low = id.to_ascii_lowercase();
+    names.contains(&id_low.as_str()) || styles.get(id).is_some_and(|s| names.contains(&s.name.as_str()))
+}
+
+/// A paragraph that starts with a check box (☐ open, ☑ or ☒ done; how Notaya's export and Word's
+/// check box content control write a task): whether it is ticked, and the text after the box.
+fn task_item(inl: &[Inline]) -> Option<(bool, Vec<Inline>)> {
+    let first = inl.iter().position(|i| !matches!(i, Inline::Text(t, _) if t.trim().is_empty()))?;
+    let Inline::Text(t, m) = &inl[first] else { return None };
+    let t = t.trim_start();
+    let c = t.chars().next().filter(|c| matches!(c, '☐' | '☑' | '☒'))?;
+    let rest = t[c.len_utf8()..].trim_start_matches([' ', '\u{a0}']);
+    let mut out = Vec::with_capacity(inl.len());
+    if !rest.is_empty() {
+        out.push(Inline::Text(rest.to_string(), m.clone()));
     }
-    let mut best: Option<(f64, usize)> = None;
-    for (i, h) in HIGHLIGHTS.iter().enumerate() {
-        let nums: Vec<f64> = h.trim_start_matches("rgba(").trim_end_matches(')').split(',').filter_map(|x| x.trim().parse().ok()).collect();
-        let [r, g, b, a] = nums[..] else { continue };
-        let blended = [255.0 + (r - 255.0) * a, 255.0 + (g - 255.0) * a, 255.0 + (b - 255.0) * a];
-        let d: f64 = blended.iter().zip(rgb).map(|(x, y)| (x - y) * (x - y)).sum::<f64>().sqrt();
-        if best.is_none_or(|(bd, _)| d < bd) {
-            best = Some((d, i));
+    out.extend(inl[first + 1..].iter().cloned());
+    // The text after the box may start in the next run.
+    if let Some(Inline::Text(t, _)) = out.first_mut() {
+        *t = t.trim_start_matches([' ', '\u{a0}']).to_string();
+    }
+    Some((c != '☐', out))
+}
+
+/// The text of a code paragraph: line breaks are new lines, tabs stay tabs.
+fn code_text(inl: &[Inline]) -> String {
+    let mut s = String::new();
+    for i in inl {
+        match i {
+            Inline::Text(t, _) => s.push_str(t),
+            Inline::Break => s.push('\n'),
+            _ => {}
         }
     }
-    best.filter(|(d, _)| *d <= 80.0).map(|(_, i)| HIGHLIGHTS[i].to_string())
+    s
 }
 
 #[derive(Default)]
@@ -199,6 +237,8 @@ struct Para {
     num: Option<(String, u32)>,
     outline: Option<u8>,
     inl: Vec<Inline>,
+    /// A code block starts here (Notaya's hidden bookmark), with this language.
+    code_start: Option<String>,
 }
 
 enum Item {
@@ -212,6 +252,8 @@ struct TableState {
     row: Vec<Cell>,
     header_row: bool,
     row_count: usize,
+    /// The table style (`NotayaShelf` marks a shelf).
+    style: Option<String>,
 }
 
 struct CellState {
@@ -371,9 +413,23 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                         }
                     }
                     "t" if !self_closing => in_t = true,
+                    // A tab: a space in text (the page writer turns it into one), a tab in code.
                     "tab" if !in_ppr && run.is_some() => {
                         if let (Some(p), Some(m)) = (paras.last_mut(), run.as_ref()) {
-                            p.inl.push(Inline::Text(" ".into(), m.clone()));
+                            p.inl.push(Inline::Text("\t".into(), m.clone()));
+                        }
+                    }
+                    // Notaya's hidden bookmark at the start of a code block: `_NotayaCode<n>_<language>`.
+                    "bookmarkStart" => {
+                        if let (Some(p), Some(rest)) = (paras.last_mut(), attr(&attrs, "w:name").and_then(|n| n.strip_prefix(CODE_BOOKMARK))) {
+                            let lang = rest.split_once('_').map_or("", |(_, l)| l);
+                            // `_` stands for `-` (bookmark names cannot hold a hyphen).
+                            p.code_start = Some(lang.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '_').map(|c| if c == '_' { '-' } else { c }).take(32).collect());
+                        }
+                    }
+                    "tblStyle" if flat == 0 => {
+                        if let Some(t) = tables.last_mut() {
+                            t.style = attr(&attrs, "w:val").map(|v| v.chars().take(64).collect());
                         }
                     }
                     "br" | "cr" if run.is_some() => {
@@ -495,8 +551,13 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                     }
                     "tbl" if flat > 0 => flat -= 1,
                     "tbl" => {
-                        if let Some(t) = tables.pop() {
-                            if !t.rows.is_empty() {
+                        if let Some(mut t) = tables.pop() {
+                            // A one-cell table in Notaya's shelf style is a shelf.
+                            let shelf = t.style.as_deref() == Some(SHELF_STYLE) && t.row_count == 1 && t.rows.len() == 1 && t.rows[0].len() == 1;
+                            if shelf {
+                                let cell = t.rows.remove(0).remove(0);
+                                push_item(Item::Block(Block::Shelf(cell.blocks)), &mut cells, &mut body);
+                            } else if !t.rows.is_empty() {
                                 push_item(Item::Block(Block::Table(t.rows)), &mut cells, &mut body);
                             }
                         }
@@ -546,25 +607,58 @@ fn is_quote(p: &Para, styles: &HashMap<String, Style>) -> bool {
     name == "quote" || name == "intense quote"
 }
 
-/// Paragraph records to blocks: headings, quotes and nested lists.
+/// Paragraph records to blocks: headings, quotes, nested lists, code blocks (consecutive code
+/// paragraphs, a new block at each of Notaya's code bookmarks), task lists (paragraphs that
+/// start with a check box) and picture captions (a "Caption" paragraph right after a picture).
 fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap<String, Levels>, title: &mut Option<String>) -> Vec<Block> {
     let mut out = Vec::new();
     let mut list: Vec<(u32, bool, Vec<Inline>)> = Vec::new();
-    let flush_list = |list: &mut Vec<(u32, bool, Vec<Inline>)>, out: &mut Vec<Block>| {
+    // The code block and the task list being collected.
+    let mut code: Option<(String, Vec<String>)> = None;
+    let mut tasks: Vec<(bool, Vec<Block>)> = Vec::new();
+    fn flush_list(list: &mut Vec<(u32, bool, Vec<Inline>)>, out: &mut Vec<Block>) {
         if !list.is_empty() {
             let base = list.iter().map(|x| x.0).min().unwrap_or(0);
             out.extend(build_list(list, base));
             list.clear();
         }
-    };
+    }
+    fn flush_code(code: &mut Option<(String, Vec<String>)>, out: &mut Vec<Block>) {
+        if let Some((lang, lines)) = code.take() {
+            out.push(Block::Code(lang, lines.join("\n")));
+        }
+    }
+    fn flush_tasks(tasks: &mut Vec<(bool, Vec<Block>)>, out: &mut Vec<Block>) {
+        if !tasks.is_empty() {
+            out.push(Block::Tasks(std::mem::take(tasks)));
+        }
+    }
     for item in items {
         match item {
             Item::Block(b) => {
                 flush_list(&mut list, &mut out);
+                flush_code(&mut code, &mut out);
+                flush_tasks(&mut tasks, &mut out);
                 out.push(b);
             }
             Item::Para(p) => {
+                if is_code_style(&p, styles) {
+                    flush_list(&mut list, &mut out);
+                    flush_tasks(&mut tasks, &mut out);
+                    let text = code_text(&p.inl);
+                    if code.is_some() && p.code_start.is_none() {
+                        if let Some((_, lines)) = code.as_mut().filter(|(_, l)| l.len() < 100_000) {
+                            lines.push(text);
+                        }
+                    } else {
+                        flush_code(&mut code, &mut out);
+                        code = Some((p.code_start.unwrap_or_default(), vec![text]));
+                    }
+                    continue;
+                }
+                flush_code(&mut code, &mut out);
                 if let Some((id, lvl)) = p.num.as_ref().filter(|(id, _)| id != "0" && !id.is_empty()) {
+                    flush_tasks(&mut tasks, &mut out);
                     let ordered = numbering.get(id).and_then(|l| l.get(*lvl as usize)).copied().flatten().unwrap_or(false);
                     if list.len() < 10_000 {
                         list.push((*lvl, ordered, p.inl));
@@ -572,6 +666,24 @@ fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap
                     continue;
                 }
                 flush_list(&mut list, &mut out);
+                if heading_level(&p, styles).is_none() {
+                    if let Some((checked, inl)) = task_item(&p.inl) {
+                        tasks.push((checked, vec![Block::Paragraph(inl)]));
+                        continue;
+                    }
+                }
+                flush_tasks(&mut tasks, &mut out);
+                if is_caption(&p, styles) {
+                    // The caption of the picture just before it.
+                    if let Some(Block::Paragraph(prev)) = out.last() {
+                        let mut seen = prev.iter().filter(|i| !matches!(i, Inline::Text(t, _) if t.trim().is_empty()));
+                        if let (Some(Inline::Image(idx)), None) = (seen.next(), seen.next()) {
+                            let idx = *idx;
+                            *out.last_mut().unwrap() = Block::Image(idx, doc::plain(&p.inl));
+                            continue;
+                        }
+                    }
+                }
                 match heading_level(&p, styles) {
                     Some(0) if title.is_none() && out.is_empty() => *title = Some(doc::plain(&p.inl)).filter(|t| !t.is_empty()),
                     Some(0) => out.push(Block::Heading(1, p.inl)),
@@ -583,6 +695,8 @@ fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap
         }
     }
     flush_list(&mut list, &mut out);
+    flush_code(&mut code, &mut out);
+    flush_tasks(&mut tasks, &mut out);
     out
 }
 
@@ -681,7 +795,7 @@ pub(crate) mod tests {
         for m in ["bold", "italic", "underline", "strike", "highlight", "textStyle", "hardBreak"] {
             assert!(s.contains(m), "{m}");
         }
-        assert!(s.contains("#c00000") && s.contains(HIGHLIGHTS[3]));
+        assert!(s.contains("#c00000") && s.contains(palette::HIGHLIGHTS[9].1), "Word's yellow is Butter");
         assert!(c[2].to_string().contains("https://example.com/") && !c[2].to_string().contains("javascript"));
         assert_eq!(c[3]["content"].as_array().unwrap().len(), 2);
         assert_eq!(c[3]["content"][0]["content"][1]["type"], "bulletList", "level 1 nests under the first item");
@@ -725,6 +839,124 @@ pub(crate) mod tests {
         }
     }
 
+    /// A page through Notaya's own Word export and back: code blocks, task lists, captions,
+    /// shelves and every palette color come back as they were.
+    #[test]
+    fn notaya_s_own_word_export_comes_back() {
+        use crate::export::doc::{parse as parse_page, tests::IMG_ID};
+        use crate::importers::html::tests::colors_of;
+        use serde_json::json;
+        let mut colored = Vec::new();
+        for (i, (_, c)) in palette::TEXT_COLORS.iter().enumerate() {
+            colored.push(json!({ "type": "text", "text": format!("tc{i}"), "marks": [{ "type": "textStyle", "attrs": { "color": c } }] }));
+            colored.push(json!({ "type": "text", "text": " " }));
+        }
+        for (i, (_, h)) in palette::HIGHLIGHTS.iter().enumerate() {
+            colored.push(json!({ "type": "text", "text": format!("hl{i}"), "marks": [{ "type": "highlight", "attrs": { "color": h } }] }));
+            colored.push(json!({ "type": "text", "text": " " }));
+        }
+        colored.push(json!({ "type": "text", "text": "dflt", "marks": [{ "type": "highlight", "attrs": { "color": null } }] }));
+        colored.push(json!({ "type": "text", "text": " and " }));
+        colored.push(json!({ "type": "text", "text": "inlinecode", "marks": [{ "type": "code" }] }));
+        let page = json!({ "type": "doc", "content": [
+            { "type": "paragraph", "content": colored },
+            { "type": "codeBlock", "attrs": { "language": "rust" }, "content": [{ "type": "text", "text": "fn main() {\n    let x = 1;\n\tx\n}" }] },
+            { "type": "codeBlock", "attrs": { "language": "php-template" }, "content": [{ "type": "text", "text": "second block" }] },
+            { "type": "codeBlock", "attrs": { "language": null }, "content": [{ "type": "text", "text": "third block" }] },
+            { "type": "taskList", "content": [
+                { "type": "taskItem", "attrs": { "checked": true }, "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Done task" }] }] },
+                { "type": "taskItem", "attrs": { "checked": false }, "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Open task" }] }] }
+            ] },
+            { "type": "image", "attrs": { "src": format!("http://clatt.localhost/{IMG_ID}"), "caption": "A caption" } },
+            { "type": "paragraph", "content": [{ "type": "text", "text": "After the picture" }] },
+            { "type": "toggle", "attrs": { "open": true, "shelf": true }, "content": [
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Shelf title" }] },
+                { "type": "paragraph", "content": [{ "type": "text", "text": "Inside the shelf" }] }
+            ] },
+            { "type": "toggle", "attrs": { "open": true }, "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Plain toggle" }] }] }
+        ] });
+        let doc = crate::export::tests::sample_doc(parse_page(&page.to_string(), &|_| None));
+        let bytes = crate::export::docx::render_at(&doc, 0).unwrap();
+        let (d, images, problems) = with_ctx(&[], |ctx| parse(bytes, ctx, "page.docx").unwrap());
+        assert!(problems.is_empty(), "{problems:?}");
+        assert_eq!(images.list.len(), 1);
+        let v = json(&d.blocks);
+        for (i, (name, c)) in palette::TEXT_COLORS.iter().enumerate() {
+            assert_eq!(colors_of(&v, &format!("tc{i}")).0.as_deref(), Some(*c), "text color {name}");
+        }
+        for (i, (name, h)) in palette::HIGHLIGHTS.iter().enumerate() {
+            assert_eq!(colors_of(&v, &format!("hl{i}")).1.as_deref(), Some(*h), "highlight {name}");
+        }
+        assert_eq!(colors_of(&v, "dflt").1.as_deref(), Some(""), "the default highlight");
+        assert_eq!(colors_of(&v, "inlinecode"), (None, None), "inline code's gray is no highlight");
+        let c = v["content"].as_array().unwrap();
+        let types: Vec<&str> = c.iter().map(|b| b["type"].as_str().unwrap()).collect();
+        assert_eq!(types, ["heading", "paragraph", "codeBlock", "codeBlock", "codeBlock", "taskList", "image", "paragraph", "toggle", "paragraph"], "{v}");
+        assert_eq!(c[2]["attrs"]["language"], "rust");
+        assert_eq!(c[2]["content"][0]["text"], "fn main() {\n    let x = 1;\n\tx\n}");
+        assert_eq!(c[3]["attrs"]["language"], "php-template");
+        assert_eq!(c[3]["content"][0]["text"], "second block", "code blocks next to each other stay apart");
+        assert_eq!(c[4]["attrs"]["language"], serde_json::Value::Null);
+        assert_eq!(c[4]["content"][0]["text"], "third block");
+        assert_eq!(c[5]["content"][0]["attrs"]["checked"], true);
+        assert_eq!(c[5]["content"][0]["content"][0]["content"][0]["text"], "Done task");
+        assert_eq!(c[5]["content"][1]["attrs"]["checked"], false);
+        assert_eq!(c[5]["content"][1]["content"][0]["content"][0]["text"], "Open task");
+        assert_eq!(c[6]["attrs"]["caption"], "A caption");
+        assert_eq!(c[8]["attrs"]["shelf"], true);
+        assert_eq!(c[8]["content"][0]["content"][0]["text"], "Shelf title");
+        assert_eq!(c[8]["content"][1]["content"][0]["text"], "Inside the shelf");
+        assert!(c[9].to_string().contains("Plain toggle"), "a plain toggle stays a line of text in Word");
+    }
+
+    #[test]
+    fn code_tasks_and_captions_from_other_word_files() {
+        let body = concat!(
+            // Word's own code styles and a user's extra line (no bookmark: it joins the block above).
+            r#"<w:p><w:pPr><w:pStyle w:val="HTMLPreformatted"/></w:pPr><w:r><w:t xml:space="preserve">line 1</w:t></w:r></w:p>"#,
+            r#"<w:p><w:pPr><w:pStyle w:val="HTMLPreformatted"/></w:pPr><w:r><w:t xml:space="preserve">  line 2</w:t></w:r></w:p>"#,
+            r#"<w:p><w:r><w:t>between</w:t></w:r></w:p>"#,
+            // A check box content control (its glyph in a run of its own) and a typed box.
+            r#"<w:p><w:sdt><w:sdtPr><w14:checkbox/></w:sdtPr><w:sdtContent><w:r><w:t>☒</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t xml:space="preserve"> Ticked</w:t></w:r></w:p>"#,
+            r#"<w:p><w:r><w:t>☐Not yet</w:t></w:r></w:p>"#,
+            // A heading that starts with a box is still a heading; a caption with no picture stays text.
+            r#"<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>☐ Heading</w:t></w:r></w:p>"#,
+            r#"<w:p><w:pPr><w:pStyle w:val="Caption"/></w:pPr><w:r><w:t>Lonely caption</w:t></w:r></w:p>"#,
+            // Bookmarks that are not Notaya's do nothing.
+            r#"<w:p><w:bookmarkStart w:id="0" w:name="_Toc1"/><w:r><w:t>toc</w:t></w:r></w:p>"#
+        );
+        let styles = r#"<w:styles><w:style w:styleId="HTMLPreformatted"><w:name w:val="HTML Preformatted"/></w:style><w:style w:styleId="Heading1"><w:name w:val="heading 1"/></w:style><w:style w:styleId="Caption"><w:name w:val="caption"/></w:style></w:styles>"#;
+        let xml = format!(r#"<w:document xmlns:w="w"><w:body>{body}</w:body></w:document>"#);
+        let bytes = zip::build(&[("word/document.xml", xml.as_bytes()), ("word/styles.xml", styles.as_bytes())], false);
+        let (d, _, _) = with_ctx(&[], |ctx| parse(bytes, ctx, "a.docx").unwrap());
+        assert_eq!(d.blocks[0], Block::Code(String::new(), "line 1\n  line 2".into()));
+        assert!(matches!(&d.blocks[1], Block::Paragraph(_)));
+        let Block::Tasks(items) = &d.blocks[2] else { panic!("{:?}", d.blocks) };
+        assert_eq!(items.iter().map(|(c, b)| (*c, text_of(b).contains(if *c { "Ticked" } else { "Not yet" }))).collect::<Vec<_>>(), [(true, true), (false, true)]);
+        assert!(!text_of(&d.blocks[2..3]).contains('☒'), "the box itself is not kept as text");
+        assert!(matches!(&d.blocks[3], Block::Heading(1, _)));
+        assert!(matches!(&d.blocks[4], Block::Paragraph(_)));
+        assert!(matches!(&d.blocks[5], Block::Paragraph(_)));
+    }
+
+    #[test]
+    fn a_shelf_needs_notaya_s_style_and_one_cell() {
+        let cell = |t: &str| format!("<w:tc><w:p><w:r><w:t>{t}</w:t></w:r></w:p></w:tc>");
+        let body = format!(
+            "<w:tbl><w:tblPr><w:tblStyle w:val=\"NotayaShelf\"/></w:tblPr><w:tr>{}</w:tr></w:tbl>\
+             <w:tbl><w:tblPr><w:tblStyle w:val=\"NotayaShelf\"/></w:tblPr><w:tr>{}{}</w:tr></w:tbl>\
+             <w:tbl><w:tblPr><w:tblStyle w:val=\"TableGrid\"/></w:tblPr><w:tr>{}</w:tr></w:tbl>",
+            cell("shelf"),
+            cell("a"),
+            cell("b"),
+            cell("plain")
+        );
+        let (d, _, _) = with_ctx(&[], |ctx| parse(docx_with_body(&body), ctx, "a.docx").unwrap());
+        assert!(matches!(&d.blocks[0], Block::Shelf(b) if text_of(b).contains("shelf")), "{:?}", d.blocks);
+        assert!(matches!(&d.blocks[1], Block::Table(_)), "two cells: a table");
+        assert!(matches!(&d.blocks[2], Block::Table(_)), "another style: a table");
+    }
+
     #[test]
     fn not_a_docx() {
         let (r, _, _) = with_ctx(&[], |ctx| parse(b"not a zip".to_vec(), ctx, "x").err());
@@ -737,7 +969,7 @@ pub(crate) mod tests {
         1 + match b {
             Block::Bullets(items) | Block::Numbered(_, items) => items.iter().flatten().map(depth).max().unwrap_or(0),
             Block::Tasks(items) => items.iter().flat_map(|(_, i)| i).map(depth).max().unwrap_or(0),
-            Block::Quote(i) | Block::Toggle(i) | Block::Callout(_, i) => i.iter().map(depth).max().unwrap_or(0),
+            Block::Quote(i) | Block::Toggle(i) | Block::Shelf(i) | Block::Callout(_, i) => i.iter().map(depth).max().unwrap_or(0),
             Block::Table(rows) => rows.iter().flatten().flat_map(|c| &c.blocks).map(depth).max().unwrap_or(0),
             Block::Columns(cols) => cols.iter().flatten().map(depth).max().unwrap_or(0),
             _ => 0,

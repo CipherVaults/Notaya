@@ -133,12 +133,14 @@ impl Renderer {
                 }
                 quote(lines)
             }
-            Block::Toggle(blocks) => {
+            Block::Toggle(blocks) | Block::Shelf(blocks) => {
                 let (summary, rest) = match blocks.split_first() {
                     Some((Block::Paragraph { content, .. } | Block::Heading { content, .. }, rest)) => (inline_text(content), rest),
                     _ => (String::new(), &blocks[..]),
                 };
-                let mut out = vec!["<details open>".to_string(), format!("<summary>{}</summary>", html_escape(&summary))];
+                // A shelf is marked with a fixed class, so Notaya's importer brings it back as one.
+                let open = if matches!(b, Block::Shelf(_)) { "<details open class=\"notaya-shelf\">" } else { "<details open>" };
+                let mut out = vec![open.to_string(), format!("<summary>{}</summary>", html_escape(&summary))];
                 let body = self.blocks(rest, shift);
                 if !body.is_empty() {
                     out.push(String::new());
@@ -243,7 +245,7 @@ fn cell_text(cell: &Cell) -> String {
                 Block::Math(m) => parts.push(format!("${m}$")),
                 Block::Image(i) => parts.push(if i.caption.is_empty() { "(picture)".into() } else { format!("(picture: {})", escape_text(&i.caption)) }),
                 Block::PageLink { title, target } => parts.push(page_link_row(title, target.as_ref())),
-                Block::Quote(x) | Block::Toggle(x) | Block::Callout { blocks: x, .. } => walk(x, parts),
+                Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout { blocks: x, .. } => walk(x, parts),
                 Block::Columns(c) => c.iter().for_each(|x| walk(x, parts)),
                 Block::Table(_) | Block::Rule => {}
             }
@@ -526,6 +528,23 @@ mod tests {
         assert_eq!(inline(&content, false), "**a *b* c**");
         let colored = Marks { color: Some(Rgb(1, 2, 3)), ..Marks::default() };
         assert_eq!(inline(&[Inline::Text("x ".into(), colored), Inline::Text("y".into(), Marks::default())], false), "<span style=\"color:#010203\">x</span> y");
+    }
+
+    #[test]
+    fn a_shelf_is_a_marked_details_and_colors_are_inline_html() {
+        let json = r##"{"type":"doc","content":[{"type":"toggle","attrs":{"open":true,"shelf":true},"content":[
+            {"type":"paragraph","content":[{"type":"text","text":"Shelf <title>"}]},
+            {"type":"paragraph","content":[{"type":"text","text":"Inside","marks":[{"type":"textStyle","attrs":{"color":"#d04f4f"}},{"type":"highlight","attrs":{"color":"rgba(206, 178, 80, 0.34)"}}]}]}]},
+            {"type":"toggle","attrs":{"open":true,"shelf":false},"content":[{"type":"paragraph","content":[{"type":"text","text":"Plain"}]}]}]}"##;
+        let doc = sample_doc(parse(json, &titles));
+        let md = render(&doc, "a").text;
+        assert!(md.contains("<details open class=\"notaya-shelf\">\n<summary>Shelf &lt;title&gt;</summary>"), "{md}");
+        assert!(md.contains("<span style=\"color:#D04F4F\"><mark style=\"background:#EEE5C4\">Inside</mark></span>"), "{md}");
+        assert!(md.contains("<details open>\n<summary>Plain</summary>"), "{md}");
+        // A color the model could not read is never written.
+        let bad = r#"{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"x","marks":[{"type":"textStyle","attrs":{"color":"red\" onmouseover=\"x"}}]}]}]}"#;
+        let md = render(&sample_doc(parse(bad, &titles)), "a").text;
+        assert!(!md.contains("span") && !md.contains("onmouseover"), "{md}");
     }
 
     #[test]

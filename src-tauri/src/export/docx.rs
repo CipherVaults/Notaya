@@ -3,6 +3,11 @@
 //! the file properties. Headings use Word's own Heading 1 to 6 styles, so the navigation pane
 //! and a table of contents work. Equations are written as their TeX text (Word's equation
 //! format is not produced). Text in right-to-left scripts gets Word's right-to-left paragraphs.
+//! So that Notaya's own Word importer brings a page back as it was: a code block is a paragraph in
+//! the "Notaya Code" style opened by a hidden bookmark naming its language, a task item starts with
+//! ☐ or ☑, a picture's caption is a "Caption" paragraph right after it, a highlight is the run's
+//! shading in the exact (blended) palette color, and a shelf is a one-cell table in the "Notaya
+//! Shelf" table style.
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
@@ -24,7 +29,7 @@ pub fn render(doc: &ExportDoc) -> Result<Vec<u8>> {
 }
 
 pub fn render_at(doc: &ExportDoc, now_ms: i64) -> Result<Vec<u8>> {
-    let mut w = Writer { doc, body: String::new(), rels: Vec::new(), images: HashMap::new(), links: HashMap::new(), nums: Vec::new(), drawing_id: 0, page_break: false, media: Vec::new() };
+    let mut w = Writer { doc, body: String::new(), rels: Vec::new(), images: HashMap::new(), links: HashMap::new(), nums: Vec::new(), drawing_id: 0, bookmarks: 0, page_break: false, media: Vec::new() };
     let mut first = true;
     let mut after_heading = false;
     let targets = doc.anchor_targets();
@@ -90,6 +95,8 @@ struct Writer<'a> {
     /// List numbering instances: (abstract numbering, level, start).
     nums: Vec<(u32, u32, u32)>,
     drawing_id: u32,
+    /// Bookmarks written so far (each code block opens with one).
+    bookmarks: u32,
     page_break: bool,
     /// Picture files: (name in word/media, attachment id).
     media: Vec<(String, String)>,
@@ -203,16 +210,24 @@ impl<'a> Writer<'a> {
                     self.blocks(rest, &Ctx { indent: ctx.indent + 360, ..ctx.clone() });
                 }
             }
+            Block::Shelf(inner) => self.shelf(inner, ctx),
             Block::Columns(cols) => cols.iter().for_each(|c| self.blocks(c, ctx)),
-            Block::Code { text, .. } => {
-                let mut runs = String::new();
+            Block::Code { language, text } => {
+                // One paragraph in the "Notaya Code" style (monospace), opened by a hidden bookmark
+                // that marks where the block starts and names its language, so Notaya's importer
+                // brings it back as the same code block.
+                self.bookmarks += 1;
+                let id = self.bookmarks;
+                // A bookmark name holds only letters, digits and `_`: a `-` (as in `php-template`) is written as `_`.
+                let lang: String = language.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').map(|c| if c == '-' { '_' } else { c }).take(20).collect();
+                let mut runs = format!("<w:bookmarkStart w:id=\"{id}\" w:name=\"{CODE_BOOKMARK}{id}_{lang}\"/><w:bookmarkEnd w:id=\"{id}\"/>");
                 for (i, line) in text.split('\n').enumerate() {
                     if i > 0 {
                         runs.push_str("<w:r><w:br/></w:r>");
                     }
                     runs.push_str(&run_xml(line, "", false));
                 }
-                self.para(Some("Code"), ctx, Align::Left, numbering, &runs, false);
+                self.para(Some("NotayaCode"), ctx, Align::Left, numbering, &runs, false);
             }
             Block::Math(latex) => {
                 if !latex.trim().is_empty() {
@@ -325,6 +340,28 @@ impl<'a> Writer<'a> {
             let runs = run_xml(img.caption.trim(), "", is_rtl_text(&img.caption));
             self.para(Some("Caption"), ctx, img.align, None, &runs, is_rtl_text(&img.caption));
         }
+    }
+
+    /// A shelf as a shaded box: a table of one cell in the "Notaya Shelf" table style, holding the
+    /// shelf's title line and content. The style name is what Notaya's importer looks for.
+    fn shelf(&mut self, inner: &[Block], ctx: &Ctx) {
+        let w = TEXT_W.saturating_sub(ctx.indent).max(2000);
+        let pre_break = self.take_break();
+        if !pre_break.is_empty() {
+            let _ = write!(self.body, "<w:p><w:pPr>{pre_break}</w:pPr></w:p>");
+        }
+        let ind = if ctx.indent > 0 { format!("<w:tblInd w:w=\"{}\" w:type=\"dxa\"/>", ctx.indent) } else { String::new() };
+        let _ = write!(
+            self.body,
+            "<w:tbl><w:tblPr><w:tblStyle w:val=\"{SHELF_STYLE}\"/><w:tblW w:w=\"{w}\" w:type=\"dxa\"/>{ind}<w:tblLayout w:type=\"fixed\"/><w:tblLook w:val=\"0000\" w:firstRow=\"0\" w:lastRow=\"0\" w:firstColumn=\"0\" w:lastColumn=\"0\" w:noHBand=\"1\" w:noVBand=\"1\"/></w:tblPr>\
+             <w:tblGrid><w:gridCol w:w=\"{w}\"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"{w}\" w:type=\"dxa\"/><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F3F4F6\"/></w:tcPr>"
+        );
+        let before = self.body.len();
+        self.blocks(inner, &Ctx { shift: ctx.shift, ..Ctx::default() });
+        if self.body.len() == before || self.body.ends_with("</w:tbl>") {
+            self.body.push_str("<w:p/>");
+        }
+        self.body.push_str("</w:tc></w:tr></w:tbl><w:p><w:pPr><w:spacing w:after=\"0\"/></w:pPr></w:p>");
     }
 
     fn table(&mut self, rows: &[Vec<super::doc::Cell>], ctx: &Ctx) {
@@ -590,7 +627,12 @@ impl Writer<'_> {
     }
 }
 
-const MATH_RPR: &str = "<w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/><w:i/>";
+/// The start of the hidden bookmark (`_NotayaCode<n>_<language>`) that opens a code block, and the
+/// table style of a shelf. Notaya's Word importer reads both (keep them in step with importers/docx.rs).
+pub const CODE_BOOKMARK: &str = "_NotayaCode";
+pub const SHELF_STYLE: &str = "NotayaShelf";
+
+const MATH_RPR: &str ="<w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/><w:i/>";
 
 /// Only web and mail links become clickable; anything else stays plain text.
 /// A link target as a plain ASCII address for the relationships file: trimmed, control characters
@@ -719,10 +761,11 @@ const STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:style w:type="paragraph" w:styleId="Heading5"><w:name w:val="heading 5"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="160" w:after="60"/><w:outlineLvl w:val="4"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="374151"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Heading6"><w:name w:val="heading 6"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="160" w:after="60"/><w:outlineLvl w:val="5"/></w:pPr><w:rPr><w:b/><w:bCs/><w:i/><w:iCs/><w:color w:val="374151"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:qFormat/><w:rPr><w:i/><w:iCs/><w:color w:val="4B5563"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/><w:basedOn w:val="Normal"/><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F3F4F6"/><w:spacing w:after="160" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="NotayaCode"><w:name w:val="Notaya Code"/><w:basedOn w:val="Normal"/><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F3F4F6"/><w:spacing w:after="160" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Caption"><w:name w:val="caption"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:rPr><w:i/><w:iCs/><w:color w:val="6B7280"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style>
 <w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="2563EB"/><w:u w:val="single"/></w:rPr></w:style>
 <w:style w:type="table" w:styleId="NotayaTable"><w:name w:val="Notaya Table"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C9CED6"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C9CED6"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C9CED6"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C9CED6"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="C9CED6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="C9CED6"/></w:tblBorders><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
+<w:style w:type="table" w:styleId="NotayaShelf"><w:name w:val="Notaya Shelf"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="D9DDE3"/><w:left w:val="single" w:sz="4" w:space="0" w:color="D9DDE3"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="D9DDE3"/><w:right w:val="single" w:sz="4" w:space="0" w:color="D9DDE3"/></w:tblBorders><w:tblCellMar><w:top w:w="100" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
 </w:styles>"#;
 
 #[cfg(test)]
@@ -796,7 +839,7 @@ mod tests {
             "<w:pStyle w:val=\"Quote\"/>",
             "💡 ",
             "▸ ",
-            "<w:pStyle w:val=\"Code\"/>",
+            "<w:pStyle w:val=\"NotayaCode\"/></w:pPr><w:bookmarkStart w:id=\"1\" w:name=\"_NotayaCode1_rust\"/><w:bookmarkEnd w:id=\"1\"/>",
             "println!(&quot;```&quot;);",
             "\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}",
             "<a:blip r:embed=\"rId",
@@ -817,6 +860,28 @@ mod tests {
         assert!(numbering.contains("<w:startOverride w:val=\"3\"/>"), "the ordered list starts at 3");
         assert!(get("docProps/core.xml").contains("<dc:title>Sample page</dc:title>"));
         assert!(get("docProps/core.xml").contains("2026-10-28T12:34:56Z"));
+    }
+
+    #[test]
+    fn shelves_code_blocks_and_their_markers_are_well_formed() {
+        let json = r#"{"type":"doc","content":[
+            {"type":"toggle","attrs":{"open":true,"shelf":true},"content":[{"type":"paragraph","content":[{"type":"text","text":"Shelf"}]},{"type":"toggle","attrs":{"shelf":true},"content":[{"type":"paragraph","content":[{"type":"text","text":"Inner"}]}]}]},
+            {"type":"codeBlock","attrs":{"language":"c++\"/><!"},"content":[{"type":"text","text":"a"}]},
+            {"type":"codeBlock","attrs":{"language":"averyveryveryveryverylonglanguagename"},"content":[{"type":"text","text":"b"}]}]}"#;
+        let entries = read_zip(&render_at(&sample_doc(parse(json, &titles)), 0).unwrap());
+        for (name, data) in &entries {
+            if name.ends_with(".xml") {
+                assert_well_formed(name, std::str::from_utf8(data).unwrap());
+            }
+        }
+        let document = String::from_utf8(entries.iter().find(|e| e.0 == "word/document.xml").unwrap().1.clone()).unwrap();
+        assert_eq!(document.matches("<w:tblStyle w:val=\"NotayaShelf\"/>").count(), 2, "a shelf inside a shelf");
+        assert!(document.contains("w:name=\"_NotayaCode1_c\"/>"), "only letters and digits of the language");
+        assert!(!document.contains("<!--"));
+        let long = document.split("w:name=\"").filter_map(|s| s.split('"').next()).find(|n| n.starts_with("_NotayaCode2_")).unwrap();
+        assert!(long.len() <= 40, "Word's bookmark names are at most 40 characters: {long}");
+        let styles = String::from_utf8(entries.iter().find(|e| e.0 == "word/styles.xml").unwrap().1.clone()).unwrap();
+        assert!(styles.contains("w:styleId=\"NotayaShelf\"") && styles.contains("w:styleId=\"NotayaCode\""));
     }
 
     #[test]

@@ -147,6 +147,150 @@ fn scope_of(ids: &Ids, name: &str) -> Scope {
     }
 }
 
+/// A page with every palette text color and highlight, a code block, a task list, a captioned
+/// picture and a shelf: exported to Markdown, HTML and Word and imported again, each comes back
+/// as it was (the owner's round-trip losses of 2026-11-03).
+#[test]
+fn colors_code_tasks_captions_and_shelves_come_back() {
+    use crate::importers::palette::{HIGHLIGHTS, TEXT_COLORS};
+    use serde_json::{json, Value};
+    let root = temp();
+    let src = new_vault(&root.join("src-data"));
+    let att = src.with_mut(|s| s.put_attachment("image/png", PNG)).unwrap();
+    let mut colored = Vec::new();
+    for (i, (_, c)) in TEXT_COLORS.iter().enumerate() {
+        colored.push(json!({ "type": "text", "text": format!("tc{i}"), "marks": [{ "type": "textStyle", "attrs": { "color": c, "fontFamily": null, "fontSize": null } }] }));
+        colored.push(json!({ "type": "text", "text": " " }));
+    }
+    for (i, (_, h)) in HIGHLIGHTS.iter().enumerate() {
+        colored.push(json!({ "type": "text", "text": format!("hl{i}"), "marks": [{ "type": "highlight", "attrs": { "color": h } }] }));
+        colored.push(json!({ "type": "text", "text": " " }));
+    }
+    colored.push(json!({ "type": "text", "text": "both", "marks": [{ "type": "highlight", "attrs": { "color": HIGHLIGHTS[9].1 } }, { "type": "textStyle", "attrs": { "color": TEXT_COLORS[1].1 } }] }));
+    let code = "fn main() {\n    let x = 1;\n}";
+    let content = json!({ "type": "doc", "content": [
+        { "type": "paragraph", "content": colored },
+        { "type": "codeBlock", "attrs": { "language": "rust" }, "content": [{ "type": "text", "text": code }] },
+        { "type": "taskList", "content": [
+            { "type": "taskItem", "attrs": { "checked": true }, "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Done task" }] }] },
+            { "type": "taskItem", "attrs": { "checked": false }, "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Open task" }] }] }
+        ] },
+        { "type": "image", "attrs": { "src": format!("http://clatt.localhost/{att}"), "caption": "A caption" } },
+        { "type": "toggle", "attrs": { "open": true, "shelf": true }, "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Shelf title" }] },
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Inside the shelf" }] }
+        ] }
+    ] });
+    let (nb, sec, pid) = (new_id(), new_id(), new_id());
+    let items = vec![
+        Item::Notebook(Notebook { id: nb.clone(), name: "Colors".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
+        Item::Section(Section { id: sec.clone(), notebook_id: nb, name: "Main".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+        Item::Page(Page {
+            id: pid.clone(),
+            section_id: sec,
+            title: "Round trip".into(),
+            content: content.to_string(),
+            text: String::new(),
+            order: 0,
+            favorite: false,
+            icon: String::new(),
+            cover: String::new(),
+            parent: String::new(),
+            trashed_at: None,
+            created: 0,
+            updated: 0,
+        }),
+    ];
+    src.with_mut(|s| s.put_many(items)).unwrap();
+    let picture = src.with(|s| s.get_attachment(&att)).unwrap();
+    let attachment = |id: &str| (id == att).then(|| picture.clone());
+
+    fn find<'v>(v: &'v Value, pred: &dyn Fn(&Value) -> bool) -> Option<&'v Value> {
+        if pred(v) {
+            return Some(v);
+        }
+        v["content"].as_array()?.iter().find_map(|c| find(c, pred))
+    }
+    let mut failures: Vec<String> = Vec::new();
+    for format in [Format::Markdown, Format::Html, Format::Docx] {
+        let label = format.label();
+        let dir = root.join(format!("out-{}", format.ext()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let dest = dir.join("page").with_extension(format.ext());
+        let exported = src.with(|s| {
+            let items: Vec<&Item> = s.items().collect();
+            let doc = export::collect(&items, &Scope::Pages(vec![pid.clone()]), &Options::default(), &attachment)?;
+            export::write(&dest, format, &doc, &root.join("src-data")).map(|_| ())
+        });
+        if let Err(e) = exported {
+            failures.push(format!("{label}: export failed: {e}"));
+            continue;
+        }
+        let dst = new_vault(&root.join(format!("dst-{}", format.ext())));
+        if let Err(e) = import_from(&dst, &[dest.clone()], false, &root.join("src-data"), 1_700_000_000_000, &crate::importers::Control::standard()) {
+            failures.push(format!("{label}: import failed: {e}"));
+            continue;
+        }
+        let pages: Vec<Page> = dst.with(|s| Ok(s.items().filter_map(|i| if let Item::Page(p) = i { Some(p.clone()) } else { None }).collect())).unwrap();
+        let Some(v) = pages.iter().map(|p| serde_json::from_str::<Value>(&p.content).unwrap()).find(|v| v.to_string().contains("tc0")) else {
+            failures.push(format!("{label}: the page did not come back"));
+            continue;
+        };
+        let marks_of = |word: &str| -> (Option<String>, Option<String>) {
+            let Some(node) = find(&v, &|n| n["type"] == "text" && n["text"] == word) else { return (None, Some("missing".into())) };
+            let mut out = (None, None);
+            for m in node["marks"].as_array().map(Vec::as_slice).unwrap_or(&[]) {
+                if m["type"] == "textStyle" {
+                    out.0 = m["attrs"]["color"].as_str().map(str::to_string);
+                }
+                if m["type"] == "highlight" {
+                    out.1 = Some(m["attrs"]["color"].as_str().unwrap_or("").to_string());
+                }
+            }
+            out
+        };
+        for (i, (name, c)) in TEXT_COLORS.iter().enumerate() {
+            let got = marks_of(&format!("tc{i}"));
+            if got.0.as_deref() != Some(*c) {
+                failures.push(format!("{label}: text color {name} came back as {got:?}"));
+            }
+        }
+        for (i, (name, h)) in HIGHLIGHTS.iter().enumerate() {
+            let got = marks_of(&format!("hl{i}"));
+            if got.1.as_deref() != Some(*h) {
+                failures.push(format!("{label}: highlight {name} came back as {got:?}"));
+            }
+        }
+        if marks_of("both") != (Some(TEXT_COLORS[1].1.into()), Some(HIGHLIGHTS[9].1.into())) {
+            failures.push(format!("{label}: color and highlight together came back as {:?}", marks_of("both")));
+        }
+        match find(&v, &|n| n["type"] == "codeBlock") {
+            Some(c) if c["attrs"]["language"] == "rust" && c["content"][0]["text"] == code => {}
+            other => failures.push(format!("{label}: the code block came back as {other:?}")),
+        }
+        match find(&v, &|n| n["type"] == "taskList") {
+            Some(t) if t["content"][0]["attrs"]["checked"] == true
+                && t["content"][1]["attrs"]["checked"] == false
+                && t["content"][0].to_string().contains("Done task")
+                && t["content"][1].to_string().contains("Open task") => {}
+            other => failures.push(format!("{label}: the task list came back as {other:?}")),
+        }
+        match find(&v, &|n| n["type"] == "image") {
+            Some(i) if i["attrs"]["caption"] == "A caption" => {}
+            other => failures.push(format!("{label}: the picture came back as {other:?}")),
+        }
+        if v.to_string().matches("A caption").count() != 1 {
+            failures.push(format!("{label}: the caption is also kept as text"));
+        }
+        match find(&v, &|n| n["type"] == "toggle") {
+            Some(t) if t["attrs"]["shelf"] == true && t.to_string().contains("Shelf title") && t.to_string().contains("Inside the shelf") => {}
+            other => failures.push(format!("{label}: the shelf came back as {other:?}")),
+        }
+    }
+    let _ = std::fs::remove_dir_all(&root);
+    assert!(failures.is_empty(), "\n{}\n", failures.join("\n"));
+}
+
 #[test]
 fn every_format_scope_and_output_comes_back_in() {
     let root = temp();

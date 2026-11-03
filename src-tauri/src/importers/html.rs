@@ -4,15 +4,18 @@
 //! `li`, table cells; at most 100 levels deep; at most a million tokens), then walked. The
 //! walk keeps only known blocks and marks: scripts, styles, frames, forms, SVG and every
 //! attribute except a few (href, src, alt, class, start, colspan, checked, style for bold,
-//! italic, underline and strike) are dropped, so nothing active can reach the editor. Links
-//! keep only http, https and mailto. Notion's classes are mapped: text and background colors
+//! italic, underline and strike, and for the text and background color of `span`, `mark` and
+//! `font`) are dropped, so nothing active can reach the editor. A color is never copied: it is
+//! read as a number and written as the nearest Notaya palette color (`palette`), so Notaya's own
+//! exports come back with the same colors. A `details` with the class `notaya-shelf` is a shelf.
+//! Links keep only http, https and mailto. Notion's classes are mapped: text and background colors
 //! (`highlight-*`, `block-color-*`, written as the matching Notaya colors Ash to Cherry), callouts, toggles, to-do lists, code languages,
 //! equations, bookmarks, columns, links to other pages, the page icon, the cover picture and
 //! the page font (`page serif`, `page mono`).
 
 use super::doc::{self, Block, Cell, Inline, Marks, FONT_MONO, FONT_SERIF};
 use super::markup::{attr, Token, Tokenizer};
-use super::{Control, Ctx};
+use super::{palette, Control, Ctx};
 
 pub struct El {
     pub name: String,
@@ -315,6 +318,23 @@ fn color_marks(e: &El, m: &mut Marks) {
     }
 }
 
+/// Text and background colors written inline on `span`, `mark` and `font` (Notaya's own HTML and
+/// Markdown exports, Google Docs, Word's HTML), as the nearest Notaya palette colors (see
+/// `palette`). A Notion color class on the same element wins. Black text and white or
+/// transparent backgrounds are no color.
+fn inline_colors(e: &El, parent: &Marks, m: &mut Marks) {
+    let (mut color, highlight) = e.attr("style").map(palette::from_style).unwrap_or_default();
+    if e.name == "font" && color.is_none() {
+        color = e.attr("color").and_then(palette::parse).and_then(palette::text_color);
+    }
+    if m.color == parent.color && color.is_some() {
+        m.color = color;
+    }
+    if m.highlight == parent.highlight && highlight.is_some() {
+        m.highlight = highlight;
+    }
+}
+
 /// Code language from `language-xxx` classes (Notion writes `language-JavaScript`).
 fn code_language(e: &El) -> String {
     let lang = e
@@ -379,6 +399,9 @@ impl Conv<'_, '_> {
         color_marks(e, &mut m);
         if let Some(st) = e.attr("style") {
             style_marks(st, &mut m);
+        }
+        if matches!(name, "span" | "mark" | "font") {
+            inline_colors(e, parent, &mut m);
         }
         match name {
             "br" => out.inl.push(Inline::Break),
@@ -499,7 +522,12 @@ impl Conv<'_, '_> {
                     self.walk(std::slice::from_ref(n), &m, &mut o);
                 }
                 inner.extend(o.finish());
-                out.block(Block::Toggle(inner));
+                // Notaya's own exports mark a shelf with this class (the editor's `shelf` attribute).
+                if e.has_class("notaya-shelf") {
+                    out.block(Block::Shelf(inner));
+                } else {
+                    out.block(Block::Toggle(inner));
+                }
             }
             "pre" => {
                 let code = e.text();
@@ -859,6 +887,79 @@ x++;</code></pre>
         let table = c.iter().find(|b| b["type"] == "table").unwrap();
         assert_eq!(table["content"][0]["content"][0]["type"], "tableHeader");
         assert!(table.to_string().contains(doc::HIGHLIGHTS[4]) && table.to_string().contains(doc::TEXT_COLORS[8]), "cell colors");
+    }
+
+    /// The text color and highlight of the text node that holds the word `word`.
+    pub fn colors_of(v: &Value, word: &str) -> (Option<String>, Option<String>) {
+        fn find<'v>(v: &'v Value, word: &str) -> Option<&'v Value> {
+            if v["type"] == "text" && v["text"].as_str().is_some_and(|t| t.split_whitespace().any(|w| w == word)) {
+                return Some(v);
+            }
+            v["content"].as_array()?.iter().find_map(|c| find(c, word))
+        }
+        let node = find(v, word).unwrap_or_else(|| panic!("no text {word:?} in {v}"));
+        let mut out = (None, None);
+        for m in node["marks"].as_array().map(Vec::as_slice).unwrap_or(&[]) {
+            if m["type"] == "textStyle" {
+                out.0 = m["attrs"]["color"].as_str().map(str::to_string);
+            }
+            if m["type"] == "highlight" {
+                out.1 = Some(m["attrs"]["color"].as_str().unwrap_or("").to_string());
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn inline_colors_become_notaya_palette_colors() {
+        use crate::importers::palette::{HIGHLIGHTS, TEXT_COLORS};
+        // As Notaya's HTML export writes them: the text color as is, the highlight blended onto white.
+        let mut src = String::from("<p>");
+        for (i, (_, v)) in TEXT_COLORS.iter().enumerate() {
+            src.push_str(&format!("<span style=\"color:{};font-size:12pt;\">tc{i}</span> ", v.to_uppercase()));
+        }
+        for (i, (_, v)) in HIGHLIGHTS.iter().enumerate() {
+            let c = crate::export::doc::Rgb::parse(v).unwrap();
+            src.push_str(&format!("<mark style=\"background:#{}\">hl{i}</mark> ", c.hex()));
+        }
+        // Other writers: Google Docs (black on transparent is no color), <font color>, a Notion class
+        // (it wins over a style on the same element), and values that are not colors.
+        src.push_str(concat!(
+            r#"<span style="color:#000000;background-color:transparent">gdocs</span> "#,
+            r##"<font color="#d44c47">font</font> "##,
+            r#"<mark class="highlight-red_background" style="background:#EEE5C4">notion</mark> "#,
+            r#"<span style="color:red;background:url(https://evil.example/x.png)">bad</span> "#,
+            r#"<mark>plain</mark> <span style="background-color:rgba(203, 145, 47, 0.30)">rgba</span></p>"#
+        ));
+        let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment(&src, ctx));
+        let v = json(&blocks);
+        for (i, (name, c)) in TEXT_COLORS.iter().enumerate() {
+            assert_eq!(colors_of(&v, &format!("tc{i}")).0.as_deref(), Some(*c), "text color {name}");
+        }
+        for (i, (name, h)) in HIGHLIGHTS.iter().enumerate() {
+            assert_eq!(colors_of(&v, &format!("hl{i}")).1.as_deref(), Some(*h), "highlight {name}");
+        }
+        assert_eq!(colors_of(&v, "gdocs"), (None, None));
+        assert_eq!(colors_of(&v, "font").0.as_deref(), Some("#d44c47"));
+        assert_eq!(colors_of(&v, "notion").1.as_deref(), Some(doc::HIGHLIGHTS[8]), "the Notion class wins");
+        assert_eq!(colors_of(&v, "bad"), (None, None));
+        assert!(!v.to_string().contains("evil"));
+        assert_eq!(colors_of(&v, "plain").1.as_deref(), Some(""), "a plain <mark> is the default highlight");
+        assert_eq!(colors_of(&v, "rgba").1.as_deref(), Some(HIGHLIGHTS[2].1));
+    }
+
+    #[test]
+    fn a_shelf_comes_back_as_a_shelf() {
+        let src = "<details open class=\"notaya-shelf\"><summary>Shelf title</summary><p>Inside</p></details><details open><summary>Toggle</summary><p>x</p></details><details class=\"shelf\"><summary>Other</summary></details>";
+        let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment(src, ctx));
+        let v = json(&blocks);
+        let c = v["content"].as_array().unwrap();
+        assert_eq!(c.len(), 3);
+        assert_eq!(c[0]["type"], "toggle");
+        assert_eq!(c[0]["attrs"], serde_json::json!({ "open": true, "shelf": true }), "the editor's own attribute");
+        assert_eq!(c[0]["content"][0]["content"][0]["text"], "Shelf title");
+        assert_eq!(c[0]["content"][1]["content"][0]["text"], "Inside");
+        assert!(c[1]["attrs"].get("shelf").is_none() && c[2]["attrs"].get("shelf").is_none(), "only Notaya's class makes a shelf");
     }
 
     #[test]

@@ -533,7 +533,7 @@ impl<'a> Layout<'a> {
                 out.push(self.space(6.0, &c));
                 out.push(self.space(6.0, ctx));
             }
-            Block::Toggle(inner) => {
+            Block::Toggle(inner) | Block::Shelf(inner) => {
                 if let Some((first, rest)) = inner.split_first() {
                     match first {
                         Block::Paragraph { align, content } | Block::Heading { align, content, .. } => {

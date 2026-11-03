@@ -5,7 +5,9 @@
 //! the HTML converter, which sanitises them; Notion writes callouts as `<aside>`), front
 //! matter (its `title:` is used, the rest dropped) and link reference definitions.
 //! Inline: bold, italic, strike, `==highlight==`, code, links, autolinks, bare URLs, pictures,
-//! hard breaks, entities, `$math$`, and a few inline HTML tags.
+//! hard breaks, entities, `$math$`, and a few inline HTML tags (`b`, `i`, `u`, `s`, `code`,
+//! `mark`, `br`, `img`, and `span`/`mark`/`font` with a text or background color, which becomes
+//! the nearest Notaya palette color; see `palette`).
 //!
 //! Hostile input: nesting is capped, the search for a closing delimiter is bounded and a
 //! failed search is remembered (per piece of text it was made in), so the work stays roughly
@@ -15,8 +17,8 @@
 use std::collections::HashMap;
 
 use super::doc::{self, Block, Cell, Inline, Marks};
-use super::markup::decode_one;
-use super::{html, resolve_rel, safe_link, Ctx};
+use super::markup::{attr, decode_one, Token, Tokenizer};
+use super::{html, palette, resolve_rel, safe_link, Ctx};
 
 const MAX_DEPTH: usize = 16;
 /// Paragraphs longer than this are taken as plain text (no inline parsing).
@@ -306,7 +308,17 @@ impl Parser<'_, '_> {
                     para.clear();
                     match self.page_link(&text) {
                         Some(b) => out.push(b),
-                        None => out.push(Block::Paragraph(self.inline(&text))),
+                        None => {
+                            let inl = self.inline(&text);
+                            // A line of italic text right after a picture is its caption (how
+                            // Notaya's Markdown export writes one, and a common convention).
+                            let t = text.trim();
+                            let emphasis = t.len() > 2 && ((t.starts_with('*') && t.ends_with('*')) || (t.starts_with('_') && t.ends_with('_')));
+                            match (picture_only(out.last()), italic_only(&inl).filter(|_| emphasis)) {
+                                (Some(idx), Some(caption)) => *out.last_mut().unwrap() = Block::Image(idx, caption),
+                                _ => out.push(Block::Paragraph(inl)),
+                            }
+                        }
                     }
                 }
             };
@@ -893,25 +905,70 @@ impl Parser<'_, '_> {
             let inl = blocks.into_iter().flat_map(|b| if let Block::Paragraph(x) = b { x } else { Vec::new() }).collect();
             return Some((inl, close + 1));
         }
-        let mark: Option<fn(&mut Marks)> = match name.as_str() {
-            "b" | "strong" => Some(|m| m.bold = true),
-            "i" | "em" => Some(|m| m.italic = true),
-            "u" | "ins" => Some(|m| m.underline = true),
-            "s" | "del" | "strike" => Some(|m| m.strike = true),
-            "mark" => Some(|m| m.highlight = Some(String::new())),
-            "code" => Some(|m| m.code = true),
-            _ => None,
-        };
         if lower.starts_with('/') {
             // A closing tag without its opening one: dropped.
             return Some((Vec::new(), close + 1));
         }
-        if let Some(f) = mark {
+        // The text and background color of `<span style="color:…">`, `<mark style="background:…">`
+        // (how Notaya's Markdown export writes colors) and `<font color>`, read as the nearest
+        // Notaya palette colors. No other attribute is looked at.
+        let (color, highlight) = if matches!(name.as_str(), "span" | "mark" | "font") {
+            let tag: String = s[i..close + 1].iter().collect();
+            Tokenizer::html(&tag)
+                .find_map(|t| if let Token::Start { attrs, .. } = t { Some(attrs) } else { None })
+                .map(|attrs| {
+                    let (mut c, h) = attr(&attrs, "style").map(palette::from_style).unwrap_or_default();
+                    if name == "font" && c.is_none() {
+                        c = attr(&attrs, "color").and_then(palette::parse).and_then(palette::text_color);
+                    }
+                    (c, h)
+                })
+                .unwrap_or_default()
+        } else {
+            (None, None)
+        };
+        let mut im = m.clone();
+        let known = match name.as_str() {
+            "b" | "strong" => {
+                im.bold = true;
+                true
+            }
+            "i" | "em" => {
+                im.italic = true;
+                true
+            }
+            "u" | "ins" => {
+                im.underline = true;
+                true
+            }
+            "s" | "del" | "strike" => {
+                im.strike = true;
+                true
+            }
+            "code" => {
+                im.code = true;
+                true
+            }
+            // A plain <mark> is the default highlight.
+            "mark" => {
+                im.highlight = Some(highlight.unwrap_or_default());
+                true
+            }
+            "span" | "font" if color.is_some() || highlight.is_some() => {
+                if highlight.is_some() {
+                    im.highlight = highlight;
+                }
+                true
+            }
+            _ => false,
+        };
+        if color.is_some() {
+            im.color = color;
+        }
+        if known {
             let end_tag: Vec<char> = format!("</{name}>").chars().collect();
             let key = ('<', name.bytes().fold(0usize, |a, b| a.wrapping_mul(31).wrapping_add(usize::from(b))));
             if let Some(e) = scan_memo(st, key, close + 1, s.len(), |j| s[j..].iter().take(end_tag.len()).map(|c| c.to_ascii_lowercase()).eq(end_tag.iter().copied())) {
-                let mut im = m.clone();
-                f(&mut im);
                 let mut out = Vec::new();
                 if depth < MAX_DEPTH {
                     self.inline_into(&s[close + 1..e], &im, &mut out, depth + 1);
@@ -1060,6 +1117,24 @@ fn split_row(l: &str) -> Vec<String> {
     cells
 }
 
+/// The picture of a paragraph that holds one picture and nothing else.
+fn picture_only(b: Option<&Block>) -> Option<usize> {
+    let Some(Block::Paragraph(inl)) = b else { return None };
+    let mut seen = inl.iter().filter(|i| !matches!(i, Inline::Text(t, _) if t.trim().is_empty()));
+    match (seen.next(), seen.next()) {
+        (Some(Inline::Image(idx)), None) => Some(*idx),
+        _ => None,
+    }
+}
+
+/// The text of a paragraph that is all italic and nothing else (no link, no other mark).
+fn italic_only(inl: &[Inline]) -> Option<String> {
+    let only = Marks { italic: true, ..Marks::default() };
+    let all = !inl.is_empty() && inl.iter().all(|i| matches!(i, Inline::Text(t, m) if *m == only || t.trim().is_empty()));
+    let text = doc::plain(inl);
+    (all && !text.is_empty() && inl.iter().any(|i| matches!(i, Inline::Text(_, m) if *m == only))).then_some(text)
+}
+
 /// `> [!NOTE]` (GitHub's alerts) as a callout; any other quote stays a quote.
 fn callout_of(mut blocks: Vec<Block>) -> Block {
     if let Some(Block::Paragraph(first)) = blocks.first_mut() {
@@ -1174,6 +1249,52 @@ mod tests {
     }
 
     #[test]
+    fn inline_color_html_becomes_palette_colors() {
+        use crate::importers::html::tests::colors_of;
+        use crate::importers::palette::{HIGHLIGHTS, TEXT_COLORS};
+        // As Notaya's Markdown export writes them.
+        let mut src = String::new();
+        for (i, (_, v)) in TEXT_COLORS.iter().enumerate() {
+            src.push_str(&format!("<span style=\"color:{}\">tc{i}</span> ", v.to_uppercase()));
+        }
+        for (i, (_, v)) in HIGHLIGHTS.iter().enumerate() {
+            src.push_str(&format!("<mark style=\"background:#{}\">hl{i}</mark> ", crate::export::doc::Rgb::parse(v).unwrap().hex()));
+        }
+        src.push_str("<span style=\"color:#D04F4F\"><mark style=\"background:#EEE5C4\">**both**</mark></span> <mark>plain</mark> <span style=\"font-weight:bold\">nostyle</span> <span style=\"color:url(x)\">bad</span> <font color=\"#d44c47\">font</font> <span style=\"color:#D04F4F\">open");
+        let v = md(&src);
+        for (i, (name, c)) in TEXT_COLORS.iter().enumerate() {
+            assert_eq!(colors_of(&v, &format!("tc{i}")).0.as_deref(), Some(*c), "text color {name}");
+        }
+        for (i, (name, h)) in HIGHLIGHTS.iter().enumerate() {
+            assert_eq!(colors_of(&v, &format!("hl{i}")).1.as_deref(), Some(*h), "highlight {name}");
+        }
+        assert_eq!(colors_of(&v, "both"), (Some("#d04f4f".into()), Some(HIGHLIGHTS[9].1.into())));
+        assert!(v.to_string().contains("\"bold\""), "Markdown inside the tags is still read");
+        assert_eq!(colors_of(&v, "plain"), (None, Some(String::new())));
+        assert_eq!(colors_of(&v, "nostyle"), (None, None), "other spans are dropped, their text stays");
+        assert_eq!(colors_of(&v, "bad"), (None, None));
+        assert_eq!(colors_of(&v, "font").0.as_deref(), Some("#d44c47"));
+        assert!(v.to_string().contains("open"), "a span that is never closed keeps its text");
+        assert!(!v.to_string().contains("span") && !v.to_string().contains("url("));
+    }
+
+    #[test]
+    fn shelves_and_picture_captions_come_back() {
+        let png: &[u8] = b"\x89PNG\r\n\x1a\nxxxx";
+        let src = "<details open class=\"notaya-shelf\">\n<summary>Shelf title</summary>\n\nInside the shelf\n\n</details>\n\n<details open>\n<summary>Toggle</summary>\n\nx\n\n</details>\n\n![A caption](a.png)\n\n*A caption*\n\n![b](a.png)\n\nNot *a caption*\n\n![c](a.png)\n\n![missing](nope.png)";
+        let (v, _, _) = with_ctx(&[("a.png", png)], |ctx| json(&parse(src, ctx).blocks));
+        let c = v["content"].as_array().unwrap();
+        let types: Vec<&str> = c.iter().map(|b| b["type"].as_str().unwrap()).collect();
+        assert_eq!(types, ["toggle", "toggle", "image", "image", "paragraph", "image", "paragraph"], "{v}");
+        assert_eq!(c[0]["attrs"]["shelf"], true);
+        assert!(c[0].to_string().contains("Inside the shelf"));
+        assert!(c[1]["attrs"].get("shelf").is_none());
+        assert_eq!(c[2]["attrs"]["caption"], "A caption");
+        assert_eq!(c[3]["attrs"]["caption"], "", "text that is not all italic is no caption");
+        assert_eq!(c[5]["attrs"]["caption"], "", "a missing picture's note is no caption");
+    }
+
+    #[test]
     fn hostile_markdown_stays_fast_and_safe() {
         let _heavy = crate::importers::heavy();
         let many = "*a ".repeat(50_000) + &"[".repeat(50_000) + &"`".repeat(10_000) + &"_".repeat(50_000);
@@ -1223,7 +1344,7 @@ mod tests {
         let src = format!("- a\n{}  b\n", "\n".repeat(1_000_000));
         let _ = with_ctx(&[], |ctx| parse(&src, ctx));
         // Openers that never close: each used to search 4,000 characters ahead.
-        for unit in ["*a ", "_a ", "~~a ", "==a ", "$a ", "[a](b ", "[a ", "`a ", "<b>a ", "![a](", "[[[[", "*[a](b) "] {
+        for unit in ["*a ", "_a ", "~~a ", "==a ", "$a ", "[a](b ", "[a ", "`a ", "<b>a ", "![a](", "[[[[", "*[a](b) ", "<span style=\"color:#d04f4f\">a ", "<mark style=\"background:#EEE5C4;color:#d04f4f\">"] {
             let src = unit.repeat(60_000);
             let (d, _, _) = with_ctx(&[], |ctx| parse(&src, ctx));
             assert!(!d.blocks.is_empty(), "{unit}");

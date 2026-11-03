@@ -168,6 +168,8 @@ pub enum Block {
     Callout { icon: String, blocks: Vec<Block> },
     /// A collapsible block; the first block is the line that is always shown.
     Toggle(Vec<Block>),
+    /// A shelf: a toggle the editor draws as a shaded box (its `shelf` attribute is set).
+    Shelf(Vec<Block>),
     Columns(Vec<Vec<Block>>),
     Code { language: String, text: String },
     Math(String),
@@ -252,6 +254,7 @@ fn block(n: &Value, p: &Pages, out: &mut Vec<Block>) {
         "taskList" => out.push(Block::List { kind: ListKind::Task, items: list_items(kids, p) }),
         "blockquote" => out.push(Block::Quote(blocks(kids, p))),
         "callout" => out.push(Block::Callout { icon: attr_str(n, "icon"), blocks: blocks(kids, p) }),
+        "toggle" if attr(n, "shelf").and_then(Value::as_bool) == Some(true) => out.push(Block::Shelf(blocks(kids, p))),
         "toggle" => out.push(Block::Toggle(blocks(kids, p))),
         "columns" => out.push(Block::Columns(kids.iter().map(|c| blocks(children(c), p)).collect())),
         // A column outside its group (not made by the editor): just its blocks.
@@ -412,7 +415,7 @@ pub fn attachments(blocks: &[Block], out: &mut Vec<String>) {
                 }
             }
             Block::List { items, .. } => items.iter().for_each(|i| attachments(&i.blocks, out)),
-            Block::Quote(x) | Block::Toggle(x) | Block::Callout { blocks: x, .. } => attachments(x, out),
+            Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout { blocks: x, .. } => attachments(x, out),
             Block::Columns(cols) => cols.iter().for_each(|c| attachments(c, out)),
             Block::Table(rows) => rows.iter().flatten().for_each(|c| attachments(&c.blocks, out)),
             _ => {}
@@ -550,6 +553,7 @@ pub mod tests {
                 Block::Quote(_) => "quote",
                 Block::Callout { .. } => "callout",
                 Block::Toggle(_) => "toggle",
+                Block::Shelf(_) => "shelf",
                 Block::Columns(_) => "columns",
                 Block::Code { .. } => "code",
                 Block::Math(_) => "math",

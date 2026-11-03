@@ -38,6 +38,7 @@ table{border-collapse:collapse;max-width:100%;margin:1em 0}\
 th,td{border:1px solid var(--line);padding:.35em .65em;vertical-align:top}\
 th{background:var(--soft)}\
 details{margin:.8em 0}summary{cursor:pointer;font-weight:600}\
+details.notaya-shelf{background:var(--soft);border:1px solid var(--line);border-radius:.6em;padding:.5em 1em}\
 figure{margin:1em 0}figure img{max-width:100%;height:auto}figcaption{color:var(--muted);font-size:.9em;margin-top:.3em}\
 .columns{display:flex;gap:1.5rem;flex-wrap:wrap}.columns>div{flex:1 1 14rem;min-width:0}\
 .math{font-family:ui-monospace,Consolas,monospace}\
@@ -208,12 +209,14 @@ impl Renderer {
                 s.push_str("\n</blockquote>");
                 s
             }
-            Block::Toggle(blocks) => {
+            Block::Toggle(blocks) | Block::Shelf(blocks) => {
                 let (summary, rest) = match blocks.split_first() {
                     Some((Block::Paragraph { content, .. } | Block::Heading { content, .. }, rest)) => (inline(content), rest),
                     _ => (String::new(), &blocks[..]),
                 };
-                format!("<details open>\n<summary dir=\"auto\">{summary}</summary>\n{}\n</details>", self.joined(rest, shift))
+                // A shelf is a shaded box (a fixed class, so Notaya's importer brings it back as one).
+                let class = if matches!(b, Block::Shelf(_)) { " class=\"notaya-shelf\"" } else { "" };
+                format!("<details open{class}>\n<summary dir=\"auto\">{summary}</summary>\n{}\n</details>", self.joined(rest, shift))
             }
             Block::Columns(cols) => {
                 let mut s = String::from("<div class=\"columns\">\n");
@@ -636,6 +639,15 @@ mod tests {
         let html = page_html(doc::parse(json, &|_| None));
         assert!(!html.contains("evil.example") && !html.contains("expression"));
         assert!(html.contains("<mark style=\"background:#FEF08A\">y</mark>"), "the default highlight");
+    }
+
+    #[test]
+    fn a_shelf_is_a_details_with_notaya_s_class() {
+        let html = page_html(vec![Block::Shelf(vec![para("Title", Marks::default()), para("Inside", Marks::default())]), Block::Toggle(vec![para("Plain", Marks::default())])]);
+        assert!(html.contains("<details open class=\"notaya-shelf\">\n<summary dir=\"auto\">Title</summary>\n<p dir=\"auto\">Inside</p>\n</details>"), "{html}");
+        assert!(html.contains("<details open>\n<summary dir=\"auto\">Plain</summary>"));
+        assert!(html.contains("details.notaya-shelf{"), "the shelf is drawn as a box");
+        assert_well_formed(&html);
     }
 
     #[test]

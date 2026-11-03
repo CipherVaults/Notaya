@@ -98,6 +98,8 @@ pub enum Block {
     Callout(String, Vec<Block>),
     /// A collapsible block; its first block is the line that stays visible.
     Toggle(Vec<Block>),
+    /// A shelf: a toggle drawn as a shaded box (the editor's toggle with `shelf: true`).
+    Shelf(Vec<Block>),
     Code(String, String),
     Rule,
     Table(Vec<Vec<Cell>>),
@@ -283,9 +285,10 @@ impl Renderer<'_> {
                     .collect();
                 out.push(json!({ "type": "taskList", "content": content }));
             }
-            Block::Quote(inner) | Block::Toggle(inner) | Block::Callout(_, inner) if deep => out.extend(self.blocks(inner, depth)),
+            Block::Quote(inner) | Block::Toggle(inner) | Block::Shelf(inner) | Block::Callout(_, inner) if deep => out.extend(self.blocks(inner, depth)),
             Block::Quote(inner) => out.push(json!({ "type": "blockquote", "content": self.container(inner, depth) })),
             Block::Toggle(inner) => out.push(json!({ "type": "toggle", "attrs": { "open": true }, "content": self.container(inner, depth) })),
+            Block::Shelf(inner) => out.push(json!({ "type": "toggle", "attrs": { "open": true, "shelf": true }, "content": self.container(inner, depth) })),
             Block::Callout(icon, inner) => {
                 let icon = if icon.is_empty() || icon.chars().count() > 8 { "💡" } else { icon.as_str() };
                 out.push(json!({ "type": "callout", "attrs": { "icon": icon }, "content": self.container(inner, depth) }))
@@ -563,7 +566,7 @@ fn inline_nodes(run: &[&Inline], page: &dyn Fn(&str) -> Option<String>) -> (Vec<
 }
 
 fn is_container(b: &Block) -> bool {
-    matches!(b, Block::Bullets(_) | Block::Numbered(..) | Block::Tasks(_) | Block::Quote(_) | Block::Callout(..) | Block::Toggle(_) | Block::Table(_) | Block::Columns(_))
+    matches!(b, Block::Bullets(_) | Block::Numbered(..) | Block::Tasks(_) | Block::Quote(_) | Block::Callout(..) | Block::Toggle(_) | Block::Shelf(_) | Block::Table(_) | Block::Columns(_))
 }
 
 /// The blocks that are not containers inside `root`, in reading order (no recursion).
@@ -574,7 +577,7 @@ fn flatten<'a>(root: &'a Block, leaves: &mut Vec<&'a Block>) {
         match b {
             Block::Bullets(items) | Block::Numbered(_, items) => items.iter().for_each(|i| kids.extend(i.iter())),
             Block::Tasks(items) => items.iter().for_each(|(_, i)| kids.extend(i.iter())),
-            Block::Quote(i) | Block::Toggle(i) | Block::Callout(_, i) => kids.extend(i.iter()),
+            Block::Quote(i) | Block::Toggle(i) | Block::Shelf(i) | Block::Callout(_, i) => kids.extend(i.iter()),
             Block::Table(rows) => rows.iter().flatten().for_each(|c| kids.extend(c.blocks.iter())),
             Block::Columns(cols) => cols.iter().for_each(|c| kids.extend(c.iter())),
             leaf => leaves.push(leaf),
@@ -680,7 +683,7 @@ pub fn is_empty(blocks: &[Block]) -> bool {
         Block::Code(_, c) => c.trim().is_empty(),
         Block::Bullets(items) | Block::Numbered(_, items) => items.iter().all(|i| is_empty(i)),
         Block::Tasks(items) => items.iter().all(|(_, i)| is_empty(i)),
-        Block::Quote(b) | Block::Toggle(b) | Block::Callout(_, b) => is_empty(b),
+        Block::Quote(b) | Block::Toggle(b) | Block::Shelf(b) | Block::Callout(_, b) => is_empty(b),
         Block::Table(rows) => rows.iter().all(|r| r.iter().all(|c| is_empty(&c.blocks))),
         Block::Columns(cols) => cols.iter().all(|c| is_empty(c)),
         Block::Image(..) | Block::Math(_) | Block::PageLink(..) => false,

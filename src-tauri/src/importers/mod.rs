@@ -10,6 +10,7 @@ pub mod docx;
 pub mod html;
 pub mod markdown;
 pub mod markup;
+pub mod palette;
 pub mod pdf;
 pub mod plan;
 pub mod source;
