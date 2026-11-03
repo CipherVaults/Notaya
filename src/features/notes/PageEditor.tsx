@@ -374,7 +374,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
       </div>
 
       <BubbleToolbar editor={editor} />
-      <SlashMenu editor={editor} slash={slash} controller={slashController} />
+      <SlashMenu editor={editor} slash={slash} controller={slashController} page={{ id: page.id, sectionId: page.sectionId }} />
       <InternalLinkHost editor={editor} pageId={page.id} />
     </div>
   );
