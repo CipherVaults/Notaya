@@ -236,6 +236,7 @@ pub fn run() {
             database_cmd::move_database,
             database_cmd::enable_sub_items,
             database_cmd::enable_dependencies,
+            database_cmd::chart_data,
             export_cmd::export_notes,
             import_notes_cmd::import_notes,
             import_notes_cmd::import_cancel,

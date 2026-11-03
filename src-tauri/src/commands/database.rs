@@ -1123,3 +1123,26 @@ pub fn enable_dependencies(state: State<'_, AppState>, id: String) -> Result<Dat
 }
 
 pub use notes::NotesTree;
+
+#[tauri::command]
+pub fn chart_data(state: State<'_, AppState>, request: QueryRequest) -> Result<crate::database::chart::ChartData> {
+    state.with(|s| {
+        let db = database(s, &request.database_id)?;
+        let view = match request.view {
+            Some(v) => v,
+            None => db.view(&request.view_id).cloned().ok_or(Error::NotFound)?,
+        };
+        // Same limits as a saved view.
+        let mut tmp = db.clone();
+        if let Some(i) = tmp.views.iter().position(|x| x.id == view.id) {
+            tmp.views[i] = view.clone();
+        } else {
+            tmp.views.push(view.clone());
+        }
+        tmp.sanitize()?;
+        let view = tmp.views.iter().find(|x| x.id == view.id).cloned().ok_or(Error::NotFound)?;
+        let ctx = ctx_of(s);
+        let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
+        Ok(crate::database::chart::chart_data(&ctx, dbref, &view))
+    })
+}

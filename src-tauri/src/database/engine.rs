@@ -561,7 +561,7 @@ impl<'a> Ctx<'a> {
         }
     }
 
-    fn build_groups(&self, db: &Database, rows: &[&Row], g: &GroupBy) -> Vec<GroupOut> {
+    pub fn build_groups(&self, db: &Database, rows: &[&Row], g: &GroupBy) -> Vec<GroupOut> {
         let prop = match db.prop(&g.prop) {
             Some(p) => p,
             None => return Vec::new(),
