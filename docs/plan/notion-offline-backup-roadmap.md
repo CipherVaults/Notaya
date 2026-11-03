@@ -1,6 +1,6 @@
 # Notaya as an offline Notion: feature gap list and phased roadmap
 
-**Status:** a plan for the owner to decide on. **Nothing is built.** It is not an amendment until the owner picks a phase (then it becomes A35 and the phase is recorded under it). Baseline: `origin/main` `6a8af96` (V1.4.0 released, not yet accepted). Written 2026-11-03 (system clock, UTC) by a cloud thread.
+**Status:** a plan for the owner to decide on. **Nothing is built.** It is not an amendment until the owner picks a phase (then it becomes A35 and the phase is recorded under it). Baseline: `origin/main` `6a8af96` (V1.4.0 released, not yet accepted). Written 2026-11-03 (system clock, UTC) by a cloud thread. **Revised after the web check after a web check of Notion's help pages and release notes** (owner, 18:30:22: "can you search internet for all features till now"); sources in section 11.
 
 ## 1. What the owner asked
 
@@ -16,21 +16,26 @@
 
 **Out for good (owner's words):** AI, integrations, network, cloud, sync, sharing. In practice that removes: Notion AI and agents, connectors, the API and webhooks, web clipper, Notion Calendar and Mail, embeds that load from the web, link previews, publishing to the web, guests, permissions, teamspaces, live collaboration, comments between people, page analytics, mobile and web apps, synced external databases. Notaya keeps promise P5 (its own code makes no network connection).
 
-## 2. The big caveat: nobody has looked at a real Notion export yet
+## 2. The big caveat: no real Notion export has been looked at yet
 
-The import in V1.4.0 was built and tested only against **hand-made imitations** of Notion files ([import-what-carries-over.md](import-what-carries-over.md), "Not run"). Everything below about what Notion puts in an export is **from memory of Notion's export formats and is unverified**. Because the goal is a backup, this is the first thing to fix (Phase 0).
+The import in V1.4.0 was built and tested only against **hand-made imitations** of Notion files ([import-what-carries-over.md](import-what-carries-over.md), "Not run"). The web check (section 11) confirmed the general shape of Notion's export but **not** the details that decide import fidelity (file names, ids, how relations and formulas are written). Those need a real export (Phase 0).
 
-What I believe a Notion export contains, to be checked against the real thing:
+What Notion's own help pages and other sources say about the export:
 
-| Export | Believed to hold | Believed to lose |
+| Export | Holds | Loses or limits |
 |---|---|---|
-| **HTML** | Page text and formatting, colors, icons, covers, callouts, toggles (`<details>`), columns, table blocks, pictures and attached files beside the page, each database as a page of table rows | Views (board, calendar, timeline, gallery settings, filters, sorts, grouping), formula text, live relations and rollups, comments, history, synced-block links |
-| **Markdown & CSV** | Page text, pictures and files, each database as a `.csv`, row pages as `.md` with their properties listed at the top | All colors, columns, icons and covers; views; formulas and rollups arrive as their last value; relations arrive as the related page's title |
-| **PDF** | A picture of the page | Everything structural |
+| **HTML** | A zip with one HTML page per page, subpages in folders, images and files saved separately, an `index.html` sitemap. **Comments** (page and block level, resolved and unresolved) and mentioned pages/files/users can be exported | Not documented on the help page (the third-party article does not cover colors, toggles, columns or formulas either) |
+| **Markdown & CSV** | Pages as Markdown; each **full-page database as one CSV**; subpage Markdown files; files and images | **Only the current or default view of a database** is exported, so filtered-out rows are absent; **form views cannot be exported**; **relations become text** (linked names survive, the connection does not); callouts are written as HTML; comments are lost |
+| **PDF** | Page content as PDF | Not a structure format; custom emoji dropped; subpage ZIP only on Business/Enterprise |
 
-So: **views, formulas and live relations are probably not in any export.** A database can come back with its rows, columns and values, but its board/calendar/timeline setup and filters have to be rebuilt by hand or by sensible defaults. If the owner needs those exactly, the only complete source would be Notion's API, which the owner has excluded (network and integration). This should be put to the owner plainly once Phase 0 shows what the real export holds.
+Practical facts from the same pages: "Export all workspace content" (Settings, General) can take **up to 30 hours**, the download link **expires after 7 days**, pages the exporter cannot reach are left out, and **re-uploading an export does not restore a Notion workspace**. Long folder names can break extraction on Windows (260-character path limit; "Create folders for subpages" off helps).
 
-Best-looking route (hypothesis): import the **HTML export for pages** (fidelity) and the **CSV export for database data** (typed columns, easy to parse), matched by the 32-character ids Notion puts in file names.
+**What this means for the plan:**
+- **Views (board, calendar, timeline, chart, form), filters, sorts and groups are not in any export.** Notion's help page only lets you export the current or default view. A database comes back as rows, columns and values. Its views have to be rebuilt in Notaya (with sensible defaults). The API could read them, but the owner excluded network and integrations.
+- **Formulas and rollups:** the CSV holds their last value, not the formula. Treated as unverified until a real CSV is seen.
+- **Relations** come back as page names; Notaya can rebuild links by matching names, not guaranteed (duplicate names).
+- **Comments:** HTML keeps them, so a Notaya "comments on a page" feature (single-user notes, with the author name as text) could carry them over. Newly listed in 4.1.
+- Best-looking route (hypothesis): import the **HTML export for pages** (colors, icons, covers, columns, toggles) and the **CSV export for database data**, matched by file names; export a full workspace **once as HTML and once as Markdown & CSV**.
 
 ## 3. What Notaya V1.4.0 has today (short)
 
@@ -64,7 +69,14 @@ Size scale used throughout (rough effort in Notaya's working style, not hours): 
 | **Lock page**, **small text**, **full-width per page** | Width exists; others missing | Add | S |
 | **Page properties on ordinary pages** | Missing | Comes with databases (Phase 1) | - |
 | **Diagrams (Mermaid)**, **table of contents**, **Notion-style markdown shortcuts** | Shortcuts partly (editor default) | Mermaid optional, later; shortcuts check | S |
-| **Comments / discussions** | Model remnant, no UI | People-comments are out (sharing). A private "annotation" on a block is possible but not in any export; low priority | M |
+| **Comments / discussions** | Model remnant, no UI | Between-people comments are out (sharing). But the **HTML export keeps comments**, so a single-user "comments on a page / block" feature (author kept as text) would carry the owner's existing comments over | M |
+| **Tabs block** (content in clickable tabs, added 2026) | Missing | Add as a block | M |
+| **Presentation mode** (a page shown as slides, 2026) | Missing | Local full-screen slide view of a page; no network needed | M |
+| **Page archiving** (hide old pages from search, 2026) | Trash only | Archive state | S |
+| **Merge cells in simple tables** (2026), column width, header row/column | Tables resize; no merge | Add cell merge | M |
+| **Mermaid diagrams in code blocks** | Missing | Draw offline; no new library without asking | M |
+| **Custom emoji** | Standard emoji only | Local custom emoji (small images) | S |
+| **Keyboard shortcuts, Markdown shortcuts, `/` and `+` menus, word and character count** | Mostly have | Check gaps against Notion's list | S |
 | **Colored blocks** (whole-block color) | Imports as text color | Real block color | S |
 | **Page cover positions, icons as images**, custom emoji | Emoji icon + gradient/image cover | Keep; check real export | S |
 
@@ -72,14 +84,15 @@ Size scale used throughout (rough effort in Notaya's working style, not hours): 
 
 | Notion feature | Notaya V1.4.0 | Plan | Size |
 |---|---|---|---|
-| Database as full page and **inline in a page** | Missing | New item type; rows are pages (as in Notion), so rows open as full pages, can have sub-pages, links and search | XL |
+| Database as full page and **inline in a page** (Notion calls the tables "data sources" since 2025: one database can hold several) | Missing | New item type; rows are pages (as in Notion), so rows open as full pages, can have sub-pages, links and search | XL |
 | Properties: title, text, number, select, multi-select, **status**, date (with range), checkbox, URL, email, phone | Missing | Phase 1 | L |
-| Properties: person, files & media, created time, last edited time, created by, ID | Missing | Created/edited time and ID yes; **person** becomes plain text (no accounts); files stored in the vault | M |
+| Properties: person, files & media, created time, last edited time, created by, last edited by, ID | Missing | Created/edited time and ID yes; **person / created by / edited by** become plain text (no accounts); files stored in the vault | M |
+| Properties: **place** (map location), **button** | Missing | Place as text/coordinates, no map tiles (network); button with automations (Phase 6) | S |
 | **Table view**: add / hide / reorder / resize columns, row open, freeze | Missing | Phase 1 | L |
 | **Sort, filter (incl. nested), group, sub-group, calculations (sum, count...)**, saved views, several views per database | Missing | Phase 1-2 | L |
 | **Board** view, **List** view, **Gallery** view | Missing | Phase 2 (drag cards with the already-bundled drag library) | M each |
 | **Calendar** view, **Timeline** view | Missing | Phase 2 | L each |
-| **Charts** (bar, line, donut, number) and dashboards | Missing | Phase 3; drawn by hand as SVG so **no new library** | L |
+| **Charts** (bar, line, donut) as a chart view, and **dashboards** (charts + KPIs, 2026) | Missing | Phase 3; drawn by hand as SVG so **no new library** | L |
 | **Formulas** | Missing | Phase 3: an expression engine in Rust (testable under Wine). Import carries only the last value, so formulas must be re-typed | L |
 | **Relations and rollups** | Missing | Phase 3. Import rebuilds relations by matching titles / ids if the export allows it | L |
 | **Sub-items and dependencies** | Missing | Phase 3 | M |
@@ -88,7 +101,8 @@ Size scale used throughout (rough effort in Notaya's working style, not hours): 
 | Linked views of a database elsewhere | Missing | Phase 2 | M |
 | **Forms** (a form that adds a row) | Missing | A local quick-add dialog only; shared forms are out | S |
 | Database automations | Missing | Phase 6, local rules engine (no network triggers) | L |
-| Lock database, hide properties per view | Missing | With views | S |
+| Lock database, hide properties per view, **open rows as side peek / center peek / full page**, freeze columns, database search, personal vs shared filters (personal only here), advanced filters nested 3 levels | Missing | With views | S |
+| **People directory**, column permissions, typed databases | - | Out (accounts, sharing) | - |
 
 ### 4.3 Workspace
 
@@ -100,13 +114,14 @@ Size scale used throughout (rough effort in Notaya's working style, not hours): 
 | **Re-import a newer export** to refresh the backup | Not possible (each import = new notebook) | See decision D4: match Notion ids and update. Manual, one way, no sync | L |
 | Export | Have (Markdown, HTML, PDF, Word) | Add CSV for databases | M |
 | **Templates gallery** | Missing | A few built-in local templates (task list, reading list...) | S |
+| **Offline mode**, **version history** (upgraded Oct 2026) | Whole app is offline; whole-vault backups | Per-page history is Phase 4c | - |
 | Teamspaces, members, groups, permissions, guest sharing, public pages, page analytics, verified pages | - | Out (sharing) | - |
 
 ## 5. What does not make sense locally, and what is offered instead
 
 | Notion feature | Why not | Local alternative |
 |---|---|---|
-| Notion AI, AI agents, AI meeting notes, enterprise search | Cloud / owner excluded | Nothing. (A model on the PC would be huge and unreliable; not proposed) |
+| Notion AI, Agents (own computer/browser), AI meeting notes and transcription, image generation, model choice, credits, enterprise search, Developer Platform, Workers, webhooks, Notion CLI, MCP, database sync (GitHub, Jira, Salesforce), Mail, Calendar scheduling | Cloud / owner excluded | Nothing. (A model on the PC would be huge and unreliable; not proposed) |
 | Integrations, API, webhooks, Slack/Drive/GitHub connectors, synced external databases | Network / integration | CSV and file import by hand |
 | Web clipper, link previews, live embeds, Notion Calendar, Notion Mail | Network | Link card with the title the owner typed or imported; calendar **view** inside a database (Phase 2) |
 | Real-time collaboration, comments between people, @people, permissions, guests, teamspaces | Sharing / accounts | Single user: "person" properties are plain text; reminders go to the owner only |
@@ -119,7 +134,7 @@ Size scale used throughout (rough effort in Notaya's working style, not hours): 
 Each phase is meant to be one release line (the owner's rule: at most two full PC test rounds per release; bugs are fixed on the spot). Releases below are suggestions. Sizes are the sums of section 4.
 
 **Phase 0: Look at a real Notion export (S to M).**
-Owner exports his own workspace from Notion: **both** "Markdown & CSV" and "HTML", "Include subpages" on, "Everything" on, into a folder outside the repository (suggest `E:\Project\Notaya\Notaya Tests Excluded\notion-export`). A thread, with the owner's say-so, runs the existing importer on a copy and writes a **fidelity matrix**: what each block type, property and file became, what was lost, and what the databases look like on disk (file names, ids, relation form). Output: a report in `docs/execution/` and a corrected section 2 of this plan. No product code changes except bug fixes the real files expose in the importer. **Why first:** every later phase depends on what the export really contains, and the owner's backup goal is import-first.
+Owner exports his own workspace from Notion (Settings, General, "Export all workspace content"; can take up to 30 hours and the link lasts 7 days; for databases Notion exports only the current/default view): **both** "Markdown & CSV" and "HTML", "Include subpages" on, "Everything" on, into a folder outside the repository (suggest `E:\Project\Notaya\Notaya Tests Excluded\notion-export`). A thread, with the owner's say-so, runs the existing importer on a copy and writes a **fidelity matrix**: what each block type, property and file became, what was lost, and what the databases look like on disk (file names, ids, relation form). Output: a report in `docs/execution/` and a corrected section 2 of this plan. No product code changes except bug fixes the real files expose in the importer. **Why first:** every later phase depends on what the export really contains, and the owner's backup goal is import-first.
 *Needs from the owner:* the export, and an answer on whether the files hold private content (they stay on his PC; cloud threads would not see them. A PC (Remote Control) session does the run).
 
 **Phase 1: Databases, table view, CSV (XL; about V1.5.0).**
@@ -132,7 +147,7 @@ Board, list, gallery, calendar and timeline views; linked views; per-view hidden
 Expression engine, relations and rollups, import that rebuilds relations from titles/ids, sub-items and dependencies, database templates, charts and a chart dashboard (hand-drawn SVG, no new dependency). Imported formulas arrive as values: the app can mark them "formula lost, value kept" and let the owner re-enter them.
 
 **Phase 4: Editor parity (L; about V1.8.0), can be split.**
-4a quick wins (S each): toggle headings, table of contents, breadcrumb, backlinks, duplicate page, lock page, block colors, link cards. 4b: columns back, page and date mentions with reminders, synced blocks, page templates. 4c: file / PDF / audio / video blocks and per-page history (the two items that grow the vault).
+4a quick wins (S each): toggle headings, table of contents, breadcrumb, backlinks, duplicate page, lock page, block colors, link cards. 4b: columns back, page and date mentions with reminders, synced blocks, page templates, tabs block, comments carried over from the HTML export, presentation mode. 4c: file / PDF / audio / video blocks and per-page history (the two items that grow the vault).
 
 **Phase 5: Big-workspace import and backup refresh (L).**
 Limits (5,000 pages, 25 MB per picture, 32 MB per vault record) re-checked against the real export; attachments over the limit; progress and resume; speed of search and lists with tens of thousands of rows (index); optionally **re-import by Notion id** (D4).
@@ -167,4 +182,15 @@ Notion's full feature set built from nothing is years of work for a team. For th
 
 ## 10. Not checked
 
-No real Notion export, no Notion workspace and no running app were used. Notion's current feature list and export contents are from memory of its public behavior and may have changed. The V1.4.0 feature list was read from the repository (`src/`, `src-tauri/src/model.rs`, `docs/plan/A33-v1-4-0-features.md`, `import-what-carries-over.md`) at `6a8af96`. Sizes and the release numbering are suggestions.
+No real Notion export, no Notion workspace and no running app were used. Section 11 was read from Notion's public pages on 2026-11-03; several help pages were thin (the export page does not name files or say how formulas and relations are written) and the third-party article does not cover colors, toggles, columns or formulas. Some feature areas (automations, templates, forms details, charts, offline limits for databases) came only from short summaries and may be incomplete; the search tool returned link lists for some queries and I did not open every page. The V1.4.0 feature list was read from the repository at `6a8af96`. Sizes and the release numbering are suggestions.
+
+## 11. Sources (read 2026-11-03)
+
+- Notion Help, [Export your content](https://www.notion.com/help/export-your-content): formats, options, full-workspace export limits.
+- Breeze, [Notion export formats compared](https://www.breeze.pm/articles/export-from-notion): comments only in HTML; one CSV per database; only the current/default view; relations as text; form views not exportable.
+- Notion Help, [Database properties](https://notion.com/help/database-properties): 22 property types (text, number, select, status, multi-select, date, formula, relation, rollup, person, file, checkbox, URL, email, phone, created time, created by, last edited time, last edited by, button, ID, place).
+- Notion Help, [Views, filters, sorts](https://www.notion.com/help/views-filters-and-sorts): table, board, timeline, calendar, list, gallery, chart; filters nested three levels; groups and sub-groups; peek modes; freeze columns; linked databases; forms.
+- Notion Help, [Writing and editing basics](https://www.notion.com/help/writing-and-editing-basics): block list, embeds, mentions, page options.
+- Notion Developers, [Notion-flavored Markdown](https://developers.notion.com/guides/data-apis/enhanced-markdown): complete list of block and inline types (toggle headings, callouts, columns, synced blocks, table of contents, mentions, mermaid, custom blocks).
+- Notion Help, [Working offline](https://www.notion.com/help/guides/working-offline-in-notion-everything-you-need-to-know).
+- Notion releases: [2026-01-20](https://www.notion.com/releases/2026-01-20), [2026-03-26](https://www.notion.com/releases/2026-03-26) (dashboards, tabs block, presentation mode, H4, page archiving), [2026-05-13](https://www.notion.com/releases/2026-05-13) (developer platform; merge cells in simple tables), and a Releasebot / releases.sh summary of Sep to Nov 2026 (agents, MCP, synced databases, column permissions, version history).

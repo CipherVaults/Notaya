@@ -13,12 +13,13 @@ Short form (4 sections). Times are UTC: the owner's message timestamps and the c
 
 - Read `CLAUDE.md`, STATUS, the amendments record, the claims board, A33 and `import-what-carries-over.md`; checked the live code for what V1.4.0 has (editor blocks, `model.rs`, search, import/export).
 - Wrote the roadmap: the owner's narrowed goal (import a full Notion export faithfully, then edit it like Notion), the caveat that no real Notion export has been looked at, the feature gap list (blocks, databases, workspace), what is dropped and why, seven phases (0 to 6), design points, and six decisions for the owner.
+- 18:30:22 UTC the owner asked for an internet check of Notion's features. Searched and read Notion's help pages, developer docs and release notes (list in section 11 of the plan) and revised the plan: export holds only the current/default view of a database, relations as text, comments only in HTML; 22 property types; new 2026 features (tabs block, dashboards, presentation mode, page archiving, merge cells).
 - Chose the narrowest reading of "1:1": same features and content in Notaya's own style (A33); the look question is left as decision D6.
 
 ## 3. Checks
 
 - **Observed:** the V1.4.0 feature list was read from the source and records at `6a8af96`; the next free IDs were checked against all remote branches (EX-2026-11-03-39 and -40 are in use; -41 chosen; A35 left unreserved because this is a proposal).
-- **Not run / not known:** no real Notion export, no Notion workspace, no app run, no build, no tests (docs only). What Notion's export contains and Notion's current feature set are from memory and are marked unverified in the document.
+- **Not run / not known:** no real Notion export, no Notion workspace, no app run, no build, no tests (docs only). What Notion's export contains and the exact file layout of an export are not confirmed by the web pages read; some feature areas came from short page summaries (stated in section 10 of the plan).
 - **Result state:** *produced*. Not verified beyond the above, not integrated, not accepted.
 
 ## 4. Open points
