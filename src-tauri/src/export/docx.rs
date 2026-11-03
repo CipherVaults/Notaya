@@ -588,7 +588,10 @@ impl Writer<'_> {
         match bookmark {
             None => self.heading(level, &content, Align::Left, &Ctx::default()),
             Some(n) => {
-                let runs = format!("<w:bookmarkStart w:id=\"{n}\" w:name=\"{}\"/>{}<w:bookmarkEnd w:id=\"{n}\"/>", page_anchor(n), self.runs(&content, false));
+                // The id comes from the same counter as the code-block bookmarks (ids must be unique in the file).
+                self.bookmarks += 1;
+                let id = self.bookmarks;
+                let runs = format!("<w:bookmarkStart w:id=\"{id}\" w:name=\"{}\"/>{}<w:bookmarkEnd w:id=\"{id}\"/>", page_anchor(n), self.runs(&content, false));
                 self.para(Some(&format!("Heading{}", level.clamp(1, 6))), &Ctx::default(), Align::Left, None, &runs, is_rtl_text(title));
             }
         }
@@ -882,6 +885,23 @@ mod tests {
         assert!(long.len() <= 40, "Word's bookmark names are at most 40 characters: {long}");
         let styles = String::from_utf8(entries.iter().find(|e| e.0 == "word/styles.xml").unwrap().1.clone()).unwrap();
         assert!(styles.contains("w:styleId=\"NotayaShelf\"") && styles.contains("w:styleId=\"NotayaCode\""));
+    }
+
+    #[test]
+    fn every_bookmark_in_a_document_has_its_own_id() {
+        let mut doc = sample_doc(Vec::new());
+        doc.parts = vec![
+            Part::Page { level: 1, title: "One".into(), blocks: vec![Block::Code { language: "rust".into(), text: "fn a() {}".into() }] },
+            Part::Page { level: 1, title: "Two".into(), blocks: vec![Block::PageLink { title: "One".into(), target: Some(PageRef::Anchor(1)) }, Block::Code { language: "c".into(), text: "x".into() }] },
+        ];
+        let entries = read_zip(&render_at(&doc, 0).unwrap());
+        let document = String::from_utf8(entries.iter().find(|e| e.0 == "word/document.xml").unwrap().1.clone()).unwrap();
+        let ids: Vec<&str> = document.split("<w:bookmarkStart w:id=\"").skip(1).filter_map(|s| s.split('"').next()).collect();
+        assert!(ids.len() >= 3, "{ids:?}");
+        let mut sorted = ids.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(sorted.len(), ids.len(), "bookmark ids must be unique: {ids:?}");
     }
 
     #[test]

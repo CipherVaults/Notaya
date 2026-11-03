@@ -1720,8 +1720,8 @@ pub mod tests {
         assert!(html.contains("see link to elsewhere") && !html.contains("notaya:"), "{html}");
         let parts = read_zip(&docx::render_at(&d, 0).unwrap());
         let document = std::str::from_utf8(&parts.iter().find(|(n, _)| n == "word/document.xml").unwrap().1).unwrap().to_string();
-        assert!(document.contains("<w:bookmarkStart w:id=\"2\" w:name=\"notaya_page_2\"/>"), "{document}");
-        assert!(document.contains("<w:bookmarkEnd w:id=\"2\"/>"));
+        assert!(document.contains("<w:bookmarkStart w:id=\"1\" w:name=\"notaya_page_2\"/>"), "{document}");
+        assert!(document.contains("<w:bookmarkEnd w:id=\"1\"/>"));
         assert_eq!(document.matches("<w:hyperlink w:anchor=\"notaya_page_2\"").count(), 2, "the link and the row");
         // Markdown in one file keeps the text (heading anchors differ between viewers).
         let md = markdown::render(&d, "x.assets").text;
