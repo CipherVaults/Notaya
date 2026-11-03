@@ -213,7 +213,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center gap-3 px-4">
-        <nav className={cn("flex min-w-0 items-center gap-1 text-[0.8rem] text-muted", embedded && "hidden")}>
+        <nav aria-label="Breadcrumb" className={cn("flex min-w-0 items-center gap-1 text-[0.8rem] text-muted", embedded && "hidden")}>
           {notebook && (
             <>
               <span className="emoji-mono shrink-0">{notebook.icon}</span>

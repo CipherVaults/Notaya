@@ -17,16 +17,18 @@ interface Props {
   readOnly?: boolean;
   /** Hide the "files" lines (they need a stored row). */
   noFiles?: boolean;
+  /** Leave out the properties Notaya computes (formulas, rollups, times, authors, ids): a template has no value for them. */
+  noComputed?: boolean;
   onCommit: (prop: Property, value: unknown) => void;
   onLocalChange?: (prop: Property, value: unknown) => void;
   /** Properties hidden in the view are folded under a toggle. */
   hiddenIds?: Set<string>;
 }
 
-export default function PropertyLines({ db, row, props, readOnly, noFiles, onCommit, onLocalChange, hiddenIds }: Props) {
+export default function PropertyLines({ db, row, props, readOnly, noFiles, noComputed, onCommit, onLocalChange, hiddenIds }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
-  const all = (props ?? db.props.filter((p) => p.kind !== "title")).filter((p) => !(noFiles && p.kind === "files"));
+  const all = (props ?? db.props.filter((p) => p.kind !== "title")).filter((p) => !(noFiles && p.kind === "files") && !(noComputed && isComputedKind(p.kind)));
   const hidden = all.filter((p) => hiddenIds?.has(p.id));
   const shown = all.filter((p) => !hiddenIds?.has(p.id) || showHidden);
   return (

@@ -238,6 +238,178 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   is('ungrouping shows no group headers', await table().getByRole('button', { name: /Collapse group/ }).count(), 0);
   await shot('values-typed');
 
+
+  // ---------------------------------------------------------------- a relation and a rollup
+  const colOf = async (name) => (await headerNames()).findIndex((t) => t.startsWith(name));
+  const cellBy = async (row, name) => cell(row, await colOf(name));
+  const addProp = async (kind) => {
+    await p.getByRole('button', { name: 'Add a property' }).click();
+    await wait(150);
+    await p.getByRole('button', { name: kind, exact: true }).first().click();
+    await wait(200);
+  };
+  await addProp('Relation');
+  await p.getByLabel('Related database').selectOption({ label: '✅ Tasks' });
+  await shot('relation-new');
+  await p.getByRole('button', { name: 'Create', exact: true }).click();
+  await wait(900);
+  yes('the relation column exists', (await colOf('Relation')) > 0);
+  const relCell = await cellBy(0, 'Relation');
+  await relCell.click();
+  await p.keyboard.press('Enter');
+  await wait(300);
+  await p.getByRole('button', { name: 'Design the landing page' }).click();
+  await wait(200);
+  await p.getByRole('button', { name: 'Write the API' }).click();
+  await wait(300);
+  await shot('relation-picker');
+  await p.keyboard.press('Escape');
+  await wait(300);
+  const relText = (await (await cellBy(0, 'Relation')).innerText()).replace(/\s+/g, ' ');
+  yes('the relation cell shows both linked rows', relText.includes('Design the landing page') && relText.includes('Write the API'));
+  await addProp('Rollup');
+  await p.getByLabel('Rolled up property').selectOption({ label: 'Estimate' });
+  await p.getByLabel('Calculation').selectOption({ label: 'Sum' });
+  await shot('rollup-new');
+  await p.getByRole('button', { name: 'Create', exact: true }).click();
+  await wait(1200);
+  const roll = ((await (await cellBy(0, 'Rollup')).innerText()) || '').trim();
+  console.log('rollup:', roll);
+  yes('the rollup sums the Estimate of the linked rows', /^\d+(\.\d+)?$/.test(roll) && Number(roll) > 0);
+  await shot('relation-rollup-table');
+
+  // ---------------------------------------------------------------- a row as a page
+  await cell(0, 1).hover();
+  await table().getByRole('button', { name: 'Open row' }).first().click();
+  await wait(900);
+  yes('the row opens as a page with its properties', await p.getByRole('textbox', { name: /Title/i }).count() || await p.locator('.ProseMirror').count());
+  yes('the breadcrumb leads back to the database', await p.getByRole('navigation', { name: 'Breadcrumb' }).getByText('Check DB').count());
+  yes('the property list shows the row values', await p.getByText('hello').count());
+  await shot('row-page');
+  await p.locator('.ProseMirror').click();
+  await p.keyboard.type('Notes about Alpha');
+  await wait(1500);
+  await p.getByRole('navigation', { name: 'Breadcrumb' }).getByText('Check DB').first().click();
+  await wait(900);
+  yes('back in the table', await table().count());
+  await cell(0, 1).hover();
+  await table().getByRole('button', { name: 'Open row' }).first().click();
+  await wait(900);
+  yes('the page body of the row was saved', await p.locator('.ProseMirror', { hasText: 'Notes about Alpha' }).count());
+  await p.getByRole('navigation', { name: 'Breadcrumb' }).getByText('Check DB').first().click();
+  await wait(700);
+
+  // ---------------------------------------------------------------- peeks
+  const openRowsIn = async (label) => {
+    await p.getByRole('button', { name: 'View settings' }).click();
+    await wait(200);
+    await panel().getByLabel('Open rows in').selectOption({ label });
+    await wait(500);
+    await p.keyboard.press('Escape');
+    await wait(200);
+  };
+  await openRowsIn('Side peek');
+  await cell(1, 1).hover();
+  await table().getByRole('button', { name: 'Open row' }).nth(1).click();
+  await wait(1000);
+  yes('a side peek opens next to the table', await p.getByRole('complementary', { name: 'Row' }).count());
+  yes('the side peek shows the row', await p.getByRole('complementary', { name: 'Row' }).getByText('Beta').count());
+  await shot('side-peek');
+  await p.getByRole('complementary', { name: 'Row' }).getByRole('button', { name: 'Close' }).click();
+  await wait(300);
+  is('the side peek closes', await p.getByRole('complementary', { name: 'Row' }).count(), 0);
+  await openRowsIn('Center peek');
+  await cell(1, 1).hover();
+  await table().getByRole('button', { name: 'Open row' }).nth(1).click();
+  await wait(1000);
+  yes('a center peek opens as a dialog', await p.getByRole('dialog').getByText('Beta').count());
+  await shot('center-peek');
+  await p.keyboard.press('Escape');
+  await wait(300);
+  await openRowsIn('Full page');
+
+  // ---------------------------------------------------------------- duplicate, trash and undo
+  await cell(0, 1).hover();
+  await table().getByRole('button', { name: 'Row options' }).first().click();
+  await p.getByRole('menuitem', { name: 'Duplicate' }).click();
+  await wait(700);
+  is('duplicating a row adds one', (await rowTitles()).length, 4);
+  await cell(0, 1).hover();
+  await table().getByRole('button', { name: 'Row options' }).first().click();
+  await p.getByRole('menuitem', { name: 'Move to trash' }).click();
+  await wait(600);
+  is('trashing a row removes it', (await rowTitles()).length, 3);
+  await shot('row-trashed-toast');
+  await p.getByRole('button', { name: 'Undo' }).click();
+  await wait(800);
+  is('Undo brings the row back', (await rowTitles()).length, 4);
+
+  // ---------------------------------------------------------------- templates
+  await p.getByRole('button', { name: 'New with a template' }).click();
+  await p.getByRole('menuitem', { name: /Manage templates/ }).click();
+  await wait(400);
+  const tdlg = p.getByRole('dialog', { name: 'Templates' });
+  await tdlg.getByRole('button', { name: 'New template' }).click();
+  await wait(300);
+  await tdlg.getByLabel('Template name').fill('Weekly');
+  await wait(300);
+  await shot('templates-dialog');
+  await p.keyboard.press('Escape');
+  await wait(700);
+  const rowsBefore = await table().locator('tbody tr').count();
+  await p.getByRole('button', { name: 'New with a template' }).click();
+  yes('the new template is offered in the New menu', await p.getByRole('menuitem', { name: /Weekly/ }).count());
+  await shot('new-menu');
+  await p.getByRole('menuitem', { name: /Weekly/ }).click();
+  await wait(900);
+  is('a row can be made from a template', await table().locator('tbody tr').count(), rowsBefore + 1);
+
+  // ---------------------------------------------------------------- inline database and linked view inside a page
+  await p.getByRole('treeitem', { name: 'Trip notes' }).click();
+  await wait(900);
+  const pm = p.locator('.ProseMirror').first();
+  await pm.click();
+  await p.keyboard.press('Control+End');
+  await p.keyboard.press('Enter');
+  await p.keyboard.type('/database');
+  await wait(300);
+  await shot('slash-database');
+  await p.keyboard.press('Enter');
+  await wait(1200);
+  const block = p.locator('[data-database-block]');
+  is('an inline database block is inserted', await block.count(), 1);
+  yes('the inline database shows a table', await block.getByRole('application', { name: 'Table' }).count());
+  await block.getByRole('button', { name: 'New', exact: true }).first().click();
+  await wait(400);
+  await p.keyboard.type('Inline row');
+  await p.keyboard.press('Enter');
+  await wait(500);
+  yes('a row can be added inside the page', await block.getByText('Inline row').count());
+  await shot('inline-database');
+  // The block survives leaving the page and coming back.
+  await p.getByRole('treeitem', { name: 'Reading list' }).click();
+  await wait(900);
+  await p.getByRole('treeitem', { name: 'Trip notes' }).click();
+  await wait(1200);
+  is('the block is still in the page', await p.locator('[data-database-block]').count(), 1);
+  yes('and still has its row', await p.locator('[data-database-block]').getByText('Inline row').count());
+  // A linked view of Tasks.
+  await p.locator('.ProseMirror').first().focus();
+  await p.keyboard.press('Control+End');
+  await p.keyboard.press('Enter');
+  await p.keyboard.type('/linked');
+  await wait(300);
+  await p.keyboard.press('Enter');
+  await wait(300);
+  await p.getByRole('dialog', { name: 'Choose a database' }).getByRole('button', { name: /Tasks/ }).click();
+  await p.locator('[data-database-block]', { hasText: 'Design the landing page' }).waitFor({ timeout: 20000 }).catch(() => undefined);
+  await wait(300);
+  is('a linked view adds a second block', await p.locator('[data-database-block]').count(), 2);
+  yes('the linked view shows the Tasks rows', await p.locator('[data-database-block]').nth(1).getByText('Design the landing page').count());
+  yes('the linked view got a view of its own', await p.locator('[data-database-block]').nth(1).getByRole('tab', { name: /linked/ }).count());
+  await shot('linked-view');
+
+  yes('the inline database is not listed twice in the sidebar tree', (await p.getByRole('treeitem', { name: 'Untitled database' }).count()) === 0);
   await b.close();
   console.log(fail ? `${fail} FAILED` : 'ALL OK');
   process.exit(fail ? 1 : 0);
