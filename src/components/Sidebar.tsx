@@ -24,17 +24,27 @@ import {
   Settings as SettingsIcon,
   Star,
   StickyNote,
+  Table2,
   Trash2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
+import type { DatabaseMeta } from "@/lib/database-types";
 import type { NotesTree, PageMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "./ui";
 import NotebookDialog, { type NotebookDraft } from "@/features/notes/NotebookDialog";
 import { openExport } from "@/features/notes/ExportDialog";
+import NewDatabaseDialog, { type NewDatabaseTarget } from "@/features/database/NewDatabaseDialog";
+
+/** Opens the "New database" dialog for a section (and optionally a page to put it under). */
+const NewDatabaseContext = createContext<(target: NewDatabaseTarget) => void>(() => {});
+
+/** The databases shown in the tree: not in the trash, and not the inline ones that live inside a page. */
+const listedDatabases = (tree: NotesTree) =>
+  tree.databases.filter((d) => d.trashedAt === null && !d.inline).sort((a, b) => a.order - b.order);
 
 /** Runs a tree-changing command and reports whether it worked (a failure is shown as a toast). */
 type Run = (fn: () => Promise<NotesTree>) => Promise<boolean>;
@@ -149,6 +159,7 @@ export default function Sidebar() {
   const [newNotebook, setNewNotebook] = useState(false);
   const [editing, setEditing] = useState<{ id: string; draft: NotebookDraft } | null>(null);
   const [favOpen, setFavOpen] = useState(true);
+  const [newDb, setNewDb] = useState<NewDatabaseTarget | null>(null);
 
   const toggle = (id: string, force?: boolean) =>
     setOpenIds((prev) => {
@@ -161,12 +172,12 @@ export default function Sidebar() {
 
   // Opening a page (for example from search) reveals it in the tree.
   useEffect(() => {
-    const page = tree.pages.find((p) => p.id === activePageId);
+    const page = tree.pages.find((p) => p.id === activePageId) ?? tree.databases.find((d) => d.id === activePageId);
     const section = tree.sections.find((s) => s.id === page?.sectionId);
     if (section) {
       setOpenIds((prev) => new Set(prev).add(section.id).add(section.notebookId));
     }
-  }, [activePageId, tree.pages, tree.sections]);
+  }, [activePageId, tree.pages, tree.databases, tree.sections]);
 
   const run: Run = async (fn) => {
     try {
@@ -218,7 +229,8 @@ export default function Sidebar() {
   }, []);
 
   const favorites = useMemo(() => tree.pages.filter((p) => p.favorite && p.trashedAt === null), [tree.pages]);
-  const trashed = tree.pages.filter((p) => p.trashedAt !== null).length;
+  const favoriteDbs = useMemo(() => tree.databases.filter((d) => d.favorite && d.trashedAt === null), [tree.databases]);
+  const trashed = tree.pages.filter((p) => p.trashedAt !== null).length + tree.databases.filter((d) => d.trashedAt !== null).length;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const startResize = (e: React.PointerEvent) => {
@@ -238,6 +250,7 @@ export default function Sidebar() {
   const notebookIds = tree.notebooks.map((n) => n.id);
 
   return (
+    <NewDatabaseContext.Provider value={setNewDb}>
     <aside className="relative flex shrink-0 flex-col bg-sidebar" style={{ width }}>
       <nav aria-label="Primary" className="space-y-0.5 px-2 pb-2 pt-1">
         <NavRow icon={<Home size={17} />} label="Home" active={homeActive} onClick={() => { useApp.setState({ activePageId: null, showTrash: false }); setView("notes"); }} />
@@ -246,7 +259,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-        {favorites.length > 0 && (
+        {favorites.length + favoriteDbs.length > 0 && (
           <div className="mb-2">
             <GroupHeader label="Favorites" open={favOpen} onToggle={() => setFavOpen(!favOpen)} />
             {favOpen && (
@@ -257,11 +270,23 @@ export default function Sidebar() {
                     rowKey={`fav:${p.id}`}
                     page={p}
                     depth={0}
-                    pos={{ i, n: favorites.length }}
+                    pos={{ i, n: favorites.length + favoriteDbs.length }}
                     active={p.id === activePageId && view === "notes"}
                     run={run}
                     sections={tree}
                     onOpen={() => useApp.getState().openPage(p.id)}
+                  />
+                ))}
+                {favoriteDbs.map((d, i) => (
+                  <DatabaseItem
+                    key={d.id}
+                    rowKey={`favdb:${d.id}`}
+                    db={d}
+                    depth={0}
+                    pos={{ i: favorites.length + i, n: favorites.length + favoriteDbs.length }}
+                    active={d.id === activePageId && view === "notes"}
+                    run={run}
+                    tree={tree}
                   />
                 ))}
               </Tree>
@@ -400,6 +425,16 @@ export default function Sidebar() {
           <FilePlus2 size={16} /> New page
           <span className="ml-auto text-[0.7rem] text-faint">Ctrl N</span>
         </button>
+        <button
+          onClick={() => {
+            const sid = useApp.getState().activeSectionId ?? tree.sections[0]?.id;
+            if (!sid) setNewNotebook(true);
+            else setNewDb({ sectionId: sid, parent: "" });
+          }}
+          className="flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        >
+          <Table2 size={16} /> New database…
+        </button>
         <NavRow
           icon={<Trash2 size={16} />}
           label="Trash"
@@ -454,7 +489,9 @@ export default function Sidebar() {
           setEditing(null);
         }}
       />
+      <NewDatabaseDialog target={newDb} onClose={() => setNewDb(null)} />
     </aside>
+    </NewDatabaseContext.Provider>
   );
 }
 
@@ -798,10 +835,12 @@ function SectionBlock({
   activePageId: string | null;
 }) {
   const deleteWithConfirm = useDeleteWithConfirm();
+  const newDatabase = useContext(NewDatabaseContext);
   const [renaming, setRenaming] = useState(false);
   const pages = tree.pages.filter((p) => p.sectionId === section.id && p.trashedAt === null);
   const known = new Set(pages.map((p) => p.id));
   const roots = pages.filter((p) => !p.parent || !known.has(p.parent));
+  const dbsHere = listedDatabases(tree).filter((d) => d.sectionId === section.id && (!d.parent || !known.has(d.parent)));
   const rootIds = roots.map((p) => p.id);
   const rowKey = `sec:${section.id}`;
   // Only the section's own row starts a drag, so dragging its pages doesn't move the section.
@@ -861,6 +900,9 @@ function SectionBlock({
             <>
               <MenuItem icon={<Plus size={14} />} onSelect={onNewPage}>
                 New page
+              </MenuItem>
+              <MenuItem icon={<Table2 size={14} />} onSelect={() => newDatabase({ sectionId: section.id, parent: "" })}>
+                New database…
               </MenuItem>
               <MenuItem icon={<Pencil size={14} />} onSelect={() => setRenaming(true)}>
                 Rename
@@ -923,7 +965,10 @@ function SectionBlock({
                 ))}
               </SortableContext>
             </DndContext>
-            {pages.length === 0 && (
+            {dbsHere.map((d, i) => (
+              <DatabaseItem key={d.id} rowKey={`db:${d.id}`} db={d} depth={2} pos={{ i, n: dbsHere.length }} active={d.id === activePageId} run={run} tree={tree} />
+            ))}
+            {pages.length === 0 && dbsHere.length === 0 && (
               <Row rowKey={`add:${section.id}`} depth={2} pos={{ i: 0, n: 1 }} onClick={onNewPage} icon={<Plus size={14} className="text-faint" />} label="Add a page" active={false} muted />
             )}
           </motion.div>
@@ -955,7 +1000,11 @@ function PageBranch({
 }) {
   const kids = pages.filter((p) => p.parent === page.id);
   const kidIds = kids.map((k) => k.id);
-  const containsActive = (id: string): boolean => pages.some((p) => p.parent === id && (p.id === activePageId || containsActive(p.id)));
+  const newDatabase = useContext(NewDatabaseContext);
+  const kidDbs = listedDatabases(tree).filter((d) => d.parent === page.id);
+  const containsActive = (id: string): boolean =>
+    pages.some((p) => p.parent === id && (p.id === activePageId || containsActive(p.id))) ||
+    listedDatabases(tree).some((d) => d.parent === id && d.id === activePageId);
   const [open, setOpen] = useState(() => containsActive(page.id));
   useEffect(() => {
     if (activePageId && containsActive(page.id)) setOpen(true);
@@ -973,9 +1022,13 @@ function PageBranch({
         run={run}
         sections={tree}
         onOpen={() => useApp.getState().openPage(page.id)}
-        childCount={kids.length}
+        childCount={kids.length + kidDbs.length}
         open={open}
         onToggle={() => setOpen(!open)}
+        onAddDatabase={() => {
+          setOpen(true);
+          newDatabase({ sectionId: page.sectionId, parent: page.id });
+        }}
         onAddSub={async () => {
           try {
             const created = await api.createSubpage(page.id, "");
@@ -990,6 +1043,10 @@ function PageBranch({
       {open &&
         kids.map((k, i) => (
           <PageBranch key={k.id} page={k} depth={depth + 1} pos={{ i, n: kids.length }} siblings={kidIds} pages={pages} tree={tree} activePageId={activePageId} run={run} />
+        ))}
+      {open &&
+        kidDbs.map((d, i) => (
+          <DatabaseItem key={d.id} rowKey={`db:${d.id}`} db={d} depth={depth + 1} pos={{ i, n: kidDbs.length }} active={d.id === activePageId} run={run} tree={tree} />
         ))}
     </>
   );
@@ -1009,6 +1066,7 @@ function PageItem({
   open,
   onToggle,
   onAddSub,
+  onAddDatabase,
 }: {
   rowKey: string;
   page: PageMeta;
@@ -1024,6 +1082,7 @@ function PageItem({
   open?: boolean;
   onToggle?: () => void;
   onAddSub?: () => void;
+  onAddDatabase?: () => void;
 }) {
   const setView = useApp((s) => s.setView);
   return (
@@ -1048,6 +1107,11 @@ function PageItem({
           {onAddSub && (
             <MenuItem icon={<Plus size={14} />} onSelect={onAddSub}>
               Add a page inside
+            </MenuItem>
+          )}
+          {onAddDatabase && (
+            <MenuItem icon={<Table2 size={14} />} onSelect={onAddDatabase}>
+              Add a database inside…
             </MenuItem>
           )}
           <MenuItem icon={<Star size={14} />} onSelect={() => run(() => api.setPageFavorite(page.id, !page.favorite))}>
@@ -1088,6 +1152,93 @@ function PageItem({
               await run(() => api.trashPage(page.id));
               if (useApp.getState().activePageId === page.id) useApp.getState().openPage(null);
               toast("Moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(page.id)) } });
+            }}
+          >
+            Move to trash
+          </MenuItem>
+        </>
+      }
+    />
+  );
+}
+
+/** A database in the tree. Opens in the main area; rows are not listed here. */
+function DatabaseItem({
+  rowKey,
+  db,
+  depth,
+  pos,
+  active,
+  run,
+  tree,
+}: {
+  rowKey: string;
+  db: DatabaseMeta;
+  depth: number;
+  pos: Pos;
+  active: boolean;
+  run: Run;
+  tree: NotesTree;
+}) {
+  const setView = useApp((s) => s.setView);
+  const setFavorite = async () => {
+    try {
+      const m = await api.setDatabaseLook(db.id, db.title, db.icon, !db.favorite, db.locked);
+      const t = useApp.getState().tree;
+      useApp.getState().setTree({ ...t, databases: t.databases.map((d) => (d.id === m.id ? m : d)) });
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+  };
+  const moveTo = async (sectionId: string) => {
+    try {
+      await api.moveDatabase(db.id, sectionId);
+      useApp.getState().setTree(await api.listNotes());
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+  };
+  return (
+    <Row
+      rowKey={rowKey}
+      depth={depth}
+      pos={pos}
+      onClick={() => {
+        setView("notes");
+        useApp.getState().openDatabase(db.id);
+      }}
+      icon={db.icon ? <span className="emoji-mono text-[0.9rem] leading-none">{db.icon}</span> : <Table2 size={15} className="text-faint" />}
+      label={db.title || "Untitled database"}
+      active={active}
+      muted={!db.title}
+      menuLabel="Database options"
+      menu={
+        <>
+          <MenuItem icon={<Star size={14} />} onSelect={setFavorite}>
+            {db.favorite ? "Remove from favorites" : "Add to favorites"}
+          </MenuItem>
+          {tree.sections.length > 1 && <div className="px-2.5 pb-1 pt-2 text-xs text-faint">Move to</div>}
+          {tree.sections
+            .filter((s) => s.id !== db.sectionId)
+            .slice(0, 8)
+            .map((s) => {
+              const nb = tree.notebooks.find((n) => n.id === s.notebookId);
+              return (
+                <MenuItem key={s.id} onSelect={() => moveTo(s.id)}>
+                  <span className="truncate">
+                    {nb?.name} / {s.name}
+                  </span>
+                </MenuItem>
+              );
+            })}
+          <MenuSeparator />
+          <MenuItem
+            danger
+            icon={<Trash2 size={14} />}
+            onSelect={async () => {
+              await run(() => api.trashPage(db.id));
+              if (useApp.getState().activePageId === db.id) useApp.getState().openPage(null);
+              toast("Database moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(db.id)) } });
             }}
           >
             Move to trash

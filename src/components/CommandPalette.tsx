@@ -70,6 +70,13 @@ export default function CommandPalette() {
         s.openNotebook(hit.id);
       } else if (hit.kind === "sticky") {
         await api.openSticky(hit.id);
+      } else if (hit.kind === "database") {
+        const db = s.tree.databases.find((d) => d.id === hit.id);
+        const section = s.tree.sections.find((x) => x.id === db?.sectionId);
+        if (section) useApp.setState({ activeNotebookId: section.notebookId, activeSectionId: section.id });
+        s.openDatabase(hit.id);
+      } else if (hit.kind === "row") {
+        s.openRow(hit.id);
       }
     });
 
