@@ -27,3 +27,5 @@ Short form (4 sections). Times are UTC: the owner's message timestamps and the c
 ## 4. Open points
 
 - The owner chooses a phase and answers D1 to D6 in the document. Recommended: Phase 0, which needs his own Notion export (HTML and Markdown & CSV) in a test folder outside the repository.
+
+- **Postponed by the owner, 2026-11-03 19:18:50 UTC ("postponed for now").** No phase, no inventory (M0) and no copy is started; the two plan documents stay as drafts for when he resumes.
