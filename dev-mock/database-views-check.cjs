@@ -260,12 +260,125 @@ tests.calendar = async (b) => {
   await p.close();
 };
 
+/* ------------------------------------------------------------- timeline */
+tests.timeline = async (b) => {
+  let p = await open(b, 'view=timeline&zoom=day', { width: 1400, height: 800 });
+  const t0 = todayIso();
+  is('timeline: a bar per dated row (17 dated of 20)', await p.locator('[data-bar]').count(), 18);
+  is('timeline: a today line', await p.locator('[data-today-line]').count(), 1);
+  is('timeline: one dependency arrow', await p.locator('[data-dep]').count(), 1);
+  is('timeline: sub-items are listed (Demo script under Prepare demo)', await p.locator('[data-title-of="r12"]').count(), 1);
+  await shot(p, 'timeline-day');
+
+  const mouseDrag = async (loc, dx, where = 'center') => {
+    const bb = await loc.boundingBox();
+    const sx = where === 'start' ? bb.x + 3 : where === 'end' ? bb.x + bb.width - 3 : bb.x + bb.width / 2;
+    const sy = bb.y + bb.height / 2;
+    await p.mouse.move(sx, sy);
+    await p.mouse.down();
+    await p.mouse.move(sx + dx / 2, sy, { steps: 5 });
+    await p.mouse.move(sx + dx, sy, { steps: 5 });
+    await p.mouse.up();
+    await p.waitForTimeout(200);
+  };
+  const bar = (id) => p.locator(`[data-bar="${id}"]`);
+  // Move r1 (range) by +2 days (44px per day at day zoom).
+  const r1 = await p.evaluate(() => window.__h.row('r1').values.due);
+  await clear(p);
+  await mouseDrag(bar('r1'), 88);
+  let sc = await calls(p, 'setCells');
+  is('timeline: dragging a bar moves both dates', sc[0] && sc[0].args, ['r1', { due: { start: addDays(r1.start, 2), end: addDays(r1.end, 2) } }]);
+  is('timeline: the bar follows', [await bar('r1').getAttribute('data-start'), await bar('r1').getAttribute('data-end')], [addDays(r1.start, 2), addDays(r1.end, 2)]);
+
+  // Resize the end of r4 by +1 day and the start of r4 by -1 day.
+  const r4 = await p.evaluate(() => window.__h.row('r4').values.due);
+  await clear(p);
+  await mouseDrag(p.locator('[data-bar="r4"] [data-handle="end"]'), 44, 'center');
+  sc = await calls(p, 'setCells');
+  is('timeline: dragging the right edge moves the end', sc[0] && sc[0].args, ['r4', { due: { start: r4.start, end: addDays(r4.end, 1) } }]);
+  await clear(p);
+  await mouseDrag(p.locator('[data-bar="r4"] [data-handle="start"]'), -44, 'center');
+  sc = await calls(p, 'setCells');
+  is('timeline: dragging the left edge moves the start', sc[0] && sc[0].args, ['r4', { due: { start: addDays(r4.start, -1), end: addDays(r4.end, 1) } }]);
+
+  // A click opens, an arrow key moves.
+  await clear(p);
+  await bar('r7').click();
+  is('timeline: clicking a bar opens the row', (await calls(p, 'openRow')).map((c) => c.args[0]), ['r7']);
+  await clear(p);
+  await bar('r7').focus();
+  await p.keyboard.press('ArrowRight');
+  await p.waitForTimeout(100);
+  sc = await calls(p, 'setCells');
+  is('timeline: ArrowRight moves a bar by a day', sc[0] && sc[0].args, ['r7', { due: { start: addDays(t0, 1) } }]);
+
+  // Collapse the sub-items of "Prepare demo".
+  await p.getByLabel('Collapse sub-items').click();
+  is('timeline: collapsing hides sub-items', await p.locator('[data-title-of="r12"]').count(), 0);
+  await p.getByLabel('Expand sub-items').click();
+  is('timeline: expanding shows them again', await p.locator('[data-title-of="r12"]').count(), 1);
+
+  // Dependencies follow a dragged bar (arrow path changes live).
+  const d0 = await p.locator('[data-dep]').getAttribute('d');
+  const bb = await bar('r4').boundingBox();
+  await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(bb.x + bb.width / 2 + 100, bb.y + bb.height / 2, { steps: 6 });
+  truthy('timeline: the arrow moves while dragging', (await p.locator('[data-dep]').getAttribute('d')) !== d0);
+  await p.mouse.up();
+
+  // Unscheduled rows: Set dates.
+  await clear(p);
+  is('timeline: two rows without dates in the footer', await p.locator('[data-unscheduled]').count(), 2);
+  await p.locator('[data-unscheduled="r10"]').getByRole('button', { name: 'Set dates' }).click();
+  await p.getByLabel('End date', { exact: true }).fill(addDays(t0, 3));
+  await p.getByLabel('Start date', { exact: true }).fill(t0);
+  await p.getByRole('button', { name: 'Save' }).click();
+  await p.waitForTimeout(200);
+  sc = await calls(p, 'setCells');
+  is('timeline: Set dates saves a range', sc[0] && sc[0].args, ['r10', { due: { start: t0, end: addDays(t0, 3) } }]);
+  is('timeline: the row gets a bar', await bar('r10').count(), 1);
+
+  // Zoom.
+  await clear(p);
+  for (const z of ['Month', 'Quarter', 'Year']) {
+    await p.getByRole('button', { name: new RegExp('^' + z + '$', 'i') }).click();
+    truthy(`timeline: zoom ${z} saves timelineZoom`, (await calls(p, 'updateView')).pop().args[0].timelineZoom === z.toLowerCase());
+    await p.waitForTimeout(250);
+    if (z === 'Month') await shot(p, 'timeline-month');
+  }
+  await p.close();
+
+  // Grouped timeline + end property.
+  p = await open(b, 'view=timeline&grouped=1&zoom=week', { width: 1400, height: 800 });
+  is('timeline grouped: group headers', await p.locator('button[aria-expanded]').filter({ hasText: /Not started|In progress|Done/ }).count() >= 3, true);
+  await shot(p, 'timeline-grouped');
+  await clear(p);
+  await p.locator('button[aria-expanded]').filter({ hasText: 'Done' }).first().click();
+  is('timeline grouped: collapsing a group saves it', (await calls(p, 'updateView'))[0].args[0].group.collapsed, ['s3']);
+  await p.close();
+
+  // No date property.
+  p = await open(b, 'view=timeline&noprop=1');
+  truthy('timeline: prompt when no date property', await p.getByText('Choose a date property for the timeline').isVisible());
+  await p.close();
+
+  // Many rows, empty, dark + RTL.
+  p = await open(b, 'view=timeline&data=many&theme=sunrise-dark&rtl=1', { width: 1400, height: 800 });
+  truthy('timeline: 200+ rows render', (await p.locator('[data-bar]').count()) > 200);
+  await shot(p, 'timeline-dark-rtl');
+  await p.close();
+  p = await open(b, 'view=timeline&data=empty');
+  truthy('timeline: empty state', await p.getByText('No rows yet').isVisible());
+  await p.close();
+};
+
 (async () => {
   const b = await chromium.launch();
   for (const [name, fn] of Object.entries(tests)) {
     if (only && only !== name) continue;
     console.log('--', name);
-    try { await fn(b); } catch (e) { fail++; console.log('FAIL', name, 'threw', e.message.split('\n')[0]); }
+    try { await fn(b); } catch (e) { fail++; console.log('FAIL', name, 'threw', e.message.split('\n').slice(0, 12).join(' | ')); }
   }
   await b.close();
   console.log(fail ? `${fail} FAILED` : 'ALL OK');
