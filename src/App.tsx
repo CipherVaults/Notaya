@@ -16,6 +16,33 @@ export default function App() {
   const refreshStatus = useApp((s) => s.refreshStatus);
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
 
+  // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
+  const unlocked = status?.unlocked ?? false;
+  useEffect(() => {
+    if (!unlocked) return;
+    let stopped = false;
+    const check = () =>
+      api
+        .dueReminders()
+        .then((list) => {
+          if (stopped) return;
+          for (const r of list) {
+            toast(r.title || "Untitled", {
+              description: r.databaseTitle ? `Reminder · ${r.databaseTitle}` : "Reminder",
+              duration: 20000,
+              action: { label: "Open", onClick: () => useApp.getState().openRow(r.rowId) },
+            });
+          }
+        })
+        .catch(() => {});
+    check();
+    const t = setInterval(check, 60000);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
+  }, [unlocked]);
+
   useEffect(() => {
     // A message saved just before a reload (for example a restore that failed): show it once.
     try {
