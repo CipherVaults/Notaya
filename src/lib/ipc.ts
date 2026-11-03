@@ -29,6 +29,8 @@ import type {
   Database,
   DatabaseFull,
   DatabaseMeta,
+  CsvSummary,
+  FileRef,
   DbRow,
   QueryRequest,
   RowHit,
@@ -140,6 +142,16 @@ export const api = {
   enableSubItems: (id: string) => invoke<Database>("enable_sub_items", { id }),
   enableDependencies: (id: string) => invoke<Database>("enable_dependencies", { id }),
   chartData: (request: QueryRequest) => invoke<ChartData>("chart_data", { request }),
+  /** Imports a CSV file as a new database in a section, or into an existing one. null = cancelled. */
+  importCsv: (databaseId: string | null, sectionId: string | null) =>
+    invoke<CsvSummary | null>("import_csv", { databaseId, sectionId }),
+  exportCsv: (databaseId: string, viewId: string | null) =>
+    invoke<{ fileName: string; rows: number; columns: number } | null>("export_csv", { databaseId, viewId }),
+  /** Stores a file (up to 50 MB) encrypted in the vault; put the result into the row's Files cell. */
+  attachFile: (bytes: Uint8Array, name: string) =>
+    invoke<FileRef>("attach_file", bytes, { headers: { "x-file-name": encodeURIComponent(name) } }),
+  openFile: (fileId: string, name: string) => invoke<void>("open_file", { fileId, name }),
+  saveFileAs: (fileId: string, name: string) => invoke<string | null>("save_file_as", { fileId, name }),
   // Trash, restore and delete of a row or a database use trashPage / restorePage / deletePage with its id.
 
   // Export: the backend asks where to save (resolves to null if cancelled) and writes an unencrypted file

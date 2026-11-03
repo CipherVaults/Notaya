@@ -327,3 +327,20 @@ export const CALC_NAMES = [
   "sum", "avg", "median", "min", "max", "range", "earliest", "latest", "dateRange",
   "checked", "unchecked", "percentChecked", "percentUnchecked", "showOriginal", "showUnique",
 ] as const;
+
+export interface FileRef {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+}
+
+export interface CsvSummary {
+  databaseId: string;
+  title: string;
+  rows: number;
+  columns: number;
+  skipped: string[];
+  badCells: number;
+  notice: string | null;
+}

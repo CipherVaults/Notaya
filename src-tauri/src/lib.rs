@@ -26,7 +26,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, calculator, database as database_cmd, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, calculator, database as database_cmd, database_io, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -93,12 +93,21 @@ pub fn run() {
             let state = ctx.app_handle().state::<state::AppState>();
             let id = request.uri().path().trim_start_matches('/').to_string();
             let response = match state.with(|s| s.get_attachment(&id)) {
-                Ok((mime, bytes)) => http::Response::builder()
-                    .status(200)
-                    .header("Content-Type", mime)
-                    .header("Cache-Control", "no-store")
-                    .header("X-Content-Type-Options", "nosniff")
-                    .body(bytes),
+                // Only pictures are shown with their own type. A file attached to a database row is
+                // sent as plain data and as a download, so it can never run as a page or a script.
+                Ok((mime, bytes)) => {
+                    let picture = matches!(mime.as_str(), "image/png" | "image/jpeg" | "image/gif" | "image/webp");
+                    let mut b = http::Response::builder()
+                        .status(200)
+                        .header("Content-Type", if picture { mime.as_str() } else { "application/octet-stream" })
+                        .header("Cache-Control", "no-store")
+                        .header("X-Content-Type-Options", "nosniff")
+                        .header("Content-Security-Policy", "default-src 'none'; sandbox");
+                    if !picture {
+                        b = b.header("Content-Disposition", "attachment");
+                    }
+                    b.body(bytes)
+                }
                 Err(_) => http::Response::builder().status(404).body(Vec::new()),
             };
             response.unwrap_or_else(|_| http::Response::new(Vec::new()))
@@ -107,6 +116,8 @@ pub fn run() {
             let _ = APP.set(app.handle().clone());
             // After the single-instance check (a second copy never gets here), so a second start can't look like a crash.
             logging::start(&paths);
+            // Plain copies of row files opened in another program are removed at the next start.
+            database_io::clean_open_copies();
             if let Err(e) = paths.ensure_dirs() {
                 // The folder next to the app can't be written (a read-only drive or folder).
                 // The release exe has no console, so without a message it would just vanish.
@@ -237,6 +248,11 @@ pub fn run() {
             database_cmd::enable_sub_items,
             database_cmd::enable_dependencies,
             database_cmd::chart_data,
+            database_io::import_csv,
+            database_io::export_csv,
+            database_io::attach_file,
+            database_io::open_file,
+            database_io::save_file_as,
             export_cmd::export_notes,
             import_notes_cmd::import_notes,
             import_notes_cmd::import_cancel,

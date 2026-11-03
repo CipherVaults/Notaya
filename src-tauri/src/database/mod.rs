@@ -4,6 +4,7 @@
 
 pub mod chart;
 pub mod clock;
+pub mod csv;
 pub mod engine;
 pub mod formula;
 pub mod regex;

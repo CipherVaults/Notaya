@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use tauri::State;
 
-use super::{limit, notes};
+use super::limit;
 use crate::backup;
 use crate::database::clock;
 use crate::database::engine::{Ctx, RowOut, ViewResult};
@@ -37,7 +37,7 @@ pub fn row(s: &Session, id: &str) -> Result<Row> {
     }
 }
 
-fn ctx_of(s: &Session) -> Ctx<'_> {
+pub(crate) fn ctx_of(s: &Session) -> Ctx<'_> {
     let (now, tz) = clock::local_now();
     Ctx::new(s.items(), now, tz)
 }
@@ -299,11 +299,11 @@ pub fn clean_cell(s: &Session, db: &Database, prop: &Property, v: &Value) -> Res
     .map(|o| o.filter(|_| db.prop(&prop.id).is_some()))
 }
 
-fn parse_cells(r: &Row) -> Map<String, Value> {
+pub(crate) fn parse_cells(r: &Row) -> Map<String, Value> {
     serde_json::from_str::<Value>(&r.cells).ok().and_then(|v| if let Value::Object(m) = v { Some(m) } else { None }).unwrap_or_default()
 }
 
-fn write_cells(r: &mut Row, m: &Map<String, Value>) -> Result<()> {
+pub(crate) fn write_cells(r: &mut Row, m: &Map<String, Value>) -> Result<()> {
     let text = serde_json::to_string(m).map_err(|e| Error::Other(e.to_string()))?;
     if text.len() > 20_000_000 {
         return Err(Error::invalid("This row holds too much data."));
@@ -381,6 +381,18 @@ pub struct DatabaseFull {
     pub notice: Option<String>,
 }
 
+/// The first database changes what an older Notaya can read, so a backup comes first.
+/// Returns true when this is the first database (and the backup was made).
+pub(crate) fn first_database_backup(state: &AppState, s: &Session) -> Result<bool> {
+    let first = !s.items().any(|i| matches!(i, Item::Database(_)));
+    if first {
+        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
+    }
+    Ok(first)
+}
+
+pub(crate) const FIRST_DATABASE_NOTICE: &str = "Notaya made a backup copy first. After this, an older Notaya (V1.4.0 or earlier) cannot open this vault.";
+
 #[tauri::command]
 pub fn create_database(state: State<'_, AppState>, section_id: String, parent: String, inline: bool, title: String, starter_kind: String) -> Result<DatabaseFull> {
     limit("Name", &title, MAX_NAME)?;
@@ -393,10 +405,7 @@ pub fn create_database(state: State<'_, AppState>, section_id: String, parent: S
             return Err(Error::NotFound);
         }
         // The first database changes what an older Notaya can read, so a backup comes first.
-        let first = !s.items().any(|i| matches!(i, Item::Database(_)));
-        if first {
-            backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
-        }
+        let first = first_database_backup(&state, s)?;
         let now = now_ms();
         let order = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.order) } else { None }).max().map_or(0, |m| m + 1);
         let mut db = Database::new(new_id(), section_id, if title.trim().is_empty() { "Untitled database".into() } else { title }, now);
@@ -406,7 +415,7 @@ pub fn create_database(state: State<'_, AppState>, section_id: String, parent: S
         starter(&mut db, &starter_kind);
         db.sanitize()?;
         s.put(Item::Database(db.clone()))?;
-        Ok(DatabaseFull { database: db, notice: if first { Some("Notaya made a backup copy first. After this, an older Notaya (V1.4.0 or earlier) cannot open this vault.".into()) } else { None } })
+        Ok(DatabaseFull { database: db, notice: if first { Some(FIRST_DATABASE_NOTICE.into()) } else { None } })
     })
 }
 
@@ -646,7 +655,7 @@ pub fn query_view(state: State<'_, AppState>, request: QueryRequest) -> Result<V
     })
 }
 
-fn new_row(s: &Session, db: &mut Database, title: String) -> Result<Row> {
+pub(crate) fn new_row(s: &Session, db: &mut Database, title: String) -> Result<Row> {
     let count = s.items().filter(|i| matches!(i, Item::Row(r) if r.db == db.id)).count();
     if count >= MAX_ROWS_PER_DATABASE {
         return Err(Error::invalid("This database has the most rows it can hold."));
@@ -1122,8 +1131,6 @@ pub fn enable_dependencies(state: State<'_, AppState>, id: String) -> Result<Dat
     })
 }
 
-pub use notes::NotesTree;
-
 #[tauri::command]
 pub fn chart_data(state: State<'_, AppState>, request: QueryRequest) -> Result<crate::database::chart::ChartData> {
     state.with(|s| {
@@ -1145,4 +1152,143 @@ pub fn chart_data(state: State<'_, AppState>, request: QueryRequest) -> Result<c
         let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
         Ok(crate::database::chart::chart_data(&ctx, dbref, &view))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::database_io::export_lines;
+
+    fn temp_vault() -> Session {
+        let dir = std::env::temp_dir().join(format!("notaya-dbtest-{}", new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        Session::create_open(&dir.join("vault.nota")).unwrap()
+    }
+
+    fn make_db(s: &mut Session, title: &str) -> Database {
+        let mut db = Database::new(new_id(), "sec".into(), title.into(), 1);
+        db.props.push(Property { id: "n".into(), name: "Qty".into(), kind: PropKind::Number, ..Property::default() });
+        db.props.push(Property { id: "f".into(), name: "Docs".into(), kind: PropKind::Files, ..Property::default() });
+        db.sanitize().unwrap();
+        s.put(Item::Database(db.clone())).unwrap();
+        db
+    }
+
+    fn add_row(s: &mut Session, db: &mut Database, title: &str, cells: &str) -> String {
+        let mut r = new_row(s, db, title.into()).unwrap();
+        r.cells = cells.into();
+        let id = r.id.clone();
+        s.put(Item::Row(r)).unwrap();
+        s.put(Item::Database(db.clone())).unwrap();
+        id
+    }
+
+    #[test]
+    fn deleting_rows_keeps_files_other_rows_use_and_removes_the_rest() {
+        let mut s = temp_vault();
+        let mut db = make_db(&mut s, "Files");
+        let shared = s.put_file("application/octet-stream", b"shared").unwrap();
+        let only = s.put_file("application/octet-stream", b"only").unwrap();
+        let a = add_row(&mut s, &mut db, "A", &format!("{{\"f\":[{{\"id\":\"{shared}\",\"name\":\"s.pdf\"}},{{\"id\":\"{only}\",\"name\":\"o.pdf\"}}]}}"));
+        let _b = add_row(&mut s, &mut db, "B", &format!("{{\"f\":[{{\"id\":\"{shared}\",\"name\":\"s.pdf\"}}]}}"));
+        delete_rows(&mut s, &[a.clone()]).unwrap();
+        assert!(s.get(&a).is_none());
+        assert!(s.get_attachment(&shared).is_ok(), "row B still uses it");
+        assert!(s.get_attachment(&only).is_err(), "nothing uses it any more");
+    }
+
+    #[test]
+    fn rows_go_to_the_trash_and_come_back() {
+        let mut s = temp_vault();
+        let mut db = make_db(&mut s, "T");
+        let a = add_row(&mut s, &mut db, "A", "{}");
+        trash_rows(&mut s, &[a.clone()]).unwrap();
+        assert!(row(&s, &a).unwrap().trashed_at.is_some());
+        restore_rows(&mut s, &[a.clone()]).unwrap();
+        assert!(row(&s, &a).unwrap().trashed_at.is_none());
+        let count = meta_list(&s).into_iter().find(|m| m.id == db.id).unwrap().rows;
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn two_way_relations_follow_each_change() {
+        let mut s = temp_vault();
+        let mut a = make_db(&mut s, "A");
+        let mut b = make_db(&mut s, "B");
+        a.props.push(Property { id: "rel".into(), name: "To B".into(), kind: PropKind::Relation, relation_db: b.id.clone(), relation_back: "back".into(), ..Property::default() });
+        b.props.push(Property { id: "back".into(), name: "To A".into(), kind: PropKind::Relation, relation_db: a.id.clone(), relation_back: "rel".into(), ..Property::default() });
+        s.put(Item::Database(a.clone())).unwrap();
+        s.put(Item::Database(b.clone())).unwrap();
+        let ra = add_row(&mut s, &mut a, "ra", "{}");
+        let rb = add_row(&mut s, &mut b, "rb", "{}");
+        let mut new = Map::new();
+        new.insert("rel".into(), json!([rb.clone()]));
+        let changed = relation_sync_diff(&s, &ra, Some(&Map::new()), &new, &a).unwrap();
+        assert_eq!(changed.len(), 1);
+        s.put_many(changed).unwrap();
+        assert_eq!(parse_cells(&row(&s, &rb).unwrap()).get("back").unwrap(), &json!([ra.clone()]));
+        // Removing the link removes the other side.
+        let changed = relation_sync_diff(&s, &ra, Some(&new), &Map::new(), &a).unwrap();
+        s.put_many(changed).unwrap();
+        assert!(parse_cells(&row(&s, &rb).unwrap()).get("back").is_none());
+    }
+
+    #[test]
+    fn deleting_a_database_cleans_up_relations_to_it() {
+        let mut s = temp_vault();
+        let mut a = make_db(&mut s, "A");
+        let b = make_db(&mut s, "B");
+        a.props.push(Property { id: "rel".into(), name: "To B".into(), kind: PropKind::Relation, relation_db: b.id.clone(), ..Property::default() });
+        a.props.push(Property { id: "roll".into(), name: "Sum".into(), kind: PropKind::Rollup, rollup_relation: "rel".into(), rollup_prop: "n".into(), rollup_calc: "sum".into(), ..Property::default() });
+        s.put(Item::Database(a.clone())).unwrap();
+        let ra = add_row(&mut s, &mut a, "ra", "{\"rel\":[\"x\"],\"n\":3}");
+        delete_database(&mut s, &b.id).unwrap();
+        assert!(s.get(&b.id).is_none());
+        let a2 = database(&s, &a.id).unwrap();
+        assert!(a2.prop("rel").is_none() && a2.prop("roll").is_none());
+        let cells = parse_cells(&row(&s, &ra).unwrap());
+        assert!(cells.get("rel").is_none());
+        assert_eq!(cells.get("n"), Some(&json!(3)));
+    }
+
+    #[test]
+    fn cells_are_checked() {
+        let mut s = temp_vault();
+        let db = make_db(&mut s, "C");
+        let qty = db.prop("n").unwrap().clone();
+        assert_eq!(clean_cell(&s, &db, &qty, &json!("4.5")).unwrap(), Some(json!(4.5)));
+        assert!(clean_cell(&s, &db, &qty, &json!("abc")).is_err());
+        assert_eq!(clean_cell(&s, &db, &qty, &json!("")).unwrap(), None);
+        let files = db.prop("f").unwrap().clone();
+        assert!(clean_cell(&s, &db, &files, &json!([{"id": "../../etc"}])).is_err(), "only vault ids");
+        let ok = clean_cell(&s, &db, &files, &json!([{"id": "a".repeat(32), "name": "..\\x<y>.pdf", "mime": "text/html"}])).unwrap().unwrap();
+        assert_eq!(ok[0]["name"], "..xy.pdf");
+        let title = db.props[0].clone();
+        assert!(clean_cell(&s, &db, &title, &json!("x")).is_err());
+    }
+
+    #[test]
+    fn csv_export_follows_the_view_and_guards_formulas() {
+        let mut s = temp_vault();
+        let mut db = make_db(&mut s, "E");
+        add_row(&mut s, &mut db, "=SUM(A1)", "{\"n\":-5}");
+        add_row(&mut s, &mut db, "plain", "{\"n\":7,\"f\":[{\"id\":\"00000000000000000000000000000000\",\"name\":\"a.pdf\"}]}");
+        let lines = export_lines(&s, &db.id, None).unwrap();
+        assert_eq!(lines[0], vec!["Name", "Qty", "Docs"]);
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[1][0], "'=SUM(A1)", "a formula in a title is defused");
+        assert_eq!(lines[1][1], "-5", "a real negative number is left alone");
+        assert_eq!(lines[2][2], "a.pdf");
+        // A view that hides Docs and filters.
+        let mut v = View { id: "v1".into(), name: "Big".into(), ..View::default() };
+        v.columns = vec![Column { prop: "n".into(), visible: true, width: 0 }, Column { prop: "f".into(), visible: false, width: 0 }];
+        v.filter.conds.push(Cond { prop: "n".into(), op: "gt".into(), value: "0".into(), ..Cond::default() });
+        let mut d = database(&s, &db.id).unwrap();
+        d.views.push(v);
+        s.put(Item::Database(d)).unwrap();
+        let lines = export_lines(&s, &db.id, Some("v1")).unwrap();
+        assert_eq!(lines[0], vec!["Name", "Qty"]);
+        assert_eq!(lines.len(), 2, "only the row with Qty above 0");
+        assert_eq!(lines[1], vec!["plain", "7"]);
+    }
 }
