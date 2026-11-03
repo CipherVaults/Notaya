@@ -5,9 +5,9 @@
 ## 1. What the owner asked, and one conflict to confirm
 
 - 2026-11-03 19:03:04 UTC, Mohamed: "if i told you to copy all thing from notion api to notaya / if we built every feature what it will be".
-- 2026-11-03 19:06:43 UTC, Mohamed: "give me a plan and what limitations we will face / consider like every future we did already and using export of Notion API you will do it / mix of MD and html from notion".
+- 2026-11-03 19:06:43 UTC, Mohamed (edited at 19:08:33): "give me a plan and what limitations we will face / consider like every future we did already and using export of Notion API you will do it / mix of MD and html or pdfs from notion".
 
-So this plan **assumes every Notaya feature in the roadmap exists** (databases, all seven view types, formulas, relations, rollups, charts, dashboards, columns, tabs, synced blocks, files and so on) and asks how a full copy of the owner's Notion would work, using **the Notion API together with the HTML and Markdown & CSV exports**.
+So this plan **assumes every Notaya feature in the roadmap exists** (databases, all seven view types, formulas, relations, rollups, charts, dashboards, columns, tabs, synced blocks, files and so on) and asks how a full copy of the owner's Notion would work, using **the Notion API together with the HTML, Markdown & CSV and PDF exports**.
 
 **Conflict to confirm (D-M1).** At 18:20:37 UTC the owner said "not ... integration or network". The API needs the network once. This plan reads the later messages (19:03 and 19:06) as the owner allowing a **one-time copy tool**, and keeps **Notaya itself fully offline** (promise P5 unchanged). If that is wrong, drop this plan and use only the export route.
 
@@ -15,7 +15,7 @@ So this plan **assumes every Notaya feature in the roadmap exists** (databases, 
 
 ```
 Notion ──API (read only, once)──▶ Migrator tool (separate program, on the owner's PC)
-Notion ──HTML export + Markdown & CSV export──▶ (files the owner downloads)
+Notion ──HTML, Markdown & CSV and PDF exports──▶ (files the owner downloads)
                          │
                          ▼
             Migration folder (JSON + downloaded files + report)
@@ -35,9 +35,10 @@ Notion ──HTML export + Markdown & CSV export──▶ (files the owner downl
 |---|---|---|
 | **Notion API** | Page tree, every block with its type, colors and nesting; database schemas (property types, select/status options, relation targets, **formula expressions**, rollup definitions); every row with typed values; **relations as exact page ids**; **views** (filter, sorts, group-by, visible properties, and the settings of table, board, calendar, timeline, gallery, form, chart, map and **dashboard** views); comments; synced-block originals and where they are reused; file download links | The only source that carries the structure. Read from the Notion help pages for the Views API (version `2025-09-03` or later) |
 | **HTML export** | The page as Notion renders it: fonts, icon, cover, block colors, embeds and bookmarks with their titles; comments | A **cross-check** (page and block counts, text) and a **fallback** for pages where the API returns `unsupported` blocks, and the likeliest source for page look settings (font, small text, full width) that the API may not give. What it adds beyond the API is **not verified** |
+| **PDF export** | A picture of each page as Notion drew it (layout, colors, columns, images). Subpage ZIPs of PDFs only on Business/Enterprise plans; custom emoji are dropped; database pages cannot be printed from the browser | A **look reference only**: a person can open the PDF next to the Notaya page and see what was lost. Notaya's PDF import reads **text only** (no layout, tables, pictures or links), so a PDF can rescue the text of a page that is missing elsewhere but never rebuilds its structure. Not used as a source of data |
 | **Markdown & CSV export** | Plain readable pages and one CSV per database (current view only) | An independent, human-readable backup, and a **check on row counts and values** (a CSV row that is missing in the API copy is a bug in the tool). Not used as the main source |
 
-So the "mix" is: **API for structure, HTML for look and cross-check, Markdown & CSV as the safety copy and the counting check.**
+So the "mix" is: **API for structure, HTML for look and cross-check, Markdown & CSV as the safety copy and the counting check, PDF as the picture of how each page looked (and a last-resort text copy).** Keeping all three exports also means the owner has a readable backup in standard formats that does not depend on Notaya.
 
 ## 3. What carries over (assuming the Notaya features exist)
 
@@ -69,7 +70,7 @@ So the "mix" is: **API for structure, HTML for look and cross-check, Markdown & 
 4. **M3: Databases and rows (L).** Schemas, rows, relations. Needs Notaya Phase 1.
 5. **M4: Views and dashboards (L).** Needs Notaya Phases 2 and 3 (views, charts).
 6. **M5: Formulas and rollups (L).** Needs Notaya Phase 3.
-7. **M6: Check (M).** Compare the Notaya copy with the Markdown & CSV export (page counts, row counts, text of a sample) and the HTML export (a sample of pages side by side), then a written list of what is missing.
+7. **M6: Check (M).** Compare the Notaya copy with the Markdown & CSV export (page counts, row counts, text of a sample), the HTML export and the PDF export (a sample of pages side by side, by eye), then a written list of what is missing.
 8. **M7: Finish.** A final full run on the day the owner wants his backup, then a PC check on throwaway data first (never his real Notaya vault), as in the usual rules.
 
 M1 to M3 can start as soon as the owner picks; M4 to M5 wait for the matching Notaya phases. Pages can be copied before databases exist, so the owner gets something usable early.
@@ -94,6 +95,7 @@ M1 to M3 can start as soon as the owner picks; M4 to M5 wait for the matching No
 - **The file format changes** when databases arrive: an older Notaya may not open a newer vault.
 - **Workload:** search and lists with tens of thousands of rows need the index described in the roadmap.
 - **Windows only.** The tool and Notaya target Windows 10 and 11.
+- **PDFs are pictures:** a Notion PDF export cannot be turned back into blocks, databases or colors. Notaya's PDF import is text only and the PDF export keeps standard fonts only (Arabic, Hebrew, CJK print as `?`), so PDFs are for looking and rescue, not for migration.
 - **Look:** Notaya's own style, not Notion's.
 
 **Process and security**
