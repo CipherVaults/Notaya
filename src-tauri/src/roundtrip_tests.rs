@@ -544,3 +544,56 @@ fn links_between_exported_pages_come_back_as_links_between_the_imported_pages() 
     let _ = std::fs::remove_dir_all(&root);
     assert!(failures.is_empty(), "\n{}\n", failures.join("\n"));
 }
+
+/// A "Link to page" row inside a shelf goes out in every format and comes back as a row inside a
+/// shelf (found in the real app: Markdown kept the shelf body as plain text).
+#[test]
+fn page_link_rows_inside_a_shelf_come_back_as_rows_inside_a_shelf() {
+    let root = temp();
+    let src = new_vault(&root.join("src-data"));
+    let nb = Item::Notebook(Notebook { id: new_id(), name: "Book".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
+    let Item::Notebook(n) = &nb else { unreachable!() };
+    let section = Item::Section(Section { id: new_id(), notebook_id: n.id.clone(), name: "Sec".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+    let Item::Section(sec) = &section else { unreachable!() };
+    let (pa, pb) = (new_id(), new_id());
+    let mut a = page(&pa, &sec.id, "", "Holder", 0, None);
+    if let Item::Page(p) = &mut a {
+        p.content = format!(
+            r#"{{"type":"doc","content":[{{"type":"toggle","attrs":{{"open":true,"shelf":true}},"content":[{{"type":"paragraph","content":[{{"type":"text","text":"Shelf SHELFTITLE"}}]}},{{"type":"pageLink","attrs":{{"pageId":"{pb}"}}}}]}}]}}"#
+        );
+    }
+    let b = page(&pb, &sec.id, "", "Target", 1, None);
+    src.with_mut(|s| s.put_many(vec![nb.clone(), section.clone(), a, b])).unwrap();
+    let mut failures: Vec<String> = Vec::new();
+    for format in [Format::Markdown, Format::Html, Format::Docx] {
+        let label = format.label().to_string();
+        let dir = root.join(format!("shelf-{}", format.ext()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let dest = dir.join("shelf.zip");
+        let scope = Scope::Notebook(n.id.clone());
+        let opts = Options { include_subpages: true, ..Options::default() };
+        src.with(|s| {
+            let items: Vec<&Item> = s.items().collect();
+            let zdoc = export::collect_zip(&items, &scope, &opts, format)?;
+            export::write_zip(&dest, format, zdoc, &|_| None, ZipLimits::default()).map(|_| ())
+        })
+        .unwrap_or_else(|e| panic!("{label}: export: {e}"));
+        let dst = new_vault(&root.join(format!("shelf-dst-{}", format.ext())));
+        import_from(&dst, &[dest.clone()], false, &root.join("src-data"), 1_700_000_000_000, &crate::importers::Control::standard())
+            .unwrap_or_else(|e| panic!("{label}: import: {e}"));
+        let pages: Vec<Page> = dst.with(|s| Ok(s.items().filter_map(|i| if let Item::Page(p) = i { Some(p.clone()) } else { None }).collect())).unwrap();
+        let (Some(a), Some(b)) = (pages.iter().find(|p| p.title == "Holder"), pages.iter().find(|p| p.title == "Target")) else {
+            failures.push(format!("{label}: pages came back as {:?}", pages.iter().map(|p| &p.title).collect::<Vec<_>>()));
+            continue;
+        };
+        let doc: serde_json::Value = serde_json::from_str(&a.content).unwrap();
+        let shelf = &doc["content"][0];
+        let ok_shelf = shelf["type"] == "toggle" && shelf["attrs"]["shelf"] == true;
+        let row = shelf["content"].as_array().and_then(|c| c.iter().find(|n| n["type"] == "pageLink"));
+        if !ok_shelf || row.map(|r| r["attrs"]["pageId"] == b.id.as_str()) != Some(true) {
+            failures.push(format!("{label}: the row inside the shelf: {}", a.content));
+        }
+    }
+    let _ = std::fs::remove_dir_all(&root);
+    assert!(failures.is_empty(), "\n{}\n", failures.join("\n"));
+}

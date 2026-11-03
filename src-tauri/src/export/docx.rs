@@ -618,7 +618,7 @@ impl Writer<'_> {
 
     /// The "Link to page" row: an arrow and the page's title, linked when the page is part of the export.
     fn page_link_row(&mut self, title: &str, target: Option<&PageRef>, ctx: &Ctx, numbering: Option<(u32, u32)>) {
-        const RPR: &str = "<w:i/><w:color w:val=\"4B5563\"/>";
+        const RPR: &str = "<w:i/>";
         let runs = match target {
             None => run_xml(&format!("→ {title}"), RPR, is_rtl_text(title)),
             Some(r) => {

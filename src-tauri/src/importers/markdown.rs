@@ -446,6 +446,15 @@ impl Parser<'_, '_> {
                     html_lines.push(lines[i].as_str());
                     i += 1;
                 }
+                // Notaya's own export (and many tools) write a toggle or shelf as `<details>`, a
+                // `<summary>` line, then the body as Markdown, then `</details>`: the body is read as
+                // Markdown (page-link rows, lists, code...), not as HTML text.
+                if toggle {
+                    if let Some(block) = self.details_with_markdown_body(&html_lines, depth) {
+                        out.push(block);
+                        continue;
+                    }
+                }
                 let blocks = html::parse_fragment(&html_lines.join("\n"), self.ctx);
                 out.extend(blocks);
                 continue;
@@ -459,6 +468,51 @@ impl Parser<'_, '_> {
         }
         flush!();
         out
+    }
+
+    /// `<details ...>`, a summary within its first lines, a Markdown body and a closing `</details>`
+    /// as the last line of the one block (no sibling `<details>` in between): the toggle or shelf
+    /// with its body parsed as Markdown. `None` for anything else (it is read as HTML as before).
+    fn details_with_markdown_body(&mut self, html_lines: &[&str], depth: usize) -> Option<Block> {
+        let n = html_lines.len();
+        if n < 3 || depth >= MAX_DEPTH {
+            return None;
+        }
+        let low: Vec<String> = html_lines.iter().map(|l| l.trim().to_ascii_lowercase()).collect();
+        if !low[0].starts_with("<details") || low[n - 1] != "</details>" {
+            return None;
+        }
+        // The summary ends on one of the first three lines.
+        let s_end = low.iter().take(3).position(|l| l.contains("</summary>"))?;
+        if low[..=s_end].iter().any(|l| l.matches("<details").count() > 1 || l.contains("</details>")) {
+            return None;
+        }
+        // Only one `<details>` at the top: the depth never returns to zero before the last line.
+        let mut open = 0i32;
+        for (k, l) in low.iter().enumerate() {
+            open += l.matches("<details").count() as i32 - l.matches("</details>").count() as i32;
+            if (k + 1 < n && open <= 0) || (k + 1 == n && open != 0) {
+                return None;
+            }
+        }
+        let head = format!("{}\n</details>", html_lines[..=s_end].join("\n"));
+        let mut parsed = html::parse_fragment(&head, self.ctx);
+        if parsed.len() != 1 {
+            return None;
+        }
+        let body: Vec<String> = html_lines[s_end + 1..n - 1].iter().map(|l| l.to_string()).collect();
+        let more = self.blocks(&body, depth + 1);
+        match parsed.pop()? {
+            Block::Toggle(mut inner) => {
+                inner.extend(more);
+                Some(Block::Toggle(inner))
+            }
+            Block::Shelf(mut inner) => {
+                inner.extend(more);
+                Some(Block::Shelf(inner))
+            }
+            _ => None,
+        }
     }
 
     fn list(&mut self, lines: &[String], i: &mut usize, depth: usize) -> Vec<Block> {
@@ -1233,6 +1287,27 @@ mod tests {
         assert!(matches!(blocks[2], Block::Paragraph(_)), "only Markdown and HTML pages");
         assert!(matches!(blocks[3], Block::Paragraph(_)), "a link inside a sentence stays a link");
         assert!(matches!(blocks[4], Block::Paragraph(_)), "never outside the import");
+    }
+
+    #[test]
+    fn a_shelf_or_toggle_body_is_read_as_markdown_with_page_link_rows_and_lists() {
+        let files: &[(&str, &[u8])] = &[("Plain page.md", b"# Plain"), ("Beta page.md", b"# Beta")];
+        let src = "<details open class=\"notaya-shelf\">\n<summary>Shelf</summary>\n\nShelf body\n\n\u{2192} [Plain page](Plain%20page.md)\n\n\u{2192} [Beta page](Beta%20page.md)\n\n- one\n- two\n\n<details open>\n<summary>Inner</summary>\n\nDeep\n\n</details>\n\n</details>\n\nAfter";
+        let (blocks, _, _) = with_ctx(files, |ctx| parse(src, ctx).blocks);
+        assert_eq!(blocks.len(), 2, "{blocks:?}");
+        let Block::Shelf(inner) = &blocks[0] else { panic!("a shelf: {blocks:?}") };
+        assert!(matches!(inner[0], Block::Paragraph(_)), "the summary line");
+        // The arrow rows are still paragraphs here; the renderer turns "→ [Page](file)" lines into page-link rows.
+        for (k, want) in [(2, "notaya-src:Plain page.md"), (3, "notaya-src:Beta page.md")] {
+            let Block::Paragraph(inl) = &inner[k] else { panic!("{inner:?}") };
+            assert!(inl.iter().any(|i| matches!(i, Inline::Text(_, m) if m.link.as_deref() == Some(want))), "{inner:?}");
+        }
+        assert!(matches!(inner[4], Block::Bullets(_)), "a list: {inner:?}");
+        assert!(matches!(&inner[5], Block::Toggle(t) if t.len() == 2), "a toggle inside: {inner:?}");
+        assert!(matches!(blocks[1], Block::Paragraph(_)));
+        // Two details side by side, or a block that is not closed, keep the old reading (as HTML).
+        let (b2, _, _) = with_ctx(files, |ctx| parse("<details>\n<summary>A</summary>\n\nx\n\n</details>\n<details>\n<summary>B</summary>\n\ny\n\n</details>", ctx).blocks);
+        assert_eq!(b2.len(), 2, "{b2:?}");
     }
 
     #[test]
