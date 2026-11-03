@@ -159,3 +159,16 @@ fn agrees_with_what_notion_computed() {
     assert_eq!(num(ours("Squared", 7)), 6.25);
     assert_eq!(ours("Plus10", 7), Ok(Val::Str("2026-11-13".into())));
 }
+
+/// Notion's own order of the names (a view sorted by Name ascending, read back 2026-11-03):
+/// case is ignored, a shorter name comes before a longer one that starts with it, and Arabic comes after Latin.
+#[test]
+fn sorts_names_in_the_order_notion_does() {
+    let (db, rows) = build();
+    let items: Vec<crate::model::Item> = std::iter::once(crate::model::Item::Database(db.clone())).chain(rows.iter().cloned().map(crate::model::Item::Row)).collect();
+    let ctx = Ctx::new(items.iter(), value::from_parts(2026, 11, 3, 12, 0), 0);
+    let all: Vec<&Row> = rows.iter().collect();
+    let sorted = ctx.sorted(&db, all, &[Sort { prop: TITLE_PROP.into(), descending: false }]);
+    let names: Vec<&str> = sorted.iter().map(|r| r.title.as_str()).collect();
+    assert_eq!(names, vec!["apple pie", "Banana", "Banana split", "Empty row", "Mango", "Time row", "Zebra", "مرحبا بالعالم"]);
+}

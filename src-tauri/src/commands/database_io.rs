@@ -657,6 +657,30 @@ mod tests {
         assert_eq!(b.bad_cells, 0);
     }
 
+    /// The owner's "To Do List DB" in Notion (6 rows; its "Done" view, filtered on Done checked, shows 1).
+    /// Shaped like a Notion CSV export: dates as "July 1, 2025", checkboxes as Yes / No.
+    #[test]
+    fn the_owners_notion_todo_list_imports_and_filters_like_notion() {
+        use crate::database::engine::Ctx;
+        let t = table("Name,Done,Due Date\nCheck the box to mark items as done,Yes,\"July 1, 2025\"\nClick the due date below to change it,No,\"July 1, 2025\"\nClick this text to see more details,No,\"July 1, 2025\"\nClick the blue + button to add a task,No,\"July 1, 2025\"\nSee finished items in the \"Done\" view,No,\"July 1, 2025\"\nClick me to learn to hide checked items,No,\"July 1, 2025\"\n");
+        let db = Database::new("d".into(), "sec".into(), "To Do List DB".into(), 1);
+        let b = build_from_table(db, &t, 0, 5).unwrap();
+        let kinds: Vec<PropKind> = b.db.props.iter().map(|p| p.kind).collect();
+        assert_eq!(kinds, vec![PropKind::Title, PropKind::Checkbox, PropKind::Date]);
+        assert_eq!(b.rows.len(), 6);
+        let done_id = b.db.props[1].id.clone();
+        let mut view = View { id: "done".into(), name: "Done".into(), ..View::default() };
+        view.filter.conds.push(Cond { prop: done_id, op: "is".into(), value: "true".into(), ..Cond::default() });
+        let items: Vec<Item> = std::iter::once(Item::Database(b.db.clone())).chain(b.rows.iter().cloned().map(Item::Row)).collect();
+        let ctx = Ctx::new(items.iter(), value::from_parts(2026, 11, 3, 12, 0), 0);
+        let out = ctx.run_view(&b.db, &view);
+        assert_eq!(out.total, 6);
+        assert_eq!(out.rows.len(), 1, "Notion's Done view shows one row");
+        assert_eq!(out.rows[0].title, "Check the box to mark items as done");
+        let all = ctx.run_view(&b.db, &View::default());
+        assert_eq!(all.rows.len(), 6, "Notion's To Do view shows all six");
+    }
+
     #[test]
     fn existing_columns_are_matched_by_name_and_bad_cells_counted() {
         let mut db = Database::new("d".into(), "sec".into(), "T".into(), 1);
