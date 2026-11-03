@@ -7,6 +7,7 @@ pub mod clock;
 pub mod csv;
 pub mod engine;
 pub mod formula;
+pub mod notion_compare;
 pub mod regex;
 pub mod types;
 pub mod value;

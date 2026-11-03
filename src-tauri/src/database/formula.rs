@@ -876,6 +876,13 @@ impl<'a> Scope<'a> {
             // ---- dates
             "now" => Val::Date(DateVal { start: self.env.now(), end: None, has_time: true }),
             "today" => Val::Date(DateVal { start: start_of_day(self.env.now()), end: None, has_time: false }),
+            // An empty date gives an empty result (as in Notion), not an error.
+            "year" | "month" | "date" | "day" | "hour" | "minute" | "start" | "dateStart" | "end" | "dateEnd" | "dateAdd" | "dateSubtract" | "formatDate" | "timestamp"
+                if matches!(arg(0)?, Val::Null) =>
+            {
+                Val::Null
+            }
+            "dateBetween" if matches!(arg(0)?, Val::Null) || matches!(arg(1)?, Val::Null) => Val::Null,
             "year" => Val::Num(parts(date_of(arg(0)?, name)?.start).0 as f64),
             "month" => Val::Num(parts(date_of(arg(0)?, name)?.start).1 as f64),
             "date" => Val::Num(parts(date_of(arg(0)?, name)?.start).2 as f64),
@@ -952,7 +959,25 @@ fn need(name: &str, args: &[Expr], lo: usize, hi: usize) -> Result<(), String> {
     Ok(())
 }
 
+/// An empty value next to a number, text or checkbox counts as 0, "" or unchecked (as in Notion:
+/// an empty number is not greater than 5). Next to another empty value or a date it stays empty.
+fn fill_empty(l: &Val, r: &Val) -> (Val, Val) {
+    let zero = |other: &Val| match other {
+        Val::Num(_) => Some(Val::Num(0.0)),
+        Val::Str(_) => Some(Val::Str(String::new())),
+        Val::Bool(_) => Some(Val::Bool(false)),
+        Val::List(_) => Some(Val::List(vec![])),
+        _ => None,
+    };
+    match (l, r) {
+        (Val::Null, o) => (zero(o).unwrap_or(Val::Null), o.clone()),
+        (o, Val::Null) => (o.clone(), zero(o).unwrap_or(Val::Null)),
+        _ => (l.clone(), r.clone()),
+    }
+}
+
 fn binary(op: &str, l: Val, r: Val) -> Result<Val, String> {
+    let (l, r) = if matches!(op, "==" | "!=" | "<" | ">" | "<=" | ">=") { fill_empty(&l, &r) } else { (l, r) };
     Ok(match op {
         "==" => Val::Bool(same(&l, &r)),
         "!=" => Val::Bool(!same(&l, &r)),
