@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-03 (owner's messages 18:18:10 and 18:20:37 UTC; work 18:18-18:40 UTC, system clock), EX-2026-11-03-41: plan for Notaya as an offline Notion
+
+- Report: [2026-11-03-notion-offline-roadmap.md](2026-11-03-notion-offline-roadmap.md)
+- Task / Goal: "all the features but locally"; "not ai or integration or network or cloud or sync or sharing ... if something happened to notion i have my offline backup"
+- Executor: Claude (Claude Code) in a cloud thread; docs only
+- Outcome: produced (gap list, local/not-local split, sizes, phased roadmap); nothing built; not integrated, not accepted
+- Open dependency / next action: the owner picks a phase (Phase 0, a real Notion export, recommended)
+
 ### 2026-11-03 (owner's messages 06:52:53 and 06:54:14 UTC; PC session started after 06:54 UTC and ended before 08:11:56 UTC (thread timestamps)), EX-2026-11-03-40: V1.4.0 features and PC tests
 
 - Report: [2026-11-03-v1-4-0-pc-tests.md](2026-11-03-v1-4-0-pc-tests.md)
