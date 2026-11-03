@@ -248,6 +248,7 @@ pub fn run() {
             database_cmd::enable_sub_items,
             database_cmd::enable_dependencies,
             database_cmd::chart_data,
+            database_cmd::due_reminders_now,
             database_io::import_csv,
             database_io::export_csv,
             database_io::export_database,

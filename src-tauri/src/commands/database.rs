@@ -1154,6 +1154,77 @@ pub fn chart_data(state: State<'_, AppState>, request: QueryRequest) -> Result<c
     })
 }
 
+// ---------------------------------------------------------------- reminders
+
+/// A date with a reminder that has come due. Only the row's title is sent (no cell values).
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Reminder {
+    pub key: String,
+    pub row_id: String,
+    pub title: String,
+    pub database_id: String,
+    pub database_title: String,
+    /// When the date starts, as text.
+    pub when: String,
+}
+
+/// Reminders that came due in the last 24 hours (a date without a time counts as 09:00).
+/// Pure: `shown` is the keys already reported.
+pub fn due_reminders(ctx: &Ctx, shown: &HashSet<String>) -> Vec<Reminder> {
+    let mut out = Vec::new();
+    for (dbid, db) in &ctx.dbs {
+        let date_props: Vec<&Property> = db.props.iter().filter(|p| p.kind == PropKind::Date).collect();
+        if date_props.is_empty() {
+            continue;
+        }
+        for r in ctx.rows_of(dbid) {
+            let cells = ctx.cells_of(r);
+            for p in &date_props {
+                let Some(Value::Object(o)) = cells.get(&p.id) else { continue };
+                let Some(mins) = o.get("reminder").and_then(|x| x.as_i64()) else { continue };
+                let Some(start) = o.get("start").and_then(|x| x.as_str()).and_then(parse_date) else { continue };
+                let at = if start.has_time { start.start } else { start.start + 9 * 60 };
+                let fire = at - mins;
+                let key = format!("{}:{}:{}", r.id, p.id, fire);
+                if fire <= ctx.now && fire > ctx.now - 24 * 60 && !shown.contains(&key) {
+                    out.push(Reminder {
+                        key,
+                        row_id: r.id.clone(),
+                        title: if r.title.is_empty() { "Untitled".into() } else { r.title.clone() },
+                        database_id: db.id.clone(),
+                        database_title: db.title.clone(),
+                        when: value::format_iso(start.start, start.has_time),
+                    });
+                }
+            }
+        }
+    }
+    out.sort_by(|a, b| a.when.cmp(&b.when).then(a.key.cmp(&b.key)));
+    out.truncate(20);
+    out
+}
+
+static SHOWN_REMINDERS: std::sync::Mutex<Option<HashSet<String>>> = std::sync::Mutex::new(None);
+
+/// The reminders that are due now and were not reported before in this run. The UI shows each
+/// one inside Notaya (title only); turning reminders off is a setting of the UI.
+#[tauri::command]
+pub fn due_reminders_now(state: State<'_, AppState>) -> Result<Vec<Reminder>> {
+    state.with(|s| {
+        let mut guard = SHOWN_REMINDERS.lock().unwrap_or_else(|e| e.into_inner());
+        let shown = guard.get_or_insert_with(HashSet::new);
+        let due = due_reminders(&ctx_of(s), shown);
+        for d in &due {
+            shown.insert(d.key.clone());
+        }
+        if shown.len() > 5000 {
+            shown.clear();
+        }
+        Ok(due)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1249,6 +1320,27 @@ mod tests {
         let cells = parse_cells(&row(&s, &ra).unwrap());
         assert!(cells.get("rel").is_none());
         assert_eq!(cells.get("n"), Some(&json!(3)));
+    }
+
+    #[test]
+    fn reminders_come_due_once_and_stay_quiet_for_old_or_future_dates() {
+        let mut s = temp_vault();
+        let mut db = Database::new(new_id(), "sec".into(), "Plans".into(), 1);
+        db.props.push(Property { id: "d".into(), name: "When".into(), kind: PropKind::Date, ..Property::default() });
+        s.put(Item::Database(db.clone())).unwrap();
+        let now = value::from_parts(2026, 11, 3, 12, 0);
+        let iso = |m: i64| value::format_iso(m, true);
+        let cell = |start: i64, rem: i64| format!("{{\"d\":{{\"start\":\"{}\",\"reminder\":{rem}}}}}", iso(start));
+        add_row(&mut s, &mut db, "due", &cell(now + 5, 10));
+        add_row(&mut s, &mut db, "later", &cell(now + 120, 10));
+        add_row(&mut s, &mut db, "old", &cell(now - 3 * 24 * 60, 10));
+        add_row(&mut s, &mut db, "no reminder", &format!("{{\"d\":{{\"start\":\"{}\"}}}}", iso(now)));
+        let ctx = Ctx::new(s.items(), now, 0);
+        let mut shown = HashSet::new();
+        let due = due_reminders(&ctx, &shown);
+        assert_eq!(due.iter().map(|d| d.title.as_str()).collect::<Vec<_>>(), vec!["due"]);
+        shown.insert(due[0].key.clone());
+        assert!(due_reminders(&ctx, &shown).is_empty(), "reported once");
     }
 
     #[test]

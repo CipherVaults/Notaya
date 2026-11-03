@@ -30,6 +30,7 @@ import type {
   DatabaseFull,
   DatabaseMeta,
   CsvSummary,
+  Reminder,
   FileRef,
   DbRow,
   QueryRequest,
@@ -150,6 +151,8 @@ export const api = {
   /** The database (or one view) as a document with one table. format: html | markdown | pdf | docx. */
   exportDatabase: (databaseId: string, viewId: string | null, format: "html" | "markdown" | "pdf" | "docx") =>
     invoke<ExportSummary | null>("export_database", { databaseId, viewId, format }),
+  /** Reminders that came due since the last call (title only). */
+  dueReminders: () => invoke<Reminder[]>("due_reminders_now"),
   /** Stores a file (up to 50 MB) encrypted in the vault; put the result into the row's Files cell. */
   attachFile: (bytes: Uint8Array, name: string) =>
     invoke<FileRef>("attach_file", bytes, { headers: { "x-file-name": encodeURIComponent(name) } }),

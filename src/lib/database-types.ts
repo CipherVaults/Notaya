@@ -344,3 +344,12 @@ export interface CsvSummary {
   badCells: number;
   notice: string | null;
 }
+
+export interface Reminder {
+  key: string;
+  rowId: string;
+  title: string;
+  databaseId: string;
+  databaseTitle: string;
+  when: string;
+}
