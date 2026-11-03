@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
-import { CalendarDays, ImagePlus, Link2, Minus, Radical, Table2 } from "lucide-react";
+import { CalendarDays, ImagePlus, Link2, Minus, PilcrowLeft, PilcrowRight, Radical, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { pickImages } from "./extensions";
@@ -44,6 +44,9 @@ const ITEMS: Item[] = [
   { group: "Insert", title: "Inline equation", hint: "Maths inside a line (or type $x^2$)", keywords: "equation math formula tex latex inline", icon: <Radical size={s} />, run: (e) => e.chain().focus().insertMathInline().run() },
   { group: "Insert", title: "Sub-page", hint: "A new page inside this one", keywords: "page subpage sub-page child inside", icon: icon("page"), run: turn("page") },
   { group: "Insert", title: "Link to page", hint: "A link to a page you already have", keywords: "link page mention existing", icon: <Link2 size={s} />, run: () => {}, picker: "page" },
+  { group: "Direction", title: "Right-to-left text", hint: "Arabic, Hebrew: runs from the right", keywords: "rtl right to left direction arabic hebrew persian urdu", icon: <PilcrowLeft size={s} />, run: (e) => void e.chain().focus().setBlockDirection("rtl").run() },
+  { group: "Direction", title: "Left-to-right text", hint: "English: runs from the left", keywords: "ltr left to right direction english", icon: <PilcrowRight size={s} />, run: (e) => void e.chain().focus().setBlockDirection("ltr").run() },
+  { group: "Direction", title: "Automatic direction", hint: "Follow the language of the text", keywords: "auto automatic direction rtl ltr language", icon: icon("p"), run: (e) => void e.chain().focus().setBlockDirection(null).run() },
   {
     group: "Quick",
     title: "Today's date",

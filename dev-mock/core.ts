@@ -93,6 +93,43 @@ const pageBody = {
   ],
 };
 
+// ?rtl=1 shows a page mixing Arabic, Hebrew and English (for checking right-to-left text).
+const t = (text: string, marks?: unknown[]) => ({ type: "text", text, ...(marks ? { marks } : {}) });
+const para = (text: string, attrs?: Record<string, unknown>) => ({ type: "paragraph", ...(attrs ? { attrs } : {}), content: [t(text)] });
+const item = (text: string, type = "listItem", attrs?: Record<string, unknown>) => ({ type, ...(attrs ? { attrs } : {}), content: [para(text)] });
+const rtlBody = {
+  type: "doc",
+  content: [
+    { type: "heading", attrs: { level: 2 }, content: [t("ملاحظات الصباح")] },
+    para("هذه فقرة عربية تبدأ من اليمين، وفيها كلمة English في الوسط وأرقام 123."),
+    para("This is an English paragraph, it stays on the left."),
+    para("זוהי פסקה בעברית, והיא מיושרת לימין."),
+    para("هذه فقرة عربية مع محاذاة صريحة لليسار", { textAlign: "left" }),
+    para("English text forced right-to-left", { dir: "rtl" }),
+    { type: "heading", attrs: { level: 3 }, content: [t("قائمة المهام")] },
+    { type: "bulletList", content: [item("البند الأول"), item("البند الثاني"), item("English item")] },
+    { type: "orderedList", content: [item("الخطوة الأولى"), item("الخطوة الثانية")] },
+    { type: "taskList", content: [item("إنهاء الخزنة", "taskItem", { checked: true }), item("تحسين المحرر", "taskItem", { checked: false })] },
+    { type: "blockquote", content: [para("البساطة أولاً، ثم الأفكار الذكية.")] },
+    { type: "callout", attrs: { icon: "💡" }, content: [para("نصيحة: اكتب / في سطر فارغ لإضافة كتلة.")] },
+    { type: "toggle", attrs: { open: true, shelf: true }, content: [para("رف الملاحظات"), para("نص داخل الرف.")] },
+    { type: "toggle", attrs: { open: false }, content: [para("قسم قابل للطي"), para("مخفي")] },
+    { type: "table", content: [
+      { type: "tableRow", content: [{ type: "tableHeader", content: [para("الاسم")] }, { type: "tableHeader", content: [para("القيمة")] }, { type: "tableHeader", content: [para("ملاحظة")] }] },
+      { type: "tableRow", content: [{ type: "tableCell", content: [para("أحمد")] }, { type: "tableCell", content: [para("١٢٣")] }, { type: "tableCell", content: [para("جيد")] }] },
+    ] },
+    { type: "table", content: [
+      { type: "tableRow", content: [{ type: "tableHeader", content: [para("Name")] }, { type: "tableHeader", content: [para("Value")] }, { type: "tableHeader", content: [para("Note")] }] },
+      { type: "tableRow", content: [{ type: "tableCell", content: [para("Ahmed")] }, { type: "tableCell", content: [para("42")] }, { type: "tableCell", content: [para("fine")] }] },
+    ] },
+    { type: "paragraph" },
+  ],
+};
+if (params.get("rtl")) {
+  tree.pages[0].title = "ملاحظات الصباح";
+  tree.pages[0].preview = "هذه فقرة عربية تبدأ من اليمين";
+}
+
 const stickies = [
   { id: "k1", content: "", text: "Call the bank before Friday\n- ask about the card", color: "yellow", x: 100, y: 100, w: 320, h: 320, onTop: true, open: true, created: ago(100), updated: ago(10) },
   { id: "k2", content: "", text: "Ideas: dark/light toggle, keyboard shortcuts cheat sheet", color: "blue", x: 140, y: 140, w: 320, h: 320, onTop: true, open: false, created: ago(200), updated: ago(60) },
@@ -222,7 +259,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok({ ...tree });
     }
     case "get_page":
-      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk" });
+      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk" });
     case "create_subpage":
       return ok({ ...tree.pages[0], id: "p" + Math.floor(Math.random() * 1e6), parent: args.parentId, title: args.title, content: "", text: "", cover: "" });
     case "set_page_look":

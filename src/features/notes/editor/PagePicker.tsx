@@ -119,7 +119,7 @@ export default function PagePicker({
             >
               <span className="grid h-6 w-6 shrink-0 place-items-center text-base leading-none">{page.icon || "📄"}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-fg">{page.title || "Untitled"}</span>
+                <span dir="auto" className="block truncate text-sm text-fg">{page.title || "Untitled"}</span>
                 {where && <span className="block truncate text-xs text-faint">{where}</span>}
               </span>
             </button>

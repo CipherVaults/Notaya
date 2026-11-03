@@ -26,6 +26,7 @@ use super::doc::{self, Block, Cell, Inline, Marks, HIGHLIGHTS};
 use super::markup::{attr, local, Token, Tokenizer};
 use super::zip::Archive;
 use super::{palette, safe_link, Ctx};
+use crate::export::doc::Dir;
 use crate::export::docx::{CODE_BOOKMARK, SHELF_STYLE};
 
 const MAX_XML: u64 = 64 * 1024 * 1024;
@@ -239,6 +240,8 @@ struct Para {
     inl: Vec<Inline>,
     /// A code block starts here (Notaya's hidden bookmark), with this language.
     code_start: Option<String>,
+    /// A right-to-left paragraph (`w:bidi`).
+    bidi: bool,
 }
 
 enum Item {
@@ -254,6 +257,8 @@ struct TableState {
     row_count: usize,
     /// The table style (`NotayaShelf` marks a shelf).
     style: Option<String>,
+    /// A table drawn right-to-left (`w:bidiVisual`).
+    bidi: bool,
 }
 
 struct CellState {
@@ -338,6 +343,16 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                     "pStyle" if in_ppr => {
                         if let Some(p) = paras.last_mut() {
                             p.style = attr(&attrs, "w:val").map(str::to_string);
+                        }
+                    }
+                    "bidi" if in_ppr => {
+                        if let Some(p) = paras.last_mut() {
+                            p.bidi = on(&attrs);
+                        }
+                    }
+                    "bidiVisual" if flat == 0 => {
+                        if let Some(t) = tables.last_mut() {
+                            t.bidi = on(&attrs);
                         }
                     }
                     "outlineLvl" if in_ppr => {
@@ -523,7 +538,15 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                     }
                     "p" if para_over > 0 => para_over -= 1,
                     "p" => {
-                        if let Some(p) = paras.pop() {
+                        if let Some(mut p) = paras.pop() {
+                            // A right-to-left paragraph: its text runs carry the direction to the page writer.
+                            if p.bidi {
+                                for i in p.inl.iter_mut() {
+                                    if let Inline::Text(_, m) = i {
+                                        m.dir = Dir::Rtl;
+                                    }
+                                }
+                            }
                             push_item(Item::Para(p), &mut cells, &mut body);
                         }
                     }
@@ -558,7 +581,13 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                                 let cell = t.rows.remove(0).remove(0);
                                 push_item(Item::Block(Block::Shelf(cell.blocks)), &mut cells, &mut body);
                             } else if !t.rows.is_empty() {
-                                push_item(Item::Block(Block::Table(t.rows)), &mut cells, &mut body);
+                                let mut table = vec![Block::Table(t.rows)];
+                                if t.bidi {
+                                    doc::force_first_rtl(&mut table);
+                                }
+                                if let Some(table) = table.pop() {
+                                    push_item(Item::Block(table), &mut cells, &mut body);
+                                }
                             }
                         }
                     }
@@ -779,6 +808,31 @@ pub(crate) mod tests {
             ],
             true,
         )
+    }
+
+    #[test]
+    fn word_right_to_left_paragraphs_and_tables_keep_their_direction() {
+        use crate::importers::html::tests::dirs_of;
+        let body = r#"
+            <w:p><w:pPr><w:bidi/></w:pPr><w:r><w:t>English bidi</w:t></w:r></w:p>
+            <w:p><w:pPr><w:bidi/><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:rtl/></w:rPr><w:t>مرحبا</w:t></w:r></w:p>
+            <w:p><w:pPr><w:bidi w:val="0"/></w:pPr><w:r><w:t>Not bidi</w:t></w:r></w:p>
+            <w:p><w:r><w:t>مرحبا بلا bidi</w:t></w:r></w:p>
+            <w:p><w:pPr><w:bidi/></w:pPr><w:r><w:t>123</w:t></w:r></w:p>
+            <w:tbl><w:tblPr><w:bidiVisual/></w:tblPr><w:tr><w:tc><w:p><w:r><w:t>First cell</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Second</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"#;
+        let (d, _, problems) = with_ctx(&[], |ctx| parse(docx_with_body(body), ctx, "bidi.docx").unwrap());
+        assert!(problems.is_empty(), "{problems:?}");
+        let got = dirs_of(&json(&d.blocks));
+        let find = |t: &str| got.iter().find(|(x, _)| x == t).unwrap_or_else(|| panic!("{t} in {got:?}")).1.clone();
+        // A right-to-left paragraph with English text keeps its direction; Arabic gets it from the text.
+        assert_eq!(find("English bidi").as_deref(), Some("rtl"));
+        assert_eq!(find("مرحبا"), None);
+        assert_eq!(find("Not bidi"), None);
+        assert_eq!(find("مرحبا بلا bidi"), None, "no bidi in Word: shown by its text, so it is right-aligned here");
+        assert_eq!(find("123").as_deref(), Some("rtl"));
+        // A table drawn right-to-left: its first text is made right-to-left so the columns run from the right.
+        assert_eq!(find("First cell").as_deref(), Some("rtl"));
+        assert_eq!(find("Second"), None);
     }
 
     #[test]

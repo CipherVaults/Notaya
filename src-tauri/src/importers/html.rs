@@ -14,6 +14,7 @@
 //! the page font (`page serif`, `page mono`).
 
 use super::doc::{self, Block, Cell, Inline, Marks, FONT_MONO, FONT_SERIF};
+use crate::export::doc::Dir;
 use super::markup::{attr, Token, Tokenizer};
 use super::{palette, Control, Ctx};
 
@@ -302,6 +303,49 @@ fn style_marks(style: &str, m: &mut Marks) {
     }
 }
 
+/// Elements that carry text of their own (a paragraph, heading, list item, table cell, summary, caption):
+/// a `dir="ltr"` on one of these is the author's statement about that text. Anywhere else (the
+/// page, `div`, `ul`, `table`...) `ltr` is only a default, so it does not hold Arabic or Hebrew
+/// text on the left; `rtl` is kept wherever it is written, and passes down to what is inside.
+const TEXT_ELEMENTS: &[&str] = &["p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "td", "th", "summary", "caption", "figcaption", "dt", "dd", "legend"];
+
+/// Inline elements: a direction written on one does not make the paragraph around it run that way.
+const INLINE_ELEMENTS: &[&str] = &[
+    "span", "bdi", "bdo", "a", "b", "i", "em", "strong", "u", "s", "strike", "del", "ins", "code", "kbd", "samp", "tt", "var", "cite", "dfn", "font",
+    "mark", "sub", "sup", "small", "big", "abbr", "q", "label", "time",
+];
+
+/// Languages written right to left (the primary language subtag of `lang`).
+const RTL_LANGS: &[&str] = &["ar", "he", "iw", "fa", "ur", "ps", "sd", "ug", "yi", "dv", "ckb", "ku"];
+
+fn rtl_lang(lang: &str) -> bool {
+    let primary = lang.trim().split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
+    RTL_LANGS.contains(&primary.as_str())
+}
+
+/// The reading direction an element sets for its text: its `dir` attribute, else CSS `direction`
+/// in its `style`, else a right-to-left `lang`. `None` when it says nothing (the direction around
+/// it carries on). `ltr` and `auto` both give `Auto` except on text elements (see [`TEXT_ELEMENTS`]).
+fn element_dir(e: &El) -> Option<Dir> {
+    if INLINE_ELEMENTS.contains(&e.name.as_str()) {
+        return None;
+    }
+    let from_css = || {
+        e.attr("style")?.split(';').find_map(|decl| {
+            let (k, v) = decl.split_once(':')?;
+            (k.trim().eq_ignore_ascii_case("direction")).then(|| v.trim().to_ascii_lowercase())
+        })
+    };
+    let word = e.attr("dir").map(|v| v.trim().to_ascii_lowercase()).or_else(from_css);
+    let own = TEXT_ELEMENTS.contains(&e.name.as_str());
+    match word.as_deref() {
+        Some("rtl") => Some(Dir::Rtl),
+        Some("ltr") if own => Some(Dir::Ltr),
+        Some("ltr" | "auto") => Some(Dir::Auto),
+        _ => e.attr("lang").or_else(|| e.attr("xml:lang")).filter(|l| rtl_lang(l)).map(|_| Dir::Rtl),
+    }
+}
+
 /// Notion's color classes (`highlight-red`, `highlight-red_background`, `block-color-blue`...),
 /// written as the matching Notaya palette colors (Ash, Cocoa, Amber, Honey, Moss, Denim, Plum,
 /// Orchid, Cherry) with their exact values.
@@ -397,6 +441,9 @@ impl Conv<'_, '_> {
         }
         let mut m = parent.clone();
         color_marks(e, &mut m);
+        if let Some(d) = element_dir(e) {
+            m.dir = d;
+        }
         if let Some(st) = e.attr("style") {
             style_marks(st, &mut m);
         }
@@ -513,7 +560,13 @@ impl Conv<'_, '_> {
                 let mut inner = Vec::new();
                 let summary = e.elements().find(|x| x.name == "summary");
                 match summary {
-                    Some(s) => inner.push(Block::Paragraph(self.inline_of(&s.children, &m))),
+                    Some(s) => {
+                        let mut sm = m.clone();
+                        if let Some(d) = element_dir(s) {
+                            sm.dir = d;
+                        }
+                        inner.push(Block::Paragraph(self.inline_of(&s.children, &sm)))
+                    }
                     None => inner.push(Block::Paragraph(Vec::new())),
                 }
                 let rest: Vec<&Node> = e.children.iter().filter(|n| !matches!(n, Node::El(x) if x.name == "summary")).collect();
@@ -594,6 +647,9 @@ impl Conv<'_, '_> {
                     let task = task.or(if todo_list { Some(false) } else { None });
                     let mut lm = m.clone();
                     color_marks(li, &mut lm);
+                    if let Some(d) = element_dir(li) {
+                        lm.dir = d;
+                    }
                     items.push((task, self.blocks(&li.children, &lm)));
                 }
             }
@@ -644,6 +700,9 @@ impl Conv<'_, '_> {
                 let colspan = td.attr("colspan").and_then(|s| s.trim().parse::<u32>().ok()).unwrap_or(1).clamp(1, doc::MAX_TABLE_COLS as u32);
                 let mut cm = m.clone();
                 color_marks(td, &mut cm);
+                if let Some(d) = element_dir(td) {
+                    cm.dir = d;
+                }
                 row.push(Cell { header: head || td.name == "th", colspan, blocks: self.blocks(&td.children, &cm) });
             }
             if !row.is_empty() {
@@ -946,6 +1005,64 @@ x++;</code></pre>
         assert!(!v.to_string().contains("evil"));
         assert_eq!(colors_of(&v, "plain").1.as_deref(), Some(""), "a plain <mark> is the default highlight");
         assert_eq!(colors_of(&v, "rgba").1.as_deref(), Some(HIGHLIGHTS[2].1));
+    }
+
+    /// (first text, stored `dir`) of every paragraph and heading in an editor document, in order.
+    pub fn dirs_of(v: &Value) -> Vec<(String, Option<String>)> {
+        fn go(v: &Value, out: &mut Vec<(String, Option<String>)>) {
+            if v["type"] == "paragraph" || v["type"] == "heading" {
+                let text = v["content"][0]["text"].as_str().unwrap_or("").to_string();
+                out.push((text, v["attrs"]["dir"].as_str().map(str::to_string)));
+            }
+            for c in v["content"].as_array().map(Vec::as_slice).unwrap_or(&[]) {
+                go(c, out);
+            }
+        }
+        let mut out = Vec::new();
+        go(v, &mut out);
+        out
+    }
+
+    #[test]
+    fn html_directions_are_kept_where_the_text_would_not_give_them() {
+        let src = r#"<div dir="rtl"><p>English in rtl</p><p dir="auto">auto</p><p dir="ltr">ltr back</p></div>
+            <p lang="ar-EG">123</p><p style="color:red; direction: rtl">456</p><p dir="rtl">مرحبا</p>
+            <div dir="ltr"><p>مرحبا من div</p></div><p dir="ltr">مرحبا ltr</p>
+            <ul dir="rtl"><li>one</li><li dir="auto">two</li></ul>
+            <table dir="rtl"><tr><td>cell</td></tr></table>
+            <p>Plain <span dir="rtl">inline</span></p><h2 dir="rtl">Heading</h2>"#;
+        let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment(src, ctx));
+        let d: Vec<(String, Option<String>)> = dirs_of(&json(&blocks));
+        let got = |text: &str| d.iter().find(|(t, _)| t == text).unwrap_or_else(|| panic!("{text} in {d:?}")).1.clone();
+        // rtl is inherited from an ancestor, and kept when the text is English.
+        assert_eq!(got("English in rtl").as_deref(), Some("rtl"));
+        // auto and ltr (that match the text) store nothing: the editor decides by the text.
+        assert_eq!(got("auto"), None);
+        assert_eq!(got("ltr back"), None);
+        // lang and CSS direction count, and they matter when the text has no letters.
+        assert_eq!(got("123").as_deref(), Some("rtl"));
+        assert_eq!(got("456").as_deref(), Some("rtl"));
+        // rtl on Arabic text is what the text gives anyway.
+        assert_eq!(got("مرحبا"), None);
+        // ltr on a wrapper is only a default: Arabic text inside still runs right-to-left (by the text).
+        assert_eq!(got("مرحبا من div"), None);
+        // ltr on the paragraph itself is the author's choice and is kept.
+        assert_eq!(got("مرحبا ltr").as_deref(), Some("ltr"));
+        // A list and a table under dir="rtl"; an item that says auto goes back to the text.
+        assert_eq!(got("one").as_deref(), Some("rtl"));
+        assert_eq!(got("two"), None);
+        assert_eq!(got("cell").as_deref(), Some("rtl"));
+        // An inline dir does not turn the paragraph around it.
+        assert_eq!(got("Plain inline"), None);
+        assert_eq!(got("Heading").as_deref(), Some("rtl"));
+    }
+
+    #[test]
+    fn html_without_any_direction_stays_automatic() {
+        let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment("<h1>مرحبا</h1><p>مرحبا بالعالم</p><p>Hello</p><ul><li>بند</li></ul>", ctx));
+        let v = json(&blocks);
+        assert!(dirs_of(&v).iter().all(|(_, d)| d.is_none()), "{v}");
+        assert!(!v.to_string().contains("\"dir\""), "no dir attribute is written");
     }
 
     #[test]

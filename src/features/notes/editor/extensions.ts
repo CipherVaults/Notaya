@@ -9,6 +9,7 @@ import { Column, Columns, Comment, PageLink } from "./more-blocks";
 import { MathBlock, MathInline } from "./math";
 import { ImageBlock } from "./ImageBlock";
 import { SlashCommand, type SlashOptions } from "./slash";
+import { Direction } from "./direction";
 import { followInternalLink, InternalLinks, isInternalHref, isOwnScheme } from "./internalLinks";
 import { Placeholder } from "@tiptap/extensions";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
@@ -68,6 +69,7 @@ export function pageExtensions(slash: SlashOptions) {
     }),
     CodeBlockLowlight.configure({ lowlight }),
     TextAlign.configure({ types: ["heading", "paragraph"] }),
+    Direction,
     SlashCommand.configure(slash),
   ];
 }
@@ -80,6 +82,7 @@ export function stickyExtensions() {
     TaskList,
     TaskItem.configure({ nested: true }),
     Image.configure({ allowBase64: false }),
+    Direction,
     Placeholder.configure({ placeholder: "Write something…" }),
   ];
 }

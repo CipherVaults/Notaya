@@ -722,7 +722,7 @@ function Row({
         <span className="w-5 shrink-0" />
       )}
       <span className="grid shrink-0 place-items-center">{icon}</span>
-      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span dir="auto" className="min-w-0 flex-1 truncate">{label}</span>
       <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-focus-visible/row:opacity-100 group-hover/row:opacity-100">
         {menu && (
           <Menu

@@ -201,7 +201,7 @@ export default function ExportDialog() {
                       <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-surface-2" style={{ paddingLeft: 8 + depth * 16 }}>
                         <input type="checkbox" checked={chosen.has(p.id)} onChange={() => toggle(p.id)} className="accent-accent" />
                         {p.icon && <span className="emoji-mono">{p.icon}</span>}
-                        <span className="truncate">{p.title || "Untitled"}</span>
+                        <span dir="auto" className="truncate">{p.title || "Untitled"}</span>
                       </label>
                     ))}
                   </div>

@@ -93,6 +93,7 @@ export default function CommandPalette() {
             <Command.Input
               value={query}
               onValueChange={setQuery}
+              dir="auto"
               autoFocus
               placeholder="Search notes and sticky notes, or type a command"
               className="h-14 w-full border-b border-line bg-transparent px-5 text-[0.95rem] text-fg outline-none placeholder:text-faint"
@@ -106,9 +107,9 @@ export default function CommandPalette() {
                     <Command.Item key={`${h.kind}-${h.id}`} value={`${h.kind}-${h.id}`} onSelect={() => goToHit(h)} className={itemClass}>
                       <span className="text-muted">{icon(h.kind)}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{h.title || "Untitled"}</div>
+                        <div dir="auto" className="truncate font-medium">{h.title || "Untitled"}</div>
                         {(h.subtitle || h.snippet) && (
-                          <div className="truncate text-xs text-muted">{h.subtitle || h.snippet}</div>
+                          <div dir="auto" className="truncate text-xs text-muted">{h.subtitle || h.snippet}</div>
                         )}
                       </div>
                       <span className="text-[0.7rem] uppercase tracking-wider text-faint">{h.kind}</span>

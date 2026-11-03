@@ -16,6 +16,8 @@ import {
   Italic,
   Link2,
   Minus,
+  PilcrowLeft,
+  PilcrowRight,
   Plus,
   Radical,
   Strikethrough,
@@ -27,6 +29,7 @@ import { Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { applyTurnInto, BLOCKS, currentBlock, type BlockKey } from "./turnInto";
 import { requestInternalLinkPicker } from "./internalLinks";
+import { storedDirection } from "./direction";
 
 export const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64];
 export const FONT_FAMILIES = [
@@ -573,6 +576,27 @@ function AlignPop({ editor, align, track }: { editor: Editor; align: string; tra
               onClick={() => editor.chain().focus().setTextAlign(a).run()}
               aria-label={`Align ${a}`}
               className={cn("grid h-8 flex-1 place-items-center rounded-lg border hover:bg-surface-2", align === a ? "border-fg/50 bg-surface-2" : "border-line text-muted")}
+            >
+              {icon}
+            </button>
+          </Popover.Close>
+        ))}
+      </div>
+      <div className="flex gap-1 p-0.5 pt-0">
+        {(
+          [
+            ["ltr", <PilcrowRight size={15} key="l" />, "Left-to-right"],
+            ["rtl", <PilcrowLeft size={15} key="r" />, "Right-to-left"],
+            [null, <span key="a" className="text-xs font-medium">Auto</span>, "Automatic direction"],
+          ] as const
+        ).map(([d, icon, label]) => (
+          <Popover.Close asChild key={label}>
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().setBlockDirection(d).run()}
+              aria-label={label}
+              title={label}
+              className={cn("grid h-8 flex-1 place-items-center rounded-lg border hover:bg-surface-2", storedDirection(editor.state) === d ? "border-fg/50 bg-surface-2" : "border-line text-muted")}
             >
               {icon}
             </button>
