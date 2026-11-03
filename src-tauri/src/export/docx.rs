@@ -2,7 +2,10 @@
 //! few parts Word needs: the document, its styles, list numbering, the pictures and links, and
 //! the file properties. Headings use Word's own Heading 1 to 6 styles, so the navigation pane
 //! and a table of contents work. Equations are written as their TeX text (Word's equation
-//! format is not produced). Text in right-to-left scripts gets Word's right-to-left paragraphs.
+//! format is not produced). Right-to-left text (Arabic, Hebrew: a paragraph set to right-to-left, or one
+//! whose first strong letter is) gets Word's right-to-left paragraph (`w:bidi`, which makes
+//! Word's "start" the right side, so it is right-aligned), its runs get `w:rtl`, and a table
+//! whose first text is right-to-left is drawn right-to-left (`w:bidiVisual`).
 //! So that Notaya's own Word importer brings a page back as it was: a code block is a paragraph in
 //! the "Notaya Code" style opened by a hidden bookmark naming its language, a task item starts with
 //! ☐ or ☑, a picture's caption is a "Caption" paragraph right after it, a highlight is the run's
@@ -12,7 +15,7 @@
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-use super::doc::{page_anchor, Align, Block, Image, Inline, ListKind, Marks, PageRef, Rgb};
+use super::doc::{blocks_dir, content_dir, first_strong, page_anchor, Align, Block, Dir, Image, Inline, ListKind, Marks, PageRef, Rgb};
 use super::zip::{civil, ZipWriter};
 use super::{table_grid, ExportDoc, Part, Slot};
 use crate::error::Result;
@@ -276,7 +279,8 @@ impl<'a> Writer<'a> {
                     let mut c = vec![Inline::Text(mark.into(), Marks::default())];
                     c.extend(content);
                     let runs = self.runs(&c, ctx.bold);
-                    self.para(None, &Ctx { indent: ctx.indent.max(360 + 360 * lvl), ..ctx.clone() }, Align::Left, None, &runs, false);
+                    let rtl = is_rtl(&c);
+                    self.para(None, &Ctx { indent: ctx.indent.max(360 + 360 * lvl), ..ctx.clone() }, Align::Left, None, &runs, rtl);
                 }
             }
             self.blocks(rest, &inner);
@@ -395,7 +399,9 @@ impl<'a> Writer<'a> {
         }
         let _ = write!(
             self.body,
-            "<w:tbl><w:tblPr><w:tblStyle w:val=\"NotayaTable\"/><w:tblW w:w=\"{}\" w:type=\"dxa\"/>{}<w:tblLayout w:type=\"fixed\"/><w:tblLook w:val=\"04A0\" w:firstRow=\"1\" w:lastRow=\"0\" w:firstColumn=\"0\" w:lastColumn=\"0\" w:noHBand=\"1\" w:noVBand=\"1\"/></w:tblPr><w:tblGrid>",
+            "<w:tbl><w:tblPr><w:tblStyle w:val=\"NotayaTable\"/>{}<w:tblW w:w=\"{}\" w:type=\"dxa\"/>{}<w:tblLayout w:type=\"fixed\"/><w:tblLook w:val=\"04A0\" w:firstRow=\"1\" w:lastRow=\"0\" w:firstColumn=\"0\" w:lastColumn=\"0\" w:noHBand=\"1\" w:noVBand=\"1\"/></w:tblPr><w:tblGrid>",
+            // A table whose first text runs right-to-left is drawn from the right (Word's "bidiVisual").
+            if rows.iter().flatten().find_map(|c| blocks_dir(&c.blocks)) == Some(Dir::Rtl) { "<w:bidiVisual/>" } else { "" },
             widths.iter().sum::<u32>(),
             if ctx.indent > 0 { format!("<w:tblInd w:w=\"{}\" w:type=\"dxa\"/>", ctx.indent) } else { String::new() }
         );
@@ -701,17 +707,14 @@ pub fn xml(s: &str) -> String {
     out
 }
 
-fn is_rtl_char(c: char) -> bool {
-    matches!(c as u32, 0x0590..=0x08FF | 0xFB1D..=0xFDFF | 0xFE70..=0xFEFF)
-}
-
-/// True when the first letter of the text belongs to a right-to-left script (Arabic, Hebrew).
+/// True when the first strong character of the text belongs to a right-to-left script (Arabic, Hebrew).
 fn is_rtl_text(s: &str) -> bool {
-    s.chars().find(|c| c.is_alphabetic()).is_some_and(is_rtl_char)
+    first_strong(s) == Some(Dir::Rtl)
 }
 
+/// True when a paragraph runs right-to-left: set so by its direction, else by its first strong letter.
 fn is_rtl(content: &[Inline]) -> bool {
-    is_rtl_text(&super::doc::inline_text(content))
+    content_dir(content) == Dir::Rtl
 }
 
 fn content_types() -> String {
@@ -911,6 +914,59 @@ mod tests {
         let document = String::from_utf8(entries.iter().find(|e| e.0 == "word/document.xml").unwrap().1.clone()).unwrap();
         assert!(document.contains("<w:bidi/>"));
         assert!(document.contains("<w:rtl/></w:rPr><w:t xml:space=\"preserve\">مرحبا بالعالم</w:t>"));
+    }
+
+    fn document_xml(json: &str) -> String {
+        let doc = sample_doc(parse(json, &titles));
+        let entries = read_zip(&render_at(&doc, 0).unwrap());
+        String::from_utf8(entries.iter().find(|e| e.0 == "word/document.xml").unwrap().1.clone()).unwrap()
+    }
+
+    fn p(attrs: &str, text: &str) -> String {
+        format!(r#"{{"type":"paragraph","attrs":{{{attrs}}},"content":[{{"type":"text","text":"{text}"}}]}}"#)
+    }
+
+    #[test]
+    fn a_chosen_direction_decides_the_word_paragraph() {
+        // English text set to right-to-left: a right-to-left paragraph (right-aligned), runs stay as they are.
+        let x = document_xml(&format!(r#"{{"type":"doc","content":[{}]}}"#, p(r#""dir":"rtl""#, "English forced")));
+        assert!(x.contains("<w:pPr><w:bidi/></w:pPr>"), "{x}");
+        assert!(!x.contains("<w:jc "), "under w:bidi, Word's start is the right side already: no jc");
+        assert!(!x.contains("<w:rtl/>"));
+        // Arabic text set to left-to-right: no bidi, and the Arabic run is still marked right-to-left for Word's shaping.
+        let x = document_xml(&format!(r#"{{"type":"doc","content":[{}]}}"#, p(r#""dir":"ltr""#, "مرحبا")));
+        assert!(!x.contains("<w:bidi/>"), "{x}");
+        assert!(x.contains("<w:rtl/>"));
+        // Automatic: by the first strong letter, block by block.
+        let x = document_xml(&format!(r#"{{"type":"doc","content":[{},{},{}]}}"#, p(r#""dir":null"#, "مرحبا"), p("", "Hello"), p(r#""dir":null"#, "שלום")));
+        assert_eq!(x.matches("<w:bidi/>").count(), 2, "{x}");
+    }
+
+    #[test]
+    fn explicit_right_alignment_stays_right_in_both_directions() {
+        // Under w:bidi no jc is the right side; an English paragraph aligned right gets jc "right".
+        let x = document_xml(&format!(r#"{{"type":"doc","content":[{},{}]}}"#, p(r#""textAlign":"right""#, "مرحبا"), p(r#""textAlign":"right""#, "Hello")));
+        assert!(x.contains("<w:pPr><w:bidi/></w:pPr>"), "{x}");
+        assert!(x.contains("<w:pPr><w:jc w:val=\"right\"/></w:pPr>"), "{x}");
+        let x = document_xml(&format!(r#"{{"type":"doc","content":[{}]}}"#, p(r#""textAlign":"center""#, "مرحبا")));
+        assert!(x.contains("<w:bidi/><w:jc w:val=\"center\"/>"), "{x}");
+    }
+
+    #[test]
+    fn arabic_task_items_lists_and_tables_run_right_to_left() {
+        let json = r#"{"type":"doc","content":[
+            {"type":"taskList","content":[{"type":"taskItem","attrs":{"checked":true},"content":[{"type":"paragraph","content":[{"type":"text","text":"مهمة"}]}]}]},
+            {"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"بند"}]}]}]},
+            {"type":"table","content":[{"type":"tableRow","content":[{"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"الاسم"}]}]}]}]},
+            {"type":"table","content":[{"type":"tableRow","content":[{"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"Name"}]}]}]}]}
+        ]}"#;
+        let x = document_xml(json);
+        // task item, bullet item, the Arabic table's cell: three right-to-left paragraphs.
+        assert_eq!(x.matches("<w:bidi/>").count(), 3, "{x}");
+        assert_eq!(x.matches("<w:bidiVisual/>").count(), 1, "only the Arabic table is drawn right-to-left");
+        // bidiVisual comes right after the table style (schema order).
+        assert!(x.contains("<w:tblStyle w:val=\"NotayaTable\"/><w:bidiVisual/><w:tblW"), "{x}");
+        assert_well_formed("rtl", &x);
     }
 
     #[test]

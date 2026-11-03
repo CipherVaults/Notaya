@@ -291,6 +291,131 @@ fn colors_code_tasks_captions_and_shelves_come_back() {
     assert!(failures.is_empty(), "\n{}\n", failures.join("\n"));
 }
 
+/// A page mixing Arabic, Hebrew and English (and one English block forced right-to-left) is exported
+/// to Markdown, HTML and Word and imported again: every block runs the way it did (the owner's
+/// "the Arabic stays right and the English left, with the export as well", 2026-11-03). Markdown is plain
+/// text, so it keeps the direction the text itself gives; a block forced the other way is the one thing it
+/// cannot carry (nor can Word carry "left-to-right" for Arabic text).
+#[test]
+fn arabic_hebrew_and_english_keep_their_direction() {
+    use crate::export::doc::{first_strong, Dir};
+    use serde_json::{json, Value};
+    let root = temp();
+    let src = new_vault(&root.join("src-data"));
+    let t = |s: &str| json!({ "type": "text", "text": s });
+    let p = |s: &str| json!({ "type": "paragraph", "content": [t(s)] });
+    let item = |s: &str| json!({ "type": "listItem", "content": [p(s)] });
+    let cell = |s: &str, header: bool| json!({ "type": if header { "tableHeader" } else { "tableCell" }, "content": [p(s)] });
+    let content = json!({ "type": "doc", "content": [
+        { "type": "heading", "attrs": { "level": 2 }, "content": [t("عنوان عربي")] },
+        p("هذه فقرة عربية تبدأ من اليمين"),
+        p("This paragraph is English."),
+        p("זוהי פסקה בעברית"),
+        { "type": "paragraph", "attrs": { "dir": "rtl" }, "content": [t("English forced right to left")] },
+        { "type": "paragraph", "attrs": { "dir": "ltr" }, "content": [t("مرحبا فرض اليسار")] },
+        { "type": "bulletList", "content": [item("بند عربي"), item("English bullet")] },
+        { "type": "taskList", "content": [{ "type": "taskItem", "attrs": { "checked": true }, "content": [p("مهمة عربية")] }] },
+        { "type": "blockquote", "content": [p("اقتباس عربي")] },
+        { "type": "table", "content": [
+            { "type": "tableRow", "content": [cell("الاسم", true), cell("القيمة", true)] },
+            { "type": "tableRow", "content": [cell("أحمد", false), cell("42", false)] }
+        ] }
+    ] });
+    let (nb, sec, pid) = (new_id(), new_id(), new_id());
+    let items = vec![
+        Item::Notebook(Notebook { id: nb.clone(), name: "Directions".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
+        Item::Section(Section { id: sec.clone(), notebook_id: nb, name: "Main".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+        Item::Page(Page {
+            id: pid.clone(),
+            section_id: sec,
+            title: "Directions".into(),
+            content: content.to_string(),
+            text: String::new(),
+            order: 0,
+            favorite: false,
+            icon: String::new(),
+            cover: String::new(),
+            parent: String::new(),
+            trashed_at: None,
+            created: 0,
+            updated: 0,
+        }),
+    ];
+    src.with_mut(|s| s.put_many(items)).unwrap();
+
+    /// Every paragraph and heading of an editor document: (text, the direction the editor shows it in).
+    fn shown(v: &Value, out: &mut Vec<(String, Dir)>) {
+        if v["type"] == "paragraph" || v["type"] == "heading" {
+            let text = v["content"].as_array().map(|c| c.iter().filter_map(|n| n["text"].as_str()).collect::<String>()).unwrap_or_default();
+            let dir = match v["attrs"]["dir"].as_str() {
+                Some("rtl") => Dir::Rtl,
+                Some("ltr") => Dir::Ltr,
+                _ => first_strong(&text).unwrap_or(Dir::Ltr),
+            };
+            out.push((text, dir));
+        }
+        for c in v["content"].as_array().map(Vec::as_slice).unwrap_or(&[]) {
+            shown(c, out);
+        }
+    }
+    let mut before = Vec::new();
+    shown(&content, &mut before);
+    assert_eq!(before.iter().filter(|(_, d)| *d == Dir::Rtl).count(), 10, "{before:?}");
+
+    let mut failures: Vec<String> = Vec::new();
+    for format in [Format::Markdown, Format::Html, Format::Docx] {
+        let label = format.label();
+        let dir = root.join(format!("out-{}", format.ext()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let dest = dir.join("page").with_extension(format.ext());
+        let exported = src.with(|s| {
+            let items: Vec<&Item> = s.items().collect();
+            let doc = export::collect(&items, &Scope::Pages(vec![pid.clone()]), &Options::default(), &|_: &str| None)?;
+            export::write(&dest, format, &doc, &root.join("src-data")).map(|_| ())
+        });
+        if let Err(e) = exported {
+            failures.push(format!("{label}: export failed: {e}"));
+            continue;
+        }
+        let dst = new_vault(&root.join(format!("dst-{}", format.ext())));
+        if let Err(e) = import_from(&dst, &[dest.clone()], false, &root.join("src-data"), 1_700_000_000_000, &crate::importers::Control::standard()) {
+            failures.push(format!("{label}: import failed: {e}"));
+            continue;
+        }
+        let pages: Vec<Page> = dst.with(|s| Ok(s.items().filter_map(|i| if let Item::Page(p) = i { Some(p.clone()) } else { None }).collect())).unwrap();
+        let Some(v) = pages.iter().map(|p| serde_json::from_str::<Value>(&p.content).unwrap()).find(|v| v.to_string().contains("English bullet")) else {
+            failures.push(format!("{label}: the page did not come back"));
+            continue;
+        };
+        let mut after = Vec::new();
+        shown(&v, &mut after);
+        for (text, want) in &before {
+            // Markdown cannot carry a direction that the text does not give (its two forced blocks), and Word
+            // cannot carry "left-to-right" for Arabic text (a paragraph without bidi is how every Word
+            // file says it, so Notaya reads that by the text).
+            let lost = match format {
+                Format::Markdown => text == "English forced right to left" || text == "مرحبا فرض اليسار",
+                Format::Docx => text == "مرحبا فرض اليسار",
+                _ => false,
+            };
+            let want = if lost { first_strong(text).unwrap_or(Dir::Ltr) } else { *want };
+            match after.iter().find(|(t, _)| t == text) {
+                Some((_, got)) if *got == want => {}
+                Some((_, got)) => failures.push(format!("{label}: {text:?} came back {got:?}, was {want:?}")),
+                None => failures.push(format!("{label}: {text:?} is missing from {after:?}")),
+            }
+        }
+        // The Arabic table's first column is still the Arabic one.
+        let table = v["content"].as_array().and_then(|c| c.iter().find(|n| n["type"] == "table"));
+        match table {
+            Some(t) if t["content"][0]["content"][0]["content"][0]["content"][0]["text"] == "الاسم" => {}
+            other => failures.push(format!("{label}: the Arabic table came back as {other:?}")),
+        }
+    }
+    let _ = std::fs::remove_dir_all(&root);
+    assert!(failures.is_empty(), "\n{}\n", failures.join("\n"));
+}
+
 #[test]
 fn every_format_scope_and_output_comes_back_in() {
     let root = temp();

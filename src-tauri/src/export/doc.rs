@@ -25,6 +25,104 @@ impl Align {
     }
 }
 
+/// The reading direction of a text block. `Auto` (the default, and what every page saved before
+/// this was added has) means "decide from the text": see [`first_strong`]. `Ltr` and `Rtl` are a
+/// person's explicit choice, stored on the block as `dir` in the page JSON.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Dir {
+    #[default]
+    Auto,
+    Ltr,
+    Rtl,
+}
+
+impl Dir {
+    /// From the page JSON's `dir` attribute: anything but "ltr" and "rtl" is automatic.
+    pub fn parse(v: Option<&Value>) -> Dir {
+        match v.and_then(Value::as_str) {
+            Some("ltr") => Dir::Ltr,
+            Some("rtl") => Dir::Rtl,
+            _ => Dir::Auto,
+        }
+    }
+
+    /// The value of an HTML `dir` attribute.
+    pub fn html(self) -> &'static str {
+        match self {
+            Dir::Auto => "auto",
+            Dir::Ltr => "ltr",
+            Dir::Rtl => "rtl",
+        }
+    }
+}
+
+/// True for the letters of the right-to-left scripts: Hebrew, Arabic (and Persian, Urdu), Syriac,
+/// Thaana, N'Ko, Samaritan, Mandaic and their presentation forms. Digits and punctuation of those
+/// scripts are not letters, so they are not strong either.
+fn is_rtl_letter(c: char) -> bool {
+    matches!(c as u32, 0x0590..=0x08FF | 0xFB1D..=0xFDFF | 0xFE70..=0xFEFF | 0x10800..=0x10FFF | 0x1E800..=0x1EFFF) && c.is_alphabetic()
+}
+
+/// The direction of the first strong character of `text`: a letter (right-to-left for the scripts
+/// above, left-to-right for every other script) or an explicit direction mark (U+200F, U+200E).
+/// `None` when there is none (digits, punctuation, emoji, nothing). This is the "automatic" rule;
+/// the editor uses the same one (`src/features/notes/editor/direction.ts`).
+pub fn first_strong(text: &str) -> Option<Dir> {
+    for c in text.chars() {
+        match c {
+            '\u{200F}' => return Some(Dir::Rtl),
+            '\u{200E}' => return Some(Dir::Ltr),
+            c if is_rtl_letter(c) => return Some(Dir::Rtl),
+            c if c.is_alphabetic() => return Some(Dir::Ltr),
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The explicit direction a text block carries. It is kept on the text runs' [`Marks`] (so the
+/// shape of [`Block`] does not change): the first run that has one decides.
+pub fn explicit_dir(content: &[Inline]) -> Dir {
+    content
+        .iter()
+        .find_map(|i| match i {
+            Inline::Text(_, m) if m.dir != Dir::Auto => Some(m.dir),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+/// The direction a text block is shown in: its explicit one, else by its text (left-to-right when
+/// the text has no strong character).
+pub fn content_dir(content: &[Inline]) -> Dir {
+    match explicit_dir(content) {
+        Dir::Auto => first_strong(&inline_text(content)).unwrap_or(Dir::Ltr),
+        d => d,
+    }
+}
+
+/// The direction of the first text block inside `blocks` (what a list, quote, box or table takes
+/// as its own), or `None` when no text block has an explicit direction or a strong character.
+pub fn blocks_dir(blocks: &[Block]) -> Option<Dir> {
+    for b in blocks {
+        let found = match b {
+            Block::Paragraph { content, .. } | Block::Heading { content, .. } => match explicit_dir(content) {
+                Dir::Auto => first_strong(&inline_text(content)),
+                d => Some(d),
+            },
+            Block::List { items, .. } => items.iter().find_map(|i| blocks_dir(&i.blocks)),
+            Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout { blocks: x, .. } => blocks_dir(x),
+            Block::Columns(cols) => cols.iter().find_map(|c| blocks_dir(c)),
+            Block::Table(rows) => rows.iter().flatten().find_map(|c| blocks_dir(&c.blocks)),
+            _ => None,
+        };
+        if found.is_some() {
+            return found;
+        }
+    }
+    None
+}
+
 /// A color as red, green and blue (0 to 255). Translucent colors are blended onto white,
 /// because a page on paper (or in Word) has a white background.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,6 +173,9 @@ pub struct Marks {
     /// exporter resolved it; `link` is then `None`. A link to a page outside the export has
     /// neither, so its text is written as plain text.
     pub page: Option<PageRef>,
+    /// The text block's explicit direction, repeated on each of its runs (see [`explicit_dir`]).
+    /// `Auto` for every page saved before the direction setting existed.
+    pub dir: Dir,
 }
 
 /// Where a link to another page of the same export goes. Only the exporter makes these, from its
@@ -241,10 +342,10 @@ fn blocks(nodes: &[Value], p: &Pages) -> Vec<Block> {
 fn block(n: &Value, p: &Pages, out: &mut Vec<Block>) {
     let kids = children(n);
     match node_type(n) {
-        "paragraph" => out.push(Block::Paragraph { align: Align::parse(attr(n, "textAlign")), content: inlines(kids, p) }),
+        "paragraph" => out.push(Block::Paragraph { align: Align::parse(attr(n, "textAlign")), content: dir_inlines(n, kids, p) }),
         "heading" => {
             let level = attr(n, "level").and_then(Value::as_u64).unwrap_or(1).clamp(1, 6) as u8;
-            out.push(Block::Heading { level, align: Align::parse(attr(n, "textAlign")), content: inlines(kids, p) });
+            out.push(Block::Heading { level, align: Align::parse(attr(n, "textAlign")), content: dir_inlines(n, kids, p) });
         }
         "bulletList" => out.push(Block::List { kind: ListKind::Bullet, items: list_items(kids, p) }),
         "orderedList" => {
@@ -338,6 +439,20 @@ fn inlines(nodes: &[Value], p: &Pages) -> Vec<Inline> {
         }
     }
     out
+}
+
+/// The inline content of a paragraph or heading, with the node's `dir` attribute put on its runs.
+fn dir_inlines(n: &Value, kids: &[Value], p: &Pages) -> Vec<Inline> {
+    let mut content = inlines(kids, p);
+    let dir = Dir::parse(attr(n, "dir"));
+    if dir != Dir::Auto {
+        for i in &mut content {
+            if let Inline::Text(_, m) = i {
+                m.dir = dir;
+            }
+        }
+    }
+    content
 }
 
 fn marks(n: &Value, p: &Pages) -> Marks {
@@ -656,5 +771,64 @@ pub mod tests {
         let mut found = std::collections::HashSet::new();
         anchor_targets(&[Block::Shelf(vec![link.clone()]), Block::Toggle(vec![Block::Quote(vec![Block::PageLink { title: "Deep".into(), target: Some(PageRef::Anchor(9)) }])])], &mut found);
         assert!(found.contains(&7) && found.contains(&9), "{found:?}");
+    }
+
+    #[test]
+    fn the_first_strong_letter_decides_the_automatic_direction() {
+        assert_eq!(first_strong("Hello"), Some(Dir::Ltr));
+        assert_eq!(first_strong("مرحبا بالعالم"), Some(Dir::Rtl));
+        assert_eq!(first_strong("שלום"), Some(Dir::Rtl));
+        assert_eq!(first_strong("سلام"), Some(Dir::Rtl), "Persian and Urdu share the Arabic block");
+        // Digits, punctuation, emoji and spaces are not strong: the first letter after them decides.
+        assert_eq!(first_strong("123 - مرحبا"), Some(Dir::Rtl));
+        assert_eq!(first_strong("\u{661}\u{662}\u{663} abc"), Some(Dir::Ltr), "Arabic-Indic digits are not letters");
+        assert_eq!(first_strong("(!) 😀 hello"), Some(Dir::Ltr));
+        assert_eq!(first_strong("Hello مرحبا"), Some(Dir::Ltr));
+        assert_eq!(first_strong("\u{200F}abc"), Some(Dir::Rtl), "an explicit right-to-left mark");
+        assert_eq!(first_strong("12 + 3"), None);
+        assert_eq!(first_strong(""), None);
+    }
+
+    #[test]
+    fn a_page_saved_before_the_direction_setting_loads_as_automatic() {
+        // No `dir` anywhere (what every older version wrote): every block is automatic, and Arabic text
+        // is shown right-to-left by its first letter, with no migration.
+        let old = r#"{"type":"doc","content":[
+            {"type":"heading","attrs":{"level":2,"textAlign":null},"content":[{"type":"text","text":"عنوان"}]},
+            {"type":"paragraph","content":[{"type":"text","text":"مرحبا بالعالم"}]},
+            {"type":"paragraph","attrs":{"textAlign":"left"},"content":[{"type":"text","text":"English"}]},
+            {"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"بند"}]}]}]}]}"#;
+        let blocks = parse(old, &titles);
+        for b in &blocks {
+            if let Block::Paragraph { content, .. } | Block::Heading { content, .. } = b {
+                assert_eq!(explicit_dir(content), Dir::Auto);
+            }
+        }
+        let dirs: Vec<Dir> = blocks
+            .iter()
+            .filter_map(|b| match b {
+                Block::Paragraph { content, .. } | Block::Heading { content, .. } => Some(content_dir(content)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(dirs, vec![Dir::Rtl, Dir::Rtl, Dir::Ltr]);
+        assert_eq!(blocks_dir(&blocks[3..]), Some(Dir::Rtl), "a list takes the direction of its first line");
+    }
+
+    #[test]
+    fn a_stored_direction_overrides_the_text() {
+        let json = r#"{"type":"doc","content":[
+            {"type":"paragraph","attrs":{"dir":"rtl"},"content":[{"type":"text","text":"English"},{"type":"text","text":" bold","marks":[{"type":"bold"}]}]},
+            {"type":"paragraph","attrs":{"dir":"ltr"},"content":[{"type":"text","text":"مرحبا"}]},
+            {"type":"paragraph","attrs":{"dir":null},"content":[{"type":"text","text":"مرحبا"}]},
+            {"type":"paragraph","attrs":{"dir":"sideways"},"content":[{"type":"text","text":"x"}]}]}"#;
+        let dirs: Vec<(Dir, Dir)> = parse(json, &titles)
+            .iter()
+            .filter_map(|b| match b {
+                Block::Paragraph { content, .. } => Some((explicit_dir(content), content_dir(content))),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(dirs, vec![(Dir::Rtl, Dir::Rtl), (Dir::Ltr, Dir::Ltr), (Dir::Auto, Dir::Rtl), (Dir::Auto, Dir::Ltr)]);
     }
 }

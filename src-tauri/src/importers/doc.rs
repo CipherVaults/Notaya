@@ -8,6 +8,8 @@
 
 use serde_json::{json, Map, Value};
 
+use crate::export::doc::{first_strong, Dir};
+
 /// Text formatting. `link` is already checked (http, https or mailto only).
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct Marks {
@@ -24,6 +26,11 @@ pub struct Marks {
     /// Font family, one of the editor's choices ([`FONT_SERIF`], [`FONT_MONO`]).
     pub font: Option<String>,
     pub link: Option<String>,
+    /// The reading direction the source gave the text block this run belongs to (HTML `dir`,
+    /// `lang` or CSS `direction`, Word's right-to-left paragraph). `Auto` = the source said
+    /// nothing, so the editor decides from the text. A text block takes the direction of its first
+    /// run; it is stored only when it differs from what the text itself would give.
+    pub dir: Dir,
 }
 
 /// Color names used in Notion's export classes, matched by position to the Notaya colors below.
@@ -439,6 +446,16 @@ impl Renderer<'_> {
             return;
         }
         let mut n = node.clone();
+        // The source's direction is kept only where the text would not give it by itself.
+        let want = run.iter().find_map(|i| match i {
+            Inline::Text(t, m) if !t.trim().is_empty() => Some(m.dir),
+            _ => None,
+        });
+        if let Some(d @ (Dir::Ltr | Dir::Rtl)) = want
+            && d != first_strong(&text).unwrap_or(Dir::Ltr)
+        {
+            n["attrs"]["dir"] = json!(d.html());
+        }
         n["content"] = Value::Array(content);
         self.text.push(text);
         out.push(n);
@@ -645,6 +662,47 @@ fn arrow_row(inl: &[Inline]) -> Option<Block> {
     }
     let label = collapse_ws(&label);
     (!label.is_empty()).then(|| Block::PageLink(path.to_string(), label))
+}
+
+/// Makes the first text block with text in `blocks` run right-to-left (a Word table drawn
+/// right-to-left: the editor takes a table's direction from its first text). Does nothing when
+/// that text already runs right-to-left by itself.
+pub fn force_first_rtl(blocks: &mut [Block]) {
+    fn go(blocks: &mut [Block], depth: usize) -> bool {
+        if depth > MAX_DEPTH {
+            return false;
+        }
+        for b in blocks.iter_mut() {
+            let done = match b {
+                Block::Paragraph(inl) | Block::Heading(_, inl) => {
+                    let text = plain(inl);
+                    if text.is_empty() {
+                        false
+                    } else {
+                        if first_strong(&text) != Some(Dir::Rtl) {
+                            for i in inl.iter_mut() {
+                                if let Inline::Text(_, m) = i {
+                                    m.dir = Dir::Rtl;
+                                }
+                            }
+                        }
+                        true
+                    }
+                }
+                Block::Bullets(items) | Block::Numbered(_, items) => items.iter_mut().any(|i| go(i, depth + 1)),
+                Block::Tasks(items) => items.iter_mut().any(|(_, i)| go(i, depth + 1)),
+                Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout(_, x) => go(x, depth + 1),
+                Block::Columns(cols) => cols.iter_mut().any(|c| go(c, depth + 1)),
+                Block::Table(rows) => rows.iter_mut().flatten().any(|c| go(&mut c.blocks, depth + 1)),
+                _ => false,
+            };
+            if done {
+                return true;
+            }
+        }
+        false
+    }
+    go(blocks, 0);
 }
 
 /// Plain text helper used by converters (for titles and captions).
