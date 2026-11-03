@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personalized Charts"
+  short_description: "Ahmed-style charts with clear evidence and labels"
+  default_prompt: "Use $personalized-charts to turn my data into clear charts with exact settings, source credits, and concise findings."

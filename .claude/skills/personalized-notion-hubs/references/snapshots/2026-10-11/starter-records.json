@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "captured_utc": "2026-10-11 01:28:54 UTC",
+  "view_url": "view://ddbe91a5-cc85-4db8-89cd-80ad3b831c4b",
+  "data_source_url": "collection://92510ca4-2b3c-4ad3-aa0c-217b7d3c5aa0",
+  "meaning": "All rows are intentional master-starter demonstration records, not project or financial facts.",
+  "result": {
+    "results": [
+      {
+        "Status": "Template · replace",
+        "Order": 10,
+        "Phase": "2 · Current",
+        "Next action": "Replace with the next concrete action.",
+        "Source": "",
+        "Area": "Core work",
+        "Evidence basis": "Unknown",
+        "Purpose / outcome": "Replace with the current bounded outcome.",
+        "Example": "__YES__",
+        "date:As of:is_datetime": 0,
+        "Item": "EXAMPLE · A current work item",
+        "url": "https://app.notion.com/p/3f6bd7ade63b81f0943ff5955f9813cf"
+      },
+      {
+        "Status": "Template · replace",
+        "Order": 20,
+        "Phase": "3 · Next",
+        "Next action": "Replace with needed evidence or a decision.",
+        "Source": "",
+        "Area": "Research",
+        "Evidence basis": "Unknown",
+        "Purpose / outcome": "Replace with the question to resolve before proceeding.",
+        "Example": "__YES__",
+        "date:As of:is_datetime": 0,
+        "Item": "EXAMPLE · A next step",
+        "url": "https://app.notion.com/p/3f6bd7ade63b816090c5c5b929584a32"
+      },
+      {
+        "Status": "Template · replace",
+        "Order": 30,
+        "Phase": "4 · Exploring",
+        "Next action": "State a revisit trigger, or leave uncommitted.",
+        "Source": "",
+        "Area": "Operations",
+        "Evidence basis": "Unknown",
+        "Purpose / outcome": "Replace with a useful possibility; this is not a commitment.",
+        "Example": "__YES__",
+        "date:As of:is_datetime": 0,
+        "Item": "EXAMPLE · An uncommitted idea",
+        "url": "https://app.notion.com/p/3f6bd7ade63b81e0936af21c594907b3"
+      }
+    ],
+    "has_more": false
+  }
+}
