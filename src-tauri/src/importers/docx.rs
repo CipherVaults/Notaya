@@ -322,7 +322,7 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
                         let target = attr(&attrs, "r:id")
                             .and_then(|id| rels.get(id))
                             .filter(|(_, external)| *external)
-                            .and_then(|(t, _)| safe_link(t))
+                            .and_then(|(t, _)| safe_link(t).or_else(|| ctx.page_href(t)))
                             .or_else(|| links.last().cloned().flatten());
                         links.push(target);
                     }

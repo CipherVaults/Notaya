@@ -315,11 +315,22 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
         mk(`p${n + 31}`, secs[0].id, "Sub page", 1, `p${n + 30}`),
         mk(`p${n + 32}`, secs[1].id, "Pancakes", 0, "", "🥞"),
       );
+      // ?importTwo=1: a Notaya ZIP of two notebooks, which comes back as two notebooks.
+      const notebooks = [{ id: nb.id, name: nb.name }];
+      if (params.get("importTwo") === "1") {
+        const nb2 = { ...nb, id: `n${n + 11}`, name: "Second notebook", order: n + 1 };
+        const sec2 = { ...secs[0], id: `s${n + 22}`, notebookId: nb2.id, name: "Work" };
+        tree.notebooks.push(nb2);
+        tree.sections.push(sec2);
+        tree.pages.push(mk(`p${n + 33}`, sec2.id, "Tasks", 0));
+        notebooks.push({ id: nb2.id, name: nb2.name });
+      }
       return ok({
         notebookId: nb.id,
         notebookName: nb.name,
-        sections: 2,
-        pages: 3,
+        notebooks,
+        sections: notebooks.length > 1 ? 3 : 2,
+        pages: notebooks.length > 1 ? 4 : 3,
         images: 2,
         skipped: [
           { item: "Tasks 0123abcd.csv", reason: "A Notion database (table) view. Tables are not imported; the pages inside a database are, when they were exported." },

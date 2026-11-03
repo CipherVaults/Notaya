@@ -6,7 +6,7 @@ Status: built in a cloud thread, **produced and tested with made-up sample files
 
 - **Import pages…** is in the sidebar (hover "Notebooks", the upload button), in the empty sidebar ("Import pages from another app") and in the command palette.
 - One file picker: you can select **many files at once and mix kinds**: Markdown (`.md`), plain text (`.txt`), HTML, Word (`.docx`), PDF and **ZIP files** (Notion exports, one or several, for example `Part-1` and `Part-2`). A second choice, **A folder**, imports every supported file inside it.
-- The result is always **one new notebook**. Your existing notes are never changed.
+- The result is **one new notebook**. Your existing notes are never changed. (2026-11-03: a ZIP that Notaya itself exported from several notebooks comes back as **one new notebook for each**; see "Notaya's own ZIP exports" below.)
 - Notebook name: the folder, the ZIP file or the single file you chose (a generic name such as "Export-…" becomes "Notion import"); several loose files give "Imported <date>".
 - Sections: each top-level folder becomes a section; loose pages go into a section called "Imported pages".
 - Pages: named from the page's own title (first level-1 heading, `<title>`, Word title), else from the file name. Notion's 32-letter id at the end of names is removed.
@@ -36,6 +36,7 @@ Choose **HTML** when you export from Notion. The Markdown export has no colors a
 | Pictures | Stored in your notes (encrypted), with the caption | Stored in your notes |
 | "Link to page" blocks | Become page links to the imported page (if that page is in the import) | Same, when the link sits alone in its paragraph |
 | A page mentioned inside a sentence | Text only, the link is dropped | Text only, the link is dropped |
+| (Correction 2026-11-03 to the row above: a link inside a sentence to another page **of the same import** becomes a Notaya link to that page, in HTML and Markdown; this was already so, shown by `a_link_inside_a_sentence_to_another_imported_page_becomes_an_internal_link`. A link to a page that is not in the import is text only.) | | |
 | Sub-pages (nested folders) | Kept as sub-pages | Kept as sub-pages |
 
 Where this is shown by a test: HTML export in `importers/html.rs` (`a_notion_html_page_keeps_its_formatting`, `notion_page_fonts_map_to_serif_mono_or_the_default`) and in `importers/plan.rs` (`a_notion_html_zip_keeps_folders_ids_pictures_colors_and_links`); Markdown in `importers/markdown.rs` and `plan.rs` (`markdown_folders_become_sections_and_notion_markdown_nests`). The sample pages were written by hand from what we know of Notion's export format. **Not verified against a real Notion export:** the exact class names Notion writes (we also accept "teal" as Notion's name for green), how Notion writes toggles in Markdown, and anything Notion changed recently.
@@ -80,6 +81,19 @@ Not carried over: tracked deletions, comments, footnotes and endnotes, headers a
 ## PDF
 
 **Text only.** Carried over: the text in reading order; lines in a clearly larger font become headings; lines are joined into paragraphs. Not carried over: pictures, scanned pages (no text recognition), tables and columns as such, links, page layout. A PDF with a password or restrictions is refused with a message; a PDF whose fonts have no readable character map is refused with a message; a PDF with pages that have no text imports the others and lists the count. Shown by tests on hand-made PDFs; **not verified with PDFs from real programs** (fonts and encodings vary a lot, so expect some PDFs to come out wrong or empty).
+
+## Notaya's own ZIP exports (added 2026-11-03)
+
+A ZIP made with **Export → Separate files in a ZIP** now goes out and comes back with its structure and its links:
+
+- **The marker file.** Every such ZIP holds `notaya-export.txt`. Its first line is `Notaya export v1`, the second says the layout (`layout: notebooks`, `sections` or `pages`), then one sentence saying what the file is for. It holds **no names and no note content**. The import does not turn it into a page.
+- **Notebooks.** With `layout: notebooks` and folders of that shape (only folders at the top, only section folders inside each, pages inside each section folder), each top folder becomes **its own new notebook** named after the folder, and each folder inside it a section. Two notebooks with 7 pages come back as 2 notebooks with the same sections and 7 pages (shown by the round-trip matrix test, which now checks the notebook, section and page counts of every case). The app opens the first new notebook; the closing screen names all of them. Everything is still saved in one step (all or nothing), pictures stay held until then, Cancel and the 15-minute limit still work, and the 5,000-page limit counts all notebooks together. At most 100 notebooks per import: a ZIP with more top folders is imported as before (one notebook, the folders as sections).
+- **Sections.** With `layout: sections`, each top folder is a section, also when there is only one (before, a single folder was taken as a wrapper and its pages went into "Imported pages").
+- **Pages.** With `layout: pages` the import works as before.
+- **Without the marker** (Notion, any other ZIP or folder, or a Notaya ZIP from before this change), or when the folders do not have the shape the marker names, or when the marker is unreadable, too large (over 4 KB) or has another first line, the import works exactly as before. A marker inside a folder is not the ZIP's marker.
+- **Links between pages.** A link to another page and the "Link to page" row are exported as real links **when the other page is in the same export**: in a ZIP as a relative link to that page's file (Markdown `[Title](Other%20page.md)`, HTML `<a href="Other%20page.html">`, Word a hyperlink to `Other page.docx`); the "Link to page" row is written as `→` and the linked title. The import turns these back into links to the new pages, and a `→` row back into a "Link to page" row. Names with spaces, `#`, `%`, `&`, parentheses and non-English letters, sub-page folders and `../` across notebooks are tested.
+- **One file.** In one HTML file a link to a page of the same export jumps to that page's heading (`#notaya_page_2`); in one Word file it jumps to a bookmark at that page's title. One Markdown file and PDF keep the link's text only (heading anchors differ between Markdown viewers, and the PDF writer has no internal links). Importing one combined file gives one page, so these links come back as text.
+- **Not carried:** a link to a page that is **not** in the export is written as its text (never as a `notaya:` address, never as a dead link); a link to a heading goes to the page's file, not the heading; PDF files in a ZIP do not link to each other (PDF import is text only anyway); the order of notebooks, sections and pages comes back sorted by name, not in the sidebar order; two notebooks whose names differ only by capitals come back as `Name` and `name (2)`.
 
 ## Safety and limits
 

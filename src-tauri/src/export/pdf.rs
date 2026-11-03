@@ -580,7 +580,8 @@ impl<'a> Layout<'a> {
                 decor: ctx.decor.clone(),
                 ..Strip::default()
             }),
-            Block::PageLink { title } => {
+            // A PDF keeps the title only, also when the page is part of the export (no links between PDF files).
+            Block::PageLink { title, .. } => {
                 let st = TextStyle { italic: true, color: MUTED, ..TextStyle::body(ctx) };
                 out.extend(self.text(&[Inline::Text(format!("→ {title}"), Marks::default())], ctx, st));
                 out.push(self.space(5.0, ctx));

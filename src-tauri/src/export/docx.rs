@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
-use super::doc::{Align, Block, Image, Inline, ListKind, Marks, Rgb};
+use super::doc::{page_anchor, Align, Block, Image, Inline, ListKind, Marks, PageRef, Rgb};
 use super::zip::{civil, ZipWriter};
 use super::{table_grid, ExportDoc, Part, Slot};
 use crate::error::Result;
@@ -27,6 +27,8 @@ pub fn render_at(doc: &ExportDoc, now_ms: i64) -> Result<Vec<u8>> {
     let mut w = Writer { doc, body: String::new(), rels: Vec::new(), images: HashMap::new(), links: HashMap::new(), nums: Vec::new(), drawing_id: 0, page_break: false, media: Vec::new() };
     let mut first = true;
     let mut after_heading = false;
+    let targets = doc.anchor_targets();
+    let mut page_no = 0;
     for part in &doc.parts {
         // Each page starts on a new page, except right after its notebook or section heading.
         w.page_break = !first && !after_heading;
@@ -36,7 +38,8 @@ pub fn render_at(doc: &ExportDoc, now_ms: i64) -> Result<Vec<u8>> {
                 after_heading = true;
             }
             Part::Page { level, title, blocks } => {
-                w.heading(*level, &[Inline::Text(title.clone(), Marks::default())], Align::Left, &Ctx::default());
+                page_no += 1;
+                w.page_title(*level, title, targets.contains(&page_no).then_some(page_no));
                 w.blocks(blocks, &Ctx { shift: *level, ..Ctx::default() });
                 after_heading = false;
             }
@@ -226,10 +229,7 @@ impl<'a> Writer<'a> {
                     "<w:p><w:pPr>{brk}<w:pBdr><w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"1\" w:color=\"BFBFBF\"/></w:pBdr></w:pPr></w:p>"
                 );
             }
-            Block::PageLink { title } => {
-                let runs = run_xml(&format!("→ {title}"), "<w:i/><w:color w:val=\"4B5563\"/>", is_rtl_text(title));
-                self.para(None, ctx, Align::Left, numbering, &runs, false);
-            }
+            Block::PageLink { title, target } => self.page_link_row(title, target.as_ref(), ctx, numbering),
         }
     }
 
@@ -427,7 +427,7 @@ impl<'a> Writer<'a> {
             match item {
                 Inline::Text(text, m) => {
                     let mut rpr = String::new();
-                    if m.link.is_some() {
+                    if m.link.is_some() || m.page.is_some() {
                         rpr.push_str("<w:rStyle w:val=\"Hyperlink\"/>");
                     }
                     if m.code {
@@ -470,7 +470,10 @@ impl<'a> Writer<'a> {
                             };
                             let _ = write!(out, "<w:hyperlink r:id=\"{rid}\" w:history=\"1\">{run}</w:hyperlink>");
                         }
-                        None => out.push_str(&run),
+                        None => match &m.page {
+                            Some(r) => out.push_str(&self.page_hyperlink(r, &run)),
+                            None => out.push_str(&run),
+                        },
                     }
                 }
                 Inline::Break => out.push_str("<w:r><w:br/></w:r>"),
@@ -536,6 +539,54 @@ impl<'a> Writer<'a> {
         }
         s.push_str("</w:numbering>");
         s
+    }
+}
+
+/// Links to other pages of the same export.
+impl Writer<'_> {
+    /// A page's title heading; `bookmark` (the page's number) marks it as the place that links
+    /// in this document go to.
+    fn page_title(&mut self, level: u8, title: &str, bookmark: Option<usize>) {
+        let content = [Inline::Text(title.to_string(), Marks::default())];
+        match bookmark {
+            None => self.heading(level, &content, Align::Left, &Ctx::default()),
+            Some(n) => {
+                let runs = format!("<w:bookmarkStart w:id=\"{n}\" w:name=\"{}\"/>{}<w:bookmarkEnd w:id=\"{n}\"/>", page_anchor(n), self.runs(&content, false));
+                self.para(Some(&format!("Heading{}", level.clamp(1, 6))), &Ctx::default(), Align::Left, None, &runs, is_rtl_text(title));
+            }
+        }
+    }
+
+    /// `run` as a link to another page: a bookmark of this document, or (in a ZIP) the other
+    /// .docx file by its relative path, which the exporter made from its own file names.
+    fn page_hyperlink(&mut self, target: &PageRef, run: &str) -> String {
+        match target {
+            PageRef::Anchor(n) => format!("<w:hyperlink w:anchor=\"{}\" w:history=\"1\">{run}</w:hyperlink>", page_anchor(*n)),
+            PageRef::File(path) => {
+                let rid = match self.links.get(path) {
+                    Some(r) => r.clone(),
+                    None => {
+                        let r = self.rel(REL_LINK, clean_link_target(path), true);
+                        self.links.insert(path.clone(), r.clone());
+                        r
+                    }
+                };
+                format!("<w:hyperlink r:id=\"{rid}\" w:history=\"1\">{run}</w:hyperlink>")
+            }
+        }
+    }
+
+    /// The "Link to page" row: an arrow and the page's title, linked when the page is part of the export.
+    fn page_link_row(&mut self, title: &str, target: Option<&PageRef>, ctx: &Ctx, numbering: Option<(u32, u32)>) {
+        const RPR: &str = "<w:i/><w:color w:val=\"4B5563\"/>";
+        let runs = match target {
+            None => run_xml(&format!("→ {title}"), RPR, is_rtl_text(title)),
+            Some(r) => {
+                let link = run_xml(title, "<w:rStyle w:val=\"Hyperlink\"/><w:i/>", is_rtl_text(title));
+                format!("{}{}", run_xml("→ ", RPR, false), self.page_hyperlink(r, &link))
+            }
+        };
+        self.para(None, ctx, Align::Left, numbering, &runs, false);
     }
 }
 

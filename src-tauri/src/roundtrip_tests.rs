@@ -108,6 +108,35 @@ fn source(v: &Vault) -> (Ids, Vec<(&'static str, Vec<&'static str>)>) {
     (ids, cases)
 }
 
+/// The notebooks and sections a ZIP export of each case must come back as (one page and its
+/// sub-page: loose pages; a single notebook keeps its name).
+fn expected_shape(name: &str) -> (Vec<&'static str>, Vec<&'static str>) {
+    match name {
+        "one page" => (vec!["*"], vec!["Imported pages"]),
+        "section" => (vec!["*"], vec!["Journal"]),
+        "notebook" => (vec!["Alpha"], vec!["Journal", "Ideas"]),
+        "two sections" => (vec!["*"], vec!["Journal", "Ideas"]),
+        _ => (vec!["Alpha", "Beta"], vec!["Journal", "Ideas", "Work"]),
+    }
+}
+
+/// The names of the notebooks and sections in a vault.
+fn shape_of(v: &Vault) -> (Vec<String>, Vec<String>) {
+    v.with(|s| {
+        let mut nbs = Vec::new();
+        let mut secs = Vec::new();
+        for i in s.items() {
+            match i {
+                Item::Notebook(n) => nbs.push(n.name.clone()),
+                Item::Section(x) => secs.push(x.name.clone()),
+                _ => {}
+            }
+        }
+        Ok((nbs, secs))
+    })
+    .unwrap()
+}
+
 fn scope_of(ids: &Ids, name: &str) -> Scope {
     match name {
         "one page" => Scope::Pages(vec![ids.j1.clone()]),
@@ -124,7 +153,7 @@ fn every_format_scope_and_output_comes_back_in() {
     let src = new_vault(&root.join("src-data"));
     let (ids, cases) = source(&src);
     let mut failures: Vec<String> = Vec::new();
-    let mut table = vec![format!("{:<8} {:<14} {:<6} {:>5} {:>8} {:>6}  notes", "format", "scope", "output", "pages", "sections", "images")];
+    let mut table = vec![format!("{:<8} {:<14} {:<6} {:>9} {:>5} {:>8} {:>6}  notes", "format", "scope", "output", "notebooks", "pages", "sections", "images")];
     for format in [Format::Markdown, Format::Html, Format::Docx, Format::Pdf] {
         for (scope_name, expected) in &cases {
             for zip in [false, true] {
@@ -167,6 +196,35 @@ fn every_format_scope_and_output_comes_back_in() {
                     }
                 };
                 let pages: Vec<Page> = dst.with(|s| Ok(s.items().filter_map(|i| if let Item::Page(p) = i { Some(p.clone()) } else { None }).collect())).unwrap();
+                // The structure: a ZIP comes back as the notebooks, sections and pages that went out
+                // (Notaya's marker says how it is laid out); one combined file is one page.
+                let (notebooks, sections) = shape_of(&dst);
+                let (want_nbs, want_secs): (Vec<&str>, Vec<&str>) = if zip { expected_shape(scope_name) } else { (vec!["*"], vec!["Imported pages"]) };
+                // "*": one notebook named after the file ("export" is too general, so a date).
+                let mut got_nbs: Vec<&str> = notebooks.iter().map(|n| if want_nbs == ["*"] { "*" } else { n.as_str() }).collect();
+                let mut got_secs: Vec<&str> = sections.iter().map(String::as_str).collect();
+                got_nbs.sort_unstable();
+                got_secs.sort_unstable();
+                let (mut want_nbs, mut want_secs) = (want_nbs, want_secs);
+                want_nbs.sort_unstable();
+                want_secs.sort_unstable();
+                if (got_nbs.len(), got_secs.len(), pages.len()) != (want_nbs.len(), want_secs.len(), if zip { expected.len() } else { 1 }) {
+                    failures.push(format!(
+                        "{label}: {} notebooks, {} sections, {} pages came back for {} notebooks, {} sections, {} pages",
+                        got_nbs.len(),
+                        got_secs.len(),
+                        pages.len(),
+                        want_nbs.len(),
+                        want_secs.len(),
+                        if zip { expected.len() } else { 1 }
+                    ));
+                }
+                if got_secs != want_secs || got_nbs != want_nbs {
+                    failures.push(format!("{label}: notebooks {got_nbs:?} and sections {got_secs:?}, expected {want_nbs:?} and {want_secs:?}"));
+                }
+                if summary.notebooks.len() != got_nbs.len() || summary.notebook_id != summary.notebooks[0].id {
+                    failures.push(format!("{label}: the summary names {} notebooks", summary.notebooks.len()));
+                }
                 let text: String = pages.iter().map(|p| format!("{}\n{}\n", p.title, p.text)).collect();
                 let json: String = pages.iter().map(|p| p.content.clone()).collect();
                 let mut notes = Vec::new();
@@ -204,10 +262,11 @@ fn every_format_scope_and_output_comes_back_in() {
                     notes.push("text only");
                 }
                 table.push(format!(
-                    "{:<8} {:<14} {:<6} {:>5} {:>8} {:>6}  {}",
+                    "{:<8} {:<14} {:<6} {:>9} {:>5} {:>8} {:>6}  {}",
                     format.ext(),
                     scope_name,
                     out,
+                    summary.notebooks.len(),
                     summary.pages,
                     summary.sections,
                     summary.images,
@@ -217,6 +276,127 @@ fn every_format_scope_and_output_comes_back_in() {
         }
     }
     println!("\n{}\n", table.join("\n"));
+    let _ = std::fs::remove_dir_all(&root);
+    assert!(failures.is_empty(), "\n{}\n", failures.join("\n"));
+}
+
+/// A page with an inline link to each of `inline` and a "Link to page" row to each of `rows`
+/// (page ids; the link text is `LINK <name>` with the name from `name_of`).
+fn linking(id: &str, section: &str, parent: &str, title: &str, order: i64, inline: &[&str], rows: &[&str], name_of: &dyn Fn(&str) -> &'static str) -> Item {
+    let mut content = vec![format!(r#"{{"type":"paragraph","content":[{{"type":"text","text":"MARK {title}"}}]}}"#)];
+    for t in inline {
+        let name = name_of(t);
+        content.push(format!(
+            r#"{{"type":"paragraph","content":[{{"type":"text","text":"see "}},{{"type":"text","text":"LINK {name}","marks":[{{"type":"link","attrs":{{"href":"notaya:page/{t}#h0abc"}}}}]}},{{"type":"text","text":" here"}}]}}"#
+        ));
+    }
+    for t in rows {
+        content.push(format!(r#"{{"type":"pageLink","attrs":{{"pageId":"{t}"}}}}"#));
+    }
+    let mut p = page(id, section, parent, title, order, None);
+    if let Item::Page(p) = &mut p {
+        p.content = format!(r#"{{"type":"doc","content":[{}]}}"#, content.join(","));
+    }
+    p
+}
+
+/// Links between pages (in text, and "Link to page" rows) go out as links between the files of
+/// a ZIP and come back as links between the new pages, in every format that has links. Links
+/// to pages that were not exported come back as their text; nothing dead or `notaya:` is left.
+#[test]
+fn links_between_exported_pages_come_back_as_links_between_the_imported_pages() {
+    let root = temp();
+    let src = new_vault(&root.join("src-data"));
+    let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
+    let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 });
+    let (n1, n2, s1, s2, pa, pb, pc, pt) = (new_id(), new_id(), new_id(), new_id(), new_id(), new_id(), new_id(), new_id());
+    let ids = [(pa.clone(), "pa"), (pb.clone(), "pb"), (pc.clone(), "pc"), (pt.clone(), "ptrash")];
+    let name_of = |id: &str| ids.iter().find(|(i, _)| i == id).map_or("?", |(_, n)| *n);
+    let mut trashed = page(&pt, &s1, "", "Thrown away", 9, None);
+    if let Item::Page(p) = &mut trashed {
+        p.trashed_at = Some(5);
+    }
+    let items = vec![
+        nb(&n1, "My notes", 0),
+        nb(&n2, "Other", 1),
+        sec(&s1, &n1, "Day 1", 0),
+        sec(&s2, &n2, "Café & co", 0),
+        linking(&pa, &s1, "", "Plan #1 (draft)", 0, &[&pb, &pc, &pt], &[&pb, &pc, &pt], &name_of),
+        linking(&pb, &s1, &pa, "Sub 100%", 1, &[&pa, &pc], &[], &name_of),
+        linking(&pc, &s2, "", "Ünïcode", 0, &[&pb], &[&pa], &name_of),
+        trashed,
+    ];
+    src.with_mut(|s| s.put_many(items)).unwrap();
+    let mut failures: Vec<String> = Vec::new();
+    for format in [Format::Markdown, Format::Html, Format::Docx, Format::Pdf] {
+        for zip in [true, false] {
+            let label = format!("{} / {}", format.label(), if zip { "zip" } else { "single" });
+            let dir = root.join(format!("links-{}-{zip}", format.ext()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let dest = dir.join(if zip { "links.zip".to_string() } else { format!("links.{}", format.ext()) });
+            let scope = Scope::Notebooks(vec![n1.clone(), n2.clone()]);
+            let opts = Options { include_subpages: true, ..Options::default() };
+            src.with(|s| {
+                let items: Vec<&Item> = s.items().collect();
+                if zip {
+                    let zdoc = export::collect_zip(&items, &scope, &opts, format)?;
+                    export::write_zip(&dest, format, zdoc, &|_| None, ZipLimits::default()).map(|_| ())
+                } else {
+                    let doc = export::collect(&items, &scope, &opts, &|_| None)?;
+                    export::write(&dest, format, &doc, &root.join("src-data")).map(|_| ())
+                }
+            })
+            .unwrap_or_else(|e| panic!("{label}: export: {e}"));
+            let dst = new_vault(&root.join(format!("links-dst-{}-{zip}", format.ext())));
+            let summary = import_from(&dst, &[dest.clone()], false, &root.join("src-data"), 1_700_000_000_000, &crate::importers::Control::standard())
+                .unwrap_or_else(|e| panic!("{label}: import: {e}"));
+            let pages: Vec<Page> = dst.with(|s| Ok(s.items().filter_map(|i| if let Item::Page(p) = i { Some(p.clone()) } else { None }).collect())).unwrap();
+            let all: String = pages.iter().map(|p| p.content.clone()).collect();
+            for bad in ["notaya-src", &format!("notaya:page/{pa}"), &format!("notaya:page/{pb}"), &format!("notaya:page/{pc}"), &format!("notaya:page/{pt}"), "notaya_page", "Thrown away"] {
+                if all.contains(bad) {
+                    failures.push(format!("{label}: {bad:?} was left in the imported pages"));
+                }
+            }
+            if !zip || format == Format::Pdf {
+                // One page (single file), or text only (PDF): the text of every link is there.
+                let text: String = pages.iter().map(|p| p.text.clone()).collect();
+                for t in ["LINK pb", "LINK pc", "LINK ptrash", "Sub 100%"] {
+                    if !text.contains(t) {
+                        failures.push(format!("{label}: the text {t:?} did not come back"));
+                    }
+                }
+                continue;
+            }
+            if summary.notebooks.len() != 2 {
+                failures.push(format!("{label}: {} notebooks", summary.notebooks.len()));
+            }
+            let by_title = |t: &str| pages.iter().find(|p| p.title == t);
+            let (Some(a), Some(b), Some(c)) = (by_title("Plan #1 (draft)"), by_title("Sub 100%"), by_title("Ünïcode")) else {
+                failures.push(format!("{label}: pages came back as {:?}", pages.iter().map(|p| &p.title).collect::<Vec<_>>()));
+                continue;
+            };
+            if b.parent != a.id {
+                failures.push(format!("{label}: the sub-page lost its page"));
+            }
+            let link = |to: &Page| format!("\"href\":\"notaya:page/{}\"", to.id);
+            let row = |to: &Page| format!("{{\"attrs\":{{\"pageId\":\"{}\"}},\"type\":\"pageLink\"}}", to.id);
+            for (from, want) in [
+                (a, vec![link(b), link(c), row(b), row(c)]),
+                (b, vec![link(a), link(c)]),
+                (c, vec![link(b), row(a)]),
+            ] {
+                for w in want {
+                    if !from.content.contains(&w) {
+                        failures.push(format!("{label}: '{}' lacks {w}: {}", from.title, from.content));
+                    }
+                }
+            }
+            // The links to the trashed page are text: the inline one and the row ("Page not found").
+            if !a.text.contains("see LINK ptrash here") || a.content.matches("pageLink").count() != 2 {
+                failures.push(format!("{label}: the link to a page outside the export: {}", a.content));
+            }
+        }
+    }
     let _ = std::fs::remove_dir_all(&root);
     assert!(failures.is_empty(), "\n{}\n", failures.join("\n"));
 }

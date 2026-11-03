@@ -212,8 +212,12 @@ export interface ImportSkipped {
 
 /** What an import created (mirrors `ImportSummary` in src-tauri/src/importers/plan.rs). */
 export interface NotesImportSummary {
+  /** The first (usually the only) new notebook; the app opens it. */
   notebookId: string;
   notebookName: string;
+  /** Every new notebook, the first included (several for a Notaya ZIP of several notebooks). */
+  notebooks: { id: string; name: string }[];
+  /** Sections and pages of all the new notebooks together. */
   sections: number;
   pages: number;
   images: number;

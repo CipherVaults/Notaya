@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use super::doc::{Align, Block, Cell, Image, Inline, ListKind, Marks};
+use super::doc::{Align, Block, Cell, Image, Inline, ListKind, Marks, PageRef};
 use super::{ExportDoc, Part, Slot};
 use crate::error::{Error, Result};
 
@@ -73,6 +73,8 @@ pub fn render(doc: &ExportDoc) -> Result<String> {
     out.push_str(&format!("<meta http-equiv=\"Content-Security-Policy\" content=\"{}\">\n", esc(CSP)));
     out.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"generator\" content=\"Notaya\">\n");
     out.push_str(&format!("<title>{}</title>\n<style>{STYLE}</style>\n</head>\n<body>\n", esc(&doc.title)));
+    let targets = doc.anchor_targets();
+    let mut page_no = 0;
     for part in &doc.parts {
         match part {
             Part::Heading { level, text } => {
@@ -81,7 +83,8 @@ pub fn render(doc: &ExportDoc) -> Result<String> {
             }
             Part::Page { level, title, blocks } => {
                 let l = (*level).clamp(1, 6);
-                out.push_str(&format!("<h{l} dir=\"auto\">{}</h{l}>\n", esc(title)));
+                page_no += 1;
+                out.push_str(&format!("{}{}</h{l}>\n", page_title_open(l, page_no, &targets), esc(title)));
                 for line in r.blocks(blocks, *level) {
                     out.push_str(&line);
                     out.push('\n');
@@ -236,7 +239,7 @@ impl Renderer {
             Block::Image(img) => self.image(img),
             Block::Table(rows) => self.table(rows, shift),
             Block::Rule => "<hr>".to_string(),
-            Block::PageLink { title } => format!("<p dir=\"auto\">\u{2192} {}</p>", esc(title)),
+            Block::PageLink { title, target } => page_link_row(title, target.as_ref()),
         })
     }
 
@@ -342,6 +345,27 @@ impl Mark {
     }
 }
 
+/// The "Link to page" row: a link to the page's file (in a ZIP) or its place in this file when it
+/// is part of the export, else its title as text.
+fn page_link_row(title: &str, target: Option<&PageRef>) -> String {
+    match target {
+        Some(r) => {
+            let link = Mark::Link(r.href());
+            format!("<p dir=\"auto\">\u{2192} {}{}{}</p>", link.open(), esc(title), link.close())
+        }
+        None => format!("<p dir=\"auto\">\u{2192} {}</p>", esc(title)),
+    }
+}
+
+/// The start of the n-th page's title heading: with an `id` when a link in the file points at it.
+fn page_title_open(level: u8, n: usize, targets: &std::collections::HashSet<usize>) -> String {
+    if targets.contains(&n) {
+        format!("<h{level} id=\"{}\" dir=\"auto\">", super::doc::page_anchor(n))
+    } else {
+        format!("<h{level} dir=\"auto\">")
+    }
+}
+
 /// Only web and mail links stay live; anything else (`javascript:`, `file:`, `data:`) is plain text.
 fn safe_href(url: &str) -> Option<String> {
     let u: String = url.trim().chars().filter(|c| !c.is_control()).collect();
@@ -354,6 +378,9 @@ fn mark_list(m: &Marks) -> Vec<Mark> {
     let mut v = Vec::new();
     if let Some(url) = m.link.as_deref().and_then(safe_href) {
         v.push(Mark::Link(url));
+    } else if let Some(r) = &m.page {
+        // Another page of the same export: its file in the ZIP, or its place in this file.
+        v.push(Mark::Link(r.href()));
     }
     let size = m.size.filter(|z| z.is_finite()).map(|z| format!("{}", (z.clamp(6.0, 72.0) * 10.0).round() / 10.0));
     if m.color.is_some() || size.is_some() {
@@ -547,7 +574,7 @@ mod tests {
             Block::Math(evil.into()),
             Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: evil.into(), width_pct: Some(50.0), align: Align::Center }),
             Block::Callout { icon: evil.into(), blocks: vec![] },
-            Block::PageLink { title: evil.into() },
+            Block::PageLink { title: evil.into(), target: None },
             Block::Toggle(vec![para(evil, Marks::default())]),
         ];
         let mut d = sample_doc(blocks);

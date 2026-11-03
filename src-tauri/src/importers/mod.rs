@@ -245,15 +245,22 @@ pub fn safe_link(href: &str) -> Option<String> {
     }
 }
 
-/// Marks a link to another page of the same import (a relative `.md`, `.html` or `.htm` address that
-/// names a file in the source) for the renderer, which turns it into an internal Notaya link once the
+/// Marks a link to another page of the same import (a relative address of a document that names a
+/// file in the source) for the renderer, which turns it into an internal Notaya link once the
 /// page ids are known, or drops it when that page was not imported.
 pub const PAGE_HREF: &str = "notaya-src:";
 
+/// True when a relative link names a page document: Markdown or HTML (how Notion and Notaya's
+/// own ZIP export link their pages), Word (Notaya's own Word ZIP) or PDF (an attachment that the
+/// import turns into a page). Query and fragment are ignored.
+pub fn is_page_address(href: &str) -> bool {
+    let lower = href.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
+    [".md", ".markdown", ".html", ".htm", ".docx", ".pdf"].iter().any(|ext| lower.ends_with(ext))
+}
+
 impl Ctx<'_> {
     pub fn page_href(&self, href: &str) -> Option<String> {
-        let lower = href.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
-        if !(lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".html") || lower.ends_with(".htm")) {
+        if !is_page_address(href) {
             return None;
         }
         let path = resolve_rel(&self.dir, href).and_then(|p| self.vfs.find(&p))?;

@@ -1,5 +1,7 @@
 //! "Import pages…": Markdown, HTML, Word and PDF files, a folder of them, and ZIP files (for
-//! example a Notion export) become ONE new notebook (see `crate::importers`).
+//! example a Notion export) become ONE new notebook (see `crate::importers`). A ZIP of several
+//! notebooks made by Notaya's own export becomes one new notebook for each; the summary lists
+//! them all, and the app opens the first.
 //!
 //! The UI sends only which kind of source to import ("files" or "folder"). The dialog is opened
 //! here, the files are read and converted here, and the UI gets back a summary. Nothing is ever
@@ -192,9 +194,9 @@ pub fn import_from<V: VaultAccess>(vault: &V, paths: &[PathBuf], folder: bool, d
                 .map_err(Error::Other)?;
             let order = vault.with(|s| Ok(next_notebook_order(s)))?;
             let (items, summary) = plan.items(ctl, &urls, now, order).map_err(Error::invalid)?;
-            // Last chance to stop: after this the notebook is saved in one step.
+            // Last chance to stop: after this the notebooks are saved in one step.
             plan::check(ctl).map_err(Error::invalid)?;
-            // The notebook, sections and pages in one transaction; the pictures are then in saved
+            // The notebooks, sections and pages in one transaction; the pictures are then in saved
             // pages and no longer need holding.
             vault.with_mut(|s| {
                 if !s.holds(&stored) {
@@ -415,6 +417,67 @@ mod tests {
         let ok = import_from(&v, &[src.join("a.md")], false, &root.join("data"), 1, &Control::standard()).unwrap();
         assert_eq!((ok.pages, ok.images), (1, 2));
         assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "both pictures are used");
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    /// A ZIP of two notebooks in Notaya's own layout, with a picture.
+    fn two_notebook_zip(dir: &Path) -> PathBuf {
+        let marker = crate::export::marker_text(crate::export::Layout::Notebooks);
+        let z = zip::build(
+            &[
+                ("notaya-export.txt", marker.as_bytes()),
+                ("Alpha/Journal/One.md", b"# One\n\n![p](One.assets/image-001.png)\n\n\xE2\x86\x92 [Two](../../Beta/Work/Two.md)"),
+                ("Alpha/Journal/One.assets/image-001.png", PNG),
+                ("Beta/Work/Two.md", b"# Two\n\nsecond"),
+            ],
+            true,
+        );
+        let path = dir.join("2 notebooks.zip");
+        std::fs::write(&path, z).unwrap();
+        path
+    }
+
+    #[test]
+    fn a_zip_of_two_notebooks_is_saved_as_two_notebooks_all_or_nothing() {
+        let root = temp();
+        let file = two_notebook_zip(&root);
+        let v = vault(&root.join("data"));
+        let before = count(&v);
+        // Calls: 1 stores the picture, 2 saves both notebooks in one step.
+        for fail_on in [1usize, 2] {
+            let f = Failing { inner: &v, calls: 0.into(), fail_on };
+            assert!(import_from(&f, &[file.clone()], false, &root.join("data"), 1, &Control::standard()).is_err());
+            assert_eq!(count(&v), before, "no notebook at all when it fails (fail_on {fail_on})");
+            assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "the picture was taken back (fail_on {fail_on})");
+        }
+        // Cancelled: nothing either.
+        let flag = Arc::new(AtomicBool::new(true));
+        assert_eq!(import_from(&v, &[file.clone()], false, &root.join("data"), 1, &flag_control(&flag)).unwrap_err().to_string(), plan::CANCELLED);
+        assert_eq!(count(&v), before);
+        // With a cleanup before every change, the picture is still there at the end.
+        let hooked = Hooked {
+            inner: &v,
+            calls: 0.into(),
+            hook: Box::new(|_, store| {
+                let _ = store.with_mut(|s| s.collect_garbage());
+            }),
+        };
+        let summary = import_from(&hooked, &[file], false, &root.join("data"), 1, &Control::standard()).unwrap();
+        let names: Vec<&str> = summary.notebooks.iter().map(|n| n.name.as_str()).collect();
+        assert_eq!(names, ["Alpha", "Beta"]);
+        assert_eq!((summary.notebook_name.as_str(), summary.sections, summary.pages, summary.images), ("Alpha", 2, 2, 1));
+        let ps = pages(&v);
+        let one = ps.iter().find(|p| p.title == "One").unwrap();
+        let two = ps.iter().find(|p| p.title == "Two").unwrap();
+        assert!(one.content.contains(&format!("\"pageId\":\"{}\"", two.id)), "a link across notebooks: {}", one.content);
+        v.with(|s| {
+            let nbs: Vec<&str> = s.items().filter_map(|i| if let Item::Notebook(n) = i { Some(n.name.as_str()) } else { None }).collect();
+            assert_eq!(nbs.len(), 2);
+            assert!(nbs.contains(&"Alpha") && nbs.contains(&"Beta"));
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0);
         let _ = std::fs::remove_dir_all(root);
     }
 

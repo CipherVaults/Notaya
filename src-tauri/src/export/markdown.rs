@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use super::doc::{inline_text, Align, Block, Cell, Inline, ListKind, Marks};
+use super::doc::{inline_text, Align, Block, Cell, Inline, ListKind, Marks, PageRef};
 use super::{ExportDoc, Part, Slot};
 
 pub struct Output {
@@ -187,7 +187,7 @@ impl Renderer {
             }
             Block::Table(rows) => table(rows),
             Block::Rule => vec!["---".to_string()],
-            Block::PageLink { title } => vec![format!("→ {}", escape_text(title))],
+            Block::PageLink { title, target } => vec![page_link_row(title, target.as_ref())],
         }
     }
 }
@@ -242,7 +242,7 @@ fn cell_text(cell: &Cell) -> String {
                 Block::Code { text, .. } => parts.push(format!("`{}`", text.replace('\n', " ").replace('|', "\\|"))),
                 Block::Math(m) => parts.push(format!("${m}$")),
                 Block::Image(i) => parts.push(if i.caption.is_empty() { "(picture)".into() } else { format!("(picture: {})", escape_text(&i.caption)) }),
-                Block::PageLink { title } => parts.push(format!("→ {}", escape_text(title))),
+                Block::PageLink { title, target } => parts.push(page_link_row(title, target.as_ref())),
                 Block::Quote(x) | Block::Toggle(x) | Block::Callout { blocks: x, .. } => walk(x, parts),
                 Block::Columns(c) => c.iter().for_each(|x| walk(x, parts)),
                 Block::Table(_) | Block::Rule => {}
@@ -299,6 +299,9 @@ fn mark_list(m: &Marks) -> Vec<Mark> {
         u.starts_with("http://") || u.starts_with("https://") || u.starts_with("mailto:")
     }) {
         v.push(Mark::Link(url.clone()));
+    } else if let Some(PageRef::File(path)) = &m.page {
+        // Another page of the same ZIP: its file, by the path the exporter made.
+        v.push(Mark::Link(path.clone()));
     }
     if let Some(c) = m.color {
         v.push(Mark::Color(c.hex()));
@@ -319,6 +322,16 @@ fn mark_list(m: &Marks) -> Vec<Mark> {
         v.push(Mark::Underline);
     }
     v
+}
+
+/// The "Link to page" row: `→ [Title](Other%20page.md)` when the page is another file of the
+/// same ZIP, else `→ Title`. (A single Markdown file keeps the title only: heading anchors
+/// differ from viewer to viewer.)
+fn page_link_row(title: &str, target: Option<&PageRef>) -> String {
+    match target {
+        Some(PageRef::File(path)) => format!("→ [{}]({})", escape_text(title), link_target(path)),
+        _ => format!("→ {}", escape_text(title)),
+    }
 }
 
 fn link_target(url: &str) -> String {

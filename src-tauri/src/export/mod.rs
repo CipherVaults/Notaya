@@ -16,7 +16,13 @@
 //! [`write_zip`]): folders `Notebook/Section/` (only the levels the choice spans), the file
 //! `Page.<ext>`, and the sub-pages of a page in a folder named like the page, next to it
 //! (`Section/Page.md` and `Section/Page/Sub-page.md`). Names are made safe for Windows and made
-//! unique within their folder without regard to capitals (`Name (2).md`).
+//! unique within their folder without regard to capitals (`Name (2).md`). The ZIP also holds
+//! `notaya-export.txt`, which says only how it is laid out (see [`marker_text`]), and links
+//! between its pages are relative links to their files.
+//!
+//! Links to other pages (`notaya:page/<id>` and the "Link to page" row) become real links only
+//! when that page is part of the same export: to its file in a ZIP, or to its place in a single
+//! HTML or Word file. Any other one is written as its text.
 
 pub mod deflate;
 pub mod doc;
@@ -146,6 +152,17 @@ impl ExportDoc {
 
     pub fn page_count(&self) -> usize {
         self.parts.iter().filter(|p| matches!(p, Part::Page { .. })).count()
+    }
+
+    /// The pages (numbered from 1 in document order) that links inside this document point at.
+    pub fn anchor_targets(&self) -> HashSet<usize> {
+        let mut out = HashSet::new();
+        for part in &self.parts {
+            if let Part::Page { blocks, .. } = part {
+                doc::anchor_targets(blocks, &mut out);
+            }
+        }
+        out
     }
 }
 
@@ -437,6 +454,14 @@ fn title_lookup<'a>(items: &'a [&'a Item], opts: &'a Options) -> impl Fn(&str) -
 pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn Fn(&str) -> Option<(String, Vec<u8>)>) -> Result<ExportDoc> {
     let sel = select(items, scope, opts)?;
     let title_of = title_lookup(items, opts);
+    // The pages of the document, numbered in order: a link to one of them goes to its place in
+    // the file (HTML and Word; Markdown and PDF keep the text).
+    let mut number: HashMap<&str, usize> = HashMap::new();
+    for (p, _) in sel.groups.iter().flat_map(|g| &g.pages) {
+        let n = number.len() + 1;
+        number.entry(p.id.as_str()).or_insert(n);
+    }
+    let page_ref = |id: &str| number.get(id).map(|n| doc::PageRef::Anchor(*n));
     let mut parts = Vec::new();
     let mut last_notebook: Option<&str> = None;
     for g in &sel.groups {
@@ -457,7 +482,7 @@ pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn 
         };
         for (p, depth) in &g.pages {
             let level = base.saturating_add(*depth).min(6);
-            parts.push(Part::Page { level, title: page_title(&p.title), blocks: doc::parse(&p.content, &title_of) });
+            parts.push(Part::Page { level, title: page_title(&p.title), blocks: doc::parse_with(&p.content, &title_of, &page_ref) });
         }
     }
     let mut out = ExportDoc { title: sel.title, parts, images: BTreeMap::new(), missing_images: 0 };
@@ -500,6 +525,52 @@ pub struct ZipFile {
 
 pub struct ZipDoc {
     pub files: Vec<ZipFile>,
+    /// What the top folders are, for the marker file (see [`MARKER_NAME`]).
+    pub layout: Layout,
+}
+
+/// How a ZIP export is laid out, as its marker file says.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Layout {
+    /// One top folder per notebook, with a folder per section inside.
+    Notebooks,
+    /// One top folder per section.
+    Sections,
+    /// The chosen pages, in section folders only when they come from several sections.
+    Pages,
+}
+
+impl Layout {
+    pub fn name(self) -> &'static str {
+        match self {
+            Layout::Notebooks => "notebooks",
+            Layout::Sections => "sections",
+            Layout::Pages => "pages",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Layout> {
+        match s.trim() {
+            "notebooks" => Some(Layout::Notebooks),
+            "sections" => Some(Layout::Sections),
+            "pages" => Some(Layout::Pages),
+            _ => None,
+        }
+    }
+}
+
+/// The small text file at the top of every ZIP export that tells Notaya's import how the ZIP is
+/// laid out (so several notebooks come back as several notebooks). It holds no note content:
+/// only [`MARKER_FIRST_LINE`], the layout, and a sentence for whoever opens it.
+pub const MARKER_NAME: &str = "notaya-export.txt";
+pub const MARKER_FIRST_LINE: &str = "Notaya export v1";
+
+/// The marker file's text for a layout.
+pub fn marker_text(layout: Layout) -> String {
+    format!(
+        "{MARKER_FIRST_LINE}\nlayout: {}\n\nThis file tells Notaya how to import this ZIP again (Import pages). It holds no notes.\n",
+        layout.name()
+    )
 }
 
 /// A name for a folder or file, made safe for Windows. An empty name becomes `fallback`.
@@ -551,11 +622,14 @@ pub const MAX_ZIP_BYTES: u64 = 1024 * 1024 * 1024;
 pub fn collect_zip(items: &[&Item], scope: &Scope, opts: &Options, format: Format) -> Result<ZipDoc> {
     let sel = select(items, scope, opts)?;
     let page_total: usize = sel.groups.iter().map(|g| g.pages.len()).sum();
-    if page_total > MAX_ZIP_ENTRIES {
+    // One entry more for the marker file.
+    if page_total + 1 > MAX_ZIP_ENTRIES {
         return Err(Error::invalid(format!("A ZIP can hold at most {MAX_ZIP_ENTRIES} files. Choose fewer pages.")));
     }
     let title_of = title_lookup(items, opts);
     let mut namer = Namer::default();
+    // The marker's name is taken first, so no folder or page can have it.
+    namer.claim(&[], MARKER_NAME, &|c| vec![c.to_string()]);
     let ext = format.ext();
     let folder = |namer: &mut Namer, parent: &[String], name: &str, fallback: &str| -> String {
         namer.claim(parent, &safe_part(name, fallback), &|c| vec![c.to_string()])
@@ -566,7 +640,9 @@ pub fn collect_zip(items: &[&Item], scope: &Scope, opts: &Options, format: Forma
     let multi_section = sel.groups.iter().filter(|g| !g.pages.is_empty()).map(|g| g.section_id).collect::<HashSet<_>>().len() > 1;
     // The folder where the sub-pages of a page go, by page id.
     let mut child_dirs: HashMap<&str, Vec<String>> = HashMap::new();
-    let mut files = Vec::new();
+    // Every page's place first (folders, unique file name), then the pages are read, so a link
+    // to any page of the ZIP can be written as a relative path to its file.
+    let mut placed: Vec<(Vec<String>, String, String, &Page)> = Vec::new();
     for g in &sel.groups {
         if g.pages.is_empty() {
             continue;
@@ -612,10 +688,32 @@ pub fn collect_zip(items: &[&Item], scope: &Scope, opts: &Options, format: Forma
                 child.push(stem.clone());
             }
             child_dirs.insert(p.id.as_str(), child);
-            files.push(ZipFile { dir, stem, title, blocks: doc::parse(&p.content, &title_of) });
+            placed.push((dir, stem, title, p));
         }
     }
-    Ok(ZipDoc { files })
+    let file_of: HashMap<&str, (&[String], String)> = placed.iter().map(|(dir, stem, _, p)| (p.id.as_str(), (dir.as_slice(), format!("{stem}.{ext}")))).collect();
+    let mut files = Vec::with_capacity(placed.len());
+    for (dir, stem, title, p) in &placed {
+        let page_ref = |id: &str| file_of.get(id).map(|(to, name)| doc::PageRef::File(relative_href(dir, to, name)));
+        files.push(ZipFile { dir: dir.clone(), stem: stem.clone(), title: title.clone(), blocks: doc::parse_with(&p.content, &title_of, &page_ref) });
+    }
+    let layout = match sel.shape {
+        Shape::Notebooks => Layout::Notebooks,
+        Shape::Sections => Layout::Sections,
+        Shape::Pages => Layout::Pages,
+    };
+    Ok(ZipDoc { files, layout })
+}
+
+/// The link from a file in folder `from` to the file `name` in folder `to`, both inside the same
+/// ZIP: `..` for each folder up, then the folders down, every name percent-encoded. Only names
+/// from the exporter's own table go in.
+fn relative_href(from: &[String], to: &[String], name: &str) -> String {
+    let common = from.iter().zip(to).take_while(|(a, b)| a == b).count();
+    let mut parts: Vec<String> = vec!["..".to_string(); from.len() - common];
+    parts.extend(to[common..].iter().map(|d| doc::url_segment(d)));
+    parts.push(doc::url_segment(name));
+    parts.join("/")
 }
 
 /// What a ZIP export may hold; the defaults are the limits above (tests use smaller ones).
@@ -651,6 +749,11 @@ pub fn write_zip(dest: &Path, format: Format, zdoc: ZipDoc, attachment: &dyn Fn(
         p.push_str(name);
         p
     };
+    // The marker first (it is not counted among the files the person is told about).
+    if limits.max_entries == 0 {
+        return Err(too_many());
+    }
+    zip.add(MARKER_NAME, marker_text(zdoc.layout).as_bytes(), true)?;
     for f in zdoc.files {
         let mut ids = Vec::new();
         doc::attachments(&f.blocks, &mut ids);
@@ -1208,8 +1311,11 @@ pub mod tests {
         let root = temp_dir();
         let dest = root.join("out.zip");
         let summary = write_zip(&dest, format, zdoc, &vault_picture, ZipLimits::default())?;
-        let entries = read_zip(&fs::read(&dest).unwrap());
+        let mut entries = read_zip(&fs::read(&dest).unwrap());
         let _ = fs::remove_dir_all(root);
+        // Every ZIP starts with its marker; the tests look at the pages.
+        assert_eq!(entries.first().map(|(n, _)| n.as_str()), Some(MARKER_NAME));
+        entries.remove(0);
         Ok((entries, summary))
     }
 
@@ -1478,6 +1584,7 @@ pub mod tests {
         assert_eq!(
             listed,
             [
+                MARKER_NAME,
                 "Personal/Journal/First.md",
                 "Personal/Journal/First/Inside first.md",
                 "Personal/Journal/Second.md",
@@ -1486,6 +1593,139 @@ pub mod tests {
             ]
         );
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn the_marker_says_the_layout_and_nothing_else() {
+        let items = sample_items();
+        for (scope, layout) in [
+            (Scope::Notebooks(vec!["nb".into(), "nb2".into()]), "notebooks"),
+            (Scope::Notebook("nb".into()), "notebooks"),
+            (Scope::Sections(vec!["s1".into()]), "sections"),
+            (Scope::Section("s1".into()), "sections"),
+            (Scope::Pages(vec!["a".into()]), "pages"),
+        ] {
+            let refs: Vec<&Item> = items.iter().collect();
+            let zdoc = collect_zip(&refs, &scope, &Options::default(), Format::Html).unwrap();
+            let root = temp_dir();
+            let s = write_zip(&root.join("x.zip"), Format::Html, zdoc, &vault_picture, ZipLimits::default()).unwrap();
+            let entries = read_zip(&fs::read(root.join("x.zip")).unwrap());
+            let marker = text(&entries, MARKER_NAME);
+            assert_eq!(marker.lines().next(), Some(MARKER_FIRST_LINE));
+            assert_eq!(marker.lines().nth(1), Some(format!("layout: {layout}").as_str()), "{scope:?}");
+            for name in ["Personal", "Journal", "First", "Body"] {
+                assert!(!marker.contains(name), "no names or content in the marker: {marker}");
+            }
+            assert_eq!(s.files, entries.len() - 1, "the marker is not counted as a page file");
+            let _ = fs::remove_dir_all(root);
+        }
+        // A page or section named like the marker gets another name.
+        let mut items = sample_items();
+        items.push(page("m", "s2", "", "notaya-export.txt", 9, false));
+        let (entries, _) = zip_of(&items, Scope::Section("s2".into()), Format::Markdown, true, false).unwrap();
+        assert!(names(&entries).contains(&"Ideas/notaya-export.txt.md"));
+        let (entries, _) = zip_of(&items, Scope::Pages(vec!["m".into()]), Format::Markdown, true, false).unwrap();
+        assert_eq!(names(&entries), ["notaya-export.txt (2).md"], "its sub-page folder would take the marker's name");
+    }
+
+    fn linking(id: &str, section: &str, parent: &str, title: &str, order: i64, targets: &[&str]) -> Item {
+        let mut content = vec![format!(r#"{{"type":"paragraph","content":[{{"type":"text","text":"Body of {title}"}}]}}"#)];
+        for t in targets {
+            content.push(format!(
+                r#"{{"type":"paragraph","content":[{{"type":"text","text":"see "}},{{"type":"text","text":"link to {t}","marks":[{{"type":"link","attrs":{{"href":"notaya:page/{t}#h1"}}}}]}}]}}"#
+            ));
+            content.push(format!(r#"{{"type":"pageLink","attrs":{{"pageId":"{t}"}}}}"#));
+        }
+        page_with(id, section, parent, title, order, format!(r#"{{"type":"doc","content":[{}]}}"#, content.join(",")))
+    }
+
+    #[test]
+    fn links_between_pages_of_a_zip_are_relative_paths_to_their_files() {
+        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
+        let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 });
+        let items = vec![
+            nb("n1", "My notes", 0),
+            nb("n2", "Other", 1),
+            sec("s1", "n1", "Day 1", 0),
+            sec("s2", "n2", "Café & co", 0),
+            linking("a", "s1", "", "Plan #1 (draft)", 0, &["b", "c", "gone", "x"]),
+            linking("b", "s1", "a", "Sub 100%", 1, &["a", "c"]),
+            linking("c", "s2", "", "Ünïcode?", 0, &["b"]),
+            page("gone", "s1", "", "Thrown away", 5, true),
+        ];
+        let (entries, _) = zip_of(&items, Scope::Notebooks(vec!["n1".into(), "n2".into()]), Format::Markdown, true, false).unwrap();
+        assert_eq!(names(&entries), ["My notes/Day 1/Plan #1 (draft).md", "My notes/Day 1/Plan #1 (draft)/Sub 100%.md", "Other/Café & co/Ünïcode.md"]);
+        let a = text(&entries, "My notes/Day 1/Plan #1 (draft).md");
+        assert!(a.contains("[link to b](Plan%20%231%20%28draft%29/Sub%20100%25.md)"), "{a}");
+        assert!(a.contains("→ [Sub 100%](Plan%20%231%20%28draft%29/Sub%20100%25.md)"), "{a}");
+        assert!(a.contains("[link to c](../../Other/Caf%C3%A9%20%26%20co/%C3%9Cn%C3%AFcode.md)"), "{a}");
+        // A trashed page and a page that does not exist: text only, never a notaya: address.
+        assert!(a.contains("see link to gone") && a.contains("→ Page not found") && a.contains("see link to x"), "{a}");
+        assert!(!a.contains("notaya:"), "{a}");
+        let b = text(&entries, "My notes/Day 1/Plan #1 (draft)/Sub 100%.md");
+        assert!(b.contains("[link to a](../Plan%20%231%20%28draft%29.md)"), "{b}");
+        assert!(b.contains("(../../../Other/Caf%C3%A9%20%26%20co/%C3%9Cn%C3%AFcode.md)"), "{b}");
+        let c = text(&entries, "Other/Café & co/Ünïcode.md");
+        assert!(c.contains("(../../My%20notes/Day%201/Plan%20%231%20%28draft%29/Sub%20100%25.md)"), "{c}");
+        // Only the chosen pages count: a link to a page outside the export is text.
+        let (entries, _) = zip_of(&items, Scope::Notebook("n2".into()), Format::Markdown, true, false).unwrap();
+        let c = text(&entries, "Other/Café & co/Ünïcode.md");
+        assert!(c.contains("see link to b") && c.contains("→ Sub 100%") && !c.contains("](") && !c.contains("notaya:"), "{c}");
+        // HTML and Word point at their own files.
+        let (entries, _) = zip_of(&items, Scope::Section("s1".into()), Format::Html, true, false).unwrap();
+        let a = text(&entries, "Day 1/Plan #1 (draft).html");
+        assert!(a.contains("<a href=\"Plan%20%231%20%28draft%29/Sub%20100%25.html\" rel=\"noopener noreferrer\">link to b</a>"), "{a}");
+        assert!(a.contains("<p dir=\"auto\">\u{2192} <a href=\"Plan%20%231%20%28draft%29/Sub%20100%25.html\""), "{a}");
+        assert!(!a.contains("notaya:") && !a.contains("href=\"#"), "{a}");
+        let (entries, _) = zip_of(&items, Scope::Section("s1".into()), Format::Docx, true, false).unwrap();
+        let docx = &entries.iter().find(|(n, _)| n == "Day 1/Plan #1 (draft).docx").unwrap().1;
+        let parts = read_zip(docx);
+        let rels = std::str::from_utf8(&parts.iter().find(|(n, _)| n == "word/_rels/document.xml.rels").unwrap().1).unwrap().to_string();
+        assert!(rels.contains("Target=\"Plan%20%231%20%28draft%29/Sub%20100%25.docx\" TargetMode=\"External\""), "{rels}");
+        assert_eq!(rels.matches("Sub%20100%25.docx").count(), 1, "one relationship for both links: {rels}");
+        assert!(!rels.contains("notaya"));
+    }
+
+    #[test]
+    fn relative_paths_climb_and_descend() {
+        let v = |s: &[&str]| s.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        assert_eq!(relative_href(&v(&["A", "B"]), &v(&["A", "B"]), "x.md"), "x.md");
+        assert_eq!(relative_href(&v(&["A", "B"]), &v(&["A", "B", "C"]), "x.md"), "C/x.md");
+        assert_eq!(relative_href(&v(&["A", "B", "C"]), &v(&["A", "D"]), "x y.md"), "../../D/x%20y.md");
+        assert_eq!(relative_href(&v(&[]), &v(&["a:b"]), "c.md"), "a%3Ab/c.md", "never a scheme");
+        for (from, to) in [(v(&["A", "B"]), v(&["C"])), (v(&[]), v(&["A", "B"])), (v(&["A"]), v(&[]))] {
+            let href = relative_href(&from, &to, "Page.md");
+            let joined = crate::importers::resolve_rel(&from.join("/"), &href);
+            let mut want = to.clone();
+            want.push("Page.md".into());
+            assert_eq!(joined, Some(want.join("/")), "{href}");
+        }
+    }
+
+    #[test]
+    fn links_inside_one_html_or_word_file_go_to_the_page_s_place() {
+        let items = vec![
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            linking("a", "s", "", "First", 0, &["b", "elsewhere"]),
+            linking("b", "s", "", "Second", 1, &[]),
+        ];
+        let refs: Vec<&Item> = items.iter().collect();
+        let d = collect(&refs, &Scope::Section("s".into()), &Options::default(), &|_| None).unwrap();
+        assert_eq!(d.anchor_targets().into_iter().collect::<Vec<_>>(), [2]);
+        let html = html::render(&d).unwrap();
+        assert!(html.contains("<h2 id=\"notaya_page_2\" dir=\"auto\">Second</h2>"), "{html}");
+        assert!(html.contains("<h2 dir=\"auto\">First</h2>"), "a page nothing links to has no id");
+        assert!(html.contains("<a href=\"#notaya_page_2\" rel=\"noopener noreferrer\">link to b</a>"), "{html}");
+        assert!(html.contains("see link to elsewhere") && !html.contains("notaya:"), "{html}");
+        let parts = read_zip(&docx::render_at(&d, 0).unwrap());
+        let document = std::str::from_utf8(&parts.iter().find(|(n, _)| n == "word/document.xml").unwrap().1).unwrap().to_string();
+        assert!(document.contains("<w:bookmarkStart w:id=\"2\" w:name=\"notaya_page_2\"/>"), "{document}");
+        assert!(document.contains("<w:bookmarkEnd w:id=\"2\"/>"));
+        assert_eq!(document.matches("<w:hyperlink w:anchor=\"notaya_page_2\"").count(), 2, "the link and the row");
+        // Markdown in one file keeps the text (heading anchors differ between viewers).
+        let md = markdown::render(&d, "x.assets").text;
+        assert!(md.contains("see link to b") && md.contains("→ Second") && !md.contains("](") && !md.contains("notaya:"), "{md}");
     }
 
     #[test]
@@ -1512,7 +1752,7 @@ pub mod tests {
         let zdoc = collect_zip(&refs, &Scope::Notebook("nb".into()), &opts, Format::Markdown).unwrap();
         let s = write_zip(&dest, Format::Markdown, zdoc, &vault_picture, ZipLimits::default()).unwrap();
         assert_eq!(s.pages, 4);
-        assert_eq!(read_zip(&fs::read(&dest).unwrap()).len(), 4);
+        assert_eq!(read_zip(&fs::read(&dest).unwrap()).len(), 5, "four pages and the marker");
         let leftovers = fs::read_dir(&root).unwrap().filter_map(|e| e.ok()).filter(|e| e.file_name().to_string_lossy().ends_with(".tmp")).count();
         assert_eq!(leftovers, 0);
         let _ = fs::remove_dir_all(root);

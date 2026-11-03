@@ -1,12 +1,18 @@
-//! The glue of an import: from the files of a [`Vfs`] to ONE new notebook.
+//! The glue of an import: from the files of a [`Vfs`] to ONE new notebook (or, for a ZIP of
+//! several notebooks made by Notaya's own export, one new notebook for each).
 //!
 //! 1. [`build`] finds the documents (by extension), converts each with the matching converter
 //!    and arranges them: one section per top-level folder (or one section "Imported pages" for
 //!    loose pages), a page for each document, and Notion's nested folders as sub-pages (a page
 //!    `X.md` and a folder `X/` next to it: the pages in `X/` are sub-pages of X; a folder with no
 //!    page of its own becomes an empty page that holds its pages). Nothing is written.
+//!    When the source has Notaya's marker file at its top (`notaya-export.txt`, see
+//!    `crate::export::marker_text`) and its folders have the shape the marker names, the layout
+//!    is restored: `notebooks` gives a notebook per top folder and a section per folder inside it,
+//!    `sections` a section per top folder (even when there is only one). Without the marker, or
+//!    when the folders do not fit it, the import works as described above.
 //! 2. [`Plan::store_images`] stores the pictures (the caller gives the function that stores one).
-//! 3. [`Plan::items`] renders the pages and returns the vault items of the new notebook, to be
+//! 3. [`Plan::items`] renders the pages and returns the vault items of the new notebooks, to be
 //!    saved in one transaction (`Session::put_many`).
 //!
 //! Pictures are shown with the same address the editor uses for a pasted picture
@@ -20,6 +26,7 @@ use super::doc::{self, Block, ImageOut, Inline};
 use super::source::Vfs;
 use super::{clean_title, decode_text, docx, html, markdown, pdf, sniff, strip_notion_id, Control, Ctx, ImgSrc, Images, Skipped, Stop};
 use super::{MAX_BINARY_FILE, MAX_IMAGE, MAX_PAGES, MAX_TEXT_FILE};
+use crate::export::Layout;
 use crate::model::{new_id, Item, Notebook, Page, Section};
 
 /// What the person is told when they cancel.
@@ -49,13 +56,24 @@ const NOTEBOOK_ICON: &str = "📓";
 #[derive(Serialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportSummary {
+    /// The first (usually the only) new notebook, which the app opens.
     pub notebook_id: String,
     pub notebook_name: String,
+    /// Every new notebook, the first one included, in order.
+    pub notebooks: Vec<NotebookRef>,
+    /// Sections and pages of all the new notebooks together.
     pub sections: usize,
     pub pages: usize,
     pub images: usize,
     pub skipped: Vec<Skipped>,
     pub notes: Vec<String>,
+}
+
+#[derive(Serialize, Debug, Default, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct NotebookRef {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -160,8 +178,11 @@ impl Dir {
 
 /// The result of building: nothing is stored yet.
 pub struct Plan {
-    pub notebook: String,
+    /// The new notebooks' names (one, unless a Notaya ZIP of several notebooks is imported).
+    pub notebooks: Vec<String>,
     pub sections: Vec<String>,
+    /// For each section, the notebook it belongs to (an index into `notebooks`).
+    pub section_notebook: Vec<usize>,
     pub pages: Vec<PlanPage>,
     pub images: Images,
     pub skipped: Vec<Skipped>,
@@ -340,6 +361,8 @@ impl Builder<'_> {
             }
             return None;
         }
+        // "→ Title" rows that link to another document (Notaya's own export) are page links again.
+        doc::page_link_rows(&mut blocks);
         let title = take_title(declared, &mut blocks, name);
         self.pages.push(PlanPage {
             key: path.to_string(),
@@ -409,6 +432,40 @@ fn date_text(now_ms: i64) -> String {
     format!("{y:04}-{m:02}-{d:02}")
 }
 
+/// Most bytes of a marker file that are read.
+const MAX_MARKER: u64 = 4 * 1024;
+/// Most notebooks one import may create (a ZIP of more notebooks than this is imported as one
+/// notebook, its top folders as sections, as without the marker).
+pub const MAX_NOTEBOOKS: usize = 100;
+
+/// Notaya's marker file at the top of the source (see `crate::export::marker_text`): `Some` with
+/// the layout it names (`None` inside for a layout this version does not know) when the file is
+/// there and starts with the fixed first line. Such a file is not imported as a page.
+fn marker(vfs: &Vfs) -> Option<Option<Layout>> {
+    let name = crate::export::MARKER_NAME;
+    if !vfs.paths().any(|p| p == name) {
+        return None;
+    }
+    let bytes = vfs.read(name, MAX_MARKER).ok()?;
+    let text = std::str::from_utf8(&bytes).ok()?;
+    let mut lines = text.lines();
+    if lines.next()?.trim_end() != crate::export::MARKER_FIRST_LINE {
+        return None;
+    }
+    Some(lines.find_map(|l| l.strip_prefix("layout:")).and_then(Layout::parse))
+}
+
+/// The folders have the shape of a ZIP of notebooks: nothing but folders at the top, nothing but
+/// section folders in each, and pages in each section folder.
+fn notebooks_shape(root: &Dir) -> bool {
+    root.files.is_empty() && !root.dirs.is_empty() && root.dirs.len() <= MAX_NOTEBOOKS && root.dirs.values().all(|nb| nb.files.is_empty() && !nb.dirs.is_empty() && nb.dirs.values().all(|s| !s.files.is_empty()))
+}
+
+/// The folders have the shape of a ZIP of sections: nothing but folders at the top, with pages in each.
+fn sections_shape(root: &Dir) -> bool {
+    root.files.is_empty() && !root.dirs.is_empty() && root.dirs.values().all(|s| !s.files.is_empty())
+}
+
 /// Builds the plan. `name_hint` is the name of the chosen folder, ZIP file or single file (the
 /// notebook is named after it). `now_ms` only names an unnamed notebook ("Imported <date>").
 pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> Result<Plan, String> {
@@ -425,12 +482,16 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
         note_skip(&mut skipped, name.clone(), reason.clone());
     }
 
+    let layout = marker(vfs);
     let paths: Vec<&String> = vfs.paths().collect();
     let html_count = paths.iter().filter(|p| kind_of(p) == Some(Kind::Html)).count();
     let mut root = Dir::default();
     let mut docs = 0usize;
     let mut notion_markdown = false;
     for path in paths {
+        if layout.is_some() && path == crate::export::MARKER_NAME {
+            continue;
+        }
         let name = path.rsplit('/').next().unwrap_or(path);
         let top_index = !path.contains('/') && name.eq_ignore_ascii_case("index.html");
         match kind_of(name) {
@@ -465,30 +526,63 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
         return Err("No pages were found. Choose Markdown (.md), HTML, Word (.docx) or PDF files, a folder of them, or a ZIP file made by Notion.".into());
     }
 
-    // A single folder that holds everything (a ZIP's wrapper folder) is not a section.
-    let mut top = &root;
-    let mut wrapper = String::new();
-    while top.files.is_empty() && top.dirs.len() == 1 {
-        let (name, sub) = top.dirs.iter().next().expect("one folder");
-        wrapper = name.clone();
-        top = sub;
-    }
+    // Notaya's own ZIP export: its marker says what the top folders are, if they fit.
+    let restored = match layout.flatten() {
+        Some(Layout::Notebooks) if notebooks_shape(&root) => Some(Layout::Notebooks),
+        Some(Layout::Sections) if sections_shape(&root) => Some(Layout::Sections),
+        _ => None,
+    };
+    let folder_name = |n: &str| -> String { clean_title(n, false).chars().take(MAX_NAME).collect() };
 
     let mut b = Builder { vfs, ctl, pages: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0 };
     let mut sections: Vec<String> = Vec::new();
-    let used = if top.files.is_empty() {
-        HashSet::new()
-    } else {
-        sections.push(LOOSE_SECTION.to_string());
-        b.files_of(top, 0, None)
-    };
-    for (name, sub) in top.sorted_dirs() {
-        if used.contains(name) {
-            continue;
+    let mut section_notebook: Vec<usize> = Vec::new();
+    // Notebooks named after folders (the notebooks layout); otherwise one, named below.
+    let mut notebooks: Vec<String> = Vec::new();
+    let mut wrapper = String::new();
+    match restored {
+        Some(Layout::Notebooks) => {
+            for (nb_name, nb) in root.sorted_dirs() {
+                notebooks.push(folder_name(nb_name));
+                for (sec_name, sec) in nb.sorted_dirs() {
+                    sections.push(folder_name(sec_name));
+                    section_notebook.push(notebooks.len() - 1);
+                    b.folder(sec, sections.len() - 1, None, &format!("{nb_name}/{sec_name}"));
+                }
+            }
         }
-        sections.push(clean_title(name, false).chars().take(MAX_NAME).collect());
-        let section = sections.len() - 1;
-        b.folder(sub, section, None, name);
+        Some(Layout::Sections) => {
+            for (name, sub) in root.sorted_dirs() {
+                sections.push(folder_name(name));
+                section_notebook.push(0);
+                b.folder(sub, sections.len() - 1, None, name);
+            }
+        }
+        _ => {
+            // A single folder that holds everything (a ZIP's wrapper folder) is not a section.
+            let mut top = &root;
+            while top.files.is_empty() && top.dirs.len() == 1 {
+                let (name, sub) = top.dirs.iter().next().expect("one folder");
+                wrapper = name.clone();
+                top = sub;
+            }
+            let used = if top.files.is_empty() {
+                HashSet::new()
+            } else {
+                sections.push(LOOSE_SECTION.to_string());
+                section_notebook.push(0);
+                b.files_of(top, 0, None)
+            };
+            for (name, sub) in top.sorted_dirs() {
+                if used.contains(name) {
+                    continue;
+                }
+                sections.push(folder_name(name));
+                section_notebook.push(0);
+                let section = sections.len() - 1;
+                b.folder(sub, section, None, name);
+            }
+        }
     }
     match b.stopped {
         Some(Stop::Cancelled) => return Err(CANCELLED.into()),
@@ -513,17 +607,30 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     for p in &mut b.pages {
         p.section = remap[&p.section];
     }
+    let mut section_notebook: Vec<usize> = keep.iter().map(|i| section_notebook[*i]).collect();
     let sections: Vec<String> = keep.iter().map(|i| sections[*i].clone()).collect();
 
-    let hint_given = name_hint.is_some();
-    let hint = name_hint.map(|h| clean_title(h, false)).filter(|h| !generic_name(h));
-    let wrapper = Some(clean_title(&wrapper, false)).filter(|w| !wrapper.is_empty() && !generic_name(w));
-    let notebook = match hint.or(wrapper) {
-        Some(n) => n,
-        None if hint_given && vfs.has_archives() => "Notion import".to_string(),
-        None => format!("Imported {}", date_text(now_ms)),
+    let notebooks = if notebooks.is_empty() {
+        let hint_given = name_hint.is_some();
+        let hint = name_hint.map(|h| clean_title(h, false)).filter(|h| !generic_name(h));
+        let wrapper = Some(clean_title(&wrapper, false)).filter(|w| !wrapper.is_empty() && !generic_name(w));
+        let notebook = match hint.or(wrapper) {
+            Some(n) => n,
+            // A ZIP with a general name: most likely Notion's, unless it is Notaya's own.
+            None if hint_given && vfs.has_archives() && layout.is_none() => "Notion import".to_string(),
+            None => format!("Imported {}", date_text(now_ms)),
+        };
+        vec![notebook.chars().take(MAX_NAME).collect()]
+    } else {
+        // A notebook with no section left (its documents could not be read) is not created.
+        let used: HashSet<usize> = section_notebook.iter().copied().collect();
+        let kept: Vec<usize> = (0..notebooks.len()).filter(|n| used.contains(n)).collect();
+        let renumber: HashMap<usize, usize> = kept.iter().enumerate().map(|(new, old)| (*old, new)).collect();
+        for n in &mut section_notebook {
+            *n = renumber[n];
+        }
+        kept.iter().map(|i| notebooks[*i].clone()).collect()
     };
-    let notebook: String = notebook.chars().take(MAX_NAME).collect();
 
     let mut notes = Vec::new();
     if notion_markdown {
@@ -535,7 +642,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     if b.unlisted > 0 {
         notes.push(format!("{} more items were not imported than the list shows.", b.unlisted));
     }
-    Ok(Plan { notebook, sections, pages: b.pages, images: b.images, skipped: b.skipped, notes })
+    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, images: b.images, skipped: b.skipped, notes })
 }
 
 /// `Err` with the message for the person when the import was cancelled or ran out of time.
@@ -636,27 +743,39 @@ impl Plan {
                 self.skipped.push(Skipped { item: self.pages[*i].title.clone(), reason: "The page is too large to store (over 20 MB of text), so it was not imported.".into() });
             }
         }
-        let notebook_id = new_id();
-        let mut items = vec![Item::Notebook(Notebook {
-            id: notebook_id.clone(),
-            name: self.notebook.clone(),
-            color: NOTEBOOK_COLOR.into(),
-            icon: NOTEBOOK_ICON.into(),
-            order: notebook_order,
-            created: now,
-            updated: now,
-        })];
+        if self.notebooks.is_empty() {
+            return Err("There is nothing to import.".into());
+        }
+        let notebooks: Vec<NotebookRef> = self.notebooks.iter().map(|name| NotebookRef { id: new_id(), name: name.clone() }).collect();
+        let mut items: Vec<Item> = notebooks
+            .iter()
+            .enumerate()
+            .map(|(i, nb)| {
+                Item::Notebook(Notebook {
+                    id: nb.id.clone(),
+                    name: nb.name.clone(),
+                    color: NOTEBOOK_COLOR.into(),
+                    icon: NOTEBOOK_ICON.into(),
+                    order: notebook_order + i as i64,
+                    created: now,
+                    updated: now,
+                })
+            })
+            .collect();
         let section_ids: Vec<String> = self.sections.iter().map(|_| new_id()).collect();
+        let mut in_notebook = vec![0i64; notebooks.len()];
         for (i, name) in self.sections.iter().enumerate() {
+            let nb = self.section_notebook.get(i).copied().unwrap_or(0).min(notebooks.len().saturating_sub(1));
             items.push(Item::Section(Section {
                 id: section_ids[i].clone(),
-                notebook_id: notebook_id.clone(),
+                notebook_id: notebooks[nb].id.clone(),
                 name: name.clone(),
                 color: String::new(),
-                order: i as i64,
+                order: in_notebook[nb],
                 created: now,
                 updated: now,
             }));
+            in_notebook[nb] += 1;
         }
         let kept = rendered.iter().filter(|r| r.is_some()).count();
         for (i, p) in self.pages.iter().enumerate() {
@@ -694,8 +813,9 @@ impl Plan {
         let mut skipped = self.skipped.clone();
         skipped.truncate(MAX_LISTED);
         let summary = ImportSummary {
-            notebook_id,
-            notebook_name: self.notebook.clone(),
+            notebook_id: notebooks[0].id.clone(),
+            notebook_name: notebooks[0].name.clone(),
+            notebooks,
             sections: self.sections.len(),
             pages: kept,
             images,
@@ -767,7 +887,7 @@ mod tests {
         let refs: Vec<(&str, &[u8])> = files.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
         let v = vfs(&refs);
         let mut plan = build(&v, &Control::standard(), Some("Export-4a9d6e1c-0123-4567-89ab-cdef01234567"), NOW).unwrap();
-        assert_eq!(plan.notebook, "Notion import", "a generic ZIP name is not used");
+        assert_eq!(plan.notebooks, ["Notion import"], "a generic ZIP name is not used");
         assert_eq!(plan.sections, [LOOSE_SECTION]);
         assert_eq!(plan.pages.len(), 2);
         assert!(plan.skipped.iter().any(|s| s.item.ends_with(".csv") && s.reason.contains("database")));
@@ -808,6 +928,135 @@ mod tests {
         assert!(one.contains("a missing one"), "the text stays");
     }
 
+    fn marker(layout: &str) -> String {
+        format!("Notaya export v1\nlayout: {layout}\n\nThis file tells Notaya how to import this ZIP again.\n")
+    }
+
+    fn notebook_of<'a>(items: &'a [Item], page_title: &str) -> &'a str {
+        let p = page(items, page_title);
+        let nb = items.iter().find_map(|i| if let Item::Section(s) = i { (s.id == p.section_id).then_some(s.notebook_id.as_str()) } else { None }).unwrap();
+        items.iter().find_map(|i| if let Item::Notebook(n) = i { (n.id == nb).then_some(n.name.as_str()) } else { None }).unwrap()
+    }
+
+    #[test]
+    fn a_notaya_zip_of_several_notebooks_comes_back_as_several_notebooks() {
+        let m = marker("notebooks");
+        let v = vfs(&[
+            ("notaya-export.txt", m.as_bytes()),
+            ("Alpha/Journal/One.md", b"# One\n\nfirst"),
+            ("Alpha/Journal/One/Child.md", b"# Child\n\nchild"),
+            ("Alpha/Ideas/Idea.md", b"# Idea\n\nidea"),
+            ("Beta/Work/Task.md", b"# Task\n\ntask"),
+        ]);
+        let mut plan = build(&v, &Control::standard(), Some("2 notebooks"), NOW).unwrap();
+        assert_eq!(plan.notebooks, ["Alpha", "Beta"], "named after their folders, not the ZIP");
+        assert_eq!(plan.sections, ["Ideas", "Journal", "Work"]);
+        assert_eq!(plan.section_notebook, [0, 0, 1]);
+        assert_eq!(plan.pages.len(), 4, "the marker is no page");
+        let (items, summary) = plan.items(&Control::standard(), &[], NOW, 7).unwrap();
+        assert_eq!((summary.notebooks.len(), summary.sections, summary.pages), (2, 3, 4));
+        assert_eq!(summary.notebook_name, "Alpha");
+        assert_eq!(summary.notebook_id, summary.notebooks[0].id);
+        assert_eq!(notebook_of(&items, "Task"), "Beta");
+        assert_eq!(notebook_of(&items, "Child"), "Alpha");
+        assert_eq!(page(&items, "Child").parent, page(&items, "One").id);
+        let orders: Vec<i64> = items.iter().filter_map(|i| if let Item::Notebook(n) = i { Some(n.order) } else { None }).collect();
+        assert_eq!(orders, [7, 8]);
+        let work_order = items.iter().find_map(|i| if let Item::Section(s) = i { (s.name == "Work").then_some(s.order) } else { None });
+        assert_eq!(work_order, Some(0), "sections are counted within their notebook");
+        // One notebook: its own name, not the ZIP's.
+        let v = vfs(&[("notaya-export.txt", m.as_bytes()), ("Alpha/Journal/One.md", b"# One\n\nx")]);
+        let plan = build(&v, &Control::standard(), Some("Alpha export"), NOW).unwrap();
+        assert_eq!((plan.notebooks.as_slice(), plan.sections.as_slice()), (["Alpha".to_string()].as_slice(), ["Journal".to_string()].as_slice()));
+    }
+
+    #[test]
+    fn a_notaya_zip_of_one_section_keeps_its_section_name() {
+        let v = vfs(&[("notaya-export.txt", marker("sections").as_bytes()), ("Journal/One.md", b"# One\n\nx"), ("Journal/Two.md", b"# Two\n\ny")]);
+        let plan = build(&v, &Control::standard(), Some("Journal"), NOW).unwrap();
+        assert_eq!((plan.notebooks.as_slice(), plan.sections.as_slice()), (["Journal".to_string()].as_slice(), ["Journal".to_string()].as_slice()));
+        assert_eq!(plan.pages.len(), 2);
+        // Without the marker the one folder is a wrapper, as for any other ZIP.
+        let v = vfs(&[("Journal/One.md", b"# One\n\nx"), ("Journal/Two.md", b"# Two\n\ny")]);
+        assert_eq!(build(&v, &Control::standard(), Some("Journal"), NOW).unwrap().sections, [LOOSE_SECTION]);
+        // Pages: as before, the marker is just left out.
+        let v = vfs(&[("notaya-export.txt", marker("pages").as_bytes()), ("One.md", b"# One\n\nx"), ("One/Sub.md", b"# Sub\n\ny")]);
+        let mut plan = build(&v, &Control::standard(), Some("One"), NOW).unwrap();
+        assert_eq!((plan.notebooks.len(), plan.sections.as_slice(), plan.pages.len()), (1, [LOOSE_SECTION.to_string()].as_slice(), 2));
+        let (items, _) = plan.items(&Control::standard(), &[], NOW, 0).unwrap();
+        assert_eq!(page(&items, "Sub").parent, page(&items, "One").id);
+    }
+
+    #[test]
+    fn a_marker_that_does_not_fit_changes_nothing() {
+        let docs: [(&str, &[u8]); 3] = [("Alpha/Journal/One.md", b"# One\n\nx"), ("Beta/Work/Task.md", b"# Task\n\ny"), ("Beta/Loose.md", b"# Loose\n\nz")];
+        let without = build(&vfs(&docs), &Control::standard(), Some("x"), NOW).unwrap();
+        assert_eq!(without.sections, ["Alpha", "Beta"]);
+        let big = format!("{}{}", marker("notebooks"), "x".repeat(5_000));
+        // (marker, is it taken as the marker)
+        for (label, m, is_marker) in [
+            ("a page directly in a notebook folder", marker("notebooks"), true),
+            ("an unknown layout", "Notaya export v1\nlayout: shelves\n".to_string(), true),
+            ("another first line", "Notaya export v2\nlayout: notebooks\n".to_string(), false),
+            ("too large to be a marker", big, false),
+        ] {
+            let mut files: Vec<(&str, &[u8])> = docs.to_vec();
+            files.push(("notaya-export.txt", m.as_bytes()));
+            let plan = build(&vfs(&files), &Control::standard(), Some("x"), NOW).unwrap();
+            assert_eq!(plan.notebooks, without.notebooks, "{label}");
+            if is_marker {
+                assert_eq!(plan.sections, without.sections, "{label}");
+                assert_eq!(plan.pages.len(), without.pages.len(), "{label}: the marker is no page");
+            } else {
+                // Not a marker: an ordinary text file, imported as a page like any other.
+                assert_eq!(plan.sections, [LOOSE_SECTION, "Alpha", "Beta"], "{label}");
+            }
+        }
+        // A marker inside a folder is not the ZIP's marker; one with another first line is an ordinary text page.
+        let v = vfs(&[("Alpha/notaya-export.txt", marker("notebooks").as_bytes()), ("Alpha/Journal/One.md", b"# One\n\nx")]);
+        assert_eq!(build(&v, &Control::standard(), None, NOW).unwrap().pages.len(), 2);
+        let v = vfs(&[("notaya-export.txt", b"my own notes"), ("One.md", b"# One\n\nx")]);
+        assert_eq!(build(&v, &Control::standard(), None, NOW).unwrap().pages.len(), 2);
+        // More notebooks than one import may create: one notebook, as without the marker.
+        let names: Vec<String> = (0..=MAX_NOTEBOOKS).map(|i| format!("N{i}/S/p.md")).collect();
+        let m = marker("notebooks");
+        let mut files: Vec<(&str, &[u8])> = names.iter().map(|n| (n.as_str(), b"x" as &[u8])).collect();
+        files.push(("notaya-export.txt", m.as_bytes()));
+        let plan = build(&vfs(&files), &Control::standard(), None, NOW).unwrap();
+        assert_eq!(plan.notebooks.len(), 1);
+        assert_eq!(plan.sections.len(), MAX_NOTEBOOKS + 1);
+    }
+
+    #[test]
+    fn links_and_rows_from_a_notaya_zip_point_at_the_imported_pages() {
+        let a = "# Plan #1 (draft)\n\nsee [link to b](Plan%20%231%20%28draft%29/Sub%20100%25.md) and [c](../../Other/Caf%C3%A9%20%26%20co/%C3%9Cn%C3%AFcode.md)\n\n\u{2192} [Sub 100%](./Plan%20%231%20%28draft%29/Sub%20100%25.md)\n\n\u{2192} Page not found\n\n- \u{2192} [Ünïcode](../../Other/Caf%C3%A9%20%26%20co/%C3%9Cn%C3%AFcode.md)\n";
+        let b = "# Sub 100%\n\nback to [the plan](../Plan%20%231%20%28draft%29.md)\n\n[only a link](../Plan%20%231%20%28draft%29.md#h1)\n";
+        let m = marker("notebooks");
+        let v = vfs(&[
+            ("notaya-export.txt", m.as_bytes()),
+            ("My notes/Day 1/Plan #1 (draft).md", a.as_bytes()),
+            ("My notes/Day 1/Plan #1 (draft)/Sub 100%.md", b.as_bytes()),
+            ("Other/Café & co/Ünïcode.md", b"# \xC3\x9Cn\xC3\xAFcode\n\nhello"),
+        ]);
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let (items, _) = finish(&mut plan, &v);
+        let (pa, pb, pc) = (page(&items, "Plan #1 (draft)"), page(&items, "Sub 100%"), page(&items, "Ünïcode"));
+        assert_eq!(pb.parent, pa.id);
+        let ja = json(pa);
+        let blocks = ja["content"].as_array().unwrap();
+        let links: Vec<&str> = blocks[0]["content"].as_array().unwrap().iter().filter_map(|t| t["marks"][0]["attrs"]["href"].as_str()).collect();
+        assert_eq!(links, [format!("notaya:page/{}", pb.id), format!("notaya:page/{}", pc.id)]);
+        assert_eq!(blocks[1], serde_json::json!({ "type": "pageLink", "attrs": { "pageId": pb.id } }), "the row is a page link again");
+        assert_eq!(blocks[2]["type"], "paragraph", "a row to a page that was not exported stays text");
+        // A row inside a list too (after the empty line a list item starts with).
+        assert_eq!(blocks[3]["content"][0]["content"][1]["type"], "pageLink", "{}", pa.content);
+        assert_eq!(blocks[3]["content"][0]["content"][1]["attrs"]["pageId"], pc.id.as_str());
+        let jb = json(pb);
+        assert!(pb.content.contains(&format!("\"href\":\"notaya:page/{}\"", pa.id)));
+        assert_eq!(jb["content"][1]["type"], "pageLink", "a paragraph that is only a link to a page: a page link, as for Notion");
+        assert!(!pa.content.contains("notaya-src") && !pb.content.contains("notaya-src"));
+    }
+
     #[test]
     fn markdown_folders_become_sections_and_notion_markdown_nests() {
         let top = format!("Top {ID}.md");
@@ -827,7 +1076,7 @@ mod tests {
         all.push((other.as_str(), b"x"));
         let v = vfs(&all);
         let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
-        assert_eq!(plan.notebook, "Imported 2023-11-14", "no name to use: the date");
+        assert_eq!(plan.notebooks, ["Imported 2023-11-14"], "no name to use: the date");
         assert_eq!(plan.sections, [LOOSE_SECTION, "Work"]);
         assert!(plan.notes.iter().any(|n| n.contains("no text colors")), "{:?}", plan.notes);
         let (items, summary) = finish(&mut plan, &v);
@@ -859,7 +1108,7 @@ mod tests {
         let pdf = crate::importers::pdf::tests::sample_pdf();
         let v = vfs(&[("Reports/q1.docx", &docx), ("Reports/paper.pdf", &pdf), ("Reports/broken.docx", b"not a zip"), ("Reports/blank.pdf", b"%PDF-1.4 nothing")]);
         let mut plan = build(&v, &Control::standard(), Some("Reports"), NOW).unwrap();
-        assert_eq!(plan.notebook, "Reports");
+        assert_eq!(plan.notebooks, ["Reports"]);
         assert!(plan.notes.iter().any(|n| n.contains("text only")), "{:?}", plan.notes);
         let (items, summary) = finish(&mut plan, &v);
         assert_eq!(summary.sections, 1);

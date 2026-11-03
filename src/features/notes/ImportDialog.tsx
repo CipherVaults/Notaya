@@ -91,7 +91,11 @@ export default function ImportDialog() {
           <div className="flex items-start gap-3">
             <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-accent" aria-hidden />
             <div className="text-sm">
-              <div className="font-medium">A new notebook "{result.notebookName}" was added.</div>
+              <div className="font-medium">
+                {result.notebooks.length > 1
+                  ? `${result.notebooks.length} new notebooks were added: ${result.notebooks.map((n) => `"${n.name}"`).join(", ")}.`
+                  : `A new notebook "${result.notebookName}" was added.`}
+              </div>
               <div className="mt-0.5 text-muted">
                 {plural(result.pages, "page")} in {plural(result.sections, "section")}
                 {result.images > 0 && `, ${plural(result.images, "picture")}`}. Your other notes were not changed.

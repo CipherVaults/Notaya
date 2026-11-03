@@ -583,6 +583,67 @@ fn flatten<'a>(root: &'a Block, leaves: &mut Vec<&'a Block>) {
     }
 }
 
+/// Notaya's own exports write a "Link to page" row as an arrow and a link to the page's file
+/// (`→ [Title](Title.md)`, `<p>→ <a href="Title.html">Title</a></p>`, the same in Word). A
+/// paragraph that is just that, whose link points at another document of the import, becomes a
+/// page link again. Other paragraphs are left as they are (a link inside a sentence stays a link).
+/// One pass over the blocks, containers at most [`MAX_DEPTH`] deep.
+pub fn page_link_rows(blocks: &mut [Block]) {
+    rows_in(blocks, 0);
+}
+
+fn rows_in(blocks: &mut [Block], depth: usize) {
+    if depth > MAX_DEPTH {
+        return;
+    }
+    for b in blocks.iter_mut() {
+        match b {
+            Block::Paragraph(inl) => {
+                if let Some(row) = arrow_row(inl) {
+                    *b = row;
+                }
+            }
+            Block::Bullets(items) | Block::Numbered(_, items) => items.iter_mut().for_each(|i| rows_in(i, depth + 1)),
+            Block::Tasks(items) => items.iter_mut().for_each(|(_, i)| rows_in(i, depth + 1)),
+            Block::Quote(x) | Block::Toggle(x) | Block::Callout(_, x) => rows_in(x, depth + 1),
+            Block::Columns(cols) => cols.iter_mut().for_each(|c| rows_in(c, depth + 1)),
+            Block::Table(rows) => rows.iter_mut().flatten().for_each(|c| rows_in(&mut c.blocks, depth + 1)),
+            _ => {}
+        }
+    }
+}
+
+/// `→` (text without a link), then text that all carries one link to a document of the import.
+fn arrow_row(inl: &[Inline]) -> Option<Block> {
+    let mut lead = String::new();
+    let mut i = 0;
+    while let Some(Inline::Text(t, m)) = inl.get(i) {
+        if m.link.is_some() || lead.len() > 16 {
+            break;
+        }
+        lead.push_str(t);
+        i += 1;
+    }
+    if lead.trim() != "\u{2192}" {
+        return None;
+    }
+    let href = match inl.get(i)? {
+        Inline::Text(_, m) => m.link.as_deref()?,
+        _ => return None,
+    };
+    let path = href.strip_prefix(super::PAGE_HREF)?;
+    let mut label = String::new();
+    for x in &inl[i..] {
+        match x {
+            Inline::Text(t, m) if m.link.as_deref() == Some(href) => label.push_str(t),
+            Inline::Text(t, m) if m.link.is_none() && t.trim().is_empty() => {}
+            _ => return None,
+        }
+    }
+    let label = collapse_ws(&label);
+    (!label.is_empty()).then(|| Block::PageLink(path.to_string(), label))
+}
+
 /// Plain text helper used by converters (for titles and captions).
 pub fn plain(inl: &[Inline]) -> String {
     let mut s = String::new();
@@ -751,6 +812,45 @@ mod tests {
         // Millions of tiny inline pieces count too.
         let inl: Vec<Inline> = (0..400_000).map(|i| Inline::Text("a".into(), Marks { bold: i % 2 == 0, ..Marks::default() })).collect();
         assert_eq!(render_limited(&[Block::Paragraph(inl)], &no_images, &|_| None, 10_000_000).err(), Some(TooLarge));
+    }
+
+    #[test]
+    fn arrow_rows_that_link_to_a_page_become_page_links_and_nothing_else_does() {
+        let to = |path: &str, s: &str| Inline::Text(s.into(), Marks { link: Some(format!("{}{path}", crate::importers::PAGE_HREF)), ..Marks::default() });
+        let web = Inline::Text("site".into(), Marks { link: Some("https://example.com/a.md".into()), ..Marks::default() });
+        let italic = Marks { italic: true, ..Marks::default() };
+        let mut blocks = vec![
+            Block::Paragraph(vec![t("→ "), to("A.md", "Page A")]),
+            Block::Paragraph(vec![Inline::Text("→ ".into(), italic), to("B.docx", "Page "), to("B.docx", "B"), t(" ")]),
+            Block::Paragraph(vec![t("see "), to("A.md", "Page A")]),
+            Block::Paragraph(vec![to("A.md", "Page A")]),
+            Block::Paragraph(vec![t("→ "), web.clone()]),
+            Block::Paragraph(vec![t("→ "), to("A.md", "A"), to("C.md", "C")]),
+            Block::Paragraph(vec![t("→ "), to("A.md", "A"), t(" and more")]),
+            Block::Paragraph(vec![t("→ "), to("A.md", "  ")]),
+            Block::Toggle(vec![Block::Paragraph(vec![t("→"), to("A.md", "Deep")])]),
+        ];
+        page_link_rows(&mut blocks);
+        assert_eq!(blocks[0], Block::PageLink("A.md".into(), "Page A".into()));
+        assert_eq!(blocks[1], Block::PageLink("B.docx".into(), "Page B".into()));
+        for (i, b) in blocks.iter().enumerate().skip(2).take(6) {
+            assert!(matches!(b, Block::Paragraph(_)), "{i}: {b:?}");
+        }
+        assert_eq!(blocks[8], Block::Toggle(vec![Block::PageLink("A.md".into(), "Deep".into())]));
+        // Nested far deeper than the editor allows: the walk stops, nothing overflows.
+        let mut deep = Block::Paragraph(vec![t("→ "), to("A.md", "A")]);
+        for _ in 0..10_000 {
+            deep = Block::Quote(vec![deep]);
+        }
+        let mut v = vec![deep];
+        page_link_rows(&mut v);
+        // (dropped iteratively below, so the test itself does not overflow the stack)
+        let mut stack = v;
+        while let Some(b) = stack.pop() {
+            if let Block::Quote(inner) = b {
+                stack.extend(inner);
+            }
+        }
     }
 
     #[test]
