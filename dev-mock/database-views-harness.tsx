@@ -115,7 +115,11 @@ const views: Record<string, View> = {
   timeline: baseView("v-tl", "timeline", { timelineZoom: q.get("zoom") ?? "week", dateProp: q.get("noprop") ? "" : "due", group: q.has("grouped") ? group("status") : null }),
   list: baseView("v-list", "list", { group: q.has("grouped") ? group("status") : null }),
   gallery: baseView("v-gal", "gallery", { cardCover: q.get("cover") ?? "cover", group: q.has("grouped") ? group("status") : null }),
-  chart: baseView("v-chart", "chart"),
+  chart: (() => {
+    const v = baseView("v-chart", "chart");
+    v.chart = { ...v.chart, kind: q.get("ck") ?? "bar", xProp: q.get("cx") ?? "status", groupProp: q.get("cg") ?? "", horizontal: q.has("horiz"), stacked: q.has("stack"), xBy: q.get("by") ?? "", yCalc: q.get("calc") ?? "countAll", yProp: q.get("cy") ?? "" };
+    return v;
+  })(),
   table: baseView("v-table", "table"),
 };
 
@@ -189,43 +193,54 @@ function run(): ViewResult {
 function chartData(v: View): ChartData {
   const c = v.chart;
   const p = props.find((x) => x.id === c.xProp);
-  const palette = ["#3b82f6", "#e8553f", "#2f9e6a", "#8b5cf6", "#d9a514", "#ec4899"];
-  if (!p) return { labels: [], series: [], total: null, rows: rows.length };
-  if (c.kind === "number") return { labels: [], series: [], total: String(rows.length), rows: rows.length };
+  const palette = ["blue", "orange", "green", "purple", "pink", "yellow", "red", "brown", "gray"];
+  const col = (x: string, i: number) => x || palette[i % palette.length];
+  const calc = (rs: DbRow[]) => {
+    const vals = c.yProp ? rs.map((r) => Number(r.values[c.yProp]) || 0) : [];
+    const n = c.yCalc === "sum" ? vals.reduce((a, b) => a + b, 0) : c.yCalc === "avg" ? (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0) : rs.length;
+    return { value: n, text: String(Math.round(n * 100) / 100) };
+  };
+  if (c.kind === "number" || !p) {
+    const r = calc(rows);
+    return { labels: [], series: [{ name: c.title, color: col(c.color, 0), points: [{ label: "", value: r.value, text: r.text, color: col(c.color, 0) }] }], total: r.text, rows: rows.length };
+  }
   let labels: string[] = [];
+  let colors: string[] = [];
   let keyOf: (r: DbRow) => string = () => "";
   if (p.kind === "select" || p.kind === "status") {
     labels = [...p.options.map((o) => o.name), "No " + p.name];
+    colors = [...p.options.map((o) => o.color), ""];
     keyOf = (r) => p.options.find((o) => o.id === r.values[p.id])?.name ?? "No " + p.name;
+  } else if (p.kind === "multiSelect") {
+    labels = p.options.map((o) => o.name);
+    colors = p.options.map((o) => o.color);
+    keyOf = (r) => ((r.values[p.id] as string[] | undefined) ?? []).map((id) => p.options.find((o) => o.id === id)?.name).join("|");
   } else if (p.kind === "date") {
     const set = new Set<string>();
-    rows.forEach((r) => { const d = r.values[p.id] as { start: string } | undefined; if (d) set.add(d.start.slice(0, 7)); });
+    rows.forEach((r) => { const d = r.values[p.id] as { start: string } | undefined; if (d) set.add(c.xBy === "year" ? d.start.slice(0, 4) : d.start.slice(0, 7)); });
     labels = [...set].sort();
-    keyOf = (r) => (r.values[p.id] as { start: string } | undefined)?.start.slice(0, 7) ?? "";
+    if (c.xSort === "desc") labels.reverse();
+    colors = labels.map(() => "");
+    keyOf = (r) => { const d = (r.values[p.id] as { start: string } | undefined)?.start; return d ? (c.xBy === "year" ? d.slice(0, 4) : d.slice(0, 7)) : ""; };
   } else {
     labels = ["A", "B"];
+    colors = ["", ""];
     keyOf = (r) => (r.number % 2 ? "A" : "B");
   }
   const gp = props.find((x) => x.id === c.groupProp);
-  const names = gp ? [...gp.options.map((o) => o.name)] : ["Count"];
-  const sKey = (r: DbRow) => (gp ? gp.options.find((o) => o.id === r.values[gp.id])?.name ?? "" : "Count");
+  const names = gp ? gp.options.map((o) => o.name) : [c.title || "Count"];
+  const sKey = (r: DbRow) => (gp ? gp.options.find((o) => o.id === r.values[gp.id])?.name ?? "" : names[0]);
+  const keepIdx = labels.map((l, i) => (c.hideEmpty && !rows.some((r) => keyOf(r).split("|").includes(l)) ? -1 : i)).filter((i) => i >= 0);
   const series = names.map((name, si) => ({
     name,
-    color: gp ? "" : palette[0],
-    points: labels.map((label) => {
-      const rs = rows.filter((r) => keyOf(r) === label && sKey(r) === name);
-      const value = c.yCalc === "sum" && c.yProp ? rs.reduce((a, r) => a + (Number(r.values[c.yProp]) || 0), 0) : rs.length;
-      void si;
-      return { label, value, text: String(value), color: gp ? (gp.options.find((o) => o.name === name)?.color ?? "") : "" };
+    color: gp ? col(gp.options[si].color, si) : col(c.color, 0),
+    points: keepIdx.map((li) => {
+      const label = labels[li];
+      const r = calc(rows.filter((x) => keyOf(x).split("|").includes(label) && sKey(x) === name));
+      return { label, value: r.value, text: r.text, color: gp ? col(gp.options[si].color, si) : c.kind === "donut" || colors[li] ? col(colors[li], li) : col(c.color, 0) };
     }),
   }));
-  const keep = c.hideEmpty ? labels.filter((l) => series.some((s) => (s.points.find((pt) => pt.label === l)?.value ?? 0) > 0)) : labels;
-  return {
-    labels: keep,
-    series: series.map((s) => ({ ...s, points: s.points.filter((pt) => keep.includes(pt.label)) })),
-    total: null,
-    rows: rows.length,
-  };
+  return { labels: keepIdx.map((i) => labels[i]), series, total: c.kind === "donut" ? calc(rows).text : null, rows: rows.length };
 }
 
 (window as unknown as { __invoke: (cmd: string, args: Record<string, unknown>) => Promise<unknown> }).__invoke = async (cmd, args) => {

@@ -373,6 +373,84 @@ tests.timeline = async (b) => {
   await p.close();
 };
 
+/* ---------------------------------------------------------------- chart */
+tests.chart = async (b) => {
+  let p = await open(b, 'view=chart');
+  await p.waitForSelector('[data-chart]');
+  is('chart: a bar per status (4 groups)', await p.locator('[data-bar]').count(), 4);
+  const label = await p.locator('svg[data-chart]').getAttribute('aria-label');
+  truthy('chart: the svg has role img and a summary', (await p.locator('svg[data-chart]').getAttribute('role')) === 'img' && /Bar chart of 20 rows in 4 groups/.test(label) && /Not started: 11/.test(label));
+  const hs = await p.locator('[data-bar]').evaluateAll((els) => els.map((e) => Math.round(+e.getAttribute('height'))));
+  truthy('chart: the tallest bar is the biggest group (11 vs 4)', hs[0] > hs[1] * 2.5 && hs[1] === hs[2]);
+  // tooltip
+  const r0 = await p.locator('[data-bar]').first().boundingBox();
+  await p.mouse.move(r0.x + r0.width / 2, r0.y + 20);
+  await p.waitForTimeout(100);
+  truthy('chart: hovering a bar shows a tooltip with the value', /Not started[\s\S]*11/.test((await p.locator('[data-tooltip]').textContent()) || ''));
+  await p.mouse.move(5, 500);
+  is('chart: the tooltip goes away', await p.locator('[data-tooltip]').count(), 0);
+  // table toggle
+  await p.getByRole('button', { name: 'Show as table' }).click();
+  is('chart: the data table lists every group', await p.locator('[data-chart-table] tbody tr').count(), 4);
+  await p.getByRole('button', { name: 'Show chart' }).click();
+  // customize: x axis, kind, group
+  await clear(p);
+  await p.getByRole('button', { name: 'Customize' }).click();
+  await p.getByLabel('X axis', { exact: true }).selectOption('prio');
+  await p.waitForTimeout(300);
+  is('chart: choosing the X axis saves it', (await calls(p, 'updateView')).pop().args[0].chart.xProp, 'prio');
+  is('chart: the chart is asked again with the new axis', (await calls(p, 'chartData')).pop().args[0].xProp, 'prio');
+  is('chart: bars follow (4 priorities incl. none)', await p.locator('[data-bar]').count(), 4);
+  await p.getByLabel('Group by', { exact: true }).selectOption({ label: 'Status' });
+  await p.waitForTimeout(300);
+  is('chart: grouping splits series (4 x 3 bars)', await p.locator('[data-bar]').count(), 12);
+  await p.getByLabel('Stacked').check();
+  await p.waitForTimeout(300);
+  is('chart: stacked saves the flag', (await calls(p, 'updateView')).pop().args[0].chart.stacked, true);
+  await p.getByLabel('Horizontal').check();
+  await p.waitForTimeout(200);
+  is('chart: horizontal saves the flag', (await calls(p, 'updateView')).pop().args[0].chart.horizontal, true);
+  await shot(p, 'chart-config');
+  await p.getByRole('button', { name: 'Line' }).click();
+  await p.waitForTimeout(300);
+  is('chart: line chart draws a polyline per series', await p.locator('svg[data-chart="line"] polyline').count(), 3);
+  await p.getByRole('button', { name: 'Donut' }).click();
+  await p.waitForTimeout(300);
+  truthy('chart: donut draws slices', (await p.locator('[data-slice]').count()) >= 3);
+  await p.getByRole('button', { name: 'Number' }).click();
+  await p.waitForTimeout(300);
+  is('chart: number tile shows the count', (await p.locator('[data-number]').textContent()), '20');
+  await p.close();
+
+  p = await open(b, 'view=chart&ck=bar&cx=prio&cg=status&horiz&stack');
+  await shot(p, 'chart-stacked');
+  await p.close();
+  p = await open(b, 'view=chart&ck=line&cx=due&cg=prio&theme=sunrise-dark');
+  is('chart: line points (2 months x 3 series)', await p.locator('[data-point]').count(), 6);
+  await shot(p, 'chart-line-dark');
+  await p.close();
+  p = await open(b, 'view=chart&ck=donut&cx=prio&rtl=1');
+  is('chart: donut slices (4 options)', await p.locator('[data-slice]').count(), 4);
+  is('chart: donut center total', await p.locator('[data-donut-total]').textContent(), '20');
+  is('chart: donut legend rows', await p.locator('[data-legend]').count(), 4);
+  await shot(p, 'chart-donut-rtl');
+  await p.close();
+  p = await open(b, 'view=chart&ck=number&calc=sum&cy=est');
+  is('chart: sum of estimates', await p.locator('[data-number]').textContent(), '26');
+  await shot(p, 'chart-number');
+  await p.close();
+  p = await open(b, 'view=chart&chart=error');
+  truthy('chart: an error is shown with a retry button', (await p.getByRole('alert').textContent()).includes('could not be calculated') && (await p.getByRole('button', { name: 'Try again' }).isVisible()));
+  await shot(p, 'chart-error');
+  await p.close();
+  p = await open(b, 'view=chart&data=empty');
+  truthy('chart: empty state', await p.getByText('Nothing to chart yet').isVisible());
+  await p.close();
+  p = await open(b, 'view=chart&cx=');
+  truthy('chart: no X axis asks to choose one', await p.getByText('Choose what to chart').isVisible());
+  await p.close();
+};
+
 (async () => {
   const b = await chromium.launch();
   for (const [name, fn] of Object.entries(tests)) {
