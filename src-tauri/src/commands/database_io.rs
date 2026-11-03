@@ -305,7 +305,7 @@ fn cell_text(v: &Val, p: &Property) -> (String, bool) {
 }
 
 /// The rows of a view (or all rows) as CSV lines. Used by the command and by tests.
-pub fn export_lines(s: &crate::vault::Session, database_id: &str, view_id: Option<&str>) -> Result<Vec<Vec<String>>> {
+pub fn export_lines(s: &crate::vault::Session, database_id: &str, view_id: Option<&str>, spreadsheet: bool) -> Result<Vec<Vec<String>>> {
     let db = dbc::database(s, database_id)?;
     let ctx = ctx_of(s);
     let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
@@ -336,7 +336,8 @@ pub fn export_lines(s: &crate::vault::Session, database_id: &str, view_id: Optio
         Some(v) => ctx.sorted(dbref, rows, &v.sorts),
         None => rows,
     };
-    let mut lines: Vec<Vec<String>> = vec![cols.iter().map(|p| csv::safe_cell(&p.name, false)).collect()];
+    let guard = |t: &str, num: bool| if spreadsheet { csv::safe_cell(t, num) } else { t.to_string() };
+    let mut lines: Vec<Vec<String>> = vec![cols.iter().map(|p| guard(&p.name, false)).collect()];
     for r in rows {
         let mut line = Vec::with_capacity(cols.len());
         for p in &cols {
@@ -352,17 +353,64 @@ pub fn export_lines(s: &crate::vault::Session, database_id: &str, view_id: Optio
                     Err(_) => (String::new(), false),
                 },
             };
-            line.push(csv::safe_cell(&text, num));
+            line.push(guard(&text, num));
         }
         lines.push(line);
     }
     Ok(lines)
 }
 
+/// The rows of a database (or one view) as a document with a heading and one table, for the
+/// HTML, Markdown, PDF and Word writers.
+pub fn table_doc(lines: Vec<Vec<String>>, title: &str) -> crate::export::ExportDoc {
+    use crate::export::doc::{Align, Block, Cell, Inline, Marks};
+    use crate::export::{ExportDoc, Part};
+    let cell = |text: &str, header: bool| Cell {
+        header,
+        colspan: 1,
+        rowspan: 1,
+        widths: Vec::new(),
+        blocks: vec![Block::Paragraph { align: Align::Left, content: vec![Inline::Text(text.to_string(), Marks { bold: header, ..Marks::default() })] }],
+    };
+    let table: Vec<Vec<Cell>> = lines.iter().enumerate().map(|(i, l)| l.iter().map(|t| cell(t, i == 0)).collect()).collect();
+    ExportDoc {
+        title: title.to_string(),
+        parts: vec![Part::Page { level: 1, title: title.to_string(), blocks: vec![Block::Table(table)] }],
+        images: Default::default(),
+        missing_images: 0,
+    }
+}
+
+/// Exports a database (or one view of it) as HTML, Markdown, PDF or Word: its title and one table.
+/// `None` if the save dialog was cancelled.
+#[tauri::command(async)]
+pub fn export_database(app: AppHandle, state: State<'_, AppState>, database_id: String, view_id: Option<String>, format: String) -> Result<Option<crate::export::ExportSummary>> {
+    use crate::export::{self, Format};
+    let format = Format::parse(&format)?;
+    let (lines, title) = state.with(|s| Ok((export_lines(s, &database_id, view_id.as_deref(), false)?, dbc::database(s, &database_id)?.title.clone())))?;
+    if lines.len() > 20_001 {
+        return Err(Error::invalid("This view has too many rows for a document. Export it as CSV, or add a filter."));
+    }
+    let safe: String = title.chars().map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c }).collect();
+    let Some(chosen) = app
+        .dialog()
+        .file()
+        .set_title("Export")
+        .set_file_name(format!("{}.{}", if safe.trim().is_empty() { "Database" } else { safe.trim() }, format.ext()))
+        .add_filter(format.label(), &[format.ext()])
+        .blocking_save_file()
+        .and_then(|f| f.into_path().ok())
+    else {
+        return Ok(None);
+    };
+    let dest = export::checked_destination(&chosen, format.ext(), &state.paths.data)?;
+    export::write(&dest, format, &table_doc(lines, &title), &state.paths.data).map(Some)
+}
+
 /// Exports a database (or one of its views, with its filter, sort and visible properties) as CSV.
 #[tauri::command(async)]
 pub fn export_csv(app: AppHandle, state: State<'_, AppState>, database_id: String, view_id: Option<String>) -> Result<Option<CsvExported>> {
-    let (lines, title) = state.with(|s| Ok((export_lines(s, &database_id, view_id.as_deref())?, dbc::database(s, &database_id)?.title.clone())))?;
+    let (lines, title) = state.with(|s| Ok((export_lines(s, &database_id, view_id.as_deref(), true)?, dbc::database(s, &database_id)?.title.clone())))?;
     let safe: String = title.chars().map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c }).collect();
     let Some(chosen) = app
         .dialog()
@@ -598,6 +646,32 @@ mod tests {
         assert!(!can_open("page.html"));
         assert!(!can_open("vector.svg"));
         assert!(!can_open("noext"));
+    }
+
+    #[test]
+    fn a_table_document_has_one_page_with_the_rows() {
+        let d = table_doc(vec![vec!["Name".into(), "Qty".into()], vec!["a".into(), "1".into()]], "My table");
+        assert_eq!(d.page_count(), 1);
+        assert_eq!(d.title, "My table");
+    }
+
+    #[test]
+    fn a_table_document_is_written_in_every_format() {
+        use crate::export::{self, Format};
+        let dir = std::env::temp_dir().join(format!("notaya-tbl-{}", new_id()));
+        let data = std::env::temp_dir().join(format!("notaya-tbl-data-{}", new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::create_dir_all(&data).unwrap();
+        for f in [Format::Html, Format::Markdown, Format::Pdf, Format::Docx] {
+            let d = table_doc(vec![vec!["الاسم".into(), "Qty".into()], vec!["أحمد".into(), "1".into()], vec!["日本語".into(), "2".into()]], "جدول Table");
+            let dest = dir.join(format!("t.{}", f.ext()));
+            export::write(&dest, f, &d, &data).unwrap();
+            assert!(std::fs::metadata(&dest).unwrap().len() > 20, "{:?}", f.ext());
+        }
+        let html = std::fs::read_to_string(dir.join("t.html")).unwrap();
+        assert!(html.contains("أحمد") && html.contains("<table"));
+        let md = std::fs::read_to_string(dir.join("t.md")).unwrap();
+        assert!(md.contains("| الاسم") || md.contains("الاسم"), "{md}");
     }
 
     #[test]

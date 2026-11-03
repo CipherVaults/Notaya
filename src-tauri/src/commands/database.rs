@@ -1273,7 +1273,7 @@ mod tests {
         let mut db = make_db(&mut s, "E");
         add_row(&mut s, &mut db, "=SUM(A1)", "{\"n\":-5}");
         add_row(&mut s, &mut db, "plain", "{\"n\":7,\"f\":[{\"id\":\"00000000000000000000000000000000\",\"name\":\"a.pdf\"}]}");
-        let lines = export_lines(&s, &db.id, None).unwrap();
+        let lines = export_lines(&s, &db.id, None, true).unwrap();
         assert_eq!(lines[0], vec!["Name", "Qty", "Docs"]);
         assert_eq!(lines.len(), 3);
         assert_eq!(lines[1][0], "'=SUM(A1)", "a formula in a title is defused");
@@ -1286,7 +1286,7 @@ mod tests {
         let mut d = database(&s, &db.id).unwrap();
         d.views.push(v);
         s.put(Item::Database(d)).unwrap();
-        let lines = export_lines(&s, &db.id, Some("v1")).unwrap();
+        let lines = export_lines(&s, &db.id, Some("v1"), true).unwrap();
         assert_eq!(lines[0], vec!["Name", "Qty"]);
         assert_eq!(lines.len(), 2, "only the row with Qty above 0");
         assert_eq!(lines[1], vec!["plain", "7"]);

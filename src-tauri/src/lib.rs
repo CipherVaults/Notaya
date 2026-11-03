@@ -250,6 +250,7 @@ pub fn run() {
             database_cmd::chart_data,
             database_io::import_csv,
             database_io::export_csv,
+            database_io::export_database,
             database_io::attach_file,
             database_io::open_file,
             database_io::save_file_as,

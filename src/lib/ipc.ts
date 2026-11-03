@@ -147,6 +147,9 @@ export const api = {
     invoke<CsvSummary | null>("import_csv", { databaseId, sectionId }),
   exportCsv: (databaseId: string, viewId: string | null) =>
     invoke<{ fileName: string; rows: number; columns: number } | null>("export_csv", { databaseId, viewId }),
+  /** The database (or one view) as a document with one table. format: html | markdown | pdf | docx. */
+  exportDatabase: (databaseId: string, viewId: string | null, format: "html" | "markdown" | "pdf" | "docx") =>
+    invoke<ExportSummary | null>("export_database", { databaseId, viewId, format }),
   /** Stores a file (up to 50 MB) encrypted in the vault; put the result into the row's Files cell. */
   attachFile: (bytes: Uint8Array, name: string) =>
     invoke<FileRef>("attach_file", bytes, { headers: { "x-file-name": encodeURIComponent(name) } }),
