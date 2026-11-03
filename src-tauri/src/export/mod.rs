@@ -24,6 +24,8 @@
 //! when that page is part of the same export: to its file in a ZIP, or to its place in a single
 //! HTML or Word file. Any other one is written as its text.
 
+mod arabic;
+mod bidi;
 pub mod deflate;
 pub mod doc;
 pub mod docx;
@@ -32,6 +34,8 @@ pub mod image;
 pub mod markdown;
 pub mod pdf;
 mod pdf_fonts;
+mod pdf_unicode;
+mod ttf;
 pub mod zip;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -179,6 +183,8 @@ pub struct ExportSummary {
     pub images_left_out: usize,
     /// Characters the PDF fonts do not have (shown as "?").
     pub chars_replaced: usize,
+    /// Of those, Chinese, Japanese or Korean characters because the PC has no usable font for them.
+    pub chars_no_font: usize,
     /// The folder the Markdown pictures were written to, if any.
     pub assets_folder: Option<String>,
     /// "Separate files in a ZIP": how many files the ZIP holds (pages and Markdown pictures).
@@ -796,6 +802,7 @@ pub fn write_zip(dest: &Path, format: Format, zdoc: ZipDoc, attachment: &dyn Fn(
                 let out = pdf::render(&page);
                 summary.images_left_out += out.images_left_out;
                 summary.chars_replaced += out.chars_replaced;
+                summary.chars_no_font += out.chars_no_font;
                 entries.push((join(&f.dir, &file_name), out.bytes, false));
             }
         }
@@ -1046,6 +1053,7 @@ pub fn write(dest: &Path, format: Format, doc: &ExportDoc, data_dir: &Path) -> R
             let out = pdf::render(doc);
             summary.images_left_out = out.images_left_out;
             summary.chars_replaced = out.chars_replaced;
+            summary.chars_no_font = out.chars_no_font;
             write_atomic(dest, &out.bytes)?;
         }
     }
