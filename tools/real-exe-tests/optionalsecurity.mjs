@@ -46,9 +46,9 @@ async function connectMain() {
 
 const doc = (t) => JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: t }] }] });
 const TEXT = "OPEN-MODE-NOTE-7731";
-const vaultPath = `${dataDir}\\vault.clf`;
+const vaultPath = `${dataDir}\\vault.nota`;
 const backupsDir = `${dataDir}\\backups`;
-const backups = () => (existsSync(backupsDir) ? readdirSync(backupsDir).filter((n) => /^vault-.*\.clf$/.test(n)) : []);
+const backups = () => (existsSync(backupsDir) ? readdirSync(backupsDir).filter((n) => /^vault-.*\.(nota|clf)$/.test(n)) : []);
 // Bit 1 of the flags byte (offset 50) in the header row marks a vault with security off.
 function isOpenFile(path) {
   const db = new DatabaseSync(path, { readOnly: true });

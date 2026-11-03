@@ -16,7 +16,7 @@ These are this repository's working rules for Claude Code. This file doesn't hol
 
 - **Stable releases only.** No alpha, beta, rc, preview or nightly packages. npm versions are exact (`.npmrc` sets `save-exact=true`); Rust versions are locked in `src-tauri/Cargo.lock`.
 - **Never edit `docs/plan/approved-plan-2026-10-22.md`.** Git keeps it byte-for-byte (`.gitattributes`). Record plan changes in the amendments record.
-- **Never commit vault data or secrets:** `.devdata/`, `*.clf`, `*.key`, password CSV exports or `.env` files. Check `git status` before every commit.
+- **Never commit vault data or secrets:** `.devdata/`, `*.nota`, `*.clf`, `*.key`, password CSV exports or `.env` files. Check `git status` before every commit.
 - **Ask the owner first** before: installing tools or dependencies, deleting files, making Git commits, adding a remote or pushing, changing security behavior, or resuming development while `docs/STATUS.md` says it's paused.
 - **Keep keys and secrets in the Rust core.** The UI receives only what it displays.
 - **Never test on the owner's live window or vault.** UI automation (for example a WebView2 debug port) uses a throwaway vault in a separate process, with `CIPHERLEAF_HOME` pointing at a temp folder. Close the debug port afterwards and confirm that nothing listens on it (see `docs/failure-intelligence.md`, FI-01). Never leave `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` set.
@@ -49,7 +49,7 @@ Most work now runs in cloud threads of the Claude project, not in a PowerShell s
 - works on its own `claude/project-thread-*` branch from the latest `origin/main`, pushes it, opens a **draft** pull request and never merges (the owner merges; push and open PRs freely, but ask before a force-push, deleting branches, making the repository public or adding a licence);
 - has no PowerShell or Windows: it runs `tsc`, `npm run build`, `npm audit` and, for Rust, `cargo test --lib --target x86_64-pc-windows-gnu` under Wine (copy `WebView2Loader.dll` next to the test exe). It reports what it could not run as not run (the PC exe, the real-exe scripts, `cargo clippy` for MSVC);
 - tests the real app only through a Remote Control session on the PC, on throwaway data, following the rules above;
-- after the owner merges, the PC copy `E:\Project\cipherleaf` is fast-forwarded (`git pull --ff-only` on `main`) and checked to equal `origin/main`; never `git add -A` there (untracked `vendor\`).
+- after the owner merges, the PC copy `E:\Project\Notaya\Notaya` (moved there on 2026-10-28, [EX-2026-10-28-37](docs/execution/2026-10-28-v1-3-0-settings-text-rerelease.md)) is fast-forwarded (`git pull --ff-only` on `main`) and checked to equal `origin/main`; never `git add -A` there (untracked `vendor\`).
 
 ## PBS work cycle
 

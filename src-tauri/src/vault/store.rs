@@ -182,7 +182,7 @@ mod tests {
 
     /// A bare store (no header) in a fresh temp folder, with the two data tables.
     fn temp_store() -> Store {
-        let dir = std::env::temp_dir().join(format!("cipherleaf-store-{}", crate::model::new_id()));
+        let dir = std::env::temp_dir().join(format!("notaya-store-{}", crate::model::new_id()));
         std::fs::create_dir_all(&dir).unwrap();
         let store = Store::connect(&dir.join("test.clf")).unwrap();
         store

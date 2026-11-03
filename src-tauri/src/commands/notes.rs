@@ -422,7 +422,7 @@ pub fn empty_trash(state: State<'_, AppState>) -> Result<NotesTree> {
 
 /// Identifies an image from its first bytes; the name the UI sends is ignored.
 /// SVG is refused on purpose because it can contain scripts.
-fn sniff_image(bytes: &[u8]) -> Option<&'static str> {
+pub(crate) fn sniff_image(bytes: &[u8]) -> Option<&'static str> {
     if bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
         Some("image/png")
     } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
@@ -483,9 +483,9 @@ mod subpage_tests {
     use crate::crypto::KdfParams;
 
     fn vault() -> Session {
-        let dir = std::env::temp_dir().join(format!("cipherleaf-test-{}", new_id()));
+        let dir = std::env::temp_dir().join(format!("notaya-test-{}", new_id()));
         std::fs::create_dir_all(&dir).unwrap();
-        Session::create(&dir.join("vault.clf"), "pw", None, KdfParams { m_kib: 64, t: 1, p: 1 }).unwrap()
+        Session::create(&dir.join("vault.nota"), "pw", None, KdfParams { m_kib: 64, t: 1, p: 1 }).unwrap()
     }
 
     fn page_in(s: &mut Session, section_id: &str, title: &str) -> Page {

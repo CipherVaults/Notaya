@@ -28,7 +28,7 @@ pub struct RestoreResult {
     undo_file: Option<String>,
 }
 
-/// The automatic backups (`data/backups/vault-*.clf`), newest first. Works
+/// The automatic backups (`data/backups/vault-*.nota`), newest first. Works
 /// while locked: it reads only file names, times and sizes.
 #[tauri::command]
 pub fn list_backups(state: State<'_, AppState>) -> Result<Vec<BackupInfo>> {
@@ -37,7 +37,7 @@ pub fn list_backups(state: State<'_, AppState>) -> Result<Vec<BackupInfo>> {
 
 #[tauri::command(async)]
 pub fn pick_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
-    let mut dialog = app.dialog().file().set_title("Choose a Notaya backup").add_filter("Notaya vault", &["clf"]);
+    let mut dialog = app.dialog().file().set_title("Choose a Notaya backup").add_filter("Notaya vault", &[crate::filenames::EXT, crate::filenames::OLD_EXT]);
     if state.paths.backups.is_dir() {
         dialog = dialog.set_directory(&state.paths.backups);
     }
@@ -77,7 +77,7 @@ pub fn import_portable_notes(app: AppHandle, state: State<'_, AppState>) -> Resu
 }
 
 /// "Start over" on the lock screen: sets the vault aside as
-/// `set-aside-<ms>.clf` in the data folder, so the first-run screen shows again.
+/// `set-aside-<ms>.nota` in the data folder, so the first-run screen shows again.
 /// Only while locked. Nothing is deleted; the old vault can be brought back with
 /// "Restore from a backup" and its own password. Other files in the data folder are
 /// not touched. Returns the set-aside file's name.
@@ -98,7 +98,7 @@ pub fn start_over(state: State<'_, AppState>) -> Result<String> {
 
 /// Replaces the vault with a backup. Checks the backup first (header, every
 /// record and attachment, with the given password and keyfile), keeps the old
-/// vault as `restore-undo-<ms>.clf`, then unlocks the restored vault.
+/// vault as `restore-undo-<ms>.nota`, then unlocks the restored vault.
 ///
 /// Runs on a worker thread because a lock waits for the windows to save.
 #[tauri::command(async)]
@@ -186,8 +186,16 @@ fn install_and_open(
     };
 
     match Session::unlock_any(&state.paths.vault, password, kf) {
-        Ok(session) => {
-            state.set_session(session);
+        Ok(mut session) => {
+            // A backup from V1.3.0 or earlier is re-encrypted in the Notaya format (same password).
+            session.upgrade_format_quietly(password, kf);
+            // A restored vault with a master password is not stored if the window was closed to the
+            // tray meanwhile (the same rule as an unlock); one with security off is stored as ever.
+            if session.is_open() {
+                state.set_session(session);
+            } else {
+                state.set_session_unless_hidden(session)?;
+            }
             after_unlock(app, state);
             Ok(undo)
         }

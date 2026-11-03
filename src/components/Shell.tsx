@@ -8,6 +8,8 @@ import { useApp, type View } from "@/store/app";
 import CommandPalette from "./CommandPalette";
 import Sidebar from "./Sidebar";
 import NotesView from "@/features/notes/NotesView";
+import ExportDialog from "@/features/notes/ExportDialog";
+import ImportDialog from "@/features/notes/ImportDialog";
 import StickyBoard from "@/features/sticky/StickyBoard";
 import SettingsView from "@/features/settings/SettingsView";
 
@@ -89,6 +91,8 @@ export default function Shell() {
       </main>
 
       <CommandPalette />
+      <ExportDialog />
+      <ImportDialog />
     </div>
   );
 }

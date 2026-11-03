@@ -11,10 +11,20 @@ let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
 let noticeTaken = false;
+let importRunning = false;
+let importCancelled = false;
 const calcHistory: { expr: string; result: string }[] = [{ expr: "12.5 × (3 + 4)", result: "87.5" }];
 
 const now = Date.now();
 const ago = (m: number) => now - m * 60_000;
+
+const shellPrefs: Record<string, unknown> = {
+  closeToTray: true,
+  startWithWindows: false,
+  startMinimized: true,
+  installed: params.get("portable") !== "1",
+  trayAvailable: true,
+};
 
 const settings: Record<string, unknown> = {
   theme: params.get("theme") ?? "sunrise",
@@ -132,22 +142,22 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok(null);
     case "start_over":
       exists = false;
-      return ok("set-aside-1792700000000.clf");
+      return ok("set-aside-1792700000000.nota");
     case "lock_vault":
       if (!securityOn) return ok(null);
       unlocked = false;
       return ok(null);
     case "list_backups":
       return ok([
-        { name: "vault-2026-10-22-18-40.clf", modifiedMs: ago(60 * 20), size: 482_304 },
-        { name: "vault-2026-10-21-09-05.clf", modifiedMs: ago(60 * 44), size: 1_572_864 },
+        { name: "vault-2026-10-22-18-40.nota", modifiedMs: ago(60 * 20), size: 482_304 },
+        { name: "vault-2026-10-21-09-05.nota", modifiedMs: ago(60 * 44), size: 1_572_864 },
       ]);
     case "pick_backup_file":
-      return ok("E:\\Backups\\my-old-vault.clf");
+      return ok("E:\\Backups\\my-old-vault.nota");
     case "restore_vault":
       if (args.password === "wrong") throw "That password (or keyfile) doesn't open this backup.";
     {
-      const undoFile = exists ? "restore-undo-1792700000000.clf" : null;
+      const undoFile = exists ? "restore-undo-1792700000000.nota" : null;
       exists = true;
       unlocked = true;
       securityOn = !!args.password;
@@ -169,6 +179,18 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok({ ...settings });
     case "set_backdrop":
       return ok(false);
+    // The error log: nothing is recorded in the mock; the numbers are made up.
+    case "log_frontend_error":
+      return ok(null);
+    case "log_info":
+      return ok({ folder: "E:\\Notaya\\data\\logs", bytes: 18432, lastEntry: "2026-10-29T07:45:00Z" });
+    case "open_log_folder":
+      return ok(null);
+    case "get_shell_prefs":
+      return ok({ ...shellPrefs });
+    case "set_shell_prefs":
+      Object.assign(shellPrefs, args.prefs as Args);
+      return ok({ ...shellPrefs });
     case "list_notes":
       return ok(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree);
     // The real app makes a verified backup first and fails the delete if that fails; ?failDelete=1 mimics that.
@@ -225,12 +247,98 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
     case "add_calc_entry": {
       const expr = String(args.expr), result = String(args.result);
       if (!(calcHistory[0]?.expr === expr && calcHistory[0]?.result === result)) calcHistory.unshift({ expr, result });
-      calcHistory.length = Math.min(calcHistory.length, 200);
+      calcHistory.length = Math.min(calcHistory.length, 500);
       return ok([...calcHistory]);
     }
     case "clear_calc_history":
       calcHistory.length = 0;
       return ok(null);
+    // The real app opens a save dialog and writes the file; here it pretends the file was saved.
+    case "export_notes": {
+      const req = args.request as { scope: string; ids: string[]; format: string; includeSubpages: boolean; output?: string };
+      await new Promise((r) => setTimeout(r, 400));
+      const zip = req.output === "zip";
+      const ext = req.format === "docx" ? "docx" : req.format === "pdf" ? "pdf" : req.format === "html" ? "html" : "md";
+      const live = tree.pages.filter((p) => p.trashedAt === null);
+      const inSections = (ids: string[]) => live.filter((p) => ids.includes(p.sectionId)).length;
+      const pages =
+        req.scope === "pages"
+          ? req.ids.length
+          : req.scope === "section" || req.scope === "sections"
+            ? inSections(req.ids)
+            : inSections(tree.sections.filter((s) => req.ids.includes(s.notebookId)).map((s) => s.id));
+      return ok({
+        path: `C:\\Users\\you\\Documents\\Notaya export.${zip ? "zip" : ext}`,
+        pages,
+        images: 1,
+        missingImages: 0,
+        imagesLeftOut: 0,
+        charsReplaced: req.format === "pdf" ? 2 : 0,
+        assetsFolder: !zip && ext === "md" ? "C:\\Users\\you\\Documents\\Notaya export.assets" : null,
+        files: zip ? pages + (ext === "md" ? 1 : 0) : 1,
+        archive: zip,
+      });
+    }
+    case "import_cancel": {
+      const running = importRunning;
+      importCancelled = running;
+      return ok(running);
+    }
+    // The real app opens a file dialog and imports the files; here it pretends two files were picked.
+    // ?importFail=1 makes it fail, ?importCancel=1 cancels the dialog.
+    case "import_notes": {
+      if (params.get("importFail") === "1") throw "No pages were found. Choose Markdown (.md), HTML, Word (.docx) or PDF files, a folder of them, or a ZIP file made by Notion.";
+      // The import takes a moment (longer with ?importSlow=1) and stops at once when "import_cancel" arrives.
+      importCancelled = false;
+      importRunning = true;
+      const steps = params.get("importSlow") === "1" ? 100 : 15;
+      for (let i = 0; i < steps && !importCancelled; i++) await new Promise((r) => setTimeout(r, 100));
+      importRunning = false;
+      if (importCancelled) {
+        importCancelled = false;
+        return ok(null);
+      }
+      if (params.get("importCancel") === "1") return ok(null);
+      const n = tree.notebooks.length + 1;
+      const nb = { id: `n${n + 10}`, name: "Notion import", color: "#6366f1", icon: "📓", order: n, created: ago(0), updated: ago(0) };
+      const secs = [
+        { id: `s${n + 20}`, notebookId: nb.id, name: "Imported pages", color: "", order: 0, created: ago(0), updated: ago(0) },
+        { id: `s${n + 21}`, notebookId: nb.id, name: "Recipes", color: "", order: 1, created: ago(0), updated: ago(0) },
+      ];
+      const mk = (id: string, sectionId: string, title: string, order: number, parent = "", icon = "") => ({
+        id, sectionId, title, preview: "Imported from Notion.", words: 40, order, favorite: false, parent, icon, trashedAt: null, created: ago(0), updated: ago(0),
+      });
+      tree.notebooks.push(nb);
+      tree.sections.push(...secs);
+      tree.pages.push(
+        mk(`p${n + 30}`, secs[0].id, "Project plan", 0, "", "🚀"),
+        mk(`p${n + 31}`, secs[0].id, "Sub page", 1, `p${n + 30}`),
+        mk(`p${n + 32}`, secs[1].id, "Pancakes", 0, "", "🥞"),
+      );
+      // ?importTwo=1: a Notaya ZIP of two notebooks, which comes back as two notebooks.
+      const notebooks = [{ id: nb.id, name: nb.name }];
+      if (params.get("importTwo") === "1") {
+        const nb2 = { ...nb, id: `n${n + 11}`, name: "Second notebook", order: n + 1 };
+        const sec2 = { ...secs[0], id: `s${n + 22}`, notebookId: nb2.id, name: "Work" };
+        tree.notebooks.push(nb2);
+        tree.sections.push(sec2);
+        tree.pages.push(mk(`p${n + 33}`, sec2.id, "Tasks", 0));
+        notebooks.push({ id: nb2.id, name: nb2.name });
+      }
+      return ok({
+        notebookId: nb.id,
+        notebookName: nb.name,
+        notebooks,
+        sections: notebooks.length > 1 ? 3 : 2,
+        pages: notebooks.length > 1 ? 4 : 3,
+        images: 2,
+        skipped: [
+          { item: "Tasks 0123abcd.csv", reason: "A Notion database (table) view. Tables are not imported; the pages inside a database are, when they were exported." },
+          { item: "Picture holiday.heic (Project plan 0123abcd.html)", reason: "Not a PNG, JPEG, GIF or WebP picture." },
+        ],
+        notes: ["PDF import reads text only: pictures, scanned pages and the page layout are not imported."],
+      });
+    }
     case "password_strength": {
       const len = String(args.password ?? "").length;
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;

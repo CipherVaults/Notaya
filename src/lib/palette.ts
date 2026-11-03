@@ -43,30 +43,58 @@ export function stickyColor(name: string) {
 
 export const NOTEBOOK_ICONS = ["📓", "📘", "📗", "📕", "📙", "🗂️", "💼", "🏠", "✈️", "💡", "🎓", "🧪", "🎨", "💰", "❤️", "🔒"];
 
-/** Highlight colors are translucent, so they read well on every theme. */
+/**
+ * Highlight colors for text. They are matte: soft, low-saturation tints, and translucent, so the
+ * same saved value looks right on every light and dark theme and the text stays readable on top.
+ * (Older pages may hold other values; they still show, only these are offered.) The order is fixed and
+ * deliberately mixed. Ash to Cherry are the exact values the importer for pages from other apps writes
+ * (keep both in step with `src-tauri/src/importers`), so imported colors show as selected here.
+ */
 export const HIGHLIGHTS = [
-  { name: "Gray", value: "rgba(155, 154, 151, 0.35)" },
-  { name: "Brown", value: "rgba(160, 115, 90, 0.38)" },
-  { name: "Orange", value: "rgba(224, 123, 57, 0.36)" },
-  { name: "Yellow", value: "rgba(236, 189, 40, 0.38)" },
-  { name: "Green", value: "rgba(79, 157, 105, 0.36)" },
-  { name: "Blue", value: "rgba(59, 130, 196, 0.36)" },
-  { name: "Purple", value: "rgba(144, 101, 176, 0.38)" },
-  { name: "Pink", value: "rgba(193, 76, 138, 0.36)" },
-  { name: "Red", value: "rgba(229, 72, 77, 0.36)" },
+  { name: "Mist", value: "rgba(100, 150, 190, 0.32)" },
+  { name: "Brick", value: "rgba(200, 105, 100, 0.32)" },
+  { name: "Honey", value: "rgba(203, 145, 47, 0.30)" },
+  { name: "Sage", value: "rgba(110, 160, 125, 0.32)" },
+  { name: "Orchid", value: "rgba(193, 76, 138, 0.28)" },
+  { name: "Stone", value: "rgba(140, 142, 148, 0.30)" },
+  { name: "Amber", value: "rgba(217, 115, 13, 0.28)" },
+  { name: "Lavender", value: "rgba(150, 125, 190, 0.32)" },
+  { name: "Cocoa", value: "rgba(159, 107, 83, 0.28)" },
+  { name: "Butter", value: "rgba(206, 178, 80, 0.34)" },
+  { name: "Denim", value: "rgba(51, 126, 169, 0.28)" },
+  { name: "Blush", value: "rgba(200, 120, 150, 0.32)" },
+  { name: "Moss", value: "rgba(68, 131, 97, 0.28)" },
+  { name: "Clay", value: "rgba(176, 130, 105, 0.32)" },
+  { name: "Plum", value: "rgba(144, 101, 176, 0.28)" },
+  { name: "Peach", value: "rgba(214, 140, 90, 0.32)" },
+  { name: "Cherry", value: "rgba(212, 76, 71, 0.28)" },
+  { name: "Ash", value: "rgba(120, 119, 116, 0.28)" },
 ];
 
+/**
+ * Text colors: mid-tones with at least about 3.5:1 contrast on the light themes and 4.4:1 on the dark
+ * ones, so a color chosen on one theme stays legible on the others. "Default" removes the color.
+ */
 export const TEXT_COLORS = [
   { name: "Default", value: "" },
-  { name: "Gray", value: "#9b9a97" },
-  { name: "Brown", value: "#b0805f" },
-  { name: "Orange", value: "#e07b39" },
-  { name: "Yellow", value: "#d9a21b" },
-  { name: "Green", value: "#4f9d69" },
-  { name: "Blue", value: "#3b82c4" },
-  { name: "Purple", value: "#9065b0" },
-  { name: "Pink", value: "#c14c8a" },
-  { name: "Red", value: "#e5484d" },
+  { name: "Ocean", value: "#4a8bc2" },
+  { name: "Brick", value: "#d04f4f" },
+  { name: "Honey", value: "#cb912f" },
+  { name: "Sage", value: "#43905f" },
+  { name: "Orchid", value: "#c14c8a" },
+  { name: "Slate", value: "#78838f" },
+  { name: "Amber", value: "#d9730d" },
+  { name: "Lavender", value: "#8d6bc2" },
+  { name: "Cocoa", value: "#9f6b53" },
+  { name: "Mustard", value: "#a67c1c" },
+  { name: "Denim", value: "#337ea9" },
+  { name: "Rose", value: "#c9557f" },
+  { name: "Moss", value: "#448361" },
+  { name: "Clay", value: "#a8765a" },
+  { name: "Plum", value: "#9065b0" },
+  { name: "Terracotta", value: "#c8683a" },
+  { name: "Cherry", value: "#d44c47" },
+  { name: "Ash", value: "#787774" },
 ];
 
 export const COVER_GRADIENTS = [

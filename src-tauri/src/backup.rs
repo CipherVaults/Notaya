@@ -9,12 +9,13 @@
 //! deletes the file just written, and ignores anything it does not clearly own.
 //!
 //! There are three separate rotations in the backups folder. The automatic backups (made when
-//! the vault locks or the app quits) are `vault-<digits>.clf` (10 kept). The hourly backups of
-//! an open vault that is running are `vault-hourly-<digits>.clf` (3 kept). The safety backups
-//! made just before a notebook or section is deleted are `vault-predelete-<digits>.clf` (5
+//! the vault locks or the app quits) are `vault-<digits>.nota` (10 kept). The hourly backups of
+//! an open vault that is running are `vault-hourly-<digits>.nota` (3 kept). The safety backups
+//! made just before a notebook or section is deleted are `vault-predelete-<digits>.nota` (5
 //! kept). Each rotation counts and deletes only its own files, so a day of hourly copies can't
 //! push out the older ordinary backups, a run of deletes can't push out the ordinary backups,
 //! and the ordinary ones can't push out the copy that still holds what was just deleted.
+//! Backups made by V1.3.0 and earlier end in `.clf`; they are rotated together with the `.nota` ones.
 
 use std::cmp::Ordering;
 use std::fs::{self, OpenOptions};
@@ -72,6 +73,14 @@ fn number_with_prefix(name: &str, prefix: &str, ext: &str) -> Option<u64> {
     digits.parse().ok()
 }
 
+/// `<prefix><digits>.nota` or `<prefix><digits>.clf` (the name used until V1.3.0) gives the digits. The two
+/// kinds are rotated together, so the old backups age out as new ones are made.
+fn number_with_vault_ext(name: &str, prefix: &str) -> Option<u64> {
+    [crate::filenames::EXT, crate::filenames::OLD_EXT]
+        .iter()
+        .find_map(|ext| number_with_prefix(name, prefix, &format!(".{ext}")))
+}
+
 /// One automatic backup as rotation sees it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Candidate {
@@ -109,7 +118,7 @@ fn clock_ms() -> u64 {
 }
 
 /// Rotates `dir` after `just_made` was written. Only files named exactly
-/// `<prefix><digits>.clf` are looked at (the other kind of backup is never touched). A file that is empty counts for nothing (it can
+/// `<prefix><digits>.nota` or `.clf` are looked at (the other kind of backup is never touched). A file that is empty counts for nothing (it can
 /// only be junk from an older version that wrote straight to the final name) and is
 /// removed; a file whose details can't be read is left alone and not counted.
 fn rotate(dir: &Path, prefix: &str, just_made: &str, keep: usize) {
@@ -121,7 +130,7 @@ fn rotate(dir: &Path, prefix: &str, just_made: &str, keep: usize) {
         let Some(name) = entry.file_name().to_str().map(str::to_string) else {
             continue;
         };
-        let Some(number) = number_with_prefix(&name, prefix, ".clf") else {
+        let Some(number) = number_with_vault_ext(&name, prefix) else {
             continue;
         };
         let Ok(meta) = entry.metadata() else {
@@ -195,13 +204,13 @@ fn write_checked(session: &Session, tmp: &Path, dest: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Makes an automatic backup `vault-<ms>.clf` in the backups folder and rotates. Returns
+/// Makes an automatic backup `vault-<ms>.nota` in the backups folder and rotates. Returns
 /// the file name. Nothing exists under the final name unless the copy passed its check.
 pub fn make_backup(paths: &Paths, session: &Session) -> Result<String> {
     make_backup_in(&paths.backups, session, now_ms().max(0) as u64, MAX_BACKUPS)
 }
 
-/// The safety backup before a notebook or section is deleted: `vault-predelete-<ms>.clf`,
+/// The safety backup before a notebook or section is deleted: `vault-predelete-<ms>.nota`,
 /// checked like any backup, in a rotation of its own (the newest `MAX_SAFETY_BACKUPS` are
 /// kept). It never counts toward, and never deletes, the automatic backups, and the
 /// automatic rotation never touches it. Returns the file name.
@@ -209,7 +218,7 @@ pub fn make_safety_backup(paths: &Paths, session: &Session) -> Result<String> {
     make_in(&paths.backups, session, now_ms().max(0) as u64, PREDELETE, MAX_SAFETY_BACKUPS)
 }
 
-/// The hourly backup of an open vault that stays running: `vault-hourly-<ms>.clf`, checked like
+/// The hourly backup of an open vault that stays running: `vault-hourly-<ms>.nota`, checked like
 /// any backup, in a rotation of its own (the newest `MAX_HOURLY_BACKUPS` are kept). A day of
 /// hourly copies therefore never pushes out the ordinary backups that go back days. Returns
 /// the file name.
@@ -228,7 +237,7 @@ fn make_in(dir: &Path, session: &Session, now: u64, prefix: &str, keep: usize) -
     // `rename` replaces an existing file on Windows, so take a name that is free.
     let mut ms = now;
     let (tmp, dest, name) = loop {
-        let name = format!("{prefix}{ms}.clf");
+        let name = format!("{prefix}{ms}.{}", crate::filenames::EXT);
         let dest = dir.join(&name);
         let tmp = dir.join(format!("{prefix}{ms}.tmp"));
         if !dest.try_exists()? && !tmp.try_exists()? {
@@ -344,17 +353,17 @@ pub fn failure_notice(e: &Error, vault_present: bool) -> String {
     let because = reason(e);
     if !vault_present {
         format!(
-            "Notaya could not make a backup copy of your notes ({because}). The vault file data\\vault.clf cannot be found, so check that the drive is connected."
+            "Notaya could not make a backup copy of your notes ({because}). The vault file data\\vault.nota cannot be found, so check that the drive is connected."
         )
     } else if matches!(e, Error::Corrupt) {
-        "Notaya could not make a backup copy of your notes: the copy failed its integrity check, so the vault file data\\vault.clf or the drive it is on may be damaged. Do not rely on it alone. Keep your older backups, and if your notes look wrong, restore one of them.".to_string()
+        "Notaya could not make a backup copy of your notes: the copy failed its integrity check, so the vault file data\\vault.nota or the drive it is on may be damaged. Do not rely on it alone. Keep your older backups, and if your notes look wrong, restore one of them.".to_string()
     } else if is_destination_problem(e) {
         format!(
-            "Notaya could not make a backup copy of your notes ({because}). Your notes are still saved in data\\vault.clf."
+            "Notaya could not make a backup copy of your notes ({because}). Your notes are still saved in data\\vault.nota."
         )
     } else {
         format!(
-            "Notaya could not make a backup copy of your notes ({because}). It is not clear whether the vault file data\\vault.clf or the drive is at fault, so do not rely on it alone. Keep your older backups, and if your notes are on a USB stick, copy the whole Notaya folder to another drive."
+            "Notaya could not make a backup copy of your notes ({because}). It is not clear whether the vault file data\\vault.nota or the drive is at fault, so do not rely on it alone. Keep your older backups, and if your notes are on a USB stick, copy the whole Notaya folder to another drive."
         )
     }
 }
@@ -376,13 +385,13 @@ mod tests {
     const CLOCK: u64 = 1_000_000;
 
     fn temp_dir() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("cipherleaf-backup-{}", new_id()));
+        let dir = std::env::temp_dir().join(format!("notaya-backup-{}", new_id()));
         fs::create_dir_all(&dir).unwrap();
         dir
     }
 
     fn session_in(dir: &Path) -> Session {
-        let mut s = Session::create_open(&dir.join("vault.clf")).unwrap();
+        let mut s = Session::create_open(&dir.join("vault.nota")).unwrap();
         s.put_attachment("image/png", b"pixels").unwrap();
         s
     }
@@ -414,7 +423,7 @@ mod tests {
 
     /// Damages a record in the live file, so a copy of it fails the check.
     fn damage_live_vault(dir: &Path) {
-        let conn = Connection::open(dir.join("vault.clf")).unwrap();
+        let conn = Connection::open(dir.join("vault.nota")).unwrap();
         let (id, mut data): (Vec<u8>, Vec<u8>) =
             conn.query_row("SELECT id, data FROM records LIMIT 1", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         data[40] ^= 0xff;
@@ -468,7 +477,7 @@ mod tests {
         let s = session_in(&dir);
         let backups = dir.join("backups");
         let name = make_backup_in(&backups, &s, 1_700_000_000_000, MAX_BACKUPS).unwrap();
-        assert_eq!(name, "vault-1700000000000.clf");
+        assert_eq!(name, "vault-1700000000000.nota");
         assert_eq!(names(&backups), [name.clone()]);
         s.verify_copy(&backups.join(&name)).unwrap();
         // Two backups in the same millisecond get two names.
@@ -644,47 +653,47 @@ mod tests {
     fn a_manual_copy_replaces_an_old_file_only_after_the_new_one_is_good() {
         let dir = temp_dir();
         let s = session_in(&dir);
-        let live = dir.join("vault.clf");
-        let dest = write(&dir, "mine.clf", b"OLD BACKUP");
+        let live = dir.join("vault.nota");
+        let dest = write(&dir, "mine.nota", b"OLD BACKUP");
         // A failing copy leaves the old file untouched and no temp file.
         damage_live_vault(&dir);
         assert!(save_copy(&s, &dest, &live).is_err());
         assert_eq!(fs::read(&dest).unwrap(), b"OLD BACKUP");
-        assert_eq!(names(&dir), ["mine.clf", "vault.clf"]);
+        assert_eq!(names(&dir), ["mine.nota", "vault.nota"]);
         // A good copy replaces it.
         let dir2 = temp_dir();
         let s2 = session_in(&dir2);
-        let dest2 = write(&dir2, "mine.clf", b"OLD BACKUP");
-        save_copy(&s2, &dest2, &dir2.join("vault.clf")).unwrap();
+        let dest2 = write(&dir2, "mine.nota", b"OLD BACKUP");
+        save_copy(&s2, &dest2, &dir2.join("vault.nota")).unwrap();
         s2.verify_copy(&dest2).unwrap();
-        assert_eq!(names(&dir2), ["mine.clf", "vault.clf"], "no temp file left");
+        assert_eq!(names(&dir2), ["mine.nota", "vault.nota"], "no temp file left");
     }
 
     #[test]
     fn a_manual_copy_refuses_the_live_vault_and_leaves_it_alone() {
         let dir = temp_dir();
         let s = session_in(&dir);
-        let live = dir.join("vault.clf");
+        let live = dir.join("vault.nota");
         let before = fs::read(&live).unwrap();
         assert!(save_copy(&s, &live, &live).is_err());
         // The same file spelled another way.
-        let sneaky = dir.join(".").join("sub").join("..").join("vault.clf");
+        let sneaky = dir.join(".").join("sub").join("..").join("vault.nota");
         fs::create_dir_all(dir.join("sub")).unwrap();
         assert!(save_copy(&s, &sneaky, &live).is_err());
         assert_eq!(fs::read(&live).unwrap(), before);
-        assert_eq!(names(&dir), ["sub", "vault.clf"]);
+        assert_eq!(names(&dir), ["sub", "vault.nota"]);
         // A new file that does not exist yet is fine.
-        save_copy(&s, &dir.join("new.clf"), &live).unwrap();
+        save_copy(&s, &dir.join("new.nota"), &live).unwrap();
     }
 
     #[test]
     fn a_manual_copy_onto_a_folder_fails_and_leaves_no_temp_file() {
         let dir = temp_dir();
         let s = session_in(&dir);
-        let target = dir.join("is-a-folder.clf");
+        let target = dir.join("is-a-folder.nota");
         fs::create_dir(&target).unwrap();
-        assert!(save_copy(&s, &target, &dir.join("vault.clf")).is_err());
-        assert_eq!(names(&dir), ["is-a-folder.clf", "vault.clf"]);
+        assert!(save_copy(&s, &target, &dir.join("vault.nota")).is_err());
+        assert_eq!(names(&dir), ["is-a-folder.nota", "vault.nota"]);
     }
 
     #[test]
@@ -693,7 +702,7 @@ mod tests {
         assert_eq!(reason(&full), "the drive is full");
         assert_eq!(
             failure_notice(&full, true),
-            "Notaya could not make a backup copy of your notes (the drive is full). Your notes are still saved in data\\vault.clf."
+            "Notaya could not make a backup copy of your notes (the drive is full). Your notes are still saved in data\\vault.nota."
         );
         assert_eq!(
             safety_failure(&full).to_string(),
@@ -728,7 +737,7 @@ mod tests {
         let sqlite_ro = Error::Db(rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_READONLY), None));
         for e in [&full, &denied, &exists, &in_use, &sqlite_full, &sqlite_ro] {
             let text = failure_notice(e, true);
-            assert!(text.ends_with("Your notes are still saved in data\\vault.clf."), "{text}");
+            assert!(text.ends_with("Your notes are still saved in data\\vault.nota."), "{text}");
         }
     }
 
@@ -770,7 +779,7 @@ mod tests {
         let mut hourly = Vec::new();
         for i in 0..8u64 {
             let name = make_in(&backups, &s, 5_000 + i, HOURLY, MAX_HOURLY_BACKUPS).unwrap();
-            assert_eq!(name, format!("vault-hourly-{}.clf", 5_000 + i));
+            assert_eq!(name, format!("vault-hourly-{}.nota", 5_000 + i));
             s.verify_copy(&backups.join(&name)).unwrap();
             hourly.push(name);
         }
@@ -798,7 +807,7 @@ mod tests {
         let mut made = Vec::new();
         for _ in 0..6 {
             let name = make_hourly_backup(&paths, &s).unwrap();
-            assert!(name.starts_with("vault-hourly-") && name.ends_with(".clf"), "{name}");
+            assert!(name.starts_with("vault-hourly-") && name.ends_with(".nota"), "{name}");
             // Older than the next one, whatever the clock resolution.
             secs_ago(&paths.backups.join(&name), 600 - made.len() as u64 * 60);
             made.push(name);
@@ -822,7 +831,7 @@ mod tests {
         let left = names(&backups);
         assert!(!left.contains(&"vault-hourly-5.tmp".to_string()), "{left:?}");
         assert!(left.contains(&"vault-hourly-x.tmp".to_string()), "{left:?}");
-        assert!(left.contains(&"vault-hourly-10.clf".to_string()), "{left:?}");
+        assert!(left.contains(&"vault-hourly-10.nota".to_string()), "{left:?}");
     }
 
     #[test]
@@ -867,7 +876,7 @@ mod tests {
         let mut safety = Vec::new();
         for i in 0..8u64 {
             let name = make_in(&backups, &s, 2_000 + i, PREDELETE, MAX_SAFETY_BACKUPS).unwrap();
-            assert_eq!(name, format!("vault-predelete-{}.clf", 2_000 + i));
+            assert_eq!(name, format!("vault-predelete-{}.nota", 2_000 + i));
             s.verify_copy(&backups.join(&name)).unwrap();
             safety.push(name);
         }
@@ -908,7 +917,7 @@ mod tests {
         assert!(!left.contains(&"vault-predelete-6.clf".to_string()));
         assert!(left.contains(&"vault-predelete-x.tmp".to_string()));
         assert!(left.contains(&"vault-predelete-old.clf".to_string()));
-        assert!(left.contains(&"vault-predelete-10.clf".to_string()));
+        assert!(left.contains(&"vault-predelete-10.nota".to_string()));
     }
 
     #[test]
@@ -917,5 +926,40 @@ mod tests {
         assert_eq!(number_with_prefix("vault-predelete-123.clf", PREDELETE, ".clf"), Some(123));
         assert_eq!(number_with_prefix("vault-123.clf", PREDELETE, ".clf"), None);
         assert_eq!(number_with_prefix("vault-predelete-.clf", PREDELETE, ".clf"), None);
+    }
+
+    #[test]
+    fn old_clf_backups_and_new_nota_backups_rotate_together() {
+        let dir = temp_dir();
+        let s = session_in(&dir);
+        let backups = dir.join("backups");
+        fs::create_dir_all(&backups).unwrap();
+        for i in 0..4u64 {
+            write(&backups, &format!("vault-{}.clf", 100 + i), b"old backup");
+        }
+        for i in 0..4u64 {
+            let name = make_backup_in(&backups, &s, 200 + i, 5).unwrap();
+            assert_eq!(name, format!("vault-{}.nota", 200 + i));
+        }
+        let left = names(&backups);
+        assert_eq!(left.len(), 5, "{left:?}");
+        assert!(left.iter().all(|n| n.ends_with(".nota") || n.ends_with(".clf")));
+        assert!(left.contains(&"vault-203.nota".to_string()), "the newest is kept: {left:?}");
+        assert!(!left.contains(&"vault-100.clf".to_string()), "the oldest old-style backup ages out: {left:?}");
+        // The other rotations never see them.
+        write(&backups, "vault-hourly-1.clf", b"hourly old");
+        make_in(&backups, &s, 300, PREDELETE, 5).unwrap();
+        assert!(names(&backups).contains(&"vault-hourly-1.clf".to_string()));
+    }
+
+    #[test]
+    fn nota_names_parse_like_clf_names() {
+        assert_eq!(number_with_vault_ext("vault-123.nota", AUTOMATIC), Some(123));
+        assert_eq!(number_with_vault_ext("vault-123.clf", AUTOMATIC), Some(123));
+        assert_eq!(number_with_vault_ext("vault-hourly-5.nota", HOURLY), Some(5));
+        assert_eq!(number_with_vault_ext("vault-hourly-5.nota", AUTOMATIC), None);
+        assert_eq!(number_with_vault_ext("vault-predelete-9.nota", PREDELETE), Some(9));
+        assert_eq!(number_with_vault_ext("vault-12.nota.bak", AUTOMATIC), None);
+        assert_eq!(number_with_vault_ext("vault-.nota", AUTOMATIC), None);
     }
 }

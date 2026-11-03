@@ -1,11 +1,21 @@
 import { create } from "zustand";
 import { api } from "@/lib/ipc";
+import { getKey, setKey } from "@/lib/storage";
 import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
 
 export type View = "notes" | "stickies" | "settings";
 
 /** A one-shot request for a view to do something once it is shown (e.g. from the command palette). */
 export type Intent = "new-page" | "new-notebook" | null;
+
+/** Where "Export…" was chosen: the dialog offers this page, its section and its notebook. */
+export interface ExportTarget {
+  notebookId: string;
+  sectionId?: string;
+  pageId?: string;
+  /** What the dialog starts with. */
+  initial: "page" | "section" | "notebook";
+}
 
 interface AppState {
   status: VaultStatus | null;
@@ -21,8 +31,14 @@ interface AppState {
   intent: Intent;
   sidebarOpen: boolean;
   sidebarWidth: number;
+  exportTarget: ExportTarget | null;
+  importOpen: boolean;
 
   setIntent: (i: Intent) => void;
+  /** Opens the export dialog (null closes it). */
+  setExportTarget: (t: ExportTarget | null) => void;
+  /** Opens or closes the import dialog. */
+  setImportOpen: (open: boolean) => void;
   setView: (v: View) => void;
   refreshStatus: () => Promise<VaultStatus>;
   loadVault: () => Promise<void>;
@@ -39,10 +55,10 @@ interface AppState {
 }
 
 /** Small, non-secret layout choices kept in the browser storage. */
-const LAYOUT_KEY = "cipherleaf.layout";
+const LAYOUT_KEY = "layout";
 function layout(): { open: boolean; width: number } {
   try {
-    const v = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "{}");
+    const v = JSON.parse(getKey(LAYOUT_KEY) ?? "{}");
     return { open: v.open !== false, width: Math.min(420, Math.max(200, Number(v.width) || 264)) };
   } catch {
     return { open: true, width: 264 };
@@ -50,7 +66,7 @@ function layout(): { open: boolean; width: number } {
 }
 function saveLayout(open: boolean, width: number) {
   try {
-    localStorage.setItem(LAYOUT_KEY, JSON.stringify({ open, width }));
+    setKey(LAYOUT_KEY, JSON.stringify({ open, width }));
   } catch {
     // Not critical.
   }
@@ -72,8 +88,12 @@ export const useApp = create<AppState>((set, get) => ({
   intent: null,
   sidebarOpen: layout().open,
   sidebarWidth: layout().width,
+  exportTarget: null,
+  importOpen: false,
 
   setIntent: (intent) => set({ intent }),
+  setExportTarget: (exportTarget) => set({ exportTarget }),
+  setImportOpen: (importOpen) => set({ importOpen }),
   setView: (view) => set({ view }),
 
   refreshStatus: async () => {

@@ -450,6 +450,26 @@ textarea,
 .ProseMirror .toggle[data-open="false"] > .toggle-row > .toggle-body > :not(:first-child) { display: none; }
 .ProseMirror .toggle > .toggle-row > .toggle-body > :not(:first-child) { margin-left: 0; }
 
+/* Shelf: a collapsible section drawn as a filled, rounded box (titled line, then what is inside) */
+.ProseMirror .toggle[data-shelf="true"] {
+  margin: 0.6em 0;
+  padding: 0.5em 0.85em 0.55em 0.4em;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.ProseMirror .toggle[data-shelf="true"] > .toggle-row > .toggle-body > p:first-child { font-weight: 600; }
+.ProseMirror .toggle[data-shelf="true"] > .toggle-row > .toggle-body > * + * { margin-top: 0.25em; }
+.ProseMirror .toggle[data-shelf="true"][data-open="true"] > .toggle-row > .toggle-body > :first-child + * { margin-top: 0.45em; }
+.ProseMirror .toggle[data-shelf="true"] > .toggle-row > .toggle-btn:hover,
+.ProseMirror .toggle[data-shelf="true"] .page-link:hover { background: var(--surface-2); }
+.ProseMirror .toggle[data-shelf="true"] .page-link { margin: 0; }
+/* A short description right under a page link lines up with the link's title. */
+.ProseMirror .toggle[data-shelf="true"] > .toggle-row > .toggle-body > .page-link + p {
+  margin-top: 0;
+  margin-left: 2.15em;
+}
+
 /* Columns */
 .ProseMirror .columns { display: flex; gap: 1.5rem; margin: 0.5em 0; }
 .ProseMirror .columns > .column { flex: 1 1 0; min-width: 0; }
@@ -645,3 +665,12 @@ textarea,
 .hljs-deletion { color: var(--hl-del); }
 .hljs-addition { color: var(--hl-string); }
 
+
+/* Links to pages and headings inside Notaya */
+.ProseMirror a[href^="notaya:"] { text-decoration-style: solid; text-decoration-color: var(--muted); }
+.ProseMirror a[href^="notaya:"]:hover { text-decoration-color: var(--text); }
+.ProseMirror .anchor-flash { animation: anchor-flash 1.7s ease-out; border-radius: 6px; }
+@keyframes anchor-flash {
+  0%, 35% { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+  100% { background: transparent; }
+}

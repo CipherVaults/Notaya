@@ -39,10 +39,11 @@ import { cn } from "@/lib/utils";
 import { ColorPop, FONT_FAMILIES, FONT_SIZES, LinkPop, Pop, Row, Sep } from "./BubbleToolbar";
 import { pickImages } from "./extensions";
 import { applyTurnInto, BLOCKS, currentBlock, type BlockKey } from "./turnInto";
+import { getKey, setKey } from "@/lib/storage";
 
 type Tab = "home" | "insert" | "table";
 
-const COLLAPSED_KEY = "cipherleaf.ribbonCollapsed";
+const COLLAPSED_KEY = "ribbonCollapsed";
 const s = 16;
 const blockIcon = (key: BlockKey) => BLOCKS.find((b) => b.key === key)!.icon;
 // The ribbon's pop-ups are not inside a floating bar, so they don't need to keep it open.
@@ -52,7 +53,7 @@ export default function Ribbon({ editor }: { editor: Editor }) {
   const [tab, setTab] = useState<Tab>("home");
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(COLLAPSED_KEY) === "1";
+      return getKey(COLLAPSED_KEY) === "1";
     } catch {
       return false;
     }
@@ -68,7 +69,7 @@ export default function Ribbon({ editor }: { editor: Editor }) {
   const setCollapsedSaved = (v: boolean) => {
     setCollapsed(v);
     try {
-      localStorage.setItem(COLLAPSED_KEY, v ? "1" : "0");
+      setKey(COLLAPSED_KEY, v ? "1" : "0");
     } catch {
       /* the ribbon just opens expanded next time */
     }
@@ -135,7 +136,6 @@ function HomeTab({ editor }: { editor: Editor }) {
       canRedo: e.can().redo(),
       fontSize: (e.getAttributes("textStyle").fontSize as string | undefined) ?? "",
       fontFamily: (e.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
-      color: (e.getAttributes("textStyle").color as string | undefined) ?? "",
       align: e.isActive({ textAlign: "center" }) ? "center" : e.isActive({ textAlign: "right" }) ? "right" : "left",
     }),
   });
@@ -232,7 +232,7 @@ function HomeTab({ editor }: { editor: Editor }) {
             <Btn small label="Code" active={st.code} onClick={() => c().toggleCode().run()}>
               <Code size={15} />
             </Btn>
-            <ColorPop editor={editor} color={st.color} track={noTrack} onClose={refocus} />
+            <ColorPop editor={editor} track={noTrack} onClose={refocus} />
             <LinkPop editor={editor} active={st.link} track={noTrack} onClose={refocus} />
             <Btn small label="Remove formatting" onClick={() => c().unsetAllMarks().run()}>
               <Eraser size={15} />

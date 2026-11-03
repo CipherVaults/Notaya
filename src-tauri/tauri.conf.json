@@ -2,8 +2,8 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Notaya",
   "mainBinaryName": "Notaya",
-  "version": "1.3.0",
-  "identifier": "app.cipherleaf.vault",
+  "version": "1.4.0",
+  "identifier": "app.notaya.notes",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -59,7 +59,8 @@
       "nsis": {
         "installMode": "currentUser",
         "installerIcon": "icons/icon.ico",
-        "installerHooks": "../packaging/installer-hooks.nsh"
+        "installerHooks": "../packaging/installer-hooks.nsh",
+        "template": "../packaging/installer-template.nsi"
       }
     }
   }

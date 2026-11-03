@@ -61,6 +61,27 @@ export interface Settings {
   stickyDefaultColor: string;
 }
 
+/** The local error log: its folder, the size of its files and the time of the newest entry (UTC, ISO). */
+export interface LogInfo {
+  folder: string;
+  bytes: number;
+  lastEntry: string | null;
+}
+
+/** The Windows section of Settings (kept next to the vault, readable while it is locked). */
+export interface ShellPrefs {
+  /** The close button hides Notaya to the tray instead of quitting. */
+  closeToTray: boolean;
+  /** Windows starts this copy of Notaya when you sign in. */
+  startWithWindows: boolean;
+  /** When Windows starts it, Notaya stays hidden in the tray. */
+  startMinimized: boolean;
+  /** False for a portable copy (its start-up entry names the folder it is in now). */
+  installed: boolean;
+  /** False when no tray icon could be made; the close button then quits. */
+  trayAvailable: boolean;
+}
+
 /** One line of the shared calculator history. */
 export interface CalcEntry {
   expr: string;
@@ -147,6 +168,61 @@ export interface Strength {
   crackTime: string;
   warning: string | null;
   suggestions: string[];
+}
+
+export type ExportFormat = "html" | "markdown" | "pdf" | "docx";
+
+/** What to export. The backend opens the save dialog and writes the file itself. */
+export interface ExportRequest {
+  scope: "pages" | "section" | "sections" | "notebook" | "notebooks";
+  ids: string[];
+  format: ExportFormat;
+  includeSubpages: boolean;
+  /** "single" (the default): one document. "zip": one file per page, in folders, in a ZIP. */
+  output?: "single" | "zip";
+}
+
+/** What an export wrote (mirrors `ExportSummary` in src-tauri/src/export/mod.rs). */
+export interface ExportSummary {
+  path: string;
+  pages: number;
+  images: number;
+  /** Pictures that could not be read from the vault. */
+  missingImages: number;
+  /** Pictures the PDF could not hold (GIF, WebP). */
+  imagesLeftOut: number;
+  /** Characters the PDF fonts do not have. */
+  charsReplaced: number;
+  /** Markdown: the folder the pictures went to. */
+  assetsFolder: string | null;
+  /** ZIP: how many files the ZIP holds (pages and Markdown pictures). */
+  files: number;
+  /** True when the export is a ZIP of separate files. */
+  archive: boolean;
+}
+
+/** Where an import comes from. The backend opens the dialog itself. */
+export type ImportSource = "files" | "folder";
+
+/** One thing an import left out, and why. */
+export interface ImportSkipped {
+  item: string;
+  reason: string;
+}
+
+/** What an import created (mirrors `ImportSummary` in src-tauri/src/importers/plan.rs). */
+export interface NotesImportSummary {
+  /** The first (usually the only) new notebook; the app opens it. */
+  notebookId: string;
+  notebookName: string;
+  /** Every new notebook, the first included (several for a Notaya ZIP of several notebooks). */
+  notebooks: { id: string; name: string }[];
+  /** Sections and pages of all the new notebooks together. */
+  sections: number;
+  pages: number;
+  images: number;
+  skipped: ImportSkipped[];
+  notes: string[];
 }
 
 export interface SearchHit {

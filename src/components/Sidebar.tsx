@@ -12,6 +12,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronRight,
+  Download,
   FilePlus2,
   FileText,
   Home,
@@ -24,6 +25,7 @@ import {
   Star,
   StickyNote,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -32,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "./ui";
 import NotebookDialog, { type NotebookDraft } from "@/features/notes/NotebookDialog";
+import { openExport } from "@/features/notes/ExportDialog";
 
 /** Runs a tree-changing command and reports whether it worked (a failure is shown as a toast). */
 type Run = (fn: () => Promise<NotesTree>) => Promise<boolean>;
@@ -266,10 +269,19 @@ export default function Sidebar() {
           </div>
         )}
 
-        <GroupHeader label="Notebooks" action={{ label: "New notebook", onClick: () => setNewNotebook(true) }} />
+        <GroupHeader
+          label="Notebooks"
+          action={{ label: "New notebook", onClick: () => setNewNotebook(true) }}
+          secondAction={{ label: "Import pages…", onClick: () => useApp.getState().setImportOpen(true) }}
+        />
         {tree.notebooks.length === 0 && (
           <button onClick={() => setNewNotebook(true)} className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg">
             <Plus size={15} /> Create your first notebook
+          </button>
+        )}
+        {tree.notebooks.length === 0 && (
+          <button onClick={() => useApp.getState().setImportOpen(true)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg">
+            <Upload size={15} /> Import pages from another app
           </button>
         )}
         {tree.notebooks.length > 0 && (
@@ -313,6 +325,9 @@ export default function Sidebar() {
                             Move down
                           </MenuItem>
                         )}
+                        <MenuItem icon={<Download size={14} />} onSelect={() => openExport("notebook", nb.id)}>
+                          Export…
+                        </MenuItem>
                         <MenuSeparator />
                         <MenuItem
                           danger
@@ -516,11 +531,13 @@ function GroupHeader({
   open,
   onToggle,
   action,
+  secondAction,
 }: {
   label: string;
   open?: boolean;
   onToggle?: () => void;
   action?: { label: string; onClick: () => void };
+  secondAction?: { label: string; onClick: () => void };
 }) {
   return (
     <div className="group/gh flex h-7 items-center justify-between px-2.5 pt-1">
@@ -533,16 +550,28 @@ function GroupHeader({
         {onToggle && <ChevronRight size={12} className={cn("transition-transform", open && "rotate-90")} />}
         {label}
       </button>
-      {action && (
-        <button
-          onClick={action.onClick}
-          title={action.label}
-          aria-label={action.label}
-          className="grid h-5 w-5 place-items-center rounded text-faint opacity-0 hover:bg-surface-2 hover:text-fg focus-visible:opacity-100 group-hover/gh:opacity-100"
-        >
-          <Plus size={14} />
-        </button>
-      )}
+      <div className="flex items-center gap-0.5">
+        {secondAction && (
+          <button
+            onClick={secondAction.onClick}
+            title={secondAction.label}
+            aria-label={secondAction.label}
+            className="grid h-5 w-5 place-items-center rounded text-faint opacity-0 hover:bg-surface-2 hover:text-fg focus-visible:opacity-100 group-hover/gh:opacity-100"
+          >
+            <Upload size={13} />
+          </button>
+        )}
+        {action && (
+          <button
+            onClick={action.onClick}
+            title={action.label}
+            aria-label={action.label}
+            className="grid h-5 w-5 place-items-center rounded text-faint opacity-0 hover:bg-surface-2 hover:text-fg focus-visible:opacity-100 group-hover/gh:opacity-100"
+          >
+            <Plus size={14} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -846,6 +875,9 @@ function SectionBlock({
                   Move down
                 </MenuItem>
               )}
+              <MenuItem icon={<Download size={14} />} onSelect={() => openExport("section", section.id)}>
+                Export…
+              </MenuItem>
               <MenuSeparator />
               <MenuItem
                 danger
@@ -1046,6 +1078,9 @@ function PageItem({
               );
             })}
           <MenuSeparator />
+          <MenuItem icon={<Download size={14} />} onSelect={() => openExport("page", page.id)}>
+            Export…
+          </MenuItem>
           <MenuItem
             danger
             icon={<Trash2 size={14} />}

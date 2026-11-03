@@ -2,6 +2,7 @@
 // is cached in local storage so the lock screen can look right before unlocking.
 
 import { api } from "./ipc";
+import { getKey, setKey } from "./storage";
 import type { Settings } from "./types";
 
 export type Appearance = Pick<
@@ -9,7 +10,7 @@ export type Appearance = Pick<
   "theme" | "accent" | "backdrop" | "font" | "fontSize" | "editorWidth" | "density" | "unlockBackground"
 >;
 
-const KEY = "cipherleaf.appearance";
+const KEY = "appearance";
 
 export const DEFAULT_APPEARANCE: Appearance = {
   theme: "sunrise",
@@ -38,7 +39,7 @@ const WIDTHS: Record<Appearance["editorWidth"], string> = {
 
 export function cachedAppearance(): Appearance {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = getKey(KEY);
     if (raw) {
       const a = { ...DEFAULT_APPEARANCE, ...JSON.parse(raw) };
       // Earlier versions called the first two looks "dark" and "light".
@@ -122,7 +123,7 @@ export async function applyAppearance(a: Appearance, applyBackdrop: boolean) {
       density: a.density,
       unlockBackground: a.unlockBackground,
     };
-    localStorage.setItem(KEY, JSON.stringify(cached));
+    setKey(KEY, JSON.stringify(cached));
   } catch {
     // Not critical.
   }

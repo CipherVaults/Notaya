@@ -7,13 +7,19 @@ import type {
   BackupInfo,
   CalcEntry,
   EnableSecurityResult,
+  ExportRequest,
+  ExportSummary,
+  ImportSource,
   ImportSummary,
+  LogInfo,
+  NotesImportSummary,
   NotesTree,
   Page,
   PageMeta,
   RestoreResult,
   SearchHit,
   Settings,
+  ShellPrefs,
   Sticky,
   Strength,
   VaultStatus,
@@ -67,6 +73,13 @@ export const api = {
     return invoke<void>("quit_app");
   },
   openDataFolder: () => invoke<void>("open_data_folder"),
+  // The error log (a text file in the logs folder): where it is, and open that folder in Explorer
+  logInfo: () => invoke<LogInfo>("log_info"),
+  openLogFolder: () => invoke<void>("open_log_folder"),
+  // Close to the tray and start with Windows (saved next to the vault, not in the encrypted settings)
+  getShellPrefs: () => invoke<ShellPrefs>("get_shell_prefs"),
+  setShellPrefs: (prefs: Pick<ShellPrefs, "closeToTray" | "startWithWindows" | "startMinimized">) =>
+    invoke<ShellPrefs>("set_shell_prefs", { prefs }),
 
   // Notes
   listNotes: () => invoke<NotesTree>("list_notes"),
@@ -95,6 +108,12 @@ export const api = {
   deletePage: (id: string) => invoke<NotesTree>("delete_page", { id }),
   emptyTrash: () => invoke<NotesTree>("empty_trash"),
   addAttachment: (bytes: Uint8Array) => invoke<string>("add_attachment", bytes),
+  // Export: the backend asks where to save (resolves to null if cancelled) and writes an unencrypted file
+  exportNotes: (request: ExportRequest) => invoke<ExportSummary | null>("export_notes", { request }),
+  // Import: the backend asks what to import (resolves to null if cancelled) and makes one new notebook
+  importNotes: (source: ImportSource) => invoke<NotesImportSummary | null>("import_notes", { request: { source } }),
+  // Asks the import in progress to stop; it then resolves to null and nothing is added
+  importCancel: () => invoke<boolean>("import_cancel"),
 
   // Sticky notes
   listStickies: () => invoke<Sticky[]>("list_stickies"),

@@ -5,7 +5,7 @@
             backups with different text, then checks restore_vault (locked and unlocked, refusals for
             bad paths and a wrong password) through the WebView2 debug port. Prints PASS / FAIL lines.
   Usage   : powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-restoreflow.ps1 `
-              -Exe E:\Project\cipherleaf\src-tauri\target\release\Notaya.exe
+              -Exe E:\Project\Notaya\Notaya\src-tauri\target\release\Notaya.exe
             -Exe is optional; the default is ..\..\src-tauri\target\release\Notaya.exe relative to
             this script (the release build from "npm run tauri build").
   Needs   : Node 24 (global fetch and WebSocket), Windows PowerShell 5.1, WebView2.

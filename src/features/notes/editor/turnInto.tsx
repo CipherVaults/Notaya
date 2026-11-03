@@ -1,6 +1,6 @@
 // "Change type" for blocks: the list shown in the selection toolbar, the block menu and the "/" menu.
 
-import { Code2, File, Heading1, Heading2, Heading3, Lightbulb, List, ListChecks, ListCollapse, ListOrdered, Pilcrow, Quote, Sigma } from "lucide-react";
+import { Code2, File, Heading1, Heading2, Heading3, Lightbulb, List, ListChecks, ListCollapse, Library, ListOrdered, Pilcrow, Quote, Sigma } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 import { TextSelection } from "@tiptap/pm/state";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ export type BlockKey =
   | "ordered"
   | "task"
   | "toggle"
+  | "shelf"
   | "code"
   | "quote"
   | "callout"
@@ -33,6 +34,7 @@ export const BLOCKS: { key: BlockKey; label: string; keywords: string; icon: Rea
   { key: "ordered", label: "Numbered list", keywords: "number list ol ordered", icon: <ListOrdered size={s} /> },
   { key: "task", label: "Checklist", keywords: "checklist todo task checkbox check", icon: <ListChecks size={s} /> },
   { key: "toggle", label: "Collapsible section", keywords: "collapsible toggle fold hide details", icon: <ListCollapse size={s} /> },
+  { key: "shelf", label: "Shelf", keywords: "shelf collapse collapsible box group", icon: <Library size={s} /> },
   { key: "quote", label: "Quote", keywords: "quote citation", icon: <Quote size={s} /> },
   { key: "callout", label: "Highlight box", keywords: "highlight box callout note tip warning info", icon: <Lightbulb size={s} /> },
   { key: "code", label: "Code block", keywords: "code snippet pre", icon: <Code2 size={s} /> },
@@ -41,11 +43,11 @@ export const BLOCKS: { key: BlockKey; label: string; keywords: string; icon: Rea
 ];
 
 /** The collapsible section the cursor is in, when the cursor's block is the section's first line. */
-function toggleAround(editor: Editor): { pos: number; size: number } | null {
+function toggleAround(editor: Editor): { pos: number; size: number; shelf: boolean } | null {
   const { $from } = editor.state.selection;
   for (let d = $from.depth; d >= 1; d--) {
     if ($from.node(d).type.name === "toggle") {
-      return $from.index(d) === 0 ? { pos: $from.before(d), size: $from.node(d).nodeSize } : null;
+      return $from.index(d) === 0 ? { pos: $from.before(d), size: $from.node(d).nodeSize, shelf: !!$from.node(d).attrs.shelf } : null;
     }
   }
   return null;
@@ -55,7 +57,8 @@ function toggleAround(editor: Editor): { pos: number; size: number } | null {
 export function currentBlock(editor: Editor): BlockKey {
   const { $from } = editor.state.selection;
   const parent = $from.parent;
-  if (toggleAround(editor)) return "toggle";
+  const tog = toggleAround(editor);
+  if (tog) return tog.shelf ? "shelf" : "toggle";
   // Pages written with older, now removed, heading sizes show as the smallest heading.
   if (parent.type.name === "heading") return `h${Math.min(3, Number(parent.attrs.level))}` as BlockKey;
   if (editor.isActive("taskList")) return "task";
@@ -77,8 +80,8 @@ function unwrapToggle(editor: Editor, tog: { pos: number; size: number }) {
 }
 
 /** Wraps the block the cursor is in as the first line of a new collapsible section, with an empty line inside. */
-function wrapInToggle(editor: Editor) {
-  editor.chain().focus().wrapIn("toggle", { open: true }).run();
+function wrapInToggle(editor: Editor, shelf = false) {
+  editor.chain().focus().wrapIn("toggle", { open: true, shelf }).run();
   const { $from } = editor.state.selection;
   for (let d = $from.depth; d >= 1; d--) {
     if ($from.node(d).type.name === "toggle") {
@@ -128,9 +131,17 @@ async function toSubpage(editor: Editor) {
 }
 
 export async function applyTurnInto(editor: Editor, key: BlockKey) {
-  // Already a collapsible section: changing its first line keeps the section.
   const tog = toggleAround(editor);
-  if (tog && key === "toggle") return;
+  // Already a collapsible section: "Collapsible section" and "Shelf" only switch its look.
+  if (tog && (key === "toggle" || key === "shelf")) {
+    const shelf = key === "shelf";
+    if (tog.shelf !== shelf) {
+      const node = editor.state.doc.nodeAt(tog.pos);
+      if (node) editor.view.dispatch(editor.state.tr.setNodeMarkup(tog.pos, undefined, { ...node.attrs, shelf }));
+    }
+    editor.view.focus();
+    return;
+  }
   if (tog) unwrapToggle(editor, tog);
 
   const c = () => editor.chain().focus().clearNodes();
@@ -168,6 +179,10 @@ export async function applyTurnInto(editor: Editor, key: BlockKey) {
     case "toggle":
       c().run();
       wrapInToggle(editor);
+      break;
+    case "shelf":
+      c().run();
+      wrapInToggle(editor, true);
       break;
     case "page":
       c().run();

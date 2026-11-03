@@ -3,10 +3,10 @@
 //! The rules: check first, never delete. The chosen file is copied to
 //! `data/restore-check.tmp` and that copy is opened with the password (so the
 //! exact bytes that will be installed are the ones that were verified). Only
-//! then is the live vault renamed to `data/restore-undo-<ms>.clf` and the copy
-//! renamed to `data/vault.clf`. The app never deletes or rotates `restore-undo-*`
-//! files; the backup rotations only touch `vault-<digits>.clf` and
-//! `vault-predelete-<digits>.clf` in `data/backups`.
+//! then is the live vault renamed to `data/restore-undo-<ms>.nota` and the copy
+//! renamed to `data/vault.nota`. The app never deletes or rotates `restore-undo-*`
+//! files; the backup rotations only touch `vault-<digits>.nota` and
+//! `vault-predelete-<digits>.nota` in `data/backups`.
 
 use std::ffi::OsString;
 use std::fs::{self, File, OpenOptions};
@@ -33,7 +33,7 @@ const MAX_RESTORE_P: u32 = 16;
 /// closed a moment ago).
 pub(crate) const RENAME_ATTEMPTS: u32 = 6;
 pub(crate) const RENAME_DELAY: Duration = Duration::from_millis(300);
-/// The verified copy, before it is renamed to `vault.clf`.
+/// The verified copy, before it is renamed to `vault.nota`.
 const TEMP_NAME: &str = "restore-check.tmp";
 /// The old vault, kept when a restore replaces it.
 pub(crate) const UNDO_PREFIX: &str = "restore-undo-";
@@ -46,17 +46,17 @@ pub struct BackupInfo {
     pub size: u64,
 }
 
-/// The backups look like `vault-<ms>.clf` (automatic) or `vault-predelete-<ms>.clf` (the safety
+/// The backups look like `vault-<ms>.nota` (automatic) or `vault-predelete-<ms>.nota` (the safety
 /// backup made before a notebook or section is deleted). Both start with `vault-`, so this one
 /// loose rule lists both for a restore and counts both as "earlier copies" (`openvault`), which
 /// is wanted: a safety backup holds what the person deleted and may want back, and it is
 /// readable by anyone when security was off, so turning security on removes it too. (The
 /// rotation in `backup.rs` is stricter: it owns only exact names, one pattern per rotation.)
 pub(crate) fn is_backup_name(name: &str) -> bool {
-    name.starts_with("vault-") && name.ends_with(".clf")
+    name.starts_with("vault-") && crate::filenames::has_vault_ext(name)
 }
 
-/// `path` with `suffix` added to the file name (`vault.clf` -> `vault.clf-journal`).
+/// `path` with `suffix` added to the file name (`vault.nota` -> `vault.nota-journal`).
 fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
     let mut name: OsString = path.file_name().map(OsString::from).unwrap_or_default();
     name.push(suffix);
@@ -67,7 +67,7 @@ fn temp_path(paths: &Paths) -> PathBuf {
     paths.data.join(TEMP_NAME)
 }
 
-/// The regular files `vault-*.clf` in the backups folder (safety backups included), newest first. Reads
+/// The regular files `vault-*.nota` in the backups folder (safety backups included), newest first. Reads
 /// only names, times and sizes, never contents, so it works while locked.
 pub fn list_backups(paths: &Paths) -> Result<Vec<BackupInfo>> {
     list_in(&paths.backups, is_backup_name)
@@ -139,9 +139,8 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
         path
     };
 
-    let is_clf = path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("clf"));
-    if !is_clf {
-        return Err(Error::invalid("A Notaya backup is a file ending in .clf."));
+    if !crate::filenames::path_has_vault_ext(&path) {
+        return Err(Error::invalid("A Notaya backup is a file ending in .nota (or .clf, from before V1.4.0)."));
     }
     let meta = match fs::metadata(&path) {
         Ok(m) => m,
@@ -170,7 +169,7 @@ pub fn resolve_source(paths: &Paths, source: &str, picked: Option<&Path>) -> Res
     if fs::canonicalize(&paths.vault).is_ok_and(|live| live == real) {
         return Err(Error::invalid("That is the vault in use now, not a backup."));
     }
-    // (`restore-check.tmp` can't get here: the .clf extension rule above refuses it.)
+    // (`restore-check.tmp` can't get here: the extension rule above refuses it.)
     Ok(path)
 }
 
@@ -304,7 +303,7 @@ pub(crate) fn install_failure(e: io::Error, rollback_notes: &[String]) -> Error 
 }
 
 /// Replaces the live vault with the checked copy. An existing vault is renamed
-/// to `data/restore-undo-<now_ms>.clf` (with its `-journal` file, if any) and
+/// to `data/restore-undo-<now_ms>.nota` (with its `-journal` file, if any) and
 /// its name is returned; if there was no vault, returns `None` (a stray journal
 /// is still moved aside, so SQLite can't apply it to the new file). If a rename
 /// fails, the old files are put back. Nothing is ever deleted.
@@ -327,7 +326,7 @@ fn install_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) -> R
         // `rename` replaces an existing file on Windows, so pick a name that is free.
         let mut ms = now_ms;
         let base = loop {
-            let p = paths.data.join(format!("{UNDO_PREFIX}{ms}.clf"));
+            let p = paths.data.join(format!("{UNDO_PREFIX}{ms}.{}", crate::filenames::EXT));
             if !p.try_exists()? && !with_suffix(&p, "-journal").try_exists()? {
                 break p;
             }
@@ -367,7 +366,7 @@ fn install_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) -> R
 /// Name prefix of a vault set aside by "Start over".
 pub(crate) const SET_ASIDE_PREFIX: &str = "set-aside-";
 
-/// "Start over": renames the vault to `data/set-aside-<now_ms>.clf` (with its
+/// "Start over": renames the vault to `data/set-aside-<now_ms>.nota` (with its
 /// `-journal` file, if any) so the app shows the first-run screen again, and
 /// returns the new name. Nothing is deleted, and the set-aside file can be
 /// brought back with "Restore from a backup". If a rename fails, the files are
@@ -385,7 +384,7 @@ fn set_aside_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) ->
     // `rename` replaces an existing file on Windows, so pick a name that is free.
     let mut ms = now_ms;
     let base = loop {
-        let p = paths.data.join(format!("{SET_ASIDE_PREFIX}{ms}.clf"));
+        let p = paths.data.join(format!("{SET_ASIDE_PREFIX}{ms}.{}", crate::filenames::EXT));
         if !p.try_exists()? && !with_suffix(&p, "-journal").try_exists()? {
             break p;
         }
@@ -445,7 +444,7 @@ mod tests {
     const FAST: KdfParams = KdfParams { m_kib: 64, t: 1, p: 1 };
 
     fn temp_paths() -> Paths {
-        let root = std::env::temp_dir().join(format!("cipherleaf-restore-{}", new_id()));
+        let root = std::env::temp_dir().join(format!("notaya-restore-{}", new_id()));
         std::fs::create_dir_all(&root).unwrap();
         let paths = Paths::at(&root);
         std::fs::create_dir_all(&paths.backups).unwrap();
@@ -481,7 +480,7 @@ mod tests {
     const NOT_A_NAME: &str = "That is not the name of a Notaya backup.";
     const DIALOG: &str = "Choose the backup file with the file dialog.";
     const NETWORK: &str = "Backups on a network or device path can't be used. Copy the file to this PC first.";
-    const NOT_CLF: &str = "A Notaya backup is a file ending in .clf.";
+    const NOT_CLF: &str = "A Notaya backup is a file ending in .nota (or .clf, from before V1.4.0).";
 
     /// `source` must be refused with exactly `reason`. For an absolute path that
     /// exists, the dialog is taken to have returned it, so the refusal comes from
@@ -575,7 +574,7 @@ mod tests {
     #[test]
     fn an_absolute_path_with_any_clf_name_resolves() {
         let paths = temp_paths();
-        let f = paths.data.join("cipherleaf-backup-1.CLF");
+        let f = paths.data.join("notaya-backup-1.CLF");
         write(&f, b"data");
         let picked = fs::canonicalize(&f).unwrap();
         assert_eq!(resolve_source(&paths, &f.display().to_string(), Some(&picked)).unwrap(), f);
@@ -652,7 +651,7 @@ mod tests {
         // The live vault, spelled plainly and spelled with `..` inside.
         let live = "That is the vault in use now, not a backup.";
         rejected(&paths, &abs(paths.vault.clone()), live);
-        rejected(&paths, &abs(b.join("..").join("vault.clf")), live);
+        rejected(&paths, &abs(b.join("..").join("vault.nota")), live);
         // The temporary copy has the wrong extension, so it never gets further.
         rejected(&paths, &abs(paths.data.join(TEMP_NAME)), NOT_CLF);
         // Absolute paths: wrong extension, a folder, and a missing file (never picked).
@@ -671,10 +670,10 @@ mod tests {
         write(&temp_path(&paths), b"NEW");
 
         let undo = install(&paths, 1234).unwrap().expect("an undo file");
-        assert_eq!(undo, "restore-undo-1234.clf");
+        assert_eq!(undo, "restore-undo-1234.nota");
         assert_eq!(std::fs::read(&paths.vault).unwrap(), b"NEW");
         assert_eq!(std::fs::read(paths.data.join(&undo)).unwrap(), b"OLD");
-        assert_eq!(std::fs::read(paths.data.join("restore-undo-1234.clf-journal")).unwrap(), b"OLDJ");
+        assert_eq!(std::fs::read(paths.data.join("restore-undo-1234.nota-journal")).unwrap(), b"OLDJ");
         assert!(!temp_path(&paths).exists());
         assert!(!with_suffix(&paths.vault, "-journal").exists());
     }
@@ -682,12 +681,12 @@ mod tests {
     #[test]
     fn install_never_overwrites_an_earlier_undo_file() {
         let paths = temp_paths();
-        write(&paths.data.join("restore-undo-50.clf"), b"EARLIER");
+        write(&paths.data.join("restore-undo-50.nota"), b"EARLIER");
         write(&paths.vault, b"OLD");
         write(&temp_path(&paths), b"NEW");
         let undo = install(&paths, 50).unwrap().unwrap();
-        assert_eq!(undo, "restore-undo-51.clf");
-        assert_eq!(std::fs::read(paths.data.join("restore-undo-50.clf")).unwrap(), b"EARLIER");
+        assert_eq!(undo, "restore-undo-51.nota");
+        assert_eq!(std::fs::read(paths.data.join("restore-undo-50.nota")).unwrap(), b"EARLIER");
         assert_eq!(std::fs::read(paths.data.join(undo)).unwrap(), b"OLD");
     }
 
@@ -715,8 +714,8 @@ mod tests {
         assert!(install(&paths, 7).is_err());
         assert_eq!(std::fs::read(&paths.vault).unwrap(), b"OLD");
         assert_eq!(std::fs::read(with_suffix(&paths.vault, "-journal")).unwrap(), b"OLDJ");
-        assert!(!paths.data.join("restore-undo-7.clf").exists());
-        assert!(!paths.data.join("restore-undo-7.clf-journal").exists());
+        assert!(!paths.data.join("restore-undo-7.nota").exists());
+        assert!(!paths.data.join("restore-undo-7.nota-journal").exists());
     }
 
     /// A vault with `password` and one sticky note, saved as a backup in the backups folder.
@@ -791,7 +790,7 @@ mod tests {
         assert!(s.is_open());
         assert!(s.get(&item_id).is_some());
         // The protected vault it replaced is kept and still needs its password.
-        assert!(Session::unlock(&paths.data.join("restore-undo-77.clf"), "password-B", None).is_ok());
+        assert!(Session::unlock(&paths.data.join("restore-undo-77.nota"), "password-B", None).is_ok());
     }
 
     #[test]
@@ -902,7 +901,7 @@ mod tests {
         assert_eq!(install(&paths, 5).unwrap(), None, "no old vault, so no undo vault file");
         assert_eq!(std::fs::read(&paths.vault).unwrap(), b"NEW");
         assert!(!with_suffix(&paths.vault, "-journal").exists());
-        assert_eq!(std::fs::read(paths.data.join("restore-undo-5.clf-journal")).unwrap(), b"STRAY");
+        assert_eq!(std::fs::read(paths.data.join("restore-undo-5.nota-journal")).unwrap(), b"STRAY");
     }
 
     #[test]
@@ -911,7 +910,7 @@ mod tests {
         write(&with_suffix(&paths.vault, "-journal"), b"STRAY");
         assert!(install(&paths, 5).is_err()); // no temp file
         assert_eq!(std::fs::read(with_suffix(&paths.vault, "-journal")).unwrap(), b"STRAY");
-        assert!(!paths.data.join("restore-undo-5.clf-journal").exists());
+        assert!(!paths.data.join("restore-undo-5.nota-journal").exists());
         assert!(!paths.vault.exists());
     }
 
@@ -919,9 +918,9 @@ mod tests {
     fn a_failed_rollback_is_reported_in_the_error() {
         // Making the rollback itself fail is hard to arrange, so this checks the message.
         let e = io::Error::new(io::ErrorKind::PermissionDenied, "access denied");
-        let notes = ["Your previous vault could not be put back; it is saved as restore-undo-9.clf in the data folder.".to_string()];
+        let notes = ["Your previous vault could not be put back; it is saved as restore-undo-9.nota in the data folder.".to_string()];
         let text = install_failure(e, &notes).to_string();
-        assert!(text.contains("could not be put back") && text.contains("restore-undo-9.clf"), "{text}");
+        assert!(text.contains("could not be put back") && text.contains("restore-undo-9.nota"), "{text}");
         assert!(!text.contains("access denied"), "raw error text stays out of the UI: {text}");
         assert!(matches!(install_failure(io::Error::other("x"), &[]), Error::Io(_)));
     }
@@ -932,14 +931,14 @@ mod tests {
         write(&paths.vault, b"VAULT");
         write(&with_suffix(&paths.vault, "-journal"), b"J");
         // A name already taken is skipped, not replaced.
-        write(&paths.data.join("set-aside-7.clf"), b"EARLIER");
+        write(&paths.data.join("set-aside-7.nota"), b"EARLIER");
         let name = set_aside_with(&paths, 7, 1, Duration::ZERO).unwrap();
-        assert_eq!(name, "set-aside-8.clf");
+        assert_eq!(name, "set-aside-8.nota");
         assert!(!paths.vault.exists());
         assert!(!with_suffix(&paths.vault, "-journal").exists());
-        assert_eq!(std::fs::read(paths.data.join("set-aside-8.clf")).unwrap(), b"VAULT");
-        assert_eq!(std::fs::read(paths.data.join("set-aside-8.clf-journal")).unwrap(), b"J");
-        assert_eq!(std::fs::read(paths.data.join("set-aside-7.clf")).unwrap(), b"EARLIER");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-8.nota")).unwrap(), b"VAULT");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-8.nota-journal")).unwrap(), b"J");
+        assert_eq!(std::fs::read(paths.data.join("set-aside-7.nota")).unwrap(), b"EARLIER");
     }
 
     #[test]
@@ -1038,5 +1037,41 @@ mod tests {
         let r = rename_retry(&paths.data.join("nope"), &paths.data.join("x"), 6, Duration::from_millis(300));
         assert!(r.is_err());
         assert!(started.elapsed() < Duration::from_millis(250));
+    }
+
+    #[test]
+    fn a_backup_from_v1_3_0_restores_and_upgrades_after_the_restore() {
+        let paths = temp_paths();
+        // A real protected vault made by V1.3.0 (see `vault::tests` for how the fixtures were made).
+        let src = paths.backups.join("vault-1700000000000.clf");
+        std::fs::write(&src, include_bytes!("../test-data/v1.3.0/protected.vault")).unwrap();
+        drop(Session::create(&paths.vault, "password-B", None, FAST).unwrap());
+
+        let source = resolve_source(&paths, "vault-1700000000000.clf", None).unwrap();
+        verify_and_stage(&paths, &source, "Fixture-Pass-1", None).unwrap();
+        install(&paths, 5).unwrap().expect("the old vault is kept");
+        assert!(paths.data.join("restore-undo-5.nota").is_file());
+
+        let mut s = Session::unlock_any(&paths.vault, "Fixture-Pass-1", None).unwrap();
+        assert!(!s.is_current_format(), "the restored file is exactly the backup until it is unlocked");
+        assert!(s.upgrade_format("Fixture-Pass-1", None).unwrap());
+        drop(s);
+        assert!(Session::unlock(&paths.vault, "Fixture-Pass-1", None).unwrap().is_current_format());
+        // The backup itself is untouched and still a V1.3.0 file.
+        assert!(!Session::unlock(&src, "Fixture-Pass-1", None).unwrap().is_current_format());
+    }
+
+    #[test]
+    fn nota_and_clf_backups_are_both_listed() {
+        let paths = temp_paths();
+        write(&paths.backups.join("vault-100.clf"), b"old");
+        write(&paths.backups.join("vault-200.nota"), b"new");
+        write(&paths.backups.join("vault-300.txt"), b"no");
+        set_age(&paths.backups.join("vault-100.clf"), 300);
+        set_age(&paths.backups.join("vault-200.nota"), 100);
+        let names: Vec<_> = list_backups(&paths).unwrap().into_iter().map(|b| b.name).collect();
+        assert_eq!(names, ["vault-200.nota", "vault-100.clf"]);
+        assert!(resolve_source(&paths, "vault-100.clf", None).is_ok());
+        assert!(resolve_source(&paths, "vault-200.nota", None).is_ok());
     }
 }

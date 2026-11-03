@@ -5,7 +5,7 @@
             a page (scenarios page and close) or a sticky note (scenario sticky), locks or closes the
             window at once (inside the save delay), unlocks and prints whether the text was saved.
   Usage   : powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-lockflow.ps1 `
-              -Exe E:\Project\cipherleaf\src-tauri\target\release\Notaya.exe -Scenarios page,sticky,close
+              -Exe E:\Project\Notaya\Notaya\src-tauri\target\release\Notaya.exe -Scenarios page,sticky,close
             -Exe     optional; default ..\..\src-tauri\target\release\Notaya.exe relative to this script.
             -Scenarios  any of page, sticky, close (default: all three).  -Label  a name for the temp folder.
   Needs   : Node 24 (global fetch and WebSocket), Windows PowerShell 5.1, WebView2.

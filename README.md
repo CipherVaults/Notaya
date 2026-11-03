@@ -1,10 +1,10 @@
 # Notaya
 
-*Formerly Cipherleaf.* The app was renamed after version 1.1.0, when it became a notes app first. Your notes, backups and settings from Cipherleaf open in Notaya unchanged: the `data` folder, `data\vault.clf` and its format stay the same.
+*Formerly Cipherleaf.* The app was renamed after version 1.1.0, when it became a notes app first. Your notes, backups and settings from Cipherleaf and from Notaya up to 1.3.0 open in Notaya 1.4.0. The first time it starts, it makes `data\vault.nota` from your old `data\vault.clf` (the old file is kept as `data\vault-before-notaya.clf`; Notaya does not delete it on its own, and if security was off, turning security on offers to delete it with the other earlier unprotected copies), and re-encrypts the notes in the Notaya format when you first unlock them. Old `.clf` backups still open. Older versions of Notaya cannot open the new files.
 
 Notaya is a portable Windows notes app. You write notes in notebooks, sections and pages, keep sticky notes on the desktop, and keep everything in one `data` folder, so the app can run from a folder or a USB stick.
 
-**Your notes are saved locally.** They live in one file, `data\vault.clf`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Notaya's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup. What it sends was not captured, and Notaya does not currently stop it, so the app is not silent on the network. Notaya's own code never sends your notes anywhere. A web link in a note opens in your normal browser only when you click it.
+**Your notes are saved locally.** They live in one file, `data\vault.nota`, next to the app on your PC or USB stick. There is no cloud, no account and no sync, and Notaya's own code has no network code, so your notes are never sent anywhere. One honest caveat: the window is drawn by Microsoft's WebView2 component, and in a test on Windows 11 it made background connections to Microsoft addresses at startup. What it sends was not captured, and Notaya does not currently stop it, so the app is not silent on the network. Notaya's own code never sends your notes anywhere. A web link in a note opens in your normal browser only when you click it.
 
 Security is an optional extra. It is off by default: Notaya opens straight to your notes with no password. While it is off your notes are not private: anyone who can open the folder can read them. You can turn security on or off at any time in Settings.
 
@@ -36,7 +36,7 @@ Security is an optional extra. It is off by default: Notaya opens straight to yo
 ### Sticky notes and calculators
 
 - **Sticky notes** are small frameless windows on the desktop. Eight colors, bold, italic, checklist, "Keep on top" (on by default), resize and move; position and size are remembered. They are saved in the vault and are searchable. With security on they hide when the vault locks. Closing one with the X keeps it in the vault; click its tile in "Sticky notes" or press "Show all on desktop" to bring it back.
-- **Calculator.** The Calculator button on the Sticky notes screen, or the calculator button on a sticky note, opens a basic and scientific calculator in its own small window (Deg/Rad, Copy, percent such as `200 + 10%`). Open as many as you like. They share one history of the last 200 calculations, saved in your vault (encrypted when security is on), so it is still there after you close them; Clear empties it. Calculator windows close when the vault locks.
+- **Calculator.** The Calculator button on the Sticky notes screen, or the calculator button on a sticky note, opens a basic and scientific calculator in its own small window (Deg/Rad, Copy, percent such as `200 + 10%`). Open as many as you like. They share one history of the last 500 calculations, saved in your vault (encrypted when security is on), so it is still there after you close them; Clear empties it. Calculator windows close when the vault locks.
 
 ### Looks (Settings, Appearance)
 
@@ -61,12 +61,12 @@ By default security is **off**: notes open straight away, nothing locks, and scr
 ### Backups and restore
 
 - **Automatic backup** when the app quits, and also when the vault locks if you use security, if something changed. Saved in `data\backups`; the newest 10 are kept.
-- **Hourly backup (security off only).** An open vault never locks, so while you work it is also backed up about once an hour if something changed and you have paused for a moment (`vault-hourly-<number>.clf`; the newest 3 are kept, so they never push out the older automatic backups).
-- **Safety backup before a delete.** Before a notebook or section is deleted, Notaya makes a backup first (`vault-predelete-<number>.clf`). If it can't be made, nothing is deleted. The newest 5 of these are kept.
+- **Hourly backup (security off only).** An open vault never locks, so while you work it is also backed up about once an hour if something changed and you have paused for a moment (`vault-hourly-<number>.nota`; the newest 3 are kept, so they never push out the older automatic backups).
+- **Safety backup before a delete.** Before a notebook or section is deleted, Notaya makes a backup first (`vault-predelete-<number>.nota`). If it can't be made, nothing is deleted. The newest 5 of these are kept.
 - If a backup fails, Notaya shows a message.
 - **Save a backup copy** from Settings, or "Back up vault now" in the `Ctrl+K` menu, saves a copy wherever you choose.
-- **Restore** from the lock screen, from Settings, or from the start screens. Notaya checks the backup first and keeps your current file as `restore-undo-....clf`. Nothing is deleted.
-- **Start over** sets a vault you can't open aside as `set-aside-....clf` and lets you start new notes. Nothing is deleted, and you can bring the old file back with Restore.
+- **Restore** from the lock screen, from Settings, or from the start screens. Notaya checks the backup first and keeps your current file as `restore-undo-....nota`. Nothing is deleted.
+- **Start over** sets a vault you can't open aside as `set-aside-....nota` and lets you start new notes. Nothing is deleted, and you can bring the old file back with Restore.
 - **Open data folder** from Settings.
 
 ### Install or portable
@@ -97,7 +97,7 @@ Releases from V1.3.0 on (see [the installer plan](docs/plan/windows-installer-pl
 
 1. Open **Settings** and find **Security (optional)**. Press **Turn on…**.
 2. Choose a master password (a long phrase of several unrelated words is easy to remember and strong) and write it down somewhere safe. Add a keyfile if you want one ("Create new" or "Use existing"). Confirm that you understand there is no password reset.
-3. Leave "Delete earlier backups made while security was off" ticked unless you want to keep them. Notaya saves a fresh protected backup first and deletes the files named `vault-*.clf` in `data\backups` that open without a password (the automatic and hourly backups and the safety copies saved before a delete, so a notebook deleted earlier can no longer be brought back from them, and also any `vault-*.clf` you put there yourself); your own backup copies saved elsewhere, `restore-undo` and `set-aside` files are never deleted.
+3. Leave "Delete earlier backups made while security was off" ticked unless you want to keep them. Notaya saves a fresh protected backup first and deletes the files named `vault-*.nota` (and `.clf`) in `data\backups` that open without a password (the automatic and hourly backups and the safety copies saved before a delete, so a notebook deleted earlier can no longer be brought back from them, and also any such file you put there yourself); your own backup copies saved elsewhere, `restore-undo` and `set-aside` files are never deleted.
 4. Press **Turn on security**. Your notes get a new key under the new password; this takes a moment, longer for big notebooks.
 5. From now on the app locks as described above, and you unlock with the password (and keyfile).
 
@@ -107,17 +107,17 @@ Releases from V1.3.0 on (see [the installer plan](docs/plan/windows-installer-pl
 2. Read the warnings, type your current master password (and choose your keyfile if you use one), and confirm.
 3. Press **Turn off security**. The notes then open without a password. A wrong password changes nothing and counts toward the wait after wrong passwords.
 
-With security off, your notes are saved in Notaya's file format, which is tamper-checked, but the key is a **public key built into the program**. So your notes are **not private**: anyone who has your `vault.clf` or a backup, and a copy of Notaya, can read them. The app says so on the Home screen until you dismiss the note.
+With security off, your notes are saved in Notaya's file format, which is tamper-checked, but the key is a **public key built into the program**. So your notes are **not private**: anyone who has your `vault.nota` or a backup, and a copy of Notaya, can read them. The app says so on the Home screen until you dismiss the note.
 
 ### If you forget the password
 
-There is no reset and no recovery. If you lose the master password, or a keyfile you required, the notes cannot be opened. The way forward is **Start over…** on the lock screen: type START OVER and press "Set aside and start over". Your old vault is set aside (never deleted); then press "Start new notes". If you find the password later, use **Restore from a backup…**, choose the `set-aside-....clf` file in `data\` and type its password. Backups made while security was on open with the password they had then.
+There is no reset and no recovery. If you lose the master password, or a keyfile you required, the notes cannot be opened. The way forward is **Start over…** on the lock screen: type START OVER and press "Set aside and start over". Your old vault is set aside (never deleted); then press "Start new notes". If you find the password later, use **Restore from a backup…**, choose the `set-aside-....nota` file in `data\` and type its password. Backups made while security was on open with the password they had then.
 
 ### Backups and restore
 
-1. Notaya backs up automatically when you quit (and on lock, if you use security), if something changed. The newest 10 are in `data\backups`. With security off it also makes an hourly backup while you work (`vault-hourly-<number>.clf`, newest 3 kept). Before a notebook or section is deleted it makes a safety backup first (`vault-predelete-<number>.clf`, newest 5 kept); if that can't be made, nothing is deleted. To get a deleted notebook back, use Restore with that safety backup: it replaces your whole vault with that copy and keeps the current one as `restore-undo`. If a backup fails, Notaya shows a message.
+1. Notaya backs up automatically when you quit (and on lock, if you use security), if something changed. The newest 10 are in `data\backups`. With security off it also makes an hourly backup while you work (`vault-hourly-<number>.nota`, newest 3 kept). Before a notebook or section is deleted it makes a safety backup first (`vault-predelete-<number>.nota`, newest 5 kept); if that can't be made, nothing is deleted. To get a deleted notebook back, use Restore with that safety backup: it replaces your whole vault with that copy and keeps the current one as `restore-undo`. If a backup fails, Notaya shows a message.
 2. For a copy you control, use **Settings, Backups, Save a backup copy…** and keep it somewhere else (another drive is best).
-3. To restore, choose **Restore from a backup…** (lock screen, start screens, or Settings), pick a backup from the list or "Choose another backup file…", enter "Password of this backup" if it has one, and press "Replace my vault with this backup" ("Restore backup" on the start screens). Your current vault is kept as `restore-undo-....clf`.
+3. To restore, choose **Restore from a backup…** (lock screen, start screens, or Settings), pick a backup from the list or "Choose another backup file…", enter "Password of this backup" if it has one, and press "Replace my vault with this backup" ("Restore backup" on the start screens). Your current vault is kept as `restore-undo-....nota`.
 4. A backup made while security was off needs no password. Restoring one onto a vault that has a master password asks you to confirm that security will be turned off.
 
 ### Moving or backing up the folder
@@ -143,7 +143,7 @@ Close Notaya, then copy the whole folder (`Notaya.exe` and `data`). Moving the f
 
 Short answers. The full list is in [`docs/security-design.md`](docs/security-design.md).
 
-- **Local only, no network code.** Notes are saved only in `data\vault.clf` on your PC. Notaya's own code makes no connections (the page security policy allows only the app's internal channel). The WebView2 component that Windows uses to draw the window is Microsoft's, and a live test showed it contacting Microsoft addresses at startup; Notaya does not currently stop that and does not claim zero network traffic. A web link in a note opens in your browser only when you click it.
+- **Local only, no network code.** Notes are saved only in `data\vault.nota` on your PC. Notaya's own code makes no connections (the page security policy allows only the app's internal channel). The WebView2 component that Windows uses to draw the window is Microsoft's, and a live test showed it contacting Microsoft addresses at startup; Notaya does not currently stop that and does not claim zero network traffic. A web link in a note opens in your browser only when you click it.
 - **With security on:** notes are encrypted with XChaCha20-Poly1305, with the key derived from your password by Argon2id (256 MiB, 3 passes), and tampering is detected.
 - **With security off, the notes are readable by anyone with the folder.** This is by design, and it is stated in Settings.
 - **The exe is not signed.** Windows SmartScreen may warn. Notaya does not check itself, so a replaced exe would not be noticed.

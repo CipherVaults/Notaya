@@ -9,13 +9,13 @@ Scripts that start a **copy of the built `Notaya.exe`** with a **throwaway vault
 
 ## Safety rules
 
-- **Where on the owner's PC (rule from 2026-10-28 14:03:51 UTC):** builds, clones, test installs and throwaway vaults live only in `E:\Project\Notaya Tests Excluded` (Bitdefender exclusion, path has spaces: quote it). Temp folders under `%TEMP%` had test files removed by the antivirus on 2026-10-28.
+- **Where on the owner's PC (rule from 2026-10-28 14:03:51 UTC):** builds, clones, test installs and throwaway vaults live only in `E:\Project\Notaya\Notaya Tests Excluded` (the owner moved the folder there on 2026-10-28; Bitdefender exclusion, path has spaces: quote it). Temp folders under `%TEMP%` had test files removed by the antivirus on 2026-10-28.
 
-- **Never** run these against a real vault or `E:\Project\Cipherleaf-portable\data` (the owner's real vault; also any future `Notaya-portable\data`). The runners copy the exe into `%TEMP%\clf-*` (with a `portable.txt` marker, via `Copy-TestExe` in `common.ps1`, so the vault stays in that folder; without the marker a bare folder counts as an installed copy and would use `%LOCALAPPDATA%`) and create a new vault there. Never test on the owner's live window.
+- **Never** run these against a real vault or `E:\Project\Notaya\Cipherleaf-portable\data` (moved there on 2026-10-28) (the owner's real vault; also any future `Notaya-portable\data`). The runners copy the exe into `%TEMP%\clf-*` (with a `portable.txt` marker, via `Copy-TestExe` in `common.ps1`, so the vault stays in that folder; without the marker a bare folder counts as an installed copy and would use `%LOCALAPPDATA%`) and create a new vault there. Never test on the owner's live window.
 - The debug port is **9335**, set (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`) for the test process only, never left set. After a run, the runner prints `port 9335 listening after test: 0`. If it is not 0, find out why and close it.
 - The passphrase is generated fresh for each run from a cryptographic RNG, written to a temp file and deleted at the end. It is never printed or stored. Do not hard-code one.
 - Only the Notaya the script started is stopped.
-- Never commit vault data or secrets (`*.clf`, `*.key`, `.devdata/`).
+- Never commit vault data or secrets (`*.nota`, `*.clf`, `*.key`, `.devdata/`).
 - Run only after the work is approved. In `docs/STATUS.md` a paused mission means ask the owner first.
 
 ## How to run
@@ -24,7 +24,7 @@ From the project root:
 
 ```powershell
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-$exe = "E:\Project\cipherleaf\src-tauri\target\release\Notaya.exe"
+$exe = "E:\Project\Notaya\Notaya\src-tauri\target\release\Notaya.exe"
 
 # Restore from backup (about 1 minute)
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-restoreflow.ps1 -Exe $exe
