@@ -1,6 +1,6 @@
 # A35: Notaya V1.5.0, Arabic / right-to-left and full local databases
 
-**Status:** approved to build by the owner, 2026-11-03 19:28:12 UTC ("can you do everthing in this version except the automations"). Supersedes the three-release staging in section 3: everything below goes into V1.5.0 except automations (and the Button property, which needs them). Decisions B to E taken as recommended (vault option 1, files in the vault with a 25 MB cap, Notaya's own look); PDF Arabic included because the owner said "everything" (he may drop it). Not built yet when this file was written. Baseline `origin/main` `ee8c32e` (V1.4.0, released and accepted 2026-11-03 18:23:19 UTC).
+**Status:** approved to build by the owner, 2026-11-03 19:28:12 UTC ("can you do everthing in this version except the automations"). Supersedes the three-release staging in section 3: everything below goes into V1.5.0 except automations (and the Button property, which needs them). Decisions B to E taken as recommended (vault option 1, files in the vault with a 50 MB cap, Notaya's own look); PDF Arabic included because the owner said "everything" (he may drop it). **Owner 2026-11-03 19:30:11 UTC:** file cap is **50 MB** (not 50 MB); PDF export must print Arabic, Hebrew and Chinese/Japanese/Korean letters instead of "?" (in V1.5.0, no longer optional). Not built yet when this file was written. Baseline `origin/main` `ee8c32e` (V1.4.0, released and accepted 2026-11-03 18:23:19 UTC).
 **Owner's message:** 2026-11-03 19:20:58 UTC ("if arabic import from other thing will be in the left side, not right like english / Full database like notion i mean everthing") and 19:22:15 UTC ("tell me if you got the full databases from notion and types").
 **Result state of this file:** produced (not verified, not accepted). Local only: no AI, network, cloud, sync or sharing.
 
@@ -113,7 +113,7 @@ Options:
 
 ## 5. Other decisions
 
-- **D. Files in rows (and later, pages):** store them encrypted inside the vault (vault grows; I suggest a cap of 25 MB per file as for pictures) or keep only a link to the file on disk? Recommended: inside the vault, 25 MB cap.
+- **D. Files in rows (and later, pages):** store them encrypted inside the vault (vault grows; I suggest a cap of 50 MB per file as for pictures) or keep only a link to the file on disk? Recommended: inside the vault, 50 MB cap.
 - **E. Look:** keep Notaya's own style (as in A33), not a Notion copy. Recommended.
 - **F. Notion export (Phase 0):** later, when you want it. Not needed to start.
 
@@ -129,4 +129,4 @@ Options:
 
 ## 7. What I need from you to start
 
-Reply **"ok recommendations"** to accept: PDF Arabic in V1.5.0 only if you say so (A), three-release staging (B), option 1 for the vault (C), files in the vault with a 25 MB cap (D), Notaya's own look (E). Or change any letter. I will not build before your OK.
+Reply **"ok recommendations"** to accept: PDF Arabic in V1.5.0 only if you say so (A), three-release staging (B), option 1 for the vault (C), files in the vault with a 50 MB cap (D), Notaya's own look (E). Or change any letter. I will not build before your OK.

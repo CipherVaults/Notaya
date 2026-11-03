@@ -1,6 +1,7 @@
 mod backup;
 mod commands;
 mod crypto;
+mod database;
 mod error;
 mod export;
 mod filenames;
@@ -25,7 +26,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, calculator, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, calculator, database as database_cmd, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -221,6 +222,20 @@ pub fn run() {
             notes::delete_page,
             notes::empty_trash,
             notes::add_attachment,
+            database_cmd::create_database,
+            database_cmd::get_database,
+            database_cmd::save_database,
+            database_cmd::query_view,
+            database_cmd::create_row,
+            database_cmd::set_cells,
+            database_cmd::duplicate_row,
+            database_cmd::reorder_rows,
+            database_cmd::search_rows,
+            database_cmd::row_titles,
+            database_cmd::set_database_look,
+            database_cmd::move_database,
+            database_cmd::enable_sub_items,
+            database_cmd::enable_dependencies,
             export_cmd::export_notes,
             import_notes_cmd::import_notes,
             import_notes_cmd::import_cancel,

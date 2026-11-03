@@ -2,6 +2,7 @@
 use tauri::ipc::{InvokeBody, Request};
 use tauri::State;
 
+use super::database as dbc;
 use super::{check_color, limit, notebook, page, section};
 use crate::backup;
 use crate::error::{Error, Result};
@@ -17,9 +18,35 @@ pub struct NotesTree {
     notebooks: Vec<Notebook>,
     sections: Vec<Section>,
     pages: Vec<PageMeta>,
+    databases: Vec<dbc::DatabaseMeta>,
+}
+
+/// A database row shown as a page (so the page editor opens it unchanged). Its `parent` is the
+/// id of its database.
+fn row_as_page(s: &Session, r: &crate::database::types::Row) -> Page {
+    let section_id = match s.get(&r.db) {
+        Some(Item::Database(d)) => d.section_id.clone(),
+        _ => String::new(),
+    };
+    Page {
+        id: r.id.clone(),
+        section_id,
+        title: r.title.clone(),
+        content: r.content.clone(),
+        text: r.text.clone(),
+        order: r.order,
+        favorite: r.favorite,
+        icon: r.icon.clone(),
+        cover: r.cover.clone(),
+        parent: r.db.clone(),
+        trashed_at: r.trashed_at,
+        created: r.created,
+        updated: r.updated,
+    }
 }
 
 fn tree(s: &Session) -> NotesTree {
+    let hidden = dbc::pages_under_rows(s);
     let mut notebooks = Vec::new();
     let mut sections = Vec::new();
     let mut pages = Vec::new();
@@ -27,14 +54,14 @@ fn tree(s: &Session) -> NotesTree {
         match item {
             Item::Notebook(n) => notebooks.push(n.clone()),
             Item::Section(x) => sections.push(x.clone()),
-            Item::Page(p) => pages.push(PageMeta::from(p)),
+            Item::Page(p) if !hidden.contains(&p.id) => pages.push(PageMeta::from(p)),
             _ => {}
         }
     }
     notebooks.sort_by_key(|n| (n.order, n.created));
     sections.sort_by_key(|x| (x.order, x.created));
     pages.sort_by_key(|p| (p.order, p.created));
-    NotesTree { notebooks, sections, pages }
+    NotesTree { notebooks, sections, pages, databases: dbc::meta_list(s) }
 }
 
 fn next_order(orders: impl Iterator<Item = i64>) -> i64 {
@@ -208,7 +235,10 @@ pub fn create_page(state: State<'_, AppState>, section_id: String, title: String
 
 #[tauri::command]
 pub fn get_page(state: State<'_, AppState>, id: String) -> Result<Page> {
-    state.with(|s| page(s, &id))
+    state.with(|s| match s.get(&id) {
+        Some(Item::Row(r)) => Ok(row_as_page(s, r)),
+        _ => page(s, &id),
+    })
 }
 
 #[tauri::command]
@@ -217,6 +247,16 @@ pub fn save_page(state: State<'_, AppState>, id: String, title: String, content:
     limit("Page", &content, MAX_PAGE_CHARS)?;
     limit("Page", &text, MAX_PAGE_CHARS)?;
     state.with_mut(|s| {
+        if let Some(Item::Row(r)) = s.get(&id) {
+            let mut r = r.clone();
+            r.title = title;
+            r.content = content;
+            r.text = text;
+            r.updated = now_ms();
+            let meta = PageMeta::from(&row_as_page(s, &r));
+            s.put(Item::Row(r))?;
+            return Ok(meta);
+        }
         let mut p = page(s, &id)?;
         p.title = title;
         p.content = content;
@@ -248,7 +288,10 @@ fn with_descendants(s: &crate::vault::Session, id: &str) -> Vec<String> {
 
 /// Creates a page inside another page. It lives in the same section.
 fn add_subpage(s: &mut Session, parent_id: &str, title: String) -> Result<Page> {
-    let parent = page(s, parent_id)?;
+    let parent = match s.get(parent_id) {
+        Some(Item::Row(r)) => row_as_page(s, r),
+        _ => page(s, parent_id)?,
+    };
     let now = now_ms();
     let order = next_order(s.items().filter_map(|i| match i {
         Item::Page(p) if p.parent == parent_id => Some(p.order),
@@ -282,9 +325,23 @@ pub fn create_subpage(state: State<'_, AppState>, parent_id: String, title: Stri
 #[tauri::command]
 pub fn set_page_favorite(state: State<'_, AppState>, id: String, favorite: bool) -> Result<NotesTree> {
     state.with_mut(|s| {
-        let mut p = page(s, &id)?;
-        p.favorite = favorite;
-        s.put(Item::Page(p))?;
+        match s.get(&id) {
+            Some(Item::Row(r)) => {
+                let mut r = r.clone();
+                r.favorite = favorite;
+                s.put(Item::Row(r))?;
+            }
+            Some(Item::Database(d)) => {
+                let mut d = d.clone();
+                d.favorite = favorite && d.trashed_at.is_none();
+                s.put(Item::Database(d))?;
+            }
+            _ => {
+                let mut p = page(s, &id)?;
+                p.favorite = favorite;
+                s.put(Item::Page(p))?;
+            }
+        }
         Ok(tree(s))
     })
 }
@@ -312,7 +369,16 @@ fn move_subtree(s: &mut Session, id: &str, section_id: &str) -> Result<()> {
 #[tauri::command]
 pub fn move_page(state: State<'_, AppState>, id: String, section_id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
-        move_subtree(s, &id, &section_id)?;
+        if matches!(s.get(&id), Some(Item::Database(_))) {
+            section(s, &section_id)?;
+            let mut d = dbc::database(s, &id)?;
+            d.section_id = section_id;
+            d.parent = String::new();
+            d.updated = now_ms();
+            s.put(Item::Database(d))?;
+        } else {
+            move_subtree(s, &id, &section_id)?;
+        }
         Ok(tree(s))
     })
 }
@@ -336,6 +402,14 @@ pub fn reorder(state: State<'_, AppState>, ids: Vec<String>) -> Result<NotesTree
                 Some(Item::Page(mut p)) => {
                     p.order = order;
                     changed.push(Item::Page(p));
+                }
+                Some(Item::Database(mut d)) => {
+                    d.order = order;
+                    changed.push(Item::Database(d));
+                }
+                Some(Item::Row(mut r)) => {
+                    r.order = order;
+                    changed.push(Item::Row(r));
                 }
                 _ => return Err(Error::NotFound),
             }
@@ -380,7 +454,11 @@ fn restore_subtree(s: &mut Session, id: &str) -> Result<()> {
 #[tauri::command]
 pub fn trash_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
-        trash_subtree(s, &id)?;
+        match s.get(&id) {
+            Some(Item::Row(_)) => dbc::trash_rows(s, &[id.clone()])?,
+            Some(Item::Database(_)) => dbc::trash_database(s, &id)?,
+            _ => trash_subtree(s, &id)?,
+        }
         Ok(tree(s))
     })
 }
@@ -388,7 +466,11 @@ pub fn trash_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
 #[tauri::command]
 pub fn restore_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
-        restore_subtree(s, &id)?;
+        match s.get(&id) {
+            Some(Item::Row(_)) => dbc::restore_rows(s, &[id.clone()])?,
+            Some(Item::Database(_)) => dbc::restore_database(s, &id)?,
+            _ => restore_subtree(s, &id)?,
+        }
         Ok(tree(s))
     })
 }
@@ -396,10 +478,16 @@ pub fn restore_page(state: State<'_, AppState>, id: String) -> Result<NotesTree>
 #[tauri::command]
 pub fn delete_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     state.with_mut(|s| {
-        page(s, &id)?;
-        let doomed = with_descendants(s, &id);
-        s.remove_many(&doomed)?;
-        s.collect_garbage()?;
+        match s.get(&id) {
+            Some(Item::Row(_)) => dbc::delete_rows(s, &[id.clone()])?,
+            Some(Item::Database(_)) => dbc::delete_database(s, &id)?,
+            _ => {
+                page(s, &id)?;
+                let doomed = with_descendants(s, &id);
+                s.remove_many(&doomed)?;
+                s.collect_garbage()?;
+            }
+        }
         Ok(tree(s))
     })
 }
@@ -407,6 +495,15 @@ pub fn delete_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> 
 #[tauri::command]
 pub fn empty_trash(state: State<'_, AppState>) -> Result<NotesTree> {
     state.with_mut(|s| {
+        // Databases and rows in the trash go first (with their rows, links and files).
+        let trashed_dbs: Vec<String> = s.items().filter_map(|i| if let Item::Database(d) = i { if d.trashed_at.is_some() { Some(d.id.clone()) } else { None } } else { None }).collect();
+        for id in trashed_dbs {
+            dbc::delete_database(s, &id)?;
+        }
+        let trashed_rows: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.trashed_at.is_some() { Some(r.id.clone()) } else { None } } else { None }).collect();
+        if !trashed_rows.is_empty() {
+            dbc::delete_rows(s, &trashed_rows)?;
+        }
         let doomed: Vec<String> = s
             .items()
             .filter_map(|i| match i {
@@ -467,6 +564,15 @@ pub fn set_page_look(state: State<'_, AppState>, id: String, icon: String, cover
     limit("Icon", &icon, 40)?;
     limit("Cover", &cover, 200)?;
     state.with_mut(|s| {
+        if let Some(Item::Row(r)) = s.get(&id) {
+            let mut r = r.clone();
+            r.icon = icon;
+            r.cover = cover;
+            r.updated = now_ms();
+            let meta = PageMeta::from(&row_as_page(s, &r));
+            s.put(Item::Row(r))?;
+            return Ok(meta);
+        }
         let mut p = page(s, &id)?;
         p.icon = icon;
         p.cover = cover;
