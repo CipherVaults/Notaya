@@ -340,7 +340,7 @@ fn emits_vault_locked(reason: &str, was_open: bool) -> bool {
 }
 
 /// Asks every window to write its pending edits, then waits (up to the usual lock time). Used before
-/// closing sticky notes without locking ("Hide all"). Same rule as `request_flush`: not on the main thread.
+/// closing sticky notes without locking ("Close all"). Same rule as `request_flush`: not on the main thread.
 pub fn flush_windows(app: &AppHandle) {
     request_flush(app, FLUSH_TIMEOUT);
 }

@@ -121,7 +121,7 @@ pub fn show_main(app: &AppHandle) {
 /// hide itself anywhere it could not be reached again).
 pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open Notaya", true, None::<&str>)?;
-    let hide_notes = MenuItem::with_id(app, "hide-stickies", "Hide sticky notes", true, None::<&str>)?;
+    let hide_notes = MenuItem::with_id(app, "close-stickies", "Close sticky notes", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Notaya", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &hide_notes, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
@@ -130,7 +130,7 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => show_main(app),
-            "hide-stickies" => {
+            "close-stickies" => {
                 // Waits for the windows to save, so not on the menu's own thread. Nothing to do while locked.
                 let app = app.clone();
                 std::thread::spawn(move || {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Calculator, Check, CheckSquare, EyeOff, ExternalLink, MonitorUp, Plus, StickyNote, Trash2, X } from "lucide-react";
+import { Calculator, Check, CheckSquare, ExternalLink, MonitorUp, Plus, StickyNote, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { stickyColor } from "@/lib/palette";
@@ -168,7 +168,7 @@ export default function StickyBoard() {
                 <MonitorUp size={16} /> Open all
               </Button>
               <Button variant="outline" onClick={hideAll} disabled={!anyOpen} title="Close every sticky note window. The notes are kept; Open all brings them back.">
-                <EyeOff size={16} /> Hide all
+                <X size={16} /> Close all
               </Button>
               <Button variant="primary" onClick={create}>
                 <Plus size={16} /> New note

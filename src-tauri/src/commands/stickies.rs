@@ -123,7 +123,7 @@ pub fn close_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> R
     Ok(())
 }
 
-/// Closes every open sticky note window at once ("Hide all"), keeping the notes: each one is marked as not
+/// Closes every open sticky note window at once ("Close all"), keeping the notes: each one is marked as not
 /// open, so Open / Open all brings it back and it does not return by itself at the next unlock. Every window
 /// writes its pending edits first (the same step a lock takes). Nothing is deleted.
 pub fn hide_all(app: &AppHandle, state: &AppState) -> Result<()> {
