@@ -83,6 +83,17 @@ Findings and what was done:
 
 Not run in round 1: the exact 100,000-row boundary, a real clipboard paste, database trash and restore from the sidebar, a final read of the test vault's error log, how the RTL pages and databases look (screenshots are in `v150\shots`).
 
+## 8c. After PC round 2 (2026-11-04, owner's messages 09:40:41 to 10:30:24 UTC)
+
+Round 2 used the owner's "Notebook 2.zip" (a second large Notion notebook with every database feature) and by-hand use in Notaya. Findings and fixes, all cloud-verified only (Rust tests, tsc, build):
+
+1. BUG-2 and BUG-3 (flat Notion export: relation cells that name the table file; row pages next to the CSV files): fixed in `38d4df0` and `6d8e21d`.
+2. BUG-4 (a line forced left-to-right or right-to-left printed in the wrong direction in PDF), OBS-3 (first-database notice after a CSV import), OBS-4 (PDF export text), a warning when a notebook of the same name already exists: fixed in `1ad3364`.
+3. **Combined import (owner 10:16:09 to 10:26:06 UTC, "will be in v1.5"):** a Markdown & CSV export and an HTML export of the same Notion workspace complete each other, as ZIP files, folders or loose files. Rule chosen: pages are matched by the 32-character Notion id at the end of the file name; a page found once in each is imported once, with the HTML text and formatting, plus the Markdown/CSV property lines and data for database rows. HTML database view pages (same id as a CSV) are not imported as pages. Cloud tests added in `plan.rs` and `import_notes.rs`.
+4. Security review of the new code (self-review, 10:40 UTC): files are read only through the existing `Vfs` with the existing size limit; the pairing uses names from the archive listing only, never builds file-system paths; no new dependency, no network. No finding.
+
+Round 3 (owner-approved 10:17:54 UTC) will retest these fixes and the combined import on the PC; it needs an HTML ZIP export of the same Notion workspace in `E:\Project\Notaya\Notaya Tests Excluded`.
+
 ## 9. Not run
 
 In the cloud: the PC exe and the real backend. On the PC after round 1: the fixes, the reworked ZIP-to-database import (section 8b, items 1, 2, 4, 6) and the automations and Button property have not been run on the PC, and they have not been run in the real backend at all (only the Rust tests and the mock screens); the items in the last paragraph of 8b; Windows reminders (not built).
@@ -93,7 +104,7 @@ No list of trashed rows (only the toast undo restores one); no thumbnails for pi
 
 ## 11. Next permitted action
 
-PC round 2 (at most two rounds): retest the fixes and the ZIP-to-database import on the exact new tip, on throwaway data in `E:\Project\Notaya\Notaya Tests Excluded`, never the real vault. Remote Control starts only on the owner's own message.
+PC round 3 (owner-approved 2026-11-04 10:17:54 UTC): retest sections 8b and 8c on the exact new tip, including the combined HTML + Markdown/CSV import, on throwaway data in `E:\Project\Notaya\Notaya Tests Excluded`, never the real vault. Remote Control starts only on the owner's own message.
 
 ## 12. Merge and release
 

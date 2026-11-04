@@ -19,8 +19,8 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Report: [2026-11-03-v1-5-0-rtl-and-databases.md](2026-11-03-v1-5-0-rtl-and-databases.md)
 - Task / Goal: "Full database like notion i mean everthing" and Arabic that stays right-to-left everywhere, "except the automations" ([A35](../plan/A35-v1-5-0-rtl-and-databases.md))
 - Executor: Claude (Claude Code) in a cloud thread with two helper agents; the PC checks have not run yet
-- Outcome: produced and cloud-verified (480 Rust tests, tsc, build, npm audit 0, mock-app checks of every view); not run on the PC, not integrated, not released, not accepted
-- Open dependency / next action: the owner asks for a PC test round (throwaway data only), then merges draft PR #47 ("Create a merge commit") and says "publish"
+- Outcome: produced and cloud-verified (499 Rust tests, tsc, build, mock-app checks of every view; PC rounds 1 and 2 passed except the bugs fixed since, see report 8b and 8c); the newest fixes and the combined Notion import have not run on the PC; not integrated, not released, not accepted
+- Open dependency / next action: PC round 3 (approved 2026-11-04 10:17:54 UTC, throwaway data only), then the owner merges draft PR #47 ("Create a merge commit") and says "publish"
 
 ### 2026-11-03 (owner's messages 06:52:53 and 06:54:14 UTC; PC session started after 06:54 UTC and ended before 08:11:56 UTC (thread timestamps)), EX-2026-11-03-40: V1.4.0 features and PC tests
 
