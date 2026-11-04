@@ -1311,6 +1311,18 @@ mod tests {
     }
 
     #[test]
+    fn fenced_mermaid_becomes_a_diagram_block() {
+        let src = "Intro\n\n```mermaid\nflowchart TD\n  A --> B\n```\n\n```Mermaid\n```\n\n```js\nlet x = 1;\n```\n";
+        let v = md(src);
+        let c = v["content"].as_array().unwrap();
+        let types: Vec<&str> = c.iter().map(|b| b["type"].as_str().unwrap()).collect();
+        // An empty fence stays an (empty) code block; other languages stay code.
+        assert_eq!(types, ["paragraph", "mermaidBlock", "codeBlock", "codeBlock"], "{v}");
+        assert_eq!(c[1]["attrs"]["code"], "flowchart TD\n  A --> B");
+        assert_eq!(c[1]["attrs"]["showCode"], false);
+    }
+
+    #[test]
     fn notion_markdown_toggles_equations_todos_and_bookmarks() {
         let src = "- [x] done\n- [ ] open\n\n<details>\n<summary>More</summary>\n\nHidden part\n\n</details>\n\n$$\nE = mc^2\n$$\n\n[An article](https://example.com/a)\n\n> quoted\n\n1. one\n2. two\n";
         let v = md(src);

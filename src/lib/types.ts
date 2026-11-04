@@ -117,6 +117,8 @@ export interface PageMeta {
   order: number;
   favorite: boolean;
   icon: string;
+  /** The page's cover (see `Page.cover`), for the cards on Home. */
+  cover?: string;
   /** Id of the page this one sits inside, or empty. */
   parent: string;
   trashedAt: number | null;
@@ -133,7 +135,7 @@ export interface Page {
   order: number;
   favorite: boolean;
   icon: string;
-  /** "gradient:<name>", an image URL, or empty. */
+  /** "gradient:<name>", "solid:#rrggbb", a vault picture URL (optionally ending "#y=<0..100>", its vertical position), or empty. */
   cover: string;
   parent: string;
   trashedAt: number | null;

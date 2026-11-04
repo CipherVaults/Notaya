@@ -351,6 +351,7 @@ impl Session {
                 Item::Page(p) => {
                     referenced.push_str(&p.content);
                     referenced.push_str(&p.cover);
+                    referenced.push_str(&p.icon);
                 }
                 Item::Sticky(s) => referenced.push_str(&s.content),
                 // Database rows keep pictures in their body and cover, and files in their cells;

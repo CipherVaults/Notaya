@@ -1054,6 +1054,39 @@ mod tests {
     }
 
     #[test]
+    fn a_main_page_next_to_a_folder_of_databases_and_pages_is_imported_for_markdown_and_html() {
+        // A Notion "Hubs" main page: the page, a folder of the same name with sub-pages and a database.
+        let (hub, sub, db, row) = ("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb4");
+        let html = |t: &str, body: &str| format!("<html><head><title>{t}</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">{t}</h1></header><div class=\"page-body\">{body}</div></article></body></html>");
+        let hub_md = format!("# Hubs\n\n[Sub](Hubs%20{hub}/Sub%20{sub}.md)\n\n[Tasks](Hubs%20{hub}/Tasks%20{db}.csv)\n");
+        let md: Vec<(String, Vec<u8>)> = vec![
+            (format!("Hubs {hub}.md"), hub_md.into_bytes()),
+            (format!("Hubs {hub}/Sub {sub}.md"), b"# Sub\n\ntext\n".to_vec()),
+            (format!("Hubs {hub}/Tasks {db}.csv"), b"Name,Status\nOne,Done\n".to_vec()),
+            (format!("Hubs {hub}/Tasks {db}/One {row}.md"), b"# One\n\nStatus: Done\n".to_vec()),
+        ];
+        let refs: Vec<(&str, &[u8])> = md.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let v = vfs(&refs);
+        let plan = build(&v, &Control::standard(), Some("Export"), NOW).unwrap();
+        let titles: Vec<&str> = plan.pages.iter().map(|p| p.title.as_str()).collect();
+        assert!(titles.contains(&"Hubs"), "the main page (Markdown) is imported: {titles:?}");
+        let hh = html("Hubs", &format!("<p><a href=\"Hubs%20{hub}/Sub%20{sub}.html\">Sub</a></p>"));
+        let files: Vec<(String, Vec<u8>)> = vec![
+            ("index.html".into(), b"<ul><li><a href=\"x\">x</a></li></ul>".to_vec()),
+            (format!("Hubs {hub}.html"), hh.into_bytes()),
+            (format!("Hubs {hub}/Sub {sub}.html"), html("Sub", "<p>text</p>").into_bytes()),
+            (format!("Hubs {hub}/Tasks {db}.html"), html("Tasks", "<table><tr><td>One</td></tr></table>").into_bytes()),
+            (format!("Hubs {hub}/Tasks {db}.csv"), b"Name,Status\nOne,Done\n".to_vec()),
+            (format!("Hubs {hub}/Tasks {db}/One {row}.html"), html("One", "<p>x</p>").into_bytes()),
+        ];
+        let refs: Vec<(&str, &[u8])> = files.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let v = vfs(&refs);
+        let plan = build(&v, &Control::standard(), Some("Export"), NOW).unwrap();
+        let titles: Vec<&str> = plan.pages.iter().map(|p| p.title.as_str()).collect();
+        assert!(titles.contains(&"Hubs"), "the main page (HTML) is imported: {titles:?}");
+    }
+
+    #[test]
     fn a_page_in_both_a_markdown_and_an_html_export_is_imported_once_with_the_html_formatting() {
         let (guide, hand, table, row) = ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4");
         let html_page = |title: &str, body: &str| format!("<html><head><title>{title}</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">{title}</h1></header><div class=\"page-body\">{body}</div></article></body></html>");

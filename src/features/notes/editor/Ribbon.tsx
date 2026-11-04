@@ -342,6 +342,9 @@ function InsertTab({ editor }: { editor: Editor }) {
         <Big label="Equation" title="Maths written in TeX, on its own line" onClick={turn("equation")}>
           {blockIcon("equation")}
         </Big>
+        <Big label="Diagram" title="A flowchart, sequence, Gantt… written as Mermaid code" onClick={turn("mermaid")}>
+          {blockIcon("mermaid")}
+        </Big>
         <Big label="Inline" title="Maths inside a line (or type $x^2$)" onClick={() => c().insertMathInline().run()}>
           <Radical size={20} />
         </Big>

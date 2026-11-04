@@ -44,7 +44,9 @@ const settings: Record<string, unknown> = {
   stickyDefaultColor: "yellow",
 };
 
-const savedPages = new Map<string, { title: string; content: string; text: string }>();
+const savedPages = new Map<string, { title?: string; content?: string; text?: string; icon?: string; cover?: string }>();
+// Pictures added with add_attachment (cover and icon uploads): id -> blob URL, so the mock can show what was picked.
+const pictures = new Map<string, string>();
 const tree = {
   notebooks: [
     { id: "n1", name: "Personal", color: "#a3a3a3", icon: "📓", order: 0, created: ago(900), updated: ago(5) },
@@ -56,8 +58,8 @@ const tree = {
     { id: "s3", notebookId: "n2", name: "Projects", color: "", order: 0, created: ago(800), updated: ago(50) },
   ],
   pages: [
-    { id: "p1", sectionId: "s1", title: "Morning pages", preview: "Slept badly, but the plan for the week is clear: finish the vault, then the editor polish.", words: 212, order: 0, favorite: true, parent: "", icon: "☀️", trashedAt: null, created: ago(300), updated: ago(5) },
-    { id: "p2", sectionId: "s1", title: "Trip notes", preview: "Flights, hotel confirmation numbers and a rough itinerary for the first three days.", words: 96, order: 1, favorite: false, icon: "✈️", trashedAt: null, created: ago(500), updated: ago(120) },
+    { id: "p1", sectionId: "s1", title: "Morning pages", preview: "Slept badly, but the plan for the week is clear: finish the vault, then the editor polish.", words: 212, order: 0, favorite: true, parent: "", icon: "☀️", cover: "gradient:dusk", trashedAt: null, created: ago(300), updated: ago(5) },
+    { id: "p2", sectionId: "s1", title: "Trip notes", preview: "Flights, hotel confirmation numbers and a rough itinerary for the first three days.", words: 96, order: 1, favorite: false, icon: "✈️", cover: "solid:#cdd9f3", trashedAt: null, created: ago(500), updated: ago(120) },
     { id: "p4", sectionId: "s1", parent: "p1", title: "Weekly goals", preview: "Three things for this week.", words: 12, order: 0, favorite: false, icon: "🎯", trashedAt: null, created: ago(200), updated: ago(40) },
     { id: "p5", sectionId: "s2", title: "Old draft", preview: "", words: 3, order: 0, favorite: false, parent: "", icon: "", trashedAt: ago(30), created: ago(700), updated: ago(30) },
     { id: "p6", sectionId: "s2", title: "App ideas", preview: "A list.", words: 8, order: 1, favorite: false, parent: "", icon: "", trashedAt: null, created: ago(600), updated: ago(60) },
@@ -268,15 +270,41 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     }
     case "get_page": {
       const saved = savedPages.get(String(args.id));
-      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk", ...(saved ?? {}) });
+      const meta = tree.pages.find((x) => x.id === args.id) as { icon?: string; cover?: string } | undefined;
+      // A page the mock has no cover for gets the dusk gradient (the editor checks lean on it); ?cover=none turns it off.
+      const cover = params.get("cover") === "none" ? "" : meta?.cover ?? "gradient:dusk";
+      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, ...(meta ? { icon: meta.icon ?? "" } : {}), cover, ...(saved ?? {}) });
     }
     case "create_subpage":
       return ok({ ...tree.pages[0], id: "p" + Math.floor(Math.random() * 1e6), parent: args.parentId, title: args.title, content: "", text: "", cover: "" });
-    case "set_page_look":
-      return ok({ ...tree.pages[0], icon: args.icon });
+    case "set_page_look": {
+      // The same rules as the real command: no outside addresses, picture icons only for pages.
+      const cover = String(args.cover ?? "");
+      const icon = String(args.icon ?? "");
+      const coverOk = cover === "" || /^gradient:[a-z0-9-]{1,24}$/i.test(cover) || /^solid:#[0-9a-f]{6}$/i.test(cover) || /^http:\/\/clatt\.localhost\/[0-9a-f]{32}(#y=(100|[0-9]{1,2}))?$/i.test(cover);
+      if (!coverOk) throw "This cover is not allowed. Use a gradient, a colour or a picture from your notes.";
+      if (icon.startsWith("pic:") && !/^pic:[0-9a-f]{32}$/i.test(icon)) throw "This icon is not allowed.";
+      if (icon.length > 40) throw "Icon is too long (max 40 characters).";
+      const pg = tree.pages.find((x) => x.id === args.id) as { icon: string; cover?: string } | undefined;
+      if (pg) {
+        pg.icon = icon;
+        pg.cover = cover;
+      }
+      savedPages.set(String(args.id), { ...(savedPages.get(String(args.id)) ?? {}), icon, cover });
+      return ok({ ...(pg ?? tree.pages[0]), icon, cover });
+    }
+    case "add_attachment": {
+      const bytes = args as unknown as Uint8Array;
+      const png = bytes[0] === 0x89 && bytes[1] === 0x50;
+      const jpg = bytes[0] === 0xff && bytes[1] === 0xd8;
+      if (!png && !jpg) throw "Only PNG, JPEG, GIF and WebP images are supported.";
+      const id = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      pictures.set(id, URL.createObjectURL(new Blob([bytes as BlobPart], { type: png ? "image/png" : "image/jpeg" })));
+      return ok(id);
+    }
     case "save_page":
       // Remember what was saved, so a page keeps its content while the mock runs (the first page is the fixed sample otherwise).
-      savedPages.set(String(args.id), { title: String(args.title ?? ""), content: String(args.content ?? ""), text: String(args.text ?? "") });
+      savedPages.set(String(args.id), { ...(savedPages.get(String(args.id)) ?? {}), title: String(args.title ?? ""), content: String(args.content ?? ""), text: String(args.text ?? "") });
       return ok({ ...tree.pages[0] });
     case "list_stickies":
       return ok([...stickies]);
@@ -435,5 +463,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
 }
 
 export function convertFileSrc(id: string): string {
+  const picked = pictures.get(id);
+  if (picked) return picked;
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><rect width="40" height="30" fill="#888"/><text x="4" y="18" font-size="8">${id}</text></svg>`)}`;
 }

@@ -50,6 +50,7 @@ const ITEMS: Item[] = [
   { group: "Insert", title: "Picture", hint: "Add an image from your PC", keywords: "picture image photo upload png jpg", icon: <ImagePlus size={s} />, run: (e) => pickImages(e) },
   { group: "Insert", title: "Equation", hint: "Maths written in TeX", keywords: "equation math formula tex latex block", icon: icon("equation"), run: turn("equation") },
   { group: "Insert", title: "Inline equation", hint: "Maths inside a line (or type $x^2$)", keywords: "equation math formula tex latex inline", icon: <Radical size={s} />, run: (e) => e.chain().focus().insertMathInline().run() },
+  { group: "Insert", title: "Diagram", hint: "A flowchart, sequence, Gantt… written as Mermaid code", keywords: "diagram mermaid flowchart graph chart sequence uml gantt pie mindmap er class state git", icon: icon("mermaid"), run: turn("mermaid") },
   { group: "Insert", title: "Sub-page", hint: "A new page inside this one", keywords: "page subpage sub-page child inside", icon: icon("page"), run: turn("page") },
   { group: "Insert", title: "Link to page", hint: "A link to a page you already have", keywords: "link page mention existing", icon: <Link2 size={s} />, run: () => {}, picker: "page" },
   { group: "Database", title: "Database (inline)", hint: "A new table inside this page", keywords: "database table inline notion rows properties board calendar", icon: <TableProperties size={s} />, run: (e, page) => page && void insertInlineDatabase(e, page) },

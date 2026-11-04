@@ -10,6 +10,9 @@ use serde_json::{json, Map, Value};
 
 use crate::export::doc::{first_strong, Dir};
 
+/// The longest Mermaid diagram code kept (characters); the editor draws nothing longer.
+const MERMAID_MAX_CHARS: usize = 50_000;
+
 /// Text formatting. `link` is already checked (http, https or mailto only).
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct Marks {
@@ -299,6 +302,13 @@ impl Renderer<'_> {
             Block::Callout(icon, inner) => {
                 let icon = if icon.is_empty() || icon.chars().count() > 8 { "💡" } else { icon.as_str() };
                 out.push(json!({ "type": "callout", "attrs": { "icon": icon }, "content": self.container(inner, depth) }))
+            }
+            // A fenced block written as ```mermaid becomes a Mermaid diagram block (drawn by the editor, on this device).
+            Block::Code(lang, code) if lang.trim().eq_ignore_ascii_case("mermaid") && !code.trim().is_empty() => {
+                let code: String = code.trim_matches('\n').chars().take(MERMAID_MAX_CHARS).collect();
+                self.charge(code.len().saturating_mul(2));
+                self.text.push(code.clone());
+                out.push(json!({ "type": "mermaidBlock", "attrs": { "code": code, "showCode": false } }));
             }
             Block::Code(lang, code) => {
                 let code = code.trim_end_matches('\n');

@@ -376,6 +376,15 @@ fn block(n: &Value, p: &Pages, out: &mut Vec<Block>) {
         "column" => out.extend(blocks(kids, p)),
         "codeBlock" => out.push(Block::Code { language: attr_str(n, "language"), text: plain_text(n) }),
         "mathBlock" => out.push(Block::Math(attr_str(n, "latex"))),
+        // A Mermaid diagram is drawn by the editor only; exports carry its code, as a code block with a caption.
+        "mermaidBlock" => {
+            let code = attr_str(n, "code");
+            if !code.trim().is_empty() {
+                let caption = Marks { italic: true, ..Marks::default() };
+                out.push(Block::Paragraph { align: Align::Left, content: vec![Inline::Text("Mermaid diagram (code)".into(), caption)] });
+                out.push(Block::Code { language: "mermaid".into(), text: code });
+            }
+        }
         "image" => out.push(Block::Image(Image {
             attachment: attachment_id(&attr_str(n, "src")),
             caption: attr_str(n, "caption"),
@@ -668,6 +677,19 @@ pub mod tests {
 
     pub fn titles(id: &str) -> Option<String> {
         (id == "child-page").then(|| "Child page".to_string())
+    }
+
+    #[test]
+    fn a_mermaid_diagram_is_exported_as_captioned_code() {
+        let json = serde_json::json!({ "type": "doc", "content": [
+            { "type": "mermaidBlock", "attrs": { "code": "graph TD\n  A --> B", "showCode": false } },
+            { "type": "mermaidBlock", "attrs": { "code": "  " } }
+        ] })
+        .to_string();
+        let blocks = parse(&json, &titles);
+        assert_eq!(blocks.len(), 2, "an empty diagram is left out: {blocks:?}");
+        assert!(matches!(&blocks[0], Block::Paragraph { content, .. } if matches!(&content[0], Inline::Text(t, m) if t == "Mermaid diagram (code)" && m.italic)));
+        assert_eq!(blocks[1], Block::Code { language: "mermaid".into(), text: "graph TD\n  A --> B".into() });
     }
 
     #[test]

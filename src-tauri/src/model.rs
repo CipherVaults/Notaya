@@ -82,10 +82,11 @@ pub struct Page {
     pub text: String,
     pub order: i64,
     pub favorite: bool,
-    /// Emoji shown beside the title (empty = none).
+    /// Emoji shown beside the title, or `pic:<attachment id>` for a small picture (empty = none).
     #[serde(default)]
     pub icon: String,
-    /// "gradient:<name>" or an attachment URL (empty = no cover).
+    /// "gradient:<name>", "solid:#rrggbb" or an attachment URL, the last optionally ending in `#y=<0..100>`
+    /// (how far down the picture is shown, in percent). Empty = no cover.
     #[serde(default)]
     pub cover: String,
     /// Id of the page this one sits inside (empty = directly in its section).
@@ -109,6 +110,8 @@ pub struct PageMeta {
     pub order: i64,
     pub favorite: bool,
     pub icon: String,
+    /// The page's cover (see `Page::cover`), so a card can show a strip of it without opening the page.
+    pub cover: String,
     pub trashed_at: Option<i64>,
     pub created: i64,
     pub updated: i64,
@@ -125,6 +128,7 @@ impl From<&Page> for PageMeta {
             order: p.order,
             favorite: p.favorite,
             icon: p.icon.clone(),
+            cover: p.cover.clone(),
             parent: p.parent.clone(),
             trashed_at: p.trashed_at,
             created: p.created,

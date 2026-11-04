@@ -1,13 +1,13 @@
-import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { BookPlus, FilePlus2, FileText, NotebookPen, RotateCcw, Table2, Trash2, X } from "lucide-react";
+import { FileText, RotateCcw, Table2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { NotesTree } from "@/lib/types";
 import { timeAgo } from "@/lib/utils";
 import { useApp } from "@/store/app";
-import { Button, EmptyState, useConfirm } from "@/components/ui";
-import { getKey, setKey } from "@/lib/storage";
+import { Button, useConfirm } from "@/components/ui";
+import { PageIcon } from "@/lib/pageLook";
+import Home from "./HomeView";
 import PageEditor from "./PageEditor";
 import DatabasePage from "@/features/database/DatabasePage";
 
@@ -36,131 +36,6 @@ export default function NotesView() {
         )}
       </motion.div>
     </AnimatePresence>
-  );
-}
-
-const OPEN_NOTE_KEY = "openVaultNoteDismissed";
-
-/** One-time reminder, shown only while security is off. Remembers the dismissal in this browser profile only. */
-function OpenVaultNote() {
-  const [dismissed, setDismissed] = useState(() => {
-    try {
-      return getKey(OPEN_NOTE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-  if (dismissed) return null;
-  const dismiss = () => {
-    setDismissed(true);
-    try {
-      setKey(OPEN_NOTE_KEY, "1");
-    } catch {
-      /* the note simply shows again next time */
-    }
-  };
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left text-sm text-muted" role="note">
-      <p className="flex-1">Your notes open without a password. Turn on security in Settings, Security, to protect them.</p>
-      <button onClick={dismiss} className="rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-fg" aria-label="Dismiss" title="Dismiss">
-        <X size={14} />
-      </button>
-    </div>
-  );
-}
-
-function Home() {
-  const tree = useApp((s) => s.tree);
-  const setIntent = useApp((s) => s.setIntent);
-  const openPage = useApp((s) => s.openPage);
-  const statusKnown = useApp((s) => s.status !== null);
-  const securityOn = useApp((s) => s.status?.securityOn ?? false);
-  const showNote = statusKnown && !securityOn;
-
-  if (tree.notebooks.length === 0) {
-    return (
-      <EmptyState
-        icon={<NotebookPen size={28} />}
-        title="Your first notebook"
-        body={
-          securityOn
-            ? "Notebooks hold sections, and sections hold pages. Everything is encrypted the moment you type it."
-            : "Notebooks hold sections, and sections hold pages. Your notes are saved on this drive, in the app's vault file. They are not private until you turn on security in Settings."
-        }
-        action={
-          <div className="flex max-w-md flex-col items-center gap-4">
-            <Button variant="primary" onClick={() => setIntent("new-notebook")}>
-              <BookPlus size={16} /> Create notebook
-            </Button>
-            {showNote && <OpenVaultNote />}
-          </div>
-        }
-      />
-    );
-  }
-
-  const recent = [...tree.pages]
-    .filter((p) => p.trashedAt === null)
-    .sort((a, b) => b.updated - a.updated)
-    .slice(0, 6);
-  const hour = new Date().getHours();
-  const greeting = hour < 5 ? "Working late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto px-10 pb-16 pt-16" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
-        <h1 className="text-[2rem] font-bold tracking-tight">{greeting}</h1>
-        <p className="mt-1 text-muted">
-          {securityOn
-            ? "Everything here is encrypted. Pick a page from the sidebar, or start a new one."
-            : "Your notes are saved on this drive. Pick a page from the sidebar, or start a new one."}
-        </p>
-        {showNote && (
-          <div className="mt-5">
-            <OpenVaultNote />
-          </div>
-        )}
-
-        <div className="mt-8 flex gap-2">
-          <Button variant="primary" onClick={() => setIntent("new-page")}>
-            <FilePlus2 size={16} /> New page
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => api.createSticky(true).then(async () => useApp.getState().setStickies(await api.listStickies()))}
-          >
-            New sticky note
-          </Button>
-        </div>
-
-        {recent.length > 0 && (
-          <>
-            <h2 className="mb-3 mt-12 text-xs font-semibold uppercase tracking-wider text-faint">Recently edited</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {recent.map((p) => {
-                const section = tree.sections.find((s) => s.id === p.sectionId);
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => openPage(p.id)}
-                    className="group rounded-xl border border-line bg-surface p-4 text-left transition-colors hover:bg-surface-2"
-                  >
-                    <div className="mb-2 text-xl leading-none">
-                      {p.icon ? <span className="emoji-mono">{p.icon}</span> : <FileText size={20} className="text-faint" />}
-                    </div>
-                    <div dir="auto" className="truncate font-medium">{p.title || "Untitled"}</div>
-                    <div dir="auto" className="mt-0.5 line-clamp-2 min-h-[2.4em] text-xs leading-relaxed text-muted">{p.preview || "Empty page"}</div>
-                    <div className="mt-2 text-[0.7rem] text-faint">
-                      {section?.name} · {timeAgo(p.updated)}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -214,7 +89,7 @@ function TrashView() {
             {pages.map((p) => (
               <div key={p.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="w-6 text-center text-lg">
-                  {p.icon ? <span className="emoji-mono">{p.icon}</span> : p.db ? <Table2 size={17} className="mx-auto text-faint" /> : <FileText size={17} className="mx-auto text-faint" />}
+                  <PageIcon icon={p.icon} size={18} fallback={p.db ? <Table2 size={17} className="mx-auto text-faint" /> : <FileText size={17} className="mx-auto text-faint" />} />
                 </span>
                 <button onClick={() => openPage(p.id)} className="min-w-0 flex-1 text-left">
                   <div dir="auto" className="truncate text-sm font-medium">{p.title || "Untitled"}{p.db && <span className="ms-2 text-xs font-normal text-faint">Database</span>}</div>

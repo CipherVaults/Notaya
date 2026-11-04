@@ -828,6 +828,18 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_notion_mermaid_code_block_becomes_a_diagram_block() {
+        let src = r#"<pre class="code"><code class="language-Mermaid">graph TD
+  A --&gt; B</code></pre><pre><code class="language-js">x</code></pre>"#;
+        let (blocks, _, _) = with_ctx(&[], |ctx| parse_fragment(src, ctx));
+        let v = json(&blocks);
+        let c = v["content"].as_array().unwrap();
+        assert_eq!(c[0]["type"], "mermaidBlock", "{v}");
+        assert_eq!(c[0]["attrs"]["code"], "graph TD\n  A --> B");
+        assert_eq!(c[1]["type"], "codeBlock");
+    }
+
+    #[test]
     fn notion_page_fonts_map_to_serif_mono_or_the_default() {
         for (class, expect) in [("page serif", Some("Georgia, Cambria, serif")), ("page mono", Some("\"JetBrains Mono Variable\", Consolas, monospace")), ("page sans", None), ("page", None)] {
             let src = format!("<html><body><article class=\"{class}\"><p>text</p></article></body></html>");
