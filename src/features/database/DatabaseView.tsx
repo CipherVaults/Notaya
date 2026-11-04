@@ -373,6 +373,18 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       toast.error(errorText(e));
     }
   };
+  const exportAs = async (format: "html" | "markdown" | "pdf" | "docx") => {
+    if (!db || !view) return;
+    try {
+      const r = await api.exportDatabase(db.id, view.id, format);
+      if (r) {
+        toast.success(`Exported to ${r.path}`);
+        if (r.charsNoFont > 0) toast.warning(`${r.charsNoFont} characters have no font in the PDF and were left out.`);
+      }
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+  };
   const enable = async (what: "sub" | "deps") => {
     if (!db) return;
     try {
@@ -552,6 +564,10 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           <MenuSeparator />
           <MenuItem icon={<FileUp size={15} />} onSelect={importCsv}>Import CSV…</MenuItem>
           <MenuItem icon={<Download size={15} />} onSelect={exportCsv}>Export CSV (this view)…</MenuItem>
+          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("markdown")}>Export Markdown (this view)…</MenuItem>
+          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("html")}>Export HTML (this view)…</MenuItem>
+          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("docx")}>Export Word (this view)…</MenuItem>
+          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("pdf")}>Export PDF (this view)…</MenuItem>
           {!locked && !db.subParentProp && <MenuItem icon={<ListTree size={15} />} onSelect={() => enable("sub")}>Turn on sub-items</MenuItem>}
           {!locked && !db.blockedByProp && <MenuItem icon={<GitBranch size={15} />} onSelect={() => enable("deps")}>Turn on dependencies</MenuItem>}
           {compact && <MenuItem icon={<ExternalLink size={15} />} onSelect={() => openDatabase(db.id)}>Open as page</MenuItem>}

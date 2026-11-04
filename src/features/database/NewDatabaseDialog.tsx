@@ -48,9 +48,10 @@ export default function NewDatabaseDialog({ target, onClose }: { target: NewData
     }
   };
   const fromCsv = async () => {
+    if (!target) return;
     setBusy(true);
     try {
-      const r = await api.importCsv(null);
+      const r = await api.importCsv(null, target.sectionId);
       if (!r) return;
       setTree(await api.listNotes());
       useApp.getState().openDatabase(r.databaseId);
