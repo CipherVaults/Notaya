@@ -14,6 +14,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-03 (owner's messages 19:20:58 to 21:29:02 UTC; work 19:30 to 22:19 UTC, system clock), EX-2026-11-03-42: Notaya V1.5.0, right-to-left text, PDF letters and full local databases
+
+- Report: [2026-11-03-v1-5-0-rtl-and-databases.md](2026-11-03-v1-5-0-rtl-and-databases.md)
+- Task / Goal: "Full database like notion i mean everthing" and Arabic that stays right-to-left everywhere, "except the automations" ([A35](../plan/A35-v1-5-0-rtl-and-databases.md))
+- Executor: Claude (Claude Code) in a cloud thread with two helper agents; the PC checks have not run yet
+- Outcome: produced and cloud-verified (480 Rust tests, tsc, build, npm audit 0, mock-app checks of every view); not run on the PC, not integrated, not released, not accepted
+- Open dependency / next action: the owner asks for a PC test round (throwaway data only), then merges draft PR #47 ("Create a merge commit") and says "publish"
+
 ### 2026-11-03 (owner's messages 06:52:53 and 06:54:14 UTC; PC session started after 06:54 UTC and ended before 08:11:56 UTC (thread timestamps)), EX-2026-11-03-40: V1.4.0 features and PC tests
 
 - Report: [2026-11-03-v1-4-0-pc-tests.md](2026-11-03-v1-4-0-pc-tests.md)
