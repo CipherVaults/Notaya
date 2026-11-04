@@ -1,6 +1,6 @@
 # Execution Summary: EX-2026-11-03-42 — Notaya V1.5.0: right-to-left text, PDF letters and full local databases
 
-Result state: **produced** (code on the branch, builds, cloud checks pass); **verified** only for the checks listed in section 8, on the exact source named there; **not integrated, not released, not accepted**. The real app (PC exe), the real backend with the new screens and the PDF letters in the real window have **not been run** (section 9).
+Result state: **produced**, and **verified** for the checks listed in sections 8 and 8b (cloud checks, and PC round 1 on the exact source `cc44d37`); the fixes made after round 1 (section 8b) have only cloud checks so far; **not integrated, not released, not accepted**.
 
 ## 1. Task overview
 
@@ -56,9 +56,33 @@ A35 row (already in `approval-and-amendments.md`), this report and its index row
 | Security review (read-only reader agent, by hand; the built-in skill could not run) | 4 findings, all fixed on this branch: (1) the formula regex matcher could overflow the stack on a long text, which would end the app (now bounded in depth, long texts matched on a helper thread with a 64 MB stack, one step budget per search; test on a 1 MB stack); (2) a long chain of rollups of rollups had no depth limit (now 32 levels, then an error; test on a 1 MB stack); (3) old Office and RTF files (doc, xls, ppt, rtf) were on the "open" list although a temp copy has no Mark-of-the-Web (removed, they can still be saved); (4) email and phone cells tried to open `mailto:` and `tel:`, which the backend refuses (they now show as plain text). Items checked and found fine: the `clatt` handler, file names, size caps, CSV limits and formula guard, exports, no `innerHTML` or `eval` in the UI. Not tested: a formula that builds very large strings inside a map (rated low) |
 | Cargo tests after the fixes | 482 passed, 0 failed, 1 ignored |
 
+## 8b. PC round 1 (owner's "Start pc tests", 2026-11-04 05:54:15 UTC; source `cc44d37c5e60`, exe SHA-256 `28A814B6CC9A40F2F29104B681A7433E64A1E594B9DBEA9D4F1104D4DE5875BD`; full report on the PC: `E:\Project\Notaya\Notaya Tests Excluded\v150\RESULTS-v150-round1.md`)
+
+Throwaway vault only. Build on the PC: 482 cargo tests passed (MSVC), clippy 0 errors (122 style warnings), tsc clean, npm audit 0, release build OK. Repo runners on the exe: restoreflow 12 PASS, installed 11 PASS, optionalsecurity 47 PASS, lockflow OK, tray OK on a re-run.
+
+| Area | Result |
+|---|---|
+| A databases (every property kind, views, filters, sorts, groups, relations, rollups, templates, sub-items, inline databases, first-database backup) | PASS except bug 1 |
+| B files in cells (attach, open, save as with matching SHA-256, 50 MB limit, .bat/.exe refused) | PASS (the check that no program started for .bat/.exe was wrong in the script and was not re-run) |
+| C CSV and exports (Arabic, Hebrew, CJK database exported to 5 formats and re-imported, every cell equal, `= + - @` cells safe) | PASS except bug 1 |
+| D the owner's Notion zip (SHA-256 `FA4D0538…A7386C2`) | pages: 55 pages in 2 sections, headings, lists, to-dos, callouts, toggles, tables, code, equations, columns and the Arabic page right-to-left came across; the 10 table CSVs were left out by design (then); the 5 database CSVs imported one by one: 6, 7, 8, 5 and 18 rows, 0 bad cells; person, relation and formatted-number columns arrive as text |
+| E right-to-left (auto, manual, slash item, Word and HTML import and export, survives lock and restore) | PASS |
+| F compatibility | PASS except note 2 |
+| G V1.4.0 smoke through the runners | PASS |
+
+Findings and what was done:
+1. **Bug 1:** New database -> "From a CSV file…" showed "That item no longer exists." (the dialog passed no section). **Fixed** in `8705826`.
+2. Note: no menu items for Markdown, HTML, Word and PDF export of a database. **Added** in `8705826`.
+3. Note: V1.4.0 on a vault with a database says "The vault file is damaged or has been tampered with." (as designed in P27; V1.4.0 is released and unchanged). The first-database notice in V1.5.0 already warns before it happens.
+4. Note: version numbers still said 1.4.0. **Bumped to 1.5.0** in `02062d4`.
+5. Observation: in the first tray run, the secure phase hit "The vault is locked."; a re-run passed. Not reproduced, cause not found.
+6. **New after round 1:** a Notion ZIP import now makes a real database from each table in the export (the `_all` file wins), after a safety backup, in the same saving step; the row pages are kept as ordinary pages too (their bodies are not merged into the rows yet) and relations, people and statuses are text columns. Cloud test only (`the_tables_of_a_notion_export_become_databases`); 483 Rust tests pass.
+
+Not run in round 1: the exact 100,000-row boundary, a real clipboard paste, database trash and restore from the sidebar, a final read of the test vault's error log, how the RTL pages and databases look (screenshots are in `v150\shots`).
+
 ## 9. Not run
 
-The PC exe; the real backend with the new screens (the screens were checked only against the mock, which was written from `ipc.ts` and the Rust sources, so a mismatch is possible); `cargo clippy` for MSVC; PDF letters in the real window; opening a real Notion export ZIP; a vault with a database opened by V1.4.0 to confirm the refusal message; Windows reminders (not built).
+In the cloud: the PC exe and the real backend. On the PC after round 1: the fixes and the ZIP-to-database import (section 8b, items 1, 2, 4, 6) have not been run on the PC; the items in the last paragraph of 8b; Windows reminders (not built).
 
 ## 10. Known gaps
 
@@ -66,7 +90,7 @@ No list of trashed rows (only the toast undo restores one); no thumbnails for pi
 
 ## 11. Next permitted action
 
-The owner asks for a PC test round (Remote Control, throwaway data in `E:\Project\Notaya\Notaya Tests Excluded`, never the real vault), at most two rounds; bugs found are fixed on the spot and the area is retested.
+PC round 2 (at most two rounds): retest the fixes and the ZIP-to-database import on the exact new tip, on throwaway data in `E:\Project\Notaya\Notaya Tests Excluded`, never the real vault. Remote Control starts only on the owner's own message.
 
 ## 12. Merge and release
 

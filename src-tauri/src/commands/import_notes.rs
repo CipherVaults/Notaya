@@ -163,6 +163,20 @@ fn on_big_stack<T: Send>(f: impl FnOnce() -> T + Send) -> Result<T> {
 /// The whole import of the chosen paths into the vault. Nothing is written when it fails, is
 /// cancelled through `ctl` or runs out of time.
 pub fn import_from<V: VaultAccess>(vault: &V, paths: &[PathBuf], folder: bool, data_dir: &Path, now: i64, ctl: &Control) -> Result<ImportSummary> {
+    import_from_with(vault, paths, folder, data_dir, now, ctl, &|_| Ok(()))
+}
+
+/// Like `import_from`; `before_first_database` runs (inside the saving step) when the import makes the
+/// vault's first database from the tables of a Notion export, so the app can make its safety backup.
+pub fn import_from_with<V: VaultAccess>(
+    vault: &V,
+    paths: &[PathBuf],
+    folder: bool,
+    data_dir: &Path,
+    now: i64,
+    ctl: &Control,
+    before_first_database: &(dyn Fn(&Session) -> Result<()> + Sync),
+) -> Result<ImportSummary> {
     check_sources(paths, data_dir, folder)?;
     let hint = name_hint(paths, folder);
     on_big_stack(|| -> Result<ImportSummary> {
@@ -193,7 +207,9 @@ pub fn import_from<V: VaultAccess>(vault: &V, paths: &[PathBuf], folder: bool, d
                 })
                 .map_err(Error::Other)?;
             let order = vault.with(|s| Ok(next_notebook_order(s)))?;
-            let (items, summary) = plan.items(ctl, &urls, now, order).map_err(Error::invalid)?;
+            // The tables of a Notion export: each becomes a database (the pages importer leaves them out).
+            let csv_paths: Vec<String> = plan.skipped.iter().filter(|k| k.item.to_ascii_lowercase().ends_with(".csv") && k.reason.contains("database")).map(|k| k.item.clone()).collect();
+            let (mut items, mut summary) = plan.items(ctl, &urls, now, order).map_err(Error::invalid)?;
             // Last chance to stop: after this the notebooks are saved in one step.
             plan::check(ctl).map_err(Error::invalid)?;
             // The notebooks, sections and pages in one transaction; the pictures are then in saved
@@ -201,6 +217,17 @@ pub fn import_from<V: VaultAccess>(vault: &V, paths: &[PathBuf], folder: bool, d
             vault.with_mut(|s| {
                 if !s.holds(&stored) {
                     return Err(Error::Other(LOCKED.into()));
+                }
+                if !csv_paths.is_empty() {
+                    let section = items.iter().find_map(|i| if let Item::Section(sec) = i { Some(sec.id.clone()) } else { None });
+                    if let Some(section) = section {
+                        let made = crate::commands::database_io::databases_from_csv(&vfs, &csv_paths, &section, s, now, before_first_database)?;
+                        if made.databases > 0 {
+                            summary.skipped.retain(|k| !made.covered.contains(&k.item));
+                        }
+                        summary.notes.extend(made.notes);
+                        items.extend(made.items);
+                    }
                 }
                 s.put_many(items)?;
                 s.release_attachments(&stored);
@@ -251,7 +278,8 @@ pub fn import_notes(app: AppHandle, state: State<'_, AppState>, request: ImportR
         return Ok(None);
     }
     let ctl = Control::new(MAX_TIME, running.0.clone());
-    match import_from(&*state, &paths, folder, &state.paths.data, now_ms(), &ctl) {
+    let safety = |s: &Session| crate::backup::make_safety_backup(&state.paths, s).map(|_| ()).map_err(|e| crate::backup::safety_failure(&e));
+    match import_from_with(&*state, &paths, folder, &state.paths.data, now_ms(), &ctl, &safety) {
         Ok(summary) => Ok(Some(summary)),
         // The person pressed Cancel: nothing happened, and that is not an error. A lock that
         // stopped the import is told as such.
@@ -307,6 +335,42 @@ mod tests {
 
     fn count(v: &Test) -> usize {
         v.with(|s| Ok(s.items().count())).unwrap()
+    }
+
+    #[test]
+    fn the_tables_of_a_notion_export_become_databases() {
+        let root = temp();
+        let src = root.join("export");
+        let id = "98b9830964384ed4b08e1c3de9ace4e9";
+        std::fs::create_dir_all(src.join(format!("Space/Projects {id}"))).unwrap();
+        std::fs::write(src.join(format!("Space/Projects {id}.csv")), "Name,Status\nOnly the view,Done\n").unwrap();
+        std::fs::write(src.join(format!("Space/Projects {id}_all.csv")), "Name,Status,Budget\nAlpha,Done,10\nBeta,In progress,20\n\u{645}\u{631}\u{62d}\u{628}\u{627},Done,30\n").unwrap();
+        std::fs::write(src.join(format!("Space/Projects {id}/Alpha.md")), "# Alpha\n\nStatus: Done\n").unwrap();
+        std::fs::write(src.join("Space/Handbook.md"), "# Handbook\n\nHello\n").unwrap();
+        let v = vault(&root.join("data"));
+        let backed_up = std::sync::atomic::AtomicUsize::new(0);
+        let backup = |_: &Session| -> Result<()> {
+            backed_up.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        };
+        let flag = Arc::new(AtomicBool::new(false));
+        let summary = import_from_with(&v, &[src.clone()], true, &root.join("data"), 1, &flag_control(&flag), &backup).unwrap();
+        let (dbs, rows): (Vec<_>, Vec<_>) = v
+            .with(|s| {
+                let d: Vec<_> = s.items().filter_map(|i| if let Item::Database(d) = i { Some((d.title.clone(), d.props.len())) } else { None }).collect();
+                let r: Vec<_> = s.items().filter_map(|i| if let Item::Row(r) = i { Some(r.title.clone()) } else { None }).collect();
+                Ok((d, r))
+            })
+            .unwrap();
+        assert_eq!(dbs.len(), 1, "one database, from the _all file");
+        assert_eq!(dbs[0].0, "Projects");
+        assert!(dbs[0].1 >= 3, "a column for each header");
+        assert_eq!(rows.len(), 3, "every row of the _all file, not the view's");
+        assert!(rows.iter().any(|t| t == "\u{645}\u{631}\u{62d}\u{628}\u{627}"));
+        assert_eq!(backed_up.load(Ordering::SeqCst), 1, "a backup before the first database");
+        assert!(!summary.skipped.iter().any(|k| k.item.ends_with(".csv")), "{:?}", summary.skipped);
+        assert!(summary.notes.iter().any(|n| n.contains("Database \"Projects\": 3 rows")), "{:?}", summary.notes);
+        assert!(!pages(&v).is_empty());
     }
 
     #[test]
