@@ -39,7 +39,7 @@
         "base-uri": "'none'"
       },
       "dangerousDisableAssetCspModification": ["style-src"],
-      "freezePrototype": true
+      "freezePrototype": false
     }
   },
   "bundle": {
