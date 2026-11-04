@@ -113,3 +113,7 @@ PC round 3 (owner-approved 2026-11-04 10:17:54 UTC): retest sections 8b and 8c o
 ## 12. Merge and release
 
 The owner merges the draft PR with "Create a merge commit" and says "publish". Claude does not merge or release.
+
+## 13. Release (2026-11-04)
+
+The owner merged PR #47 at 14:24:53 UTC (merge commit `c27f68ed974f39ae9e550e53b8a557c9eec53911`) and wrote "Publish" in this thread at 14:30:06 UTC. The PC session built from exactly that commit in a fresh clone (`cargo test --lib` 500 passed, 1 ignored; `tsc` ok), smoke-tested the portable build on throwaway data (a database with two rows, one Arabic, survived a restart), and ran `gh release create v1.5.0` (tag on `c27f68e`, Latest). Assets and SHA-256 digests on GitHub equal the table in `docs/release-notes/v1.5.0.md`; v1.4.0 and older releases were not touched. **Not run:** the setup installer of this build (the test PC already has an installed Notaya registry key). Result state: published; not accepted.
