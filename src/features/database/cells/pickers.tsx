@@ -238,7 +238,7 @@ export function FilesPicker({ rowId, prop, value, onFiles }: FilesProps) {
         onClick={() => input.current?.click()}
         className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line py-2 text-sm text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-50"
       >
-        <Upload size={14} /> {busy ? "Uploading…" : "Upload a file (up to 50 MB)"}
+        <Upload size={14} /> {busy ? "Uploading…" : "Upload a file (up to 900 MB)"}
       </button>
     </div>
   );

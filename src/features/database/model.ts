@@ -281,7 +281,7 @@ export function weekdayMon(y: number, m: number, d: number): number {
 
 // ---------------------------------------------------------------- files
 
-export const MAX_FILE_BYTES = 50 * 1024 * 1024;
+export const MAX_FILE_BYTES = 900 * 1024 * 1024;
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${Math.round(n / 102.4) / 10} KB`;

@@ -19,6 +19,7 @@ import { api, errorText } from "@/lib/ipc";
 import type { SearchHit } from "@/lib/types";
 import { useApp } from "@/store/app";
 import { openExport } from "@/features/notes/ExportDialog";
+import { RecentSearches, useRecentSearches } from "@/features/search/RecentSearches";
 
 export default function CommandPalette() {
   const open = useApp((s) => s.paletteOpen);
@@ -26,6 +27,7 @@ export default function CommandPalette() {
   const setOpen = useApp((s) => s.setPaletteOpen);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
+  const searches = useRecentSearches(open);
 
   useEffect(() => {
     if (!open) {
@@ -54,7 +56,11 @@ export default function CommandPalette() {
     Promise.resolve(fn()).catch((e) => toast.error(errorText(e)));
   };
 
-  const goToHit = (hit: SearchHit) =>
+  const goToHit = (hit: SearchHit) => {
+    searches.remember(query);
+    return goToHitNow(hit);
+  };
+  const goToHitNow = (hit: SearchHit) =>
     run(async () => {
       const s = useApp.getState();
       if (hit.kind === "page") {
@@ -126,6 +132,17 @@ export default function CommandPalette() {
                     </Command.Item>
                   ))}
                 </Command.Group>
+              )}
+
+              {!query.trim() && (
+                <RecentSearches
+                  recent={searches.recent}
+                  onPick={setQuery}
+                  onForget={searches.forget}
+                  onClear={searches.clear}
+                  itemClass={itemClass}
+                  headingClass="mb-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint"
+                />
               )}
 
               {!query.trim() && (

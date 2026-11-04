@@ -386,6 +386,7 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
     let mut settings = state.with(|s| Ok(s.settings()))?;
     // The calculator history has its own commands; the settings screen doesn't need it.
     settings.calc_history.clear();
+    settings.search_history.clear();
     Ok(settings)
 }
 
@@ -395,6 +396,7 @@ pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Setti
     let protect = state.with_mut(|s| {
         // The calculator history changes only through the calculator commands.
         settings.calc_history = s.settings().calc_history;
+        settings.search_history = s.settings().search_history;
         s.put(Item::Settings(settings.clone()))?;
         Ok(s.protects_capture())
     })?;

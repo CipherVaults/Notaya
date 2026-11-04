@@ -17,8 +17,9 @@ use store::{RowId, Store, Table};
 
 /// Largest single item accepted (a long page with lots of text).
 const MAX_ITEM_BYTES: usize = 32 * 1024 * 1024;
-/// Largest image attachment.
-pub const MAX_ATTACHMENT_BYTES: usize = 25 * 1024 * 1024;
+/// Largest image attachment. One SQLite value holds at most 1,000,000,000 bytes, so 900 MB is the ceiling for
+/// anything stored as one encrypted record (the owner asked for 2 GB on 2026-11-04; see EX-2026-11-04-43).
+pub const MAX_ATTACHMENT_BYTES: usize = 900 * 1024 * 1024;
 
 pub struct Session {
     /// The format the file is in. A vault from V1.3.0 or earlier is `Legacy` until `upgrade_format` runs.
@@ -259,15 +260,15 @@ impl Session {
 
     pub fn put_attachment(&mut self, mime: &str, bytes: &[u8]) -> Result<String> {
         if bytes.len() > MAX_ATTACHMENT_BYTES {
-            return Err(Error::invalid("Images must be smaller than 25 MB."));
+            return Err(Error::invalid("Images must be smaller than 900 MB."));
         }
         self.put_blob(mime, bytes)
     }
 
-    /// A file attached to a database row (any type; at most `database::types::MAX_FILE_BYTES`, 50 MB).
+    /// A file attached to a database row (any type; at most `database::types::MAX_FILE_BYTES`, 900 MB).
     pub fn put_file(&mut self, mime: &str, bytes: &[u8]) -> Result<String> {
         if bytes.len() > crate::database::types::MAX_FILE_BYTES {
-            return Err(Error::invalid("Files must be smaller than 50 MB."));
+            return Err(Error::invalid("Files must be smaller than 900 MB."));
         }
         self.put_blob(mime, bytes)
     }

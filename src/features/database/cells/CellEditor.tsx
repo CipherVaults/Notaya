@@ -95,6 +95,10 @@ export default function EditableCell(p: EditableCellProps) {
           sideOffset={4}
           collisionPadding={12}
           onClick={(e) => e.stopPropagation()}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            p.onEnd?.("blur"); // a grid takes the focus back, so the keys keep working
+          }}
           className="z-[80] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto rounded-lg border border-line bg-elevated shadow-float outline-none"
         >
           {body}

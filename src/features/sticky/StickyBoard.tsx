@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Calculator, Check, CheckSquare, ExternalLink, MonitorUp, Plus, StickyNote, Trash2, X } from "lucide-react";
+import { Calculator, Check, CheckSquare, EyeOff, ExternalLink, MonitorUp, Plus, StickyNote, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { stickyColor } from "@/lib/palette";
@@ -104,6 +104,17 @@ export default function StickyBoard() {
     await refresh();
   };
 
+  // Closes every sticky note window at once. The notes are kept: Open all (or a click on a note) brings them back.
+  const hideAll = async () => {
+    try {
+      await api.hideStickies();
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+    await refresh().catch(() => {});
+  };
+  const anyOpen = stickies.some((s) => s.open);
+
   return (
     <div
       ref={boardRef}
@@ -112,6 +123,11 @@ export default function StickyBoard() {
       onKeyDown={(e) => {
         // A key handler on the board, not the window, so Escape in the confirm dialog only closes the dialog.
         if (selecting && e.key === "Escape") stopSelecting();
+        // Delete or Backspace removes the ticked notes (after the same confirmation as the button).
+        else if (selecting && (e.key === "Delete" || e.key === "Backspace") && !e.repeat) {
+          e.preventDefault();
+          deleteSelected();
+        }
       }}
     >
       <div className="px-8 py-8">
@@ -148,8 +164,11 @@ export default function StickyBoard() {
               <Button variant="outline" onClick={openCalculator} title="Open a calculator in its own window">
                 <Calculator size={16} /> Calculator
               </Button>
-              <Button variant="outline" onClick={openAll}>
-                <MonitorUp size={16} /> Show all on desktop
+              <Button variant="outline" onClick={openAll} disabled={stickies.length === 0} title="Open every sticky note on the desktop">
+                <MonitorUp size={16} /> Open all
+              </Button>
+              <Button variant="outline" onClick={hideAll} disabled={!anyOpen} title="Close every sticky note window. The notes are kept; Open all brings them back.">
+                <EyeOff size={16} /> Hide all
               </Button>
               <Button variant="primary" onClick={create}>
                 <Plus size={16} /> New note

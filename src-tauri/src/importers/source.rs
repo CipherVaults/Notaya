@@ -19,13 +19,13 @@ use super::zip::Archive;
 #[cfg(test)]
 use super::zip;
 
-/// Everything read or inflated during one import.
-pub const MAX_TOTAL: u64 = 2 * 1024 * 1024 * 1024;
+/// Everything read or inflated during one import (a 2 GB file may hold more than 2 GB once unpacked).
+pub const MAX_TOTAL: u64 = 4 * 1024 * 1024 * 1024;
 /// Most files looked at in a folder.
 const MAX_WALK: usize = 50_000;
 const MAX_DEPTH: usize = 24;
 /// Largest ZIP file read into memory.
-pub const MAX_ZIP_FILE: u64 = 1024 * 1024 * 1024;
+pub const MAX_ZIP_FILE: u64 = 2 * 1024 * 1024 * 1024;
 
 enum Origin {
     Disk(PathBuf),
@@ -103,12 +103,12 @@ impl Vfs {
         self.mount(Archive::open(data)?, true)
     }
 
-    /// Makes room for `len` more bytes of ZIP file in memory. Refused beyond 1 GB together: many
+    /// Makes room for `len` more bytes of ZIP file in memory. Refused beyond 2 GB together: many
     /// picked ZIP files must not add up to more than one big one.
     fn charge_zip(&mut self, len: u64) -> Result<(), String> {
         let total = self.zip_total.saturating_add(len);
         if total > MAX_ZIP_FILE {
-            return Err("The ZIP files you chose are larger than 1 GB together. Import them in smaller parts.".into());
+            return Err("The ZIP files you chose are larger than 2 GB together. Import them in smaller parts.".into());
         }
         self.zip_total = total;
         Ok(())
@@ -256,7 +256,7 @@ impl Vfs {
                 return Err(format!("Too large (the limit is {} MB).", max / (1024 * 1024)));
             }
             if len > self.budget.get() {
-                return Err("The import is too large in total (more than 2 GB of content).".into());
+                return Err("The import is too large in total (more than 4 GB of content).".into());
             }
             let data = std::fs::read(p).map_err(|e| format!("Could not be read ({e})."))?;
             if data.len() as u64 > max {
@@ -370,7 +370,7 @@ mod tests {
     fn picked_zip_files_share_one_memory_allowance() {
         let mut v = Vfs::empty();
         v.zip_total = MAX_ZIP_FILE - 10;
-        assert!(v.charge_zip(11).unwrap_err().contains("larger than 1 GB together"));
+        assert!(v.charge_zip(11).unwrap_err().contains("larger than 2 GB together"));
         assert!(v.charge_zip(10).is_ok());
         assert!(v.charge_zip(1).is_err());
         // Two real picks each count.

@@ -223,7 +223,7 @@ impl PngParts {
         let (w, h) = (self.width as usize, self.height as usize);
         let rb = self.row_bytes();
         let expected = h.checked_mul(rb + 1).ok_or_else(bad)?;
-        // A picture in the vault is at most 25 MB, but it could still describe a huge canvas.
+        // A picture in the vault is at most 900 MB, but it could still describe a huge canvas.
         if w.saturating_mul(h) > 40_000_000 {
             return Err(Error::invalid("A picture is too large to put in a PDF."));
         }

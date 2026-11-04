@@ -27,16 +27,16 @@ use doc::{Inline, Marks};
 use source::Vfs;
 
 /// Largest Markdown, HTML or text file.
-pub const MAX_TEXT_FILE: u64 = 20 * 1024 * 1024;
+pub const MAX_TEXT_FILE: u64 = 2 * 1024 * 1024 * 1024;
 /// Largest Word or PDF file.
-pub const MAX_BINARY_FILE: u64 = 100 * 1024 * 1024;
+pub const MAX_BINARY_FILE: u64 = 2 * 1024 * 1024 * 1024;
 /// Largest picture (the same limit as a pasted picture).
 pub const MAX_IMAGE: u64 = crate::vault::MAX_ATTACHMENT_BYTES as u64;
 /// Most pages and pictures one import may create.
 pub const MAX_PAGES: usize = 5_000;
 pub const MAX_IMAGES: usize = 5_000;
 /// Pictures held in memory before they are stored (Word media, data: URIs).
-const MAX_IMAGE_MEMORY: u64 = 512 * 1024 * 1024;
+const MAX_IMAGE_MEMORY: u64 = 2 * 1024 * 1024 * 1024;
 
 /// The whole import may run this long; after that the converters stop and report it.
 pub const MAX_TIME: Duration = Duration::from_secs(15 * 60);

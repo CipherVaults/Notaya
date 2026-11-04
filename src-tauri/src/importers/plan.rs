@@ -38,12 +38,12 @@ const MAX_FOLDERS: usize = 40;
 /// Most skipped items listed.
 pub const MAX_LISTED: usize = 500;
 /// Most picture bytes one import may store.
-const MAX_IMAGE_TOTAL: u64 = 1024 * 1024 * 1024;
+const MAX_IMAGE_TOTAL: u64 = 2 * 1024 * 1024 * 1024;
 /// A page whose editor JSON or text is larger than this is not imported (the editor saves up to
 /// 20 million characters).
 const MAX_PAGE_BYTES: usize = 20_000_000;
 /// The rendered pages of one import together.
-const MAX_TOTAL_BYTES: usize = 512 * 1024 * 1024;
+const MAX_TOTAL_BYTES: usize = 2 * 1024 * 1024 * 1024;
 /// Names the vault accepts.
 const MAX_NAME: usize = 120;
 const MAX_TITLE: usize = 300;
@@ -811,7 +811,7 @@ impl Plan {
             };
             let usable = bytes.and_then(|b| match sniff(&b) {
                 None => Err("Not a PNG, JPEG, GIF or WebP picture.".to_string()),
-                Some(_) if total + b.len() as u64 > MAX_IMAGE_TOTAL => Err("Too many pictures in one import (more than 1 GB).".to_string()),
+                Some(_) if total + b.len() as u64 > MAX_IMAGE_TOTAL => Err("Too many pictures in one import (more than 2 GB).".to_string()),
                 Some(mime) => Ok((mime, b)),
             });
             match usable {
@@ -864,7 +864,7 @@ impl Plan {
                     Ok(r) if r.content.len() <= MAX_PAGE_BYTES && r.text.len() <= MAX_PAGE_BYTES => {
                         total = total.saturating_add(r.content.len() + r.text.len());
                         if total > MAX_TOTAL_BYTES {
-                            return Err("This import is too large (more than 512 MB of text). Import it in smaller parts.".into());
+                            return Err("This import is too large (more than 2 GB of text). Import it in smaller parts.".into());
                         }
                         cut_rows += r.cut_rows;
                         rendered.push(Some((r.content, r.text)));

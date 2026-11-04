@@ -140,9 +140,15 @@ const RowView = memo(function RowView({ row, index, cols, dbId, wrap, numbers, s
             role="gridcell"
             aria-selected={isActive}
             onMouseDown={(e) => {
-              if ((e.target as HTMLElement).closest("button,a,input,textarea")) return;
+              if (e.button !== 0 || (e.target as HTMLElement).closest("button,a,input,textarea")) return;
               const interactive = ["select", "status", "multiSelect", "date", "person", "files", "relation", "place"].includes(c.prop.kind) && !isComputedKind(c.prop.kind);
-              actions.select(index, ci, interactive && !isActive);
+              // A click on a tag or a date opens its picker at once. The browser must not move the focus afterwards (to the
+              // table): the picker would see that as a click outside and close itself the moment it opened.
+              if (interactive) {
+                e.preventDefault();
+                if (isActive && editing) return; // the picker is open already; Radix closes it on a click outside
+              }
+              actions.select(index, ci, interactive);
             }}
             className={cn(
               "db-cell relative align-top",
@@ -625,7 +631,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   const more = flat.length > limit;
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {selected.size > 0 && (
         <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-elevated px-4 py-1.5 text-sm">
           <span className="font-medium">{selected.size} selected</span>
@@ -635,7 +641,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           <button type="button" onClick={() => setSelected(new Set())} className="ms-auto rounded-md px-2 py-1 text-muted hover:bg-surface-2 hover:text-fg">Clear selection</button>
         </div>
       )}
-      <div ref={wrapRef} tabIndex={0} onKeyDown={onKeyDown} role="application" aria-label="Table" className="db-scroll overflow-x-auto outline-none" style={{ overflowY: "visible" }}>
+      <div ref={wrapRef} tabIndex={0} onKeyDown={onKeyDown} role="application" aria-label="Table" className="db-scroll min-h-0 flex-1 overflow-auto outline-none" style={shell.compact ? { maxHeight: 480 } : undefined}>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => (view.columns.some((c) => c.prop === String(e.active.id)) ? onColumnDrag(e) : onRowDrag(e))}>
           <table className="db-table text-sm" style={{ tableLayout: "fixed", width: GUTTER + cols.reduce((n, c) => n + c.width, 0) + 44 }} role="grid" aria-rowcount={flat.length}>
             <colgroup>
@@ -693,12 +699,12 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
         </DndContext>
       </div>
       {more && (
-        <button type="button" onClick={() => setLimit((n) => n + PAGE)} className="mx-auto my-3 rounded-md border border-line px-3 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg">
+        <button type="button" onClick={() => setLimit((n) => n + PAGE)} className="mx-auto my-3 shrink-0 rounded-md border border-line px-3 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg">
           Show more rows ({flat.length - limit} left)
         </button>
       )}
       {result.rows.length === 0 && !groups && (
-        <p className="px-4 py-3 text-sm text-faint">This table has no rows yet.</p>
+        <p className="shrink-0 px-4 py-3 text-sm text-faint">This table has no rows yet.</p>
       )}
       <span className="sr-only" aria-live="polite">{selected.size > 0 ? `${selected.size} rows selected` : ""}</span>
     </div>

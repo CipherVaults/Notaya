@@ -4,9 +4,11 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { BarChart3, ChartLine, ChartPie, Hash, RefreshCw, Settings2, Table2 } from "lucide-react";
 import { api } from "@/lib/ipc";
-import type { ChartConfig, ChartData, ChartSeries, Database, Property } from "@/lib/database-types";
+import type { ChartConfig, ChartData, ChartSeries, Database, GroupBy, Property } from "@/lib/database-types";
 import type { ViewProps } from "../viewTypes";
 import { cn } from "@/lib/utils";
+import { isComputedKind } from "../model";
+import ChartDrill, { type Drill } from "./ChartDrill";
 import { EmptyState, HUES, PropSelect, propOf } from "./shared";
 
 const KINDS = [
@@ -41,7 +43,13 @@ function paint(c: string | undefined, i = 0): string {
   return HUES[c && HUES[c] ? c : PALETTE[i % PALETTE.length]];
 }
 
-export default function ChartView({ db, view, result, updateView }: ViewProps) {
+/** Which part of a chart was clicked: a label (a bar, a slice, a point), a series, or both. Nothing = every row of the chart. */
+export interface ChartPick {
+  li?: number;
+  si?: number;
+}
+
+export default function ChartView({ db, view, result, updateView, openRow }: ViewProps) {
   const cfg = view.chart;
   const [data, setData] = useState<ChartData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +57,9 @@ export default function ChartView({ db, view, result, updateView }: ViewProps) {
   const [table, setTable] = useState(false);
   const [panel, setPanel] = useState(!cfg.xProp && cfg.kind !== "number");
   const [retry, setRetry] = useState(0);
+  const [drill, setDrill] = useState<Drill | null>(null);
   const seq = useRef(0);
+  const drillSeq = useRef(0);
   const key = JSON.stringify([db.id, view.id, view.chart, view.filter]);
 
   useEffect(() => {
@@ -77,6 +87,46 @@ export default function ChartView({ db, view, result, updateView }: ViewProps) {
 
   const patch = (p: Partial<ChartConfig>) => updateView({ chart: { ...cfg, ...p } });
   const needsX = cfg.kind !== "number";
+
+  // Click on a part of the chart: ask the backend for the rows with the same grouping the chart used, so the list
+  // always agrees with the numbers (dates by month, numbers in steps, options, empty values).
+  const openDrill = (pick: ChartPick) => {
+    if (!data) return;
+    const x = needsX ? propOf(db, cfg.xProp) : undefined;
+    const g = propOf(db, cfg.groupProp);
+    const label = pick.li !== undefined ? data.labels[pick.li] ?? "" : undefined;
+    const series = pick.si !== undefined && data.series.length > 1 ? data.series[pick.si]?.name ?? "" : undefined;
+    const chips: string[] = [];
+    if (x && label !== undefined) chips.push(`${x.name} is ${label || "empty"}`);
+    if (g && series !== undefined) chips.push(`${g.name} is ${series || "empty"}`);
+    if (!chips.length) chips.push(cfg.kind === "number" ? "All rows counted in this number" : "All rows in this chart");
+    const title = label !== undefined ? label : series !== undefined ? series : cfg.title || defaultTitle(db, cfg);
+    const others = db.props.filter((p) => p.kind !== "title" && p.id !== x?.id && p.id !== g?.id && !isComputedKind(p.kind) && p.kind !== "button" && p.kind !== "files");
+    const cols = [...(x ? [x] : []), ...(g ? [g] : []), ...others].slice(0, 3);
+    const mine = ++drillSeq.current;
+    setDrill({ title, chips, rows: [], cols, loading: true, error: null });
+    const xg: GroupBy | null = x ? { prop: x.id, sort: cfg.xSort || "manual", dateBy: cfg.xBy, numberStep: cfg.xStep, hideEmpty: cfg.hideEmpty, hidden: [], collapsed: [] } : null;
+    const sg: GroupBy | null = x && g ? { prop: g.id, sort: "manual", dateBy: "", numberStep: 0, hideEmpty: false, hidden: [], collapsed: [] } : null;
+    api
+      .queryView({ databaseId: db.id, viewId: view.id, view: { ...view, sorts: [], calcs: [], group: xg, subGroup: sg } })
+      .then((r) => {
+        if (drillSeq.current !== mine) return;
+        const groups = r.groups ?? [];
+        const grp = label !== undefined ? groups.find((q) => q.label === label) ?? groups[pick.li ?? -1] : undefined;
+        let ids: string[];
+        if (series !== undefined && sg) {
+          const pool = grp ? [grp] : groups;
+          ids = [...new Set(pool.flatMap((q) => q.subs.filter((sub) => sub.label === series).flatMap((sub) => sub.rows)))];
+        } else if (label !== undefined) ids = grp?.rows ?? [];
+        else ids = r.rows.map((row) => row.id);
+        const byId = new Map(r.rows.map((row) => [row.id, row]));
+        setDrill((d) => (d ? { ...d, rows: ids.map((id) => byId.get(id)).filter((row): row is NonNullable<typeof row> => !!row), loading: false } : d));
+      })
+      .catch((e) => {
+        if (drillSeq.current !== mine) return;
+        setDrill((d) => (d ? { ...d, loading: false, error: typeof e === "string" ? e : e instanceof Error ? e.message : "The rows could not be loaded." } : d));
+      });
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-6 pt-1" role="region" aria-label="Chart">
@@ -114,10 +164,11 @@ export default function ChartView({ db, view, result, updateView }: ViewProps) {
               {!panel ? <button type="button" onClick={() => setPanel(true)} className="h-8 rounded-lg bg-accent px-3 text-[0.8rem] text-accent-fg">Customize</button> : null}
             </EmptyState>
           ) : (
-            <Chart data={data} cfg={cfg} db={db} table={table} dim={loading} />
+            <Chart data={data} cfg={cfg} db={db} table={table} dim={loading} open={openDrill} />
           )}
         </div>
       </div>
+      {drill ? <ChartDrill drill={drill} onClose={() => (drillSeq.current++, setDrill(null))} onOpenRow={(id) => (drillSeq.current++, setDrill(null), openRow(id))} /> : null}
     </div>
   );
 }
@@ -230,6 +281,10 @@ interface Tip {
   rows: { color: string; name: string; text: string }[];
 }
 
+const HINT = "Click to view data";
+/** Calculations whose result is not a share of a whole, so a percent next to them would mean nothing. */
+const NO_PERCENT = new Set(["avg", "median", "min", "max", "range", "percentNotEmpty"]);
+
 function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
   const ref = useRef<T>(null);
   const [w, setW] = useState(640);
@@ -264,7 +319,7 @@ export function niceTicks(min: number, max: number, count = 5, integers = false)
 const compact = (n: number) => (Math.abs(n) >= 10000 ? new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n) : new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n));
 const cut = (s: string, n: number) => (s.length > n ? s.slice(0, Math.max(1, n - 1)) + "…" : s);
 
-function Chart({ data, cfg, db, table, dim }: { data: ChartData; cfg: ChartConfig; db: Database; table: boolean; dim: boolean }) {
+function Chart({ data, cfg, db, table, dim, open }: { data: ChartData; cfg: ChartConfig; db: Database; table: boolean; dim: boolean; open: (p: ChartPick) => void }) {
   const [box, width] = useWidth<HTMLDivElement>();
   const [tip, setTip] = useState<Tip | null>(null);
   const y = propOf(db, cfg.yProp);
@@ -280,7 +335,7 @@ function Chart({ data, cfg, db, table, dim }: { data: ChartData; cfg: ChartConfi
 
   let body: ReactNode;
   if (cfg.kind === "number") {
-    body = <NumberTile data={data} cfg={cfg} y={y} />;
+    body = <NumberTile data={data} cfg={cfg} y={y} open={() => open({})} />;
   } else if (empty) {
     body = (
       <EmptyState icon={<BarChart3 size={28} />} title="Nothing to chart yet">
@@ -290,11 +345,11 @@ function Chart({ data, cfg, db, table, dim }: { data: ChartData; cfg: ChartConfi
   } else if (table) {
     body = <DataTable data={data} />;
   } else if (cfg.kind === "donut") {
-    body = <Donut data={data} cfg={cfg} width={width} summary={summary} show={show} hide={hide} />;
+    body = <Donut data={data} cfg={cfg} width={width} summary={summary} show={show} hide={hide} open={open} />;
   } else if (cfg.kind === "line") {
-    body = <Lines data={data} cfg={cfg} width={width} summary={summary} show={show} hide={hide} />;
+    body = <Lines data={data} cfg={cfg} width={width} summary={summary} show={show} hide={hide} open={open} />;
   } else {
-    body = <Bars data={data} cfg={cfg} width={width} summary={summary} show={show} hide={hide} />;
+    body = <Bars data={data} cfg={cfg} width={width} summary={summary} show={show} hide={hide} open={open} />;
   }
 
   return (
@@ -310,6 +365,7 @@ function Chart({ data, cfg, db, table, dim }: { data: ChartData; cfg: ChartConfi
               <span className="ms-auto ps-2 tabular-nums text-fg">{r.text}</span>
             </div>
           ))}
+          {!table ? <div className="mt-1 border-t border-line pt-1 text-[0.72rem] text-faint" data-tooltip-hint>{HINT}</div> : null}
         </div>
       ) : null}
     </div>
@@ -331,15 +387,30 @@ interface Draw {
   summary: string;
   show: (e: React.MouseEvent, title: string, rows: Tip["rows"]) => void;
   hide: () => void;
+  /** A bar, slice or point was clicked: show the rows behind it. */
+  open: (p: ChartPick) => void;
 }
+
+const clickKeys = (fn: () => void) => (e: React.KeyboardEvent) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    fn();
+  }
+};
 
 const seriesColor = (s: ChartSeries, i: number, cfg: ChartConfig) => paint(s.color || cfg.color, i);
 
 function tipRows(data: ChartData, cfg: ChartConfig, li: number, only?: number): Tip["rows"] {
+  const pct = !NO_PERCENT.has(cfg.yCalc || "countAll");
   return data.series
     .map((s, si) => ({ s, si }))
     .filter(({ si }) => only === undefined || si === only)
-    .map(({ s, si }) => ({ color: s.points[li]?.color ? paint(s.points[li].color, li) : seriesColor(s, si, cfg), name: s.name, text: s.points[li]?.text ?? "" }));
+    .map(({ s, si }) => {
+      const total = s.points.reduce((a, p) => a + Math.max(0, p.value), 0);
+      const v = s.points[li]?.value ?? 0;
+      const share = pct && total > 0 && v >= 0 ? ` · ${Math.round((v / total) * 1000) / 10}%` : "";
+      return { color: s.points[li]?.color ? paint(s.points[li].color, li) : seriesColor(s, si, cfg), name: s.name, text: `${s.points[li]?.text ?? ""}${share}` };
+    });
 }
 
 function Legend({ data, cfg }: { data: ChartData; cfg: ChartConfig }) {
@@ -356,7 +427,7 @@ function Legend({ data, cfg }: { data: ChartData; cfg: ChartConfig }) {
   );
 }
 
-function Bars({ data, cfg, width, summary, show, hide }: Draw) {
+function Bars({ data, cfg, width, summary, show, hide, open }: Draw) {
   const horizontal = cfg.horizontal;
   const n = data.labels.length;
   const k = data.series.length;
@@ -406,7 +477,19 @@ function Bars({ data, cfg, width, summary, show, hide }: Draw) {
       const wid = Math.max(Math.abs(vx(top) - vx(base)), v === 0 ? 0 : 1.5);
       const labelOk = cfg.showLabels && (horizontal ? true : band / (stacked ? 1 : k) >= 30);
       bars.push(
-        <g key={`${li}-${si}`} onMouseMove={(e) => show(e, label, tipRows(data, cfg, li, stacked || k === 1 ? undefined : si))} onMouseLeave={hide} data-bar-point>
+        <g
+          key={`${li}-${si}`}
+          role="button"
+          tabIndex={0}
+          aria-label={`${label || "No value"}: ${p.text}. Click to view data`}
+          onMouseMove={(e) => show(e, label, tipRows(data, cfg, li, stacked || k === 1 ? undefined : si))}
+          onMouseLeave={hide}
+          onFocus={() => hide()}
+          onClick={() => (hide(), open({ li, si: stacked || k === 1 ? undefined : si }))}
+          onKeyDown={clickKeys(() => open({ li, si: stacked || k === 1 ? undefined : si }))}
+          className="cursor-pointer outline-none focus-visible:[&>rect]:stroke-[var(--text)] focus-visible:[&>rect]:stroke-2"
+          data-bar-point
+        >
           <rect
             data-bar
             x={horizontal ? xA : c0 + off - barW / 2}
@@ -470,7 +553,7 @@ function Bars({ data, cfg, width, summary, show, hide }: Draw) {
   );
 }
 
-function Lines({ data, cfg, width, summary, show, hide }: Draw) {
+function Lines({ data, cfg, width, summary, show, hide, open }: Draw) {
   const n = data.labels.length;
   const all = data.series.flatMap((s) => s.points.map((p) => p.value));
   const ticks = niceTicks(Math.min(...all, 0), Math.max(...all, 0), 5, all.every(Number.isInteger));
@@ -514,7 +597,21 @@ function Lines({ data, cfg, width, summary, show, hide }: Draw) {
               {s.points.map((p, i) => (
                 <g key={i}>
                   <circle data-point cx={pts[i][0]} cy={pts[i][1]} r={3.6} fill="var(--bg)" stroke={color} strokeWidth={2} />
-                  <circle cx={pts[i][0]} cy={pts[i][1]} r={12} fill="transparent" onMouseMove={(e) => show(e, data.labels[i], tipRows(data, cfg, i))} onMouseLeave={hide} />
+                  <circle
+                    data-point-hit
+                    cx={pts[i][0]}
+                    cy={pts[i][1]}
+                    r={12}
+                    fill="transparent"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${data.labels[i] || "No value"}: ${p.text}. Click to view data`}
+                    className="cursor-pointer outline-none"
+                    onMouseMove={(e) => show(e, data.labels[i], tipRows(data, cfg, i))}
+                    onMouseLeave={hide}
+                    onClick={() => (hide(), open({ li: i, si: data.series.length > 1 ? si : undefined }))}
+                    onKeyDown={clickKeys(() => open({ li: i, si: data.series.length > 1 ? si : undefined }))}
+                  />
                   {cfg.showLabels && n <= 14 && data.series.length <= 2 ? (
                     <text x={pts[i][0]} y={pts[i][1] - 9} textAnchor="middle" fontSize="11" fill="currentColor" className="pointer-events-none text-muted">{p.text}</text>
                   ) : null}
@@ -529,7 +626,7 @@ function Lines({ data, cfg, width, summary, show, hide }: Draw) {
   );
 }
 
-function Donut({ data, cfg, width, summary, show, hide }: Draw) {
+function Donut({ data, cfg, width, summary, show, hide, open }: Draw) {
   const slices = useMemo(() => {
     if (data.series.length > 1) {
       return data.series.map((s, i) => ({ label: s.name, value: s.points.reduce((a, p) => a + Math.max(0, p.value), 0), text: String(Math.round(s.points.reduce((a, p) => a + Math.max(0, p.value), 0) * 100) / 100), color: seriesColor(s, i, cfg) }));
@@ -538,6 +635,8 @@ function Donut({ data, cfg, width, summary, show, hide }: Draw) {
     return (s?.points ?? []).map((p, i) => ({ label: p.label, value: Math.max(0, p.value), text: p.text, color: paint(p.color, i) }));
   }, [data, cfg]);
   const sum = slices.reduce((a, s) => a + s.value, 0) || 1;
+  // One series: a slice is a label. Several series: a slice is a series (all its labels).
+  const pickOfSlice = (i: number): ChartPick => (data.series.length > 1 ? { si: i } : { li: i });
   const wide = width >= 520;
   const size = wide ? 260 : Math.min(260, width - 16);
   const sw = 38;
@@ -563,9 +662,14 @@ function Donut({ data, cfg, width, summary, show, hide }: Draw) {
                 strokeWidth={sw}
                 strokeDasharray={`${Math.max(len - (slices.length > 1 && len > 2 ? 1.5 : 0), 0)} ${circ}`}
                 strokeDashoffset={-acc}
-                className="transition-opacity hover:opacity-80"
+                className="cursor-pointer outline-none transition-opacity hover:opacity-80"
+                role="button"
+                tabIndex={0}
+                aria-label={`${s.label || "No value"}: ${s.text}. Click to view data`}
                 onMouseMove={(e) => show(e, s.label, [{ color: s.color, name: `${Math.round((s.value / sum) * 1000) / 10}%`, text: s.text }])}
                 onMouseLeave={hide}
+                onClick={() => (hide(), open(pickOfSlice(i)))}
+                onKeyDown={clickKeys(() => open(pickOfSlice(i)))}
               />
             );
             acc += len;
@@ -577,11 +681,13 @@ function Donut({ data, cfg, width, summary, show, hide }: Draw) {
       </svg>
       <ul className="flex min-w-0 max-w-full flex-col gap-1 text-[0.82rem]" aria-label="Legend">
         {slices.map((s, i) => (
-          <li key={i} className="flex items-center gap-2" data-legend>
-            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
-            <span dir="auto" className="min-w-0 truncate">{s.label || "No value"}</span>
-            <span className="ms-auto ps-3 tabular-nums text-muted">{s.text}</span>
-            <span className="w-11 text-end tabular-nums text-faint">{Math.round((s.value / sum) * 100)}%</span>
+          <li key={i} data-legend>
+            <button type="button" onClick={() => open(pickOfSlice(i))} className="flex w-full items-center gap-2 rounded-md px-1.5 py-0.5 text-start hover:bg-surface-2" title={HINT}>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
+              <span dir="auto" className="min-w-0 truncate">{s.label || "No value"}</span>
+              <span className="ms-auto ps-3 tabular-nums text-muted">{s.text}</span>
+              <span className="w-11 text-end tabular-nums text-faint">{Math.round((s.value / sum) * 100)}%</span>
+            </button>
           </li>
         ))}
       </ul>
@@ -589,16 +695,16 @@ function Donut({ data, cfg, width, summary, show, hide }: Draw) {
   );
 }
 
-function NumberTile({ data, cfg, y }: { data: ChartData; cfg: ChartConfig; y: Property | undefined }) {
+function NumberTile({ data, cfg, y, open }: { data: ChartData; cfg: ChartConfig; y: Property | undefined; open: () => void }) {
   const text = data.total ?? data.series[0]?.points[0]?.text ?? "0";
   const calc = CALCS.find((c) => c.id === (cfg.yCalc || "countAll"))?.name ?? "Count of rows";
   const color = cfg.color ? paint(cfg.color) : "var(--text)";
   return (
-    <div className="flex min-h-[16rem] flex-col items-center justify-center gap-1 text-center" role="img" aria-label={`${cfg.title || calc}: ${text}`} data-chart="number">
+    <button type="button" onClick={open} title={HINT} className="flex min-h-[16rem] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg text-center hover:bg-surface-2/60" aria-label={`${cfg.title || calc}: ${text}. Click to view data`} data-chart="number">
       <div className="text-[4rem] font-semibold leading-none tabular-nums" style={{ color }} data-number>{text}</div>
       <div dir="auto" className="mt-2 text-[0.9rem] text-muted">{cfg.title || (y && cfg.yCalc !== "countAll" ? `${calc} of ${y.name}` : calc)}</div>
-      <div className="text-xs text-faint">{data.rows} {data.rows === 1 ? "row" : "rows"}</div>
-    </div>
+      <div className="text-xs text-faint">{data.rows} {data.rows === 1 ? "row" : "rows"} · {HINT}</div>
+    </button>
   );
 }
 

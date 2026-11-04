@@ -100,7 +100,7 @@ pub enum Scope {
 
 /// The most sections or notebooks one export may name.
 pub const MAX_CHOSEN: usize = 1_000;
-/// The most picture data one export holds in memory (the vault allows 25 MB for each picture).
+/// The most picture data one export holds in memory (the vault allows 900 MB for each picture).
 pub const MAX_IMAGE_BYTES: u64 = 1024 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug)]

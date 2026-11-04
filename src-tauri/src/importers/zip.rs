@@ -12,7 +12,7 @@ use std::cell::Cell;
 
 pub const MAX_ENTRIES: usize = 50_000;
 /// Largest single entry, as declared and as inflated.
-pub const MAX_ENTRY: u64 = 512 * 1024 * 1024;
+pub const MAX_ENTRY: u64 = 2 * 1024 * 1024 * 1024;
 /// Entries above this size must not be compressed more than `MAX_RATIO` to 1.
 const RATIO_FLOOR: u64 = 1024 * 1024;
 const MAX_RATIO: u64 = 100;
@@ -188,7 +188,7 @@ impl Archive {
             return Err("Too large.".into());
         }
         if e.size > budget.get() {
-            return Err("The import is too large in total (more than 2 GB of content).".into());
+            return Err("The import is too large in total (more than 4 GB of content).".into());
         }
         let b = &self.data;
         let lo = usize::try_from(e.local_offset).map_err(|_| "Damaged entry.")?;

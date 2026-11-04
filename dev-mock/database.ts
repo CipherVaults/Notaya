@@ -716,7 +716,10 @@ function sanitize(db: Database) {
     if (v.group && !db.props.some((p) => p.id === v.group!.prop)) v.group = null;
     if (v.subGroup && (!v.group || !db.props.some((p) => p.id === v.subGroup!.prop))) v.subGroup = null;
   }
-  void ids;
+  // Like the backend: an action that changes a property the database does not have is dropped when it is saved.
+  const dropBlank = (acts: { kind: string; prop: string }[] | undefined) => acts && acts.splice(0, acts.length, ...acts.filter((a) => a.kind !== "setProp" || ids.includes(a.prop)));
+  for (const a of db.automations ?? []) dropBlank(a.actions);
+  for (const p of db.props) dropBlank(p.actions);
 }
 
 function meta(d: Database) {

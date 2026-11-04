@@ -339,6 +339,12 @@ fn emits_vault_locked(reason: &str, was_open: bool) -> bool {
     reason != "restore" && !(reason == "quit" && was_open)
 }
 
+/// Asks every window to write its pending edits, then waits (up to the usual lock time). Used before
+/// closing sticky notes without locking ("Hide all"). Same rule as `request_flush`: not on the main thread.
+pub fn flush_windows(app: &AppHandle) {
+    request_flush(app, FLUSH_TIMEOUT);
+}
+
 /// Locks the vault: first lets every window save its pending edits (unless the
 /// drive was removed, when saving can't work), then wipes keys and decrypted
 /// data from memory, closes sticky notes and calculators, tells the UI to reset itself, and only

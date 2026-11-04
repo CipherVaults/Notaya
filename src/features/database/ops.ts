@@ -29,9 +29,9 @@ export async function saveCells(rowId: string, patch: Record<string, unknown>, t
   }
 }
 
-/** Reads a File into the backend (the 50 MB limit is checked first) and resolves to the cell's files. */
+/** Reads a File into the backend (the 900 MB limit is checked first) and resolves to the cell's files. */
 export async function uploadFile(rowId: string, propId: string, file: File, max: number) {
-  if (file.size > max) throw new Error(`"${file.name}" is larger than 50 MB.`);
+  if (file.size > max) throw new Error(`"${file.name}" is larger than 900 MB.`);
   const bytes = new Uint8Array(await file.arrayBuffer());
   return api.attachFile(rowId, propId, file.name, bytes);
 }

@@ -15,6 +15,7 @@ let exists = startState !== "create" && startState !== "start";
 let noticeTaken = false;
 let importRunning = false;
 let importCancelled = false;
+const searchHistory: string[] = [];
 const calcHistory: { expr: string; result: string }[] = [{ expr: "12.5 × (3 + 4)", result: "87.5" }];
 
 const now = Date.now();
@@ -289,6 +290,36 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     }
     // The real app opens a calculator window; here, open ?label=calc-1 in a new tab to see one.
     case "open_calculator":
+      return ok(null);
+    case "open_sticky":
+      for (const k of stickies) if (k.id === args.id) k.open = true;
+      return ok(null);
+    case "close_sticky":
+      for (const k of stickies) if (k.id === args.id) k.open = false;
+      return ok(null);
+    case "hide_stickies":
+      for (const k of stickies) k.open = false;
+      return ok(null);
+    // The last five searches (the real app keeps them in the encrypted vault).
+    case "search_history":
+      return ok([...searchHistory]);
+    case "add_search_term": {
+      const term = String(args.term).trim().replace(/\s+/g, " ");
+      if (term) {
+        const at = searchHistory.findIndex((t) => t.toLowerCase() === term.toLowerCase());
+        if (at >= 0) searchHistory.splice(at, 1);
+        searchHistory.unshift(term);
+        searchHistory.length = Math.min(searchHistory.length, 5);
+      }
+      return ok([...searchHistory]);
+    }
+    case "remove_search_term": {
+      const at = searchHistory.indexOf(String(args.term));
+      if (at >= 0) searchHistory.splice(at, 1);
+      return ok([...searchHistory]);
+    }
+    case "clear_search_history":
+      searchHistory.length = 0;
       return ok(null);
     case "calc_history":
       return ok([...calcHistory]);

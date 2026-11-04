@@ -4,7 +4,7 @@
 
 use super::value::{from_parts, parse_date};
 
-pub const MAX_BYTES: u64 = 50 * 1024 * 1024;
+pub const MAX_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 pub const MAX_ROWS: usize = 100_000;
 pub const MAX_COLUMNS: usize = 100;
 
