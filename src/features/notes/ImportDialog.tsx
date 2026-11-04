@@ -152,7 +152,9 @@ export default function ImportDialog() {
           <div className="space-y-2 rounded-lg border border-line bg-surface-2/50 px-3 py-2.5 text-sm text-muted">
             <p>
               <span className="font-medium text-fg">Notion:</span> export your pages as <span className="font-medium text-fg">HTML</span> (Export, then Format: HTML)
-              to keep colors, highlights and the page font. The Markdown export drops them.
+              to keep colors, highlights and the page font. The Markdown export drops them. For databases, also choose the{" "}
+              <span className="font-medium text-fg">Markdown &amp; CSV</span> export (its CSV files hold the rows). Choose both together, as ZIP files, folders or loose
+              files: each page is imported once, with the formatting of the HTML and the data of the CSV.
             </p>
             <p>
               <span className="font-medium text-fg">PDF:</span> only the text is imported, not scanned pages, pictures or the layout.

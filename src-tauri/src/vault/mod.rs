@@ -261,6 +261,18 @@ impl Session {
         if bytes.len() > MAX_ATTACHMENT_BYTES {
             return Err(Error::invalid("Images must be smaller than 25 MB."));
         }
+        self.put_blob(mime, bytes)
+    }
+
+    /// A file attached to a database row (any type; at most `database::types::MAX_FILE_BYTES`, 50 MB).
+    pub fn put_file(&mut self, mime: &str, bytes: &[u8]) -> Result<String> {
+        if bytes.len() > crate::database::types::MAX_FILE_BYTES {
+            return Err(Error::invalid("Files must be smaller than 50 MB."));
+        }
+        self.put_blob(mime, bytes)
+    }
+
+    fn put_blob(&mut self, mime: &str, bytes: &[u8]) -> Result<String> {
         let id_hex = crate::model::new_id();
         let id = parse_id(&id_hex)?;
         let mut payload = Zeroizing::new(Vec::with_capacity(1 + mime.len() + bytes.len()));
@@ -340,6 +352,19 @@ impl Session {
                     referenced.push_str(&p.cover);
                 }
                 Item::Sticky(s) => referenced.push_str(&s.content),
+                // Database rows keep pictures in their body and cover, and files in their cells;
+                // templates keep a body too (A35).
+                Item::Row(r) => {
+                    referenced.push_str(&r.content);
+                    referenced.push_str(&r.cover);
+                    referenced.push_str(&r.cells);
+                }
+                Item::Database(d) => {
+                    for t in &d.templates {
+                        referenced.push_str(&t.content);
+                        referenced.push_str(&t.cells);
+                    }
+                }
                 _ => {}
             }
         }

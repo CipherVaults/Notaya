@@ -242,6 +242,8 @@ impl AppState {
     }
 
     pub fn take_session(&self) -> Option<Session> {
+        // Messages of automations hold row titles: they do not outlive the unlocked session.
+        crate::commands::automation::clear_notices();
         guard(&self.session).take()
     }
 

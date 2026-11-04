@@ -51,6 +51,7 @@ export const ImageBlock = Image.extend({
       const caption = document.createElement("input");
       caption.className = "image-caption";
       caption.placeholder = "Write a caption…";
+      caption.dir = "auto";
       caption.spellcheck = true;
       caption.readOnly = !editor.isEditable;
       frame.append(img, left, right);

@@ -26,6 +26,10 @@ pub enum Item {
     Page(Page),
     Sticky(Sticky),
     Settings(Settings),
+    /// A database (A35, V1.5.0). V1.4.0 and earlier cannot read a vault that holds one.
+    Database(crate::database::types::Database),
+    /// A row of a database (A35): a page with cell values.
+    Row(crate::database::types::Row),
 }
 
 impl Item {
@@ -36,6 +40,8 @@ impl Item {
             Item::Page(x) => &x.id,
             Item::Sticky(x) => &x.id,
             Item::Settings(_) => SETTINGS_ID,
+            Item::Database(x) => &x.id,
+            Item::Row(x) => &x.id,
         }
     }
 }

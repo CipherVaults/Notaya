@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
-import { CalendarDays, ImagePlus, Link2, Minus, Radical, Table2 } from "lucide-react";
+import { CalendarDays, ImagePlus, Link2, Minus, PilcrowLeft, PilcrowRight, Radical, Table2, TableProperties } from "lucide-react";
+import DatabasePicker from "@/features/database/DatabasePicker";
+import { insertInlineDatabase, insertLinkedView } from "@/features/database/inline";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { pickImages } from "./extensions";
@@ -15,9 +17,15 @@ interface Item {
   group: string;
   keywords: string;
   icon: React.ReactNode;
-  run: (editor: Editor) => void;
-  /** Opens the page list instead of running right away. */
-  picker?: "page";
+  run: (editor: Editor, page?: PageRef) => void;
+  /** Opens the page or database list instead of running right away. */
+  picker?: "page" | "database";
+}
+
+/** The page being edited (a row of a database counts as a page). */
+export interface PageRef {
+  id: string;
+  sectionId: string;
 }
 
 const s = 17;
@@ -44,6 +52,11 @@ const ITEMS: Item[] = [
   { group: "Insert", title: "Inline equation", hint: "Maths inside a line (or type $x^2$)", keywords: "equation math formula tex latex inline", icon: <Radical size={s} />, run: (e) => e.chain().focus().insertMathInline().run() },
   { group: "Insert", title: "Sub-page", hint: "A new page inside this one", keywords: "page subpage sub-page child inside", icon: icon("page"), run: turn("page") },
   { group: "Insert", title: "Link to page", hint: "A link to a page you already have", keywords: "link page mention existing", icon: <Link2 size={s} />, run: () => {}, picker: "page" },
+  { group: "Database", title: "Database (inline)", hint: "A new table inside this page", keywords: "database table inline notion rows properties board calendar", icon: <TableProperties size={s} />, run: (e, page) => page && void insertInlineDatabase(e, page) },
+  { group: "Database", title: "Linked view of database…", hint: "Show a database you already have, with its own filters", keywords: "database linked view existing embed", icon: <Table2 size={s} />, run: () => {}, picker: "database" },
+  { group: "Direction", title: "Right-to-left text", hint: "Arabic, Hebrew: runs from the right", keywords: "rtl right to left direction arabic hebrew persian urdu", icon: <PilcrowLeft size={s} />, run: (e) => void e.chain().focus().setBlockDirection("rtl").run() },
+  { group: "Direction", title: "Left-to-right text", hint: "English: runs from the left", keywords: "ltr left to right direction english", icon: <PilcrowRight size={s} />, run: (e) => void e.chain().focus().setBlockDirection("ltr").run() },
+  { group: "Direction", title: "Automatic direction", hint: "Follow the language of the text", keywords: "auto automatic direction rtl ltr language", icon: icon("p"), run: (e) => void e.chain().focus().setBlockDirection(null).run() },
   {
     group: "Quick",
     title: "Today's date",
@@ -64,10 +77,12 @@ export default function SlashMenu({
   editor,
   slash,
   controller,
+  page,
 }: {
   editor: Editor;
   slash: SlashState | null;
   controller: React.MutableRefObject<SlashController>;
+  page?: PageRef;
 }) {
   const securityOn = useApp((s) => s.status?.securityOn ?? false);
   const [index, setIndex] = useState(0);
@@ -84,19 +99,24 @@ export default function SlashMenu({
 
   useEffect(() => setIndex(0), [slash?.query, slash?.from]);
 
-  const [picker, setPicker] = useState<(PickerPlacement & { anchor: number }) | null>(null);
+  const [picker, setPicker] = useState<(PickerPlacement & { anchor: number; kind: "page" | "database" }) | null>(null);
 
   const choose = (item: Item) => {
     const st = controller.current.state;
     if (!st) return;
     editor.chain().focus().deleteRange({ from: st.from, to: st.to }).run();
-    if (item.picker) setPicker({ left: st.left, top: st.top, bottom: st.bottom, anchor: editor.state.selection.from });
-    else item.run(editor);
+    if (item.picker) setPicker({ left: st.left, top: st.top, bottom: st.bottom, anchor: editor.state.selection.from, kind: item.picker });
+    else item.run(editor, page);
   };
 
   const closePicker = () => {
     setPicker(null);
     editor.commands.focus();
+  };
+
+  const insertLinked = (databaseId: string) => {
+    setPicker(null);
+    void insertLinkedView(editor, databaseId);
   };
 
   /** Puts a link to the chosen page where the "/" was: in place of an empty line, else below the current block. */
@@ -162,7 +182,9 @@ export default function SlashMenu({
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
   }, [index]);
 
-  const pickerView = picker ? <PagePicker placement={picker} onPick={insertPageLink} onClose={closePicker} /> : null;
+  const pickerView = picker ? (
+    picker.kind === "database" ? <DatabasePicker placement={picker} onPick={insertLinked} onClose={closePicker} /> : <PagePicker placement={picker} onPick={insertPageLink} onClose={closePicker} />
+  ) : null;
   if (!slash || items.length === 0) return pickerView;
 
   let lastGroup = "";

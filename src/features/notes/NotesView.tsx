@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { BookPlus, FilePlus2, FileText, NotebookPen, RotateCcw, Trash2, X } from "lucide-react";
+import { BookPlus, FilePlus2, FileText, NotebookPen, RotateCcw, Table2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { NotesTree } from "@/lib/types";
@@ -9,11 +9,13 @@ import { useApp } from "@/store/app";
 import { Button, EmptyState, useConfirm } from "@/components/ui";
 import { getKey, setKey } from "@/lib/storage";
 import PageEditor from "./PageEditor";
+import DatabasePage from "@/features/database/DatabasePage";
 
 /** The main area of the Notes view. The notebook tree lives in the sidebar. */
 export default function NotesView() {
   const activePageId = useApp((s) => s.activePageId);
   const showTrash = useApp((s) => s.showTrash);
+  const activeKind = useApp((s) => s.activeKind);
 
   return (
     <AnimatePresence mode="wait">
@@ -25,7 +27,13 @@ export default function NotesView() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.12 }}
       >
-        {showTrash ? <TrashView /> : activePageId ? <PageEditor pageId={activePageId} /> : <Home />}
+        {showTrash ? (
+          <TrashView />
+        ) : activePageId ? (
+          activeKind === "database" ? <DatabasePage databaseId={activePageId} /> : <PageEditor pageId={activePageId} />
+        ) : (
+          <Home />
+        )}
       </motion.div>
     </AnimatePresence>
   );
@@ -140,8 +148,8 @@ function Home() {
                     <div className="mb-2 text-xl leading-none">
                       {p.icon ? <span className="emoji-mono">{p.icon}</span> : <FileText size={20} className="text-faint" />}
                     </div>
-                    <div className="truncate font-medium">{p.title || "Untitled"}</div>
-                    <div className="mt-0.5 line-clamp-2 min-h-[2.4em] text-xs leading-relaxed text-muted">{p.preview || "Empty page"}</div>
+                    <div dir="auto" className="truncate font-medium">{p.title || "Untitled"}</div>
+                    <div dir="auto" className="mt-0.5 line-clamp-2 min-h-[2.4em] text-xs leading-relaxed text-muted">{p.preview || "Empty page"}</div>
                     <div className="mt-2 text-[0.7rem] text-faint">
                       {section?.name} · {timeAgo(p.updated)}
                     </div>
@@ -161,7 +169,9 @@ function TrashView() {
   const setTree = useApp((s) => s.setTree);
   const openPage = useApp((s) => s.openPage);
   const confirm = useConfirm();
-  const pages = [...tree.pages.filter((p) => p.trashedAt !== null)].sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
+  const trashedPages = tree.pages.filter((p) => p.trashedAt !== null).map((p) => ({ id: p.id, title: p.title, icon: p.icon, trashedAt: p.trashedAt, updated: p.updated, db: false }));
+  const trashedDbs = tree.databases.filter((d) => d.trashedAt !== null).map((d) => ({ id: d.id, title: d.title, icon: d.icon, trashedAt: d.trashedAt, updated: d.updated, db: true }));
+  const pages = [...trashedPages, ...trashedDbs].sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
 
   const run = async (fn: () => Promise<NotesTree>) => {
     try {
@@ -204,10 +214,10 @@ function TrashView() {
             {pages.map((p) => (
               <div key={p.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="w-6 text-center text-lg">
-                  {p.icon ? <span className="emoji-mono">{p.icon}</span> : <FileText size={17} className="mx-auto text-faint" />}
+                  {p.icon ? <span className="emoji-mono">{p.icon}</span> : p.db ? <Table2 size={17} className="mx-auto text-faint" /> : <FileText size={17} className="mx-auto text-faint" />}
                 </span>
                 <button onClick={() => openPage(p.id)} className="min-w-0 flex-1 text-left">
-                  <div className="truncate text-sm font-medium">{p.title || "Untitled"}</div>
+                  <div dir="auto" className="truncate text-sm font-medium">{p.title || "Untitled"}{p.db && <span className="ms-2 text-xs font-normal text-faint">Database</span>}</div>
                   <div className="truncate text-xs text-faint">Deleted {timeAgo(p.trashedAt ?? p.updated)}</div>
                 </button>
                 <Button variant="ghost" size="sm" onClick={() => run(() => api.restorePage(p.id))}>

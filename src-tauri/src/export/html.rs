@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use super::doc::{Align, Block, Cell, Image, Inline, ListKind, Marks, PageRef};
+use super::doc::{blocks_dir, explicit_dir, Align, Block, Cell, Dir, Image, Inline, ListKind, Marks, PageRef};
 use super::{ExportDoc, Part, Slot};
 use crate::error::{Error, Result};
 
@@ -31,7 +31,7 @@ pre{background:var(--soft);border:1px solid var(--line);border-radius:.5em;paddi
 pre code{background:none;padding:0}\
 blockquote{margin:1em 0;padding:.1em 1em;border-inline-start:4px solid var(--line);color:var(--muted)}\
 blockquote.callout{background:var(--soft);border-radius:.5em;color:var(--fg);border-inline-start-color:var(--link)}\
-blockquote.callout>p.icon{float:inline-start;margin:.5em .6em 0 0}\
+blockquote.callout>p.icon{float:inline-start;margin:.5em 0 0;margin-inline-end:.6em}\
 ul.tasks{list-style:none;padding-inline-start:.4em}\
 ul.tasks input{margin-inline-end:.5em}\
 table{border-collapse:collapse;max-width:100%;margin:1em 0}\
@@ -152,6 +152,7 @@ impl Renderer {
     }
 
     /// The content of a list item or table cell: a first paragraph is written without its `p`.
+    /// (The item or cell carries that paragraph's own direction, see [`first_dir`].)
     fn compact(&self, blocks: &[Block], shift: u8) -> String {
         match blocks.split_first() {
             Some((Block::Paragraph { content, .. }, rest)) => {
@@ -173,18 +174,20 @@ impl Renderer {
                 if text.trim().is_empty() {
                     return None;
                 }
-                format!("<p dir=\"auto\"{}>{text}</p>", align_style(*align))
+                format!("<p dir=\"{}\"{}>{text}</p>", explicit_dir(content).html(), align_style(*align))
             }
             Block::Heading { level, align, content } => {
                 let l = level.saturating_add(shift).clamp(1, 6);
-                format!("<h{l} dir=\"auto\"{}>{}</h{l}>", align_style(*align), inline(content))
+                format!("<h{l} dir=\"{}\"{}>{}</h{l}>", explicit_dir(content).html(), align_style(*align), inline(content))
             }
             Block::List { kind, items } => {
+                // The list (its bullets or numbers) takes the direction of its first line; each item then says its own.
+                let d = box_dir(items.iter().map(|i| i.blocks.as_slice()));
                 let (open, close) = match kind {
-                    ListKind::Bullet => ("<ul dir=\"auto\">".to_string(), "</ul>"),
-                    ListKind::Ordered(1) => ("<ol dir=\"auto\">".to_string(), "</ol>"),
-                    ListKind::Ordered(n) => (format!("<ol dir=\"auto\" start=\"{n}\">"), "</ol>"),
-                    ListKind::Task => ("<ul dir=\"auto\" class=\"tasks\">".to_string(), "</ul>"),
+                    ListKind::Bullet => (format!("<ul dir=\"{d}\">"), "</ul>"),
+                    ListKind::Ordered(1) => (format!("<ol dir=\"{d}\">"), "</ol>"),
+                    ListKind::Ordered(n) => (format!("<ol dir=\"{d}\" start=\"{n}\">"), "</ol>"),
+                    ListKind::Task => (format!("<ul dir=\"{d}\" class=\"tasks\">"), "</ul>"),
                 };
                 let mut out = vec![open];
                 for item in items {
@@ -194,14 +197,14 @@ impl Renderer {
                         (ListKind::Task, _) => "<input type=\"checkbox\" disabled> ",
                         _ => "",
                     };
-                    out.push(format!("<li dir=\"auto\">{check}{body}</li>"));
+                    out.push(format!("<li dir=\"{}\">{check}{body}</li>", first_dir(&item.blocks)));
                 }
                 out.push(close.to_string());
                 out.join("\n")
             }
-            Block::Quote(blocks) => format!("<blockquote dir=\"auto\">\n{}\n</blockquote>", self.joined(blocks, shift)),
+            Block::Quote(blocks) => format!("<blockquote dir=\"{}\">\n{}\n</blockquote>", box_dir([blocks.as_slice()]), self.joined(blocks, shift)),
             Block::Callout { icon, blocks } => {
-                let mut s = String::from("<blockquote class=\"callout\" dir=\"auto\">\n");
+                let mut s = format!("<blockquote class=\"callout\" dir=\"{}\">\n", box_dir([blocks.as_slice()]));
                 if !icon.trim().is_empty() {
                     s.push_str(&format!("<p class=\"icon\">{}</p>\n", esc(icon)));
                 }
@@ -216,7 +219,8 @@ impl Renderer {
                 };
                 // A shelf is a shaded box (a fixed class, so Notaya's importer brings it back as one).
                 let class = if matches!(b, Block::Shelf(_)) { " class=\"notaya-shelf\"" } else { "" };
-                format!("<details open{class}>\n<summary dir=\"auto\">{summary}</summary>\n{}\n</details>", self.joined(rest, shift))
+                let rtl = if box_dir([blocks.as_slice()]) == "rtl" { " dir=\"rtl\"" } else { "" };
+                format!("<details{rtl} open{class}>\n<summary dir=\"{}\">{summary}</summary>\n{}\n</details>", first_dir(blocks), self.joined(rest, shift))
             }
             Block::Columns(cols) => {
                 let mut s = String::from("<div class=\"columns\">\n");
@@ -275,7 +279,9 @@ impl Renderer {
             return String::new();
         }
         let width = grid[0].len();
-        let mut out = vec!["<table>".to_string()];
+        // The columns run from the right when the table's first text is right-to-left; each cell says its own direction.
+        let rtl = if box_dir(rows.iter().flatten().map(|c| c.blocks.as_slice())) == "rtl" { " dir=\"rtl\"" } else { "" };
+        let mut out = vec![format!("<table{rtl}>")];
         for (r, row) in grid.iter().enumerate() {
             let mut line = String::from("<tr>");
             for (c, slot) in row.iter().enumerate() {
@@ -292,13 +298,32 @@ impl Renderer {
                 if rs > 1 {
                     attrs.push_str(&format!(" rowspan=\"{rs}\""));
                 }
-                line.push_str(&format!("<{tag} dir=\"auto\"{attrs}>{}</{tag}>", self.compact(&cell.blocks, shift)));
+                line.push_str(&format!("<{tag} dir=\"{}\"{attrs}>{}</{tag}>", first_dir(&cell.blocks), self.compact(&cell.blocks, shift)));
             }
             line.push_str("</tr>");
             out.push(line);
         }
         out.push("</table>".to_string());
         out.join("\n")
+    }
+}
+
+/// The `dir` of a list, quote, box or table: "rtl" when the first text block inside it runs
+/// right-to-left (so bullets, the quote bar and the columns go to the right), else "auto". Each
+/// text block inside says its own direction as well.
+fn box_dir<'b>(parts: impl IntoIterator<Item = &'b [Block]>) -> &'static str {
+    match parts.into_iter().find_map(blocks_dir) {
+        Some(Dir::Rtl) => "rtl",
+        _ => "auto",
+    }
+}
+
+/// The `dir` of a list item, table cell or summary line that is written without a `p` of its own:
+/// its first paragraph's explicit direction, else "auto" (decided by the text).
+fn first_dir(blocks: &[Block]) -> &'static str {
+    match blocks.first() {
+        Some(Block::Paragraph { content, .. } | Block::Heading { content, .. }) => explicit_dir(content).html(),
+        _ => "auto",
     }
 }
 
@@ -671,9 +696,47 @@ mod tests {
             Block::Quote(vec![para("نص", Marks::default())]),
         ]);
         assert!(html.contains("<p dir=\"auto\">مرحبا بالعالم</p>"));
-        assert!(html.contains("<ul dir=\"auto\">\n<li dir=\"auto\">שלום</li>"));
-        assert!(html.contains("<blockquote dir=\"auto\">"));
+        // A list or quote whose first text runs right-to-left says so, so its bullets and bar go to the right.
+        assert!(html.contains("<ul dir=\"rtl\">\n<li dir=\"auto\">שלום</li>"), "{html}");
+        assert!(html.contains("<blockquote dir=\"rtl\">"));
         assert!(html.contains("<h1 dir=\"auto\">Sample page</h1>"));
+    }
+
+    #[test]
+    fn a_chosen_direction_is_written_and_an_automatic_one_is_auto() {
+        let rtl = Marks { dir: Dir::Rtl, ..Marks::default() };
+        let ltr = Marks { dir: Dir::Ltr, ..Marks::default() };
+        let html = page_html(vec![
+            para("English forced right-to-left", rtl.clone()),
+            para("مرحبا forced left-to-right", ltr),
+            para("Automatic", Marks::default()),
+            Block::Heading { level: 2, align: Align::Left, content: vec![Inline::Text("Heading".into(), rtl.clone())] },
+            // A list item and a table cell written without a p say their own direction.
+            Block::List { kind: ListKind::Bullet, items: vec![doc::ListItem { checked: None, blocks: vec![para("item", rtl.clone())] }] },
+            Block::Table(vec![vec![Cell { header: false, colspan: 1, rowspan: 1, widths: vec![], blocks: vec![para("cell", rtl)] }]]),
+        ]);
+        assert!(html.contains("<p dir=\"rtl\">English forced right-to-left</p>"), "{html}");
+        assert!(html.contains("<p dir=\"ltr\">مرحبا forced left-to-right</p>"));
+        assert!(html.contains("<p dir=\"auto\">Automatic</p>"));
+        assert!(html.contains("<h3 dir=\"rtl\">Heading</h3>"));
+        assert!(html.contains("<ul dir=\"rtl\">\n<li dir=\"rtl\">item</li>"), "{html}");
+        assert!(html.contains("<table dir=\"rtl\">"));
+        assert!(html.contains("<td dir=\"rtl\">cell</td>"));
+        assert_well_formed(&html);
+    }
+
+    #[test]
+    fn arabic_boxes_and_shelves_run_right_to_left_and_the_icon_floats_to_the_start() {
+        let html = page_html(vec![
+            Block::Callout { icon: "💡".into(), blocks: vec![para("نصيحة", Marks::default())] },
+            Block::Shelf(vec![para("رف", Marks::default()), para("داخل", Marks::default())]),
+            Block::Callout { icon: "💡".into(), blocks: vec![para("Tip", Marks::default())] },
+        ]);
+        assert!(html.contains("<blockquote class=\"callout\" dir=\"rtl\">"), "{html}");
+        assert!(html.contains("<details dir=\"rtl\" open class=\"notaya-shelf\">"), "{html}");
+        assert!(html.contains("<blockquote class=\"callout\" dir=\"auto\">"));
+        assert!(html.contains("margin-inline-end:.6em"), "the icon's gap follows the direction");
+        assert_well_formed(&html);
     }
 
     #[test]

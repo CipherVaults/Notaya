@@ -24,6 +24,34 @@ import type {
   Strength,
   VaultStatus,
 } from "./types";
+import type {
+  ChartData,
+  Database,
+  DatabaseFull,
+  DatabaseMeta,
+  Reminder,
+  DbRow,
+  FileCell,
+  QueryRequest,
+  RowHit,
+  ViewResult,
+} from "./database-types";
+
+/** What a CSV import did (the backend asks for the file). */
+export interface CsvImportResult {
+  databaseId: string;
+  /** True when a new database was made from the CSV. */
+  created: boolean;
+  rows: number;
+  title: string;
+  columns: number;
+  /** Columns that could not be imported, with the reason. */
+  skipped: string[];
+  /** Values that did not fit their property and were left empty. */
+  badCells: number;
+  /** Shown once: the safety backup made before the first database. */
+  notice: string | null;
+}
 
 export const api = {
   // Vault
@@ -108,6 +136,51 @@ export const api = {
   deletePage: (id: string) => invoke<NotesTree>("delete_page", { id }),
   emptyTrash: () => invoke<NotesTree>("empty_trash"),
   addAttachment: (bytes: Uint8Array) => invoke<string>("add_attachment", bytes),
+  // Databases (A35). Rows are pages: open one with getPage/savePage like any page.
+  createDatabase: (sectionId: string, parent: string, inline: boolean, title: string, starterKind: "blank" | "tasks" | "reading" | "projects") =>
+    invoke<DatabaseFull>("create_database", { sectionId, parent, inline, title, starterKind }),
+  getDatabase: (id: string) => invoke<Database>("get_database", { id }),
+  /** The whole database definition as JSON text (properties, views, templates). */
+  saveDatabase: (database: Database) => invoke<Database>("save_database", { databaseJson: JSON.stringify(database) }),
+  queryView: (request: QueryRequest) => invoke<ViewResult>("query_view", { request }),
+  createRow: (databaseId: string, title: string, cells: Record<string, unknown>, templateId = "") =>
+    invoke<{ row: DbRow }>("create_row", { databaseId, title, cells: JSON.stringify(cells), templateId }),
+  setCells: (rowId: string, title: string | null, patch: Record<string, unknown>) =>
+    invoke<{ row: DbRow }>("set_cells", { rowId, title, patch: JSON.stringify(patch) }),
+  /** Runs the actions of a button property on a row. */
+  pressButton: (rowId: string, propId: string) => invoke<{ row: DbRow }>("press_button", { rowId, propId }),
+  duplicateRow: (rowId: string) => invoke<{ row: DbRow }>("duplicate_row", { rowId }),
+  reorderRows: (ids: string[]) => invoke<void>("reorder_rows", { ids }),
+  searchRows: (databaseId: string, query: string, limitN = 50) =>
+    invoke<RowHit[]>("search_rows", { databaseId, query, limitN }),
+  rowTitles: (ids: string[]) => invoke<RowHit[]>("row_titles", { ids }),
+  setDatabaseLook: (id: string, title: string, icon: string, favorite: boolean, locked: boolean) =>
+    invoke<DatabaseMeta>("set_database_look", { id, title, icon, favorite, locked }),
+  moveDatabase: (id: string, sectionId: string) => invoke<void>("move_database", { id, sectionId }),
+  enableSubItems: (id: string) => invoke<Database>("enable_sub_items", { id }),
+  enableDependencies: (id: string) => invoke<Database>("enable_dependencies", { id }),
+  chartData: (request: QueryRequest) => invoke<ChartData>("chart_data", { request }),
+  /** The database (or one view) as a document with one table. format: html | markdown | pdf | docx. */
+  exportDatabase: (databaseId: string, viewId: string | null, format: "html" | "markdown" | "pdf" | "docx") =>
+    invoke<ExportSummary | null>("export_database", { databaseId, viewId, format }),
+  /** Reminders that came due since the last call (title only). */
+  dueReminders: () => invoke<Reminder[]>("due_reminders_now"),
+  // Trash, restore and delete of a row or a database use trashPage / restorePage / deletePage with its id.
+  /** One row with its cell values (Rust command `get_row`, same result as setCells with an empty patch but without touching the row). */
+  getRow: (rowId: string) => invoke<{ row: DbRow }>("get_row", { rowId }),
+  /** The backend opens the file dialog; null databaseId makes a new database from the CSV in the section sectionId. Resolves to null if cancelled. */
+  importCsv: (databaseId: string | null, sectionId: string | null = null) => invoke<CsvImportResult | null>("import_csv", { databaseId, sectionId }),
+  /** The backend asks where to save (null if cancelled) and writes the rows of the view as an unencrypted CSV. */
+  exportCsv: (databaseId: string, viewId: string | null) => invoke<{ path: string; rows: number } | null>("export_csv", { databaseId, viewId }),
+  /** Raw body upload like addAttachment; the ids and the (URL-encoded) file name travel in headers. Resolves to the cell's files after adding. */
+  attachFile: (rowId: string, propId: string, name: string, bytes: Uint8Array) =>
+    invoke<FileCell[]>("attach_file", bytes, {
+      headers: { "x-row-id": rowId, "x-prop-id": propId, "x-file-name": encodeURIComponent(name) },
+    }),
+  openFile: (rowId: string, propId: string, fileId: string) => invoke<void>("open_file", { rowId, propId, fileId }),
+  saveFileAs: (rowId: string, propId: string, fileId: string) => invoke<string | null>("save_file_as", { rowId, propId, fileId }),
+  removeFile: (rowId: string, propId: string, fileId: string) => invoke<FileCell[]>("remove_file", { rowId, propId, fileId }),
+
   // Export: the backend asks where to save (resolves to null if cancelled) and writes an unencrypted file
   exportNotes: (request: ExportRequest) => invoke<ExportSummary | null>("export_notes", { request }),
   // Import: the backend asks what to import (resolves to null if cancelled) and makes one new notebook

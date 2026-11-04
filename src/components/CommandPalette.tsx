@@ -11,6 +11,7 @@ import {
   Palette,
   Settings,
   StickyNote,
+  Table2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -69,6 +70,13 @@ export default function CommandPalette() {
         s.openNotebook(hit.id);
       } else if (hit.kind === "sticky") {
         await api.openSticky(hit.id);
+      } else if (hit.kind === "database") {
+        const db = s.tree.databases.find((d) => d.id === hit.id);
+        const section = s.tree.sections.find((x) => x.id === db?.sectionId);
+        if (section) useApp.setState({ activeNotebookId: section.notebookId, activeSectionId: section.id });
+        s.openDatabase(hit.id);
+      } else if (hit.kind === "row") {
+        s.openRow(hit.id);
       }
     });
 
@@ -77,6 +85,8 @@ export default function CommandPalette() {
       page: <FileText size={16} />,
       sticky: <StickyNote size={16} />,
       notebook: <BookOpen size={16} />,
+      database: <Table2 size={16} />,
+      row: <FileText size={16} />,
     })[kind];
 
   const itemClass =
@@ -93,6 +103,7 @@ export default function CommandPalette() {
             <Command.Input
               value={query}
               onValueChange={setQuery}
+              dir="auto"
               autoFocus
               placeholder="Search notes and sticky notes, or type a command"
               className="h-14 w-full border-b border-line bg-transparent px-5 text-[0.95rem] text-fg outline-none placeholder:text-faint"
@@ -106,9 +117,9 @@ export default function CommandPalette() {
                     <Command.Item key={`${h.kind}-${h.id}`} value={`${h.kind}-${h.id}`} onSelect={() => goToHit(h)} className={itemClass}>
                       <span className="text-muted">{icon(h.kind)}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{h.title || "Untitled"}</div>
+                        <div dir="auto" className="truncate font-medium">{h.title || "Untitled"}</div>
                         {(h.subtitle || h.snippet) && (
-                          <div className="truncate text-xs text-muted">{h.subtitle || h.snippet}</div>
+                          <div dir="auto" className="truncate text-xs text-muted">{h.subtitle || h.snippet}</div>
                         )}
                       </div>
                       <span className="text-[0.7rem] uppercase tracking-wider text-faint">{h.kind}</span>

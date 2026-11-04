@@ -10,11 +10,28 @@ import { ConfirmProvider, TooltipProvider } from "@/components/ui";
 import TitleBar from "@/components/TitleBar";
 import UnlockScreen from "@/features/unlock/UnlockScreen";
 import Shell from "@/components/Shell";
+import { pollNotices } from "@/features/database/notices";
 
 export default function App() {
   const status = useApp((s) => s.status);
   const refreshStatus = useApp((s) => s.refreshStatus);
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
+
+  // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
+  const unlocked = status?.unlocked ?? false;
+  useEffect(() => {
+    if (!unlocked) return;
+    let stopped = false;
+    const check = () => {
+      if (!stopped) void pollNotices();
+    };
+    check();
+    const t = setInterval(check, 60000);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
+  }, [unlocked]);
 
   useEffect(() => {
     // A message saved just before a reload (for example a restore that failed): show it once.

@@ -1,6 +1,8 @@
 // Dev-only stand-in for @tauri-apps/api/core, used by `npm run mock` to preview
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
+import { databaseCommand, databaseMetas, NOT_HANDLED } from "./database";
+
 const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
 // | start = no vault but earlier copies exist (create is an alias of start)
@@ -41,6 +43,7 @@ const settings: Record<string, unknown> = {
   stickyDefaultColor: "yellow",
 };
 
+const savedPages = new Map<string, { title: string; content: string; text: string }>();
 const tree = {
   notebooks: [
     { id: "n1", name: "Personal", color: "#a3a3a3", icon: "📓", order: 0, created: ago(900), updated: ago(5) },
@@ -93,6 +96,43 @@ const pageBody = {
   ],
 };
 
+// ?rtl=1 shows a page mixing Arabic, Hebrew and English (for checking right-to-left text).
+const t = (text: string, marks?: unknown[]) => ({ type: "text", text, ...(marks ? { marks } : {}) });
+const para = (text: string, attrs?: Record<string, unknown>) => ({ type: "paragraph", ...(attrs ? { attrs } : {}), content: [t(text)] });
+const item = (text: string, type = "listItem", attrs?: Record<string, unknown>) => ({ type, ...(attrs ? { attrs } : {}), content: [para(text)] });
+const rtlBody = {
+  type: "doc",
+  content: [
+    { type: "heading", attrs: { level: 2 }, content: [t("ملاحظات الصباح")] },
+    para("هذه فقرة عربية تبدأ من اليمين، وفيها كلمة English في الوسط وأرقام 123."),
+    para("This is an English paragraph, it stays on the left."),
+    para("זוהי פסקה בעברית, והיא מיושרת לימין."),
+    para("هذه فقرة عربية مع محاذاة صريحة لليسار", { textAlign: "left" }),
+    para("English text forced right-to-left", { dir: "rtl" }),
+    { type: "heading", attrs: { level: 3 }, content: [t("قائمة المهام")] },
+    { type: "bulletList", content: [item("البند الأول"), item("البند الثاني"), item("English item")] },
+    { type: "orderedList", content: [item("الخطوة الأولى"), item("الخطوة الثانية")] },
+    { type: "taskList", content: [item("إنهاء الخزنة", "taskItem", { checked: true }), item("تحسين المحرر", "taskItem", { checked: false })] },
+    { type: "blockquote", content: [para("البساطة أولاً، ثم الأفكار الذكية.")] },
+    { type: "callout", attrs: { icon: "💡" }, content: [para("نصيحة: اكتب / في سطر فارغ لإضافة كتلة.")] },
+    { type: "toggle", attrs: { open: true, shelf: true }, content: [para("رف الملاحظات"), para("نص داخل الرف.")] },
+    { type: "toggle", attrs: { open: false }, content: [para("قسم قابل للطي"), para("مخفي")] },
+    { type: "table", content: [
+      { type: "tableRow", content: [{ type: "tableHeader", content: [para("الاسم")] }, { type: "tableHeader", content: [para("القيمة")] }, { type: "tableHeader", content: [para("ملاحظة")] }] },
+      { type: "tableRow", content: [{ type: "tableCell", content: [para("أحمد")] }, { type: "tableCell", content: [para("١٢٣")] }, { type: "tableCell", content: [para("جيد")] }] },
+    ] },
+    { type: "table", content: [
+      { type: "tableRow", content: [{ type: "tableHeader", content: [para("Name")] }, { type: "tableHeader", content: [para("Value")] }, { type: "tableHeader", content: [para("Note")] }] },
+      { type: "tableRow", content: [{ type: "tableCell", content: [para("Ahmed")] }, { type: "tableCell", content: [para("42")] }, { type: "tableCell", content: [para("fine")] }] },
+    ] },
+    { type: "paragraph" },
+  ],
+};
+if (params.get("rtl")) {
+  tree.pages[0].title = "ملاحظات الصباح";
+  tree.pages[0].preview = "هذه فقرة عربية تبدأ من اليمين";
+}
+
 const stickies = [
   { id: "k1", content: "", text: "Call the bank before Friday\n- ask about the card", color: "yellow", x: 100, y: 100, w: 320, h: 320, onTop: true, open: true, created: ago(100), updated: ago(10) },
   { id: "k2", content: "", text: "Ideas: dark/light toggle, keyboard shortcuts cheat sheet", color: "blue", x: 140, y: 140, w: 320, h: 320, onTop: true, open: false, created: ago(200), updated: ago(60) },
@@ -101,9 +141,13 @@ const stickies = [
 
 type Args = Record<string, unknown>;
 
-export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise<T> {
+export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
+  if (cmd !== "list_notes" && cmd !== "search") {
+    const dbr = databaseCommand(cmd, args, tree, options);
+    if (dbr !== NOT_HANDLED) return ok(dbr);
+  }
   switch (cmd) {
     case "vault_status":
       return ok({
@@ -192,7 +236,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       Object.assign(shellPrefs, args.prefs as Args);
       return ok({ ...shellPrefs });
     case "list_notes":
-      return ok(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree);
+      return ok({ ...(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree), databases: databaseMetas() });
     // The real app makes a verified backup first and fails the delete if that fails; ?failDelete=1 mimics that.
     case "delete_notebook":
     case "delete_section": {
@@ -221,13 +265,17 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       for (const k of ["notebooks", "sections", "pages"] as const) (tree[k] as { order: number }[]).sort((a, b) => a.order - b.order);
       return ok({ ...tree });
     }
-    case "get_page":
-      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk" });
+    case "get_page": {
+      const saved = savedPages.get(String(args.id));
+      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, cover: params.get("cover") === "none" ? "" : "gradient:dusk", ...(saved ?? {}) });
+    }
     case "create_subpage":
       return ok({ ...tree.pages[0], id: "p" + Math.floor(Math.random() * 1e6), parent: args.parentId, title: args.title, content: "", text: "", cover: "" });
     case "set_page_look":
       return ok({ ...tree.pages[0], icon: args.icon });
     case "save_page":
+      // Remember what was saved, so a page keeps its content while the mock runs (the first page is the fixed sample otherwise).
+      savedPages.set(String(args.id), { title: String(args.title ?? ""), content: String(args.content ?? ""), text: String(args.text ?? "") });
       return ok({ ...tree.pages[0] });
     case "list_stickies":
       return ok([...stickies]);
@@ -348,6 +396,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}): Promise
       return ok([
         { kind: "page", id: "p1", title: "Morning pages", subtitle: "", snippet: "Slept badly, but the plan for the week is clear", score: 3 },
         { kind: "sticky", id: "k1", title: "Call the bank before Friday", subtitle: "", snippet: "ask about the card", score: 1 },
+        ...(databaseCommand("search", args, tree) as unknown[]),
       ]);
     default:
       return ok(null);
