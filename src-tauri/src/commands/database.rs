@@ -1329,6 +1329,35 @@ mod tests {
     }
 
     #[test]
+    fn a_long_chain_of_rollups_ends_with_an_error_not_a_crash() {
+        // Everything runs on a thread with a small stack: a crash by stack overflow would end the test run.
+        let h = std::thread::Builder::new()
+            .stack_size(1024 * 1024)
+            .spawn(|| {
+                let mut s = temp_vault();
+                let mut a = make_db(&mut s, "Chain");
+                a.props.push(Property { id: "next".into(), name: "Next".into(), kind: PropKind::Relation, relation_db: a.id.clone(), ..Property::default() });
+                a.props.push(Property { id: "roll".into(), name: "Roll".into(), kind: PropKind::Rollup, rollup_relation: "next".into(), rollup_prop: "roll".into(), rollup_calc: "count".into(), ..Property::default() });
+                s.put(Item::Database(a.clone())).unwrap();
+                let ids: Vec<String> = (0..3000).map(|i| add_row(&mut s, &mut a, &format!("r{i}"), "{}")).collect();
+                for (i, id) in ids.iter().enumerate() {
+                    if let Some(n) = ids.get(i + 1) {
+                        let mut r = row(&s, id).unwrap();
+                        r.cells = format!("{{\"next\":[\"{n}\"]}}");
+                        s.put(Item::Row(r)).unwrap();
+                    }
+                }
+                let ctx = Ctx::new(s.items(), 0, 0);
+                let db = database(&s, &a.id).unwrap();
+                let first = row(&s, &ids[0]).unwrap();
+                let roll = db.prop("roll").unwrap().clone();
+                ctx.value(&db, &first, &roll).is_err()
+            })
+            .unwrap();
+        assert!(h.join().expect("no stack overflow"), "a chain this long is refused with an error");
+    }
+
+    #[test]
     fn reminders_come_due_once_and_stay_quiet_for_old_or_future_dates() {
         let mut s = temp_vault();
         let mut db = Database::new(new_id(), "sec".into(), "Plans".into(), 1);

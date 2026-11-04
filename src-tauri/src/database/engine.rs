@@ -18,6 +18,8 @@ const MAX_ROWS_OUT: usize = 50_000;
 
 /// Everything a query needs: the databases and their (not trashed) rows, the clock and the
 /// caches. Built from the vault's items for one call and then dropped.
+const MAX_VALUE_DEPTH: usize = 32;
+
 pub struct Ctx<'a> {
     pub dbs: HashMap<&'a str, &'a Database>,
     pub rows: HashMap<&'a str, Vec<&'a Row>>,
@@ -28,6 +30,8 @@ pub struct Ctx<'a> {
     cells: RefCell<HashMap<String, Rc<Map<String, Value>>>>,
     memo: RefCell<HashMap<(String, String), Result<Val, String>>>,
     busy: RefCell<HashSet<(String, String)>>,
+    /// How many formula or rollup values are being worked out inside one another right now.
+    depth: std::cell::Cell<usize>,
 }
 
 impl<'a> Ctx<'a> {
@@ -50,7 +54,7 @@ impl<'a> Ctx<'a> {
         for v in rows.values_mut() {
             v.sort_by_key(|r| (r.order, r.created));
         }
-        Ctx { dbs, rows, by_id, now, tz, cells: RefCell::default(), memo: RefCell::default(), busy: RefCell::default() }
+        Ctx { dbs, rows, by_id, now, tz, cells: RefCell::default(), memo: RefCell::default(), busy: RefCell::default(), depth: std::cell::Cell::new(0) }
     }
 
     pub fn rows_of(&self, db: &str) -> &[&'a Row] {
@@ -92,7 +96,15 @@ impl<'a> Ctx<'a> {
                 if !self.busy.borrow_mut().insert(key.clone()) {
                     return Err("Circular reference".into());
                 }
+                // A long chain (row 1 rolls up row 2, which rolls up row 3, ...) is not a cycle, but each
+                // link costs stack; stop it before the stack runs out.
+                if self.depth.get() >= MAX_VALUE_DEPTH {
+                    self.busy.borrow_mut().remove(&key);
+                    return Err("Too many levels of formulas and rollups".into());
+                }
+                self.depth.set(self.depth.get() + 1);
                 let r = if prop.kind == PropKind::Formula { self.formula_value(db, row, prop) } else { self.rollup_value(db, row, prop) };
+                self.depth.set(self.depth.get() - 1);
                 self.busy.borrow_mut().remove(&key);
                 self.memo.borrow_mut().insert(key, r.clone());
                 r

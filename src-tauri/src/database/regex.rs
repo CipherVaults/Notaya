@@ -39,6 +39,14 @@ struct Parser<'a> {
 }
 
 const STEP_BUDGET: usize = 2_000_000;
+/// How deep the matcher may nest. Each level costs stack, and a stack overflow cannot be caught: it ends
+/// the whole app. So a short text is matched where we are (a Windows main thread has only 1 MB, hence
+/// the small limit), and a longer text is matched on a helper thread with a big stack and a bigger limit.
+/// When even that is not enough the pattern simply does not match.
+const SMALL_DEPTH: usize = 500;
+const BIG_DEPTH: usize = 30_000;
+const SMALL_TEXT: usize = 100;
+const BIG_STACK: usize = 64 * 1024 * 1024;
 
 impl<'a> Parser<'a> {
     fn peek(&self) -> Option<char> {
@@ -247,6 +255,8 @@ struct Matcher<'a> {
     text: &'a [char],
     caps: Vec<Option<(usize, usize)>>,
     steps: usize,
+    depth: usize,
+    max_depth: usize,
     ic: bool,
 }
 
@@ -254,9 +264,16 @@ impl<'a> Matcher<'a> {
     // Match `node` at `i`, then call `k` with the end; true if the continuation succeeds.
     fn m(&mut self, node: &Node, i: usize, k: &mut dyn FnMut(&mut Self, usize) -> bool) -> bool {
         self.steps += 1;
-        if self.steps > STEP_BUDGET {
+        if self.steps > STEP_BUDGET || self.depth >= self.max_depth {
             return false;
         }
+        self.depth += 1;
+        let r = self.m_inner(node, i, k);
+        self.depth -= 1;
+        r
+    }
+
+    fn m_inner(&mut self, node: &Node, i: usize, k: &mut dyn FnMut(&mut Self, usize) -> bool) -> bool {
         match node {
             Node::Char(c) => {
                 if i < self.text.len() && (self.text[i] == *c || (self.ic && self.text[i].to_lowercase().eq(c.to_lowercase()))) {
@@ -352,8 +369,24 @@ impl Regex {
 
     /// The first match at or after `from`: (start, end, captures as char ranges).
     pub fn find_at(&self, text: &[char], from: usize) -> Option<(usize, usize, Vec<Option<(usize, usize)>>)> {
+        if text.len() <= SMALL_TEXT {
+            return self.find_with(text, from, SMALL_DEPTH);
+        }
+        std::thread::scope(|sc| {
+            match std::thread::Builder::new().stack_size(BIG_STACK).spawn_scoped(sc, || self.find_with(text, from, BIG_DEPTH)) {
+                Ok(h) => h.join().unwrap_or(None),
+                // No thread to be had: use the small limit here instead.
+                Err(_) => self.find_with(text, from, SMALL_DEPTH),
+            }
+        })
+    }
+
+    fn find_with(&self, text: &[char], from: usize, max_depth: usize) -> Option<(usize, usize, Vec<Option<(usize, usize)>>)> {
+        // One step budget for the whole search, not one per start position: a long text would
+        // otherwise allow millions of steps for every position.
+        let mut steps = 0;
         for start in from..=text.len() {
-            let mut m = Matcher { text, caps: vec![None; self.groups + 1], steps: 0, ic: self.ignore_case };
+            let mut m = Matcher { text, caps: vec![None; self.groups + 1], steps, depth: 0, max_depth, ic: self.ignore_case };
             let mut end = None;
             let ok = m.m(&self.root, start, &mut |_, j| {
                 end = Some(j);
@@ -362,7 +395,8 @@ impl Regex {
             if ok {
                 return Some((start, end.unwrap(), m.caps));
             }
-            if m.steps > STEP_BUDGET {
+            steps = m.steps;
+            if steps > STEP_BUDGET {
                 return None;
             }
         }
@@ -457,6 +491,26 @@ mod tests {
 
     fn re(p: &str) -> Regex {
         Regex::new(p, false).unwrap()
+    }
+
+    /// A long text must make a pattern fail to match, never overflow the stack (that would end the
+    /// whole app). Run on a thread with a small stack, smaller than a Windows main thread's 1 MB.
+    #[test]
+    fn long_text_does_not_overflow_the_stack() {
+        let h = std::thread::Builder::new()
+            .stack_size(1024 * 1024)
+            .spawn(|| {
+                let a: String = "ab".repeat(50_000);
+                let _ = re("(?:a|b)*c").is_match(&a);
+                let _ = re(".*b").is_match(&"x".repeat(100_000));
+                let _ = re("(a|b)+$").is_match(&a);
+                let _ = re("^(?:[a-z]+ ?)*!").is_match(&"word ".repeat(20_000));
+                // Short texts still work.
+                assert!(re("(?:a|b)*c").is_match("ababc"));
+                assert!(re(".*b").is_match("xxxb"));
+            })
+            .unwrap();
+        h.join().expect("the matcher must not overflow the stack");
     }
 
     #[test]

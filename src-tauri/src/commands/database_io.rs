@@ -559,8 +559,8 @@ fn percent_decode(s: &str) -> String {
 }
 
 /// Types that open in another program without running code. Anything else can only be saved.
-const OPENABLE: [&str; 33] = [
-    "pdf", "txt", "md", "csv", "rtf", "png", "jpg", "jpeg", "gif", "webp", "bmp", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp", "mp3", "wav", "ogg", "m4a", "mp4", "mov", "webm", "mkv", "avi", "flac", "epub", "json", "tsv",
+const OPENABLE: [&str; 29] = [
+    "pdf", "txt", "md", "csv", "png", "jpg", "jpeg", "gif", "webp", "bmp", "docx", "xlsx", "pptx", "odt", "ods", "odp", "mp3", "wav", "ogg", "m4a", "mp4", "mov", "webm", "mkv", "avi", "flac", "epub", "json", "tsv",
 ];
 
 fn extension(name: &str) -> String {

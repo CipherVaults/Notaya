@@ -26,9 +26,10 @@ export function StatusChip({ option }: { option: SelectOption }) {
   );
 }
 
-export function openLink(kind: "url" | "email" | "phone", value: string) {
+// Only web addresses open (the backend allows nothing else). Email and phone values are shown as text.
+export function openLink(value: string) {
   const v = value.trim();
-  const target = kind === "email" ? `mailto:${v}` : kind === "phone" ? `tel:${v.replace(/\s+/g, "")}` : /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
+  const target = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
   api.openUrl(target).catch((e) => toast.error(errorText(e)));
 }
 
@@ -175,16 +176,17 @@ export default function CellDisplay({ prop, value, row, wrap }: Props) {
       return <Chips>{(value as FileCell[]).map((f) => <FileChip key={f.id} file={f} />)}</Chips>;
     case "checkbox":
       return <CheckBox checked={value === true} />;
-    case "url":
     case "email":
     case "phone":
+      return <span dir="auto" className={cn("text-fg", trunc)} title={String(value)}>{String(value)}</span>;
+    case "url":
       return (
         <a
           href="#"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            openLink(prop.kind as "url" | "email" | "phone", String(value));
+            openLink(String(value));
           }}
           dir="auto"
           className={cn("text-accent-strong underline decoration-line underline-offset-2 hover:decoration-current", trunc)}

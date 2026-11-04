@@ -53,7 +53,8 @@ A35 row (already in `approval-and-amendments.md`), this report and its index row
 | `npm audit` | 0 vulnerabilities |
 | Mock app, `dev-mock/database-ui-check.cjs` (Playwright) | ALL OK (every property kind, filters, sorts, groups, formulas, relations, row pages, templates, inline databases, RTL, dark and narrow looks) |
 | Mock app, all seven view kinds added to the seeded Tasks database | each opened, no page errors |
-| Independent security review (reader agent, by hand) | see the PR description for the result when it is in; **not yet recorded here** |
+| Security review (read-only reader agent, by hand; the built-in skill could not run) | 4 findings, all fixed on this branch: (1) the formula regex matcher could overflow the stack on a long text, which would end the app (now bounded in depth, long texts matched on a helper thread with a 64 MB stack, one step budget per search; test on a 1 MB stack); (2) a long chain of rollups of rollups had no depth limit (now 32 levels, then an error; test on a 1 MB stack); (3) old Office and RTF files (doc, xls, ppt, rtf) were on the "open" list although a temp copy has no Mark-of-the-Web (removed, they can still be saved); (4) email and phone cells tried to open `mailto:` and `tel:`, which the backend refuses (they now show as plain text). Items checked and found fine: the `clatt` handler, file names, size caps, CSV limits and formula guard, exports, no `innerHTML` or `eval` in the UI. Not tested: a formula that builds very large strings inside a map (rated low) |
+| Cargo tests after the fixes | 482 passed, 0 failed, 1 ignored |
 
 ## 9. Not run
 
