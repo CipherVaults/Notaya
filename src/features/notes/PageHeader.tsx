@@ -219,7 +219,7 @@ export function PageIconAndActions({ icon, cover, readOnly, allowPicture = true,
   const hasActions = !readOnly && (!icon || !cover);
   if (!icon && !hasActions) return null;
   return (
-    <div className={cn("relative z-10", cover && icon && "-mt-10")} data-testid="page-icon-row">
+    <div className={cn("pointer-events-none relative z-10", cover && icon && "-mt-10")} data-testid="page-icon-row">
       {icon &&
         (readOnly ? (
           <span className="mb-1 inline-grid h-[76px] w-[76px] place-items-center rounded-xl">
@@ -232,14 +232,14 @@ export function PageIconAndActions({ icon, cover, readOnly, allowPicture = true,
               aria-label="Change icon"
               title="Change icon"
               data-testid="page-icon"
-              className="mb-1 inline-grid h-[76px] w-[76px] place-items-center rounded-xl transition-colors hover:bg-surface-2"
+              className="pointer-events-auto mb-1 inline-grid h-[76px] w-[76px] place-items-center rounded-xl transition-colors hover:bg-surface-2"
             >
               <PageIcon icon={icon} size={58} />
             </button>
           </IconPopover>
         ))}
       {hasActions && (
-        <div className={cn("flex h-7 items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover/head:opacity-100", icon && "mb-1")} data-testid="page-look-actions">
+        <div className={cn("pointer-events-auto flex h-7 w-fit items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover/head:opacity-100", icon && "mb-1")} data-testid="page-look-actions">
           {!icon && (
             <IconPopover icon="" allowPicture={allowPicture} onPick={(i) => onChange(i, cover)}>
               <button type="button" className={GHOST_BTN} data-testid="add-icon">

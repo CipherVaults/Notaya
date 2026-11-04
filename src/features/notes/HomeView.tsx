@@ -173,7 +173,7 @@ export default function Home() {
     <div className="h-full overflow-y-auto" data-testid="home">
       <div className={`cover-gradient-${banner} h-[168px] w-full dark:brightness-[.8]`} data-testid="home-banner" aria-hidden />
       <div className="mx-auto px-10 pb-16" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
-        <div className="-mt-9 mb-1 text-[3.2rem] leading-none" aria-hidden>{glyph}</div>
+        <div className="relative z-10 -mt-9 mb-1 text-[3.2rem] leading-none" aria-hidden>{glyph}</div>
         <h1 className="text-[2rem] font-bold tracking-tight">{greeting}</h1>
         <p className="mt-0.5 text-sm text-faint">{now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</p>
         <p className="mt-2 text-muted">
