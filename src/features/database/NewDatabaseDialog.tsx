@@ -56,6 +56,7 @@ export default function NewDatabaseDialog({ target, onClose }: { target: NewData
       setTree(await api.listNotes());
       useApp.getState().openDatabase(r.databaseId);
       toast.success(`Imported ${r.rows} ${r.rows === 1 ? "row" : "rows"} into a new database.`);
+      if (r.notice) toast.info(r.notice, { duration: 20000 });
       if (r.skipped.length) toast.warning(`Skipped: ${r.skipped.slice(0, 3).join("; ")}`);
       onClose();
     } catch (e) {

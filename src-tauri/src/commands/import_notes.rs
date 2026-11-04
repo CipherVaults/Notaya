@@ -236,6 +236,15 @@ pub fn import_from_with<V: VaultAccess>(
                         items.extend(made.items);
                     }
                 }
+                // Importing the same export twice makes a second notebook; say so, so it is not mistaken for an update.
+                let existing: Vec<String> = s.items().filter_map(|i| if let Item::Notebook(n) = i { Some(n.name.trim().to_lowercase()) } else { None }).collect();
+                for it in &items {
+                    if let Item::Notebook(n) = it {
+                        if existing.contains(&n.name.trim().to_lowercase()) {
+                            summary.notes.push(format!("A notebook named \"{}\" already exists. This import added another one next to it, so everything in it is now twice in your notes. Delete one of them if this was the same export.", n.name));
+                        }
+                    }
+                }
                 s.put_many(items)?;
                 s.release_attachments(&stored);
                 Ok(())
@@ -534,6 +543,35 @@ mod tests {
         let titles: Vec<String> = pages(&v).iter().map(|p| p.title.clone()).collect();
         assert!(titles.iter().any(|t| t == "Handbook"), "{titles:?}");
         assert!(!titles.iter().any(|t| t == "Alpha" || t == "Write it"), "row pages are not kept as pages: {titles:?}");
+    }
+
+    #[test]
+    fn markdown_csv_and_html_files_together_complete_each_other_into_database_rows() {
+        let root = temp();
+        let src = root.join("export");
+        std::fs::create_dir_all(&src).unwrap();
+        let (pdb, a, b) = ("98b9830964384ed4b08e1c3de9ace4e9", "40d90e048b60816bb6ebddfb2c2daf50", "40d90e048b60814b8896d436383181dd");
+        std::fs::write(src.join(format!("Projects {pdb}_all.csv")), "Name,Status\nAlpha,Done\nBeta,Doing\n").unwrap();
+        let html = |title: &str, status: &str, body: &str| {
+            format!("<html><head><title>{title}</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">{title}</h1><table class=\"properties\"><tbody><tr class=\"property-row\"><th>Status</th><td>{status}</td></tr></tbody></table></header><div class=\"page-body\">{body}</div></article></body></html>")
+        };
+        // Alpha is in both formats; Beta only as HTML; the database's own HTML page is only a view of the table.
+        std::fs::write(src.join(format!("Alpha {a}.md")), "# Alpha\n\nStatus: Done\n\nplain markdown body\n").unwrap();
+        std::fs::write(src.join(format!("Alpha {a}.html")), html("Alpha", "Done", "<p><mark class=\"highlight-blue_background\">coloured</mark> alpha body</p>")).unwrap();
+        std::fs::write(src.join(format!("Beta {b}.html")), html("Beta", "Doing", "<p>beta html body</p>")).unwrap();
+        std::fs::write(src.join(format!("Projects {pdb}.html")), "<html><head><title>Projects</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">Projects</h1></header><div class=\"page-body\"><p>table view</p></div></article></body></html>").unwrap();
+        let v = vault(&root.join("data"));
+        let flag = Arc::new(AtomicBool::new(false));
+        let summary = import_from_with(&v, &[src.clone()], true, &root.join("data"), 1, &flag_control(&flag), &|_| Ok(())).unwrap();
+        let rows: Vec<Row> = v.with(|s| Ok(s.items().filter_map(|i| if let Item::Row(r) = i { Some(r.clone()) } else { None }).collect())).unwrap();
+        let alpha = rows.iter().find(|r| r.title == "Alpha").expect("Alpha is a row");
+        let beta = rows.iter().find(|r| r.title == "Beta").expect("Beta is a row");
+        assert!(alpha.text.contains("coloured alpha body") && !alpha.text.contains("plain markdown") && !alpha.text.contains("Status:"), "{:?}", alpha.text);
+        assert!(alpha.content.contains(crate::importers::doc::HIGHLIGHTS[5]), "the HTML formatting is kept");
+        assert!(beta.text.contains("beta html body") && !beta.text.contains("Status"), "the properties table of an HTML-only row page is dropped: {:?}", beta.text);
+        let titles: Vec<String> = pages(&v).iter().map(|p| p.title.clone()).collect();
+        assert!(!titles.iter().any(|t| t == "Alpha" || t == "Beta" || t == "Projects"), "no row pages, no page for the database view: {titles:?}");
+        assert!(summary.notes.iter().any(|n| n.contains("were in both exports")), "{:?}", summary.notes);
     }
 
     #[test]

@@ -117,6 +117,53 @@ fn stem_of(name: &str) -> &str {
     if kind_of(name).is_some() { name.rsplit_once('.').map_or(name, |(s, _)| s) } else { name }
 }
 
+/// The 32-character id Notion puts at the end of a file name in every export (`Page 0123…cdef.md`, also
+/// `Table 0123…cdef_all.csv`). `None` for a name without one.
+fn notion_file_id(name: &str) -> Option<String> {
+    let base = name.rsplit('/').next().unwrap_or(name);
+    let stem = base.rsplit_once('.').map_or(base, |(s, _)| s);
+    let stem = stem.strip_suffix("_all").unwrap_or(stem);
+    let chars: Vec<char> = stem.chars().collect();
+    if chars.len() < 32 {
+        return None;
+    }
+    let id: String = chars[chars.len() - 32..].iter().collect();
+    let separated = chars.len() == 32 || chars[chars.len() - 33] == ' ';
+    (separated && id.chars().all(|c| c.is_ascii_hexdigit())).then(|| id.to_ascii_lowercase())
+}
+
+/// The lines of a paragraph (a line break or a newline ends a line).
+fn paragraph_lines(inlines: &[Inline]) -> Vec<String> {
+    let mut lines = vec![String::new()];
+    for i in inlines {
+        match i {
+            Inline::Text(t, _) => {
+                for (n, part) in t.split('\n').enumerate() {
+                    if n > 0 {
+                        lines.push(String::new());
+                    }
+                    lines.last_mut().expect("a line").push_str(part);
+                }
+            }
+            Inline::Break => lines.push(String::new()),
+            _ => {}
+        }
+    }
+    lines.retain(|l| !l.trim().is_empty());
+    lines
+}
+
+/// A paragraph that is only `Key: value` lines, as Notion writes a row's properties at the top of its page.
+fn is_property_paragraph(inlines: &[Inline]) -> bool {
+    let lines = paragraph_lines(inlines);
+    !lines.is_empty() && lines.iter().all(|l| l.split_once(':').is_some_and(|(k, _)| !k.trim().is_empty() && k.chars().count() <= 100))
+}
+
+/// The properties table at the top of an HTML row page: every row has a name and a value.
+fn is_properties_table(rows: &[Vec<doc::Cell>]) -> bool {
+    !rows.is_empty() && rows.iter().all(|r| r.len() == 2)
+}
+
 /// Orders names the way people expect: case-insensitive, with numbers by value ("Page 2" before "Page 10").
 fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
     let (a, b) = (a.to_lowercase(), b.to_lowercase());
@@ -187,6 +234,9 @@ pub struct Plan {
     pub images: Images,
     pub skipped: Vec<Skipped>,
     pub notes: Vec<String>,
+    /// HTML pages that gave their text to the Markdown page with the same Notion id: (the HTML file, the key of
+    /// that page). Links that point at the HTML file go to the page.
+    pub aliases: Vec<(String, String)>,
 }
 
 pub struct PlanPage {
@@ -211,9 +261,32 @@ struct Builder<'a> {
     /// Set when the import was cancelled or ran out of time: no more documents are read.
     stopped: Option<Stop>,
     pdfs: usize,
+    /// Markdown file -> the HTML file of the same page (same Notion id) whose text and formatting it takes.
+    twins: HashMap<String, String>,
+    /// How many pages did take their text from an HTML twin.
+    merged: usize,
 }
 
 impl Builder<'_> {
+    /// The body of an HTML twin: its blocks (without the title), its icon and cover. `None` when it cannot be used.
+    fn html_twin(&mut self, h_path: &str) -> Option<(Vec<Block>, String, Option<usize>)> {
+        let vfs = self.vfs;
+        let bytes = vfs.read(h_path, MAX_TEXT_FILE).ok()?;
+        let dir = h_path.rsplit_once('/').map_or("", |(d, _)| d).to_string();
+        let (mut blocks, icon, cover) = {
+            let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images: &mut self.images, problems: &mut self.skipped, name: h_path.to_string() };
+            let d = html::parse_document(&decode_text(&bytes), &mut ctx);
+            (d.blocks, d.icon.unwrap_or_default(), d.cover)
+        };
+        if doc::is_empty(&blocks) {
+            return None;
+        }
+        if matches!(blocks.first(), Some(Block::Heading(1, _))) {
+            blocks.remove(0);
+        }
+        Some((blocks, icon, cover))
+    }
+
     fn skip(&mut self, item: impl Into<String>, reason: impl Into<String>) {
         if self.skipped.len() < MAX_LISTED {
             self.skipped.push(Skipped { item: item.into(), reason: reason.into() });
@@ -304,8 +377,13 @@ impl Builder<'_> {
         let mut icon = String::new();
         let mut cover = None;
         let mut blocks;
+        // The same page exported as HTML too: its text and formatting are used (colors, highlights, fonts).
+        let twin = if kind == Kind::Markdown { self.twins.get(path).cloned().and_then(|h| self.html_twin(&h)) } else { None };
         {
-            let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images: &mut self.images, problems: &mut self.skipped, name: path.to_string() };
+            let mut scratch_images = Images::default();
+            let mut scratch_problems: Vec<Skipped> = Vec::new();
+            let (images, problems) = if twin.is_some() { (&mut scratch_images, &mut scratch_problems) } else { (&mut self.images, &mut self.skipped) };
+            let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images, problems, name: path.to_string() };
             match kind {
                 Kind::Markdown => {
                     let d = markdown::parse(&decode_text(&bytes), &mut ctx);
@@ -364,6 +442,22 @@ impl Builder<'_> {
         // "→ Title" rows that link to another document (Notaya's own export) are page links again.
         doc::page_link_rows(&mut blocks);
         let title = take_title(declared, &mut blocks, name);
+        if let Some((mut html_blocks, html_icon, html_cover)) = twin {
+            // The Markdown page keeps the property lines of a row (`Status: Done`), which the database import reads;
+            // the HTML page has them as a table. The rest of the page comes from the HTML.
+            if matches!(html_blocks.first(), Some(Block::Table(rows)) if is_properties_table(rows)) {
+                if let Some(Block::Paragraph(inl)) = blocks.first().filter(|b| matches!(b, Block::Paragraph(i) if is_property_paragraph(i))) {
+                    let lead = Block::Paragraph(inl.clone());
+                    html_blocks[0] = lead;
+                }
+            }
+            blocks = html_blocks;
+            if icon.is_empty() {
+                icon = html_icon;
+            }
+            cover = cover.or(html_cover);
+            self.merged += 1;
+        }
         self.pages.push(PlanPage {
             key: path.to_string(),
             id: new_id(),
@@ -488,7 +582,43 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     let mut root = Dir::default();
     let mut docs = 0usize;
     let mut notion_markdown = false;
+    // The same Notion page in two formats (Markdown and HTML, zips or loose files, in any mix) has the same id at
+    // the end of both file names. The Markdown page is kept and takes the HTML page's text and formatting. The
+    // HTML page of a database (its table is imported from the CSV file) is not imported as a page.
+    let mut md_ids: HashMap<String, Vec<&String>> = HashMap::new();
+    let mut html_ids: HashMap<String, Vec<&String>> = HashMap::new();
+    let mut csv_ids: HashSet<String> = HashSet::new();
+    for p in &paths {
+        let name = p.rsplit('/').next().unwrap_or(p);
+        let Some(id) = notion_file_id(name) else { continue };
+        match kind_of(name) {
+            Some(Kind::Markdown) => md_ids.entry(id).or_default().push(p),
+            Some(Kind::Html) => html_ids.entry(id).or_default().push(p),
+            _ if extension(name) == "csv" => {
+                csv_ids.insert(id);
+            }
+            _ => {}
+        }
+    }
+    let mut twins: HashMap<String, String> = HashMap::new();
+    let mut hidden_html: HashSet<String> = HashSet::new();
+    let mut database_pages = 0usize;
+    for (id, hs) in &html_ids {
+        if let [h] = hs.as_slice() {
+            if csv_ids.contains(id) {
+                hidden_html.insert((*h).clone());
+                database_pages += 1;
+            } else if let Some([m]) = md_ids.get(id).map(|v| v.as_slice()) {
+                twins.insert((*m).clone(), (*h).clone());
+                hidden_html.insert((*h).clone());
+            }
+        }
+    }
+    let aliases: Vec<(String, String)> = twins.iter().map(|(m, h)| (h.clone(), m.clone())).collect();
     for path in paths {
+        if hidden_html.contains(path) {
+            continue;
+        }
         if layout.is_some() && path == crate::export::MARKER_NAME {
             continue;
         }
@@ -534,7 +664,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     };
     let folder_name = |n: &str| -> String { clean_title(n, false).chars().take(MAX_NAME).collect() };
 
-    let mut b = Builder { vfs, ctl, pages: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0 };
+    let mut b = Builder { vfs, ctl, pages: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0, twins, merged: 0 };
     let mut sections: Vec<String> = Vec::new();
     let mut section_notebook: Vec<usize> = Vec::new();
     // Notebooks named after folders (the notebooks layout); otherwise one, named below.
@@ -633,8 +763,14 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     };
 
     let mut notes = Vec::new();
-    if notion_markdown {
-        notes.push("These pages come from Notion's Markdown export, which has no text colors or highlights. Export from Notion as HTML to keep them.".to_string());
+    if b.merged > 0 {
+        notes.push(format!("{} pages were in both exports (Markdown and HTML): each was imported once, with the text, colors and fonts of the HTML and the table data of the Markdown and CSV files.", b.merged));
+    }
+    if database_pages > 0 {
+        notes.push(format!("{database_pages} HTML pages of databases were not imported as pages: their tables come from the CSV files."));
+    }
+    if notion_markdown && b.merged == 0 {
+        notes.push("These pages come from Notion's Markdown export, which has no text colors or highlights. Export from Notion as HTML to keep them, or choose the HTML and the Markdown & CSV exports together.".to_string());
     }
     if b.pdfs > 0 {
         notes.push("PDF import reads text only: pictures, scanned pages and the page layout are not imported.".to_string());
@@ -642,7 +778,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     if b.unlisted > 0 {
         notes.push(format!("{} more items were not imported than the list shows.", b.unlisted));
     }
-    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, images: b.images, skipped: b.skipped, notes })
+    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, images: b.images, skipped: b.skipped, notes, aliases })
 }
 
 /// `Err` with the message for the person when the import was cancelled or ran out of time.
@@ -706,7 +842,13 @@ impl Plan {
         let mut rendered: Vec<Option<(String, String)>> = Vec::new();
         let mut cut_rows = 0usize;
         for _ in 0..3 {
-            let ids: HashMap<&str, &str> = self.pages.iter().enumerate().filter(|(i, _)| !dropped.contains(i)).map(|(_, p)| (p.key.as_str(), p.id.as_str())).collect();
+            let mut ids: HashMap<&str, &str> = self.pages.iter().enumerate().filter(|(i, _)| !dropped.contains(i)).map(|(_, p)| (p.key.as_str(), p.id.as_str())).collect();
+            // A link that points at the HTML file of a page that was imported from its Markdown file.
+            for (alias, key) in &self.aliases {
+                if let Some(id) = ids.get(key.as_str()).copied() {
+                    ids.entry(alias.as_str()).or_insert(id);
+                }
+            }
             let page_id = |k: &str| ids.get(k).map(|s| s.to_string());
             rendered = Vec::with_capacity(self.pages.len());
             let mut too_big: Vec<usize> = Vec::new();
@@ -909,6 +1051,41 @@ mod tests {
         assert_eq!(first_image["attrs"]["caption"], "A photo");
         assert!(child.content.contains("http://clatt.localhost/") && child.text == "sub text");
         assert_eq!(summary.notebook_name, "Notion import");
+    }
+
+    #[test]
+    fn a_page_in_both_a_markdown_and_an_html_export_is_imported_once_with_the_html_formatting() {
+        let (guide, hand, table, row) = ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4");
+        let html_page = |title: &str, body: &str| format!("<html><head><title>{title}</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">{title}</h1></header><div class=\"page-body\">{body}</div></article></body></html>");
+        let row_html = format!(
+            "<html><head><title>Row</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">Row</h1><table class=\"properties\"><tbody><tr class=\"property-row\"><th>Status</th><td>Done</td></tr></tbody></table></header><div class=\"page-body\"><p><mark class=\"highlight-blue_background\">coloured</mark> body</p></div></article></body></html>"
+        );
+        let files: Vec<(String, Vec<u8>)> = vec![
+            (format!("Guide {guide}.md"), b"# Guide\n\nplain markdown text".to_vec()),
+            (format!("Guide {guide}.html"), html_page("Guide", "<p><mark class=\"highlight-blue_background\">highlighted</mark> text</p>").into_bytes()),
+            (format!("Handbook {hand}.html"), html_page("Handbook", &format!("<p>See <a href=\"Guide%20{guide}.html\">the guide</a>.</p>")).into_bytes()),
+            (format!("Table {table}.html"), html_page("Table", "<p>the table view</p>").into_bytes()),
+            (format!("Table {table}_all.csv"), b"Name,Status\nRow,Done\n".to_vec()),
+            (format!("Row {row}.md"), b"# Row\n\nStatus: Done\n\nrow markdown body".to_vec()),
+            (format!("Row {row}.html"), row_html.into_bytes()),
+        ];
+        let refs: Vec<(&str, &[u8])> = files.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let v = vfs(&refs);
+        let mut plan = build(&v, &Control::standard(), Some("Export-4a9d6e1c-0123-4567-89ab-cdef01234567"), NOW).unwrap();
+        let mut titles: Vec<&str> = plan.pages.iter().map(|p| p.title.as_str()).collect();
+        titles.sort();
+        assert_eq!(titles, ["Guide", "Handbook", "Row"], "each page once; the database's own HTML page is not a page");
+        assert_eq!(plan.aliases.len(), 2);
+        assert!(plan.notes.iter().any(|n| n.contains("were in both exports")), "{:?}", plan.notes);
+        assert!(plan.notes.iter().any(|n| n.contains("HTML pages of databases")), "{:?}", plan.notes);
+        let (items, _) = finish(&mut plan, &v);
+        let g = page(&items, "Guide");
+        assert!(g.content.contains(crate::importers::doc::HIGHLIGHTS[5]) && !g.text.contains("plain markdown"), "the HTML text, with its colors: {}", g.text);
+        let h = page(&items, "Handbook");
+        assert!(h.content.contains(&format!("notaya:page/{}", g.id)), "a link to the HTML file goes to the page imported from the Markdown file: {}", h.content);
+        let r = page(&items, "Row");
+        assert!(r.text.starts_with("Status: Done"), "the row keeps its property lines for the database import: {:?}", r.text);
+        assert!(r.text.contains("coloured") && !r.text.contains("row markdown body"), "{:?}", r.text);
     }
 
     #[test]

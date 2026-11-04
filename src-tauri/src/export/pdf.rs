@@ -367,11 +367,13 @@ struct TextStyle {
     color: Rgb,
     align: Align,
     leading: f32,
+    /// The base direction the person chose for the block (0 = left-to-right, 1 = right-to-left); `None` = by the text.
+    base: Option<u8>,
 }
 
 impl TextStyle {
     fn body(ctx: &Ctx) -> TextStyle {
-        TextStyle { size: BODY, bold: ctx.bold, italic: ctx.italic, mono: false, color: ctx.color, align: Align::Left, leading: 1.4 }
+        TextStyle { size: BODY, bold: ctx.bold, italic: ctx.italic, mono: false, color: ctx.color, align: Align::Left, leading: 1.4, base: None }
     }
 }
 
@@ -503,7 +505,7 @@ impl<'a> Layout<'a> {
         } else {
             Hint::Han
         };
-        let resolved = bidi::resolve(&chars, if st.mono { Some(0) } else { None });
+        let resolved = bidi::resolve(&chars, if st.mono { Some(0) } else { st.base });
         let rtl = resolved.base == 1;
         // What each shaped character is drawn with: a space, standard-font text, or a glyph.
         enum Kind {
@@ -608,6 +610,12 @@ impl<'a> Layout<'a> {
 
     /// Wraps inline content to the width and returns one strip per line.
     fn text(&mut self, content: &[Inline], ctx: &Ctx, st: TextStyle) -> Vec<Strip> {
+        // A direction chosen with the editor's direction button wins over the text's own.
+        let st = match (st.base, super::doc::explicit_dir(content)) {
+            (None, super::doc::Dir::Ltr) => TextStyle { base: Some(0), ..st },
+            (None, super::doc::Dir::Rtl) => TextStyle { base: Some(1), ..st },
+            _ => st,
+        };
         let mut strips = Vec::new();
         for hard_line in self.pieces(content, st) {
             // Words: runs of pieces without a space between them.
@@ -804,7 +812,7 @@ impl<'a> Layout<'a> {
         if !out.is_empty() {
             out.push(self.space(size * 0.6, ctx));
         }
-        let st = TextStyle { size, bold: true, italic: false, mono: false, color: Rgb(0x11, 0x18, 0x27), align, leading: 1.25 };
+        let st = TextStyle { size, bold: true, italic: false, mono: false, color: Rgb(0x11, 0x18, 0x27), align, leading: 1.25, base: None };
         let mut lines = self.text(content, ctx, st);
         for l in &mut lines {
             l.keep_next = true;
@@ -923,7 +931,7 @@ impl<'a> Layout<'a> {
             Block::Code { text, .. } => {
                 let mut c = ctx.inset(8.0, 8.0);
                 c.decor.push(Decor { x: ctx.x, w: ctx.w, fill: Some(CODE_BG), bar: None });
-                let st = TextStyle { size: 9.0, bold: false, italic: false, mono: true, color: INK, align: Align::Left, leading: 1.35 };
+                let st = TextStyle { size: 9.0, bold: false, italic: false, mono: true, color: INK, align: Align::Left, leading: 1.35, base: None };
                 out.push(self.space(6.0, &c));
                 for line in text.split('\n') {
                     let line = line.replace('\t', "    ");
@@ -1778,6 +1786,25 @@ mod tests {
         let line = spans(&strips[0]);
         let mid = (line.iter().map(|(x, _)| *x).fold(f32::MAX, f32::min) + line.iter().map(|(x, w)| x + w).fold(0.0, f32::max)) / 2.0;
         assert!((mid - (LEFT + WIDTH / 2.0)).abs() < 0.01);
+    }
+
+    #[test]
+    fn a_direction_chosen_by_the_person_wins_over_the_text() {
+        // Arabic text set to left-to-right starts at the left edge; by itself it ends at the right edge.
+        let laid = |dir: super::super::doc::Dir| {
+            let doc = sample_doc(Vec::new());
+            let mut lay = Layout { doc: &doc, images: Vec::new(), image_index: HashMap::new(), images_left_out: 0, chars_replaced: 0, chars_no_font: 0, pool: Pool::new(None) };
+            let ctx = Ctx::root(0);
+            let style = TextStyle::body(&ctx);
+            let strips = lay.text(&[Inline::Text("مرحبا".into(), Marks { dir, ..Marks::default() })], &ctx, style);
+            spans(&strips[0])
+        };
+        let auto = laid(super::super::doc::Dir::Auto);
+        let ltr = laid(super::super::doc::Dir::Ltr);
+        let auto_start = auto.iter().map(|(x, _)| *x).fold(f32::MAX, f32::min);
+        let ltr_start = ltr.iter().map(|(x, _)| *x).fold(f32::MAX, f32::min);
+        assert!(auto_start > LEFT + 1.0, "automatic: right-aligned, starts at {auto_start}");
+        assert!((ltr_start - LEFT).abs() < 0.01, "left-to-right: starts at the left edge, not {ltr_start}");
     }
 
     #[test]

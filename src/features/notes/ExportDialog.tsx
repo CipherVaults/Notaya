@@ -52,7 +52,7 @@ const OUTPUT_HINT: Record<Output, string> = {
 const FORMAT_HINT: Record<ExportFormat, string> = {
   html: "An .html page that opens in any browser. Pictures are inside the file; it has no scripts and loads nothing from the internet.",
   markdown: "A .md file. Pictures are saved in a folder next to it, named after the file with .assets at the end.",
-  pdf: "A .pdf file. PDF export shows Western European letters only: other scripts (for example Arabic) and emoji are replaced. Choose Word to keep them.",
+  pdf: "A .pdf file. It prints Western European, Arabic, Hebrew, Chinese, Japanese and Korean letters (the last three use fonts Windows already has). Other scripts (for example Cyrillic) and emoji are replaced. Choose Word to keep them.",
   docx: "A .docx file for Microsoft Word, LibreOffice or Google Docs. Equations are kept as their TeX text.",
 };
 

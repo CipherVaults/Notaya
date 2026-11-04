@@ -362,6 +362,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       const r = await api.importCsv(db.id);
       if (!r) return;
       toast.success(`Imported ${r.rows} ${r.rows === 1 ? "row" : "rows"}.`);
+      if (r.notice) toast.info(r.notice, { duration: 20000 });
       if (r.skipped.length) toast.warning(`Skipped: ${r.skipped.slice(0, 3).join("; ")}${r.skipped.length > 3 ? ` and ${r.skipped.length - 3} more` : ""}`);
       await loadDatabase(db.id);
       requery();

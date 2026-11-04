@@ -17,7 +17,7 @@ use super::database_io::build_from_table_with;
 use crate::database::csv;
 use crate::database::types::*;
 use crate::error::{Error, Result};
-use crate::importers::doc::{Block, Inline};
+use crate::importers::doc::{Block, Cell, Inline};
 use crate::importers::plan::PlanPage;
 use crate::importers::source::Vfs;
 use crate::importers::strip_notion_id;
@@ -159,8 +159,36 @@ fn lines_of(inlines: &[Inline]) -> Vec<String> {
     lines
 }
 
+/// The names in the first column of the properties table at the top of an HTML row page (name | value rows).
+fn table_keys(rows: &[Vec<Cell>]) -> Option<Vec<String>> {
+    if rows.is_empty() || rows.iter().any(|r| r.len() != 2) {
+        return None;
+    }
+    Some(
+        rows.iter()
+            .map(|r| match r[0].blocks.first() {
+                Some(Block::Paragraph(inl)) => lines_of(inl).join(" ").trim().to_lowercase(),
+                _ => String::new(),
+            })
+            .collect(),
+    )
+}
+
+/// Whether most of a properties table's names are columns of the table (a few properties may be left out of the CSV).
+fn is_properties_of(rows: &[Vec<Cell>], headers: &HashSet<String>) -> bool {
+    table_keys(rows).is_some_and(|keys| {
+        let hits = keys.iter().filter(|k| headers.contains(*k)).count();
+        hits > 0 && hits * 2 >= keys.len()
+    })
+}
+
 /// Removes the property lines Notion writes at the top of a row page (`Status: Done`): they are columns now.
+/// An HTML export has them as a table instead.
 fn strip_property_lines(blocks: &mut Vec<Block>, headers: &HashSet<String>) {
+    if matches!(blocks.first(), Some(Block::Table(rows)) if is_properties_of(rows, headers)) {
+        blocks.remove(0);
+        return;
+    }
     while let Some(Block::Paragraph(inl)) = blocks.first() {
         let lines = lines_of(inl);
         if lines.is_empty() {
@@ -180,18 +208,30 @@ fn strip_property_lines(blocks: &mut Vec<Block>, headers: &HashSet<String>) {
 /// row of the table whose columns name all of its leading property lines (`Status: Done`) and which has a row
 /// with the page's title.
 fn flat_table_of(tables: &[NotionTable], headers: &[HashSet<String>], p: &PlanPage) -> Option<usize> {
-    let Some(Block::Paragraph(inl)) = p.blocks.first() else { return None };
-    let lines = lines_of(inl);
-    if lines.is_empty() {
-        return None;
-    }
-    let keys: Vec<String> = lines.iter().filter_map(|l| l.split_once(':').map(|(k, _)| k.trim().to_lowercase())).collect();
-    if keys.len() != lines.len() {
-        return None;
-    }
+    // Property lines (Markdown export) or a properties table (HTML export) at the top of the page.
+    let (keys, majority): (Vec<String>, bool) = match p.blocks.first() {
+        Some(Block::Paragraph(inl)) => {
+            let lines = lines_of(inl);
+            if lines.is_empty() {
+                return None;
+            }
+            let keys: Vec<String> = lines.iter().filter_map(|l| l.split_once(':').map(|(k, _)| k.trim().to_lowercase())).collect();
+            if keys.len() != lines.len() {
+                return None;
+            }
+            (keys, false)
+        }
+        Some(Block::Table(rows)) => (table_keys(rows)?, true),
+        _ => return None,
+    };
     let title = p.title.trim().to_lowercase();
     headers.iter().enumerate().find_map(|(t, h)| {
-        let all_columns = keys.iter().all(|k| h.contains(k));
+        let all_columns = if majority {
+            let hits = keys.iter().filter(|k| h.contains(*k)).count();
+            hits > 0 && hits * 2 >= keys.len()
+        } else {
+            keys.iter().all(|k| h.contains(k))
+        };
         (all_columns && tables[t].table.rows.iter().any(|r| r.first().is_some_and(|c| c.trim().to_lowercase() == title))).then_some(t)
     })
 }
@@ -260,6 +300,7 @@ pub fn import_databases(
     }
     if !s.items().any(|i| matches!(i, Item::Database(_))) {
         before_first(s)?;
+        out.notes.push(super::database::FIRST_DATABASE_NOTICE.to_string());
     }
     let page_of: HashMap<&str, &crate::model::Page> = items.iter().filter_map(|i| if let Item::Page(p) = i { Some((p.id.as_str(), p)) } else { None }).collect();
     let has_children: HashSet<&str> = page_of.values().filter(|p| !p.parent.is_empty()).map(|p| p.parent.as_str()).collect();
