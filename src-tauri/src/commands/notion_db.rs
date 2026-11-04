@@ -104,6 +104,27 @@ pub fn read_tables(vfs: &Vfs, csv_paths: &[String]) -> (Vec<NotionTable>, Vec<St
         if is_all { e.1 = Some(p.clone()) } else { e.0 = Some(p.clone()) }
         e.2.push(p.clone());
     }
+    // The same database in two exports (a Markdown & CSV export next to an HTML export, in different folders)
+    // is one table: the files with the same Notion id are joined, and the `_all` file wins.
+    let mut by_id: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for key in groups.keys() {
+        if let Some(id) = notion_id(split_dir(key).1) {
+            by_id.entry(id).or_default().push(key.clone());
+        }
+    }
+    for (_, keys) in by_id {
+        if keys.len() < 2 || keys.iter().filter(|k| groups[*k].1.is_some()).count() > 1 {
+            continue;
+        }
+        let keep = keys.iter().find(|k| groups[*k].1.is_some()).unwrap_or(&keys[0]).clone();
+        for k in keys.into_iter().filter(|k| *k != keep) {
+            if let Some(g) = groups.remove(&k) {
+                if let Some(target) = groups.get_mut(&keep) {
+                    target.2.extend(g.2);
+                }
+            }
+        }
+    }
     let mut tables = Vec::new();
     let mut notes = Vec::new();
     let mut covered = Vec::new();

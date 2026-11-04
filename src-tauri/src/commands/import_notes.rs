@@ -575,6 +575,35 @@ mod tests {
     }
 
     #[test]
+    fn two_export_folders_picked_together_make_each_database_once() {
+        let root = temp();
+        let src = root.join("both");
+        let (md, ht) = (src.join("Export md"), src.join("Export html"));
+        std::fs::create_dir_all(md.join("Projects")).unwrap();
+        std::fs::create_dir_all(ht.join("Projects")).unwrap();
+        let (pdb, a) = ("98b9830964384ed4b08e1c3de9ace4e9", "40d90e048b60816bb6ebddfb2c2daf50");
+        std::fs::write(md.join(format!("Projects {pdb}_all.csv")), "Name,Status\nAlpha,Done\n").unwrap();
+        std::fs::write(ht.join(format!("Projects {pdb}.csv")), "Name,Status\nAlpha,Done\n").unwrap();
+        std::fs::write(md.join(format!("Projects/Alpha {a}.md")), "# Alpha\n\nStatus: Done\n\nplain markdown body\n").unwrap();
+        std::fs::write(
+            ht.join(format!("Projects/Alpha {a}.html")),
+            "<html><head><title>Alpha</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">Alpha</h1></header><div class=\"page-body\"><p>alpha html body</p></div></article></body></html>",
+        )
+        .unwrap();
+        std::fs::write(ht.join(format!("Projects {pdb}.html")), "<html><head><title>Projects</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">Projects</h1></header><div class=\"page-body\"><p>view</p></div></article></body></html>").unwrap();
+        let v = vault(&root.join("data"));
+        let flag = Arc::new(AtomicBool::new(false));
+        import_from_with(&v, &[src.clone()], true, &root.join("data"), 1, &flag_control(&flag), &|_| Ok(())).unwrap();
+        let (dbs, rows): (usize, Vec<Row>) = v
+            .with(|s| Ok((s.items().filter(|i| matches!(i, Item::Database(_))).count(), s.items().filter_map(|i| if let Item::Row(r) = i { Some(r.clone()) } else { None }).collect())))
+            .unwrap();
+        assert_eq!(dbs, 1, "one database, not one per export");
+        assert_eq!(rows.len(), 1);
+        assert!(rows[0].text.contains("alpha html body"), "{:?}", rows[0].text);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn a_folder_of_markdown_becomes_a_notebook_with_pictures() {
         let root = temp();
         let src = root.join("My notes");
