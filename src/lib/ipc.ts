@@ -147,6 +147,8 @@ export const api = {
     invoke<{ row: DbRow }>("create_row", { databaseId, title, cells: JSON.stringify(cells), templateId }),
   setCells: (rowId: string, title: string | null, patch: Record<string, unknown>) =>
     invoke<{ row: DbRow }>("set_cells", { rowId, title, patch: JSON.stringify(patch) }),
+  /** Runs the actions of a button property on a row. */
+  pressButton: (rowId: string, propId: string) => invoke<{ row: DbRow }>("press_button", { rowId, propId }),
   duplicateRow: (rowId: string) => invoke<{ row: DbRow }>("duplicate_row", { rowId }),
   reorderRows: (ids: string[]) => invoke<void>("reorder_rows", { ids }),
   searchRows: (databaseId: string, query: string, limitN = 50) =>

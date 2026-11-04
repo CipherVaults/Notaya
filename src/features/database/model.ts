@@ -45,12 +45,13 @@ export const KINDS: Record<PropKind, KindInfo> = {
   lastEditedBy: { label: "Last edited by", icon: "UserPen", computed: true },
   id: { label: "ID", icon: "Fingerprint", computed: true },
   place: { label: "Place", icon: "MapPin" },
+  button: { label: "Button", icon: "MousePointerClick", computed: true },
 };
 
 /** The order kinds are offered in the "new property" picker. */
 export const KIND_ORDER: PropKind[] = [
   "text", "number", "select", "multiSelect", "status", "date", "person", "files", "checkbox", "url", "email", "phone",
-  "formula", "relation", "rollup", "place", "createdTime", "createdBy", "lastEditedTime", "lastEditedBy", "id",
+  "formula", "relation", "rollup", "place", "button", "createdTime", "createdBy", "lastEditedTime", "lastEditedBy", "id",
 ];
 
 export const isComputedKind = (k: PropKind) => !!KINDS[k].computed || k === "createdTime";
@@ -60,7 +61,7 @@ export function blankProperty(kind: PropKind, name?: string): Property {
   return {
     id: newId(), name: name ?? KINDS[kind].label, kind, options: [], numberFormat: "number", numberDisplay: "", numberMax: 0,
     dateFormat: "full", formula: "", relationDb: "", relationBack: "", relationLimitOne: false, rollupRelation: "", rollupProp: "",
-    rollupCalc: "", idPrefix: "", description: "",
+    rollupCalc: "", idPrefix: "", description: "", buttonLabel: "", actions: [],
   };
 }
 

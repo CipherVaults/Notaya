@@ -10,6 +10,7 @@ import { ConfirmProvider, TooltipProvider } from "@/components/ui";
 import TitleBar from "@/components/TitleBar";
 import UnlockScreen from "@/features/unlock/UnlockScreen";
 import Shell from "@/components/Shell";
+import { pollNotices } from "@/features/database/notices";
 
 export default function App() {
   const status = useApp((s) => s.status);
@@ -21,20 +22,9 @@ export default function App() {
   useEffect(() => {
     if (!unlocked) return;
     let stopped = false;
-    const check = () =>
-      api
-        .dueReminders()
-        .then((list) => {
-          if (stopped) return;
-          for (const r of list) {
-            toast(r.title || "Untitled", {
-              description: r.databaseTitle ? `Reminder · ${r.databaseTitle}` : "Reminder",
-              duration: 20000,
-              action: { label: "Open", onClick: () => useApp.getState().openRow(r.rowId) },
-            });
-          }
-        })
-        .catch(() => {});
+    const check = () => {
+      if (!stopped) void pollNotices();
+    };
     check();
     const t = setInterval(check, 60000);
     return () => {

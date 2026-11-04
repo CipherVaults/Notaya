@@ -1,6 +1,7 @@
 ﻿//! Commands the UI can call. Each one checks its inputs, and none of them gives
 //! the UI general file-system or network access.
 
+pub mod automation;
 pub mod backup;
 pub mod calculator;
 pub mod database;

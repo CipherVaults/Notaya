@@ -187,7 +187,7 @@ impl<'a> Ctx<'a> {
             PropKind::LastEditedTime => Val::Date(DateVal { start: self.ms_to_local_minutes(row.updated), end: None, has_time: true }),
             PropKind::CreatedBy => str_of(Some(&Value::String(row.created_by.clone()))),
             PropKind::LastEditedBy => str_of(Some(&Value::String(row.edited_by.clone()))),
-            PropKind::Formula | PropKind::Rollup => Val::Null,
+            PropKind::Formula | PropKind::Rollup | PropKind::Button => Val::Null,
         }
     }
 

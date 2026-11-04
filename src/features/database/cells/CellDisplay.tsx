@@ -1,6 +1,7 @@
 // How a cell looks (read-only). Editing is in CellEditor.tsx. Every text is dir="auto" so Arabic and Hebrew start on the right.
 
-import { Check, File as FileIcon, Image as ImageIcon, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Check, File as FileIcon, Image as ImageIcon, MapPin, MousePointerClick } from "lucide-react";
 import { api, errorText } from "@/lib/ipc";
 import { toast } from "sonner";
 import type { DateCell, DbRow, FileCell, PlaceCell, Property, SelectOption } from "@/lib/database-types";
@@ -8,6 +9,8 @@ import { cn, initials } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { formatBytes, formatDateCell, formatNumber, isComputedValue, optClass, optDot } from "../model";
 import { useRowTitles } from "../rowTitles";
+import { pollNotices } from "../notices";
+import { rowsChanged } from "../dbStore";
 
 export function OptionChip({ option, className }: { option: Pick<SelectOption, "name" | "color"> & { group?: string }; className?: string }) {
   return (
@@ -117,6 +120,37 @@ export function CheckBox({ checked, className }: { checked: boolean; className?:
   );
 }
 
+/** A button property: pressing it runs its actions on the row (Rust: `press_button`). */
+export function ButtonCell({ prop, row }: { prop: Property; row?: DbRow }) {
+  const [busy, setBusy] = useState(false);
+  const label = prop.buttonLabel || prop.name || "Button";
+  return (
+    <button
+      type="button"
+      disabled={!row || busy || prop.actions.length === 0}
+      title={prop.actions.length === 0 ? "This button has no actions yet (edit the property)" : label}
+      onClick={async (e) => {
+        e.stopPropagation();
+        if (!row) return;
+        setBusy(true);
+        try {
+          await api.pressButton(row.id, prop.id);
+        } catch (err) {
+          toast.error(errorText(err));
+        } finally {
+          setBusy(false);
+        }
+        await pollNotices();
+        rowsChanged();
+      }}
+      className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-0.5 text-[0.86em] font-medium text-fg hover:bg-surface-2 disabled:opacity-50"
+    >
+      <MousePointerClick size={12} className="shrink-0 text-muted" aria-hidden />
+      <span dir="auto" className="truncate">{label}</span>
+    </button>
+  );
+}
+
 interface Props {
   prop: Property;
   value: unknown;
@@ -138,6 +172,7 @@ export default function CellDisplay({ prop, value, row, wrap }: Props) {
       </span>
     );
   }
+  if (prop.kind === "button") return <ButtonCell prop={prop} row={row} />;
   if (isComputedValue(value)) return <ComputedValue prop={prop} cell={value} wrap={wrap} />;
   if (value == null || value === "") {
     return prop.kind === "checkbox" ? <CheckBox checked={false} /> : null;

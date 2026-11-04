@@ -17,6 +17,8 @@ pub const MAX_TEMPLATES: usize = 100;
 pub const MAX_OPTIONS: usize = 500;
 pub const MAX_NAME: usize = 120;
 pub const MAX_FORMULA: usize = 20_000;
+pub const MAX_AUTOMATIONS: usize = 50;
+pub const MAX_ACTIONS: usize = 20;
 pub const MAX_FILTER_DEPTH: usize = 3;
 pub const MAX_FILTER_CONDS: usize = 100;
 pub const MAX_SORTS: usize = 10;
@@ -25,7 +27,7 @@ pub const TITLE_PROP: &str = "title";
 /// Files and media stored in a row: at most this many bytes each (owner, 2026-11-03: 50 MB).
 pub const MAX_FILE_BYTES: usize = 50 * 1024 * 1024;
 
-/// The kinds of property (Notion's list; Button is left out because it needs automations).
+/// The kinds of property (Notion's list).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, Zeroize, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum PropKind {
@@ -52,6 +54,8 @@ pub enum PropKind {
     LastEditedBy,
     Id,
     Place,
+    /// Runs its `actions` on the row when pressed (no value is stored).
+    Button,
 }
 
 impl PropKind {
@@ -65,6 +69,7 @@ impl PropKind {
                 | PropKind::CreatedBy
                 | PropKind::LastEditedTime
                 | PropKind::LastEditedBy
+                | PropKind::Button
         )
     }
 }
@@ -112,6 +117,57 @@ pub struct Property {
     pub id_prefix: String,
     /// Optional unique-looking description shown as a tooltip.
     pub description: String,
+    /// Button: the label on the button and what it does to the row (in order).
+    pub button_label: String,
+    pub actions: Vec<Action>,
+}
+
+/// One value to set when an action adds a row.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Zeroize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SetCell {
+    pub prop: String,
+    pub value: String,
+}
+
+/// What a button or an automation does. Everything stays inside the vault: no network, no programs.
+/// `kind`: "setProp" (set `prop` of the row to `value`) | "addRow" (add a row to `database`, "" = this one,
+/// named `title`, with `cells`) | "notify" (show `title` inside Notaya) | "trash" (move the row to the trash).
+/// A `value` is text for the property, or "@clear", "@now", "@today", "@today+7", "@toggle", "@add:5",
+/// "@self" (link to the row that triggered it); `{title}` in a text stands for that row's title.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Zeroize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Action {
+    pub kind: String,
+    pub prop: String,
+    pub value: String,
+    pub database: String,
+    pub title: String,
+    pub cells: Vec<SetCell>,
+}
+
+/// `kind`: "rowAdded" | "propChanged" (`prop` = the property, "" = any) | "dateReached" (`prop` = a date
+/// property, `offset_mins` = minutes after the date starts; negative = before).
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Zeroize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Trigger {
+    pub kind: String,
+    pub prop: String,
+    pub offset_mins: i64,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Zeroize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Automation {
+    pub id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub trigger: Trigger,
+    /// The row must match this filter for the actions to run.
+    pub filter: Filter,
+    pub actions: Vec<Action>,
+    /// Date triggers: the local minute up to which dates were handled (set by Notaya).
+    pub last_run: i64,
 }
 
 /// Conditions of a filter. `op` names (per property kind) are listed in `engine::filter`.
@@ -347,6 +403,8 @@ pub struct Database {
     pub blocked_by_prop: String,
     #[serde(default)]
     pub blocking_prop: String,
+    #[serde(default)]
+    pub automations: Vec<Automation>,
     pub trashed_at: Option<i64>,
     pub created: i64,
     pub updated: i64,
@@ -391,6 +449,7 @@ impl Database {
             sub_child_prop: String::new(),
             blocked_by_prop: String::new(),
             blocking_prop: String::new(),
+            automations: Vec::new(),
             trashed_at: None,
             created: now,
             updated: now,
@@ -619,6 +678,82 @@ impl Database {
         }
         if !self.default_template.is_empty() && !self.templates.iter().any(|t| t.id == self.default_template) {
             self.default_template.clear();
+        }
+        self.sanitize_automations()?;
+        Ok(())
+    }
+}
+
+fn check_actions(what: &str, actions: &mut Vec<Action>, props: &[String]) -> Result<()> {
+    if actions.len() > MAX_ACTIONS {
+        return Err(Error::Other(format!("{what} can have at most {MAX_ACTIONS} actions.")));
+    }
+    for a in actions.iter_mut() {
+        if !matches!(a.kind.as_str(), "setProp" | "addRow" | "notify" | "trash") {
+            return Err(Error::Other(format!("{what} has an action Notaya does not know.")));
+        }
+        check_len("An action value", &a.value, 2000)?;
+        check_len("An action title", &a.title, 300)?;
+        if a.cells.len() > 100 {
+            return Err(Error::Other("An action sets too many cells.".into()));
+        }
+        for c in &a.cells {
+            check_len("An action value", &c.value, 2000)?;
+        }
+    }
+    // An action on a property that was deleted is dropped (so deleting a property is never blocked).
+    actions.retain(|a| a.kind != "setProp" || props.contains(&a.prop) || a.prop == TITLE_PROP);
+    Ok(())
+}
+
+impl Database {
+    fn sanitize_automations(&mut self) -> Result<()> {
+        if self.automations.len() > MAX_AUTOMATIONS {
+            return Err(Error::Other(format!("A database can have at most {MAX_AUTOMATIONS} automations.")));
+        }
+        let prop_ids: Vec<String> = self.props.iter().map(|p| p.id.clone()).collect();
+        let date_ids: Vec<String> = self.props.iter().filter(|p| p.kind == PropKind::Date).map(|p| p.id.clone()).collect();
+        let mut seen = std::collections::HashSet::new();
+        for a in &mut self.automations {
+            if a.id.is_empty() {
+                a.id = crate::model::new_id();
+            }
+            if !seen.insert(a.id.clone()) {
+                return Err(Error::Other("Two automations share an id.".into()));
+            }
+            check_len("An automation name", &a.name, MAX_NAME)?;
+            if a.name.trim().is_empty() {
+                a.name = "Automation".into();
+            }
+            match a.trigger.kind.as_str() {
+                "rowAdded" => a.trigger.prop.clear(),
+                "propChanged" => {
+                    if !a.trigger.prop.is_empty() && !prop_ids.contains(&a.trigger.prop) {
+                        a.trigger.prop.clear();
+                    }
+                }
+                "dateReached" => {
+                    if !date_ids.contains(&a.trigger.prop) {
+                        a.enabled = false; // its date property is gone: switched off until the person picks another
+                    }
+                    a.trigger.offset_mins = a.trigger.offset_mins.clamp(-40_320, 40_320);
+                }
+                _ => return Err(Error::Other(format!("The automation \"{}\" has a trigger Notaya does not know.", a.name))),
+            }
+            let mut count = 0;
+            check_filter(&a.filter, 1, &mut count)?;
+            let what = format!("The automation \"{}\"", a.name);
+            check_actions(&what, &mut a.actions, &prop_ids)?;
+        }
+        for p in &mut self.props {
+            if p.kind == PropKind::Button {
+                check_len("A button label", &p.button_label, 60)?;
+                let what = format!("The button \"{}\"", p.name);
+                check_actions(&what, &mut p.actions, &prop_ids)?;
+            } else {
+                p.actions.clear();
+                p.button_label.clear();
+            }
         }
         Ok(())
     }

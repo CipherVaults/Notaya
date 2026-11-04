@@ -23,7 +23,8 @@ export type PropKind =
   | "lastEditedTime"
   | "lastEditedBy"
   | "id"
-  | "place";
+  | "place"
+  | "button";
 
 export type OptionColor = "" | "gray" | "brown" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink" | "red";
 export type StatusGroup = "todo" | "inProgress" | "complete";
@@ -58,6 +59,46 @@ export interface Property {
   rollupCalc: string;
   idPrefix: string;
   description: string;
+  /** Button: the label and what pressing it does to the row. */
+  buttonLabel: string;
+  actions: Action[];
+}
+
+export interface SetCell {
+  prop: string;
+  value: string;
+}
+
+/**
+ * What a button or an automation does (all inside the vault): "setProp" | "addRow" | "notify" | "trash".
+ * A value is plain text for the property, or "@clear", "@now", "@today", "@today+7", "@toggle", "@add:5", "@self".
+ */
+export interface Action {
+  kind: "setProp" | "addRow" | "notify" | "trash";
+  prop: string;
+  value: string;
+  /** addRow: the database to add to ("" = this one). */
+  database: string;
+  /** addRow: the new row's name; notify: the message. {title} stands for the row's name. */
+  title: string;
+  cells: SetCell[];
+}
+
+export interface Trigger {
+  kind: "rowAdded" | "propChanged" | "dateReached";
+  prop: string;
+  /** dateReached: minutes after the date starts (negative = before). */
+  offsetMins: number;
+}
+
+export interface Automation {
+  id: string;
+  name: string;
+  enabled: boolean;
+  trigger: Trigger;
+  filter: Filter;
+  actions: Action[];
+  lastRun: number;
 }
 
 export interface Cond {
@@ -187,6 +228,7 @@ export interface Database {
   subChildProp: string;
   blockedByProp: string;
   blockingProp: string;
+  automations: Automation[];
   trashedAt: number | null;
   created: number;
   updated: number;
@@ -335,4 +377,6 @@ export interface Reminder {
   databaseId: string;
   databaseTitle: string;
   when: string;
+  /** An automation's message: the name of the automation or button ("" for a date reminder). */
+  message: string;
 }

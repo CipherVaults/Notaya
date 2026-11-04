@@ -369,6 +369,8 @@ pub fn export_lines(s: &crate::vault::Session, database_id: &str, view_id: Optio
         }
         _ => db.props.iter().collect(),
     };
+    // A button holds no value: it is left out of an export.
+    let cols: Vec<&Property> = cols.into_iter().filter(|p| p.kind != PropKind::Button).collect();
     let rows: Vec<&Row> = ctx.rows_of(&db.id).iter().copied().filter(|r| view.map_or(true, |v| v.filter.is_empty() || ctx.matches(dbref, r, &v.filter))).collect();
     let rows = match view {
         Some(v) => ctx.sorted(dbref, rows, &v.sorts),

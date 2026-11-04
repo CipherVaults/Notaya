@@ -239,6 +239,7 @@ pub fn run() {
             database_cmd::query_view,
             database_cmd::create_row,
             database_cmd::set_cells,
+            database_cmd::press_button,
             database_cmd::duplicate_row,
             database_cmd::reorder_rows,
             database_cmd::search_rows,

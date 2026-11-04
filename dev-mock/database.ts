@@ -865,6 +865,56 @@ let firstDb = true;
 let csvCount = 0;
 
 /** Handles the database commands; returns NOT_HANDLED for anything else. `base` is the notes tree of the mock. */
+
+// ---- automations and buttons (a small copy of src-tauri/src/commands/automation.rs, enough for the screens)
+const notices: unknown[] = [];
+function autoValue(p: Property, spec: string, src: MRow, cur: MRow | null): unknown {
+  const s = spec.trim();
+  if (s === "@clear") return null;
+  switch (p.kind) {
+    case "number": { if (s.startsWith("@add:")) return (Number(cur?.cells[p.id] ?? 0) || 0) + Number(s.slice(5)); return s === "" ? null : Number(s); }
+    case "select": case "status": { const o = p.options.find((x) => x.name.toLowerCase() === s.toLowerCase()); if (!o) throw "\"" + spec + "\" does not fit \"" + p.name + "\""; return o.id; }
+    case "checkbox": return s === "@toggle" ? cur?.cells[p.id] !== true : ["true", "yes", "1"].includes(s.toLowerCase());
+    case "date": { const d = new Date(); if (s === "@now") return { start: d.toISOString().slice(0, 16) }; const m = /^@today([+-]\d+)?$/.exec(s); if (m) { d.setDate(d.getDate() + Number(m[1] ?? 0)); return { start: d.toISOString().slice(0, 10) }; } return { start: s }; }
+    case "relation": return s === "@self" ? [src.id] : (() => { throw "bad"; })();
+    case "person": case "multiSelect": return s.split(",").map((x) => x.trim()).filter(Boolean);
+    default: return s.replace("{title}", src.title);
+  }
+}
+function runActions(name: string, actions: any[], row: MRow, depth: number) {
+  let left = 50;
+  for (const a of actions) {
+    if (left-- <= 0) break;
+    try {
+      const d = dbFull(row.db);
+      if (a.kind === "setProp") {
+        const old = clone(row.cells);
+        if (a.prop === "title") row.title = String(a.value).replace("{title}", row.title);
+        else { const p = d.props.find((x) => x.id === a.prop); if (!p) continue; const v = autoValue(p, a.value, row, row); if (v === null) delete row.cells[p.id]; else row.cells[p.id] = v; }
+        syncRelations(d, row, old);
+        if (depth < 3 && JSON.stringify(old) !== JSON.stringify(row.cells)) fireAuto(d, row, "changed", Object.keys({ ...old, ...row.cells }).filter((k) => JSON.stringify(old[k]) !== JSON.stringify(row.cells[k])), depth + 1);
+      } else if (a.kind === "addRow") {
+        const td = dbFull(a.database || row.db);
+        const nr = newRow(td, String(a.title ?? "").replace("{title}", row.title));
+        for (const c of a.cells ?? []) { const p = td.props.find((x) => x.id === c.prop); if (!p) continue; const v = autoValue(p, c.value, row, null); if (v !== null) nr.cells[p.id] = v; }
+        syncRelations(td, nr, null);
+        if (depth < 3) fireAuto(td, nr, "added", [], depth + 1);
+      } else if (a.kind === "notify") {
+        notices.push({ key: "auto:" + nid(), rowId: row.id, title: String(a.title || name).replace("{title}", row.title), databaseId: d.id, databaseTitle: d.title, when: "", message: name });
+      } else if (a.kind === "trash") row.trashedAt = Date.now();
+    } catch (e) {
+      notices.push({ key: "auto:" + nid(), rowId: row.id, title: "An action did not run: " + String(e), databaseId: row.db, databaseTitle: "", when: "", message: name });
+    }
+  }
+}
+function fireAuto(d: Database, row: MRow, ev: "added" | "changed", changed: string[], depth = 0) {
+  for (const a of ((d as any).automations ?? []) as any[]) {
+    if (!a.enabled) continue;
+    const hit = (a.trigger.kind === "rowAdded" && ev === "added") || (a.trigger.kind === "propChanged" && ev === "changed" && (!a.trigger.prop || changed.includes(a.trigger.prop)));
+    if (hit) runActions(a.name, a.actions, row, depth);
+  }
+}
+
 export function databaseCommand(cmd: string, args: A, base: Record<string, unknown>, options?: { headers?: Record<string, string> }): unknown {
   switch (cmd) {
     case "list_notes": return treeNow(base);
@@ -938,9 +988,20 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
         if (c === undefined) delete r.cells[k]; else r.cells[k] = c;
       }
       syncRelations(d, r, null);
+      fireAuto(d, r, "added", []);
       memo.clear();
       return { row: rowOut(d, r) };
     }
+    case "press_button": {
+      const r = rowFull(args.rowId);
+      const d = dbFull(r.db);
+      const p = d.props.find((x) => x.id === args.propId && x.kind === "button");
+      if (!p) throw "Not found.";
+      runActions(p.name, (p as any).actions ?? [], r, 0);
+      memo.clear();
+      return { row: rowOut(d, r) };
+    }
+    case "due_reminders_now": return notices.splice(0);
     case "set_cells": {
       const r = rowFull(args.rowId);
       const d = dbFull(r.db);
@@ -955,6 +1016,7 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       if (args.title != null) r.title = String(args.title);
       r.updated = Date.now(); r.editedBy = "You";
       syncRelations(d, r, old);
+      fireAuto(d, r, "changed", Object.keys(patch).filter((k) => JSON.stringify(old[k]) !== JSON.stringify(r.cells[k])));
       memo.clear();
       return { row: rowOut(d, r) };
     }

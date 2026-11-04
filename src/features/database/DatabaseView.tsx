@@ -5,7 +5,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Dialog, Popover } from "radix-ui";
 import {
   AlertTriangle, ArrowUpDown, ChevronDown, Copy, Download, ExternalLink, FileUp, Filter as FilterIcon, GitBranch, Group, ListTree, Loader2, Lock, LockOpen,
-  MoreHorizontal, Plus, Search, SlidersHorizontal, Table as TableIcon, Trash2, X, Settings2, LayoutTemplate,
+  MoreHorizontal, Plus, Search, SlidersHorizontal, Table as TableIcon, Trash2, X, Settings2, LayoutTemplate, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -19,6 +19,7 @@ import { editDatabase, loadDatabase, setDatabase, useDatabase, useSaveCount } fr
 import { ViewIcon } from "./icons";
 import { VIEW_KINDS, blankView, cellText, countConds, emptyFilter, filterIsEmpty, reorderList } from "./model";
 import { saveCells } from "./ops";
+import { afterRowChange } from "./notices";
 import { FilterGroup } from "./panels/FilterPanel";
 import { GroupPanel, SortPanel } from "./panels/SortGroupPanels";
 import { PropertiesPanel, ViewSettingsPanel } from "./panels/ViewPanels";
@@ -27,6 +28,7 @@ import { PanelPopover } from "./panels/ui";
 import { viewComponent } from "./views/registry";
 import type { ViewProps } from "./viewTypes";
 import TemplatesDialog from "./TemplatesDialog";
+import AutomationsDialog from "./AutomationsDialog";
 
 const RowPeek = lazy(() => import("./RowPeek"));
 
@@ -77,6 +79,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const [propMenu, setPropMenu] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [templates, setTemplates] = useState(false);
+  const [automations, setAutomations] = useState(false);
   const reqRef = useRef(0);
   const requeryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -95,6 +98,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const viewKey = useMemo(() => JSON.stringify(view), [view]);
   const propsKey = useMemo(() => JSON.stringify(db?.props ?? []), [db?.props]);
   const locked = !!db?.locked;
+  const automationsOn = !!db?.automations?.some((a) => a.enabled);
 
   const requery = useCallback(() => {
     clearTimeout(requeryTimer.current);
@@ -175,8 +179,9 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       const row = await saveCells(rowId, patch);
       if (row) patchRow(row);
       requery();
+      afterRowChange(automationsOn);
     },
-    [patchRow, requery],
+    [patchRow, requery, automationsOn],
   );
   const setTitle = useCallback(
     async (rowId: string, title: string) => {
@@ -193,6 +198,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
         const { row } = await api.createRow(databaseId, title, cells, templateId);
         setResult((r) => (r ? { ...r, rows: [...r.rows, row], total: r.total + 1, filtered: r.filtered + 1 } : r));
         requery();
+        afterRowChange(automationsOn);
         void api.listNotes().then(setTree).catch(() => undefined);
         return row;
       } catch (e) {
@@ -200,7 +206,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
         return null;
       }
     },
-    [databaseId, requery, setTree],
+    [databaseId, requery, setTree, automationsOn],
   );
   const reorderRows = useCallback(
     async (ids: string[]) => {
@@ -462,7 +468,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           </button>
         }
       >
-        <FilterGroup filter={view.filter} props={db.props} depth={1} onChange={(f: Filter) => editView((v) => ({ ...v, filter: f }))} />
+        <FilterGroup filter={view.filter} props={db.props.filter((p) => p.kind !== "button")} depth={1} onChange={(f: Filter) => editView((v) => ({ ...v, filter: f }))} />
         {hasFilter && (
           <button type="button" className="mt-2 text-xs text-muted hover:text-danger" onClick={() => editView((v) => ({ ...v, filter: emptyFilter() }))}>
             Delete filter
@@ -561,6 +567,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
             {locked ? "Unlock database" : "Lock database"}
           </MenuItem>
           <MenuItem icon={<LayoutTemplate size={15} />} onSelect={() => setTemplates(true)}>Templates…</MenuItem>
+          <MenuItem icon={<Zap size={15} />} onSelect={() => setAutomations(true)}>Automations…</MenuItem>
           <MenuSeparator />
           <MenuItem icon={<FileUp size={15} />} onSelect={importCsv}>Import CSV…</MenuItem>
           <MenuItem icon={<Download size={15} />} onSelect={exportCsv}>Export CSV (this view)…</MenuItem>
@@ -785,6 +792,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           />
         )}
         {templates && <TemplatesDialog db={db} onClose={() => setTemplates(false)} onSaved={requery} />}
+        {automations && <AutomationsDialog db={db} onClose={() => setAutomations(false)} onSaved={requery} />}
         {peek && (
           <Suspense fallback={null}>
             <RowPeek rowId={peek.id} mode={peek.mode} onClose={() => setPeek(null)} onOpenPage={() => (setPeek(null), openRowPage(peek.id))} />

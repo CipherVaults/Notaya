@@ -10,6 +10,7 @@ import {
   reorderList,
 } from "../model";
 import { loadDatabase, useDatabase } from "../dbStore";
+import ActionsEditor from "./ActionsEditor";
 import { PSelect, PanelTitle, PropSelect, Row, SortableList, SortableRow, SwitchRow, fieldCls } from "./ui";
 import { Popover } from "radix-ui";
 import { optClass, optDot } from "../model";
@@ -356,6 +357,15 @@ export function PropertyMenu({ db, prop, databases, locked, sample, onChange, on
           <SwitchRow label="Limit to one row" checked={prop.relationLimitOne} onChange={(v) => set({ relationLimitOne: v })} />
         </div>
       )}
+      {prop.kind === "button" && (
+        <div className="space-y-2">
+          <Row label="Label">
+            <input aria-label="Button label" dir="auto" value={prop.buttonLabel} maxLength={60} placeholder={prop.name} onChange={(e) => set({ buttonLabel: e.target.value })} className={cn(fieldCls, "w-[11rem]")} />
+          </Row>
+          <PanelTitle>When pressed</PanelTitle>
+          <ActionsEditor db={db} actions={prop.actions} onChange={(actions) => set({ actions })} />
+        </div>
+      )}
       {prop.kind === "id" && (
         <Row label="Prefix">
           <input aria-label="ID prefix" value={prop.idPrefix} maxLength={20} placeholder="TASK" onChange={(e) => set({ idPrefix: e.target.value })} className={cn(fieldCls, "w-[11rem]")} />
@@ -416,7 +426,7 @@ export function NewPropertyPicker({
     if (k === "status") {
       p.options = [blankOption("Not started", "gray", "todo"), blankOption("In progress", "blue", "inProgress"), blankOption("Done", "green", "complete")];
     } else if (k === "select" || k === "multiSelect") p.options = [];
-    onCreate(p, k === "formula" || hasOptions(k));
+    onCreate(p, k === "formula" || k === "button" || hasOptions(k));
     onClose();
   };
 

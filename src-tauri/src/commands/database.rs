@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use tauri::State;
 
+use super::automation;
 use super::limit;
 use crate::backup;
 use crate::database::clock;
@@ -292,7 +293,7 @@ pub fn clean_cell(s: &Session, db: &Database, prop: &Property, v: &Value) -> Res
             }
             _ => return Err(bad()),
         },
-        PropKind::Formula | PropKind::Rollup | PropKind::CreatedTime | PropKind::CreatedBy | PropKind::LastEditedTime | PropKind::LastEditedBy | PropKind::Id => {
+        PropKind::Formula | PropKind::Rollup | PropKind::CreatedTime | PropKind::CreatedBy | PropKind::LastEditedTime | PropKind::LastEditedBy | PropKind::Id | PropKind::Button => {
             return Err(Error::invalid(format!("\"{}\" is worked out by Notaya and cannot be typed in.", prop.name)))
         }
     })
@@ -490,6 +491,11 @@ pub fn save_database(state: State<'_, AppState>, database_json: String) -> Resul
         incoming.favorite = old.favorite;
         incoming.trashed_at = old.trashed_at;
         incoming.next_id = old.next_id;
+        // Date automations: Notaya keeps the time up to which dates were handled; a new one starts now.
+        let now_min = clock::local_now().0;
+        for a in &mut incoming.automations {
+            a.last_run = old.automations.iter().find(|o| o.id == a.id).map_or(now_min, |o| o.last_run);
+        }
         incoming.updated = now_ms();
         incoming.sanitize()?;
         // Property kinds cannot change in place (a value of the old kind would be wrong); the UI makes a new property.
@@ -696,42 +702,57 @@ pub fn get_row(state: State<'_, AppState>, row_id: String) -> Result<RowResult> 
 #[tauri::command]
 pub fn create_row(state: State<'_, AppState>, database_id: String, title: String, cells: String, template_id: String) -> Result<RowResult> {
     limit("Title", &title, 300)?;
+    let given = parse_given(&cells)?;
     state.with_mut(|s| {
-        let mut db = database(s, &database_id)?;
-        let mut r = new_row(s, &mut db, title)?;
-        let tid = match template_id.as_str() {
-            "-" => String::new(),
-            "" => db.default_template.clone(),
-            other => other.to_string(),
-        };
-        if let Some(t) = db.templates.iter().find(|t| t.id == tid) {
-            apply_template(&mut r, t);
-        }
-        let mut m = parse_cells(&r);
-        if !cells.trim().is_empty() {
-            let given: Value = serde_json::from_str(&cells).map_err(|_| Error::invalid("Those cell values are not valid."))?;
-            if let Value::Object(g) = given {
-                for (k, v) in g {
-                    let p = db.prop(&k).ok_or(Error::NotFound)?.clone();
-                    match clean_cell(s, &db, &p, &v)? {
-                        Some(c) => {
-                            m.insert(k, c);
-                        }
-                        None => {
-                            m.remove(&k);
-                        }
-                    }
-                }
-            }
-        }
-        write_cells(&mut r, &m)?;
-        let id = r.id.clone();
-        let mut items = relation_sync_diff(s, &id, None, &m, &db)?;
-        items.push(Item::Row(r));
-        items.push(Item::Database(db));
-        s.put_many(items)?;
+        let id = add_row_inner(s, &database_id, title, &given, &template_id)?;
+        let mut run = automation::Run::default();
+        automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
+        automation::finish(run);
         row_result(s, &id)
     })
+}
+
+fn parse_given(cells: &str) -> Result<Map<String, Value>> {
+    if cells.trim().is_empty() {
+        return Ok(Map::new());
+    }
+    match serde_json::from_str::<Value>(cells) {
+        Ok(Value::Object(g)) => Ok(g),
+        _ => Err(Error::invalid("Those cell values are not valid.")),
+    }
+}
+
+/// Makes and saves a row (no automations run here). Returns its id.
+pub(crate) fn add_row_inner(s: &mut Session, database_id: &str, title: String, given: &Map<String, Value>, template_id: &str) -> Result<String> {
+    let mut db = database(s, database_id)?;
+    let mut r = new_row(s, &mut db, title)?;
+    let tid = match template_id {
+        "-" => String::new(),
+        "" => db.default_template.clone(),
+        other => other.to_string(),
+    };
+    if let Some(t) = db.templates.iter().find(|t| t.id == tid) {
+        apply_template(&mut r, t);
+    }
+    let mut m = parse_cells(&r);
+    for (k, v) in given {
+        let p = db.prop(k).ok_or(Error::NotFound)?.clone();
+        match clean_cell(s, &db, &p, v)? {
+            Some(c) => {
+                m.insert(k.clone(), c);
+            }
+            None => {
+                m.remove(k);
+            }
+        }
+    }
+    write_cells(&mut r, &m)?;
+    let id = r.id.clone();
+    let mut items = relation_sync_diff(s, &id, None, &m, &db)?;
+    items.push(Item::Row(r));
+    items.push(Item::Database(db));
+    s.put_many(items)?;
+    Ok(id)
 }
 
 /// For every relation property that has another side, makes the other rows list this row (or not)
@@ -784,33 +805,64 @@ pub fn set_cells(state: State<'_, AppState>, row_id: String, title: Option<Strin
     if let Some(t) = &title {
         limit("Title", t, 300)?;
     }
-    let given: Value = serde_json::from_str(&patch).map_err(|_| Error::invalid("Those cell values are not valid."))?;
+    let given = parse_given(&patch)?;
     state.with_mut(|s| {
-        let mut r = row(s, &row_id)?;
-        let db = database(s, &r.db)?;
-        let old = parse_cells(&r);
-        let mut m = old.clone();
-        if let Value::Object(g) = given {
-            for (k, v) in g {
-                let p = db.prop(&k).ok_or(Error::NotFound)?.clone();
-                match clean_cell(s, &db, &p, &v)? {
-                    Some(c) => {
-                        m.insert(k, c);
-                    }
-                    None => {
-                        m.remove(&k);
-                    }
-                }
+        let changed = change_row(s, &row_id, title, &given)?;
+        if !changed.is_empty() {
+            let mut run = automation::Run::default();
+            automation::fire(s, &mut run, &row_id, &automation::Event::Changed(&changed), 0);
+            automation::finish(run);
+        }
+        row_result(s, &row_id)
+    })
+}
+
+/// Changes cells (and the title) of a row and saves it (no automations run here).
+/// Returns the ids of the properties whose value changed ("title" for the title).
+pub(crate) fn change_row(s: &mut Session, row_id: &str, title: Option<String>, given: &Map<String, Value>) -> Result<Vec<String>> {
+    let mut r = row(s, row_id)?;
+    let db = database(s, &r.db)?;
+    let old = parse_cells(&r);
+    let mut m = old.clone();
+    for (k, v) in given {
+        let p = db.prop(k).ok_or(Error::NotFound)?.clone();
+        match clean_cell(s, &db, &p, v)? {
+            Some(c) => {
+                m.insert(k.clone(), c);
+            }
+            None => {
+                m.remove(k);
             }
         }
-        write_cells(&mut r, &m)?;
-        if let Some(t) = title {
-            r.title = t;
+    }
+    let mut changed: Vec<String> = given.keys().filter(|k| old.get(*k) != m.get(*k)).cloned().collect();
+    write_cells(&mut r, &m)?;
+    if let Some(t) = title {
+        if t != r.title {
+            changed.push(TITLE_PROP.to_string());
         }
-        r.updated = now_ms();
-        let mut items = relation_sync_diff(s, &row_id, Some(&old), &m, &db)?;
-        items.push(Item::Row(r));
-        s.put_many(items)?;
+        r.title = t;
+    }
+    r.updated = now_ms();
+    let mut items = relation_sync_diff(s, row_id, Some(&old), &m, &db)?;
+    items.push(Item::Row(r));
+    s.put_many(items)?;
+    changed.sort();
+    Ok(changed)
+}
+
+/// Presses a button property: runs its actions on the row.
+#[tauri::command]
+pub fn press_button(state: State<'_, AppState>, row_id: String, prop_id: String) -> Result<RowResult> {
+    state.with_mut(|s| {
+        let r = row(s, &row_id)?;
+        let db = database(s, &r.db)?;
+        if db.prop(&prop_id).map_or(true, |p| p.kind != PropKind::Button) {
+            return Err(Error::NotFound);
+        }
+        let mut run = automation::Run::default();
+        automation::fire(s, &mut run, &row_id, &automation::Event::Button(&prop_id), 0);
+        automation::finish(run);
         row_result(s, &row_id)
     })
 }
@@ -834,6 +886,9 @@ pub fn duplicate_row(state: State<'_, AppState>, row_id: String) -> Result<RowRe
         items.push(Item::Row(r));
         items.push(Item::Database(db));
         s.put_many(items)?;
+        let mut run = automation::Run::default();
+        automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
+        automation::finish(run);
         row_result(s, &id)
     })
 }
@@ -1171,8 +1226,10 @@ pub struct Reminder {
     pub title: String,
     pub database_id: String,
     pub database_title: String,
-    /// When the date starts, as text.
+    /// When the date starts, as text. Empty for a message from an automation.
     pub when: String,
+    /// An automation's message: the name of the automation or button ("" for a date reminder).
+    pub message: String,
 }
 
 /// Reminders that came due in the last 24 hours (a date without a time counts as 09:00).
@@ -1201,6 +1258,7 @@ pub fn due_reminders(ctx: &Ctx, shown: &HashSet<String>) -> Vec<Reminder> {
                         database_id: db.id.clone(),
                         database_title: db.title.clone(),
                         when: value::format_iso(start.start, start.has_time),
+                        message: String::new(),
                     });
                 }
             }
@@ -1213,21 +1271,25 @@ pub fn due_reminders(ctx: &Ctx, shown: &HashSet<String>) -> Vec<Reminder> {
 
 static SHOWN_REMINDERS: std::sync::Mutex<Option<HashSet<String>>> = std::sync::Mutex::new(None);
 
-/// The reminders that are due now and were not reported before in this run. The UI shows each
-/// one inside Notaya (title only); turning reminders off is a setting of the UI.
+/// The reminders that are due now and were not reported before in this run, and the messages of
+/// automations. The UI shows each one inside Notaya (title only); turning reminders off is a setting
+/// of the UI. Date automations whose time has come run first.
 #[tauri::command]
 pub fn due_reminders_now(state: State<'_, AppState>) -> Result<Vec<Reminder>> {
-    state.with(|s| {
+    state.with_mut(|s| {
+        automation::tick_dates(s);
         let mut guard = SHOWN_REMINDERS.lock().unwrap_or_else(|e| e.into_inner());
         let shown = guard.get_or_insert_with(HashSet::new);
-        let due = due_reminders(&ctx_of(s), shown);
+        let mut due = due_reminders(&ctx_of(s), shown);
         for d in &due {
             shown.insert(d.key.clone());
         }
         if shown.len() > 5000 {
             shown.clear();
         }
-        Ok(due)
+        let mut out = automation::take_notices();
+        out.append(&mut due);
+        Ok(out)
     })
 }
 

@@ -15,6 +15,12 @@ interface DbState {
 }
 const useStore = create<DbState>(() => ({ dbs: {}, saves: {} }));
 
+/** Something other than an edit in a view changed rows (a button or an automation ran): views run their query again. */
+export function rowsChanged() {
+  useStore.setState((s) => ({ saves: Object.fromEntries(Object.keys(s.dbs).map((id) => [id, (s.saves[id] ?? 0) + 1])) }));
+  window.dispatchEvent(new CustomEvent("notaya:rows-changed"));
+}
+
 /** Changes whenever a save of this database has reached the backend (the query of a view is then run again). */
 export function useSaveCount(id: string): number {
   return useStore((s) => s.saves[id] ?? 0);

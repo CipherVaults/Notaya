@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { DbRow, Property } from "@/lib/database-types";
-import { loadDatabase, useDatabase } from "./dbStore";
+import { loadDatabase, peekDatabase, useDatabase } from "./dbStore";
+import { afterRowChange } from "./notices";
 import { saveCells } from "./ops";
 import { loadRow } from "./rowOps";
 import PropertyLines from "./PropertyLines";
@@ -34,6 +35,13 @@ export default function RowProperties({ dbId, rowId, title, readOnly }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbId, rowId]);
 
+  // A button or an automation changed the row: read it again.
+  useEffect(() => {
+    const again = () => void loadRow(dbId, rowId).then((r) => r && setRow(r));
+    window.addEventListener("notaya:rows-changed", again);
+    return () => window.removeEventListener("notaya:rows-changed", again);
+  }, [dbId, rowId]);
+
   useEffect(() => {
     if (row && title !== undefined) rememberRow({ id: rowId, title, icon: row.icon });
   }, [title, row, rowId]);
@@ -50,6 +58,7 @@ export default function RowProperties({ dbId, rowId, title, readOnly }: Props) {
       const saved = await saveCells(rowId, { [p.id]: value ?? null });
       if (saved) setRow(saved);
       else void loadRow(dbId, rowId).then((r) => r && setRow(r));
+      afterRowChange(!!peekDatabase(dbId)?.automations?.some((a) => a.enabled));
     },
     [rowId, dbId],
   );
