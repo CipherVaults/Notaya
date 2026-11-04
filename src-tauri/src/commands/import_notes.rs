@@ -26,6 +26,7 @@ use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::error::{Error, Result};
+use crate::commands::notion_db;
 use crate::importers::plan::{self, ImportSummary};
 use crate::importers::source::Vfs;
 use crate::importers::{Control, MAX_TIME};
@@ -207,9 +208,13 @@ pub fn import_from_with<V: VaultAccess>(
                 })
                 .map_err(Error::Other)?;
             let order = vault.with(|s| Ok(next_notebook_order(s)))?;
-            // The tables of a Notion export: each becomes a database (the pages importer leaves them out).
+            // The tables of a Notion export: each becomes a database (the pages importer leaves them out), and the
+            // row pages are folded into the rows.
             let csv_paths: Vec<String> = plan.skipped.iter().filter(|k| k.item.to_ascii_lowercase().ends_with(".csv") && k.reason.contains("database")).map(|k| k.item.clone()).collect();
+            let (tables, covered, table_notes) = notion_db::read_tables(&vfs, &csv_paths);
+            let row_pages = notion_db::prepare_pages(&tables, &mut plan.pages);
             let (mut items, mut summary) = plan.items(ctl, &urls, now, order).map_err(Error::invalid)?;
+            summary.notes.extend(table_notes);
             // Last chance to stop: after this the notebooks are saved in one step.
             plan::check(ctl).map_err(Error::invalid)?;
             // The notebooks, sections and pages in one transaction; the pictures are then in saved
@@ -218,12 +223,14 @@ pub fn import_from_with<V: VaultAccess>(
                 if !s.holds(&stored) {
                     return Err(Error::Other(LOCKED.into()));
                 }
-                if !csv_paths.is_empty() {
+                if !tables.is_empty() {
                     let section = items.iter().find_map(|i| if let Item::Section(sec) = i { Some(sec.id.clone()) } else { None });
                     if let Some(section) = section {
-                        let made = crate::commands::database_io::databases_from_csv(&vfs, &csv_paths, &section, s, now, before_first_database)?;
+                        let made = notion_db::import_databases(&tables, &row_pages, &items, &section, s, now, before_first_database)?;
                         if made.databases > 0 {
-                            summary.skipped.retain(|k| !made.covered.contains(&k.item));
+                            summary.skipped.retain(|k| !covered.contains(&k.item));
+                            drop_row_pages(&mut items, &made.removed_pages);
+                            summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
                         }
                         summary.notes.extend(made.notes);
                         items.extend(made.items);
@@ -247,6 +254,35 @@ pub fn import_from_with<V: VaultAccess>(
         }
         result
     })?
+}
+
+/// Takes out the pages that became database rows, and the empty pages that only held them (the folder page of
+/// a Notion database, and so on up).
+fn drop_row_pages(items: &mut Vec<Item>, gone: &std::collections::HashSet<String>) {
+    use std::collections::HashSet;
+    let mut held: HashSet<String> = items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Page(p) if gone.contains(&p.id) && !p.parent.is_empty() => Some(p.parent.clone()),
+            _ => None,
+        })
+        .collect();
+    items.retain(|i| !matches!(i, Item::Page(p) if gone.contains(&p.id)));
+    for _ in 0..8 {
+        let parents: HashSet<String> = items.iter().filter_map(|i| if let Item::Page(p) = i { Some(p.parent.clone()) } else { None }).filter(|p| !p.is_empty()).collect();
+        let empty: HashSet<String> = items
+            .iter()
+            .filter_map(|i| match i {
+                Item::Page(p) if held.contains(&p.id) && p.text.trim().is_empty() && !parents.contains(&p.id) => Some(p.id.clone()),
+                _ => None,
+            })
+            .collect();
+        if empty.is_empty() {
+            break;
+        }
+        held = items.iter().filter_map(|i| match i { Item::Page(p) if empty.contains(&p.id) && !p.parent.is_empty() => Some(p.parent.clone()), _ => None }).collect();
+        items.retain(|i| !matches!(i, Item::Page(p) if empty.contains(&p.id)));
+    }
 }
 
 /// Asks what to import, then imports it as a new notebook. `None` if the dialog was cancelled.
@@ -297,7 +333,9 @@ pub fn import_notes(app: AppHandle, state: State<'_, AppState>, request: ImportR
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database::types::{Database, PropKind, Row};
     use crate::importers::zip;
+    use serde_json::Value;
     use crate::model::{new_id, Page};
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
@@ -371,6 +409,87 @@ mod tests {
         assert!(!summary.skipped.iter().any(|k| k.item.ends_with(".csv")), "{:?}", summary.skipped);
         assert!(summary.notes.iter().any(|n| n.contains("Database \"Projects\": 3 rows")), "{:?}", summary.notes);
         assert!(!pages(&v).is_empty());
+    }
+
+    #[test]
+    fn notion_rows_become_database_rows_with_relations_status_and_numbers() {
+        let root = temp();
+        let src = root.join("export");
+        let (pdb, tdb) = ("98b9830964384ed4b08e1c3de9ace4e9", "26d33f50cab44d2cb56b63471a0d5540");
+        let (a, b, t1, t2) = ("40d90e048b60816bb6ebddfb2c2daf50", "40d90e048b60814b8896d436383181dd", "40d90e048b6081abaf32ea800580a648", "40d90e048b608125bfa4c8225a33e807");
+        let space = src.join("Space");
+        std::fs::create_dir_all(space.join(format!("Projects {pdb}"))).unwrap();
+        std::fs::create_dir_all(space.join(format!("Tasks {tdb}"))).unwrap();
+        let projects = format!(
+            "Name,Status,Budget,Progress,Tags,Tasks,Priority\n\
+             Alpha,In progress,\"$12,000.00\",60%,\"a, b\",\"Write it (Tasks%20{tdb}/Write%20it%20{t1}.md), Fix (Tasks%20{tdb}/Fix%20{t2}.md)\",High\n\
+             Beta,Done,\"$3,000.00\",100%,a,,Low\n\
+             Gamma,Planning,\"$1,000.00\",0%,b,,High\n\
+             Delta,Blocked,$5.00,10%,\"a, b\",,Low\n"
+        );
+        std::fs::write(space.join(format!("Projects {pdb}_all.csv")), &projects).unwrap();
+        std::fs::write(space.join(format!("Projects {pdb}.csv")), "Name\nAlpha\n").unwrap();
+        let tasks = format!(
+            "Name,Status,Project,Estimate\n\
+             Write it,Done,\"Alpha (Projects%20{pdb}/Alpha%20{a}.md)\",3\n\
+             Fix,Doing,\"Alpha (Projects%20{pdb}/Alpha%20{a}.md)\",2\n\
+             Lonely,Doing,,1\n\
+             Extra,Done,,1\n"
+        );
+        std::fs::write(space.join(format!("Tasks {tdb}_all.csv")), &tasks).unwrap();
+        let row = |title: &str, _id: &str, props: &str, body: &str| format!("# {title}\n\n{props}\n\n{body}\n");
+        std::fs::write(
+            space.join(format!("Projects {pdb}/Alpha {a}.md")),
+            row("Alpha", a, "Status: In progress\nBudget: $12,000.00\nProgress: 60%\nPriority: High", "The body of Alpha has a **bold** word."),
+        )
+        .unwrap();
+        std::fs::write(space.join(format!("Projects {pdb}/Beta {b}.md")), row("Beta", b, "Status: Done\nPriority: Low", "")).unwrap();
+        std::fs::write(space.join(format!("Tasks {tdb}/Write it {t1}.md")), row("Write it", t1, "Status: Done\nEstimate: 3", "Write the importer.")).unwrap();
+        std::fs::write(space.join("Handbook.md"), "# Handbook\n\nStays a page.\n").unwrap();
+        let v = vault(&root.join("data"));
+        let flag = Arc::new(AtomicBool::new(false));
+        let summary = import_from_with(&v, &[src.clone()], true, &root.join("data"), 1, &flag_control(&flag), &|_| Ok(())).unwrap();
+        let (dbs, rows): (Vec<Database>, Vec<Row>) = v
+            .with(|s| {
+                let d = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.clone()) } else { None }).collect();
+                let r = s.items().filter_map(|i| if let Item::Row(r) = i { Some(r.clone()) } else { None }).collect();
+                Ok((d, r))
+            })
+            .unwrap();
+        let p = dbs.iter().find(|d| d.title == "Projects").expect("Projects");
+        let t = dbs.iter().find(|d| d.title == "Tasks").expect("Tasks");
+        let prop = |d: &Database, n: &str| d.props.iter().find(|x| x.name == n).unwrap_or_else(|| panic!("no property {n}")).clone();
+        let status = prop(p, "Status");
+        assert_eq!(status.kind, PropKind::Status);
+        assert!(status.options.iter().any(|o| o.name == "Done" && o.group == "complete"));
+        assert!(status.options.iter().any(|o| o.name == "In progress" && o.group == "inProgress"));
+        assert_eq!(prop(p, "Budget").kind, PropKind::Number);
+        assert_eq!(prop(p, "Budget").number_format, "dollar");
+        assert_eq!(prop(p, "Progress").number_format, "percent");
+        assert_eq!(prop(p, "Tags").kind, PropKind::MultiSelect);
+        assert_eq!(prop(p, "Priority").kind, PropKind::Select);
+        let tasks_prop = prop(p, "Tasks");
+        let project_prop = prop(t, "Project");
+        assert_eq!(tasks_prop.kind, PropKind::Relation);
+        assert_eq!(tasks_prop.relation_db, t.id);
+        assert_eq!(project_prop.kind, PropKind::Relation);
+        assert_eq!(project_prop.relation_db, p.id);
+        assert_eq!(tasks_prop.relation_back, project_prop.id, "the two columns are one two-way relation");
+        assert_eq!(project_prop.relation_back, tasks_prop.id);
+        let cell = |r: &Row, pid: &str| -> Value { serde_json::from_str::<Value>(&r.cells).unwrap().get(pid).cloned().unwrap_or(Value::Null) };
+        let alpha = rows.iter().find(|r| r.db == p.id && r.title == "Alpha").unwrap();
+        assert_eq!(cell(alpha, &tasks_prop.id).as_array().map(|a| a.len()), Some(2));
+        assert_eq!(cell(alpha, &prop(p, "Progress").id), serde_json::json!(0.6));
+        assert_eq!(cell(alpha, &prop(p, "Budget").id), serde_json::json!(12000.0));
+        let write = rows.iter().find(|r| r.db == t.id && r.title == "Write it").unwrap();
+        assert_eq!(cell(write, &project_prop.id), serde_json::json!([alpha.id.clone()]));
+        assert!(alpha.text.contains("The body of Alpha"), "{:?}", alpha.text);
+        assert!(!alpha.text.contains("Status:"), "the property lines are columns now: {:?}", alpha.text);
+        assert!(write.text.contains("Write the importer."));
+        let titles: Vec<String> = pages(&v).iter().map(|p| p.title.clone()).collect();
+        assert!(titles.iter().any(|t| t == "Handbook"), "{titles:?}");
+        assert!(!titles.iter().any(|t| t == "Alpha" || t == "Beta" || t == "Write it" || t == "Projects" || t == "Tasks"), "no row pages and no empty folder pages: {titles:?}");
+        assert!(summary.notes.iter().any(|n| n.contains("Relation")), "{:?}", summary.notes);
     }
 
     #[test]

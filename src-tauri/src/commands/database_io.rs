@@ -61,6 +61,28 @@ fn new_prop(name: &str, g: &Guess) -> Property {
             p.kind = if matches!(g, Guess::Select(_)) { PropKind::Select } else { PropKind::MultiSelect };
             p.options = v.iter().enumerate().map(|(i, n)| opt(n, i, false)).collect();
         }
+        Guess::Status(v) => {
+            p.kind = PropKind::Status;
+            p.options = v
+                .iter()
+                .enumerate()
+                .map(|(i, n)| {
+                    let mut o = opt(n, i, true);
+                    o.group = csv::status_group(n).into();
+                    o.color = match o.group.as_str() {
+                        "complete" => "green",
+                        "inProgress" => "blue",
+                        _ => "gray",
+                    }
+                    .into();
+                    o
+                })
+                .collect();
+        }
+        Guess::FormattedNumber(fmt) => {
+            p.kind = PropKind::Number;
+            p.number_format = fmt.clone();
+        }
     }
     p
 }
@@ -86,7 +108,14 @@ fn convert(p: &mut Property, raw: &str) -> std::result::Result<Option<Value>, ()
     }
     Ok(Some(match p.kind {
         PropKind::Text | PropKind::Url | PropKind::Email | PropKind::Phone => json!(csv::unsafe_cell(raw)),
-        PropKind::Number => json!(csv::parse_number(t).or_else(|| t.trim_end_matches('%').trim().parse::<f64>().ok().filter(|n| n.is_finite())).ok_or(())?),
+        PropKind::Number => {
+            let n = csv::parse_number(t)
+                .or_else(|| csv::parse_formatted_number(t).map(|(n, _)| n))
+                .or_else(|| t.trim_end_matches('%').trim().parse::<f64>().ok().filter(|n| n.is_finite()))
+                .ok_or(())?;
+            // A percent property keeps 0.6 for 60%; a plain "60" typed into one stays 60.
+            json!(n)
+        }
         PropKind::Checkbox => json!(csv::parse_bool(t).ok_or(())?),
         PropKind::Date => {
             let (s, e, time) = csv::parse_date_range(t).ok_or(())?;
@@ -123,7 +152,12 @@ pub struct Built {
     pub bad_cells: usize,
 }
 
-pub fn build_from_table(mut db: Database, table: &csv::Table, existing_rows: usize, now: i64) -> Result<Built> {
+pub fn build_from_table(db: Database, table: &csv::Table, existing_rows: usize, now: i64) -> Result<Built> {
+    build_from_table_with(db, table, existing_rows, now, false)
+}
+
+/// `notion`: the table comes from a Notion export, so column kinds are guessed the Notion way (see `csv::infer_notion`).
+pub fn build_from_table_with(mut db: Database, table: &csv::Table, existing_rows: usize, now: i64, notion: bool) -> Result<Built> {
     if existing_rows + table.rows.len() > MAX_ROWS_PER_DATABASE {
         return Err(Error::invalid("That would be more rows than a database can hold."));
     }
@@ -156,7 +190,7 @@ pub fn build_from_table(mut db: Database, table: &csv::Table, existing_rows: usi
             continue;
         }
         let vals: Vec<&str> = table.rows.iter().map(|r| r[i].as_str()).collect();
-        let mut p = new_prop(h, &csv::infer(&vals, true));
+        let mut p = new_prop(h, &if notion { csv::infer_notion(h, &vals, true) } else { csv::infer(&vals, true) });
         // Spreadsheet cells guarded against formulas come back as they were typed.
         if p.kind == PropKind::Text {
             p.name = h.clone();
@@ -278,87 +312,6 @@ pub fn import_csv(app: AppHandle, state: State<'_, AppState>, database_id: Optio
         s.put_many(items)?;
         Ok(Some(summary))
     })
-}
-
-// ---------------------------------------------------------------- databases inside a Notion ZIP
-
-/// What the databases of a Notion export became.
-pub struct ZipDatabases {
-    pub items: Vec<Item>,
-    /// The CSV files that were used or covered by another (Notion writes `Name.csv` and `Name_all.csv`).
-    pub covered: Vec<String>,
-    pub notes: Vec<String>,
-    pub databases: usize,
-}
-
-const MAX_ZIP_DATABASES: usize = 200;
-
-/// Makes a database of each table in a Notion export (`Name <id>.csv`, and `Name <id>_all.csv` with every
-/// row: that one wins when both exist). `before_first` runs once before the first database of the vault
-/// is made (the safety backup). Nothing is stored here; the caller saves `items` in its transaction.
-pub fn databases_from_csv(
-    vfs: &crate::importers::source::Vfs,
-    csv_paths: &[String],
-    section_id: &str,
-    s: &crate::vault::Session,
-    now: i64,
-    before_first: &dyn Fn(&crate::vault::Session) -> Result<()>,
-) -> Result<ZipDatabases> {
-    use std::collections::BTreeMap;
-    // key (folder + name without id) -> (plain file, _all file)
-    let mut groups: BTreeMap<String, (Option<String>, Option<String>)> = BTreeMap::new();
-    let mut out = ZipDatabases { items: Vec::new(), covered: Vec::new(), notes: Vec::new(), databases: 0 };
-    for p in csv_paths {
-        let (dir, name) = p.rsplit_once('/').unwrap_or(("", p.as_str()));
-        let stem = name.get(..name.len().saturating_sub(4)).unwrap_or(name);
-        let (base, is_all) = match stem.strip_suffix("_all") {
-            Some(b) => (b, true),
-            None => (stem, false),
-        };
-        let key = format!("{dir}/{base}");
-        let e = groups.entry(key).or_default();
-        if is_all { e.1 = Some(p.clone()) } else { e.0 = Some(p.clone()) }
-        out.covered.push(p.clone());
-    }
-    let mut order = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.order) } else { None }).max().map_or(0, |m| m + 1);
-    let mut backed_up = s.items().any(|i| matches!(i, Item::Database(_)));
-    for (key, (plain, all)) in groups {
-        if out.databases >= MAX_ZIP_DATABASES {
-            out.notes.push(format!("More than {MAX_ZIP_DATABASES} databases: the rest were not imported."));
-            break;
-        }
-        let Some(path) = all.or(plain) else { continue };
-        let base = key.rsplit_once('/').map_or(key.as_str(), |(_, b)| b);
-        let title: String = crate::importers::strip_notion_id(base).chars().filter(|c| !c.is_control()).take(MAX_NAME).collect();
-        let title = if title.trim().is_empty() { "Imported table".to_string() } else { title };
-        let table = match vfs.read(&path, csv::MAX_BYTES).map_err(|e| e.to_string()).and_then(|b| csv::parse(&csv::decode(&b))) {
-            Ok(t) => t,
-            Err(e) => {
-                out.notes.push(format!("The table \"{title}\" was not imported: {e}"));
-                continue;
-            }
-        };
-        if !backed_up {
-            before_first(s)?;
-            backed_up = true;
-        }
-        let mut db = Database::new(new_id(), section_id.to_string(), title.clone(), now);
-        db.order = order;
-        order += 1;
-        match build_from_table(db, &table, 0, now) {
-            Ok(built) => {
-                out.notes.push(format!("Database \"{title}\": {} rows, {} columns.", built.rows.len(), table.header.len()));
-                out.items.extend(built.rows.into_iter().map(Item::Row));
-                out.items.push(Item::Database(built.db));
-                out.databases += 1;
-            }
-            Err(e) => out.notes.push(format!("The table \"{title}\" was not imported: {e}")),
-        }
-    }
-    if out.databases > 0 {
-        out.notes.push("Notion relations, people and statuses arrive as text columns, and the pages of a database's rows are also kept as ordinary pages.".into());
-    }
-    Ok(out)
 }
 
 // ---------------------------------------------------------------- CSV export

@@ -283,6 +283,10 @@ pub enum Guess {
     Email,
     Select(Vec<String>),
     MultiSelect(Vec<String>),
+    /// A Notion status column (names in the order first seen).
+    Status(Vec<String>),
+    /// A number shown with a unit, as Notion writes it: the property's number format ("dollar", "percent", ...).
+    FormattedNumber(String),
 }
 
 pub fn parse_bool(s: &str) -> Option<bool> {
@@ -305,6 +309,105 @@ pub fn parse_number(s: &str) -> Option<f64> {
         return None;
     }
     t.parse::<f64>().ok().filter(|n| n.is_finite())
+}
+
+/// A number as Notion writes it in a CSV: `$12,000.50`, `€5`, `60%`, `1,234`. Returns the value (a percent is
+/// divided by 100, as the property stores it) and the number format that shows it the same way.
+pub fn parse_formatted_number(s: &str) -> Option<(f64, &'static str)> {
+    let t = s.trim();
+    let (fmt, rest) = match t.chars().next()? {
+        '$' => ("dollar", &t[1..]),
+        '€' => ("euro", &t['€'.len_utf8()..]),
+        '£' => ("pound", &t['£'.len_utf8()..]),
+        '¥' => ("yen", &t['¥'.len_utf8()..]),
+        _ => ("", t),
+    };
+    let (rest, percent) = match rest.strip_suffix('%') {
+        Some(r) => (r, true),
+        None => (rest, false),
+    };
+    if fmt != "" && percent {
+        return None;
+    }
+    let negative = rest.starts_with('-');
+    let body = rest.trim_start_matches('-').trim();
+    if body.is_empty() || !body.chars().next()?.is_ascii_digit() {
+        return None;
+    }
+    let had_commas = body.contains(',');
+    if had_commas {
+        // Thousands separators only: groups of three after the first.
+        let mut groups = body.split('.').next()?.split(',');
+        let first = groups.next()?;
+        if first.is_empty() || first.len() > 3 || !groups.all(|g| g.len() == 3 && g.bytes().all(|b| b.is_ascii_digit())) {
+            return None;
+        }
+    }
+    let clean: String = body.chars().filter(|c| *c != ',').collect();
+    let mut n: f64 = clean.parse().ok().filter(|n: &f64| n.is_finite())?;
+    if negative {
+        n = -n;
+    }
+    if percent {
+        return Some((n / 100.0, "percent"));
+    }
+    if fmt.is_empty() && had_commas {
+        return Some((n, "numberWithCommas"));
+    }
+    Some((n, if fmt.is_empty() { "number" } else { fmt }))
+}
+
+/// What a status column's value means for the status groups: "todo", "inProgress" or "complete".
+pub fn status_group(name: &str) -> &'static str {
+    let n = name.trim().to_ascii_lowercase();
+    match n.as_str() {
+        "done" | "complete" | "completed" | "finished" | "shipped" | "closed" | "resolved" | "published" => "complete",
+        "in progress" | "doing" | "in review" | "review" | "reading" | "blocked" | "active" | "started" | "working" | "testing" | "on hold" => "inProgress",
+        _ => "todo",
+    }
+}
+
+/// Like `infer`, for the tables of a Notion export. Notion does not say what a column is, so this guesses a bit
+/// harder: a short list of repeated values is a select, a column called "Status" is a status, and numbers written
+/// with a currency sign, a percent sign or thousands separators are numbers with that format.
+pub fn infer_notion(header: &str, values: &[&str], allow_choice: bool) -> Guess {
+    let v: Vec<&str> = values.iter().map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    if v.is_empty() {
+        return Guess::Text;
+    }
+    let all: Vec<(f64, &'static str)> = v.iter().filter_map(|s| parse_formatted_number(s)).collect();
+    if all.len() == v.len() && !v.iter().all(|s| parse_number(s).is_some()) {
+        // One unit for the whole column ("number" mixed in with a unit still takes the unit).
+        let unit = all.iter().map(|a| a.1).find(|f| *f != "number").unwrap_or("number");
+        if all.iter().all(|a| a.1 == unit || a.1 == "number") {
+            return Guess::FormattedNumber(unit.to_string());
+        }
+    }
+    let g = infer(values, allow_choice);
+    if !allow_choice || !matches!(g, Guess::Text) {
+        if let Guess::Select(d) = g {
+            return if header.trim().eq_ignore_ascii_case("status") { Guess::Status(d) } else { Guess::Select(d) };
+        }
+        return g;
+    }
+    if v.iter().any(|s| s.chars().count() > 80 || s.contains('\n')) {
+        return Guess::Text;
+    }
+    let owned: Vec<String> = v.iter().map(|s| s.to_string()).collect();
+    if owned.iter().any(|s| s.contains(',')) {
+        let tags: Vec<String> = owned.iter().flat_map(|s| split_tags(s)).collect();
+        let d = distinct(&tags);
+        if d.len() <= 30 && tags.len() > d.len() && d.iter().all(|t| t.chars().count() <= 40) {
+            return Guess::MultiSelect(d);
+        }
+        return Guess::Text;
+    }
+    let d = distinct(&owned);
+    let is_status = header.trim().eq_ignore_ascii_case("status");
+    if d.len() <= 12 && (d.len() < owned.len() || (is_status && d.iter().all(|t| t.chars().count() <= 30))) {
+        return if is_status { Guess::Status(d) } else { Guess::Select(d) };
+    }
+    Guess::Text
 }
 
 fn is_email(s: &str) -> bool {
