@@ -207,7 +207,9 @@ fn parse_links(cell: &str) -> Option<Vec<(String, String)>> {
         let seg = &rest[..end];
         let open = seg.rfind(" (")?;
         let (title, link) = (seg[..open].trim(), &seg[open + 2..]);
-        let linkish = link.contains("notion.so") || link.contains(".md") || link.starts_with("http");
+        // A flat export (no sub-page folders) points at the table's file, as in `Name (Customers.csv)`.
+        let lower = link.to_lowercase();
+        let linkish = lower.contains("notion.so") || lower.contains(".md") || lower.ends_with(".csv") || lower.ends_with(".html") || lower.starts_with("http");
         // A title with ", " inside is most likely an unlinked entry run into the next one; keep the cell as text.
         if !linkish || title.contains(", ") {
             return None;
@@ -452,5 +454,9 @@ mod tests {
         assert_eq!(l.len(), 2);
         assert_eq!(l[0].0, "A");
         assert_eq!(percent_decode("a%20b%2Fc"), "a b/c");
+        // A flat export names the table file instead of a page.
+        let l = parse_links("Anna (Customers%20abc.csv), Omar (Customers.csv)").unwrap();
+        assert_eq!(l.len(), 2);
+        assert_eq!(l[1].0, "Omar");
     }
 }
