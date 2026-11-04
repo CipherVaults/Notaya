@@ -92,7 +92,7 @@ Round 2 used the owner's "Notebook 2.zip" (a second large Notion notebook with e
 3. **Combined import (owner 10:16:09 to 10:26:06 UTC, "will be in v1.5"):** a Markdown & CSV export and an HTML export of the same Notion workspace complete each other, as ZIP files, folders or loose files. Rule chosen: pages are matched by the 32-character Notion id at the end of the file name; a page found once in each is imported once, with the HTML text and formatting, plus the Markdown/CSV property lines and data for database rows. HTML database view pages (same id as a CSV) are not imported as pages. Cloud tests added in `plan.rs` and `import_notes.rs`.
 4. Security review of the new code (self-review, 10:40 UTC): files are read only through the existing `Vfs` with the existing size limit; the pairing uses names from the archive listing only, never builds file-system paths; no new dependency, no network. No finding.
 
-Round 3 (owner-approved 10:17:54 UTC) will retest these fixes and the combined import on the PC; it needs an HTML ZIP export of the same Notion workspace in `E:\Project\Notaya\Notaya Tests Excluded`.
+**PC round 3 (2026-11-04 ~11:23 to 11:45 UTC, PC clock, source `735ad16`):** passed: BUG-2/3 (Notebook 2.zip: 104 row pages moved into rows, 148 of 148 relation cells equal to the CSV; the earlier zip 78 of 78), OBS-3, OBS-4, the duplicate-notebook warning, seven views, automations, PDF export. Failed: **BUG-5** (English text forced right-to-left stayed at the left edge in the PDF); fixed in the cloud in the next commit (alignment uses the chosen direction), cloud-tested only. Not run: the combined import (no HTML zip was in the folder when the run looked), clippy, database export to MD/HTML/Word.
 
 ## 9. Not run
 

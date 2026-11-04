@@ -701,7 +701,8 @@ impl<'a> Layout<'a> {
         let baseline = (h - size) / 2.0 + size * 0.8;
         let line_w: f32 = line.iter().map(|p| p.width).sum();
         // A right-to-left paragraph is aligned to the right unless it is centred.
-        let rtl = line.first().is_some_and(|p| p.rtl);
+        // A direction the person chose decides this even when the line has only plain letters (English set to right-to-left).
+        let rtl = st.base.map_or_else(|| line.first().is_some_and(|p| p.rtl), |b| b == 1);
         let align = match st.align {
             Align::Left | Align::Justify if rtl => Align::Right,
             a => a,
@@ -1805,6 +1806,14 @@ mod tests {
         let ltr_start = ltr.iter().map(|(x, _)| *x).fold(f32::MAX, f32::min);
         assert!(auto_start > LEFT + 1.0, "automatic: right-aligned, starts at {auto_start}");
         assert!((ltr_start - LEFT).abs() < 0.01, "left-to-right: starts at the left edge, not {ltr_start}");
+        // English text set to right-to-left ends at the right edge.
+        let doc = sample_doc(Vec::new());
+        let mut lay = Layout { doc: &doc, images: Vec::new(), image_index: HashMap::new(), images_left_out: 0, chars_replaced: 0, chars_no_font: 0, pool: Pool::new(None) };
+        let ctx = Ctx::root(0);
+        let style = TextStyle::body(&ctx);
+        let strips = lay.text(&[Inline::Text("Hello world".into(), Marks { dir: super::super::doc::Dir::Rtl, ..Marks::default() })], &ctx, style);
+        let end = spans(&strips[0]).iter().map(|(x, w)| x + w).fold(0.0, f32::max);
+        assert!((end - (LEFT + WIDTH)).abs() < 0.01, "English set to right-to-left: ends at {end}");
     }
 
     #[test]
