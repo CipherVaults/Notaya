@@ -176,12 +176,32 @@ fn strip_property_lines(blocks: &mut Vec<Block>, headers: &HashSet<String>) {
     }
 }
 
+/// A flat export puts every row page next to the CSV files instead of in the table's folder. Such a page is a
+/// row of the table whose columns name all of its leading property lines (`Status: Done`) and which has a row
+/// with the page's title.
+fn flat_table_of(tables: &[NotionTable], headers: &[HashSet<String>], p: &PlanPage) -> Option<usize> {
+    let Some(Block::Paragraph(inl)) = p.blocks.first() else { return None };
+    let lines = lines_of(inl);
+    if lines.is_empty() {
+        return None;
+    }
+    let keys: Vec<String> = lines.iter().filter_map(|l| l.split_once(':').map(|(k, _)| k.trim().to_lowercase())).collect();
+    if keys.len() != lines.len() {
+        return None;
+    }
+    let title = p.title.trim().to_lowercase();
+    headers.iter().enumerate().find_map(|(t, h)| {
+        let all_columns = keys.iter().all(|k| h.contains(k));
+        (all_columns && tables[t].table.rows.iter().any(|r| r.first().is_some_and(|c| c.trim().to_lowercase() == title))).then_some(t)
+    })
+}
+
 /// Finds the pages that are rows of a table, takes the property lines off their top, and lists them.
 pub fn prepare_pages(tables: &[NotionTable], pages: &mut [PlanPage]) -> Vec<RowPage> {
     let headers: Vec<HashSet<String>> = tables.iter().map(|t| t.table.header.iter().map(|h| h.trim().to_lowercase()).collect()).collect();
     let mut rows = Vec::new();
     for p in pages.iter_mut() {
-        let Some(t) = table_of(tables, &p.key) else { continue };
+        let Some(t) = table_of(tables, &p.key).or_else(|| flat_table_of(tables, &headers, p)) else { continue };
         strip_property_lines(&mut p.blocks, &headers[t]);
         let (_, name) = split_dir(&p.key);
         rows.push(RowPage { table: t, page_id: p.id.clone(), title: p.title.clone(), notion_id: notion_id(name) });

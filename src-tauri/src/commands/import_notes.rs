@@ -493,6 +493,50 @@ mod tests {
     }
 
     #[test]
+    fn a_flat_notion_export_still_moves_row_pages_into_rows_and_links_relations() {
+        let root = temp();
+        let src = root.join("export");
+        std::fs::create_dir_all(&src).unwrap();
+        let (pdb, tdb) = ("98b9830964384ed4b08e1c3de9ace4e9", "26d33f50cab44d2cb56b63471a0d5540");
+        let (a, t1, t2) = ("40d90e048b60816bb6ebddfb2c2daf50", "40d90e048b6081abaf32ea800580a648", "40d90e048b608125bfa4c8225a33e807");
+        std::fs::write(
+            src.join(format!("Projects {pdb}_all.csv")),
+            format!("Name,Status,Tasks\nAlpha,Done,\"Write it (Write%20it%20{t1}.csv), Fix (Fix%20{t2}.csv)\"\nBeta,Done,\n"),
+        )
+        .unwrap();
+        std::fs::write(
+            src.join(format!("Tasks {tdb}_all.csv")),
+            format!("Name,Status,Project\nWrite it,Done,\"Alpha (Alpha%20{a}.csv)\"\nFix,Doing,\"Alpha (Alpha%20{a}.csv)\"\n"),
+        )
+        .unwrap();
+        std::fs::write(src.join(format!("Alpha {a}.md")), "# Alpha\n\nStatus: Done\nTasks: Write it, Fix\n\nBody of Alpha.\n").unwrap();
+        std::fs::write(src.join(format!("Write it {t1}.md")), "# Write it\n\nStatus: Done\nProject: Alpha\n\nBody of the task.\n").unwrap();
+        std::fs::write(src.join("Handbook.md"), "# Handbook\n\nStays a page.\n").unwrap();
+        let v = vault(&root.join("data"));
+        let flag = Arc::new(AtomicBool::new(false));
+        import_from_with(&v, &[src.clone()], true, &root.join("data"), 1, &flag_control(&flag), &|_| Ok(())).unwrap();
+        let (dbs, rows): (Vec<Database>, Vec<Row>) = v
+            .with(|s| {
+                let d = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.clone()) } else { None }).collect();
+                let r = s.items().filter_map(|i| if let Item::Row(r) = i { Some(r.clone()) } else { None }).collect();
+                Ok((d, r))
+            })
+            .unwrap();
+        let p = dbs.iter().find(|d| d.title == "Projects").expect("Projects");
+        let t = dbs.iter().find(|d| d.title == "Tasks").expect("Tasks");
+        let tasks_prop = p.props.iter().find(|x| x.name == "Tasks").unwrap();
+        assert_eq!(tasks_prop.kind, PropKind::Relation, "the .csv links are relation links");
+        assert_eq!(tasks_prop.relation_db, t.id);
+        let alpha = rows.iter().find(|r| r.db == p.id && r.title == "Alpha").unwrap();
+        assert!(alpha.text.contains("Body of Alpha"), "{:?}", alpha.text);
+        let write = rows.iter().find(|r| r.db == t.id && r.title == "Write it").unwrap();
+        assert!(write.text.contains("Body of the task."), "{:?}", write.text);
+        let titles: Vec<String> = pages(&v).iter().map(|p| p.title.clone()).collect();
+        assert!(titles.iter().any(|t| t == "Handbook"), "{titles:?}");
+        assert!(!titles.iter().any(|t| t == "Alpha" || t == "Write it"), "row pages are not kept as pages: {titles:?}");
+    }
+
+    #[test]
     fn a_folder_of_markdown_becomes_a_notebook_with_pictures() {
         let root = temp();
         let src = root.join("My notes");
