@@ -14,6 +14,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-04 (owner's messages 17:02:11 to 17:56:54 UTC), EX-2026-11-04-43: Notaya V1.5.1, fixes and additions after the V1.5.0 feedback (navigation, undo, scroll bars, clickable tags/dates/charts, hide all stickies, recent searches, free pictures, 2 GB limits, icons and covers, Home, Mermaid)
+
+- [2026-11-04-v1-5-1-fixes.md](2026-11-04-v1-5-1-fixes.md): produced and cloud-verified; not tested on the PC, not integrated, not accepted. Authority: A36.
+
 ### 2026-11-03 (owner's messages 19:20:58 to 21:29:02 UTC; work 19:30 to 22:19 UTC, system clock), EX-2026-11-03-42: Notaya V1.5.0, right-to-left text, PDF letters and full local databases
 
 - Report: [2026-11-03-v1-5-0-rtl-and-databases.md](2026-11-03-v1-5-0-rtl-and-databases.md)
