@@ -25,7 +25,7 @@ A browser mock proves the web code, not the app's settings, so anything that dep
 
 ## Where to resume
 
-V1.5.1 is published and **not accepted**. The owner tries it and accepts it or reports problems, and merges the records PR #50. For the friend: [the resume note](handoff/2026-11-04-v1-5-1-resume-note.md) lists what ran, what did not (setup installer, tray entry, keyboard-layout shortcut, Clippy, the Playwright mock check) and ideas for a next release. Nothing new starts without a partner's own words.
+V1.5.1 is published and **not accepted**. The owner tries it and accepts it or reports problems, (the records PR #50 was merged at 08:17:10 UTC, `cf6dae6`). For the friend: [the resume note](handoff/2026-11-04-v1-5-1-resume-note.md) lists what ran, what did not (setup installer, tray entry, keyboard-layout shortcut, Clippy, the Playwright mock check) and ideas for a next release. Nothing new starts without a partner's own words.
 
 ---
 
