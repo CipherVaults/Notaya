@@ -433,15 +433,18 @@ impl Parser<'_, '_> {
                 let mut html_lines = Vec::new();
                 // A toggle (<details>) goes on past blank lines until it is closed, so its
                 // content stays inside it (Notion writes toggles this way).
+                // A callout (<aside>) does the same when it is closed further down, so its text after a blank line stays in it.
                 let toggle = l.trim_start().to_ascii_lowercase().starts_with("<details");
+                let aside = !toggle && l.trim_start().to_ascii_lowercase().starts_with("<aside") && lines[i..].iter().take(20_000).any(|x| x.to_ascii_lowercase().contains("</aside>"));
                 let mut open = 0i32;
                 while i < n && html_lines.len() < 20_000 {
-                    if blank(&lines[i]) && !(toggle && open > 0) {
+                    if blank(&lines[i]) && !((toggle || aside) && open > 0) {
                         break;
                     }
-                    if toggle {
+                    if toggle || aside {
                         let low = lines[i].to_ascii_lowercase();
-                        open += low.matches("<details").count() as i32 - low.matches("</details>").count() as i32;
+                        let (o, c) = if toggle { ("<details", "</details>") } else { ("<aside", "</aside>") };
+                        open += low.matches(o).count() as i32 - low.matches(c).count() as i32;
                     }
                     html_lines.push(lines[i].as_str());
                     i += 1;
@@ -451,6 +454,12 @@ impl Parser<'_, '_> {
                 // Markdown (page-link rows, lists, code...), not as HTML text.
                 if toggle {
                     if let Some(block) = self.details_with_markdown_body(&html_lines, depth) {
+                        out.push(block);
+                        continue;
+                    }
+                }
+                if aside {
+                    if let Some(block) = self.aside_with_markdown_body(&html_lines, depth) {
                         out.push(block);
                         continue;
                     }
@@ -468,6 +477,36 @@ impl Parser<'_, '_> {
         }
         flush!();
         out
+    }
+
+    /// Notion's Markdown callout: `<aside>`, an emoji line, the text as Markdown (blank lines included), `</aside>`. The emoji is the icon
+    /// (the lightbulb when there is none) and the rest is read as Markdown. `None` for anything else (it is read as HTML as before).
+    fn aside_with_markdown_body(&mut self, html_lines: &[&str], depth: usize) -> Option<Block> {
+        let n = html_lines.len();
+        if n < 3 || depth >= MAX_DEPTH {
+            return None;
+        }
+        let low: Vec<String> = html_lines.iter().map(|l| l.trim().to_ascii_lowercase()).collect();
+        // The tags are alone on the first and last line, and no second callout sits at the top level.
+        if !low[0].starts_with("<aside") || !low[0].ends_with('>') || low[0].matches('<').count() != 1 || low[n - 1] != "</aside>" {
+            return None;
+        }
+        let mut open = 0i32;
+        for (k, l) in low.iter().enumerate() {
+            open += l.matches("<aside").count() as i32 - l.matches("</aside>").count() as i32;
+            if (k + 1 < n && open <= 0) || (k + 1 == n && open != 0) {
+                return None;
+            }
+        }
+        let mut body: Vec<String> = html_lines[1..n - 1].iter().map(|l| l.to_string()).collect();
+        let first = body.iter().position(|l| !blank(l))?;
+        let lead = body[first].trim();
+        let is_icon = !lead.is_ascii() && lead.chars().count() <= 8 && !lead.chars().any(|c| c.is_alphanumeric());
+        let icon = if is_icon { lead.to_string() } else { "💡".to_string() };
+        if is_icon {
+            body.remove(first);
+        }
+        Some(Block::Callout(icon, self.blocks(&body, depth + 1)))
     }
 
     /// `<details ...>`, a summary within its first lines, a Markdown body and a closing `</details>`
@@ -1275,6 +1314,27 @@ mod tests {
         assert_eq!(c[4]["type"], "callout");
         assert_eq!(c[5]["type"], "callout");
         assert_eq!(c[5]["attrs"]["icon"], "⚠️");
+    }
+
+    #[test]
+    fn a_notion_callout_keeps_its_text_after_a_blank_line() {
+        let src = "<aside>\n\u{1F3E0}\n\nStart here: **bold** text\n\n- one\n- two\n\n</aside>\n\nAfter\n\n<aside>\nno emoji line\n\nsecond paragraph\n\n</aside>\n\n<aside>\nnever closed\n\nStays a paragraph";
+        let (blocks, _, _) = with_ctx(&[], |ctx| parse(src, ctx).blocks);
+        let v = json(&blocks);
+        let c = v["content"].as_array().unwrap();
+        assert_eq!(c[0]["type"], "callout");
+        assert_eq!(c[0]["attrs"]["icon"], "\u{1F3E0}", "the emoji line is the icon");
+        let inner = c[0]["content"].to_string();
+        assert!(inner.contains("Start here") && inner.contains("bold") && inner.contains("bulletList") && inner.contains("two"), "the text after the blank line is inside the callout: {inner}");
+        assert!(!inner.contains("\u{1F3E0}"), "the icon is not repeated in the text: {inner}");
+        assert_eq!(c[1]["type"], "paragraph");
+        assert!(c[1].to_string().contains("After"), "text after the callout stays outside it");
+        assert_eq!(c[2]["type"], "callout");
+        assert_eq!(c[2]["attrs"]["icon"], "\u{1F4A1}", "no emoji line keeps the default icon");
+        assert!(c[2]["content"].to_string().contains("second paragraph"), "{}", c[2]);
+        assert!(c[2]["content"].to_string().contains("no emoji line"), "{}", c[2]);
+        assert!(c.len() >= 4 && c.iter().skip(3).all(|b| b["type"] != "callout" || !b.to_string().contains("Stays a paragraph")), "a callout that is never closed does not swallow the rest: {v}");
+        assert!(c.iter().any(|b| b.to_string().contains("Stays a paragraph")));
     }
 
     #[test]
