@@ -39,7 +39,7 @@ Newest first. Later instructions narrow or pause the approved plan; they don't e
 
 | When (UTC) | Owner instruction | Effect |
 |---|---|---|
-| 2026-11-05 07:16:24 | "And PBS as well" (project chat, relayed by the coordinator) | Follow the full PBS routine for this big task (a release): 12-section Execution Summary, index row, authority rows, Session Summary, STATUS, acceptance only with what he decided, failure intelligence by its admission boundary, claims and a resume note. Done in the records PR #50. |
+| 2026-11-05 07:16:25 | "And PBS as well" (project chat, relayed by the coordinator) | Follow the full PBS routine for this big task (a release): 12-section Execution Summary, index row, authority rows, Session Summary, STATUS, acceptance only with what he decided, failure intelligence by its admission boundary, claims and a resume note. Done in the records PR #50. |
 | 2026-11-05 07:16:05 | "Publish / And make everything is recorded so my friend can continue on the repo" (project chat, relayed by the coordinator) | Permission to publish V1.5.1 (the owner merged PR #49 at 07:15:18 UTC, merge `95ca8b2`): tag `v1.5.1`, GitHub release as Latest with the setup and portable ZIP built on the PC, hashes in the notes; and to record everything for the friend. Published at 07:43:18 UTC ([release](https://github.com/AbyssWatcher2/Notaya/releases/tag/v1.5.1)). A36 is closed as released; **not accepted**. |
 | 2026-11-05 06:53:20 | "Finished???" | A status question; answered that the work was finished and pushed. No effect on scope. |
 | 2026-11-05 06:41:41 | "Updates" | A status question; answered. No effect on scope. |

@@ -6,7 +6,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
-# 📘 Session: 2026-11-04 17:02 to 2026-11-05 07:43 UTC (owner's messages 2026-11-04 17:02:11 to 2026-11-05 07:16:24 UTC), Notaya V1.5.1: fixes, PC test rounds, Hubs import fixes, text direction and the release, cloud thread session with a Remote Control session on the owner's PC
+# 📘 Session: 2026-11-04 17:02 to 2026-11-05 07:43 UTC (owner's messages 2026-11-04 17:02:11 to 2026-11-05 07:16:25 UTC), Notaya V1.5.1: fixes, PC test rounds, Hubs import fixes, text direction and the release, cloud thread session with a Remote Control session on the owner's PC
 
 **Executor:** Claude (Claude Code) in a cloud thread started by the coordinator; builds, tests and, from 2026-11-04 23:09:58 UTC, code edits ran in a Remote Control session on the owner's PC. **Record basis:** the thread messages and relays (UTC), the PC clock, the repository (`main` `0e7e580` to `95ca8b2`), the PC result files `v151\RESULTS-v151.md` and `v151b\RESULTS-v151b.md`. **Reconstructed:** the middle part (2026-11-04 18:38 to 23:09) is rebuilt from the earlier results files and the Execution Summary; the Hubs, direction and release parts were written from this session's own transcript at the end. **Big stop:** a release published, not accepted.
 
@@ -17,7 +17,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 3. **The Hubs test (2026-11-05 06:05 to 06:25 UTC):** the owner approved keeping recent searches and the EPL-2.0 `elkjs`, and had a large "Hubs" page built in his Notion and exported (HTML, and Markdown with CSV). Imported on fresh vaults it showed three problems: no icons (newer Notion HTML writes `data-emoji`), no cover (a built-in Notion picture, never fetched), a Markdown callout without its text (the HTML block ended at the blank line). Fixed in three small commits on the coordinator's relay of 06:25:49 (not the owner's own words; the owner later merged them).
 4. **The direction report (06:37:15):** the owner's screenshot showed an Arabic line and an English line below it both on the right. Enter already worked; the cause was Shift+Enter (one paragraph, one direction). Fixed with `unicode-bidi: plaintext` on automatic blocks that contain such a line; verified in a note and a sticky note; the Windows keyboard shortcut could not be tried with real keys.
 5. **Close call (between 06:34:52 and 06:37:33 UTC, the log lines around it):** a cleanup command selected processes by the name "Notaya" and would have closed the owner's real app; the tool's safety filter denied it and nothing ran ([FI-07](failure-intelligence.md)).
-6. **Merge and release (07:15 to 07:43 UTC):** the owner merged PR #49 at 07:15:18 UTC and wrote "Publish" (07:16:05) and "And PBS as well" (07:16:24). The PC copy was fast-forwarded, the release built from a fresh clone of the merge commit (setup and portable ZIP, unsigned), smoke-tested on throwaway data, and published as v1.5.1 ([release](https://github.com/AbyssWatcher2/Notaya/releases/tag/v1.5.1)). The setup installer was not run.
+6. **Merge and release (07:15 to 07:43 UTC):** the owner merged PR #49 at 07:15:18 UTC and wrote "Publish" (07:16:05) and "And PBS as well" (07:16:25). The PC copy was fast-forwarded, the release built from a fresh clone of the merge commit (setup and portable ZIP, unsigned), smoke-tested on throwaway data, and published as v1.5.1 ([release](https://github.com/AbyssWatcher2/Notaya/releases/tag/v1.5.1)). The setup installer was not run.
 
 ## What changed in understanding
 
