@@ -22,6 +22,78 @@ An entry belongs here if the problem reached, or could plausibly have reached, o
 
 ## Incidents
 
+### FI-07 — A test cleanup command was written to close every "Notaya" process, including the owner's real one
+
+**Occurrence / observation date:** 2026-11-05, between 06:34:52 and 06:37:33 UTC (the PC clock lines of the build log before and after it), V1.5.1 Hubs and direction round ([EX-2026-11-04-43](execution/2026-11-04-v1-5-1-fixes.md)). Reported by the test session in its own report.
+
+**Last resolution update:** 2026-11-05
+
+**Classification:** Near-miss (the owner's running app, stopped before it could happen)
+
+**Status:** resolved; no rule change proposed beyond the one below
+
+#### Context
+
+A second throwaway copy of the app would not start because an earlier throwaway copy (the Hubs test) was still running, and the app allows one instance at a time. The test session wanted to close the old copy.
+
+#### Mistake / Gap
+
+The command it wrote selected processes by name (`Get-Process Notaya`) and asked each to close. The name also matches the owner's installed Notaya and any portable copy. It did not check the path first.
+
+#### Impact
+
+**Actual impact:** none. The tool's safety filter denied the command before it ran. The test session then listed the running processes with their exe paths (one, under `Tests Excluded\v151b\hubs\both`) and closed only that process, after checking the path, and later used a script that closes only processes whose path is under the test folder.
+
+**Potential impact:** the owner's real window could have been closed while they were typing (unsaved text in a sticky note or page is saved within seconds, but not instantly).
+
+#### Resolution
+
+Reported in the round's report. All later closes used `closeapp.ps1`, which matches the path `E:\Project\Notaya\Notaya Tests Excluded\v151b\*`.
+
+#### Prevention Rule
+
+**When:** a test script stops or closes an app process.
+**Do:** select it by process id or by exe path under the test folder (never by name alone), print the paths first, and stop only processes the session started.
+**Adoption:** proposed here; the existing CLAUDE.md line "stop only processes the test started" already covers it (the owner decides on rule changes).
+
+---
+
+### FI-06 — "Mermaid verified" in the cloud was not true in the real app (freezePrototype)
+
+**Occurrence / observation date:** found in the V1.5.1 PC round of 2026-11-04 (Part A, before the release); owner's decision 2026-11-04 23:20:04 UTC; fixed in `370c7de`; retested on the PC 2026-11-04 23:41:59 to 2026-11-05 00:00:46 UTC ([EX-2026-11-04-43](execution/2026-11-04-v1-5-1-fixes.md) sections 8b and 8c).
+
+**Last resolution update:** 2026-11-05
+
+**Classification:** Near-miss (a cloud "verified" claim that failed in the real app; caught before release)
+
+**Status:** resolved; the security setting was changed by the owner's choice
+
+#### Context
+
+The Mermaid diagram block was built and checked in the cloud and in the browser mock, where the diagrams drew. The real app sets `freezePrototype: true` in `tauri.conf.json`, which freezes `Object.prototype`; the browser mock never applies Tauri settings.
+
+#### Mistake / Gap
+
+The cloud record said the Mermaid item was verified, and a hostile-code check and a "real CSP does not block it" check were listed as to run, but nothing ran in the real window until the PC round. Mermaid assigns to inherited properties, which a frozen `Object.prototype` forbids ("Cannot assign to read only property 'valueOf'"): none of the nine sample diagrams drew.
+
+#### Impact
+
+**Actual impact:** none for the owner: the build was not released, and the defect was found before the merge. It cost one PC round of retests and a security-behavior decision.
+
+**Potential impact:** a release with a visibly broken new feature, and a hidden trade-off: turning the freeze off removes one hardening step of the app.
+
+#### Resolution
+
+The PC session proved the cause (frozen prototype on, same code draws in plain Edge and fails there once the prototype is frozen) and asked the owner. He chose "Turn the freeze off, keep Mermaid" (23:20:04 UTC). `freezePrototype` is off in `370c7de`; the security design says so and what still protects the app (own scripts only, no network, Mermaid in strict mode). The retest showed all nine diagrams drawing and hostile diagram code doing nothing.
+
+#### Prevention Rule
+
+**When:** a feature depends on how the app runs (settings in `tauri.conf.json`, the CSP, window and process behaviour).
+**Do:** do not write "verified" from the browser mock; mark such a check "NOT RUN in the real app" until it ran in the real exe on throwaway data, and put it first in the PC round.
+**Adoption:** proposed here; not in `CLAUDE.md` (the owner decides on rule changes).
+
+---
+
 ### FI-05 — A setup test started the app in the owner's real Windows session
 
 **Occurrence / observation date:** 2026-10-28 15:54:06 UTC, found and reported by the test session at about 15:55 (V1.3.0 retest, [EX-2026-10-28-34](execution/2026-10-28-notaya-v1-3-0-release.md)).

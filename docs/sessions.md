@@ -6,6 +6,29 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+# 📘 Session: 2026-11-04 17:02 to 2026-11-05 07:43 UTC (owner's messages 2026-11-04 17:02:11 to 2026-11-05 07:16:24 UTC), Notaya V1.5.1: fixes, PC test rounds, Hubs import fixes, text direction and the release, cloud thread session with a Remote Control session on the owner's PC
+
+**Executor:** Claude (Claude Code) in a cloud thread started by the coordinator; builds, tests and, from 2026-11-04 23:09:58 UTC, code edits ran in a Remote Control session on the owner's PC. **Record basis:** the thread messages and relays (UTC), the PC clock, the repository (`main` `0e7e580` to `95ca8b2`), the PC result files `v151\RESULTS-v151.md` and `v151b\RESULTS-v151b.md`. **Reconstructed:** the middle part (2026-11-04 18:38 to 23:09) is rebuilt from the earlier results files and the Execution Summary; the Hubs, direction and release parts were written from this session's own transcript at the end. **Big stop:** a release published, not accepted.
+
+## What happened
+
+1. **The list (2026-11-04 17:02 to 17:56):** the owner asked for fifteen things in a fixes release V1.5.1 (navigation, scroll bars, undo and redo, clickable tags, dates and charts, "Close all" for sticky notes, five recent searches, free pictures, dark dropdowns, 2 GB limits, icons and covers, Home, Mermaid, a missing Notion main page). Decision cards: all fifteen in V1.5.1; add `mermaid`; every limit 2 GB.
+2. **Cloud build and PC rounds:** built and cloud-verified, then a PC round on the real exe (throwaway data): BUG-7 (cover buttons covered) and BUG-8 (Home emoji under the banner) fixed; **BUG-9: Mermaid drew nothing in the real exe** because `freezePrototype` freezes `Object.prototype`. The browser mock never applies that setting, so the cloud "verified" was wrong for the real app ([FI-06](failure-intelligence.md)). The owner chose to turn the freeze off (card 23:20:04 UTC); retested 23:41 to 00:00 UTC, Mermaid draws, hostile code inert. An apparent lost "idle lock 180" setting was explained: the app locks on real input idle and a harness sends none; not an app fault.
+3. **The Hubs test (2026-11-05 06:05 to 06:25 UTC):** the owner approved keeping recent searches and the EPL-2.0 `elkjs`, and had a large "Hubs" page built in his Notion and exported (HTML, and Markdown with CSV). Imported on fresh vaults it showed three problems: no icons (newer Notion HTML writes `data-emoji`), no cover (a built-in Notion picture, never fetched), a Markdown callout without its text (the HTML block ended at the blank line). Fixed in three small commits on the coordinator's relay of 06:25:49 (not the owner's own words; the owner later merged them).
+4. **The direction report (06:37:15):** the owner's screenshot showed an Arabic line and an English line below it both on the right. Enter already worked; the cause was Shift+Enter (one paragraph, one direction). Fixed with `unicode-bidi: plaintext` on automatic blocks that contain such a line; verified in a note and a sticky note; the Windows keyboard shortcut could not be tried with real keys.
+5. **Close call (between 06:34:52 and 06:37:33 UTC, the log lines around it):** a cleanup command selected processes by the name "Notaya" and would have closed the owner's real app; the tool's safety filter denied it and nothing ran ([FI-07](failure-intelligence.md)).
+6. **Merge and release (07:15 to 07:43 UTC):** the owner merged PR #49 at 07:15:18 UTC and wrote "Publish" (07:16:05) and "And PBS as well" (07:16:24). The PC copy was fast-forwarded, the release built from a fresh clone of the merge commit (setup and portable ZIP, unsigned), smoke-tested on throwaway data, and published as v1.5.1 ([release](https://github.com/AbyssWatcher2/Notaya/releases/tag/v1.5.1)). The setup installer was not run.
+
+## What changed in understanding
+
+A browser mock proves the web code, not the app's settings, so anything that depends on `tauri.conf.json`, the CSP or window behaviour is "not run" until it ran in the real exe. A test script that names a process must name it by path. Text direction is per block, and a block is not a line: Shift+Enter lines need a rule of their own. Permission still comes only from the owner's words; a coordinator's relay is a request.
+
+## Where to resume
+
+V1.5.1 is published and **not accepted**. The owner tries it and accepts it or reports problems, and merges the records PR #50. For the friend: [the resume note](handoff/2026-11-04-v1-5-1-resume-note.md) lists what ran, what did not (setup installer, tray entry, keyboard-layout shortcut, Clippy, the Playwright mock check) and ideas for a next release. Nothing new starts without a partner's own words.
+
+---
+
 # 📘 Session: 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:36 to about 16:10 UTC), Notaya: prepare V1.3.0 with the Windows setup, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests in one Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC), the PC report, the repository at `main` `52841f1` then `37774c6`. **Reconstructed:** nothing; written at the end. **Big stop:** a release prepared, not published.
