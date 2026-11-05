@@ -16,7 +16,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ### 2026-11-04 (owner's messages 17:02:11 to 17:56:54 UTC), EX-2026-11-04-43: Notaya V1.5.1, fixes and additions after the V1.5.0 feedback (navigation, undo, scroll bars, clickable tags/dates/charts, hide all stickies, recent searches, free pictures, 2 GB limits, icons and covers, Home, Mermaid)
 
-- [2026-11-04-v1-5-1-fixes.md](2026-11-04-v1-5-1-fixes.md): **published** as [v1.5.1](https://github.com/AbyssWatcher2/Notaya/releases/tag/v1.5.1) (2026-11-05, tag on `95ca8b2`); verified in the cloud and on the PC (setup installer, tray entry, keyboard-layout shortcut, Clippy NOT RUN); not accepted. Also covers the 2026-11-05 work: the Hubs import test and its three importer fixes, per-line text direction, the release and the hand-over records. Authority: A36 (closed as released).
+- [2026-11-04-v1-5-1-fixes.md](2026-11-04-v1-5-1-fixes.md): **published** as [v1.5.1](https://github.com/AbyssWatcher2/Notaya/releases/tag/v1.5.1) (2026-11-05, tag on `95ca8b2`); verified in the cloud and on the PC (setup installer, tray entry, keyboard-layout shortcut, Clippy NOT RUN); **accepted by the owner 2026-11-05 11:08:39 UTC** ("I approve this version"). Also covers the 2026-11-05 work: the Hubs import test and its three importer fixes, per-line text direction, the release and the hand-over records. Authority: A36 (closed as released).
 
 ### 2026-11-03 (owner's messages 19:20:58 to 21:29:02 UTC; work 19:30 to 22:19 UTC, system clock), EX-2026-11-03-42: Notaya V1.5.0, right-to-left text, PDF letters and full local databases
 
