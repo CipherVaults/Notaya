@@ -46,6 +46,40 @@ const DROP: &[&str] = &[
     "source", "track", "map", "area", "meta", "link", "base", "input", "frame", "frameset", "applet", "dialog",
 ];
 
+/// A Notion icon element: the emoji is its text (older exports) or its `data-emoji` attribute (newer exports leave the text empty).
+fn icon_text(e: &El) -> Option<String> {
+    let t = e.text().trim().to_string();
+    let t = if t.is_empty() { e.attr("data-emoji").unwrap_or("").trim().to_string() } else { t };
+    (!t.is_empty() && t.chars().count() <= 8).then_some(t)
+}
+
+/// The icon of a Notion callout (`<aside>` or `<figure class="callout">`): its icon element, else `data-notion-callout-icon`.
+fn callout_icon(e: &El) -> Option<String> {
+    e.find(&|x| x.has_class("icon"))
+        .and_then(icon_text)
+        .or_else(|| e.attr("data-notion-callout-icon").map(|t| t.trim().to_string()).filter(|t| !t.is_empty() && t.chars().count() <= 8))
+}
+
+/// Notion's built-in covers are pictures on notion.so, which are never fetched. The gradients and plain colors become the nearest of
+/// Notaya's own covers (approximate: the pictures are not looked at); photographs and anything unknown stay without a cover.
+fn notion_builtin_cover(src: &str) -> Option<String> {
+    const GRADIENTS: [&str; 11] = ["dusk", "ocean", "forest", "ember", "rose", "aurora", "peach", "lagoon", "grape", "sunrise", "midnight"];
+    let path = src.split(['?', '#']).next()?;
+    let rest = path.strip_prefix("https://www.notion.so/images/page-cover/").or_else(|| path.strip_prefix("https://notion.so/images/page-cover/"))?;
+    let stem = rest.rsplit_once('.').map_or(rest, |(s, _)| s);
+    if let Some(n) = stem.strip_prefix("gradients_").and_then(|n| n.parse::<usize>().ok()).filter(|n| *n >= 1) {
+        return Some(format!("gradient:{}", GRADIENTS[(n - 1) % GRADIENTS.len()]));
+    }
+    let color = match stem {
+        "solid_red" => "#e5484d",
+        "solid_yellow" => "#e9b949",
+        "solid_blue" => "#3b5bdb",
+        "solid_beige" => "#f6e1c3",
+        _ => return None,
+    };
+    Some(format!("solid:{color}"))
+}
+
 impl El {
     fn new(name: &str, attrs: Vec<(String, String)>) -> El {
         El { name: name.to_string(), attrs, children: Vec::new() }
@@ -187,6 +221,8 @@ pub struct HtmlDoc {
     pub icon: Option<String>,
     /// The cover picture (Notion's page cover), as an image index.
     pub cover: Option<usize>,
+    /// Notion's built-in cover as one of Notaya's own (`gradient:<name>` or `solid:#rrggbb`), when it is not a picture to fetch.
+    pub cover_look: Option<String>,
 }
 
 pub fn parse_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
@@ -479,7 +515,9 @@ impl Conv<'_, '_> {
                 let src = e.attr("src").unwrap_or("");
                 let alt = e.attr("alt").unwrap_or("");
                 if e.has_class("page-cover-image") {
-                    if let Inline::Image(i) = self.ctx.image(src, alt) {
+                    if let Some(look) = notion_builtin_cover(src) {
+                        self.doc.cover_look = Some(look);
+                    } else if let Inline::Image(i) = self.ctx.image(src, alt) {
                         self.doc.cover = Some(i);
                     }
                     return;
@@ -554,7 +592,7 @@ impl Conv<'_, '_> {
             }
             "aside" => {
                 let bl = self.blocks(&e.children, &m);
-                out.block(Block::Callout("💡".into(), bl));
+                out.block(Block::Callout(callout_icon(e).unwrap_or_else(|| "💡".into()), bl));
             }
             "details" => {
                 let mut inner = Vec::new();
@@ -593,8 +631,8 @@ impl Conv<'_, '_> {
                 out.block(Block::Columns(cols));
             }
             "div" if e.has_class("page-header-icon") => {
-                let t = e.text().trim().to_string();
-                if !t.is_empty() && t.chars().count() <= 8 {
+                // Older exports write the emoji as the text of the icon; newer ones write `<span class="icon" data-emoji="🏠"></span>`.
+                if let Some(t) = icon_text(e).or_else(|| e.find(&|x| x.has_class("icon")).and_then(icon_text)) {
                     self.doc.icon = Some(t);
                 }
             }
@@ -722,9 +760,8 @@ impl Conv<'_, '_> {
             return;
         }
         if e.has_class("callout") {
-            let icon = e.find(&|x| x.has_class("icon")).map(|x| x.text().trim().to_string()).filter(|t| !t.is_empty() && t.chars().count() <= 8);
             let bl = self.blocks(&e.children, m);
-            out.block(Block::Callout(icon.unwrap_or_else(|| "💡".into()), bl));
+            out.block(Block::Callout(callout_icon(e).unwrap_or_else(|| "💡".into()), bl));
             return;
         }
         if e.has_class("link-to-page") {
@@ -894,6 +931,38 @@ x++;</code></pre>
 </div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>"#;
 
     const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR";
+
+    /// Newer Notion exports write the page icon and the callout icon as `data-emoji` attributes with no text, and the cover as a built-in picture on notion.so.
+    #[test]
+    fn notion_icons_in_data_emoji_attributes_and_builtin_covers() {
+        let page = |cover: &str| {
+            format!(
+                r#"<html><body><article class="page sans" data-notion-page-icon="🏠"><header><img class="page-cover-image" src="{cover}"/><div class="page-header-icon page-header-icon-with-cover"><span class="icon" data-emoji="🏠"></span></div><h1 class="page-title">Hubs</h1></header><div class="page-body"><aside class="block-color-yellow_background callout" data-notion-callout-icon="⚠️"><div><span class="icon" data-emoji="⚠️"></span></div><div><p>Watch out</p></div></aside><figure class="callout"><div><span class="icon" data-emoji="🔥"></span></div><div><p>Hot</p></div></figure></div></article></body></html>"#
+            )
+        };
+        let (d, images, problems) = with_ctx(&[], |ctx| parse_document(&page("https://www.notion.so/images/page-cover/gradients_8.png"), ctx));
+        assert_eq!(d.title.as_deref(), Some("Hubs"));
+        assert_eq!(d.icon.as_deref(), Some("🏠"), "the page icon comes from data-emoji");
+        assert!(d.cover.is_none() && images.list.is_empty(), "a cover on notion.so is never fetched");
+        assert_eq!(d.cover_look.as_deref(), Some("gradient:lagoon"), "a built-in gradient becomes one of Notaya's own");
+        assert!(problems.is_empty(), "{problems:?}");
+        let v = json(&d.blocks);
+        let icons: Vec<&str> = v["content"].as_array().unwrap().iter().filter(|b| b["type"] == "callout").map(|b| b["attrs"]["icon"].as_str().unwrap()).collect();
+        assert_eq!(icons, ["⚠️", "🔥"], "callout icons come from data-emoji, not the default");
+        for (src, want) in [
+            ("https://www.notion.so/images/page-cover/gradients_2.png", Some("gradient:ocean")),
+            ("https://www.notion.so/images/page-cover/gradients_12.png", Some("gradient:dusk")),
+            ("https://www.notion.so/images/page-cover/solid_red.png", Some("solid:#e5484d")),
+            ("https://www.notion.so/images/page-cover/nasa_earth.jpg", None),
+            ("https://www.notion.so/images/page-cover/gradients_x.png", None),
+            ("https://www.notion.so/images/page-cover/gradients_0.png", None),
+            ("https://evil.example/images/page-cover/gradients_2.png", None),
+        ] {
+            let (d, images, _) = with_ctx(&[], |ctx| parse_document(&page(src), ctx));
+            assert_eq!(d.cover_look.as_deref(), want, "{src}");
+            assert!(d.cover.is_none() && images.list.is_empty(), "{src}");
+        }
+    }
 
     #[test]
     fn a_notion_html_page_keeps_its_formatting() {
