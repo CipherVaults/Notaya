@@ -27,6 +27,8 @@ A browser mock proves the web code, not the app's settings, so anything that dep
 
 V1.5.1 is published and **not accepted**. The owner tries it and accepts it or reports problems, (the records PR #50 was merged at 08:17:10 UTC, `cf6dae6`). For the friend: [the resume note](handoff/2026-11-04-v1-5-1-resume-note.md) lists what ran, what did not (setup installer, tray entry, keyboard-layout shortcut, Clippy, the Playwright mock check) and ideas for a next release. Nothing new starts without a partner's own words.
 
+**Addendum 2026-11-05 (after 11:08 UTC, written by a PC session started from the coordinator's relay; the entry above is not rewritten):** the owner wrote "I approve this version" at 11:08:39 UTC (cited and relayed by the coordinator at 11:08:44 UTC). It was read as the **acceptance of release V1.5.1**; recorded in `acceptance.md` (X27), `STATUS.md`, the authority row and EX-43 section 8f. The not-run list did not change. It grants no new permission. The PC copy was fast-forwarded at 07:16:29, 08:17:41 (`cf6dae6`) and 08:21:38 UTC (`2812d65`), from the reflog. Records PRs #50 and #51 were merged by the owner; this addendum is in the third records PR (draft). Where to resume: the owner's next instruction; items for the friend as already listed in the resume note.
+
 ---
 
 # 📘 Session: 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:36 to about 16:10 UTC), Notaya: prepare V1.3.0 with the Windows setup, cloud thread session
