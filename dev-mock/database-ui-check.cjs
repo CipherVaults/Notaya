@@ -107,8 +107,8 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   // Select: create options by typing, then pick one for another row.
   const pop = () => p.locator('[data-radix-popper-content-wrapper]').last();
   await cell(0, COL.Select).click();
-  await wait(150);
-  await p.keyboard.press('Enter');
+  await wait(300);
+  if (!(await p.locator('[data-radix-popper-content-wrapper]').count())) await p.keyboard.press('Enter'); // a click opens the picker itself since V1.5.1
   await wait(250);
   if (!(await p.getByLabel('Search options').count())) await cell(0, COL.Select).dblclick();
   await wait(200);
@@ -121,7 +121,8 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   is('a select option is created and set', await cellText(0, 'Select'), 'Red');
   // Multi-select with two options.
   await cell(0, COL['Multi-select']).click();
-  await p.keyboard.press('Enter');
+  await wait(300);
+  if (!(await p.locator('[data-radix-popper-content-wrapper]').count())) await p.keyboard.press('Enter');
   await wait(250);
   for (const t of ['One', 'Two']) {
     await p.getByLabel('Search options').fill(t);
@@ -133,7 +134,8 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   is('multi-select holds two options', (await cellText(0, 'Multi-select')).replace(/\s+/g, ' '), 'One Two');
   // Status uses its groups; pick the first one.
   await cell(1, COL.Status).click();
-  await p.keyboard.press('Enter');
+  await wait(300);
+  if (!(await p.locator('[data-radix-popper-content-wrapper]').count())) await p.keyboard.press('Enter');
   await wait(300);
   await shot('status-popover');
   await p.getByRole('option').first().click();
@@ -142,7 +144,8 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   is('a status can be picked', await cellText(1, 'Status'), 'Not started');
   // Date.
   await cell(0, COL.Date).click();
-  await p.keyboard.press('Enter');
+  await wait(300);
+  if (!(await p.locator('[data-radix-popper-content-wrapper]').count())) await p.keyboard.press('Enter');
   await wait(300);
   await shot('date-popover');
   await p.getByRole('grid', { name: /^[A-Z][a-z]+ 20\d\d$/ }).getByRole('button').nth(10).click();

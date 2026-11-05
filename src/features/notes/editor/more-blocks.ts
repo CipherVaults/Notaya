@@ -5,6 +5,7 @@ import { Mark, Node, mergeAttributes } from "@tiptap/react";
 import { NodeSelection, Plugin } from "@tiptap/pm/state";
 import { useApp } from "@/store/app";
 import { goToPage, livePage } from "./internalLinks";
+import { iconText } from "@/lib/pageLook";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -104,7 +105,7 @@ export const PageLink = Node.create({
 
       const paint = () => {
         const page = livePage(pageId);
-        icon.textContent = page?.icon || "📄";
+        icon.textContent = iconText(page?.icon) || "📄";
         title.textContent = page ? page.title || "Untitled" : "Page not found";
         dom.dataset.missing = page ? "false" : "true";
       };

@@ -246,11 +246,11 @@ pub fn build_from_table_with(mut db: Database, table: &csv::Table, existing_rows
     Ok(Built { db, rows, skipped, bad_cells })
 }
 
-/// Reads a file chosen with a dialog (at most 50 MB).
+/// Reads a file chosen with a dialog (at most 2 GB).
 fn read_picked(path: &PathBuf) -> Result<String> {
     let meta = std::fs::metadata(path).map_err(|_| Error::invalid("That file could not be read."))?;
     if meta.len() > csv::MAX_BYTES {
-        return Err(Error::invalid("That file is larger than 50 MB."));
+        return Err(Error::invalid("That file is larger than 2 GB."));
     }
     let bytes = std::fs::read(path).map_err(|_| Error::invalid("That file could not be read."))?;
     Ok(csv::decode(&bytes))

@@ -65,7 +65,9 @@ function buildDecorations(doc: PMNode): DecorationSet {
     if (TEXT_BLOCKS.has(node.type.name)) {
       const d = ownDirection(node) ?? (node.content.size === 0 ? last : "ltr");
       last = d;
-      decos.push(Decoration.node(pos, pos + node.nodeSize, { dir: d }));
+      // An automatic block is marked, so its lines (after a Shift+Enter) can each follow their own text, see app.css.
+      const forced = node.attrs.dir === "rtl" || node.attrs.dir === "ltr";
+      decos.push(Decoration.node(pos, pos + node.nodeSize, forced ? { dir: d } : { dir: d, "data-dir-auto": "" }));
       return d;
     }
     if (node.isTextblock || node.isLeaf) return null;

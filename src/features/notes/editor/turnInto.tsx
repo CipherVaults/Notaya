@@ -1,11 +1,12 @@
 // "Change type" for blocks: the list shown in the selection toolbar, the block menu and the "/" menu.
 
-import { Code2, File, Heading1, Heading2, Heading3, Lightbulb, List, ListChecks, ListCollapse, Library, ListOrdered, Pilcrow, Quote, Sigma } from "lucide-react";
+import { Code2, File, Heading1, Heading2, Heading3, Lightbulb, List, ListChecks, ListCollapse, Library, ListOrdered, Pilcrow, Quote, Sigma, Workflow } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 import { TextSelection } from "@tiptap/pm/state";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { useApp } from "@/store/app";
+import { MERMAID_MAX_CHARS, MERMAID_TEMPLATES } from "./mermaid";
 
 export type BlockKey =
   | "p"
@@ -21,6 +22,7 @@ export type BlockKey =
   | "quote"
   | "callout"
   | "equation"
+  | "mermaid"
   | "page";
 
 const s = 17;
@@ -39,6 +41,7 @@ export const BLOCKS: { key: BlockKey; label: string; keywords: string; icon: Rea
   { key: "callout", label: "Highlight box", keywords: "highlight box callout note tip warning info", icon: <Lightbulb size={s} /> },
   { key: "code", label: "Code block", keywords: "code snippet pre", icon: <Code2 size={s} /> },
   { key: "equation", label: "Equation", keywords: "equation math formula tex latex", icon: <Sigma size={s} /> },
+  { key: "mermaid", label: "Diagram", keywords: "diagram mermaid flowchart graph chart sequence uml gantt pie mindmap", icon: <Workflow size={s} /> },
   { key: "page", label: "Sub-page", keywords: "page subpage sub-page child inside", icon: <File size={s} /> },
 ];
 
@@ -109,6 +112,19 @@ function toEquation(editor: Editor) {
     .run();
 }
 
+/** Replaces the cursor's block with a Mermaid diagram; the block's text (a code block's code, for one) becomes its code. */
+function toMermaid(editor: Editor) {
+  const { $from } = editor.state.selection;
+  const code = $from.parent.textContent.slice(0, MERMAID_MAX_CHARS) || MERMAID_TEMPLATES[0].code;
+  const depth = $from.depth;
+  (editor.storage as unknown as { mermaidBlock: { justInserted: { current: boolean } } }).mermaidBlock.justInserted.current = true;
+  editor
+    .chain()
+    .focus()
+    .insertContentAt({ from: $from.before(depth), to: $from.after(depth) }, [{ type: "mermaidBlock", attrs: { code, showCode: true } }, { type: "paragraph" }])
+    .run();
+}
+
 /** Makes a page inside the current page and puts a link to it where the block was. */
 async function toSubpage(editor: Editor) {
   const pageId = useApp.getState().activePageId;
@@ -175,6 +191,10 @@ export async function applyTurnInto(editor: Editor, key: BlockKey) {
     case "equation":
       c().run();
       toEquation(editor);
+      break;
+    case "mermaid":
+      c().run();
+      toMermaid(editor);
       break;
     case "toggle":
       c().run();

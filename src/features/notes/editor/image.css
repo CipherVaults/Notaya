@@ -1,0 +1,74 @@
+/* Pictures that can be moved, wrapped by text, sized and placed freely (V1.5.1). Loaded by ImageBlock.ts.
+   The selectors repeat `.image-block` so they win over the older picture rules in app.css. */
+
+/* The page body is the box that free pictures are placed in, and its own stacking box, so that a picture
+   "behind the text" stays above the page background but below the text. */
+.ProseMirror { position: relative; isolation: isolate; }
+
+.ProseMirror .image-block.image-block { max-width: 100%; }
+.ProseMirror .image-block.image-block img { cursor: default; }
+.ProseMirror[contenteditable="true"] .image-block.image-block img { cursor: grab; }
+.ProseMirror .image-block.image-block[data-dragging="true"] img { cursor: grabbing; }
+
+/* Text wraps around a floated picture. */
+.ProseMirror .image-block.image-block[data-float="left"] { float: left; margin: 0.3em 1.2em 0.6em 0; align-items: stretch; }
+.ProseMirror .image-block.image-block[data-float="right"] { float: right; margin: 0.3em 0 0.6em 1.2em; align-items: stretch; }
+.ProseMirror .image-block.image-block[data-boxed] .image-frame { width: 100%; }
+.ProseMirror .image-block.image-block[data-boxed] img { width: 100%; }
+.ProseMirror .image-block.image-block[data-ratio] img { width: 100%; height: 100%; object-fit: cover; }
+.ProseMirror .image-block.image-block[data-ratio] .image-frame { overflow: visible; }
+
+/* Free: placed anywhere on the page (left in % of the page width, top in px). It takes no room in the text. */
+.ProseMirror .image-block.image-block[data-free="true"] { position: absolute; margin: 0; align-items: stretch; z-index: auto; }
+.ProseMirror .image-block.image-block[data-free="true"][data-layer="front"] { z-index: 2; }
+/* Behind the text: only the picture goes behind (negative layer of the page body); its grip and handles stay on top. */
+.ProseMirror .image-block.image-block[data-free="true"][data-layer="back"] { pointer-events: none; }
+.ProseMirror .image-block.image-block[data-free="true"][data-layer="back"] img { position: relative; z-index: -1; pointer-events: auto; }
+.ProseMirror .image-block.image-block[data-free="true"][data-layer="back"] .image-caption { display: none; }
+.ProseMirror .image-block.image-block[data-free="true"][data-layer="back"] .image-grip,
+.ProseMirror .image-block.image-block[data-free="true"][data-layer="back"] .image-handle,
+.ProseMirror .image-block.image-block[data-free="true"][data-layer="back"] .image-corner { pointer-events: auto; z-index: 3; }
+
+/* The grip: grab here to move the picture (always shown for a free one, so a picture behind the text can be found). */
+.ProseMirror .image-block .image-grip {
+  position: absolute; top: 6px; left: 6px; width: 24px; height: 24px; border-radius: 7px; z-index: 3;
+  display: none; place-items: center; cursor: grab; color: var(--text);
+  background: color-mix(in oklab, var(--elevated) 88%, transparent); border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.ProseMirror .image-block .image-grip svg { width: 14px; height: 14px; pointer-events: none; }
+.ProseMirror[contenteditable="true"] .image-block:hover .image-grip,
+.ProseMirror[contenteditable="true"] .image-block[data-selected="true"] .image-grip,
+.ProseMirror[contenteditable="true"] .image-block[data-free="true"] .image-grip { display: grid; }
+.ProseMirror[contenteditable="true"] .image-block[data-free="true"]:not(:hover):not([data-selected="true"]) .image-grip { opacity: 0.55; }
+
+/* Corner handles keep the picture's proportions. */
+.ProseMirror .image-block .image-corner {
+  position: absolute; width: 12px; height: 12px; border-radius: 3px; display: none; z-index: 3;
+  background: var(--accent); box-shadow: 0 0 0 2px var(--bg);
+}
+.ProseMirror .image-block .image-corner[data-c="nw"] { left: -6px; top: -6px; cursor: nwse-resize; }
+.ProseMirror .image-block .image-corner[data-c="ne"] { right: -6px; top: -6px; cursor: nesw-resize; }
+.ProseMirror .image-block .image-corner[data-c="sw"] { left: -6px; bottom: -6px; cursor: nesw-resize; }
+.ProseMirror .image-block .image-corner[data-c="se"] { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.ProseMirror[contenteditable="true"] .image-block[data-selected="true"] .image-corner { display: block; }
+.ProseMirror .image-block .image-handle { z-index: 3; }
+
+/* The little toolbar of the selected picture. It lives on the page body (not in the text), above everything. */
+.image-pop {
+  position: fixed; z-index: 90; display: flex; flex-direction: column; gap: 6px; padding: 8px; width: max-content; max-width: min(92vw, 540px);
+  font-size: 12px; color: var(--text); background: var(--elevated); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+}
+.image-pop .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.image-pop .lbl { color: var(--muted); margin-right: 2px; min-width: 3.2em; }
+.image-pop button, .image-pop select, .image-pop input {
+  height: 26px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font: inherit; padding: 0 8px; outline-offset: 1px;
+}
+.image-pop button { cursor: pointer; }
+.image-pop button:hover:not(:disabled):not([aria-pressed="true"]) { background: var(--surface-2); }
+.image-pop button:disabled { opacity: 0.45; cursor: default; }
+.image-pop button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.image-pop input[type="number"] { width: 58px; padding: 0 4px 0 8px; }
+.image-pop select { padding-right: 4px; }

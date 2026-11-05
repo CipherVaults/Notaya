@@ -121,14 +121,25 @@ pub fn show_main(app: &AppHandle) {
 /// hide itself anywhere it could not be reached again).
 pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open Notaya", true, None::<&str>)?;
+    let hide_notes = MenuItem::with_id(app, "close-stickies", "Close sticky notes", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Notaya", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &quit])?;
+    let menu = Menu::with_items(app, &[&open, &hide_notes, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip("Notaya")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => show_main(app),
+            "close-stickies" => {
+                // Waits for the windows to save, so not on the menu's own thread. Nothing to do while locked.
+                let app = app.clone();
+                std::thread::spawn(move || {
+                    let state = app.state::<state::AppState>();
+                    if state.is_unlocked() {
+                        let _ = crate::commands::stickies::hide_all(&app, &state);
+                    }
+                });
+            }
             "quit" => {
                 // Saves edits, locks, makes the backup and exits, on a thread of its own so the
                 // windows can answer (like the Quit button and the close button do).

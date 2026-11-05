@@ -254,22 +254,37 @@ impl Renderer {
         let Some(src) = img.attachment.as_ref().and_then(|id| self.pictures.get(id)) else {
             return "<p><em>(picture not available)</em></p>".to_string();
         };
+        let width = img.width_pct.filter(|w| w.is_finite() && *w > 0.0 && *w <= 100.0).map(|w| (w * 10.0).round() / 10.0);
+        let floated = img.float && img.align != Align::Center;
         let mut style = String::new();
-        if let Some(w) = img.width_pct.filter(|w| w.is_finite() && *w > 0.0 && *w <= 100.0) {
-            style.push_str(&format!("width:{}%;", (w * 10.0).round() / 10.0));
+        let mut fig_style = String::new();
+        if floated {
+            // Text wraps around it, as in the editor: the whole figure floats and the picture fills it.
+            let right = img.align == Align::Right;
+            let gap = if right { "margin:.3em 0 .6em 1.2em" } else { "margin:.3em 1.2em .6em 0" };
+            fig_style = format!(" style=\"float:{};{gap};width:{}%\"", if right { "right" } else { "left" }, width.unwrap_or(40.0));
+            style.push_str("width:100%;");
+        } else {
+            if let Some(w) = width {
+                style.push_str(&format!("width:{w}%;"));
+            }
+            match img.align {
+                Align::Center => style.push_str("display:block;margin-inline:auto;"),
+                Align::Right => style.push_str("display:block;margin-inline-start:auto;"),
+                _ => {}
+            }
         }
-        match img.align {
-            Align::Center => style.push_str("display:block;margin-inline:auto;"),
-            Align::Right => style.push_str("display:block;margin-inline-start:auto;"),
-            _ => {}
+        if let Some(r) = img.ratio.filter(|r| r.is_finite() && *r > 0.0) {
+            // Cropped to the shape the picture had in the editor.
+            style.push_str(&format!("aspect-ratio:{};object-fit:cover;", (r * 1000.0).round() / 1000.0));
         }
         let style = if style.is_empty() { String::new() } else { format!(" style=\"{style}\"") };
         let caption = img.caption.trim();
         let tag = format!("<img src=\"{src}\" alt=\"{}\"{style}>", esc(caption));
         if caption.is_empty() {
-            format!("<figure>{tag}</figure>")
+            format!("<figure{fig_style}>{tag}</figure>")
         } else {
-            format!("<figure>{tag}<figcaption dir=\"auto\">{}</figcaption></figure>", esc(caption))
+            format!("<figure{fig_style}>{tag}<figcaption dir=\"auto\">{}</figcaption></figure>", esc(caption))
         }
     }
 
@@ -600,7 +615,7 @@ mod tests {
             para("link", Marks { link: Some(format!("https://a.example/\"onmouseover=\"alert(1)\"{evil}")), ..Marks::default() }),
             Block::Code { language: "rust\"><script>".into(), text: evil.into() },
             Block::Math(evil.into()),
-            Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: evil.into(), width_pct: Some(50.0), align: Align::Center }),
+            Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: evil.into(), width_pct: Some(50.0), align: Align::Center, ratio: None, float: false }),
             Block::Callout { icon: evil.into(), blocks: vec![] },
             Block::PageLink { title: evil.into(), target: None },
             Block::Toggle(vec![para(evil, Marks::default())]),
@@ -755,7 +770,7 @@ mod tests {
 
     #[test]
     fn pictures_are_typed_by_their_bytes() {
-        let mut d = sample_doc(vec![Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: String::new(), width_pct: None, align: Align::Left })]);
+        let mut d = sample_doc(vec![Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: String::new(), width_pct: None, align: Align::Left, ratio: None, float: false })]);
         // Stored as a PNG, but the bytes are a GIF: the file says GIF.
         d.images.insert(doc::tests::IMG_ID.into(), Picture { kind: Kind::Png, bytes: b"GIF89a\x01\0\x01\0\x80\0\0\0\0\0\xff\xff\xff,\0\0\0\0\x01\0\x01\0\0\x02\x02D\x01\0;".to_vec() });
         let html = render(&d).unwrap();
@@ -764,6 +779,23 @@ mod tests {
         d.images.insert(doc::tests::IMG_ID.into(), Picture { kind: Kind::Png, bytes: b"<svg onload=alert(1)></svg>".to_vec() });
         let html = render(&d).unwrap();
         assert!(!html.contains("<svg") && !html.contains("data:image") && html.contains("(picture not available)"));
+    }
+
+    #[test]
+    fn a_floated_cropped_picture_keeps_its_wrap_and_shape() {
+        let png = b"GIF89a\x01\0\x01\0\x80\0\0\0\0\0\xff\xff\xff,\0\0\0\0\x01\0\x01\0\0\x02\x02D\x01\0;".to_vec();
+        let pic = |align, float, ratio| {
+            let mut d = sample_doc(vec![Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: "c".into(), width_pct: Some(30.0), align, ratio, float })]);
+            d.images.insert(doc::tests::IMG_ID.into(), Picture { kind: Kind::Png, bytes: png.clone() });
+            render(&d).unwrap()
+        };
+        let html = pic(Align::Right, true, Some(16.0 / 9.0));
+        assert!(html.contains("<figure style=\"float:right;margin:.3em 0 .6em 1.2em;width:30%\">"), "{html}");
+        assert!(html.contains("aspect-ratio:1.778;object-fit:cover;"), "{html}");
+        let plain = pic(Align::Left, false, None);
+        assert!(plain.contains("<figure><img") && !plain.contains("style=\"float") && !plain.contains("aspect-ratio"), "{plain}");
+        // A float with no side (centered) stays in the text.
+        assert!(!pic(Align::Center, true, None).contains("style=\"float"));
     }
 
     #[test]
@@ -781,7 +813,7 @@ mod tests {
 
     #[test]
     fn too_many_picture_bytes_are_refused_with_a_message() {
-        let mut d = sample_doc(vec![Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: String::new(), width_pct: None, align: Align::Left })]);
+        let mut d = sample_doc(vec![Block::Image(Image { attachment: Some(doc::tests::IMG_ID.into()), caption: String::new(), width_pct: None, align: Align::Left, ratio: None, float: false })]);
         // A picture just over the limit (zeros after a PNG signature; nothing is encoded).
         let mut big = vec![0u8; MAX_PICTURE_BYTES as usize + 1];
         big[..8].copy_from_slice(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);

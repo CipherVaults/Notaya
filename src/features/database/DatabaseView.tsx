@@ -20,6 +20,7 @@ import { ViewIcon } from "./icons";
 import { VIEW_KINDS, blankView, cellText, countConds, emptyFilter, filterIsEmpty, reorderList } from "./model";
 import { saveCells } from "./ops";
 import { afterRowChange } from "./notices";
+import { dropUndo, handleUndoKey, pushUndo, retainUndo } from "./undo";
 import { FilterGroup } from "./panels/FilterPanel";
 import { GroupPanel, SortPanel } from "./panels/SortGroupPanels";
 import { PropertiesPanel, ViewSettingsPanel } from "./panels/ViewPanels";
@@ -128,6 +129,23 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   }, [db?.id, viewKey, propsKey, tick, saveCount]);
 
   const rowById = useMemo(() => new Map((result?.rows ?? []).map((r) => [r.id, r])), [result]);
+  const resultRef = useRef(result);
+  resultRef.current = result;
+  const dbRef = useRef(db);
+  dbRef.current = db;
+
+  // Undo and redo of this database live as long as one of its views is open.
+  useEffect(() => retainUndo(databaseId), [databaseId]);
+  // A full-page database also takes Ctrl+Z when nothing has the focus (the keys inside it are handled on its root below).
+  useEffect(() => {
+    if (compact) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || (document.activeElement && document.activeElement !== document.body)) return;
+      handleUndoKey(databaseId, e);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [databaseId, compact]);
 
   // ----- editing
 
@@ -158,7 +176,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
   const patchRow = useCallback((row: DbRow) => setResult((r) => (r ? { ...r, rows: r.rows.map((x) => (x.id === row.id ? row : x)) } : r)), []);
 
-  const setCells = useCallback(
+  const applyCells = useCallback(
     async (rowId: string, patch: Record<string, unknown>) => {
       setResult((r) =>
         r
@@ -183,7 +201,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     },
     [patchRow, requery, automationsOn],
   );
-  const setTitle = useCallback(
+  const applyTitle = useCallback(
     async (rowId: string, title: string) => {
       setResult((r) => (r ? { ...r, rows: r.rows.map((x) => (x.id === rowId ? { ...x, title } : x)) } : r));
       const row = await saveCells(rowId, {}, title);
@@ -191,6 +209,51 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       requery();
     },
     [patchRow, requery],
+  );
+  // The same two, remembering how to take the change back (and do it again).
+  const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const setCells = useCallback(
+    async (rowId: string, patch: Record<string, unknown>) => {
+      const row = resultRef.current?.rows.find((x) => x.id === rowId);
+      if (row) {
+        const prev: Record<string, unknown> = {};
+        for (const k of Object.keys(patch)) prev[k] = row.values[k] ?? null;
+        if (Object.keys(patch).some((k) => !same(patch[k], prev[k]))) {
+          const names = Object.keys(patch).map((k) => dbRef.current?.props.find((p) => p.id === k)?.name ?? "a value");
+          const clear = Object.values(patch).every((v) => v == null);
+          pushUndo(databaseId, { label: `${clear ? "cleared" : "edit of"} ${names.join(", ")}`, undo: () => applyCells(rowId, prev), redo: () => applyCells(rowId, patch) });
+        }
+      }
+      await applyCells(rowId, patch);
+    },
+    [applyCells, databaseId],
+  );
+  const setTitle = useCallback(
+    async (rowId: string, title: string) => {
+      const prev = resultRef.current?.rows.find((x) => x.id === rowId)?.title;
+      if (prev !== undefined && prev !== title) pushUndo(databaseId, { label: "edit of the name", undo: () => applyTitle(rowId, prev), redo: () => applyTitle(rowId, title) });
+      await applyTitle(rowId, title);
+    },
+    [applyTitle, databaseId],
+  );
+  // Rows to the trash and back without a message of their own (the undo and redo say what happened).
+  const trashQuiet = useCallback(
+    async (ids: string[]) => {
+      let t = useApp.getState().tree;
+      for (const id of ids) t = await api.trashPage(id);
+      setTree(t);
+      requery();
+    },
+    [requery, setTree],
+  );
+  const restoreQuiet = useCallback(
+    async (ids: string[]) => {
+      let t = useApp.getState().tree;
+      for (const id of ids) t = await api.restorePage(id);
+      setTree(t);
+      requery();
+    },
+    [requery, setTree],
   );
   const createRow = useCallback(
     async (cells: Record<string, unknown> = {}, title = "", templateId = ""): Promise<DbRow | null> => {
@@ -200,24 +263,31 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
         requery();
         afterRowChange(automationsOn);
         void api.listNotes().then(setTree).catch(() => undefined);
+        pushUndo(databaseId, { label: "new row", undo: () => trashQuiet([row.id]), redo: () => restoreQuiet([row.id]) });
         return row;
       } catch (e) {
         toast.error(errorText(e));
         return null;
       }
     },
-    [databaseId, requery, setTree, automationsOn],
+    [databaseId, requery, setTree, automationsOn, trashQuiet, restoreQuiet],
   );
   const reorderRows = useCallback(
     async (ids: string[]) => {
+      const before = resultRef.current?.rows.map((r) => r.id);
+      const send = async (list: string[]) => {
+        await api.reorderRows(list);
+        requery();
+      };
       try {
-        await api.reorderRows(ids);
+        await send(ids);
+        if (before && before.length === ids.length && before.some((id, i) => id !== ids[i])) pushUndo(databaseId, { label: "row order", undo: () => send(before), redo: () => send(ids) });
       } catch (e) {
         toast.error(errorText(e));
+        requery();
       }
-      requery();
     },
-    [requery],
+    [requery, databaseId],
   );
   const duplicateRow = useCallback(
     async (id: string) => {
@@ -233,19 +303,17 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const trashRows = useCallback(
     async (ids: string[]) => {
       try {
-        let t = useApp.getState().tree;
-        for (const id of ids) t = await api.trashPage(id);
-        setTree(t);
-        requery();
+        await trashQuiet(ids);
+        // The toast's Undo and Ctrl+Z do the same; each one takes the step off the stack so it cannot be undone twice.
+        const entry = { label: ids.length === 1 ? "row moved to trash" : `${ids.length} rows moved to trash`, undo: () => restoreQuiet(ids), redo: () => trashQuiet(ids) };
+        pushUndo(databaseId, entry);
         toast(ids.length === 1 ? "Row moved to trash" : `${ids.length} rows moved to trash`, {
           action: {
             label: "Undo",
             onClick: async () => {
               try {
-                let u = useApp.getState().tree;
-                for (const id of ids) u = await api.restorePage(id);
-                setTree(u);
-                requery();
+                await restoreQuiet(ids);
+                dropUndo(databaseId, entry);
               } catch (e) {
                 toast.error(errorText(e));
               }
@@ -256,7 +324,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
         toast.error(errorText(e));
       }
     },
-    [requery, setTree],
+    [databaseId, trashQuiet, restoreQuiet],
   );
   const patchRowLocal = useCallback(
     (rowId: string, propId: string, value: unknown) => {
@@ -599,7 +667,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
   return (
     <DbShellContext.Provider value={shell}>
-      <div className={cn("relative flex min-h-0 flex-col", compact ? "rounded-lg border border-line" : "h-full")} data-database={db.id}>
+      <div className={cn("relative flex min-h-0 flex-col", compact ? "rounded-lg border border-line" : "h-full")} data-database={db.id} onKeyDown={(e) => handleUndoKey(databaseId, e)}>
         {!compact && (
           <div className="shrink-0 px-6 pb-1 pt-8 sm:px-10">
             <div className="flex items-start gap-3">
@@ -664,7 +732,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
               <span dir="auto" className="truncate">{db.title || "Untitled"}</span>
             </button>
           )}
-          <div role="tablist" aria-label="Views" className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+          <div role="tablist" aria-label="Views" className="no-scrollbar flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
             {db.views.map((v) => {
               const active = v.id === view.id;
               return (
@@ -755,7 +823,8 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           </div>
         )}
 
-        <div className={cn("min-h-0 flex-1", compact ? "max-h-[520px] overflow-auto" : "overflow-auto")}>
+        {/* A table scrolls inside itself (header stays, the bars sit at the edge of what is visible); the other views scroll here. */}
+        <div className={cn("min-h-0 flex-1", compact ? "max-h-[520px] overflow-auto" : view.kind === "table" ? "flex flex-col overflow-hidden" : "overflow-auto")}>
           {!viewProps ? (
             <div className="grid place-items-center py-16 text-muted"><Loader2 className="animate-spin" size={20} /></div>
           ) : (
@@ -768,7 +837,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
                 <ViewBody {...viewProps} />
               )}
               {!isEmpty && viewProps.result.rows.length === 0 && (hasFilter || search) && (
-                <div className="px-6 py-10 text-center text-sm text-muted">
+                <div className="shrink-0 px-6 py-10 text-center text-sm text-muted">
                   No rows match.{" "}
                   <button type="button" className="underline" onClick={() => (setSearch(""), editView((v) => ({ ...v, filter: emptyFilter() })))}>Clear the filter and search</button>
                 </div>

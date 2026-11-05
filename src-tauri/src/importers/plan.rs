@@ -38,12 +38,12 @@ const MAX_FOLDERS: usize = 40;
 /// Most skipped items listed.
 pub const MAX_LISTED: usize = 500;
 /// Most picture bytes one import may store.
-const MAX_IMAGE_TOTAL: u64 = 1024 * 1024 * 1024;
+const MAX_IMAGE_TOTAL: u64 = 2 * 1024 * 1024 * 1024;
 /// A page whose editor JSON or text is larger than this is not imported (the editor saves up to
 /// 20 million characters).
 const MAX_PAGE_BYTES: usize = 20_000_000;
 /// The rendered pages of one import together.
-const MAX_TOTAL_BYTES: usize = 512 * 1024 * 1024;
+const MAX_TOTAL_BYTES: usize = 2 * 1024 * 1024 * 1024;
 /// Names the vault accepts.
 const MAX_NAME: usize = 120;
 const MAX_TITLE: usize = 300;
@@ -248,6 +248,8 @@ pub struct PlanPage {
     pub title: String,
     pub icon: String,
     pub cover: Option<usize>,
+    /// Notion's built-in cover as one of Notaya's own (`gradient:<name>` or `solid:#rrggbb`); empty = none.
+    pub cover_look: String,
     pub blocks: Vec<Block>,
 }
 
@@ -269,14 +271,14 @@ struct Builder<'a> {
 
 impl Builder<'_> {
     /// The body of an HTML twin: its blocks (without the title), its icon and cover. `None` when it cannot be used.
-    fn html_twin(&mut self, h_path: &str) -> Option<(Vec<Block>, String, Option<usize>)> {
+    fn html_twin(&mut self, h_path: &str) -> Option<(Vec<Block>, String, Option<usize>, String)> {
         let vfs = self.vfs;
         let bytes = vfs.read(h_path, MAX_TEXT_FILE).ok()?;
         let dir = h_path.rsplit_once('/').map_or("", |(d, _)| d).to_string();
-        let (mut blocks, icon, cover) = {
+        let (mut blocks, icon, cover, cover_look) = {
             let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images: &mut self.images, problems: &mut self.skipped, name: h_path.to_string() };
             let d = html::parse_document(&decode_text(&bytes), &mut ctx);
-            (d.blocks, d.icon.unwrap_or_default(), d.cover)
+            (d.blocks, d.icon.unwrap_or_default(), d.cover, d.cover_look.unwrap_or_default())
         };
         if doc::is_empty(&blocks) {
             return None;
@@ -284,7 +286,7 @@ impl Builder<'_> {
         if matches!(blocks.first(), Some(Block::Heading(1, _))) {
             blocks.remove(0);
         }
-        Some((blocks, icon, cover))
+        Some((blocks, icon, cover, cover_look))
     }
 
     fn skip(&mut self, item: impl Into<String>, reason: impl Into<String>) {
@@ -341,6 +343,7 @@ impl Builder<'_> {
                 title: clean_title(name, false),
                 icon: String::new(),
                 cover: None,
+                cover_look: String::new(),
                 blocks: Vec::new(),
             });
             let me = self.pages.len() - 1;
@@ -376,6 +379,7 @@ impl Builder<'_> {
         let mut declared: Option<String> = None;
         let mut icon = String::new();
         let mut cover = None;
+        let mut cover_look = String::new();
         let mut blocks;
         // The same page exported as HTML too: its text and formatting are used (colors, highlights, fonts).
         let twin = if kind == Kind::Markdown { self.twins.get(path).cloned().and_then(|h| self.html_twin(&h)) } else { None };
@@ -396,6 +400,7 @@ impl Builder<'_> {
                     declared = d.title;
                     icon = d.icon.unwrap_or_default();
                     cover = d.cover;
+                    cover_look = d.cover_look.unwrap_or_default();
                     blocks = d.blocks;
                 }
                 Kind::Docx => match docx::parse(bytes, &mut ctx, path) {
@@ -442,7 +447,7 @@ impl Builder<'_> {
         // "→ Title" rows that link to another document (Notaya's own export) are page links again.
         doc::page_link_rows(&mut blocks);
         let title = take_title(declared, &mut blocks, name);
-        if let Some((mut html_blocks, html_icon, html_cover)) = twin {
+        if let Some((mut html_blocks, html_icon, html_cover, html_cover_look)) = twin {
             // The Markdown page keeps the property lines of a row (`Status: Done`), which the database import reads;
             // the HTML page has them as a table. The rest of the page comes from the HTML.
             if matches!(html_blocks.first(), Some(Block::Table(rows)) if is_properties_table(rows)) {
@@ -456,6 +461,9 @@ impl Builder<'_> {
                 icon = html_icon;
             }
             cover = cover.or(html_cover);
+            if cover_look.is_empty() {
+                cover_look = html_cover_look;
+            }
             self.merged += 1;
         }
         self.pages.push(PlanPage {
@@ -466,6 +474,7 @@ impl Builder<'_> {
             title,
             icon: if icon.chars().count() <= 8 { icon } else { String::new() },
             cover,
+            cover_look,
             blocks,
         });
         Some(self.pages.len() - 1)
@@ -811,7 +820,7 @@ impl Plan {
             };
             let usable = bytes.and_then(|b| match sniff(&b) {
                 None => Err("Not a PNG, JPEG, GIF or WebP picture.".to_string()),
-                Some(_) if total + b.len() as u64 > MAX_IMAGE_TOTAL => Err("Too many pictures in one import (more than 1 GB).".to_string()),
+                Some(_) if total + b.len() as u64 > MAX_IMAGE_TOTAL => Err("Too many pictures in one import (more than 2 GB).".to_string()),
                 Some(mime) => Ok((mime, b)),
             });
             match usable {
@@ -864,7 +873,7 @@ impl Plan {
                     Ok(r) if r.content.len() <= MAX_PAGE_BYTES && r.text.len() <= MAX_PAGE_BYTES => {
                         total = total.saturating_add(r.content.len() + r.text.len());
                         if total > MAX_TOTAL_BYTES {
-                            return Err("This import is too large (more than 512 MB of text). Import it in smaller parts.".into());
+                            return Err("This import is too large (more than 2 GB of text). Import it in smaller parts.".into());
                         }
                         cut_rows += r.cut_rows;
                         rendered.push(Some((r.content, r.text)));
@@ -935,7 +944,7 @@ impl Plan {
                 order: i as i64,
                 favorite: false,
                 icon: p.icon.clone(),
-                cover: p.cover.and_then(|c| urls.get(c).cloned().flatten()).unwrap_or_default(),
+                cover: p.cover.and_then(|c| urls.get(c).cloned().flatten()).unwrap_or_else(|| p.cover_look.clone()),
                 parent: parent.map(|q| self.pages[q].id.clone()).unwrap_or_default(),
                 trashed_at: None,
                 created: now,
@@ -1051,6 +1060,63 @@ mod tests {
         assert_eq!(first_image["attrs"]["caption"], "A photo");
         assert!(child.content.contains("http://clatt.localhost/") && child.text == "sub text");
         assert_eq!(summary.notebook_name, "Notion import");
+    }
+
+    #[test]
+    fn a_notion_built_in_cover_and_a_data_emoji_icon_are_kept_without_fetching_anything() {
+        let html = |title: &str, cover: &str| {
+            format!(r#"<html><head><title>{title}</title></head><body><article class="page sans"><header><img class="page-cover-image" src="{cover}"/><div class="page-header-icon page-header-icon-with-cover"><span class="icon" data-emoji="🏠"></span></div><h1 class="page-title">{title}</h1></header><div class="page-body"><p>Body text</p></div></article></body></html>"#)
+        };
+        let gradient = html("Hubs", "https://www.notion.so/images/page-cover/gradients_8.png");
+        let other = "cccccccccccccccccccccccccccccccc";
+        let files: Vec<(String, Vec<u8>)> = vec![
+            // An HTML-only page, and a Markdown page with an HTML twin (the twin carries the icon and the cover).
+            (format!("Solo {other}.html"), html("Solo", "https://www.notion.so/images/page-cover/solid_red.png").into_bytes()),
+            (format!("Hubs {ID}.md"), b"# Hubs\n\nBody text\n".to_vec()),
+            (format!("Hubs {ID}.html"), gradient.into_bytes()),
+        ];
+        let refs: Vec<(&str, &[u8])> = files.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let v = vfs(&refs);
+        let mut plan = build(&v, &Control::standard(), Some("Export"), NOW).unwrap();
+        let (items, summary) = finish(&mut plan, &v);
+        assert_eq!(summary.images, 0, "nothing on notion.so is fetched or stored");
+        let hubs = page(&items, "Hubs");
+        assert_eq!((hubs.icon.as_str(), hubs.cover.as_str()), ("🏠", "gradient:lagoon"));
+        let solo = page(&items, "Solo");
+        assert_eq!((solo.icon.as_str(), solo.cover.as_str()), ("🏠", "solid:#e5484d"));
+    }
+
+    #[test]
+    fn a_main_page_next_to_a_folder_of_databases_and_pages_is_imported_for_markdown_and_html() {
+        // A Notion "Hubs" main page: the page, a folder of the same name with sub-pages and a database.
+        let (hub, sub, db, row) = ("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb4");
+        let html = |t: &str, body: &str| format!("<html><head><title>{t}</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">{t}</h1></header><div class=\"page-body\">{body}</div></article></body></html>");
+        let hub_md = format!("# Hubs\n\n[Sub](Hubs%20{hub}/Sub%20{sub}.md)\n\n[Tasks](Hubs%20{hub}/Tasks%20{db}.csv)\n");
+        let md: Vec<(String, Vec<u8>)> = vec![
+            (format!("Hubs {hub}.md"), hub_md.into_bytes()),
+            (format!("Hubs {hub}/Sub {sub}.md"), b"# Sub\n\ntext\n".to_vec()),
+            (format!("Hubs {hub}/Tasks {db}.csv"), b"Name,Status\nOne,Done\n".to_vec()),
+            (format!("Hubs {hub}/Tasks {db}/One {row}.md"), b"# One\n\nStatus: Done\n".to_vec()),
+        ];
+        let refs: Vec<(&str, &[u8])> = md.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let v = vfs(&refs);
+        let plan = build(&v, &Control::standard(), Some("Export"), NOW).unwrap();
+        let titles: Vec<&str> = plan.pages.iter().map(|p| p.title.as_str()).collect();
+        assert!(titles.contains(&"Hubs"), "the main page (Markdown) is imported: {titles:?}");
+        let hh = html("Hubs", &format!("<p><a href=\"Hubs%20{hub}/Sub%20{sub}.html\">Sub</a></p>"));
+        let files: Vec<(String, Vec<u8>)> = vec![
+            ("index.html".into(), b"<ul><li><a href=\"x\">x</a></li></ul>".to_vec()),
+            (format!("Hubs {hub}.html"), hh.into_bytes()),
+            (format!("Hubs {hub}/Sub {sub}.html"), html("Sub", "<p>text</p>").into_bytes()),
+            (format!("Hubs {hub}/Tasks {db}.html"), html("Tasks", "<table><tr><td>One</td></tr></table>").into_bytes()),
+            (format!("Hubs {hub}/Tasks {db}.csv"), b"Name,Status\nOne,Done\n".to_vec()),
+            (format!("Hubs {hub}/Tasks {db}/One {row}.html"), html("One", "<p>x</p>").into_bytes()),
+        ];
+        let refs: Vec<(&str, &[u8])> = files.iter().map(|(n, d)| (n.as_str(), d.as_slice())).collect();
+        let v = vfs(&refs);
+        let plan = build(&v, &Control::standard(), Some("Export"), NOW).unwrap();
+        let titles: Vec<&str> = plan.pages.iter().map(|p| p.title.as_str()).collect();
+        assert!(titles.contains(&"Hubs"), "the main page (HTML) is imported: {titles:?}");
     }
 
     #[test]

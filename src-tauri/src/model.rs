@@ -82,10 +82,11 @@ pub struct Page {
     pub text: String,
     pub order: i64,
     pub favorite: bool,
-    /// Emoji shown beside the title (empty = none).
+    /// Emoji shown beside the title, or `pic:<attachment id>` for a small picture (empty = none).
     #[serde(default)]
     pub icon: String,
-    /// "gradient:<name>" or an attachment URL (empty = no cover).
+    /// "gradient:<name>", "solid:#rrggbb" or an attachment URL, the last optionally ending in `#y=<0..100>`
+    /// (how far down the picture is shown, in percent). Empty = no cover.
     #[serde(default)]
     pub cover: String,
     /// Id of the page this one sits inside (empty = directly in its section).
@@ -109,6 +110,8 @@ pub struct PageMeta {
     pub order: i64,
     pub favorite: bool,
     pub icon: String,
+    /// The page's cover (see `Page::cover`), so a card can show a strip of it without opening the page.
+    pub cover: String,
     pub trashed_at: Option<i64>,
     pub created: i64,
     pub updated: i64,
@@ -125,6 +128,7 @@ impl From<&Page> for PageMeta {
             order: p.order,
             favorite: p.favorite,
             icon: p.icon.clone(),
+            cover: p.cover.clone(),
             parent: p.parent.clone(),
             trashed_at: p.trashed_at,
             created: p.created,
@@ -175,7 +179,15 @@ pub struct Settings {
     /// here (not as its own record) so an older version (Cipherleaf 1.x) can still open the vault: it
     /// ignores the field. The UI reads and changes it only through the calculator commands.
     pub calc_history: Vec<CalcEntry>,
+    /// The last few things searched for, newest first (V1.5.1). Kept here like the calculator history: it is
+    /// encrypted with the vault, wiped from memory when the vault locks, and the UI reads and changes it only
+    /// through the search-history commands.
+    pub search_history: Vec<String>,
 }
+
+/// How many searches the history keeps, and the longest one it stores (in characters).
+pub const SEARCH_HISTORY_MAX: usize = 5;
+pub const SEARCH_TERM_MAX: usize = 200;
 
 /// How many calculations the history keeps.
 pub const CALC_HISTORY_MAX: usize = 500;
@@ -207,6 +219,7 @@ impl Default for Settings {
             screen_capture_protection: false,
             sticky_default_color: "yellow".into(),
             calc_history: Vec::new(),
+            search_history: Vec::new(),
         }
     }
 }
@@ -229,6 +242,13 @@ impl Settings {
         self.font_size = self.font_size.clamp(12, 22);
         self.idle_lock_minutes = self.idle_lock_minutes.clamp(1, 240);
         self.calc_history.truncate(CALC_HISTORY_MAX);
+        self.search_history.retain(|t| !t.trim().is_empty());
+        self.search_history.truncate(SEARCH_HISTORY_MAX);
+        for t in &mut self.search_history {
+            if t.chars().count() > SEARCH_TERM_MAX {
+                *t = t.chars().take(SEARCH_TERM_MAX).collect();
+            }
+        }
         self
     }
 }
@@ -290,5 +310,24 @@ mod tests {
         assert_eq!(CALC_HISTORY_MAX, 500, "V1.4.0: the history keeps 500 calculations");
         s.calc_history = vec![CalcEntry::default(); CALC_HISTORY_MAX + 20];
         assert_eq!(s.sanitized().calc_history.len(), CALC_HISTORY_MAX);
+    }
+
+    #[test]
+    fn search_history_defaults_to_empty_and_is_capped() {
+        let old = r#"{"kind":"settings","theme":"paper"}"#;
+        match serde_json::from_str::<Item>(old).unwrap() {
+            Item::Settings(s) => assert!(s.search_history.is_empty()),
+            _ => panic!("expected settings"),
+        }
+        let mut s = Settings::default();
+        s.search_history = (0..9).map(|i| format!("term {i}")).collect();
+        s.search_history.push("x".repeat(SEARCH_TERM_MAX + 50));
+        let s = s.sanitized();
+        assert_eq!(s.search_history.len(), SEARCH_HISTORY_MAX);
+        let mut t = Settings::default();
+        t.search_history = vec!["  ".into(), "y".repeat(SEARCH_TERM_MAX + 50)];
+        let t = t.sanitized();
+        assert_eq!(t.search_history.len(), 1);
+        assert_eq!(t.search_history[0].chars().count(), SEARCH_TERM_MAX);
     }
 }

@@ -200,6 +200,7 @@ export const api = {
     invoke<void>("set_sticky_geometry", { id, x, y, w, h }),
   openSticky: (id: string) => invoke<void>("open_sticky", { id }),
   closeSticky: (id: string) => invoke<void>("close_sticky", { id }),
+  hideStickies: () => invoke<void>("hide_stickies"),
   deleteSticky: (id: string) => invoke<void>("delete_sticky", { id }),
   deleteStickies: (ids: string[]) => invoke<void>("delete_stickies", { ids }),
 
@@ -214,6 +215,11 @@ export const api = {
   passwordStrength: (password: string, hints: string[] = []) =>
     invoke<Strength>("password_strength", { password, hints }),
   search: (query: string) => invoke<SearchHit[]>("search", { query }),
+  // The last five searches, kept in the encrypted vault (cleared with Clear; wiped from memory on lock).
+  searchHistory: () => invoke<string[]>("search_history"),
+  addSearchTerm: (term: string) => invoke<string[]>("add_search_term", { term }),
+  removeSearchTerm: (term: string) => invoke<string[]>("remove_search_term", { term }),
+  clearSearchHistory: () => invoke<void>("clear_search_history"),
 };
 
 /** Turns any thrown IPC error into a readable message. */

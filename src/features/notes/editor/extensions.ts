@@ -7,6 +7,7 @@ import Image from "@tiptap/extension-image";
 import { Callout, Toggle } from "./blocks";
 import { Column, Columns, Comment, PageLink } from "./more-blocks";
 import { MathBlock, MathInline } from "./math";
+import { MermaidBlock } from "./MermaidBlock";
 import { DatabaseBlock } from "./DatabaseBlock";
 import { ImageBlock } from "./ImageBlock";
 import { SlashCommand, type SlashOptions } from "./slash";
@@ -60,6 +61,7 @@ export function pageExtensions(slash: SlashOptions) {
     Comment,
     MathBlock,
     MathInline,
+    MermaidBlock,
     DatabaseBlock,
     Placeholder.configure({
       showOnlyCurrent: true,

@@ -43,6 +43,7 @@ These come from the inventory work. They are facts for the owner to decide on; n
 12. **MIT-0.** `dunce` 1.0.5 is `CC0-1.0 OR MIT-0 OR Apache-2.0`; its package contains only the CC0-1.0 text, which is used here. No MIT-0 text is reproduced because no shipped package contains one.
 13. **Icon and logo.** The Notaya mark, two sticky notes in the Sunrise colours (`assets/notaya-icon.svg`, `src/components/Logo.tsx`, `src-tauri/icons/*`), was drawn for this project in the development sessions on 2026-10-27; no outside source is recorded. Every file in `src-tauri/icons/` was regenerated from `assets/notaya-icon.svg` with `npx tauri icon`. No license is recorded for the artwork. The emoji used for notebook icons are plain Unicode characters drawn by the system font and are not shipped.
 14. **Version numbers differ:** `package.json` and `src-tauri/Cargo.toml` say 0.1.0, `tauri.conf.json` says 1.0.0.
+15. **Mermaid (V1.5.1): `elkjs` 0.9.3 is EPL-2.0.** The Eclipse Public License is a file-level copyleft: shipping it unmodified is allowed, and the license text and a pointer to its source (https://github.com/kieler/elkjs) must travel with the program; changes to its own files would have to be published. It is a dependency of Mermaid (only used for some layouts). `dompurify` is MPL-2.0 OR Apache-2.0 (Apache-2.0 is used). **The owner accepted this on 2026-11-05 06:05:04 UTC ("Ok to keep the license").** Notaya's own license (item 1) is still not chosen. The Mermaid packages' copyright lines and license texts are not copied into this file yet.
 
 ## Rust crates
 
@@ -487,6 +488,129 @@ Notes: `@tauri-apps/api` is offered under `MIT OR Apache-2.0` and is listed as M
 ### Build tools (not shipped)
 
 These development tools are not in the exe and are listed for credit: @tailwindcss/vite 4.3.3 (MIT); @tauri-apps/cli 2.12.4 (Apache-2.0 OR MIT); @types/node 26.6.5 (MIT); @types/react 19.3.0 (MIT); @types/react-dom 19.3.0 (MIT); @vitejs/plugin-react 6.1.2 (MIT); tailwindcss 4.3.3 (MIT); typescript 6.0.3 (Apache-2.0); vite 8.3.5 (MIT). Their license fields are as in `package.json`. `vite` may inject a few lines of its own MIT-licensed helper code into the bundle; that was not itemised.
+
+## Mermaid and its packages (added with V1.5.1, 2026-11-04)
+
+Mermaid 12.2.0 (MIT) draws the diagrams of the Mermaid block. It and the packages it needs are in the shipped bundle (loaded only when a diagram is shown). This list was generated on 2026-11-04 from the packages installed in `node_modules` by walking Mermaid's `dependencies`; the licenses are the `license` fields of the packages. **Copyright lines and license texts of these packages have not been copied yet** (not done; unverified). The MIT, ISC, BSD-3-Clause and Apache-2.0 texts that travel with a program are partly in "License texts" below; the rest still has to be added before the file is complete.
+
+| Package | Version | License |
+|---|---|---|
+| @antfu/install-pkg | 2.1.0 | MIT |
+| @braintree/sanitize-url | 7.1.2 | MIT |
+| @chevrotain/cst-dts-gen | 13.2.0 | Apache-2.0 |
+| @chevrotain/gast | 13.2.0 | Apache-2.0 |
+| @chevrotain/regexp-to-ast | 13.2.0 | Apache-2.0 |
+| @chevrotain/types | 13.2.0 | Apache-2.0 |
+| @chevrotain/utils | 13.2.0 | Apache-2.0 |
+| @iconify/types | 2.0.0 | MIT |
+| @iconify/utils | 3.1.7 | MIT |
+| @mermaid-js/parser | 2.0.1 | MIT |
+| @types/d3 | 7.4.3 | MIT |
+| @types/d3-array | 3.2.2 | MIT |
+| @types/d3-axis | 3.0.6 | MIT |
+| @types/d3-brush | 3.0.6 | MIT |
+| @types/d3-chord | 3.0.6 | MIT |
+| @types/d3-color | 3.1.3 | MIT |
+| @types/d3-contour | 3.0.6 | MIT |
+| @types/d3-delaunay | 6.0.4 | MIT |
+| @types/d3-dispatch | 3.0.7 | MIT |
+| @types/d3-drag | 3.0.7 | MIT |
+| @types/d3-dsv | 3.0.7 | MIT |
+| @types/d3-ease | 3.0.2 | MIT |
+| @types/d3-fetch | 3.0.7 | MIT |
+| @types/d3-force | 3.0.10 | MIT |
+| @types/d3-format | 3.0.4 | MIT |
+| @types/d3-geo | 3.1.1 | MIT |
+| @types/d3-hierarchy | 3.1.7 | MIT |
+| @types/d3-interpolate | 3.0.4 | MIT |
+| @types/d3-path | 3.1.1 | MIT |
+| @types/d3-polygon | 3.0.2 | MIT |
+| @types/d3-quadtree | 3.0.6 | MIT |
+| @types/d3-random | 3.0.4 | MIT |
+| @types/d3-scale | 4.0.9 | MIT |
+| @types/d3-scale-chromatic | 3.1.0 | MIT |
+| @types/d3-selection | 3.0.12 | MIT |
+| @types/d3-shape | 3.2.0 | MIT |
+| @types/d3-time | 3.0.4 | MIT |
+| @types/d3-time-format | 4.0.3 | MIT |
+| @types/d3-timer | 3.0.2 | MIT |
+| @types/d3-transition | 3.0.9 | MIT |
+| @types/d3-zoom | 3.0.9 | MIT |
+| @types/geojson | 7946.0.16 | MIT |
+| @upsetjs/venn.js | 2.0.0 | MIT |
+| chevrotain | 13.2.0 | Apache-2.0 |
+| commander | 7.2.0 | MIT |
+| commander | 15.0.0 | MIT |
+| cose-base | 1.0.3 | MIT |
+| cose-base | 2.2.0 | MIT |
+| cytoscape | 3.34.4 | MIT |
+| cytoscape-cose-bilkent | 4.1.0 | MIT |
+| cytoscape-fcose | 2.2.0 | MIT |
+| d3 | 7.9.2 | ISC |
+| d3-array | 3.2.5 | ISC |
+| d3-array | 2.12.1 | BSD-3-Clause |
+| d3-axis | 3.0.1 | ISC |
+| d3-brush | 3.0.1 | ISC |
+| d3-chord | 3.0.2 | ISC |
+| d3-color | 3.1.1 | ISC |
+| d3-contour | 4.0.3 | ISC |
+| d3-delaunay | 6.0.6 | ISC |
+| d3-dispatch | 3.0.2 | ISC |
+| d3-drag | 3.0.1 | ISC |
+| d3-dsv | 3.0.2 | ISC |
+| d3-ease | 3.0.2 | BSD-3-Clause |
+| d3-fetch | 3.0.2 | ISC |
+| d3-force | 3.0.1 | ISC |
+| d3-format | 3.1.3 | ISC |
+| d3-geo | 3.1.2 | ISC |
+| d3-hierarchy | 3.1.3 | ISC |
+| d3-interpolate | 3.0.2 | ISC |
+| d3-path | 3.1.1 | ISC |
+| d3-path | 1.0.9 | BSD-3-Clause |
+| d3-polygon | 3.0.2 | ISC |
+| d3-quadtree | 3.0.2 | ISC |
+| d3-random | 3.0.2 | ISC |
+| d3-sankey | 0.12.3 | BSD-3-Clause |
+| d3-scale | 4.0.3 | ISC |
+| d3-scale-chromatic | 3.1.1 | ISC |
+| d3-selection | 3.0.1 | ISC |
+| d3-shape | 3.2.1 | ISC |
+| d3-shape | 1.3.7 | BSD-3-Clause |
+| d3-time | 3.1.1 | ISC |
+| d3-time-format | 4.1.1 | ISC |
+| d3-timer | 3.0.2 | ISC |
+| d3-transition | 3.0.2 | ISC |
+| d3-zoom | 3.0.1 | ISC |
+| dagre-d3-es | 7.0.14 | MIT |
+| dayjs | 1.11.23 | MIT |
+| delaunator | 5.1.0 | ISC |
+| dompurify | 3.4.17 | (MPL-2.0 OR Apache-2.0) |
+| elkjs | 0.9.3 | EPL-2.0 |
+| es-toolkit | 1.53.1 | MIT |
+| hachure-fill | 0.5.2 | MIT |
+| iconv-lite | 0.6.3 | MIT |
+| import-meta-resolve | 4.2.0 | MIT |
+| internmap | 2.0.3 | ISC |
+| internmap | 1.0.1 | ISC |
+| katex | 0.18.10 | MIT |
+| khroma | 2.1.0 | MIT (its package.json has no license field; the project page says MIT: unverified) |
+| layout-base | 1.0.2 | MIT |
+| layout-base | 2.0.1 | MIT |
+| lodash-es | 4.18.1 | MIT |
+| marked | 16.4.2 | MIT |
+| mermaid | 12.2.0 | MIT |
+| package-manager-detector | 1.9.0 | MIT |
+| path-data-parser | 0.1.0 | MIT |
+| points-on-curve | 0.2.0 | MIT |
+| points-on-path | 0.2.1 | MIT |
+| robust-predicates | 3.0.3 | Unlicense |
+| roughjs | 4.6.6 | MIT |
+| rw | 1.3.3 | BSD-3-Clause |
+| safer-buffer | 2.1.2 | MIT |
+| stylis | 4.4.0 | MIT |
+| tinyexec | 1.3.1 | MIT |
+| ts-dedent | 2.3.0 | MIT |
+| uuid | 14.0.3 | MIT |
 
 ## License texts
 

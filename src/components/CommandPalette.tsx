@@ -18,14 +18,18 @@ import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import type { SearchHit } from "@/lib/types";
 import { useApp } from "@/store/app";
+import { PageIcon } from "@/lib/pageLook";
 import { openExport } from "@/features/notes/ExportDialog";
+import { RecentSearches, useRecentSearches } from "@/features/search/RecentSearches";
 
 export default function CommandPalette() {
   const open = useApp((s) => s.paletteOpen);
   const securityOn = useApp((s) => s.status?.securityOn ?? false);
   const setOpen = useApp((s) => s.setPaletteOpen);
+  const tree = useApp((s) => s.tree);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
+  const searches = useRecentSearches(open);
 
   useEffect(() => {
     if (!open) {
@@ -54,7 +58,11 @@ export default function CommandPalette() {
     Promise.resolve(fn()).catch((e) => toast.error(errorText(e)));
   };
 
-  const goToHit = (hit: SearchHit) =>
+  const goToHit = (hit: SearchHit) => {
+    searches.remember(query);
+    return goToHitNow(hit);
+  };
+  const goToHitNow = (hit: SearchHit) =>
     run(async () => {
       const s = useApp.getState();
       if (hit.kind === "page") {
@@ -80,14 +88,18 @@ export default function CommandPalette() {
       }
     });
 
-  const icon = (kind: SearchHit["kind"]) =>
-    ({
+  const icon = (h: SearchHit) => {
+    // A page (or database) with an icon of its own shows it here.
+    const own = h.kind === "page" ? tree.pages.find((x) => x.id === h.id)?.icon : h.kind === "database" ? tree.databases.find((x) => x.id === h.id)?.icon : "";
+    if (own) return <PageIcon icon={own} size={16} />;
+    return {
       page: <FileText size={16} />,
       sticky: <StickyNote size={16} />,
       notebook: <BookOpen size={16} />,
       database: <Table2 size={16} />,
       row: <FileText size={16} />,
-    })[kind];
+    }[h.kind];
+  };
 
   const itemClass =
     "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-fg data-[selected=true]:bg-surface-2 data-[selected=true]:text-fg";
@@ -115,7 +127,7 @@ export default function CommandPalette() {
                 <Command.Group heading="Results" className="mb-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint">
                   {hits.map((h) => (
                     <Command.Item key={`${h.kind}-${h.id}`} value={`${h.kind}-${h.id}`} onSelect={() => goToHit(h)} className={itemClass}>
-                      <span className="text-muted">{icon(h.kind)}</span>
+                      <span className="text-muted">{icon(h)}</span>
                       <div className="min-w-0 flex-1">
                         <div dir="auto" className="truncate font-medium">{h.title || "Untitled"}</div>
                         {(h.subtitle || h.snippet) && (
@@ -126,6 +138,17 @@ export default function CommandPalette() {
                     </Command.Item>
                   ))}
                 </Command.Group>
+              )}
+
+              {!query.trim() && (
+                <RecentSearches
+                  recent={searches.recent}
+                  onPick={setQuery}
+                  onForget={searches.forget}
+                  onClear={searches.clear}
+                  itemClass={itemClass}
+                  headingClass="mb-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint"
+                />
               )}
 
               {!query.trim() && (

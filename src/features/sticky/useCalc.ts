@@ -59,9 +59,24 @@ export function useCalc(degrees: boolean) {
     setExpr("");
     setShown(null);
   };
+  // Deletes the selection, or the character before the caret (the end when the box was never focused).
+  // A whole function name such as "sin(" or "Ans", as one key put it there, goes in one press.
   const back = () => {
-    setExpr((x) => x.slice(0, -1));
+    const el = input.current;
+    const len = expr.length;
+    let start = Math.min(el?.selectionStart ?? len, len);
+    const end = Math.min(el?.selectionEnd ?? len, len);
+    if (start === end) {
+      if (start === 0) return;
+      const token = /(?:asin|acos|atan|sin|cos|tan|sqrt|abs|exp|ln|log|√)\($|Ans$/.exec(expr.slice(0, start));
+      start -= token ? token[0].length : 1;
+    }
+    setExpr(expr.slice(0, start) + expr.slice(end));
     setShown(null);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start, start);
+    });
   };
   const negate = () => {
     setExpr(negateExpr);

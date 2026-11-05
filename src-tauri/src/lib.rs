@@ -26,7 +26,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, calculator, database as database_cmd, database_io, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, shell as shell_cmd, stickies, tools, vault as vault_cmd};
+use commands::{backup as backup_cmd, calculator, database as database_cmd, database_io, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, search_history, shell as shell_cmd, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -269,6 +269,7 @@ pub fn run() {
             stickies::set_sticky_geometry,
             stickies::open_sticky,
             stickies::close_sticky,
+            stickies::hide_stickies,
             stickies::delete_sticky,
             stickies::delete_stickies,
             calculator::open_calculator,
@@ -278,6 +279,10 @@ pub fn run() {
             tools::password_strength,
             tools::open_url,
             tools::search,
+            search_history::search_history,
+            search_history::add_search_term,
+            search_history::remove_search_term,
+            search_history::clear_search_history,
         ])
         .build(tauri::generate_context!())
         .unwrap_or_else(|e| {

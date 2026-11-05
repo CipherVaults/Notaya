@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Lock, Minus, PanelLeft, Search, Square, X, Copy as Restore } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Minus, PanelLeft, Search, Square, X, Copy as Restore } from "lucide-react";
 import { api } from "@/lib/ipc";
+import { goBack, goForward, useNav } from "@/lib/navHistory";
 import { useApp } from "@/store/app";
 import { Kbd } from "./ui";
 import Logo from "./Logo";
@@ -15,6 +16,8 @@ export default function TitleBar() {
   const setPaletteOpen = useApp((s) => s.setPaletteOpen);
   const sidebarOpen = useApp((s) => s.sidebarOpen);
   const setSidebarOpen = useApp((s) => s.setSidebarOpen);
+  const canBack = useNav((s) => s.canBack);
+  const canForward = useNav((s) => s.canForward);
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {
@@ -49,6 +52,29 @@ export default function TitleBar() {
         >
           <PanelLeft size={16} />
         </button>
+      )}
+
+      {unlocked && (
+        <div className="flex items-center">
+          <button
+            onClick={goBack}
+            disabled={!canBack}
+            aria-label="Back"
+            title="Back  ·  Backspace, Alt+Left or the mouse's back button"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:pointer-events-none disabled:opacity-35"
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <button
+            onClick={goForward}
+            disabled={!canForward}
+            aria-label="Forward"
+            title="Forward  ·  Shift+Backspace, Alt+Right or the mouse's forward button"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:pointer-events-none disabled:opacity-35"
+          >
+            <ChevronRight size={17} />
+          </button>
+        </div>
       )}
 
       <div data-tauri-drag-region className="flex flex-1 justify-center">

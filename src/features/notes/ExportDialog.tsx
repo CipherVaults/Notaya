@@ -11,6 +11,7 @@ import type { ExportFormat, ExportRequest, PageMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useApp, type ExportTarget } from "@/store/app";
 import { Button, Modal, Segmented, Switch } from "@/components/ui";
+import { PageIcon } from "@/lib/pageLook";
 
 type Choice = "page" | "pages" | "section" | "sections" | "notebook" | "notebooks";
 type Output = "single" | "zip";
@@ -200,7 +201,7 @@ export default function ExportDialog() {
                     {rows.map(({ page: p, depth }) => (
                       <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-surface-2" style={{ paddingLeft: 8 + depth * 16 }}>
                         <input type="checkbox" checked={chosen.has(p.id)} onChange={() => toggle(p.id)} className="accent-accent" />
-                        {p.icon && <span className="emoji-mono">{p.icon}</span>}
+                        {p.icon && <PageIcon icon={p.icon} size={14} />}
                         <span dir="auto" className="truncate">{p.title || "Untitled"}</span>
                       </label>
                     ))}

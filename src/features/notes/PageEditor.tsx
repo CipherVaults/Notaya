@@ -16,6 +16,7 @@ import SlashMenu, { type SlashController } from "./editor/SlashMenu";
 import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
 import { PageCover, PageIconAndActions } from "./PageHeader";
+import { PageIcon } from "@/lib/pageLook";
 import { openExport } from "./ExportDialog";
 import RowProperties from "@/features/database/RowProperties";
 import { loadRow, saveRowAsTemplate } from "@/features/database/rowOps";
@@ -166,6 +167,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   }
 
   const setLook = async (nextIcon: string, nextCover: string) => {
+    const [prevIcon, prevCover] = [icon, cover];
     setIcon(nextIcon);
     setCover(nextCover);
     try {
@@ -173,6 +175,8 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
       const t = useApp.getState().tree;
       setTree({ ...t, pages: t.pages.map((p) => (p.id === m.id ? m : p)) });
     } catch (e) {
+      setIcon(prevIcon);
+      setCover(prevCover);
       toast.error(errorText(e));
     }
   };
@@ -239,14 +243,14 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
           {parents.map((pp) => (
             <span key={pp.id} className="flex items-center gap-1">
               <button onClick={() => useApp.getState().openPage(pp.id)} className="max-w-[10rem] truncate hover:text-fg hover:underline">
-                {pp.icon && <span className="mr-1">{pp.icon}</span>}
+                {pp.icon && <PageIcon icon={pp.icon} size={14} className="me-1" />}
                 {pp.title || "Untitled"}
               </button>
               <ChevronRight size={12} className="shrink-0 text-faint" />
             </span>
           ))}
           <span dir="auto" className="max-w-[16rem] truncate text-fg">
-            {icon && <span className="emoji-mono mr-1">{icon}</span>}
+            {icon && <PageIcon icon={icon} size={14} className="me-1" />}
             {title || "Untitled"}
           </span>
         </nav>
@@ -322,7 +326,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PageCover cover={cover} readOnly={readOnly} onChange={(c) => setLook(icon, c)} />
-        <div className={cn("mx-auto pb-10", embedded ? "px-12" : "px-16", cover ? "pt-0" : embedded ? "pt-6" : "pt-10")} style={{ maxWidth: "calc(var(--editor-width) + 128px)" }}>
+        <div className={cn("mx-auto pb-10", embedded ? "px-12" : "px-16", cover ? (icon ? "pt-0" : "pt-4") : embedded ? "pt-6" : "pt-10")} style={{ maxWidth: "calc(var(--editor-width) + 128px)" }}>
           {readOnly && (
             <div className="mb-6 flex items-center justify-between rounded-lg border border-warn/30 bg-warn/10 px-4 py-3 text-sm">
               <span>This page is in the trash.</span>
@@ -331,7 +335,8 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
               </button>
             </div>
           )}
-          <PageIconAndActions icon={icon} cover={cover} readOnly={readOnly} onChange={setLook} />
+          <div className="group/head">
+          <PageIconAndActions icon={icon} cover={cover} readOnly={readOnly} allowPicture={!isRow} onChange={setLook} />
           <input
             value={title}
             readOnly={readOnly}
@@ -350,6 +355,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
             dir="auto"
             className={cn("mb-4 w-full min-w-0 bg-transparent font-bold leading-tight tracking-tight text-fg outline-none placeholder:text-faint/70", embedded ? "text-[2rem]" : "text-[2.6rem]")}
           />
+          </div>
           {isRow && rowDb && <RowProperties dbId={rowDb.id} rowId={page.id} title={title} readOnly={readOnly} />}
 
           <div ref={wrapRef} className={cn("relative", embedded ? "-ml-12 pl-12" : "-ml-16 pl-16")}>

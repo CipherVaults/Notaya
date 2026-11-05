@@ -24,8 +24,8 @@ pub const MAX_FILTER_CONDS: usize = 100;
 pub const MAX_SORTS: usize = 10;
 /// The id of the title property of every database (its value is the row page's title).
 pub const TITLE_PROP: &str = "title";
-/// Files and media stored in a row: at most this many bytes each (owner, 2026-11-03: 50 MB).
-pub const MAX_FILE_BYTES: usize = 50 * 1024 * 1024;
+/// Files and media stored in a row: at most this many bytes each (owner, 2026-11-03: 50 MB; 2026-11-04: 2 GB, which one stored record cannot hold, so 900 MB).
+pub const MAX_FILE_BYTES: usize = 900 * 1024 * 1024;
 
 /// The kinds of property (Notion's list).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, Zeroize, Default)]

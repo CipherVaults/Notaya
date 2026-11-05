@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast, Toaster } from "sonner";
 import { flushAll } from "@/lib/flush";
 import { api } from "@/lib/ipc";
+import { startNavHistory, startNavKeys } from "@/lib/navHistory";
 import { applyAppearance, cachedAppearance, isDark } from "@/lib/theme";
 import { useApp } from "@/store/app";
 import { ConfirmProvider, TooltipProvider } from "@/components/ui";
@@ -19,6 +20,16 @@ export default function App() {
 
   // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
   const unlocked = status?.unlocked ?? false;
+  // Back and forward (Backspace, Alt+Left/Right, the mouse buttons): only while unlocked, in memory only.
+  useEffect(() => {
+    if (!unlocked) return;
+    const stopHistory = startNavHistory();
+    const stopKeys = startNavKeys();
+    return () => {
+      stopHistory();
+      stopKeys();
+    };
+  }, [unlocked]);
   useEffect(() => {
     if (!unlocked) return;
     let stopped = false;

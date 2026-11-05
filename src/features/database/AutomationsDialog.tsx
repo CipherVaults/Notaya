@@ -18,13 +18,13 @@ const TRIGGERS: [Trigger["kind"], string][] = [
   ["dateReached", "A date arrives"],
 ];
 
-const blankAutomation = (): Automation => ({
+const blankAutomation = (db: Database): Automation => ({
   id: newId(),
   name: "New automation",
   enabled: true,
   trigger: { kind: "rowAdded", prop: "", offsetMins: 0 },
   filter: emptyFilter(),
-  actions: [blankAction()],
+  actions: [blankAction("setProp", db.props)],
   lastRun: 0,
 });
 
@@ -46,7 +46,7 @@ export default function AutomationsDialog({ db: initial, onClose, onSaved }: { d
     onSaved();
   };
   const add = () => {
-    const na = blankAutomation();
+    const na = blankAutomation(live);
     void editDatabase(live.id, (d) => ({ ...d, automations: [...(d.automations ?? []), na] }), true);
     setSel(na.id);
   };

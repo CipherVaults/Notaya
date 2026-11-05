@@ -123,6 +123,37 @@ pub fn close_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> R
     Ok(())
 }
 
+/// Closes every open sticky note window at once ("Close all"), keeping the notes: each one is marked as not
+/// open, so Open / Open all brings it back and it does not return by itself at the next unlock. Every window
+/// writes its pending edits first (the same step a lock takes). Nothing is deleted.
+pub fn hide_all(app: &AppHandle, state: &AppState) -> Result<()> {
+    if state.is_unlocked() {
+        crate::state::flush_windows(app);
+    }
+    state.with_mut(|s| {
+        let open: Vec<Sticky> = s
+            .items()
+            .filter_map(|i| match i {
+                Item::Sticky(x) if x.open => Some(x.clone()),
+                _ => None,
+            })
+            .collect();
+        for mut st in open {
+            st.open = false;
+            s.put(Item::Sticky(st))?;
+        }
+        Ok(())
+    })?;
+    ui::close_stickies(app);
+    Ok(())
+}
+
+// Async: it waits for the windows to save, which must not happen on the main thread.
+#[tauri::command(async)]
+pub fn hide_stickies(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
+    hide_all(&app, &state)
+}
+
 #[tauri::command]
 pub fn delete_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<()> {
     state.with_mut(|s| {

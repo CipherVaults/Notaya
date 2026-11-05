@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
+import { PageIcon } from "@/lib/pageLook";
 
 const MAX_SHOWN = 50;
 
@@ -117,7 +118,7 @@ export default function PagePicker({
               onClick={() => onPick(page.id)}
               className={cn("flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left", i === index ? "bg-surface-2" : "")}
             >
-              <span className="grid h-6 w-6 shrink-0 place-items-center text-base leading-none">{page.icon || "📄"}</span>
+              <span className="grid h-6 w-6 shrink-0 place-items-center text-base leading-none"><PageIcon icon={page.icon} size={16} fallback="📄" /></span>
               <span className="min-w-0 flex-1">
                 <span dir="auto" className="block truncate text-sm text-fg">{page.title || "Untitled"}</span>
                 {where && <span className="block truncate text-xs text-faint">{where}</span>}

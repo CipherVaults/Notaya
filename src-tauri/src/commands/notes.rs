@@ -557,30 +557,113 @@ mod tests {
     }
 }
 
-/// Sets the emoji and cover shown on a page. The cover is `gradient:<name>` or one
-/// of this vault's attachment URLs (so a cover image is encrypted like any other).
+/// The biggest picture that may be a page icon (an icon is shown at a few dozen pixels).
+const MAX_ICON_PICTURE_BYTES: usize = 2 * 1024 * 1024;
+
+/// The 32 hex characters of a vault picture in `http://clatt.localhost/<id>` (also the `https` and
+/// `clatt://` spellings), or None when the text is anything else (an outside address included).
+fn cover_picture_id(url: &str) -> Option<&str> {
+    let rest = ["http://clatt.localhost/", "https://clatt.localhost/", "clatt://localhost/", "clatt://"]
+        .iter()
+        .find_map(|p| url.strip_prefix(p))?;
+    (rest.len() == 32 && rest.bytes().all(|b| b.is_ascii_hexdigit())).then_some(rest)
+}
+
+/// A cover is empty, `gradient:<name>`, `solid:#rrggbb`, or a picture in this vault, optionally
+/// followed by `#y=<0 to 100>` (how far down the picture is shown, in percent).
+/// Returns the picture's id when there is one. Never accepts an outside address.
+fn check_cover(cover: &str) -> Result<Option<String>> {
+    let bad = || Error::invalid("This cover is not allowed. Use a gradient, a colour or a picture from your notes.");
+    if cover.is_empty() {
+        return Ok(None);
+    }
+    if let Some(name) = cover.strip_prefix("gradient:") {
+        let ok = !name.is_empty() && name.len() <= 24 && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-');
+        return if ok { Ok(None) } else { Err(bad()) };
+    }
+    if let Some(hex) = cover.strip_prefix("solid:#") {
+        let ok = hex.len() == 6 && hex.bytes().all(|b| b.is_ascii_hexdigit());
+        return if ok { Ok(None) } else { Err(bad()) };
+    }
+    let (url, y) = match cover.split_once("#y=") {
+        Some((u, y)) => (u, Some(y)),
+        None => (cover, None),
+    };
+    if let Some(y) = y {
+        let ok = !y.is_empty() && y.len() <= 3 && y.bytes().all(|b| b.is_ascii_digit()) && y.parse::<u32>().map_or(false, |n| n <= 100);
+        if !ok {
+            return Err(bad());
+        }
+    }
+    cover_picture_id(url).map(|id| Some(id.to_ascii_lowercase())).ok_or_else(bad)
+}
+
+/// An icon is an emoji or a short text (at most 40 characters), or `pic:<32 hex>`: a small picture
+/// in this vault. Pictures are not allowed for database rows (their views only show text).
+fn check_icon(icon: &str, allow_picture: bool) -> Result<Option<String>> {
+    if let Some(id) = icon.strip_prefix("pic:") {
+        if !allow_picture || id.len() != 32 || !id.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err(Error::invalid("This icon is not allowed."));
+        }
+        return Ok(Some(id.to_ascii_lowercase()));
+    }
+    limit("Icon", icon, 40)?;
+    Ok(None)
+}
+
+/// Sets the icon and cover shown on a page or a database row. A cover is `gradient:<name>`,
+/// `solid:#rrggbb` or one of this vault's pictures (so it is encrypted like any other), never an
+/// outside address. A picture icon is `pic:<id>`, a vault picture of at most 2 MB.
+fn apply_page_look(s: &mut Session, id: &str, icon: String, cover: String) -> Result<PageMeta> {
+    limit("Cover", &cover, 200)?;
+    let is_row = matches!(s.get(id), Some(Item::Row(_)));
+    let (old_icon, old_cover) = match s.get(id) {
+        Some(Item::Row(r)) => (r.icon.clone(), r.cover.clone()),
+        Some(Item::Page(p)) => (p.icon.clone(), p.cover.clone()),
+        _ => return Err(Error::NotFound),
+    };
+    // What the page already has stays as it is, so an old value never blocks changing the other one.
+    let icon_pic = if icon == old_icon { None } else { check_icon(&icon, !is_row)? };
+    let cover_pic = if cover == old_cover { None } else { check_cover(&cover)? };
+    // The picture is only read when it is new for this page (moving a cover up or down keeps it).
+    if let Some(pic) = icon_pic {
+        let (mime, bytes) = s.get_attachment(&pic).map_err(|_| Error::invalid("This picture is not in your notes."))?;
+        if !matches!(mime.as_str(), "image/png" | "image/jpeg" | "image/gif" | "image/webp") {
+            return Err(Error::invalid("An icon must be a PNG, JPEG, GIF or WebP picture."));
+        }
+        if bytes.len() > MAX_ICON_PICTURE_BYTES {
+            return Err(Error::invalid("An icon picture must be smaller than 2 MB."));
+        }
+    }
+    if let Some(pic) = cover_pic.filter(|pic| !old_cover.to_ascii_lowercase().contains(pic.as_str())) {
+        let (mime, _) = s.get_attachment(&pic).map_err(|_| Error::invalid("This picture is not in your notes."))?;
+        if !matches!(mime.as_str(), "image/png" | "image/jpeg" | "image/gif" | "image/webp") {
+            return Err(Error::invalid("A cover must be a PNG, JPEG, GIF or WebP picture."));
+        }
+    }
+    if let Some(Item::Row(r)) = s.get(id) {
+        let mut r = r.clone();
+        r.icon = icon;
+        r.cover = cover;
+        r.updated = now_ms();
+        let meta = PageMeta::from(&row_as_page(s, &r));
+        s.put(Item::Row(r))?;
+        return Ok(meta);
+    }
+    let mut p = page(s, id)?;
+    p.icon = icon;
+    p.cover = cover;
+    p.updated = now_ms();
+    let meta = PageMeta::from(&p);
+    s.put(Item::Page(p))?;
+    Ok(meta)
+}
+
 #[tauri::command]
 pub fn set_page_look(state: State<'_, AppState>, id: String, icon: String, cover: String) -> Result<PageMeta> {
     limit("Icon", &icon, 40)?;
     limit("Cover", &cover, 200)?;
-    state.with_mut(|s| {
-        if let Some(Item::Row(r)) = s.get(&id) {
-            let mut r = r.clone();
-            r.icon = icon;
-            r.cover = cover;
-            r.updated = now_ms();
-            let meta = PageMeta::from(&row_as_page(s, &r));
-            s.put(Item::Row(r))?;
-            return Ok(meta);
-        }
-        let mut p = page(s, &id)?;
-        p.icon = icon;
-        p.cover = cover;
-        p.updated = now_ms();
-        let meta = PageMeta::from(&p);
-        s.put(Item::Page(p))?;
-        Ok(meta)
-    })
+    state.with_mut(|s| apply_page_look(s, &id, icon, cover))
 }
 
 #[cfg(test)]
@@ -645,5 +728,159 @@ mod subpage_tests {
         assert_eq!(get(&s, &child.id).section_id, sec_b);
         assert_eq!(get(&s, &grandchild.id).section_id, sec_b);
         assert_eq!(get(&s, &grandchild.id).parent, child.id);
+    }
+}
+
+#[cfg(test)]
+mod look_tests {
+    use super::*;
+    use crate::crypto::KdfParams;
+
+    fn vault() -> Session {
+        let dir = std::env::temp_dir().join(format!("notaya-test-{}", new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        Session::create(&dir.join("vault.nota"), "pw", None, KdfParams { m_kib: 64, t: 1, p: 1 }).unwrap()
+    }
+
+    fn new_page(s: &mut Session) -> String {
+        let id = new_id();
+        s.put(Item::Page(Page {
+            id: id.clone(),
+            section_id: new_id(),
+            title: "t".into(),
+            content: String::new(),
+            text: String::new(),
+            order: 0,
+            favorite: false,
+            icon: String::new(),
+            cover: String::new(),
+            parent: String::new(),
+            trashed_at: None,
+            created: 1,
+            updated: 1,
+        }))
+        .unwrap();
+        id
+    }
+
+    const PNG: &[u8] = b"\x89PNG\r\n\x1a\nrest";
+
+    #[test]
+    fn covers_are_gradients_colours_or_vault_pictures_only() {
+        let id = "0123456789abcdef0123456789abcdef";
+        for ok in [
+            "",
+            "gradient:dusk",
+            "gradient:aurora-2",
+            "solid:#a1B2c3",
+            &format!("http://clatt.localhost/{id}"),
+            &format!("http://clatt.localhost/{id}#y=0"),
+            &format!("http://clatt.localhost/{id}#y=100"),
+            &format!("clatt://localhost/{id}#y=35"),
+        ] {
+            assert!(check_cover(ok).is_ok(), "should be allowed: {ok}");
+        }
+        for bad in [
+            "https://example.com/a.png",
+            "http://example.com/clatt.localhost/0123456789abcdef0123456789abcdef",
+            "data:image/png;base64,AAAA",
+            "file:///C:/secret.png",
+            "//evil.example/x.png",
+            "gradient:",
+            "gradient:a b",
+            "gradient:../x",
+            "solid:#12345",
+            "solid:red",
+            "solid:#12345g",
+            &format!("http://clatt.localhost/{id}#y=101"),
+            &format!("http://clatt.localhost/{id}#y=-1"),
+            &format!("http://clatt.localhost/{id}#y="),
+            &format!("http://clatt.localhost/{id}?x=1"),
+            &format!("http://clatt.localhost/{id}/x"),
+            "http://clatt.localhost/short",
+        ] {
+            assert!(check_cover(bad).is_err(), "should be refused: {bad}");
+        }
+    }
+
+    #[test]
+    fn a_page_look_keeps_only_allowed_values() {
+        let mut s = vault();
+        let pid = new_page(&mut s);
+        let pic = s.put_attachment("image/png", PNG).unwrap();
+        let url = format!("http://clatt.localhost/{pic}");
+
+        // Outside addresses and pictures that are not in the vault are refused; nothing changes.
+        assert!(apply_page_look(&mut s, &pid, "".into(), "https://example.com/x.png".into()).is_err());
+        assert!(apply_page_look(&mut s, &pid, "".into(), "http://clatt.localhost/00000000000000000000000000000000".into()).is_err());
+        assert!(apply_page_look(&mut s, &pid, "pic:00000000000000000000000000000000".into(), "".into()).is_err());
+        assert!(apply_page_look(&mut s, &pid, "".into(), format!("{url}#y=250")).is_err());
+        assert_eq!(page(&s, &pid).unwrap().cover, "");
+
+        // An icon and a gradient cover.
+        let m = apply_page_look(&mut s, &pid, "🚀".into(), "gradient:dusk".into()).unwrap();
+        assert_eq!((m.icon.as_str(), m.cover.as_str()), ("🚀", "gradient:dusk"));
+        assert!(apply_page_look(&mut s, &pid, "x".repeat(41), "".into()).is_err());
+
+        // A picture cover with a vertical position, then moved, then removed.
+        let m = apply_page_look(&mut s, &pid, "🚀".into(), format!("{url}#y=30")).unwrap();
+        assert_eq!(m.cover, format!("{url}#y=30"));
+        apply_page_look(&mut s, &pid, "🚀".into(), format!("{url}#y=80")).unwrap();
+        assert_eq!(page(&s, &pid).unwrap().cover, format!("{url}#y=80"));
+        // The picture stays alive while the cover points at it, and goes when nothing does.
+        s.collect_garbage().unwrap();
+        assert!(s.get_attachment(&pic).is_ok());
+        apply_page_look(&mut s, &pid, "🚀".into(), "solid:#112233".into()).unwrap();
+        s.collect_garbage().unwrap();
+        assert!(s.get_attachment(&pic).is_err());
+    }
+
+    #[test]
+    fn a_picture_icon_must_be_a_small_vault_picture_and_survives_cleanup() {
+        let mut s = vault();
+        let pid = new_page(&mut s);
+        let pic = s.put_attachment("image/png", PNG).unwrap();
+        let m = apply_page_look(&mut s, &pid, format!("pic:{pic}"), "".into()).unwrap();
+        assert_eq!(m.icon, format!("pic:{pic}"));
+        s.collect_garbage().unwrap();
+        assert!(s.get_attachment(&pic).is_ok(), "the icon keeps its picture");
+
+        // Too big, and not a picture at all.
+        let mut big = PNG.to_vec();
+        big.resize(MAX_ICON_PICTURE_BYTES + 1, 0);
+        let big_id = s.put_attachment("image/png", &big).unwrap();
+        assert!(apply_page_look(&mut s, &pid, format!("pic:{big_id}"), "".into()).is_err());
+        let file_id = s.put_file("application/pdf", b"%PDF").unwrap();
+        assert!(apply_page_look(&mut s, &pid, format!("pic:{file_id}"), "".into()).is_err());
+        assert!(apply_page_look(&mut s, &pid, "".into(), format!("http://clatt.localhost/{file_id}")).is_err());
+        assert_eq!(page(&s, &pid).unwrap().icon, format!("pic:{pic}"));
+
+        // Picture icons are for pages only.
+        assert!(check_icon(&format!("pic:{pic}"), false).is_err());
+        assert!(check_icon("🚀", false).is_ok());
+    }
+
+    #[test]
+    fn an_old_value_does_not_block_changing_the_other_one() {
+        let mut s = vault();
+        let pid = new_page(&mut s);
+        // A cover in a form this version would not accept (for example from an older version).
+        let mut p = page(&s, &pid).unwrap();
+        p.cover = "http://old.example/legacy.png".into();
+        s.put(Item::Page(p)).unwrap();
+        let m = apply_page_look(&mut s, &pid, "📌".into(), "http://old.example/legacy.png".into()).unwrap();
+        assert_eq!(m.icon, "📌");
+        // But a new outside cover is still refused.
+        assert!(apply_page_look(&mut s, &pid, "📌".into(), "http://other.example/a.png".into()).is_err());
+    }
+
+    #[test]
+    fn the_tree_entry_carries_the_cover() {
+        let mut s = vault();
+        let pid = new_page(&mut s);
+        let m = apply_page_look(&mut s, &pid, "".into(), "solid:#445566".into()).unwrap();
+        assert_eq!(m.cover, "solid:#445566");
+        let json = serde_json::to_value(&m).unwrap();
+        assert_eq!(json["cover"], "solid:#445566");
     }
 }

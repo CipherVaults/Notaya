@@ -38,6 +38,7 @@ import { Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConf
 import NotebookDialog, { type NotebookDraft } from "@/features/notes/NotebookDialog";
 import { openExport } from "@/features/notes/ExportDialog";
 import NewDatabaseDialog, { type NewDatabaseTarget } from "@/features/database/NewDatabaseDialog";
+import { PageIcon } from "@/lib/pageLook";
 
 /** Opens the "New database" dialog for a section (and optionally a page to put it under). */
 const NewDatabaseContext = createContext<(target: NewDatabaseTarget) => void>(() => {});
@@ -1096,7 +1097,7 @@ function PageItem({
         setView("notes");
         onOpen();
       }}
-      icon={page.icon ? <span className="emoji-mono text-[0.9rem] leading-none">{page.icon}</span> : <FileText size={15} className="text-faint" />}
+      icon={page.icon ? <PageIcon icon={page.icon} size={15} /> : <FileText size={15} className="text-faint" />}
       label={page.title || "Untitled"}
       active={active}
       muted={!page.title}

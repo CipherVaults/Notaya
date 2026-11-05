@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import DatabaseView from "./DatabaseView";
 import { setDatabase, peekDatabase } from "./dbStore";
+import { PageIcon } from "@/lib/pageLook";
 
 export default function DatabasePage({ databaseId }: { databaseId: string }) {
   const tree = useApp((s) => s.tree);
@@ -49,7 +50,7 @@ export default function DatabasePage({ databaseId }: { databaseId: string }) {
           {parentPage && (
             <>
               <button onClick={() => useApp.getState().openPage(parentPage.id)} className="max-w-[10rem] truncate hover:text-fg hover:underline">
-                {parentPage.icon && <span className="me-1">{parentPage.icon}</span>}
+                {parentPage.icon && <PageIcon icon={parentPage.icon} size={14} className="me-1" />}
                 {parentPage.title || "Untitled"}
               </button>
               <ChevronRight size={12} className="shrink-0 text-faint rtl:rotate-180" />

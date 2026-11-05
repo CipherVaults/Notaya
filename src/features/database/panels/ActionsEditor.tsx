@@ -10,7 +10,14 @@ import { loadDatabase, useDatabase } from "../dbStore";
 import { isComputedKind } from "../model";
 import { PSelect, PropSelect, fieldCls } from "./ui";
 
-export const blankAction = (kind: Action["kind"] = "setProp"): Action => ({ kind, prop: "", value: "", database: "", title: "", cells: [] });
+/**
+ * A new action. A "Change a property" action must name a property from the start: the backend drops one without a property
+ * the moment the database is saved, so a blank one would appear and vanish again by itself (V1.5.0 report).
+ */
+export const blankAction = (kind: Action["kind"] = "setProp", props: Property[] = []): Action => {
+  const first = kind === "setProp" ? (props.find((p) => settable(p) && p.kind !== "title") ?? props.find(settable)) : undefined;
+  return { kind, prop: first?.id ?? (kind === "setProp" && props.length === 0 ? "title" : ""), value: "", database: "", title: "", cells: [] };
+};
 
 const KIND_LABELS: Record<Action["kind"], string> = {
   setProp: "Change a property",
@@ -28,7 +35,9 @@ const DATE_PRESETS: [string, string][] = [
 ];
 
 /** Properties an action can set (everything Notaya does not work out itself, and not files or places). */
-export const settable = (p: Property) => !isComputedKind(p.kind) && p.kind !== "files" && p.kind !== "id" && p.kind !== "place";
+export function settable(p: Property): boolean {
+  return !isComputedKind(p.kind) && p.kind !== "files" && p.kind !== "id" && p.kind !== "place";
+}
 
 /** The value of one property in an action: a control that fits the property. */
 export function ValueInput({ prop, value, onChange, title }: { prop: Property | undefined; value: string; onChange: (v: string) => void; title?: boolean }) {
@@ -156,7 +165,7 @@ export default function ActionsEditor({ db, actions, onChange }: { db: Database;
         return (
           <div key={i} className="rounded-lg border border-line p-2">
             <div className="flex items-center gap-1.5">
-              <PSelect value={a.kind} label="Action" className="min-w-0 flex-1" onChange={(k) => set(i, { ...blankAction(k as Action["kind"]) })}>
+              <PSelect value={a.kind} label="Action" className="min-w-0 flex-1" onChange={(k) => set(i, { ...blankAction(k as Action["kind"], db.props) })}>
                 {(Object.keys(KIND_LABELS) as Action["kind"][]).map((k) => (
                   <option key={k} value={k}>{KIND_LABELS[k]}</option>
                 ))}
@@ -181,7 +190,7 @@ export default function ActionsEditor({ db, actions, onChange }: { db: Database;
           </div>
         );
       })}
-      <button type="button" disabled={actions.length >= 20} onClick={() => onChange([...actions, blankAction()])} className="inline-flex items-center gap-1 text-sm text-accent-strong hover:underline disabled:opacity-50">
+      <button type="button" disabled={actions.length >= 20} onClick={() => onChange([...actions, blankAction("setProp", db.props)])} className="inline-flex items-center gap-1 text-sm text-accent-strong hover:underline disabled:opacity-50">
         <Plus size={14} /> Add an action
       </button>
     </div>

@@ -197,25 +197,50 @@ textarea,
   border-radius: 6px;
 }
 
-/* Slim scrollbars that stay out of the way */
+/* Scrollbars: always visible (V1.5.0 hid them until the mouse was over them, so tables looked as if they could not scroll).
+   12px wide, a rounded thumb in the text colour at low strength, so it shows on every light and dark look. */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 ::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: color-mix(in oklab, var(--text) 34%, transparent);
   border-radius: 999px;
-  border: 3px solid transparent;
+  border: 2px solid transparent;
   background-clip: padding-box;
+  min-width: 36px;
+  min-height: 36px;
 }
-:hover > ::-webkit-scrollbar-thumb,
-::-webkit-scrollbar-thumb:hover {
-  background: var(--surface-2);
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: color-mix(in oklab, var(--text) 56%, transparent);
   background-clip: padding-box;
-  border: 3px solid transparent;
+  border: 2px solid transparent;
 }
 ::-webkit-scrollbar-track {
+  background: color-mix(in oklab, var(--text) 6%, transparent);
+}
+::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* A strip that scrolls sideways but is too thin for a bar (the view tabs): scrolls by wheel and touch, no bar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* The lists of native dropdowns (<select>) take the colours of the look. Their own background is translucent, which the
+   list drew over white: near-invisible text on the dark looks. color-scheme (set per look above) darkens the rest. */
+option,
+optgroup {
+  background-color: var(--elevated);
+  color: var(--text);
+}
+option:disabled {
+  color: var(--faint);
 }
 
 .drag {
@@ -267,6 +292,16 @@ textarea,
 .cover-gradient-ember { background: linear-gradient(120deg, #4a0e0e 0%, #c2410c 55%, #f9b44c 100%); }
 .cover-gradient-rose { background: linear-gradient(120deg, #7a1a4d 0%, #d6457f 55%, #f9b4c8 100%); }
 .cover-gradient-sand { background: linear-gradient(120deg, #d9c7a3 0%, #ecdcbc 50%, #f6ecd8 100%); }
+.cover-gradient-aurora { background: linear-gradient(120deg, #0f2027 0%, #1f7a8c 45%, #8be0a4 100%); }
+.cover-gradient-peach { background: linear-gradient(120deg, #ff9a8b 0%, #ffb88c 50%, #ffe3b3 100%); }
+.cover-gradient-lagoon { background: linear-gradient(120deg, #2193b0 0%, #6dd5ed 55%, #d4f1f9 100%); }
+.cover-gradient-grape { background: linear-gradient(120deg, #3a1c71 0%, #8e44ad 50%, #d76d77 100%); }
+.cover-gradient-mint { background: linear-gradient(120deg, #a8e6cf 0%, #dcedc1 55%, #fdf6c3 100%); }
+.cover-gradient-citrus { background: linear-gradient(120deg, #f6d365 0%, #fda085 55%, #f78fb3 100%); }
+.cover-gradient-candy { background: linear-gradient(120deg, #a1c4fd 0%, #c2a8f5 50%, #fbc2eb 100%); }
+.cover-gradient-midnight { background: linear-gradient(120deg, #0b1026 0%, #1b2a5c 55%, #3b4f9c 100%); }
+.cover-gradient-slate { background: linear-gradient(120deg, #485563 0%, #6c7a89 55%, #a3b1c0 100%); }
+.cover-gradient-sunrise { background: linear-gradient(120deg, #ff6a3d 0%, #ffa64d 50%, #ffe08a 100%); }
 
 /* ---------- Block editor ---------- */
 :root {
@@ -311,6 +346,10 @@ textarea,
    so everything below uses logical sides (start/end) and flips with it. The indent sits on the item,
    not the list, so each item's bullet or number goes to the side its own text starts on. */
 .ProseMirror p, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4 { text-align: start; }
+/* A block whose direction is automatic and that has lines made with Shift+Enter: each line follows its own text,
+   so an Arabic line runs right-to-left and an English line below it stays left-to-right (one dir would make both
+   lines follow the first). Blocks with a forced direction, and one-line blocks, keep their dir. */
+.ProseMirror [data-dir-auto]:has(> br:not(.ProseMirror-trailingBreak)) { unicode-bidi: plaintext; }
 .ProseMirror ul, .ProseMirror ol { list-style: disc; padding: 0; }
 .ProseMirror ol { list-style: decimal; }
 .ProseMirror li { margin-inline-start: 1.55em; }
@@ -571,6 +610,97 @@ textarea,
 .math-editor textarea:focus { border-color: color-mix(in oklab, var(--text) 40%, transparent); }
 .math-editor .math-preview { min-height: 2.2em; padding: 10px 4px 2px; text-align: center; overflow-x: auto; }
 .math-editor .math-hint { padding-top: 6px; font-size: 0.72rem; color: var(--faint); }
+
+/* Mermaid diagrams */
+.ProseMirror .mermaid-block {
+  position: relative;
+  margin: 0.6em 0;
+  padding: 0.5em 0.7em 0.7em;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: default;
+}
+.ProseMirror .mermaid-block:hover,
+.ProseMirror .mermaid-block[data-selected="true"],
+.ProseMirror .mermaid-block[data-code="open"] { background: var(--surface); border-color: var(--border); }
+.ProseMirror .mermaid-block[data-selected="true"] { border-color: color-mix(in oklab, var(--text) 35%, transparent); }
+.ProseMirror .mermaid-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.ProseMirror .mermaid-block:hover .mermaid-bar,
+.ProseMirror .mermaid-block:focus-within .mermaid-bar,
+.ProseMirror .mermaid-block[data-selected="true"] .mermaid-bar,
+.ProseMirror .mermaid-block[data-code="open"] .mermaid-bar,
+.ProseMirror .mermaid-block[data-state="error"] .mermaid-bar { opacity: 1; }
+.ProseMirror .mermaid-label { margin-inline-end: auto; }
+.ProseMirror .mermaid-bar select,
+.ProseMirror .mermaid-bar button {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--elevated);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.ProseMirror .mermaid-bar select:hover,
+.ProseMirror .mermaid-bar button:hover { background: var(--surface-2); }
+.ProseMirror .mermaid-code {
+  display: block;
+  width: 100%;
+  min-height: 7.5em;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg, var(--surface));
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  direction: ltr;
+  text-align: left;
+  outline: none;
+  user-select: text;
+  cursor: text;
+}
+.ProseMirror .mermaid-code:focus { border-color: color-mix(in oklab, var(--text) 40%, transparent); }
+.ProseMirror .mermaid-code[hidden] { display: none; }
+.ProseMirror .mermaid-out { display: flex; justify-content: center; margin-top: 8px; overflow-x: auto; direction: ltr; }
+.ProseMirror .mermaid-out[hidden] { display: none; }
+.ProseMirror .mermaid-out[data-stale="true"] { opacity: 0.45; }
+.ProseMirror .mermaid-out svg { max-width: 100%; height: auto; }
+.ProseMirror .mermaid-block[data-empty="true"][data-code="closed"] .mermaid-out { display: none; }
+.ProseMirror .mermaid-block[data-empty="true"][data-code="closed"]::after { content: "Empty diagram"; color: var(--faint); font-size: 0.95em; }
+.ProseMirror .mermaid-note { margin-top: 6px; font-size: 0.72rem; color: var(--faint); }
+.ProseMirror .mermaid-note[hidden] { display: none; }
+.ProseMirror .mermaid-error {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in oklab, #e5484d 55%, transparent);
+  border-radius: 8px;
+  background: color-mix(in oklab, #e5484d 10%, transparent);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  direction: ltr;
+  text-align: left;
+}
+.ProseMirror .mermaid-error[hidden] { display: none; }
 
 /* Images */
 .ProseMirror .image-block {

@@ -258,6 +258,20 @@ pub struct Image {
     /// Width as a percentage of the text column, when set.
     pub width_pct: Option<f32>,
     pub align: Align,
+    /// The picture was cropped to this shape (width / height), when set (V1.5.1). HTML keeps the shape; Word and
+    /// PDF show the whole picture.
+    pub ratio: Option<f32>,
+    /// The text wraps around it, at the side `align` says (V1.5.1). HTML keeps it; Word, PDF and Markdown put
+    /// the picture in the text. A picture placed freely on the page (`free`, `x`, `y`, `layer`) is exported in the
+    /// text, at the block the editor kept it next to, so reading order follows its height.
+    pub float: bool,
+}
+
+/// "16:9" as 16 / 9. Anything else (no ratio, junk, zero) is none.
+fn parse_ratio(v: Option<&Value>) -> Option<f32> {
+    let (w, h) = v?.as_str()?.split_once(':')?;
+    let (w, h): (f32, f32) = (w.trim().parse().ok()?, h.trim().parse().ok()?);
+    (w.is_finite() && h.is_finite() && w > 0.0 && h > 0.0 && w <= 100.0 && h <= 100.0).then_some(w / h)
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -362,11 +376,22 @@ fn block(n: &Value, p: &Pages, out: &mut Vec<Block>) {
         "column" => out.extend(blocks(kids, p)),
         "codeBlock" => out.push(Block::Code { language: attr_str(n, "language"), text: plain_text(n) }),
         "mathBlock" => out.push(Block::Math(attr_str(n, "latex"))),
+        // A Mermaid diagram is drawn by the editor only; exports carry its code, as a code block with a caption.
+        "mermaidBlock" => {
+            let code = attr_str(n, "code");
+            if !code.trim().is_empty() {
+                let caption = Marks { italic: true, ..Marks::default() };
+                out.push(Block::Paragraph { align: Align::Left, content: vec![Inline::Text("Mermaid diagram (code)".into(), caption)] });
+                out.push(Block::Code { language: "mermaid".into(), text: code });
+            }
+        }
         "image" => out.push(Block::Image(Image {
             attachment: attachment_id(&attr_str(n, "src")),
             caption: attr_str(n, "caption"),
             width_pct: attr(n, "width").and_then(Value::as_f64).filter(|w| *w > 0.0).map(|w| w.min(100.0) as f32),
             align: Align::parse(attr(n, "align")),
+            ratio: parse_ratio(attr(n, "ratio")),
+            float: attr(n, "float").and_then(Value::as_bool) == Some(true),
         })),
         "table" => out.push(Block::Table(kids.iter().map(|row| children(row).iter().map(|c| cell(c, p)).collect()).collect())),
         "horizontalRule" => out.push(Block::Rule),
@@ -652,6 +677,40 @@ pub mod tests {
 
     pub fn titles(id: &str) -> Option<String> {
         (id == "child-page").then(|| "Child page".to_string())
+    }
+
+    #[test]
+    fn a_mermaid_diagram_is_exported_as_captioned_code() {
+        let json = serde_json::json!({ "type": "doc", "content": [
+            { "type": "mermaidBlock", "attrs": { "code": "graph TD\n  A --> B", "showCode": false } },
+            { "type": "mermaidBlock", "attrs": { "code": "  " } }
+        ] })
+        .to_string();
+        let blocks = parse(&json, &titles);
+        assert_eq!(blocks.len(), 2, "an empty diagram is left out: {blocks:?}");
+        assert!(matches!(&blocks[0], Block::Paragraph { content, .. } if matches!(&content[0], Inline::Text(t, m) if t == "Mermaid diagram (code)" && m.italic)));
+        assert_eq!(blocks[1], Block::Code { language: "mermaid".into(), text: "graph TD\n  A --> B".into() });
+    }
+
+    #[test]
+    fn pictures_read_the_new_placement_attributes_and_ignore_the_rest() {
+        let src = format!("http://clatt.localhost/{IMG_ID}");
+        let json = |attrs: Value| serde_json::json!({ "type": "doc", "content": [{ "type": "image", "attrs": attrs }] }).to_string();
+        let one = |attrs: Value| match parse(&json(attrs), &titles).remove(0) {
+            Block::Image(i) => i,
+            _ => panic!("expected a picture"),
+        };
+        let img = one(serde_json::json!({ "src": src, "width": 40, "align": "right", "float": true, "ratio": "16:9", "free": true, "x": 12.5, "y": 300, "layer": "back" }));
+        assert_eq!(img.attachment.as_deref(), Some(IMG_ID));
+        assert!(img.float && img.align == Align::Right);
+        assert!((img.ratio.unwrap() - 16.0 / 9.0).abs() < 1e-6);
+        assert_eq!(img.width_pct, Some(40.0), "a free picture is exported in the text, with its width");
+        // Old pages have none of them; junk is ignored.
+        let old = one(serde_json::json!({ "src": src }));
+        assert!(!old.float && old.ratio.is_none());
+        let junk = one(serde_json::json!({ "src": src, "float": "yes", "ratio": "0:5", "x": "left", "layer": 7 }));
+        assert!(!junk.float && junk.ratio.is_none());
+        assert!(one(serde_json::json!({ "src": src, "ratio": "999:1" })).ratio.is_none());
     }
 
     #[test]

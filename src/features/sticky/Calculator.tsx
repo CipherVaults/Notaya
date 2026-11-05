@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Calculator as CalcIcon, Check, Copy, Delete, History, Minus, Trash2, X } from "lucide-react";
@@ -128,6 +128,41 @@ function Calculator() {
     else if (k.action === "negate") calc.negate();
     input.current?.focus();
   };
+
+  // Keys typed while focus is not in a text box (nothing focused, or on a keypad button) still reach the
+  // calculator: the window may have been shown without keyboard focus, or the keypad may have taken it.
+  // The latest handlers are kept in a ref so the listener is added once.
+  const latest = useRef(calc);
+  latest.current = calc;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      // A text box takes its own keys (the expression box has its own Enter and Escape handling).
+      if (t?.closest("input, textarea, select, [contenteditable='true']")) return;
+      const c = latest.current;
+      const onButton = !!t?.closest("button");
+      if (e.key === "Backspace") c.back();
+      else if (e.key === "Delete" || e.key === "Escape") c.clear();
+      else if (e.key === "Enter" && !onButton) c.equals();
+      else if (e.key === "=") c.equals();
+      else if (e.key.length === 1 && /[0-9a-zA-Z.,+\-*/()%^!π√ ]/.test(e.key) && !(onButton && e.key === " ")) {
+        c.insert(e.key === "*" ? "×" : e.key === "/" ? "÷" : e.key);
+      } else return;
+      e.preventDefault();
+      c.input.current?.focus();
+    };
+    // When the window gets the keyboard focus (it opens hidden, then is shown), put the caret in the box.
+    const onFocus = () => {
+      if (document.activeElement === document.body) latest.current.input.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   const keys = (list: Key[], cols: number, small?: boolean) => (
     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
