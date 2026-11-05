@@ -346,6 +346,10 @@ option:disabled {
    so everything below uses logical sides (start/end) and flips with it. The indent sits on the item,
    not the list, so each item's bullet or number goes to the side its own text starts on. */
 .ProseMirror p, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4 { text-align: start; }
+/* A block whose direction is automatic and that has lines made with Shift+Enter: each line follows its own text,
+   so an Arabic line runs right-to-left and an English line below it stays left-to-right (one dir would make both
+   lines follow the first). Blocks with a forced direction, and one-line blocks, keep their dir. */
+.ProseMirror [data-dir-auto]:has(> br:not(.ProseMirror-trailingBreak)) { unicode-bidi: plaintext; }
 .ProseMirror ul, .ProseMirror ol { list-style: disc; padding: 0; }
 .ProseMirror ol { list-style: decimal; }
 .ProseMirror li { margin-inline-start: 1.55em; }

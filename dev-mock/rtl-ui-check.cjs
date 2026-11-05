@@ -61,6 +61,20 @@ const dirOf = (loc) => loc.first().evaluate((e) => e.getAttribute('dir') + '/' +
   await p.keyboard.type('مرحبا بالعالم');
   is('typing Arabic makes the line right-to-left', await dirOf(pm.locator('p', { hasText: 'مرحبا بالعالم' })), 'rtl/rtl');
 
+  // Shift+Enter makes a second LINE in the same paragraph: each line follows its own language, so the Arabic line stays on
+  // the right and the English line under it sits on the left (the paragraph's one direction would put both on the right).
+  await p.keyboard.press('Shift+Enter');
+  await p.keyboard.type('English under it');
+  const lineSide = (i) => pm.locator('p', { hasText: 'English under it' }).first().evaluate((e, k) => {
+    const t = [...e.childNodes].filter((n) => n.nodeType === 3)[k];
+    const range = document.createRange(); range.selectNodeContents(t);
+    const r = range.getBoundingClientRect(); const pr = e.closest('.ProseMirror').getBoundingClientRect();
+    return Math.abs(r.right - pr.right) < Math.abs(r.left - pr.left) ? 'right' : 'left';
+  }, i);
+  is('Shift+Enter: the Arabic line stays on the right', await lineSide(0), 'right');
+  is('Shift+Enter: the English line under it sits on the left', await lineSide(1), 'left');
+  if (shots) await p.screenshot({ path: `${shots}/editor-rtl-two-lines.png` });
+
   // The ribbon forces a direction, and a second click goes back to automatic.
   const ribbon = p.locator('[role=region][aria-label=Ribbon]');
   const ltrBtn = ribbon.getByRole('button', { name: /^Left-to-right/ });
