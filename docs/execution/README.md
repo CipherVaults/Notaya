@@ -20,6 +20,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 - [2026-11-07-version-plan.md](2026-11-07-version-plan.md): a plan and records; PR #62. Every agreed feature staged across V1.6 to V1.15 in four waves with sizes, dependencies and gates ([the plan](../plan/2026-11-07-version-plan.md)); the Notion hub updated to match; session entry 44. **Produced** (verified only by the checks in its section 3); not accepted. Nothing is greenlit to build.
 
+### 2026-11-07 (Ahmed's messages 22:21:39 to 23:39:31 UTC, coordinator's request 23:39:45 UTC), EX-2026-11-07-48: Phase 1 feature decisions recorded, handover guide updated
+
+- [2026-11-07-phase-1-decisions-recorded.md](2026-11-07-phase-1-decisions-recorded.md): records only; PR #61. Twenty authority rows, amendments A40 to A43 (second-half feature meanings, AI CLI safety principles, rules for every feature, Phase 2 begins), session entry 43, STATUS lines, a ledger note, and the living handover guide for Mohamed (both copies). **Verified** by the checks in its section 3; integrated when PR #61 is merged; not accepted.
+
 ### 2026-11-07 (Ahmed's message 22:24:27 UTC, coordinator's request 22:28:16 UTC), EX-2026-11-07-47: handover guide for Mohamed
 
 - [2026-11-07-handover-guide-for-mohamed.md](2026-11-07-handover-guide-for-mohamed.md): records only; PR #57. A Markdown copy of the handover guide in `docs/handoff/` (what Ahmed's side has set up and decided, each item marked shared rule, Ahmed's side or needs both), session entry 42, a STATUS line. **Verified** by the checks in its section 3; integrated when PR #57 is merged; not accepted.

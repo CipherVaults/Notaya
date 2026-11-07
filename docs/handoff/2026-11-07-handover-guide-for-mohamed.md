@@ -1,8 +1,8 @@
 # Notaya handover guide for Mohamed (2026-11-07)
 
-**Who and where:** written for **Mohamed Sayed (`AbyssWatcher2`)** and his Claude, from **Ahmed's side (`AE0101`)**, by a Claude cloud thread in Ahmed's Claude project "Notaya" (machine: cloud). Written 2026-11-07, about 22:30 UTC (container clock), from the repository at `main` = `987bfc5` (merge of PR #56). A published page with the same content (private to Ahmed unless he shares it): <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>. This Markdown copy exists because the repository is the only memory the two Claudes share.
+**Who and where:** written for **Mohamed Sayed (`AbyssWatcher2`)** and his Claude, from **Ahmed's side (`AE0101`)**, by a Claude cloud thread in Ahmed's Claude project "Notaya" (machine: cloud). First written 2026-11-07, about 22:30 UTC (container clock), from the repository at `main` = `987bfc5` (merge of PR #56); updated 2026-11-07 about 23:50 UTC from `main` = `9e3e4e3` plus records PR #61 (see the change log). A published page with the same content (private to Ahmed unless he shares it): <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>. This Markdown copy exists because the repository is the only memory the two Claudes share.
 
-**Living document (Ahmed, 2026-11-07 22:33:37 UTC, [A39](../plan/approval-and-amendments.md)).** This guide is kept up to date at every milestone or decision on Ahmed's side, in both copies (this file and the published page), so that when Ahmed's cycle ends Mohamed has something solid with few or no gaps. **Last updated: 2026-11-07 22:45 UTC.** See the change log at the end.
+**Living document (Ahmed, 2026-11-07 22:33:37 UTC, [A39](../plan/approval-and-amendments.md)).** This guide is kept up to date at every milestone or decision on Ahmed's side, in both copies (this file and the published page), so that when Ahmed's cycle ends Mohamed has something solid with few or no gaps. **Last updated: 2026-11-07 23:52 UTC** (Phase 1 decisions, records PR #61). See the change log at the end.
 
 **What this is.** A reading aid: what Ahmed's side has set up, studied and decided so far, so that Mohamed's machine and Claude can carry the same methods when Ahmed's cycle ends. **It is not an authority record.** If it disagrees with `docs/plan/approval-and-amendments.md` or `docs/STATUS.md`, those win.
 
@@ -21,8 +21,9 @@ Notaya now has two partners who work independently on the same repository: Moham
 - **The method is PBS** (the AI Project Bootstrap System). On Ahmed's side it governs every task and every thread, with thorough records. [Ahmed's side]
 - **Every record says whose side and which machine** (rule A38). [Ahmed's side], offered to Mohamed.
 - **A usage ledger** tracks how much Claude and Codex work each session used, in `docs/ledger/`. [Ahmed's side]
-- **Order of work:** talk through every feature, then plan and stage across versions, then build. Before discussing a feature, check what Notaya already has. Nothing is built yet. [Ahmed's side]
-- **The AI CLI is the foundation** of the next work: Claude or Codex will drive Notaya from outside. Every new feature gets named AI actions from its first design. [Ahmed's side]
+- **Order of work:** talk through every feature (**done on 2026-11-07, except the AI CLI action list**), then plan and stage across versions (**may start now**, Ahmed 23:39:31 UTC), then build (only on Ahmed's go per feature). Before discussing a feature, check what Notaya already has. Nothing is built yet. [Ahmed's side]
+- **The AI CLI is the foundation** of the next work: Claude or Codex will drive Notaya from outside. Every new feature gets named AI actions from its first design. Security is designed in from the start: sealed in, switch only in Settings, proven patterns, no home-made security (section 10). [Ahmed's side]
+- **Two design rules for every feature:** no trademarked or copyrighted names inside Notaya (own names, such as "Notebook mode" and "Default style"), and every menu or strip is customizable in Settings (A42). [Ahmed's side]
 - **Last accepted release:** V1.5.1, accepted by Mohamed on 2026-11-05 11:08:39 UTC. Nothing newer is accepted. [Shared rule]
 - **Making the repository public and adding a licence need both partners.** GitHub repository settings stay Mohamed's click. [Needs both]
 
@@ -44,9 +45,9 @@ Reading order, if you read it yourself:
 
 1. `CLAUDE.md`: the working rules for any Claude in this repository.
 2. `docs/STATUS.md`: what is accepted and exactly where work resumes ("Exact next permitted action").
-3. `docs/plan/approval-and-amendments.md`: who said what, with exact times; amendments A1 to A38.
+3. `docs/plan/approval-and-amendments.md`: who said what, with exact times; amendments A1 to A43.
 4. `docs/handoff/collaboration-guide.md` and `claims.md`: how two people share one repository, and who has claimed what.
-5. The newest entry of `docs/sessions.md` (entry 41, 2026-11-07) and `docs/ledger/README.md`.
+5. The newest entries of `docs/sessions.md` (entries 41 and 43, 2026-11-07: what each feature means and why) and `docs/ledger/README.md`.
 
 ## 3. Who can decide what
 
@@ -118,7 +119,7 @@ Repository files own the facts. Project memory, chats and Notion are pointers on
 | Question | Record |
 |---|---|
 | What is accepted, and where does work resume? | `docs/STATUS.md` ("Current state" holds only what a partner accepted; unaccepted work is under "Continuation") |
-| What is authorized, who said it, when? | `docs/plan/approval-and-amendments.md` (rows with exact UTC times; amendments A1 to A38) |
+| What is authorized, who said it, when? | `docs/plan/approval-and-amendments.md` (rows with exact UTC times; amendments A1 to A43) |
 | What happened, in order, and why did choices change? | `docs/sessions.md` (one file, newest on top, with the "Sessions at a glance" index) |
 | What did a piece of work do, and what was checked? | `docs/execution/` and its index `docs/execution/README.md` |
 | Which criteria are met, and who accepted? | `docs/acceptance.md` |
@@ -147,7 +148,7 @@ Ahmed asked for it on 2026-11-07 at 20:12:10 UTC because "we need to analyze how
 
 **Refresh it at every session stop:** (1) cloud sessions: copy the usage block from the session record into `claude-sessions.csv` with the snapshot time; (2) sessions on a PC: run `tools/usage-ledger/scan_claude_transcript.py` on that session's transcript, on that PC; (3) Codex: one row per run with its tokens and the quota before and after; (4) add a quota reading and a dated block at the top of `usage-ledger.md`, and quote the headline in the session summary.
 
-**Limits.** Quotas are account-wide, so the ledger cannot separate Notaya's share inside one reading. **Your usage runs on your own account and is not visible from Ahmed's side:** if you want it tracked, your Claude adds its own rows (`partner` = `Mohamed (AbyssWatcher2)`). No pacing cap is set: Ahmed said to watch the 5-hour and weekly limits of Claude and Codex so work is not cut off mid-task (STATUS question 28). There is no ledger dashboard yet; the ledger today is these files.
+**Limits.** Quotas are account-wide, so the ledger cannot separate Notaya's share inside one reading. **Your usage runs on your own account and is not visible from Ahmed's side:** if you want it tracked, your Claude adds its own rows (`partner` = `Mohamed (AbyssWatcher2)`). No pacing cap is set: Ahmed said to watch the 5-hour and weekly limits of Claude and Codex so work is not cut off mid-task (STATUS question 28). A ledger page exists (private to Ahmed, rebuilt from these files): <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>. The files are the source; the page is a view of them.
 
 ## 8. How Ahmed's side works
 
@@ -160,6 +161,8 @@ Ahmed's operating model (A37). Use any of it that suits you. [Ahmed's side]
 | Claude threads | Cloud (or Remote Control on a PC) sessions for one job each: reading, studying, records, planning. Opus 5.5 or Sonnet 5.5 at high effort. Used first while the 2026-11-07 cloud credit lasts. |
 | Codex (`gpt-6.1-sol`, reasoning `xhigh`) | The developer hand that writes the bulk of the code and tests from a bounded brief. It does not merge, release or change records of authority. Its diff is reviewed by Claude, because the agent that wrote a diff is never its only reviewer. |
 
+**Choosing models** (Ahmed 22:58:04; a reading by the coordinator, not yet accepted by him, A43). Model and effort are chosen per task from his model-economics artifact (<https://claude.ai/artifact/1eLfHxqU4uyhKkdn3ZZjoL>): Sonnet 5.5 high for reading and records, Opus 5.5 high for discussion and design, Codex `gpt-6.1-sol` xhigh for building, one Opus xhigh reviewer per substantive diff; never Opus max, Sonnet xhigh, Fable 5.1 or review panels. The coordinator's own chat is capped at low effort by the platform, so heavy work runs in threads. The cloud credit (USD 100) expires 2026-11-08 19:09 UTC; afterwards cloud work counts against the Pro limits. [Ahmed's side]
+
 **Where things run**
 
 - The coordinator decides PC or cloud for each task. Cloud sessions cannot run the Windows exe; checks there are `tsc`, `npm run build`, `npm audit` and Rust tests under Wine. Whatever cannot run is reported as **not run**.
@@ -169,8 +172,9 @@ Ahmed's operating model (A37). Use any of it that suits you. [Ahmed's side]
 
 ## 9. Three phases, and know what exists first [Ahmed's side]
 
-1. **Discuss every feature** until Ahmed and Claude agree on what it means. No version is assigned yet. (Ahmed, 21:14:10: "there is a huge difference between me laying down the points like in a text way to remind myself what we need, and ... what we discuss".) *This is where we are now.*
-2. **Plan and stage** across versions 1.6, 1.7, 1.8 and on, by what is doable. Ahmed (20:41:50): "we don't have to push everything and shove it into 1.6". The coordinator will bring a staging plan and a list of Notion features Notaya lacks; Ahmed decides.
+1. **Discuss every feature** until Ahmed and Claude agree on what it means. No version is assigned. (Ahmed, 21:14:10: "there is a huge difference between me laying down the points like in a text way to remind myself what we need, and ... what we discuss".) **Done on 2026-11-07 at 23:29 UTC** for every feature on his list; only the AI CLI's list of actions is still being collected.
+2. **Plan and stage** across versions 1.6, 1.7, 1.8 and on, by what is doable. Ahmed (20:41:50): "we don't have to push everything and shove it into 1.6". At 23:39:31 UTC he said to push ahead in parallel and "Don't wait for my authority" for this mapping and planning work (A43). The coordinator brings a staging plan, a list of Notion features Notaya lacks and the Notion hub update. *This is where we are now.*
+   **Phase 2 version plan (2026-11-07, EX-2026-11-07-50, reported by the version-planning thread at 23:47 UTC; draft PR #62, not merged when this line was written, so a claim to re-check):** every agreed feature staged across V1.6 to V1.15 in four waves; foundation first (the AI CLI and its safety net in 1.6); nothing greenlit to build. Ahmed has not yet reviewed it.
 3. **Build,** with Codex as the developer hand and the coordinator inspecting every diff, only on Ahmed's go per feature or version.
 
 **Know what exists first (Ahmed, 21:00:14).** Before discussing, planning, designing or building any feature, check what Notaya already has in the code and in the records. Never redesign something that exists, and never break it. The full inventory read the code at `9474511` and found, for example, that there are no mouse right-click menus anywhere, that an inline database is silently dropped from page exports (read in the code, not yet seen in the app), and that no outside entry point for an AI exists yet. Re-check on the current commit before relying on any of it.
@@ -187,18 +191,26 @@ Ahmed uses Claude and Codex from outside to drive Notaya locally, in the way Cla
 - **Every feature is designed with named AI actions** from its first design, including moving and copying pages and databases between places.
 - **Long-term north star (direction only, not now):** Notaya eventually matches Notion closely enough that Ahmed's whole Notion can be pulled in as-is, as an always-on local backup.
 
+**Safety direction, agreed 22:45:28 and 22:49:30 UTC (A41; direction only, nothing built, no promise in `security-design.md` yet).** Ahmed's reason: he fears the attack surface of an AI that can delete, write, change or even make malware, and also does not want a weaker feature set or a home-made security system ("We are not cybersecurity experts, but we have to do our best").
+
+- Security is part of every feature from its first design.
+- **Sealed in:** the AI reaches only Notaya's notes; no programs, no other files, no internet.
+- **Off by default;** the on/off switch lives **only in Notaya's own Settings**, so the AI cannot flip it.
+- Permission levels (read-only, can edit, full) and limits to chosen notebooks; deletes go to a recycle bin after the person confirms; AI edits are kept in version history and can be undone; a log of AI actions that the AI cannot edit; locked notes stay locked.
+- Proven, well-known patterns; one simple confirm for deletes and very large changes; the AI is never given a way to change its own permissions; backups are the safety net.
+
 **Not decided yet**
 
-- The action list itself.
+- The action list itself (a thread is collecting it for Ahmed to review).
 - How an outside program reaches Notaya and proves it is allowed.
 - Whether the AI may work while the Notaya window is open, and how the window refreshes after an outside change (today the interface keeps its own copy of the data and is not refreshed from outside).
-- Where a delete is confirmed, where the activity log lives, and whether an AI change can be undone.
+- Where a delete is confirmed, where the activity log lives, and how it is made tamper-proof.
 
-**Security.** The AI CLI creates a new trust boundary. Under `CLAUDE.md`, changing security behavior needs the partner's own words, and `docs/security-design.md` must be updated with any new promise. Keys and secrets stay in the Rust core. Because this touches shared code and shared promises, Ahmed's design should be shown to Mohamed before it is built. [Needs both]
+**Security.** The AI CLI creates a new trust boundary. Under `CLAUDE.md`, changing security behavior needs the partner's own words, and `docs/security-design.md` must be updated with any new promise. Keys and secrets stay in the Rust core. Because this touches shared code and shared promises, Ahmed's design should be shown to Mohamed before it is built, and each promise must be written into `docs/security-design.md`, tested and reviewed first. [Needs both]
 
 ## 11. Feature decisions so far
 
-All of these are **Ahmed's** decisions from the 2026-11-07 discussion (full table with his reasons: `docs/sessions.md`, entry 41, section "Decisions Made"). **None of them is permission to build.** Mohamed has not yet reviewed them. ✅ agreed, 🟡 partly discussed, ⬜ not discussed.
+All of these are **Ahmed's** decisions from the 2026-11-07 discussion (full tables with his reasons: `docs/sessions.md`, entries 41 and 43, section "Decisions Made"; the amendments A40 and A41 hold the second half). **None of them is permission to build.** Mohamed has not yet reviewed them. ✅ agreed, 🟡 partly discussed (only the AI CLI's action list is still open), ⬜ not discussed (none left).
 
 | Feature | State | What was agreed | Exists today |
 |---|---|---|---|
@@ -216,15 +228,15 @@ All of these are **Ahmed's** decisions from the 2026-11-07 discussion (full tabl
 | Icons pass | ✅ | Check every icon in every theme with screenshots on throwaway data. Favorite star: clear outline when off, gold when on. | Star is faint grey off, white on. |
 | Reorder databases in the sidebar | ✅ | Drag databases among pages like any page. Moving them between pages or notebooks is a separate, later topic. | Databases are stuck below the pages. |
 | AI CLI (foundation) | ✅ in principle | See section 10. Action list and safety design still open. | No outside entry point; about 120 internal commands the UI already uses. |
-| Home banner per time of day | 🟡 | The person picks a picture for each part of the day and the picks stay as defaults. How they pick is not decided. | Built-in daily gradient with a greeting. |
-| Whiteboard | 🟡 | Its own section like Sticky notes, Microsoft Whiteboard style, with starter templates and changeable pens. Details to come. | Nothing. |
-| OneNote mode | 🟡 | Named only. | Ribbon and notebook/section/page layout are already OneNote-like. |
-| Right-click menus | 🟡 | Proposal pending: right-click opens the matching menu everywhere (sidebar items, tabs, sticky notes, editor text, database rows). Waiting for Ahmed's answer. | Menus exist behind "..." buttons and the Menu key; no mouse right-click. |
-| Tray menu | ⬜ | Idea only: right-click the tray to make a sticky note, open the calculator, jump to parts of Notaya. | Open Notaya, Close sticky notes, Quit. |
-| Power BI-like charts, slicers, dashboards | ⬜ | Idea only. Ahmed called them "very complicated". | Bar, line, donut and number charts, one per view. |
-| Guide, app tour, About credits | ⬜ | Idea only: a guide in Notaya's style, an optional tour, names in About (Mohamed Sayed, Ahmed Emara, Claude, ChatGPT). | About lists open-source credits only. |
+| Home banner | ✅ | Settings picker per time of day (image or folder per period, shuffle, reset to built-in); taller banner by default; big clear page icon overlapping the banner; Settings with live preview for banner height, icon size and icon position; Change and Reposition buttons; per-page override. | Built-in daily gradient with a greeting; cover banners and page icons exist but are small. |
+| Whiteboard | ✅ | Its own section; infinite freeform canvas; Microsoft Whiteboard's core offline features rebuilt in Notaya's own style (own original templates, backgrounds, colours, shapes, pens, fonts, sizes, timer); OneNote's Draw tab as style inspiration; mouse, pen, touch and pressure-sensitive drawing tablets; first templates weekly planner, Kanban, mind map, SWOT, lined page; a board sticky note is linked to a real sticky note or a separate copy, per note. Nine finer questions left for planning. | Nothing. |
+| Notebook mode (with Default style) | ✅ | OneNote-like layout chosen **per notebook** next to the Default style (the Notion-like layout, the default): coloured section tabs, page list with sub-pages, pages are free infinite canvases; a single page can switch to a free canvas; shares the whiteboard engine; the AI can switch modes. | Ribbon and notebook/section/page layout are OneNote-like already. |
+| Right-click menus | ✅ | Menus in sidebar items, page tabs, sticky notes, editor text ("Turn into...") and database rows; plus links and images, several items at once, keyboard hints, Copy link to page, and the empty sidebar space (on trial). Every menu customizable in Settings. No "Ask AI about this". | Menus behind "..." buttons and the Menu key; no mouse right-click. |
+| Tray menu | ✅ | Open, New page, New sticky note, Calculator, Quick search, Lock now, Show/hide all stickies, Close stickies, Quit. | Open Notaya, Close sticky notes, Quit. |
+| Dashboards (Power BI-style, inside Notaya) | ✅ | Three steps: dashboard pages with live tiles from Notaya databases (never stale); filters, Reset and click-through; named reusable calculations. The AI can build them. Details left to planning. | Bar, line, donut and number charts, one per view. |
+| Guide, tour, About | ✅ | Guide: an in-app manual (feature list with images and icons) plus an outside copy kept in step; Tour: light, skippable, never forced; About: credits for both partners, open-source references and licences, Notaya's own licence once both partners choose. | About lists open-source credits only. |
 
-Set aside or rejected by Ahmed: Favorites and New notebook on the app bar; pins and strings on the Windows desktop; moving databases between pages as part of the sidebar change; "everything into v1.6" and "v1.6 stays one release".
+Set aside or rejected by Ahmed: "Ask AI about this" in any menu; Favorites and New notebook on the app bar; pins and strings on the Windows desktop; moving databases between pages as part of the sidebar change; "everything into v1.6" and "v1.6 stays one release".
 
 ## 12. What is still open
 
@@ -238,9 +250,9 @@ Set aside or rejected by Ahmed: Favorites and New notebook on the app bar; pins 
 
 **For Ahmed's side**
 
-- Answer the right-click proposal; discuss the tray menu, dashboards, guide, tour and About credits.
-- Finish the partly discussed items: AI CLI action list and safety design, banner picker, Whiteboard, OneNote mode.
-- Then a staging plan, then planning in a fresh thread, then building with Codex on Ahmed's go.
+- Review the AI CLI action list when the thread delivers it; the AI CLI's security design (A41) comes before any build.
+- Phase 2 (may run now): the Notion parity study (what Ahmed uses Notion for, what Notaya lacks, migration and backup both ways), a staging plan across versions, the Notion hub; then building with Codex on Ahmed's go per feature.
+- Details left for planning (STATUS question 29): nine Whiteboard questions, ten dashboard questions, whether the plain word "Whiteboard" is acceptable as a screen name.
 - Not yet run in the real exe: Start-with-Windows; `cargo clippy` for MSVC on the V1.5.1 commit.
 
 ## 13. Rules for both sides [Shared rule]
@@ -277,7 +289,8 @@ These come from `CLAUDE.md` and apply to every Claude and to Codex.
 
 ## 15. Sources and limits
 
-- **Read for this guide:** `CLAUDE.md`, `AGENTS.md`, `docs/STATUS.md` (current state, open questions, next action, where-things-live), A37 and A38 with their dated notes and the rows of 2026-11-07, the top of `docs/sessions.md` (index and entry 41 including Decisions Made and Next Steps), `docs/ledger/README.md` and the first ledger blocks and CSV headers, `docs/handoff/collaboration-guide.md` and `claims.md`, and Ahmed's project memory and shared notes.
+- **Read for the update of 23:50 UTC:** the whole project chat from 21:57 to 23:39 UTC, the model-choice guide, the headings and agreed sections of the dashboards and Whiteboard studies, and the records edited in PR #61 (A40 to A43, entry 43). The Notion parity study (about 23:41 UTC) was not read in full.
+- **Read for the first version of this guide:** `CLAUDE.md`, `AGENTS.md`, `docs/STATUS.md` (current state, open questions, next action, where-things-live), A37 and A38 with their dated notes and the rows of 2026-11-07, the top of `docs/sessions.md` (index and entry 41 including Decisions Made and Next Steps), `docs/ledger/README.md` and the first ledger blocks and CSV headers, `docs/handoff/collaboration-guide.md` and `claims.md`, and Ahmed's project memory and shared notes.
 - **Not re-read in full for this guide:** the older sessions, the 49+ execution reports, `docs/security-design.md`, `docs/acceptance.md`, and the plan records A9 to A35.
 - **Nothing was run or tested.** The "exists today" column comes from Ahmed's inventory of the code at `9474511` and was not re-checked.
 - **Freshness:** this is a living document (A39) and is updated as Ahmed's side decides things. Its "last updated" line is at the top. Between updates, check the newest `sessions.md` entry and STATUS before relying on any line here.
@@ -288,5 +301,7 @@ Newest first. Each line: when (UTC), what changed, which side's decision it reco
 
 | When (UTC) | Change | Whose decision |
 |---|---|---|
+| 2026-11-07 23:52 | Added a pointer to the Phase 2 version plan (EX-2026-11-07-50, draft PR #62) in section 9, at the version-planning thread's request. | Ahmed's side (23:39:31); plan not yet reviewed by Ahmed |
+| 2026-11-07 23:50 | Phase 1 decisions: sections 1, 2, 6, 8 (model choice, credit), 9 (Phase 1 done, Phase 2 may start), 10 (AI CLI safety direction), 11 (right-click, tray, dashboards, guide/tour/About, banner, Whiteboard, Notebook mode and Default style), 12 and 15 updated; new rules: no trademarked names, customizable menus. Records: A40 to A43, entry 43, PR #61. | Ahmed's side (22:40:55 to 23:39:31) |
 | 2026-11-07 22:45 | Marked as a living document (A39); added this change log. | Ahmed's side (22:33:37) |
 | 2026-11-07 22:30 | First version, from the repository at `main` `987bfc5`. | Ahmed's side (22:24:27) |
