@@ -12,7 +12,441 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 **Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 17:00 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
 
+
 ---
+
+**Dated note (2026-11-07 22:15 UTC, Ahmed's rule [A38](plan/approval-and-amendments.md), records PR #56): who and where.** Two partners now share these records, so every entry says **which partner's side** the work was on and **which machine** it ran on. New entries use a short title, `# 📘 Session: <date> · <partner> · <machine> · <topic in a few words>`, with a **Who and where** line under it (partner and GitHub login, Claude account, machines, time range, records editor). Older entries keep their original titles (they are not rewritten); the index below gives each one a short title, its partner side and its machine, taken from the entry's own text and the reports it cites. "Not recorded" means the records do not say where the work ran. Every entry before 2026-11-07 is Mohamed's side; in those entries "the owner" means Mohamed.
+
+## Sessions at a glance (newest first)
+
+| # | Date (UTC) | Partner side | Machine | Topic |
+|---:|---|---|---|---|
+| 41 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [First feature discussion: every decision and its reasons](#session-41) |
+| 40 | 2026-11-07 | Ahmed (`AE0101`) | cloud (bound to Ahmed's Gaming-PC) | [Second records PR (#55)](#session-40) |
+| 39 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Ahmed's side begins: his rules, records PR #54, usage ledger](#session-39) |
+| 38 | 2026-11-07 | Mohamed's Claude account, working for Ahmed (commits authored `AE0101`) | Ahmed's Gaming-PC | [Hand-off to Ahmed's PC and Codex (PR #53)](#session-38) |
+| 37 | 2026-11-04 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.5.1: fixes and release](#session-37) |
+| 36 | 2026-11-03 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.5.0: right-to-left text and databases](#session-36) |
+| 35 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.4.0: tray, vault format, export and import](#session-35) |
+| 34 | 2026-10-29 | Mohamed (`AbyssWatcher2`) | cloud | [Two partners: the collaboration guide (PR #40)](#session-34) |
+| 33 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.3.0 published, repository renamed](#session-33) |
+| 32 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Prepare V1.3.0 with the Windows setup](#session-32) |
+| 31 | 2026-10-24 | Mohamed (`AbyssWatcher2`) | cloud | [Native Windows app plan, then dropped](#session-31) |
+| 30 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [The Windows installer (A30)](#session-30) |
+| 29 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Release V1.2.0](#session-29) |
+| 28 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [PBS review and adoption](#session-28) |
+| 27 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Live audit compared with V1.1.0](#session-27) |
+| 26 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Icon, theme and the rename to Notaya](#session-26) |
+| 25 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Record every step; PC copy on main](#session-25) |
+| 24 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Records catch-up](#session-24) |
+| 23 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | Mohamed's PC | [V1.1.0 portable build](#session-23) |
+| 22 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | Mohamed's PC | [Combined test of four changes](#session-22) |
+| 21 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Pop-out calculators (A24)](#session-21) |
+| 20 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [KeePassXC removed (A24)](#session-20) |
+| 19 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Ribbon editor](#session-19) |
+| 18 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Select several sticky notes (A26)](#session-18) |
+| 17 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.0.1 audit fixes (A23)](#session-17) |
+| 16 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.0 portable build](#session-16) |
+| 15 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Credits; suggested passphrase removed (A22)](#session-15) |
+| 14 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud | [Notes first, security optional (A21)](#session-14) |
+| 13 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | Mohamed's PC | [PC catch-up and clean-up](#session-13) |
+| 12 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Unlock after a move; Start over (A20)](#session-12) |
+| 11 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded (tests ran on Mohamed's PC) | [Passwords-file backup, safe Quit (A19)](#session-11) |
+| 10 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded (tests ran on Mohamed's PC) | [Restore from backup finished (A18)](#session-10) |
+| 9 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded | [Passphrase work paused; GitHub repository made](#session-09) |
+| 8 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded | [Code review, lock and data-loss fixes (A17)](#session-08) |
+| 7 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (`E:\Project\cipherleaf`) | [Fresh portable build, app icon (A15)](#session-07) |
+| 6 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First commit and release build](#session-06) |
+| 5 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [A calculator in each sticky note (A14)](#session-05) |
+| 4 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Calculator, reworded editor (A13)](#session-04) |
+| 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
+| 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
+| 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-41"></a>
+
+# 📘 Session: 2026-11-07 · Ahmed · cloud + Gaming-PC · First feature discussion
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and his Claude project "Notaya". Machines: the coordinator and most threads in the **cloud**; the setup thread, the stopped v1.6 thread and the records editor on **Ahmed's Gaming-PC** (Remote Control). Time: 19:08:49 to about 22:00 UTC. Records editor: thread "Write today's session summary for Notaya" on Ahmed's Gaming-PC.
+
+**What it covers:** 2026-11-07 (Ahmed's messages 19:09:26 to 21:56:54 UTC, project chat; coordinator session 19:08:49 to about 22:00 UTC), Notaya: the whole first coordinator session on Ahmed's side — setup and roles, the PBS rules, the two records PRs (#54, #55), the import/export study and the full inventory of what exists, and the first round of feature discussion with every decision and Ahmed's reasons; PBS made the mandatory method for all Notaya work
+
+**How this entry relates to the two below.** The two entries below this one were written during the same evening by the records thread. They cover 19:09 to 20:45 UTC (setup, Ahmed's rules, the records catch-up, PR #54) and 20:38 to 21:00 UTC (PR #55). This entry covers the **whole coordinator session**, start to finish, so a reader can follow it in one place. For the first part it gives a short account and points to those entries for the detail; it does not repeat or rewrite them. Everything from 20:22 UTC on (the feature discussion, the import/export study, the full inventory, the staging rule and the PBS rule) is recorded here for the first time.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Coordinator (the project's "mother thread"; talks with Ahmed in the project chat, starts and steers threads), session `session_01PwVKYnc7mgNpxB4bx9bMbB` | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` (session record read 20:33 UTC by the records thread) | low | The session record as copied into the [usage ledger](ledger/claude-sessions.csv). Not re-read for this entry: this PC thread has no tool to read a cloud session record. Configuration, not proof of the serving model for every turn |
+| Threads 19:09 to 20:48 UTC (explore, setup on the PC, PBS hub and FFmpeg lessons, Notion hub, stopped v1.6 thread, three readers, records editor of PRs #54 and #55) | As listed in the two entries below and in the ledger | As listed there | Their session records and transcripts |
+| Thread "Study Notaya's current import and export" (cloud, 20:56:39 to 21:00:01 UTC), `cse_01PwVKYmZJL4UYnMaEjy7b4U` | Not recorded here | Not recorded here | Thread list (times) and its output file `notes/2026-11-07-notaya-import-export-study.md` in the project's shared files (read in full for this entry). Its session record is not readable from this PC thread |
+| Thread "Map everything Notaya already does" (cloud, 21:00:26 to 21:10:28 UTC), `cse_01PwVKYnnGy3vBPFhbJTDa4N` | Not recorded here | Not recorded here | Thread list and its output `notes/2026-11-07-notaya-full-feature-inventory.md` (read in full). Session record not readable from here |
+| Records editor of this entry and of PR #56: thread "Write today's session summary for Notaya", Remote Control session on Gaming-PC, `cse_01PwVKYmEH5tLNUmtdEBEnLp` (started 21:56:17 UTC) | `claude-opus-5-5` (configured `claude-opus-5-5[1m]`, from this session's own environment) | Not recorded | Its own transcript on the PC; its usage is in the ledger, measured with the transcript scanner |
+| Codex | None ran in this session | — | No Codex run was ordered; `codex-runs.csv` has its header only |
+
+**Record basis.** Written from 22:00 UTC (PC clock; the claim commit) by the records editor, after the session's last message in scope (Ahmed, 21:56:54 UTC; coordinator reply 21:57:29 UTC). Sources, each read in full: the whole project chat from 19:08:50 to 21:57:29 UTC (Ahmed's words quoted from it with their server timestamps), the coordinator's feature-decision list from project memory (relayed to this thread at 21:56:18 UTC and quoted under Decisions Made), the import/export study and the full inventory named above, the two entries below, `CLAUDE.md`, the claims file, STATUS, the authority record, the ledger, `git log` of `main`, and Ahmed's reference session summary for his Blue project (`D:\Codex Projects\Blue\0- Documentation\03_Blue's_SESSION_SUMMARY [October 27, 2026] revision01.md`; its header, indexes and newest session were read in full, and the structure of all twenty sessions was checked; at 17,606 lines it was not read line by line) with its Session Summary Template. The coordinator's and the threads' internal steps were not seen; what they did is taken from their posted messages and outputs. The two screenshots Ahmed sent at 20:35:10 and the two at 21:23:28 to 21:28:10 UTC were not visible to this thread; what they showed is taken from his words and the coordinator's replies.
+
+**Usage headline** (numbers in the [ledger](ledger/usage-ledger.md)): the two PC threads, unmeasured until now, used about 1.06 million weighted tokens together (setup 0.81 million, stopped v1.6 thread 0.25 million). The coordinator, the import/export study and the inventory thread were not measurable from this PC thread. Codex: no run.
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC). Ahmed's PC clock is UTC+2; all times here are UTC.
+- Start: 19:08:49 UTC (the coordinator session was created; Ahmed's first message 19:09:26).
+- End of the discussion in scope: 21:56:54 UTC (Ahmed's PBS rule) and the coordinator's reply at 21:57:29. The feature discussion itself paused at 21:54:38, when Ahmed asked for the threads to be cleaned up; the right-click proposal of 21:53:24 is still unanswered.
+- Continuation: one evening, about 2 h 50 min of wall clock; threads ran in parallel. Active working time: not measured.
+- Session type: re-entry, rules and roles, records, and product discussion (design talk, not planning and not building).
+- Project stage: after V1.5.1 (accepted 2026-11-05); before any v1.6 planning or work.
+- Main focus: set Ahmed's side up on firm ground, then talk through the roadmap feature by feature so that Ahmed and Claude agree on what each feature is before anything is staged, planned or built.
+- Contributors: Ahmed (all decisions); the coordinator; eleven threads (the table above and the entries below).
+- Reason for summary: Ahmed's rule (A37 item 5) and his 21:55:57 and 21:56:54 messages: this discussion is "one of the core critical parts of the session summary for us", and PBS governs all Notaya work.
+
+## 🎯 Session Goal
+
+Ahmed opened the session to start his side of Notaya: a new partner, a new PC and a new working environment (a Claude project, with a coordinator that starts threads in the cloud or on his PC). He wanted the environment checked, Claude to understand Notaya, the AI Project Bootstrap System (PBS) and what his FFmpeg Encoder project had learned, and his own way of working written down, all before any development ("we need to talk first and plan, before any work", 19:56:28).
+
+As the evening went on, the goal grew into a second, larger part: **a real conversation about every roadmap feature.** Ahmed was clear that his roadmap list was only a reminder: "there is a huge difference between me laying down the points like in a text way to remind myself what we need, and there is a difference between what we discuss, so you can understand how you're gonna be building them" (21:14:10).
+
+The session aimed to:
+
+- check the setup and write Ahmed's rules into the repository (done in PRs #54 and #55);
+- understand what Notaya already does, from the code and the records, before designing anything;
+- talk through each feature: what Ahmed means, why, what already exists, and what is actually new;
+- keep every feature ready for the AI CLI, which Ahmed named the foundation of the next work;
+- leave staging (which feature goes in which version) for a later planning phase.
+
+The intended stopping point was **agreement on what each feature is**, not a plan and not code. That point was reached for most features; the rest are listed below as partly discussed or not discussed.
+
+## 🧭 Starting State
+
+`main` was at `7661503` (PR #53, the hand-off to Ahmed's PC and Codex, merged by Ahmed at 19:22:15 UTC). V1.5.1 was the latest release and accepted. The repository still said "Codex leads, Claude reviews" and "a Claude never merges"; the records stopped on 2026-11-05; there was no usage ledger. Ahmed had a roadmap in his head and in notes, but nothing about v1.6 had been discussed with Claude. Details: the second entry below, "Starting State".
+
+## 🛠️ Actions Taken
+
+### 1. Setup, roles and the PBS rules (19:09 to 20:23 UTC)
+
+Told in full in the entry below ("Ahmed's side begins"). In short:
+
+- 19:09:26: Ahmed's first message set up a review role for Claude ("Codex leads"). A Remote Control session on his PC checked the setup: PR #53 merged, Security Guidance on, Codex and GitHub signed in, build tools installed (confirmed to Ahmed 19:26:05).
+- 19:28 to 19:49: a question to his FFmpeg Encoder project; its lessons artifact came back ("We do not take its word as Bible").
+- 19:49:26 and 19:54:38: Ahmed gave the coordinator the lead (threads, Codex, Git, merges, model choice, PC or cloud), asked for plain words, clear multi-point commit messages and a Notion hub. The Notion hub was built (19:59:22).
+- 19:55:14: Ahmed posted "Notaya Ideas" (the v1.6, v1.7 and v1.8 lists). The coordinator wrongly started a v1.6 build thread; Ahmed stopped it within a minute (19:56:04, 19:56:28). Nothing was committed.
+- 20:12:10: Ahmed rejected the coordinator's idea of lighter paperwork: thorough documentation, one session file newest on top, and the usage ledger are mandatory.
+- 20:15:35: banner and Whiteboard meanings explained; "v1.6 can stay as one release" (this was changed later, at 20:41:50, see block 4).
+- 20:23:20: Ahmed and Mohamed are two independent developers; each partner's words govern his own side.
+
+### 2. The records catch-up, PRs #54 and #55 (20:19 to 20:48 UTC)
+
+Ahmed gave permission at 20:19:06 ("you can make records on the update that writes down my new rules and today's handoff fixes for the steel status"; "steel" is read as "stale"; the ledger must be Notaya's own). One thread did both PRs:
+
+- **PR #54** (merged 20:37:37 UTC, `2564711`): Ahmed's rules as A37, eighteen authority rows, corrected roles in `CLAUDE.md` and `AGENTS.md`, stale STATUS and claims lines fixed, backfilled session entries, and the new usage ledger in `docs/ledger/` with a transcript scanner. Reported to Ahmed at 20:38:10 (about USD 18 for the eight measured sessions at that point).
+- **PR #55** (merged 20:48:06 UTC, `9474511`): the gaps PR #54 listed (three missing session periods, the 2026-10-27 order, stale lines in the security design, the skills and the guides). It found one thing nobody had ever tested: whether "Start with Windows" works at a real Windows sign-in (reported 20:48:34).
+
+Detail: the two entries below and [EX-2026-11-07-44](execution/2026-11-07-records-catch-up-and-usage-ledger.md), [EX-2026-11-07-45](execution/2026-11-07-records-gaps-closed.md).
+
+### 3. The feature discussion begins: Mermaid and sticky notes (20:22 to 20:38 UTC)
+
+- **20:19:49**, a reading thread reported that several v1.6 items already exist in part (Mermaid, banners, tray menu, export). **20:22:14**, Ahmed answered that this does not settle anything: "before you implement anything, we just have to discuss what's my issues. I just laid down the points so we would remember them ... we need to discuss these back and forth." He named the problems again: Mermaid exists "theoretically" but is "just not simple to use"; Import belongs in the top bar "with a clear icon and its name beside it"; icons must be clear in every theme (the Favorite star "is mostly like outline of gray color, which makes it barely like visible"); an Export button near Favorites.
+- **20:22:36**, the coordinator asked about sticky notes first, because Ahmed had said they grow into something bigger. **20:27:54**, Ahmed described the vision: notes that can sit in a fixed grid "like desktop icons", or in a free mode "as if you are dealing with moving papers on a physical board"; coloured push-pins on the corners; strings between pins "like the detective's board ... so you can gather your thoughts that these two sticky notes are relevant to each other"; and notes that can be pinned on the Windows desktop and close with the app.
+- **20:28:17**, the coordinator restated it as a corkboard and asked three questions (v1.6 or later, in the app or on the desktop, what a string carries). **20:31:11**, Ahmed: strings and pins are coloured and the colours can be changed; the corkboard is "only going to be on the desktop app itself, not the desktop itself, because this is going to be very chaotically very easily"; "We need to push all this into 1.6" (later relaxed by the staging rule); and everything in his earlier list still applies (right-click, settings).
+- **20:31:34**, the coordinator gathered the full sticky-notes package and asked whether single notes may still go on the Windows desktop. **20:33:01**, Ahmed: yes, as plain movable notes, without pins or strings, "If this is difficult to execute, we can defer it, but we need just to experiment with it to see." (At 21:10:19 the inventory showed this already exists; see block 6.)
+- **20:33:22 to 20:36:13**, Mermaid. Ahmed sent two screenshots (20:35:10): in Notaya the pasted Mermaid text "just sits there"; in Notion the code block has a type and the diagram is drawn under the code. The coordinator proposed a language picker on every code block, a live diagram, and a small toolbar (code / diagram / both, zoom, download as picture, copy, wrap), and asked two questions. **20:38:34**, Ahmed agreed to automatic detection on paste and wanted the code collapsible ("something that you click on to show the code"), then raised the most important point of the evening (block 4).
+
+### 4. The AI CLI as the foundation, and staging across versions (20:38 to 20:52 UTC)
+
+- **20:38:34**, Ahmed: "there is a very, very ridiculously critical future for the entirety of version 1.6. It's the CLI for AI. We need to design all of these features and every bit of like Notaya to be prepared to handle this, meaning similarly to how you as an AI can access my Notion and build hubs and create things using MCP. I want that basically, but from a local perspective ... utilize every atom of it ... with every atom of how we design. So do not forget this."
+- **20:38:59**, the coordinator saved it as the foundation: every feature gets a list of named actions an AI can call, not only buttons; every later feature discussion includes "and here's how the AI uses it". It suggested (as its own addition) discussing the CLI next.
+- **20:41:50**, Ahmed agreed, and **changed the release plan**: "version 1.6 is going to be huge, so we need to stage this. We don't have to push everything and shove it into 1.6. Stage it accordingly to what you think is actually doable and possible, and we can do it 1.6, 1.7, 1.8 ... possibly even that CLI version of its own is actually very going to be huge, and the sticky notes side is going to be complicated, and the dashboards ... like Microsoft Power BI, is very complicated." In the same message he answered the pacing question: no spending cap per hour; instead "be cautious of our overall hourly usage for we have limited 5 hourly quota in Claude and Codex ... So we wouldn't be just interrupted by it out of nowhere. And secondly, the entire weekly quota limit."
+- **20:42:16**, the coordinator's first picture of the CLI: a published list of actions, local only (no internet), one door with two ways in (a command line and an MCP connection), and safety (on only when switched on, locked notes off-limits unless allowed, deletes confirmed, an activity log, the log being its own addition). It asked three questions.
+- **20:51:32**, Ahmed: he will use Claude or Codex **from outside** to drive Notaya "similarly to how you interact with Notion. Freely, but perhaps even more freely, and have more power and authority and capabilities. Because it's local and it's our code and it's our app"; the AI may delete "after confirmation"; and the long-term direction: "to be able to entirely collapse the futures of my entire Notion, like pages, hubs, and everything, to be able to take it as is, basically, from Notion to Notaya. So it would be an always backup methodology ... not implementing now, but this is the direction we are building towards ... not have any missing futures from Notaya that is already implemented and used by notion."
+- **20:52:11**, Ahmed: "Yes, the AI can see everything." The coordinator added that locked notes open to it only after Ahmed unlocks them (20:52:34).
+
+### 5. Import and export, and the study of what exists (20:52 to 21:00 UTC)
+
+- **20:52:34**, the coordinator listed what it had so far and proposed export formats and import sources. **20:56:12**, Ahmed: export is "almost like the save as" button of Office, a page can include its sub-pages "because ... The page itself could be a hub", the sub-pages must be ordered well even in one PDF ("I don't know how to implement this ... But we also need to figure a solution"), and formats such as Excel for databases, Word, Markdown and PDF. For import: "there is an import already function that's there, so you need to understand what it does and what it allows. Because yes, it actually already accepts Notion exports ... So you need to actually retain all of its features, not mess it up ... it has already a strong foundation for this, significantly already, more than you expect. So you need to study this before you actually change anything in any future." And the CLI must be able to run export and import, so an AI could export from Notion and import into Notaya "seamless".
+- **20:56:39**, a cloud thread studied the import and export code and records (read only). **21:00:03**, the result: import is large and mature (Markdown, text, HTML, Word, PDF text, ZIP, folders; Notion exports into real databases with Status, numbers, two-way relations); export already is "Save as" (one page or many, with sub-pages in sidebar order, PDF, Word, Markdown, HTML, one file or a ZIP). The real gaps: top-bar buttons, a printed contents page and better bookmarks in PDFs, Excel `.xlsx` for databases, a likely bug (an inline database inside a page is left out of every page export; confirmed by reading the code, not by running it), and the Import window's out-of-date sentence "Databases (tables) ... are not imported".
+
+### 6. "Understand what already exists before anything": the full inventory (21:00 to 21:10 UTC)
+
+- **21:00:14**, Ahmed: "I want you to generally understand what already exists in Notaya from what we have clearly labeled in documentation and the code itself before you start developing anything ... so that you don't actually plan or design or build something that already exists or mess it up ... That's should have been already clearer than what I've already labeled before." The coordinator agreed it should have done this first (21:00:25) and started a full map.
+- **21:10:19**, the inventory (56 KB, every area, with status and gaps, the roadmap mapped against it, and proposed AI action names for about 120 existing internal commands). Three findings changed earlier agreements:
+  1. **Sticky notes already float on the Windows desktop**, with "Keep on top". Desktop pinning is not an experiment; it mostly exists. The new work is the in-app corkboard.
+  2. **Mermaid already has a separate "Diagram" block that draws.** The real problem is that a normal code block does not use it. The fix is joining the two.
+  3. **Several items are half-built:** databases move by the "..." menu but cannot be dragged; the new-notebook button shows only on mouse-over; the tray already has Open, Close sticky notes and Quit; the menus exist behind "..." buttons but not on the right mouse button.
+  It also corrected one claim of the import/export study (there is no mouse right-click menu; the study had said there was).
+
+### 7. Taking stock, and a lesson about emojis (21:14 to 21:17 UTC)
+
+- **21:14:10**, Ahmed asked for a chart of what is established, with check marks and colours: "I like emojis a lot ... emojis help me to understand the text and not just to like get lost". Versions were to be left aside: "We just need to understand basically that we have discussed every feature and every part of the app, so we are aligned before the starting even of the planning phase, let alone the development part."
+- **21:14:48**, the coordinator posted a long chart with an emoji on almost every line. **21:16:47**, Ahmed: "You have spammed too much emojis to the degree that they became redundant. And the segmentation is too dense." **21:17:17**, a calmer version in three groups (agreed, started, not discussed) was accepted without comment, and the discussion went on.
+
+### 8. The second round: app bar, tabs, history, find, shortcuts, calculator, notebooks, icons, databases (21:21 to 21:53 UTC)
+
+- **App bar (21:21:20 to 21:28:42).** Ahmed described buttons in the top bar (where the sidebar toggle, back and forward, the logo and search are) as "shortcuts of some sort that can be helpful for the user ... you can customize it, you can move it around, order it. I'm not sure yet. So you'll have to be creative on me with that. I'm thinking with you, I don't have a direct vision for it." The coordinator proposed a strip like Office's Quick Access toolbar, customised by right-click > Customize with drag and drop and Reset, icon or icon plus name, default buttons, optional ones, and two additions: pin any page to the bar, and the AI can arrange the bar. Ahmed (21:23:28): "Yeah, basically that's my vision, but the favorites shouldn't be there because it's gonna be already in the page itself."
+- **Tabs (21:28:10).** With screenshots of Notion, Ahmed described browser-style tabs: open several pages at once, pin a tab, add it to a group, close, move left or right, reopen a closed tab with Ctrl+Shift+T, "as if it's a web browser". The coordinator added (its own idea) that open tabs come back after a restart, which also covers his "reopen the last page" item.
+- **Version history and activity (21:28:10).** In the same message: Notion's page version history with dates, highlighted changes and restore, and the activity list showing edits "done by Claude". "We need to implement things like that and add it as a features as well. Again, I'm not specifying these features across what exactly version." The coordinator noted that Notaya's existing backups may give part of this and that it will check before finalising (21:28:42).
+- **Ctrl+F (21:33:24 to 21:36:11).** Ahmed: Notion's Ctrl+K search is "not reliable to use ... the K is so far away to press", and Ctrl+F today opens the Edge search, which searches only what is visible "not ... what actually exists there ... a user experience fix". The coordinator proposed Notaya's own find bar (search the whole page including folded parts, "3 of 12", Enter for next, a "Search all notes" button, and Ctrl+H find and replace as its addition). Ahmed (21:35:43): "Yeah, let's test that ... I wanna test that methodology as you suggested and see how it feels. Then we can tune it later if it's not suitable."
+- **Shortcuts and calculator (21:36:11 to 21:41:04).** The coordinator proposed a Shortcuts page in Settings (click and press keys, clash warning, Reset) plus a global shortcut that works while Notaya is in the background (its addition, for example Ctrl+Alt+N for a new sticky note). Ahmed (21:37:59): "Yeah, exactly", with a calculator button "because I actually like the calculator of Notaya a lot"; the calculator history should move to the right side; and unit converters "like volume, length, weight, mass, temperature, energy, area, speed, time, power, data, pressure, angle, similar to Windows ... Everything that basically does not require an internet access, like currency conversions". He accepted the coordinator's calculator addition (a global shortcut and AI access) at 21:41:04.
+- **New-notebook button (21:38:29 to 21:41:33).** The coordinator proposed an always-visible "+ New notebook" at the bottom of the notebook list, and also on the app bar. Ahmed (21:41:04): "We don't have to make adding a new notebook everywhere ... normally you don't open many notebooks because the notebook is what actually holds the other sections and pages ... it's almost like how we describe a Notion hub, for example, versus just a normal page." So: always visible in the list, not on the app bar.
+- **Icons (21:41:33 to 21:50:28).** The coordinator proposed an icons pass in every theme on his PC (throwaway data, screenshots) and a gold star when on. Ahmed (21:49:58): he had not noticed other faint icons, but "sometimes things are very faded to see"; the star "already shines white when it's already favorite, but a golden would be better", and it must be visible "even if it's like if it's turned off ... especially in the black".
+- **Moving databases (21:50:28 to 21:53:24).** The coordinator proposed dragging databases on the page and between pages and notebooks. Ahmed corrected it (21:52:53): "I don't mean physically moving it across pages ... That's for another matter ... the one that I meant is just far more simpler than that ... you can normally move the order of the pages, but databases are stuck down there and you cannot move them up or down ... if you look at that financial records there, you can't move it". The coordinator restated it correctly: databases can be dragged and ordered among pages in the sidebar list.
+- **Right-click menus (21:53:24).** The coordinator proposed that right-click opens the matching menu everywhere (sidebar items, page tabs, sticky notes, editor text with "Turn into…", database rows). **Not answered yet.**
+
+### 9. Thread clean-up and the session-summary request (21:54 to 21:57 UTC)
+
+- **21:54:38**, Ahmed asked that threads waiting on things already settled be cleared and idle ones resolved, "because I'm leaving the handle of these threads to you". **21:54:53**, the coordinator resolved all eight open threads, including the old "Plan and build Notaya v1.6" thread; a fresh planning thread will be started when planning begins.
+- **21:55:57**, Ahmed: the session summary of this discussion is "one of the core critical parts ... we are going back and forth. We are developing things. We are like talking about a lot of things", with his Blue project's session summary as a reference for how such a summary can be written alongside PBS. **21:56:17**, the coordinator started this thread on his PC.
+- **21:56:54**, Ahmed: "Use the AI project bootstrap system skill. This is one of the core critical parts of that. That's for across the entire development of Notaya, not just this task or individual task. The AI PPS is critical for everything that we're going to be working with." ("PPS" is read as PBS.) **21:57:29**, the coordinator confirmed PBS as a standing rule for every Notaya task and thread.
+- This thread then read the Blue reference and its template, loaded the PBS skill (`pbs-start-resume-handoff`, method 1.1) and its session-summary method, fast-forwarded `D:\Notaya` from `4fc269d` to `9474511` at 21:56:54 UTC (reflog; the PC copy had not been fast-forwarded since 2026-11-05, so it was 13 commits behind), left in place the empty local branch `AE0101/v1-6-plan` (made by the stopped v1.6 thread at 19:56:10 UTC), claimed the work (PR #56), measured the two PC threads, and wrote this entry and the records listed under Artifacts.
+
+### 10. Ahmed's review of these records: who and where (22:11 to 22:16 UTC)
+
+- **22:11:17**, Ahmed asked where the documentation is on his PC so he could inspect it, especially the session summary. This thread gave him the paths under `D:\Notaya` (the folder was on the PR's branch, so the new entry was already visible there).
+- **22:15:49**, his feedback: the records "seem good, but they actually propose an issue of its own ... for the very first time, two different people working on the same project and sharing the same AI PBS ... it's actually critical to distinguish which developer is actually doing the work and from which machine the decision summaries come ... and the title of each of the session summary should be easier to parse and understand what it contains, but not to be flooded with everything".
+- Applied in the same PR as [A38](plan/approval-and-amendments.md): this entry's short title and Who and where line; a "Sessions at a glance" index of all entries at the top of this file, with partner and machine for each (older titles not rewritten); stable `session-NN` anchors; partner, machine and account columns in the ledger; dated notes saying that older authority rows and reports are Mohamed's side; the rule in `CLAUDE.md`; and a `Side · Machine` line at the end of commit messages on Ahmed's side.
+
+## 🧠 Key Insights
+
+### Ahmed's lists are reminders; the discussion is the design
+
+- **Insight:** a line like "manually move the databases" or "export as button" does not carry what Ahmed means. Twice tonight the coordinator built a bigger feature than he meant (databases moved across pages; a new-notebook button everywhere) and once it missed a limit (Favorites does not belong on the app bar).
+- **Why it matters:** building from the list alone would have produced work Ahmed did not want.
+- **What it changes:** each feature is talked through until Ahmed confirms the restated meaning. This entry records the meaning, not only the list line.
+
+### Know what exists before designing anything
+
+- **Insight:** Notaya is already a large app. Desktop sticky notes, a Mermaid Diagram block, "Save as"-style export, Notion import into real databases, a tray menu, database moving by menu and the "..." menus all exist. Several roadmap items are joins, fixes or small extensions of existing parts.
+- **Why it matters:** Ahmed said so plainly at 20:56:12 and 21:00:14. Designing from scratch risks rebuilding or breaking something that works.
+- **What it changes:** the full inventory (`notes/2026-11-07-notaya-full-feature-inventory.md`) is the starting point for every later discussion and for planning. Every feature row below says what exists and what is new.
+
+### The AI CLI shapes everything else
+
+- **Insight:** Ahmed's long-term use of Notaya is through an AI (Claude or Codex) working from outside, as Claude works in his Notion today, but with more power because it is his own local app.
+- **Why it matters:** if each feature is built only for the mouse, the CLI has to be bolted on later, feature by feature.
+- **What it changes:** every feature gets named actions from its first design ("pin with a red pin", "tie a string", "export this notebook as PDF"). The inventory found this is realistic: almost all of Notaya's logic already lives in about 120 named Rust commands, and the automation engine already works as a closed list of named actions. The hard parts are a safe outside door, keeping the open window up to date when the AI changes something, and confirmations and a log for deletes.
+
+### Notion parity is the north star, not the next step
+
+- **Insight:** Ahmed wants Notaya, in the long run, to hold his whole Notion as an always-available local backup.
+- **Why it matters:** it is a test for each design choice ("would this block bringing Notion over later?") and a reason to keep a list of Notion features Notaya lacks.
+- **What it changes:** nothing is built for it now. The existing gap list is EX-2026-11-03-41 on Mohamed's unmerged branch (draft PR #45, postponed by Mohamed), which the inventory names as the best existing list.
+
+### Staging is a planning decision, made after the discussion
+
+- **Insight:** the feature set is too large for one release (the AI CLI alone may be huge; the corkboard and Power-BI-like dashboards are complex).
+- **What it changes:** versions are assigned in the planning phase, by what is doable. The order is: discuss everything, then plan and stage, then build.
+
+### How Ahmed wants to be talked to
+
+- **Insight:** emojis help him when they mark sections; too many make the text noisy (21:14:10 and 21:16:47). He thinks aloud and expects Claude to bring ideas ("you'll have to be creative on me with that", 21:21:20) and to list its own additions clearly.
+- **What it changes:** moderate emojis as section markers; proposals with clearly marked additions; short restatements for him to confirm.
+
+## 📌 Decisions Made
+
+**Who decides.** Every product decision below is Ahmed's, in his own words in the project chat. The coordinator's proposals count only where Ahmed agreed. **None of these is permission to build:** product work still waits for planning and Ahmed's go (19:56:04, 19:56:28, 21:14:10).
+
+### The rules and the method
+
+- **Confirmed (Ahmed, 21:56:54): PBS governs all Notaya work** on his side, "across the entire development of Notaya, not just this task or individual task". Every task and thread follows the PBS skill (`pbs-start-resume-handoff`, method 1.1) and the PBS work cycle in `CLAUDE.md`, with the thorough records of A37 item 5.
+- **Confirmed (Ahmed, 20:41:50): stage the roadmap across versions** (1.6, 1.7, 1.8 and on), by what is doable. This replaces his 20:15:35 "version 1.6 can stay as one release" and A37 item 9's "v1.6 stays one release"; "quality first" stays.
+- **Confirmed (Ahmed, 21:14:10): three phases in order:** discuss every feature; then plan and stage (versions assigned in planning); then build.
+- **Confirmed (Ahmed, 20:41:50): no spending cap.** The coordinator watches the 5-hour and weekly limits of both Claude and Codex so work is not cut off mid-task. This answers STATUS question 28.
+- **Confirmed (Ahmed, 21:54:38):** the coordinator handles the threads, including resolving idle ones.
+- **Working preference (Ahmed, 21:14:10, 21:16:47):** use emojis as section markers, in moderation.
+- **Confirmed (Ahmed, 22:15:49): records say who and where** ([A38](plan/approval-and-amendments.md)): every record names the partner's side and the machine; session titles are short (date, partner, machine, a few words), with the detail in a Who and where line and the sections.
+
+### The features: the coordinator's list from project memory (verbatim)
+
+The coordinator kept a running list in project memory and relayed it at 21:56:18 UTC as the source for this entry. It is quoted as written:
+
+> - Agreed: Mermaid in code blocks (language picker, auto-detect on paste, drawn diagram, code collapsed, zoom/download/copy/wrap; merge with the existing Diagram block). Import/export: keep the existing strong features; add top-bar buttons, a PDF contents page with bookmarks, Excel export for databases; fix the inline-database export bug (verify it first) and the stale import text. Sticky-notes corkboard (grid and free modes, pins, strings, box-select, right-click, tray create; desktop floating already exists). App bar like Office Quick Access (defaults Import/Export/New page/New sticky note; not Favorites or New notebook; optional Calculator and others; pin a page; AI can arrange it). Browser-style tabs (pin, groups, Ctrl+Shift+T, restore on restart). Per-page version history with diff and restore, plus an activity panel that marks AI edits. Ctrl+F as Notaya's own find bar (page first, "Search all notes" button, Ctrl+H replace; try it, then tune). Editable shortcuts plus global shortcuts. Calculator: history on the right, offline unit converters, no currency. "+ New notebook" always visible at the bottom of the notebook list. Icons pass (gold favorite star, visible when off). Sidebar drag-reordering of databases among pages.
+> - AI CLI is the foundation: Claude or Codex drives Notaya from outside like Notion MCP but with more power; it sees everything (locked notes only when unlocked); it can create, edit and delete (with confirmation before deletes); there is an activity log; every feature exposes named actions. The long-term north star is a Notion feature match, so all of Notion can be backed up locally.
+> - Staging: do not cram everything into v1.6; versions are assigned in the planning phase. Phases: discuss everything, then plan and stage, then build.
+> - Partly discussed: the AI CLI action list, the banner picker, Whiteboard details, OneNote mode.
+> - Not discussed: right-click menus (proposal pending), tray menu, Power BI charts/slicers/dashboards, guide, tour, About credits.
+> - Usage: no spend cap; watch the 5-hour and weekly quotas for Claude and Codex.
+
+### The features in detail, with Ahmed's reasons
+
+Status words: **Agreed** (Ahmed confirmed the restated meaning), **Partly discussed** (some points agreed, details open), **Not discussed** (only the list line exists). "Exists today" comes from the full inventory, which read the code on `9474511`; nothing was run. "Coordinator's addition" marks an idea Ahmed did not ask for; it is included only where he agreed or did not object, as noted.
+
+| Feature | Status | What was agreed | Ahmed's reasons (his words) | Exists today | Coordinator's additions |
+|---|---|---|---|---|---|
+| **AI CLI (foundation)** | Agreed in principle (20:38:34, 20:51:32, 20:52:11); action list partly discussed | Claude or Codex drives Notaya **from outside**, like Notion through MCP but with more power; local only; sees **everything** (locked notes only after Ahmed unlocks them); create, edit and delete, with **confirmation before deletes**; every feature exposes named actions from its first design | "similarly to how you as an AI can access my Notion and build hubs and create things using MCP ... from a local perspective"; "Freely, but perhaps even more freely ... Because it's local and it's our code and it's our app"; "with every atom of how we design" | No outside entry point at all; about 120 internal commands that the UI already calls; the automation engine is a model for named actions | An **activity log** of everything the AI does (20:42:16; Ahmed did not object, and it is in the coordinator's agreed list); a command line plus an MCP connection; "on only when switched on". The exact action list, how the outside program reaches Notaya and proves it is allowed, and where deletes are confirmed are **not decided** |
+| **Notion as a local backup (north star)** | Agreed as direction; not to be built now (20:51:32) | Notaya should eventually hold all of Ahmed's Notion; each design choice is checked against it | "to be able to take it as is, basically, from Notion to Notaya. So it would be an always backup methodology"; "not have any missing futures from Notaya that is already implemented and used by notion" | Strong Notion import (pages, databases, relations); a Notion gap list exists on draft PR #45 (Mohamed's, postponed) | A list of Notion features Notaya lacks, made at staging time (20:51:58) |
+| **Mermaid in code blocks** | Agreed (20:35:10 to 20:38:34; corrected by the inventory 21:10:19) | A language picker on every code block; pasted Mermaid is **detected automatically**, switches the language and is drawn; the code is **collapsed** behind a click; a small toolbar with zoom, download as picture, copy and wrap; join this with the existing Diagram block | "I don't know how to even use mermaid blocks. Even if it's there theoretically, it's just not simple to use"; the Notion screenshot "draws down the mermaid code itself underneath ... That's what I mean"; the code collapsible "for those who would like to edit it out" | A separate "Diagram" block draws Mermaid; typing three backticks + mermaid makes one; **pasting** is not detected; code blocks have no language picker | Auto-detect on paste (accepted 20:38:34); AI action "add a diagram" |
+| **Import** | Agreed (20:56:12, 21:00:03) | Keep everything the importer does; add a top-bar **Import** button with icon and name; fix the out-of-date sentence in the Import window | "retain all of its features, not mess it up ... it has already a strong foundation for this, significantly already, more than you expect. So you need to study this before you actually change anything" | Very complete (see block 5); entry points are a hover icon, the empty sidebar and the command palette | Import and export as AI actions (Ahmed asked for this himself, 20:56:12) |
+| **Export ("Save as")** | Agreed (20:56:12, 21:00:03) | A top-bar **Export** button; export works like Office "Save as"; a page with its sub-pages in a good order; PDF gains a **contents page with clickable bookmarks**; **Excel** export for databases; **fix the inline-database bug** after checking it in the real app | "you're going to be able to export the page as, and you can even include sub pages, because ... The page itself could be a hub"; "What about Excel? What about if it's a database" | Export dialog already has scope, sub-pages, PDF/Word/Markdown/HTML, one file or ZIP; PDF has flat bookmarks only; no `.xlsx`; an inline database in a page is dropped (read in the code, not yet seen in the app) | The contents-page-and-bookmarks idea for one PDF (20:56:42) |
+| **Sticky-notes corkboard** | Agreed (20:27:54 to 20:33:01) | In the app: a **grid mode** (fixed spots like desktop icons) and a **free mode** (like papers on a board), drag to reorder, **box-select** of several notes, **coloured push-pins** on the corners (several per note), **coloured strings** between notes, both colours changeable, a **right-click** menu (rename, icon, duplicate, delete, settings), and **New sticky note from the tray** | "my vision for it is that we need something that makes these sticky notes like free"; the strings are "like the detective's board ... so you can gather your thoughts that these two sticky notes are relevant to each other"; pins and strings stay in the app "because this is going to be very chaotically very easily" on the desktop | A grid board (newest edit first, no reordering); 8 colours; Select mode with Delete; desktop windows | — |
+| **Single notes on the Windows desktop** | Agreed; mostly exists (20:33:01, 21:10:19) | A note saved to the desktop is a plain movable note, with no pins or strings, and closes with the app | "it will be movable in a sense. I don't know how to execute this. If this is difficult to execute, we can defer it, but we need just to experiment" | **Already exists**: each sticky note opens as its own window on the desktop, with "Keep on top"; it hides when the vault locks | — |
+| **App bar (Quick Access)** | Agreed (21:21:20, 21:23:28) | A strip of quick buttons in the top bar, to the right of search; right-click the bar > Customize, drag buttons on and into order, Reset; icon only or icon and name. **Defaults:** Import, Export, New page, New sticky note. **Not on it:** Favorites, New notebook. **Optional:** Calculator and others | "shortcuts of some sort that can be helpful for the user ... without having you to search for it ... you can customize it, you can move it around, order it"; "the favorites shouldn't be there because it's gonna be already in the page itself" | A fixed top bar (sidebar toggle, back, forward, logo, search, Lock) | **Pin a page** to the bar; **the AI can arrange the bar** (21:21:28; Ahmed: "that's my vision" apart from Favorites) |
+| **Browser-style tabs** | Agreed (21:28:10) | Several pages open in tabs; + for a new tab; pin, group, close, move left or right; reopen a closed tab with **Ctrl+Shift+T** | "it actually helps you to work on multiple things at the same time ... as if it's a web browser" | No page tabs (databases have view tabs only); one open page at a time | **Open tabs come back after a restart**, which also covers the roadmap item "reopen the last page" (21:28:42; listed as agreed) |
+| **Version history and activity** | Agreed (21:28:10) | Each page keeps a timeline of versions; open an old one to see what was added or removed, highlighted; restore with one click; an **activity** list of who changed the page and when, **marking AI edits** | "that beautiful future that's basically like a version control almost of the page itself ... the activity who edited by AI ... It was done by Claude"; "We need to implement things like that" | No page history; whole-vault backups (automatic and manual) | The AI's changes are recorded here so they can be undone; check first how much the existing backups already give (21:28:42) |
+| **Ctrl+F find** | Agreed, to be tried and tuned (21:35:43) | Ctrl+F opens **Notaya's own find bar** for the open page (including folded and hidden parts), with "3 of 12", next and previous; a **"Search all notes"** button widens it; **Ctrl+H find and replace** | Ctrl+K "is so far away to press and not user friendly"; Ctrl+F today uses the Edge search, which finds only what is visible, "not ... what actually exists there"; "I wanna test that methodology as you suggested and see how it feels. Then we can tune it later" | Nothing of Notaya's own; Ctrl+F shows the browser engine's find bar; Notaya's real search is Ctrl+K | Page first, then widen (accepted); find and replace (in the agreed list) |
+| **Editable shortcuts** | Agreed (21:37:59) | A **Shortcuts** page in Settings listing every action and its keys; click and press new keys; a warning when a key is taken; Reset one and Reset all; **global shortcuts** that work while Notaya is in the background | "Yeah, exactly" | Shortcuts are fixed in code, spread over several files; no settings page | Global shortcuts, for example a new sticky note from anywhere in Windows (accepted) |
+| **Calculator upgrades** | Agreed (21:37:59, 21:41:04) | The calculator history moves to a panel **on the right**; offline **unit converters** like the Windows calculator (volume, length, weight and mass, temperature, energy, area, speed, time, power, data, pressure, angle); **no currency** (it needs the internet); a Calculator button on the app bar as an option | "I actually like the calculator of Notaya a lot"; "so you can see it easier rather than down below"; "Everything that basically does not require an internet access" | Basic and scientific calculators in their own windows, with a shared history below | A global shortcut to pop up the calculator and AI access ("I also agree with your extra suggestion", 21:41:04) |
+| **"+ New notebook" button** | Agreed (21:41:04) | Always visible at the **bottom of the notebook list**; **not** on the app bar | "We don't have to make adding a new notebook everywhere ... normally you don't open many notebooks because the notebook is what actually holds the other sections and pages ... like how we describe a Notion hub ... versus just a normal page" | The button exists but shows only on mouse-over | — (the app-bar idea was declined) |
+| **Icons pass** | Agreed (21:49:58) | Check every icon in every theme on the PC (throwaway data, screenshots); brighten faded ones; the Favorite star turns **gold** when on and has a clearly visible outline when off, especially in Black | "sometimes things are very faded to see"; "a golden would be better"; "even if it's like if it's turned off ... to be able to mentally see it ... especially in the black" | The star uses a faint grey when off and white when on | The full icons check (accepted) |
+| **Reordering databases in the sidebar** | Agreed (21:52:53, 21:53:24) | Databases can be dragged up and down among the pages in the sidebar list, like pages; moving them to other pages or notebooks is a **separate topic** (later, with the AI CLI) | "you can normally move the order of the pages, but databases are stuck down there and you cannot move them up or down ... if you look at that financial records there, you can't move it" | Databases sit under the pages and move only by the "..." menu to another section | — (the coordinator's bigger move-anywhere idea was set aside) |
+| **Home banner per time of day** | Partly discussed (20:15:35) | The person picks a picture for each part of the day (morning, afternoon, evening ...), and the picks stay as that time's defaults | (20:15:35, recorded in the entry below) | A built-in gradient that changes once a day, with a time-of-day greeting | How the pictures are picked is **not decided** |
+| **Whiteboard** | Partly discussed (20:15:35, 20:17:28) | Its own section, like Sticky notes, in the style of Microsoft Whiteboard, with starter templates (free basic ones too) and changeable pens | (recorded in the entry below) | Nothing | Details to come |
+| **OneNote mode** | Partly discussed (named only) | — | — | The ribbon and the notebook/section/page layout are OneNote-like already | — |
+| **Right-click menus** | Not discussed; **proposal pending** (21:53:24) | — | Ahmed's list (19:55:14): right-click pages, sections, databases, notebooks and sticky notes to edit the icon, duplicate, delete, rename and more | The same menus exist behind "..." buttons and the keyboard Menu key; no mouse right-click | Proposal: right-click opens the matching menu everywhere (sidebar items, tabs, sticky notes, editor text with "Turn into…", database rows) |
+| **Tray menu** | Not discussed | — | List: right-click the tray to make a new sticky note, open the calculator, shortcuts to parts of Notaya | Open Notaya, Close sticky notes, Quit | — |
+| **Power BI-like charts, slicers and dashboards** | Not discussed | — | List: pie charts, Power-BI-like interactive dashboards, slicers; at 20:41:50 Ahmed called them "very complicated" | Bar, line, donut and number charts, one per view; click a bar to see its rows | — |
+| **Guide, app tour, About credits** | Not discussed | — | List (v1.7): a guide in Notaya's style, an optional tour, names in About (Mohamed Sayed, Ahmed Emara, Claude, ChatGPT) | None (About lists open-source credits only) | — |
+
+### Deferred or rejected along the way
+
+- **Rejected (Ahmed, 21:23:28):** Favorites on the app bar.
+- **Rejected (Ahmed, 21:41:04):** New notebook on the app bar.
+- **Rejected (Ahmed, 20:31:11):** pins and strings on the Windows desktop.
+- **Set aside (Ahmed, 21:52:53):** moving databases to other pages or notebooks, as part of the sidebar item; it is "for another matter".
+- **Superseded (Ahmed, 20:41:50):** "We need to push all this into 1.6" (20:31:11) and "v1.6 can stay as one release" (20:15:35).
+
+## ⚠️ Difficulties / Friction
+
+- **The coordinator moved ahead of Ahmed several times.** It started a v1.6 build thread (19:55:28), proposed skipping the heavy paperwork (20:04:42), designed import and export before studying what exists (20:52:34, corrected by Ahmed at 20:56:12 and 21:00:14), and widened two features beyond what he meant (databases moved anywhere, the new-notebook button everywhere). Each was caught by Ahmed within minutes; none led to work being built.
+- **Emoji density.** The 21:14:48 chart overused emojis; Ahmed said so plainly. The calmer version worked.
+- **Voice transcription.** Ahmed speaks his messages; some words come out wrong: "BBS" and "PPS" for PBS, "codecs" for Codex, "bins" for pins or pens, "steel" for stale, "Hamatai" for Mohamed, "futures" for features. This entry quotes his words as written and gives the reading where it matters.
+- **Ahmed has no fixed picture for some features** (the app bar: "I'm thinking with you, I don't have a direct vision for it"). He expects Claude to propose and him to react.
+- **Records not visible from every place.** The two PC threads' session records are not readable from the cloud, and the cloud threads' records are not readable from this PC thread, so the ledger stays partial.
+- **Ahmed's tiredness and time.** None was expressed in this session; it is not assumed.
+
+## 🔧 Adjustments Made
+
+- **Shifted from:** one big v1.6 release ("push all this into 1.6", 20:31:11). **To:** staging across 1.6, 1.7, 1.8 in the planning phase. **Because:** Ahmed, 20:41:50: the CLI, the corkboard and the dashboards are each large. **Consequence:** no feature is tied to a version yet; A37 item 9 is amended by a dated note.
+- **Shifted from:** designing features from the list. **To:** studying what exists first (the import/export study, then the full inventory). **Because:** Ahmed, 20:56:12 and 21:00:14. **Consequence:** every feature row says what exists; three earlier agreements were corrected.
+- **Shifted from:** desktop pinning as an experiment. **To:** it mostly exists; the new work is the in-app corkboard. **Because:** the inventory (21:10:19).
+- **Shifted from:** a new Mermaid code-block feature. **To:** joining the existing Diagram block with code blocks (picker, paste detection, toolbar). **Because:** the inventory.
+- **Shifted from:** moving databases anywhere (coordinator, 21:50:28). **To:** reordering them in the sidebar list. **Because:** Ahmed, 21:52:53.
+- **Shifted from:** building features for the mouse. **To:** every feature with named AI actions from the start. **Because:** Ahmed, 20:38:34.
+- **Shifted from:** a spending cap question. **To:** watching the 5-hour and weekly limits. **Because:** Ahmed, 20:41:50.
+- **Shifted from:** PBS as the method of particular tasks. **To:** PBS as the mandatory method for all Notaya work. **Because:** Ahmed, 21:56:54.
+
+## ❌ Mistakes / Risks Noted
+
+### Designing before studying
+
+- **What happened:** at 20:52:34 the coordinator proposed export formats and import sources without having read what the import and export already do.
+- **Actual impact:** none; Ahmed stopped it at 20:56:12, and a study ran before anything was decided.
+- **Correction:** the study (21:00:03) and the full inventory (21:10:19). Ahmed's rule "understand the entire existence of Notaya before we work on it" (21:00:14) is now in the records (authority row and STATUS).
+- **Failure Intelligence:** not entered. No harm; caught in discussion; the rule now lives in the records.
+
+### A wrong claim inside a study
+
+- **What happened:** the import/export study said Export can be reached by right-clicking a notebook, section or page. There is no mouse right-click menu in Notaya; it is the "..." button.
+- **Correction:** found and corrected by the inventory (its section 7). The study file itself is not in the repository and was not changed.
+- **Risk:** a study is a reading of code, not a test. Both studies say they ran nothing.
+
+### Things that are believed but not yet seen in the app
+
+- The inline-database export bug, the Ctrl+F browser find bar, and the faint star come from reading the code or from Ahmed's description, not from a run on this commit. They must be checked in the real app (throwaway data in `D:\Notaya Tests`) before a fix is scoped.
+
+### Decisions living only in chat
+
+- **Risk:** until this PR, the feature agreements lived only in the project chat and the coordinator's memory, which Mohamed's Claude and a fresh session cannot see.
+- **Correction:** this entry, the authority rows and the STATUS lines.
+
+## 📍 Current Position
+
+**As of:** 2026-11-07, 22:06 UTC (PC clock, the ledger snapshot), when this entry was written; `main` at `9474511` before PR #56.
+
+**Before this session:**
+
+- Ahmed's rules lived nowhere in the repository; roles said "Codex leads"; no ledger.
+- The roadmap was a list of lines. Nothing had been discussed, and what already existed in the app had not been mapped.
+
+**After this session:**
+
+- Ahmed's rules are in the repository (A37, PRs #54 and #55), now with the staging rule, the quota rule and **PBS as the mandatory method for all Notaya work** (this PR).
+- A full inventory of what Notaya already does exists (in the project's shared files, read from the code on `9474511`).
+- **Agreed:** the AI CLI foundation, the Notion north star, Mermaid in code blocks, import and export, the sticky-notes corkboard, the app bar, tabs, version history and activity, Ctrl+F, editable and global shortcuts, the calculator upgrades, the new-notebook button, the icons pass, and reordering databases in the sidebar.
+- **Partly discussed:** the AI CLI action list, the banner picker, the Whiteboard, OneNote mode.
+- **Not discussed:** right-click menus (proposal pending), the tray menu, Power BI-like charts, slicers and dashboards, the guide, the tour, the About credits.
+- No version is assigned to any feature. Nothing is planned or built. Codex has not run.
+
+**Current standing:** "Most features are agreed in meaning; the discussion continues with the right-click menus, then the remaining items, before a staging plan and any planning or building."
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md), "Exact next permitted action"; the feature table above for what each feature means.
+
+## 🔜 Next Steps
+
+1. **Read first:** this entry (the feature table), STATUS "Exact next permitted action", A37 with its dated note, and the full inventory (`notes/2026-11-07-notaya-full-feature-inventory.md` in the project's shared files).
+2. **Continue the discussion** with the pending right-click proposal (21:53:24), then the tray menu, the dashboards (charts, slicers), the guide, tour and About credits, then finish the partly discussed items (AI CLI action list and its safety design, the banner picker, Whiteboard, OneNote mode). Each with "what exists" from the inventory and "how the AI uses it".
+3. **When every feature is discussed:** the coordinator brings a staging plan (which feature in which version), with a list of Notion features Notaya lacks. Ahmed decides.
+4. **Then planning**, in a fresh planning thread (the old v1.6 thread is resolved): checks in the real app on throwaway data for the believed bugs (inline-database export, Ctrl+F, the star), the AI CLI security design (a new trust boundary; needs Ahmed's own words and a security-design promise), and per-version plans.
+5. **Then building**, with Codex as the developer hand and the coordinator inspecting every diff, only after Ahmed's go per version or feature.
+6. **At every stop:** a full entry at the top of this file, ledger rows, the STATUS lines, and the Notion hub at milestones (the agreed features should be reflected on the Version Feature Board when staging is decided).
+
+**Do not reopen or repeat:** the full reading of the records (done 2026-11-07), the import/export study and the inventory (refresh only the parts a change touches), the decisions above unless Ahmed reopens them.
+
+**Continuation boundary:** discussion and records may go on now; planning starts after the discussion; product code waits for Ahmed's go.
+
+## ❓ Open Questions
+
+- **Right-click menus:** does the 21:53:24 proposal (right-click opens the matching menu everywhere) match what Ahmed wants, and is anything missing? Needed from: Ahmed. Blocks: that feature's agreement.
+- **The not-discussed features** (tray menu, dashboards and slicers, guide, tour, About credits): what does Ahmed mean by each? Needed from: Ahmed.
+- **AI CLI design:** how does an outside program reach Notaya and prove it is allowed; may the AI work while the window is open; where is a delete confirmed (in the Notaya window or in the AI's conversation); where does the activity log live, and can an AI change be undone? Needed from: Ahmed, after the coordinator's proposal. Blocks: the CLI plan and its security design.
+- **Home banner:** how does the person pick a picture for each time of day? Needed from: Ahmed.
+- **Whiteboard and OneNote mode:** what are their details? Needed from: Ahmed.
+- **Version history:** how much can the existing backups give, and what must be new? Needed from: a check of the code by the coordinator.
+- Still open from before: Mohamed's confirmation of the A34 readings (STATUS question 27); the questions listed in STATUS. **Answered tonight:** question 28 (pacing: no cap; watch the 5-hour and weekly limits).
+
+## 🧾 Session Outcome
+
+The evening started as setup and turned into the first real design conversation on Ahmed's side. His rules are written down and in force. The project now knows, from the code, what Notaya already does, which removed three misunderstandings before they became work. Most roadmap features have an agreed meaning, in Ahmed's words, with what exists and what is new. The AI CLI is fixed as the idea every feature is built around, with the Notion backup as the long-term direction. The roadmap is no longer one huge v1.6: it will be staged in planning.
+
+Nothing was built, on purpose. Each time the coordinator went faster or wider than Ahmed wanted, he stopped it within minutes.
+
+The project is no longer asking "what are these list lines?". It is now asking "what do the last few features mean, and how should all of it be staged?".
+
+## 🔍 Confidence Level
+
+**Ahmed's words, times and decisions:** High. **Reason:** quoted from the project chat with its server timestamps; every agreed feature has Ahmed's confirming message. **Not higher because:** his messages are voice transcriptions (readings marked), and four screenshots were not visible to this thread.
+
+**What exists in the app:** Medium-High. **Reason:** two studies read the code on `9474511` and the records, and one corrected the other. **Not higher because:** neither ran the app or the tests; three items are believed, not seen.
+
+**The coordinator's and threads' actions:** Medium. **Reason:** from their posted messages, outputs and the thread list. **Not higher because:** their transcripts were not read.
+
+**Usage figures:** High for the two PC threads (measured from their transcripts); none for the coordinator after 20:33, the two study threads and the cloud side of this evening's later work.
+
+## 💬 Personal Note
+
+Ahmed calls himself "a director, in a sense, and user", not a developer (19:49:26). Tonight showed what that means in practice: he brings the picture (a detective's corkboard, a browser's tabs, Office's "Save as", Notion's history with "done by Claude"), he expects Claude to bring the craft and the ideas, and he corrects quickly when Claude runs ahead. His two strongest reminders were about humility: "understand the entire existence of Notaya before we work on it", and the records are "what keeps the memory of the future safe and intact". A future reader should keep both: read before designing, and write down why, not only what.
+
+## 📚 Artifacts / Documents Created or Updated
+
+- This entry (`docs/sessions.md`), PR #56 — records only.
+- [EX-2026-11-07-46](execution/2026-11-07-session-summary-feature-discussion.md) and its index row — what this PR did and checked.
+- Authority rows for Ahmed's messages from 20:22:14 to 21:56:54 UTC and a dated note on A37 (staging, PBS for all work, quota watching) in [approval-and-amendments.md](plan/approval-and-amendments.md).
+- STATUS: "Exact next permitted action" (dated update) and question 28 answered.
+- Usage ledger: the two PC threads measured, this thread's own row, and a dated block.
+- Claims row (this PR).
+- Outside the repository, not canonical (inputs): `notes/2026-11-07-notaya-import-export-study.md` and `notes/2026-11-07-notaya-full-feature-inventory.md` (project shared files); the coordinator's project memory; the Notaya Notion hub (not updated by this thread).
+
+## 🤝 Collaborator Contribution
+
+- **Import/export study thread** — Asked to: study the current import and export, read only (20:56:39). Produced: the study (26 KB). Integrated by: the coordinator into the 21:00:03 reply and by this entry. One claim was corrected by the inventory.
+- **Inventory thread** — Asked to: map everything Notaya already does from code and records (21:00:26). Produced: the inventory (56 KB) with the roadmap mapping and proposed AI action names. Integrated by: the coordinator (21:10:19) and this entry. Accepted: not decided.
+- **Records thread (PRs #54, #55)** — see the entries below.
+
+## 🗂️ Documentation Updates Needed
+
+- **Notion hub:** the Version Feature Board should show the agreed feature meanings and, after staging, their versions. Status: pending (the coordinator's job at the next milestone).
+- **`docs/plan/import-what-carries-over.md`:** still lists databases as left out; needs a dated note. Status: pending (noted in both studies).
+- **A gap list of Notion features Notaya lacks:** to be made at staging time; EX-2026-11-03-41 on draft PR #45 (Mohamed's, postponed) is the best existing start. Status: pending.
+
+## 🚫 Deferred Work
+
+- Staging (versions per feature), planning, and every build: after the discussion, on Ahmed's go.
+- The Notion backup north star: direction only.
+- Moving databases to other pages or notebooks: a later topic, with the AI CLI.
+- Single notes on the Windows desktop: mostly exists; any change waits for planning.
+
+---
+
+<a id="session-40"></a>
 
 # 📘 Session: 2026-11-07 (coordinator's request 20:38:17 UTC; work 20:38 to about 21:00 UTC, container clock), Notaya: second records PR, the gaps of the first catch-up closed (PR #55, EX-2026-11-07-45), cloud thread session
 
@@ -118,6 +552,8 @@ The record set now has no missing period for a big stop. The 2026-10-27 day read
 **The new entries and corrections:** High; every fact is taken from a named report, `git log` or the code. **Ordering of the pop-out entry:** Medium; it is placed by its last commit, not by a recorded end time.
 
 ---
+
+<a id="session-39"></a>
 
 # 📘 Session: 2026-11-07 (Ahmed's messages 19:09:26 to 20:23:20 UTC; work 19:08:49 to about 20:45 UTC, session records and container clock), Notaya: Ahmed's side begins, his working rules (A37), the Notion hub, a full reading of the records, and the records catch-up with Notaya's own usage ledger, a coordinated multi-thread session in the Claude project "Notaya"
 
@@ -340,6 +776,8 @@ The evening turned a new partner, a new PC and a new working environment into a 
 
 ---
 
+<a id="session-38"></a>
+
 # 📘 Session: 2026-11-07 (commits 18:27:46 to 18:57:45 UTC, merge 19:22:15 UTC, from `git log`), Notaya: hand-off to Ahmed's PC and Codex, `AGENTS.md`, PBS skill v1.1, toolchain and smoke test (PR #53), Remote Control session on Ahmed's PC started from Mohamed's account
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -432,6 +870,8 @@ Notaya moved from Mohamed's setup to Ahmed's PC and tools without losing anythin
 
 ---
 
+<a id="session-37"></a>
+
 # 📘 Session: 2026-11-04 17:02 to 2026-11-05 07:43 UTC (owner's messages 2026-11-04 17:02:11 to 2026-11-05 07:16:25 UTC), Notaya V1.5.1: fixes, PC test rounds, Hubs import fixes, text direction and the release, cloud thread session with a Remote Control session on the owner's PC
 
 **Executor:** Claude (Claude Code) in a cloud thread started by the coordinator; builds, tests and, from 2026-11-04 23:09:58 UTC, code edits ran in a Remote Control session on the owner's PC. **Record basis:** the thread messages and relays (UTC), the PC clock, the repository (`main` `0e7e580` to `95ca8b2`), the PC result files `v151\RESULTS-v151.md` and `v151b\RESULTS-v151b.md`. **Reconstructed:** the middle part (2026-11-04 18:38 to 23:09) is rebuilt from the earlier results files and the Execution Summary; the Hubs, direction and release parts were written from this session's own transcript at the end. **Big stop:** a release published, not accepted.
@@ -456,6 +896,8 @@ V1.5.1 is published and **not accepted**. The owner tries it and accepts it or r
 **Addendum 2026-11-05 (after 11:08 UTC, written by a PC session started from the coordinator's relay; the entry above is not rewritten):** the owner wrote "I approve this version" at 11:08:39 UTC (cited and relayed by the coordinator at 11:08:44 UTC). It was read as the **acceptance of release V1.5.1**; recorded in `acceptance.md` (X27), `STATUS.md`, the authority row and EX-43 section 8f. The not-run list did not change. It grants no new permission. The PC copy was fast-forwarded at 07:16:29, 08:17:41 (`cf6dae6`) and 08:21:38 UTC (`2812d65`), from the reflog. Records PRs #50 and #51 were merged by the owner; this addendum is in the third records PR (draft). Where to resume: the owner's next instruction; items for the friend as already listed in the resume note.
 
 ---
+
+<a id="session-36"></a>
 
 # 📘 Session: 2026-11-03 19:20 to 2026-11-04 about 15:05 UTC (owner's messages 2026-11-03 19:20:58 to 2026-11-04 14:30:06 UTC), Notaya V1.5.0: right-to-left text, PDF letters, full local databases with automations, Notion import rework, three PC rounds and the release, cloud thread with PC sessions (backfilled 2026-11-07)
 
@@ -551,6 +993,8 @@ Notaya gained a full local database system and right-to-left text everywhere in 
 
 ---
 
+<a id="session-35"></a>
+
 # 📘 Session: 2026-10-28 17:01 to 2026-11-03 18:23 UTC (owner's messages 2026-10-28 17:01:14 to 2026-11-03 18:23:19 UTC), Notaya V1.4.0: tray, Notaya vault format, export and import, shelf and links, error log, three PC rounds, the release and the first acceptance, cloud threads with PC sessions (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -640,6 +1084,8 @@ V1.4.0 gave Notaya its own vault format, export and import in four formats, a tr
 
 ---
 
+<a id="session-34"></a>
+
 # 📘 Session: 2026-10-29 (owner's messages 07:55:55 to 08:59:37 UTC), Notaya: two partners and their two Claudes, the collaboration guide, claim board and setup steps (A34, PR #40), cloud thread session (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -726,6 +1172,8 @@ Notaya became a two-partner project with written rules for sharing work through 
 **What was written and merged:** High (EX-38, `git log`). **Mohamed's view of the readings:** unknown (never recorded).
 
 ---
+
+<a id="session-33"></a>
 
 # 📘 Session: 2026-10-28 16:07 to about 17:00 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
 
@@ -815,6 +1263,8 @@ V1.3.0, the first Notaya release with a Windows setup, went out with its files c
 
 ---
 
+<a id="session-32"></a>
+
 # 📘 Session: 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:36 to about 16:10 UTC), Notaya: prepare V1.3.0 with the Windows setup, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests in one Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC), the PC report, the repository at `main` `52841f1` then `37774c6`. **Reconstructed:** nothing; written at the end. **Big stop:** a release prepared, not published.
@@ -835,6 +1285,8 @@ Where to resume: the owner merges PR #34 ("Create a merge commit") and runs the 
 
 ---
 
+<a id="session-31"></a>
+
 # 📘 Session: 2026-10-24 to 2026-10-28 (owner's messages 2026-10-24 08:59:52 to 2026-10-28 14:34:32 UTC), Notaya: plan for a native Windows app, then dropped, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC), draft PR #11.
@@ -848,6 +1300,8 @@ Where to resume: the owner merges PR #34 ("Create a merge commit") and runs the 
 Where to resume: nothing open for the native idea. The postponed items are in STATUS question 26.
 
 ---
+
+<a id="session-30"></a>
 
 # 📘 Session: 2026-10-28 11:19 to 14:32 UTC (owner's messages 11:19:57 to 14:31:46 UTC), Notaya: the Windows installer (A30), from the plan re-check to the PC tests and the merge, cloud thread with a PC session (backfilled 2026-11-07)
 
@@ -942,6 +1396,8 @@ Notaya got a real Windows setup that keeps notes outside the program folder and 
 
 ---
 
+<a id="session-29"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 19:40:47 to 22:28:11 UTC; work 19:41 to about 22:30 UTC, system clock and PC clock), Notaya: release V1.2.0, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests ran in Remote Control sessions on the owner's PC. **Record basis:** the thread messages (UTC timestamps), the PC sessions' reports, the GitHub API, the repository at `main` `49cd9de` then `4e40d1a`. **Reconstructed:** nothing; written at the end. **Big stop:** a release.
@@ -959,6 +1415,8 @@ Nothing is accepted. Open for the owner: acceptance of V1.2.0 (and earlier relea
 
 ---
 
+<a id="session-28"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 16:29:35 to 19:08:33 UTC; work 16:30 to about 19:45 UTC, system clock), Cipherleaf: PBS review, then adoption in its smallest form, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC timestamps), the Notion hub and every page and file that could be opened, the repository at `main` `5013244`. **Reconstructed:** nothing; written at the end of the work. **Big stop:** a change of direction (a new way of working), so this entry has the fuller form.
@@ -974,6 +1432,8 @@ Not changed: code, the security design, the plan snapshot. Not run: anything (do
 
 ---
 
+<a id="session-27"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), Cipherleaf: live audit (PR #10) compared with V1.1.0, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** GitHub PR #10, the "Live PC audit checks" thread (read in full), `git log` and the code of `main` `6981442`.
@@ -987,6 +1447,8 @@ Not changed: code, the security design, the plan snapshot. Not run: anything (do
 Not changed: code, the security design (no promise changed), the plan snapshot. Not run: anything on Windows, `cargo audit`, tests. Nothing is accepted. Where to resume: the owner merges the PR, then the PC copy is fast-forwarded; a fix release only on his word.
 
 ---
+
+<a id="session-26"></a>
 
 # 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
 
@@ -1005,6 +1467,8 @@ Not changed: code, the security design (no promise changed), the plan snapshot. 
 Run the PC checks on throwaway data ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) section 4), then the owner merges PR #24 and his PC copy is fast-forwarded. Nothing is accepted.
 
 ---
+
+<a id="session-25"></a>
 
 # 📘 Session: 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), Cipherleaf: record every step, PC copy on `main`, cloud thread session
 
@@ -1025,6 +1489,8 @@ Not changed: code. Nothing is accepted.
 
 ---
 
+<a id="session-24"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the project chat and thread messages (UTC timestamps), `git log` of `main` at `87eb7ff`, the GitHub pull request list, the read-only PBS review thread's gap list. **Reconstructed:** items 1 and 2 below come from the project chat, not from a session that recorded them at the time.
@@ -1038,6 +1504,8 @@ Not changed: code. Nothing is accepted.
 Not changed: code, the security design (no promise changed), the handoff files, the plan snapshot. Outside the repo and not changed here: the GitHub About text and the three saved skills still mention KeePassXC. Nothing is accepted.
 
 ---
+
+<a id="session-23"></a>
 
 # 📘 Session: 2026-10-27 (owner "Yes please" 08:21:52 UTC; work about 08:22 to 08:40 UTC, system clock), Cipherleaf: V1.1.0 portable build, thread session on the owner's PC
 
@@ -1053,6 +1521,8 @@ Not run: the new features in the real window on this exe, a plain first start, a
 
 ---
 
+<a id="session-22"></a>
+
 # 📘 Session: 2026-10-27 (owner's "Yes test" 07:21:42 UTC; work 07:22 to 08:20 UTC, PC system clock), Cipherleaf: combined test of the four changes, PC thread session
 
 **Executor:** a Claude Code session on the owner's PC (model output). **Record basis:** that thread's messages. **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
@@ -1065,6 +1535,8 @@ Not run: the new features in the real window on this exe, a plain first start, a
 Not run: a hand click-through, the release ZIP (made next, EX-2026-10-27-24). Nothing is accepted.
 
 ---
+
+<a id="session-21"></a>
 
 # 📘 Session: 2026-10-27 (from 06:45 UTC, container clock), Cipherleaf: pop-out calculators (A24), cloud thread session
 
@@ -1084,6 +1556,8 @@ Resume: draft PR into `main`; the PC check and the owner's review. Nothing is ac
 
 ---
 
+<a id="session-20"></a>
+
 # 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), Cipherleaf: KeePassXC removed (A24), cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread session started by the project coordinator, with a documentation agent and an independent review agent (model output). **Record basis:** the project-chat timestamp of the owner's message, the system clock and the repository.
@@ -1097,6 +1571,8 @@ Resume: draft PR into `main`; the PC check and the owner's review. Nothing is ac
 Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts), the app itself. Nothing is accepted.
 
 ---
+
+<a id="session-19"></a>
 
 # 📘 Session: 2026-10-27 (06:45 to about 06:56 UTC, system clock), Cipherleaf: ribbon editor, cloud thread session
 
@@ -1112,6 +1588,8 @@ Not run: the real app, a real-exe test on Windows. Nothing is accepted.
 
 ---
 
+<a id="session-18"></a>
+
 # 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work until about 06:53 UTC, system clock), Cipherleaf: select several sticky notes and delete them together (A26), cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** [EX-2026-10-27-sticky-multi-select](execution/2026-10-27-sticky-multi-select.md), the commit (`31dc920`, 06:53:05 UTC) and the project chat (draft PR #17 announced 06:53:36 UTC). **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
@@ -1125,6 +1603,8 @@ Not run: the real app, a real-exe test on Windows. Nothing is accepted.
 Nothing is accepted.
 
 ---
+
+<a id="session-17"></a>
 
 # 📘 Session: 2026-10-23 (after 22:25:50 UTC; work times not recorded), Cipherleaf: V1.0.1 audit fixes (A23), cloud thread session
 
@@ -1148,6 +1628,8 @@ Not run: free-space check, real-PC USB removal, idle, Win+L, sleep, a screen rea
 
 ---
 
+<a id="session-16"></a>
+
 # 📘 Session: 2026-10-23 (after the owner's merge at 20:45:05 UTC; work times not recorded), Cipherleaf: V1.0 portable build, cloud thread session
 
 **Executor:** Claude (Claude Code) in the cloud thread session, with a PC remote session for the build (model output). **Record basis:** GitHub (merge time, merge commit), the PC session's report.
@@ -1161,6 +1643,8 @@ Not run: free-space check, real-PC USB removal, idle, Win+L, sleep, a screen rea
 Not run: testA, testB, testC c2/c2q, testD1, USB removal, idle lock, Win+L and sleep on a real PC, `cargo audit`. Nothing is accepted.
 
 ---
+
+<a id="session-15"></a>
 
 # 📘 Session: 2026-10-23 (owner message 20:12:53 UTC; times of the other work not recorded), Cipherleaf: Credits for open source and the suggested passphrase removed (A22), cloud thread session
 
@@ -1179,6 +1663,8 @@ Not run: testA, testB, testC c2/c2q, testD1, USB removal, idle lock, Win+L and s
 The owner reviews draft PR #3 (A21 and A22) and decides on the merge; then the stable portable build and the private GitHub release "CipherLeaf V1.0" follow. Open: the licence for Cipherleaf itself, the notices gaps (WebView2 loader licence text, KeePassXC bundled-library source offer including Qt under LGPL, the `Licenses` folder contents to produce at build), the version numbers (`Cargo.toml` and `package.json` 0.1.0, `tauri.conf.json` 1.0.0) and `cargo fmt` (not clean). See STATUS. The A21 resume steps below still apply.
 
 ---
+
+<a id="session-14"></a>
 
 # 📘 Session: 2026-10-23 (owner messages 18:32:20 to 18:47:35 UTC), Cipherleaf: Notes first, security and passwords optional (A21), cloud thread session
 
@@ -1211,6 +1697,8 @@ The owner reviews draft PR #3 and A21 on a real PC and merges it when satisfied;
 
 ---
 
+<a id="session-13"></a>
+
 # 📘 Session: 2026-10-23 (about 17:00 to 21:45 UTC clock) — Cipherleaf — PC catch-up, test-folder cleanup, stale records fixed
 
 **Executor:** Claude (Opus 5.5) as a thread session of the owner's project; the work on the PC was read-only except the deletions below. **Reconstructed:** times are approximate system-clock readings (the PC clock read about 21:40 when the folders were deleted).
@@ -1228,6 +1716,8 @@ Unchanged from [STATUS.md](STATUS.md): the owner picks the next task from the ha
 
 ---
 
+<a id="session-12"></a>
+
 # 📘 Session: 2026-10-23 (17:04–17:35 UTC) — Cipherleaf — Unlock after moving the portable folder; Start over (A20)
 
 **Record basis:** written at the time, from the session transcript (owner message times 17:04:30, 17:16:33 and 17:26:10 UTC), the system clock on the owner's PC for the test and the repository. Executor: Claude (Claude Code) in a cloud thread, plus a Remote Control session on the owner's PC.
@@ -1239,6 +1729,8 @@ Unchanged from [STATUS.md](STATUS.md): the owner picks the next task from the ha
 **Resume at:** the Rust tests and a real-exe check of the new screens on the PC; the owner's review; the owner decides whether to merge into `main` and `feat/a9-keepassxc`.
 
 ---
+
+<a id="session-11"></a>
 
 # 📘 Session: 2026-10-23 (after about 14:17, until about 16:04 UTC) — Cipherleaf — Passwords-file backup and restore, safe Quit (A19), rebuilt
 
@@ -1267,6 +1759,8 @@ The owner tries the new exe (lock a few times and look at `data\backups`; Settin
 
 ---
 
+<a id="session-10"></a>
+
 # 📘 Session: 2026-10-23 (about 13:55–14:20 UTC) — Cipherleaf — Restore from backup and readable passphrase finished (A18), rebuilt
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1292,6 +1786,8 @@ The owner tries the new exe and replaces the outdated ZIP copies. Not tested: ch
 
 ---
 
+<a id="session-09"></a>
+
 # 📘 Session: 2026-10-23 (about 11:00–13:55 UTC) — Cipherleaf — Passphrase and restore work paused, GitHub repository created
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1316,6 +1812,8 @@ Finish the restore work (rebuild, re-run the real-exe tests, records, commit), t
 **Correction (added 2026-10-23, later the same day):** point 1 above says the restore work was uncommitted and not in the portable build. It was finished afterwards: committed as `1273093` (A18) and put into the rebuilt portable build and ZIP. See the entry above this one and [EX-14](execution/2026-10-23-restore-from-backup.md).
 
 ---
+
+<a id="session-08"></a>
 
 # 📘 Session: 2026-10-23 (from about 08:28 UTC) — Cipherleaf — Code review, lock and data-loss fixes (A17), rebuild
 
@@ -1440,6 +1938,8 @@ Text typed just before Lock or close is now saved first, and several related loc
 
 ---
 
+<a id="session-07"></a>
+
 # 📘 Session: 2026-10-22 (owner's messages from 23:14:05 UTC, the last ones after 23:39 UTC at times not recorded; commits 23:20:52 to 23:51:59 UTC, from `git log`), Cipherleaf: fresh portable build, calculator border fix and app icon (A15), wider pages and Paper as the default look (A16), PC session (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1527,6 +2027,8 @@ In forty minutes the owner got a fresh build he could share privately, and his f
 **What was built and committed:** High (three reports and `git log`). **Exact times of the A16 messages:** not recorded. **Usage:** unknown.
 
 ---
+
+<a id="session-06"></a>
 
 # 📘 Session: 2026-10-22 (22:58 UTC onward) — Cipherleaf — Commit of A10–A14 and the first release build
 
@@ -1652,6 +2154,8 @@ The work is saved in Git and there is a first portable build that starts, keeps 
 
 ---
 
+<a id="session-05"></a>
+
 # 📘 Session: 2026-10-22 (22:40 UTC onward) — Cipherleaf — A14: a small calculator inside each sticky note
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1760,6 +2264,8 @@ A small calculator is one click away inside every sticky note, sharing the same 
 **Not higher because:** a real sticky window and real clicks were not tried, and the owner hasn't reviewed it.
 
 ---
+
+<a id="session-04"></a>
 
 # 📘 Session: 2026-10-22 (22:26 UTC onward) — Cipherleaf — A13: calculator under Sticky notes, reworded and trimmed block editor, name kept
 
@@ -1894,6 +2400,8 @@ The three named items are done to the extent they can be checked without the rea
 See [EX-07](execution/2026-10-22-a13-calculator-and-wording.md) and [acceptance.md](acceptance.md) (X8, X9).
 
 ---
+
+<a id="session-03"></a>
 
 # 📘 Session: 2026-10-22 (21:32 UTC onward) — Cipherleaf — PBS reconciliation before continuing development
 
@@ -2040,6 +2548,8 @@ The project now has what the PBS framework asks for at this size: a ledger of wh
 - Decision Records — not adopted. Compact-set confirmation for `acceptance.md` and `sessions.md` — awaiting the owner (STATUS question 8).
 
 ---
+
+<a id="session-02"></a>
 
 # 📘 Session: 2026-10-22 (15:49–18:10 UTC) — Cipherleaf — First hands-on run, KeePassXC inside the window, redesign, Notion-style notes, equations, and portability questions
 
@@ -2189,6 +2699,8 @@ The project went from "never launched" to a working, restyled app with a block e
 See [acceptance.md](acceptance.md) and EX-02 to EX-05 for the individual checks and their limits.
 
 ---
+
+<a id="session-01"></a>
 
 # 📘 Session: 2026-10-22 (10:53–13:30 UTC) — Cipherleaf — Plan, first build, PBS adoption, and the KeePassXC amendment
 

@@ -14,6 +14,12 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+> **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
+
+### 2026-11-07 (Ahmed's messages 20:22:14 to 21:56:54 UTC), EX-2026-11-07-46: the session summary of the whole coordinator session (feature discussion), the PC ledger rows and the authority rows
+
+- [2026-11-07-session-summary-feature-discussion.md](2026-11-07-session-summary-feature-discussion.md): records only; PR #56. One full session entry with every feature decision and Ahmed's reasons, 23 authority rows, a dated note on A37 (staging across versions, PBS for all Notaya work, quota watching), STATUS lines, three ledger rows. **Verified** by the checks in its section 3; integrated when PR #56 is merged; not accepted.
+
 ### 2026-11-07 (coordinator's request 20:38:17 UTC under Ahmed's 20:19:06 UTC permission), EX-2026-11-07-45: second records PR, the gaps EX-44 listed
 
 - [2026-11-07-records-gaps-closed.md](2026-11-07-records-gaps-closed.md): records only; PR #55. Three backfilled session entries, the 2026-10-27 entry order, dated corrections in the security design, notes in the partner guides and the three exported skills. **Verified** by the checks in its section 3; integrated when PR #55 is merged; not accepted.

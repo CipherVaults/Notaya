@@ -1,5 +1,7 @@
 # 📋 Execution Summary: EX-2026-11-07-44 — Records catch-up for Ahmed's 2026-11-07 rules (A37), today's hand-off, stale records, backfilled session entries, and Notaya's own usage ledger
 
+**Who and where (dated note 2026-11-07, A38):** Ahmed's side (`AE0101`); the cloud thread "Catch up Notaya records and start the ledger" (bound to Ahmed's Gaming-PC).
+
 (12-section form: a change of direction and of authority on Ahmed's side.)
 
 ## 1. Task Overview
