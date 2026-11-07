@@ -14,6 +14,12 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-07 (Ahmed's messages 19:09:26 to 20:23:20 UTC), EX-2026-11-07-44: records catch-up for Ahmed's rules (A37), today's hand-off, stale records, backfilled session entries, and Notaya's own usage ledger
+
+- [2026-11-07-records-catch-up-and-usage-ledger.md](2026-11-07-records-catch-up-and-usage-ledger.md): records only (no app code); PR #54; **verified** by the checks in its section 5; integrated when PR #54 is merged; not accepted (acceptance is a partner's word).
+
+> **Dated note (2026-11-07):** the rows below for EX-42, EX-40, EX-38 and EX-37 keep the wording from before their work finished. They are not rewritten. Their end states: V1.5.0 (EX-42) merged by the owner 2026-11-04 14:24:53 UTC (`c27f68e`, PR #47) and published, not accepted; V1.4.0 (EX-37, EX-40) merged 2026-11-03 15:48:16 UTC (`452212d`, PR #39), published and **accepted** 18:23:19 UTC ([acceptance.md](../acceptance.md), X28); the partner guide (EX-38) merged 2026-10-29 08:52:53 UTC (`253ce56`, PR #40). Current state: [STATUS](../STATUS.md).
+
 ### 2026-11-04 (owner's messages 17:02:11 to 17:56:54 UTC), EX-2026-11-04-43: Notaya V1.5.1, fixes and additions after the V1.5.0 feedback (navigation, undo, scroll bars, clickable tags/dates/charts, hide all stickies, recent searches, free pictures, 2 GB limits, icons and covers, Home, Mermaid)
 
 - [2026-11-04-v1-5-1-fixes.md](2026-11-04-v1-5-1-fixes.md): **published** as [v1.5.1](https://github.com/AbyssWatcher2/Notaya/releases/tag/v1.5.1) (2026-11-05, tag on `95ca8b2`); verified in the cloud and on the PC (setup installer, tray entry, keyboard-layout shortcut, Clippy NOT RUN); **accepted by the owner 2026-11-05 11:08:39 UTC** ("I approve this version"). Also covers the 2026-11-05 work: the Hubs import test and its three importer fixes, per-line text direction, the release and the hand-over records. Authority: A36 (closed as released).

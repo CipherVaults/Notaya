@@ -1,5 +1,7 @@
 # Notaya hand-off to Ahmed: Codex leads, Claude reviews (2026-11-07)
 
+**Dated note (2026-11-07, about 20:40 UTC, records catch-up EX-2026-11-07-44):** section 1's role split ("Codex leads development, Claude coordinates and reviews") and the rule that nobody but a partner merges were superseded the same evening by Ahmed's own words, recorded as [A37](../plan/approval-and-amendments.md): on Ahmed's side his Claude coordinator is the mother thread that leads, inspects every Codex diff, merges and pushes; Codex is the developer hand; Ahmed's OK is enough. PR #53, which added this note, was merged by Ahmed at 19:22:15 UTC (`7661503`). The rest of this note (paths, toolchain, check results, open items) still stands as written on its own commit. The text below is not rewritten.
+
 Written by Claude (Ahmed's own PC, Remote Control session started from Mohamed's account) for Ahmed (GitHub `AE0101`, partner) and for whichever agent picks up next. Times are from the system clock; no PC test or build was run for this note. Per `CLAUDE.md`, the repository records win over this file wherever they differ.
 
 ## 1. The new setup
