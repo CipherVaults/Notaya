@@ -35,7 +35,7 @@ Stable releases only, exact versions; ask before installing or adding dependenci
 
 ## 5. PBS usage
 
-The project follows PBS in its smallest form (`CLAUDE.md`, "PBS work cycle"; A29). The skill `.claude/skills/pbs-start-resume-handoff/` is committed and ships `agents/openai.yaml`, so Codex can load it; its bundled references say **PBS v1.0**. Ahmed's own `~/.codex/skills/pbs-start-resume-handoff` is presumably the newer v1.1 (not compared). Do not overwrite either; if Ahmed wants v1.1 in the repo, do it as a separate small PR so the diff shows what changed.
+The project follows PBS in its smallest form (`CLAUDE.md`, "PBS work cycle"; A29). The skill `.claude/skills/pbs-start-resume-handoff/` is committed and ships `agents/openai.yaml`, so Codex can load it. The repo copy was **PBS v1.0**; Ahmed's installed copy (`~/.codex/skills/pbs-start-resume-handoff`) is **PBS method version 1.1, approved 26 October 2026**. On 2026-11-07 the 8 files that really differed (compared with line endings ignored) were copied from Ahmed's copy into the repo in their own commit, so the change is easy to review or revert. Ahmed's copy is the master; refresh the repo copy from it, never the other way round.
 
 Practice: start with the PBS "Start" or "Recover" prompt, state the task (baseline commit, partner message and time, scope, stop point), keep permission / observation / acceptance apart, label results produced / verified / integrated / accepted, and end with a resume note and a claims-row update. Records by size: small = PR text; normal = 4-section Execution Summary + index row + STATUS lines; big = 12-section summary + `sessions.md` entry.
 
