@@ -241,6 +241,8 @@ Turn the finished feature discussion into a staged plan: which feature goes in w
 - Acceptance: pending (Ahmed)
 - Open dependency / next action: Ahmed's answers; the 1.6 spec
 
+**Dated addendum (2026-11-07 about 23:58 UTC, [EX-2026-11-07-53](execution/2026-11-07-version-plan-answers.md)):** at 23:53:46 and 23:54:20 UTC Ahmed answered most of the plan's and the AI CLI list's questions (two authority rows). The versions after 1.9 are now **2.0 to 2.5** (the old 1.10 to 1.15); the order stays the coordinator's call; names in About stay in 1.6; the AI never draws freehand; four AI levels, hidden notebooks, an optional big-change confirm at 20 items, the AI's files inside Notaya's own data folder, two AIs allowed if kept apart. Page locks deferred; the bridge undecided. The plan, its repository copy and the Notion hub were updated in the same session. The title and index row of this entry keep "V1.15" as written at the time.
+
 ---
 
 <a id="session-43"></a>

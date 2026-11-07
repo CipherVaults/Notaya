@@ -138,6 +138,8 @@ The owner ran the app and created things before the restart. Claude didn't watch
 
 ### Exact next permitted action
 
+**As of 2026-11-07, about 23:58 UTC (container clock; [EX-2026-11-07-53](execution/2026-11-07-version-plan-answers.md)).** Ahmed answered the version plan (23:53:46 and 23:54:20 UTC): the versions are **1.6 to 1.9, then 2.0 to 2.5** (the old 1.10 to 1.15 in the block below); the order stays as planned; the AI CLI's design direction is set for the 1.6 spec (four levels, hidden notebooks, optional big-change confirm at 20, the AI's files inside Notaya's own data folder, two AIs kept apart; page locks deferred; the bridge undecided). Still planning only; nothing is built.
+
 **As of 2026-11-07, about 23:55 UTC (container clock; PR #62, [EX-2026-11-07-50](execution/2026-11-07-version-plan.md)).** Ahmed's side has a **staged version plan** ([plan/2026-11-07-version-plan.md](plan/2026-11-07-version-plan.md)): every agreed feature across V1.6 to V1.15 in four waves (1.6 the foundation: AI CLI with version history, activity log, recycle bin for everything and "something changed" signals, plus quick fixes; 1.7 menus, keys and bars; 1.8 page features for the Notion hubs; 1.9 tabs and files; 1.10 corkboard and manual; 1.11–1.12 dashboards; 1.13–1.14 whiteboard; 1.15 Notebook mode). It is a **proposal**: Ahmed answers its questions (plan section 10, and the AI CLI list's section 12). **Next permitted action:** planning only (the 1.6 spec and a dependency and licence study); **nothing is built** before Ahmed's word, and each gate in plan section 8 needs his own words. The blocks below are kept as history.
 
 **As of 2026-11-07, about 23:50 UTC (cloud; records PR #61).** The blocks below are kept as history.
