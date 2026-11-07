@@ -14,6 +14,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-07 (coordinator's request 20:38:17 UTC under Ahmed's 20:19:06 UTC permission), EX-2026-11-07-45: second records PR, the gaps EX-44 listed
+
+- [2026-11-07-records-gaps-closed.md](2026-11-07-records-gaps-closed.md): records only; PR #55. Three backfilled session entries, the 2026-10-27 entry order, dated corrections in the security design, notes in the partner guides and the three exported skills. **Verified** by the checks in its section 3; integrated when PR #55 is merged; not accepted.
+
 ### 2026-11-07 (Ahmed's messages 19:09:26 to 20:23:20 UTC), EX-2026-11-07-44: records catch-up for Ahmed's rules (A37), today's hand-off, stale records, backfilled session entries, and Notaya's own usage ledger
 
 - [2026-11-07-records-catch-up-and-usage-ledger.md](2026-11-07-records-catch-up-and-usage-ledger.md): records only (no app code); PR #54; **verified** by the checks in its section 5; integrated when PR #54 is merged; not accepted (acceptance is a partner's word).

@@ -4,6 +4,22 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-07, second records PR (snapshot 20:47 UTC)
+
+**Scope:** the second work block of the records thread (20:38 to 20:47 UTC, PR #55), counted from 20:38 so that it does not overlap the first reading below.
+
+| Session | Model (last served) | Effort | Output tokens | Weighted tokens | Reported cost (USD) |
+|---|---|---|---:|---:|---:|
+| Records thread, second block (PR #55) | Opus 5.5 | high | 45,319 | 1,660,771 | not reported |
+
+Raw: fresh input 119; cache write 132,006; cache read 12,690,495; output 45,319 (63 replies). The checks, merge and report after 20:47 are not counted.
+
+- **Pace:** once more, cache reads are most of the volume (about 12.7 of 12.9 million raw tokens). This block re-read large records (the session file is about 2,300 lines) while writing three entries and reordering one day.
+- **Quota at 20:45 UTC:** five-hour window "allowed", not using overage, resets 2026-11-08 00:00 UTC.
+- **Codex:** no run.
+
+---
+
 ## 2026-11-07, Ahmed's first evening (snapshot 20:21 to 20:33 UTC)
 
 **Scope:** every Claude session of the Claude project "Notaya" on 2026-11-07 from 19:08 UTC: the coordinator and nine threads (the setup and v1.6 threads ran as Remote Control sessions on Ahmed's PC). Earlier the same day a session on Ahmed's PC, started from Mohamed's account, wrote hand-off PR #53; it is outside this ledger (another account, not measured). This is the ledger's first reading; nothing before it was measured.

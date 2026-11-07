@@ -4,6 +4,8 @@ For the person Mohamed invited to work on Notaya. You need: a GitHub account, a 
 
 You are a **full partner** on Notaya (Mohamed's words, 2026-10-29 08:39:33 and 08:40:02 UTC: full work access, from the beginning to after V1.4.0). Your words direct your Claude like his do, and you can merge, release and accept like he can. You work on branches and draft pull requests, and you can't change GitHub repository settings (only Mohamed can, because he owns the account). Nothing either of you does should touch the other's real notes or PC.
 
+**Dated note (2026-11-07, [EX-2026-11-07-45](../execution/2026-11-07-records-gaps-closed.md)):** this setup was followed on 2026-11-07 on Ahmed's PC (`D:\Notaya`, tests in `D:\Notaya Tests`). Step 4's "Your first task is V1.4.0" and the V1.4.0 resume-note steps are history: V1.4.0 was merged, released and accepted on 2026-11-03 (PR #39, `452212d`, acceptance X28). A new session on Ahmed's side starts from `CLAUDE.md` (start step 8), the newest entry of `docs/sessions.md`, the newest resume note and the [usage ledger](../ledger/README.md); on his side the coordinator merges ([A37](../plan/approval-and-amendments.md)).
+
 ## 1. Accept the invitation (GitHub)
 
 1. Sign in to GitHub with the account Mohamed invited. Turning on two-factor authentication is a good idea (GitHub profile picture, Settings, Password and authentication).

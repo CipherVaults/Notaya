@@ -1,3 +1,4 @@
 time_utc,tool,limit,reading,resets_utc,read_by,source,notes
+2026-11-07T20:45Z,Claude,five-hour window,allowed (not using overage); no percentage in the record,2026-11-08T00:00:00Z,records thread,rate_limit_info in this session's record,"Account-wide; the record gives a status, not a percentage"
 2026-11-07T20:33Z,Claude,five-hour window,allowed (not using overage); no percentage in the record,2026-11-08T00:00:00Z,records thread,rate_limit_info in the session records of the coordinator and the threads,"Account-wide; the record gives a status, not a percentage"
 2026-11-07T19:49:26Z,Claude,cloud credit (USD 100),expires in less than 24 hours (Ahmed's words),not recorded,Ahmed,project chat 19:49:26,Exact expiry time and balance not read; whether a given session draws from it is not shown by the records
