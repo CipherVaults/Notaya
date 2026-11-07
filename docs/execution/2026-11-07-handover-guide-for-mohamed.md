@@ -36,3 +36,10 @@ Short form (4 sections). Normal size: records only, no app code. Times are UTC: 
 - Open: Mohamed has not seen it. Ahmed decides when to tell him.
 - Open: the guide is a snapshot of 2026-11-07 22:30 UTC. Ahmed's decisions are moving; whoever changes a rule updates the owning record first, and this guide only if still needed.
 - Ledger: this thread's usage is **not recorded** here; Ahmed's coordinator said another thread handles the ledger refresh (22:28:16 UTC).
+
+## 5. Addendum (2026-11-07 22:45 UTC, PR #59)
+
+- **Instruction:** Ahmed, 22:33:37 UTC: the guide is something "we're going to be continuously updating as we go through, so it wouldn't go stale". Recorded as [A39](../plan/approval-and-amendments.md) and an authority row.
+- **Done:** a "living document, last updated" note and a change log in the repository copy and in the published page; the open-point wording above ("a snapshot") now reads as a standing update rule; a project-memory line for later threads (outside the repository).
+- **Checked:** only records files changed; the repository copy and the page carry the same note and change log. **Not run:** any app check (no code changed).
+- **Result state:** produced and verified as above; integrated when PR #59 is merged; not accepted.

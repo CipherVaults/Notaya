@@ -2,6 +2,8 @@
 
 **Who and where:** written for **Mohamed Sayed (`AbyssWatcher2`)** and his Claude, from **Ahmed's side (`AE0101`)**, by a Claude cloud thread in Ahmed's Claude project "Notaya" (machine: cloud). Written 2026-11-07, about 22:30 UTC (container clock), from the repository at `main` = `987bfc5` (merge of PR #56). A published page with the same content (private to Ahmed unless he shares it): <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>. This Markdown copy exists because the repository is the only memory the two Claudes share.
 
+**Living document (Ahmed, 2026-11-07 22:33:37 UTC, [A39](../plan/approval-and-amendments.md)).** This guide is kept up to date at every milestone or decision on Ahmed's side, in both copies (this file and the published page), so that when Ahmed's cycle ends Mohamed has something solid with few or no gaps. **Last updated: 2026-11-07 22:45 UTC.** See the change log at the end.
+
 **What this is.** A reading aid: what Ahmed's side has set up, studied and decided so far, so that Mohamed's machine and Claude can carry the same methods when Ahmed's cycle ends. **It is not an authority record.** If it disagrees with `docs/plan/approval-and-amendments.md` or `docs/STATUS.md`, those win.
 
 **Result state:** produced. Not read by Mohamed, not accepted. Nothing was run or tested; this guide describes records, not the app.
@@ -80,6 +82,7 @@ You adopted PBS in its smallest useful form for Notaya yourself on 2026-10-27 19
 - **Thorough, mandatory documentation.** Records are read in full before acting, never skimmed (Ahmed, 20:12:10).
 - **Every session that changes the repository, records a decision or ends a work block gets a Session Summary entry in the full 13-section form**, with the "Models, Effort, Roles and Provenance" block. No exemption for small tasks on his side.
 - **One session file.** `docs/sessions.md` holds all entries, newest on top, oldest at the bottom, "even if it takes thousands of lines". Older entries are never rewritten; a correction is a dated note.
+- **This guide is a living document.** It is updated at every milestone or decision, in both copies, with a change log (A39, Ahmed 22:33:37).
 - **The Notion hub** (roadmap and feature board) and the PBS records are updated at each milestone, written so Mohamed can see what was done. The hub is private in Ahmed's Notion; the repository records win where they differ.
 
 ## 5. Who wrote what: partner and machine on every record
@@ -277,4 +280,13 @@ These come from `CLAUDE.md` and apply to every Claude and to Codex.
 - **Read for this guide:** `CLAUDE.md`, `AGENTS.md`, `docs/STATUS.md` (current state, open questions, next action, where-things-live), A37 and A38 with their dated notes and the rows of 2026-11-07, the top of `docs/sessions.md` (index and entry 41 including Decisions Made and Next Steps), `docs/ledger/README.md` and the first ledger blocks and CSV headers, `docs/handoff/collaboration-guide.md` and `claims.md`, and Ahmed's project memory and shared notes.
 - **Not re-read in full for this guide:** the older sessions, the 49+ execution reports, `docs/security-design.md`, `docs/acceptance.md`, and the plan records A9 to A35.
 - **Nothing was run or tested.** The "exists today" column comes from Ahmed's inventory of the code at `9474511` and was not re-checked.
-- **Freshness:** Ahmed's side is moving quickly. Check the newest `sessions.md` entry and STATUS before relying on any line here.
+- **Freshness:** this is a living document (A39) and is updated as Ahmed's side decides things. Its "last updated" line is at the top. Between updates, check the newest `sessions.md` entry and STATUS before relying on any line here.
+
+## Change log
+
+Newest first. Each line: when (UTC), what changed, which side's decision it records.
+
+| When (UTC) | Change | Whose decision |
+|---|---|---|
+| 2026-11-07 22:45 | Marked as a living document (A39); added this change log. | Ahmed's side (22:33:37) |
+| 2026-11-07 22:30 | First version, from the repository at `main` `987bfc5`. | Ahmed's side (22:24:27) |
