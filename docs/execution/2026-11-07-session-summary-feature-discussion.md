@@ -1,4 +1,6 @@
-# EX-2026-11-07-46: the session summary of the whole 2026-11-07 coordinator session (feature discussion), the PC ledger rows and the authority rows
+# EX-2026-11-07-46: the session summary of the whole 2026-11-07 coordinator session (feature discussion), the PC ledger rows, the authority rows, and the who-and-where rule (A38)
+
+**Who and where:** Ahmed's side (`AE0101`); the Remote Control thread "Write today's session summary for Notaya" on Ahmed's Gaming-PC.
 
 Short form (4 sections). Normal size: records only, no app code. Times are UTC: the project chat's message timestamps, `git log`, the reflog and the PC clock.
 
@@ -20,6 +22,7 @@ Short form (4 sections). Normal size: records only, no app code. Times are UTC: 
 4. **STATUS:** a new dated block at the top of "Exact next permitted action" (method, next steps, the PC copy and its empty `AE0101/v1-6-plan` branch); question 28 struck and answered.
 5. **Usage ledger:** the two PC Remote Control sessions measured with the transcript scanner on the PC (the two empty rows of PR #54 now have readings), this thread's own row to 22:06 UTC, and a dated block in `usage-ledger.md`.
 6. **Claims row**, this report and its index row.
+7. **Ahmed's feedback before merge (22:15:49 UTC), applied as [A38](../plan/approval-and-amendments.md):** every record names the partner's side and the machine. In `sessions.md`: a dated note, a "Sessions at a glance" index of all 41 entries (number, date, partner, machine, short topic), a stable anchor `session-NN` before every entry (inserted lines; no old line changed), and the short title plus a Who and where line on the new entry. Partner and machine of older entries come from each entry's own text and the reports it cites; where the records do not say where the work ran, the index says "not recorded" (four entries of 2026-10-23). In the ledger: a `partner` column (claude-sessions, codex-runs), a `machine` column (codex-runs) and an `account` column (quota-readings), with the README. Dated notes: authority rows before 2026-11-07 are Mohamed's ("the owner"); execution reports before EX-44 are Mohamed's side; EX-44 and EX-45 got a Who and where line. `CLAUDE.md` Records gets the rule; commits on Ahmed's side end with a `Side · Machine` line.
 
 ## 3. Checks
 

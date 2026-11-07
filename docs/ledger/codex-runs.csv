@@ -1,1 +1,1 @@
-date_utc,run_label,task,ordered_by,model,reasoning,start_utc,end_utc,input,cached_input,output,quota_5h_before,quota_5h_after,quota_week_before,quota_week_after,result,source,notes
+date_utc,partner,machine,run_label,task,ordered_by,model,reasoning,start_utc,end_utc,input,cached_input,output,quota_5h_before,quota_5h_after,quota_week_before,quota_week_after,result,source,notes

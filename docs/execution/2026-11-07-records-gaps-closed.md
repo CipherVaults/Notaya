@@ -1,5 +1,7 @@
 # EX-2026-11-07-45: second records PR, closing the gaps the first catch-up listed
 
+**Who and where (dated note 2026-11-07, A38):** Ahmed's side (`AE0101`); the same cloud thread as EX-44 (bound to Ahmed's Gaming-PC).
+
 Short form (4 sections). Normal size: records only, no app code. Times are UTC: message timestamps, `git log` and the container clock.
 
 ## 1. Task Overview

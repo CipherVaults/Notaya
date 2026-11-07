@@ -35,16 +35,17 @@ CSV is used so the files open in Excel, Notion or any chart tool, and so a later
 
 ## Columns
 
-`claude-sessions.csv`: `date_utc, session_id, thread_or_task, role, where, model_configured, model_last_served, effort, start_utc, last_update_utc, input, cache_write, cache_read, output, weighted, cost_usd_reported, snapshot_utc, source, notes`
+`claude-sessions.csv`: `date_utc, partner, session_id, thread_or_task, role, where, model_configured, model_last_served, effort, start_utc, last_update_utc, input, cache_write, cache_read, output, weighted, cost_usd_reported, snapshot_utc, source, notes`
 
+- `partner`: whose side the session worked for, with the GitHub login: `Ahmed (AE0101)` or `Mohamed (AbyssWatcher2)` ([A38](../plan/approval-and-amendments.md), 2026-11-07).
 - `role`: coordinator (the mother thread), thread, reader, Remote Control session, reviewer.
-- `where`: cloud or the PC's name.
+- `where`: the machine: cloud, or the PC's name (Ahmed's is `Gaming-PC`).
 - `model_configured` and `model_last_served` are both kept because they can differ (a model switch or a fallback). The session record is the evidence; a selection label alone is not proof of what served the work.
 - `snapshot_utc`: when the numbers were read. A running session's numbers grow after the snapshot; a later row with a later snapshot replaces nothing, it adds a reading.
 
-`codex-runs.csv`: `date_utc, run_label, task, ordered_by, model, reasoning, start_utc, end_utc, input, cached_input, output, quota_5h_before, quota_5h_after, quota_week_before, quota_week_after, result, source, notes`
+`codex-runs.csv`: `date_utc, partner, machine, run_label, task, ordered_by, model, reasoning, start_utc, end_utc, input, cached_input, output, quota_5h_before, quota_5h_after, quota_week_before, quota_week_after, result, source, notes`
 
-`quota-readings.csv`: `time_utc, tool, limit, reading, resets_utc, read_by, source, notes`
+`quota-readings.csv`: `time_utc, tool, account, limit, reading, resets_utc, read_by, source, notes`
 
 ## How to refresh it (at every session stop)
 

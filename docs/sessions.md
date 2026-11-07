@@ -12,9 +12,65 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 **Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 17:00 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
 
+
 ---
 
-# 📘 Session: 2026-11-07 (Ahmed's messages 19:09:26 to 21:56:54 UTC, project chat; coordinator session 19:08:49 to about 22:00 UTC), Notaya: the whole first coordinator session on Ahmed's side — setup and roles, the PBS rules, the two records PRs (#54, #55), the import/export study and the full inventory of what exists, and the first round of feature discussion with every decision and Ahmed's reasons; PBS made the mandatory method for all Notaya work
+**Dated note (2026-11-07 22:15 UTC, Ahmed's rule [A38](plan/approval-and-amendments.md), records PR #56): who and where.** Two partners now share these records, so every entry says **which partner's side** the work was on and **which machine** it ran on. New entries use a short title, `# 📘 Session: <date> · <partner> · <machine> · <topic in a few words>`, with a **Who and where** line under it (partner and GitHub login, Claude account, machines, time range, records editor). Older entries keep their original titles (they are not rewritten); the index below gives each one a short title, its partner side and its machine, taken from the entry's own text and the reports it cites. "Not recorded" means the records do not say where the work ran. Every entry before 2026-11-07 is Mohamed's side; in those entries "the owner" means Mohamed.
+
+## Sessions at a glance (newest first)
+
+| # | Date (UTC) | Partner side | Machine | Topic |
+|---:|---|---|---|---|
+| 41 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [First feature discussion: every decision and its reasons](#session-41) |
+| 40 | 2026-11-07 | Ahmed (`AE0101`) | cloud (bound to Ahmed's Gaming-PC) | [Second records PR (#55)](#session-40) |
+| 39 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Ahmed's side begins: his rules, records PR #54, usage ledger](#session-39) |
+| 38 | 2026-11-07 | Mohamed's Claude account, working for Ahmed (commits authored `AE0101`) | Ahmed's Gaming-PC | [Hand-off to Ahmed's PC and Codex (PR #53)](#session-38) |
+| 37 | 2026-11-04 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.5.1: fixes and release](#session-37) |
+| 36 | 2026-11-03 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.5.0: right-to-left text and databases](#session-36) |
+| 35 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.4.0: tray, vault format, export and import](#session-35) |
+| 34 | 2026-10-29 | Mohamed (`AbyssWatcher2`) | cloud | [Two partners: the collaboration guide (PR #40)](#session-34) |
+| 33 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.3.0 published, repository renamed](#session-33) |
+| 32 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Prepare V1.3.0 with the Windows setup](#session-32) |
+| 31 | 2026-10-24 | Mohamed (`AbyssWatcher2`) | cloud | [Native Windows app plan, then dropped](#session-31) |
+| 30 | 2026-10-28 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [The Windows installer (A30)](#session-30) |
+| 29 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Release V1.2.0](#session-29) |
+| 28 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [PBS review and adoption](#session-28) |
+| 27 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Live audit compared with V1.1.0](#session-27) |
+| 26 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Icon, theme and the rename to Notaya](#session-26) |
+| 25 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Record every step; PC copy on main](#session-25) |
+| 24 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Records catch-up](#session-24) |
+| 23 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | Mohamed's PC | [V1.1.0 portable build](#session-23) |
+| 22 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | Mohamed's PC | [Combined test of four changes](#session-22) |
+| 21 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Pop-out calculators (A24)](#session-21) |
+| 20 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [KeePassXC removed (A24)](#session-20) |
+| 19 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Ribbon editor](#session-19) |
+| 18 | 2026-10-27 | Mohamed (`AbyssWatcher2`) | cloud | [Select several sticky notes (A26)](#session-18) |
+| 17 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.0.1 audit fixes (A23)](#session-17) |
+| 16 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [V1.0 portable build](#session-16) |
+| 15 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Credits; suggested passphrase removed (A22)](#session-15) |
+| 14 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud | [Notes first, security optional (A21)](#session-14) |
+| 13 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | Mohamed's PC | [PC catch-up and clean-up](#session-13) |
+| 12 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | cloud + Mohamed's PC | [Unlock after a move; Start over (A20)](#session-12) |
+| 11 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded (tests ran on Mohamed's PC) | [Passwords-file backup, safe Quit (A19)](#session-11) |
+| 10 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded (tests ran on Mohamed's PC) | [Restore from backup finished (A18)](#session-10) |
+| 9 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded | [Passphrase work paused; GitHub repository made](#session-09) |
+| 8 | 2026-10-23 | Mohamed (`AbyssWatcher2`) | not recorded | [Code review, lock and data-loss fixes (A17)](#session-08) |
+| 7 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (`E:\Project\cipherleaf`) | [Fresh portable build, app icon (A15)](#session-07) |
+| 6 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First commit and release build](#session-06) |
+| 5 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [A calculator in each sticky note (A14)](#session-05) |
+| 4 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Calculator, reworded editor (A13)](#session-04) |
+| 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
+| 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
+| 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-41"></a>
+
+# 📘 Session: 2026-11-07 · Ahmed · cloud + Gaming-PC · First feature discussion
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and his Claude project "Notaya". Machines: the coordinator and most threads in the **cloud**; the setup thread, the stopped v1.6 thread and the records editor on **Ahmed's Gaming-PC** (Remote Control). Time: 19:08:49 to about 22:00 UTC. Records editor: thread "Write today's session summary for Notaya" on Ahmed's Gaming-PC.
+
+**What it covers:** 2026-11-07 (Ahmed's messages 19:09:26 to 21:56:54 UTC, project chat; coordinator session 19:08:49 to about 22:00 UTC), Notaya: the whole first coordinator session on Ahmed's side — setup and roles, the PBS rules, the two records PRs (#54, #55), the import/export study and the full inventory of what exists, and the first round of feature discussion with every decision and Ahmed's reasons; PBS made the mandatory method for all Notaya work
 
 **How this entry relates to the two below.** The two entries below this one were written during the same evening by the records thread. They cover 19:09 to 20:45 UTC (setup, Ahmed's rules, the records catch-up, PR #54) and 20:38 to 21:00 UTC (PR #55). This entry covers the **whole coordinator session**, start to finish, so a reader can follow it in one place. For the first part it gives a short account and points to those entries for the detail; it does not repeat or rewrite them. Everything from 20:22 UTC on (the feature discussion, the import/export study, the full inventory, the staging rule and the PBS rule) is recorded here for the first time.
 
@@ -143,6 +199,12 @@ Detail: the two entries below and [EX-2026-11-07-44](execution/2026-11-07-record
 - **21:56:54**, Ahmed: "Use the AI project bootstrap system skill. This is one of the core critical parts of that. That's for across the entire development of Notaya, not just this task or individual task. The AI PPS is critical for everything that we're going to be working with." ("PPS" is read as PBS.) **21:57:29**, the coordinator confirmed PBS as a standing rule for every Notaya task and thread.
 - This thread then read the Blue reference and its template, loaded the PBS skill (`pbs-start-resume-handoff`, method 1.1) and its session-summary method, fast-forwarded `D:\Notaya` from `4fc269d` to `9474511` at 21:56:54 UTC (reflog; the PC copy had not been fast-forwarded since 2026-11-05, so it was 13 commits behind), left in place the empty local branch `AE0101/v1-6-plan` (made by the stopped v1.6 thread at 19:56:10 UTC), claimed the work (PR #56), measured the two PC threads, and wrote this entry and the records listed under Artifacts.
 
+### 10. Ahmed's review of these records: who and where (22:11 to 22:16 UTC)
+
+- **22:11:17**, Ahmed asked where the documentation is on his PC so he could inspect it, especially the session summary. This thread gave him the paths under `D:\Notaya` (the folder was on the PR's branch, so the new entry was already visible there).
+- **22:15:49**, his feedback: the records "seem good, but they actually propose an issue of its own ... for the very first time, two different people working on the same project and sharing the same AI PBS ... it's actually critical to distinguish which developer is actually doing the work and from which machine the decision summaries come ... and the title of each of the session summary should be easier to parse and understand what it contains, but not to be flooded with everything".
+- Applied in the same PR as [A38](plan/approval-and-amendments.md): this entry's short title and Who and where line; a "Sessions at a glance" index of all entries at the top of this file, with partner and machine for each (older titles not rewritten); stable `session-NN` anchors; partner, machine and account columns in the ledger; dated notes saying that older authority rows and reports are Mohamed's side; the rule in `CLAUDE.md`; and a `Side · Machine` line at the end of commit messages on Ahmed's side.
+
 ## 🧠 Key Insights
 
 ### Ahmed's lists are reminders; the discussion is the design
@@ -191,6 +253,7 @@ Detail: the two entries below and [EX-2026-11-07-44](execution/2026-11-07-record
 - **Confirmed (Ahmed, 20:41:50): no spending cap.** The coordinator watches the 5-hour and weekly limits of both Claude and Codex so work is not cut off mid-task. This answers STATUS question 28.
 - **Confirmed (Ahmed, 21:54:38):** the coordinator handles the threads, including resolving idle ones.
 - **Working preference (Ahmed, 21:14:10, 21:16:47):** use emojis as section markers, in moderation.
+- **Confirmed (Ahmed, 22:15:49): records say who and where** ([A38](plan/approval-and-amendments.md)): every record names the partner's side and the machine; session titles are short (date, partner, machine, a few words), with the detail in a Who and where line and the sections.
 
 ### The features: the coordinator's list from project memory (verbatim)
 
@@ -383,6 +446,8 @@ Ahmed calls himself "a director, in a sense, and user", not a developer (19:49:2
 
 ---
 
+<a id="session-40"></a>
+
 # 📘 Session: 2026-11-07 (coordinator's request 20:38:17 UTC; work 20:38 to about 21:00 UTC, container clock), Notaya: second records PR, the gaps of the first catch-up closed (PR #55, EX-2026-11-07-45), cloud thread session
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -487,6 +552,8 @@ The record set now has no missing period for a big stop. The 2026-10-27 day read
 **The new entries and corrections:** High; every fact is taken from a named report, `git log` or the code. **Ordering of the pop-out entry:** Medium; it is placed by its last commit, not by a recorded end time.
 
 ---
+
+<a id="session-39"></a>
 
 # 📘 Session: 2026-11-07 (Ahmed's messages 19:09:26 to 20:23:20 UTC; work 19:08:49 to about 20:45 UTC, session records and container clock), Notaya: Ahmed's side begins, his working rules (A37), the Notion hub, a full reading of the records, and the records catch-up with Notaya's own usage ledger, a coordinated multi-thread session in the Claude project "Notaya"
 
@@ -709,6 +776,8 @@ The evening turned a new partner, a new PC and a new working environment into a 
 
 ---
 
+<a id="session-38"></a>
+
 # 📘 Session: 2026-11-07 (commits 18:27:46 to 18:57:45 UTC, merge 19:22:15 UTC, from `git log`), Notaya: hand-off to Ahmed's PC and Codex, `AGENTS.md`, PBS skill v1.1, toolchain and smoke test (PR #53), Remote Control session on Ahmed's PC started from Mohamed's account
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -801,6 +870,8 @@ Notaya moved from Mohamed's setup to Ahmed's PC and tools without losing anythin
 
 ---
 
+<a id="session-37"></a>
+
 # 📘 Session: 2026-11-04 17:02 to 2026-11-05 07:43 UTC (owner's messages 2026-11-04 17:02:11 to 2026-11-05 07:16:25 UTC), Notaya V1.5.1: fixes, PC test rounds, Hubs import fixes, text direction and the release, cloud thread session with a Remote Control session on the owner's PC
 
 **Executor:** Claude (Claude Code) in a cloud thread started by the coordinator; builds, tests and, from 2026-11-04 23:09:58 UTC, code edits ran in a Remote Control session on the owner's PC. **Record basis:** the thread messages and relays (UTC), the PC clock, the repository (`main` `0e7e580` to `95ca8b2`), the PC result files `v151\RESULTS-v151.md` and `v151b\RESULTS-v151b.md`. **Reconstructed:** the middle part (2026-11-04 18:38 to 23:09) is rebuilt from the earlier results files and the Execution Summary; the Hubs, direction and release parts were written from this session's own transcript at the end. **Big stop:** a release published, not accepted.
@@ -825,6 +896,8 @@ V1.5.1 is published and **not accepted**. The owner tries it and accepts it or r
 **Addendum 2026-11-05 (after 11:08 UTC, written by a PC session started from the coordinator's relay; the entry above is not rewritten):** the owner wrote "I approve this version" at 11:08:39 UTC (cited and relayed by the coordinator at 11:08:44 UTC). It was read as the **acceptance of release V1.5.1**; recorded in `acceptance.md` (X27), `STATUS.md`, the authority row and EX-43 section 8f. The not-run list did not change. It grants no new permission. The PC copy was fast-forwarded at 07:16:29, 08:17:41 (`cf6dae6`) and 08:21:38 UTC (`2812d65`), from the reflog. Records PRs #50 and #51 were merged by the owner; this addendum is in the third records PR (draft). Where to resume: the owner's next instruction; items for the friend as already listed in the resume note.
 
 ---
+
+<a id="session-36"></a>
 
 # 📘 Session: 2026-11-03 19:20 to 2026-11-04 about 15:05 UTC (owner's messages 2026-11-03 19:20:58 to 2026-11-04 14:30:06 UTC), Notaya V1.5.0: right-to-left text, PDF letters, full local databases with automations, Notion import rework, three PC rounds and the release, cloud thread with PC sessions (backfilled 2026-11-07)
 
@@ -920,6 +993,8 @@ Notaya gained a full local database system and right-to-left text everywhere in 
 
 ---
 
+<a id="session-35"></a>
+
 # 📘 Session: 2026-10-28 17:01 to 2026-11-03 18:23 UTC (owner's messages 2026-10-28 17:01:14 to 2026-11-03 18:23:19 UTC), Notaya V1.4.0: tray, Notaya vault format, export and import, shelf and links, error log, three PC rounds, the release and the first acceptance, cloud threads with PC sessions (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1009,6 +1084,8 @@ V1.4.0 gave Notaya its own vault format, export and import in four formats, a tr
 
 ---
 
+<a id="session-34"></a>
+
 # 📘 Session: 2026-10-29 (owner's messages 07:55:55 to 08:59:37 UTC), Notaya: two partners and their two Claudes, the collaboration guide, claim board and setup steps (A34, PR #40), cloud thread session (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1095,6 +1172,8 @@ Notaya became a two-partner project with written rules for sharing work through 
 **What was written and merged:** High (EX-38, `git log`). **Mohamed's view of the readings:** unknown (never recorded).
 
 ---
+
+<a id="session-33"></a>
 
 # 📘 Session: 2026-10-28 16:07 to about 17:00 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
 
@@ -1184,6 +1263,8 @@ V1.3.0, the first Notaya release with a Windows setup, went out with its files c
 
 ---
 
+<a id="session-32"></a>
+
 # 📘 Session: 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:36 to about 16:10 UTC), Notaya: prepare V1.3.0 with the Windows setup, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests in one Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC), the PC report, the repository at `main` `52841f1` then `37774c6`. **Reconstructed:** nothing; written at the end. **Big stop:** a release prepared, not published.
@@ -1204,6 +1285,8 @@ Where to resume: the owner merges PR #34 ("Create a merge commit") and runs the 
 
 ---
 
+<a id="session-31"></a>
+
 # 📘 Session: 2026-10-24 to 2026-10-28 (owner's messages 2026-10-24 08:59:52 to 2026-10-28 14:34:32 UTC), Notaya: plan for a native Windows app, then dropped, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC), draft PR #11.
@@ -1217,6 +1300,8 @@ Where to resume: the owner merges PR #34 ("Create a merge commit") and runs the 
 Where to resume: nothing open for the native idea. The postponed items are in STATUS question 26.
 
 ---
+
+<a id="session-30"></a>
 
 # 📘 Session: 2026-10-28 11:19 to 14:32 UTC (owner's messages 11:19:57 to 14:31:46 UTC), Notaya: the Windows installer (A30), from the plan re-check to the PC tests and the merge, cloud thread with a PC session (backfilled 2026-11-07)
 
@@ -1311,6 +1396,8 @@ Notaya got a real Windows setup that keeps notes outside the program folder and 
 
 ---
 
+<a id="session-29"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 19:40:47 to 22:28:11 UTC; work 19:41 to about 22:30 UTC, system clock and PC clock), Notaya: release V1.2.0, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests ran in Remote Control sessions on the owner's PC. **Record basis:** the thread messages (UTC timestamps), the PC sessions' reports, the GitHub API, the repository at `main` `49cd9de` then `4e40d1a`. **Reconstructed:** nothing; written at the end. **Big stop:** a release.
@@ -1328,6 +1415,8 @@ Nothing is accepted. Open for the owner: acceptance of V1.2.0 (and earlier relea
 
 ---
 
+<a id="session-28"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 16:29:35 to 19:08:33 UTC; work 16:30 to about 19:45 UTC, system clock), Cipherleaf: PBS review, then adoption in its smallest form, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the thread messages (UTC timestamps), the Notion hub and every page and file that could be opened, the repository at `main` `5013244`. **Reconstructed:** nothing; written at the end of the work. **Big stop:** a change of direction (a new way of working), so this entry has the fuller form.
@@ -1343,6 +1432,8 @@ Not changed: code, the security design, the plan snapshot. Not run: anything (do
 
 ---
 
+<a id="session-27"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 17:07:25 to 18:56:19 UTC; work 17:08 to about 19:05 UTC, system clock), Cipherleaf: live audit (PR #10) compared with V1.1.0, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** GitHub PR #10, the "Live PC audit checks" thread (read in full), `git log` and the code of `main` `6981442`.
@@ -1356,6 +1447,8 @@ Not changed: code, the security design, the plan snapshot. Not run: anything (do
 Not changed: code, the security design (no promise changed), the plan snapshot. Not run: anything on Windows, `cargo audit`, tests. Nothing is accepted. Where to resume: the owner merges the PR, then the PC copy is fast-forwarded; a fix release only on his word.
 
 ---
+
+<a id="session-26"></a>
 
 # 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
 
@@ -1374,6 +1467,8 @@ Not changed: code, the security design (no promise changed), the plan snapshot. 
 Run the PC checks on throwaway data ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) section 4), then the owner merges PR #24 and his PC copy is fast-forwarded. Nothing is accepted.
 
 ---
+
+<a id="session-25"></a>
 
 # 📘 Session: 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), Cipherleaf: record every step, PC copy on `main`, cloud thread session
 
@@ -1394,6 +1489,8 @@ Not changed: code. Nothing is accepted.
 
 ---
 
+<a id="session-24"></a>
+
 # 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator. **Record basis:** the project chat and thread messages (UTC timestamps), `git log` of `main` at `87eb7ff`, the GitHub pull request list, the read-only PBS review thread's gap list. **Reconstructed:** items 1 and 2 below come from the project chat, not from a session that recorded them at the time.
@@ -1407,6 +1504,8 @@ Not changed: code. Nothing is accepted.
 Not changed: code, the security design (no promise changed), the handoff files, the plan snapshot. Outside the repo and not changed here: the GitHub About text and the three saved skills still mention KeePassXC. Nothing is accepted.
 
 ---
+
+<a id="session-23"></a>
 
 # 📘 Session: 2026-10-27 (owner "Yes please" 08:21:52 UTC; work about 08:22 to 08:40 UTC, system clock), Cipherleaf: V1.1.0 portable build, thread session on the owner's PC
 
@@ -1422,6 +1521,8 @@ Not run: the new features in the real window on this exe, a plain first start, a
 
 ---
 
+<a id="session-22"></a>
+
 # 📘 Session: 2026-10-27 (owner's "Yes test" 07:21:42 UTC; work 07:22 to 08:20 UTC, PC system clock), Cipherleaf: combined test of the four changes, PC thread session
 
 **Executor:** a Claude Code session on the owner's PC (model output). **Record basis:** that thread's messages. **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
@@ -1434,6 +1535,8 @@ Not run: the new features in the real window on this exe, a plain first start, a
 Not run: a hand click-through, the release ZIP (made next, EX-2026-10-27-24). Nothing is accepted.
 
 ---
+
+<a id="session-21"></a>
 
 # 📘 Session: 2026-10-27 (from 06:45 UTC, container clock), Cipherleaf: pop-out calculators (A24), cloud thread session
 
@@ -1453,6 +1556,8 @@ Resume: draft PR into `main`; the PC check and the owner's review. Nothing is ac
 
 ---
 
+<a id="session-20"></a>
+
 # 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), Cipherleaf: KeePassXC removed (A24), cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread session started by the project coordinator, with a documentation agent and an independent review agent (model output). **Record basis:** the project-chat timestamp of the owner's message, the system clock and the repository.
@@ -1466,6 +1571,8 @@ Resume: draft PR into `main`; the PC check and the owner's review. Nothing is ac
 Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts), the app itself. Nothing is accepted.
 
 ---
+
+<a id="session-19"></a>
 
 # 📘 Session: 2026-10-27 (06:45 to about 06:56 UTC, system clock), Cipherleaf: ribbon editor, cloud thread session
 
@@ -1481,6 +1588,8 @@ Not run: the real app, a real-exe test on Windows. Nothing is accepted.
 
 ---
 
+<a id="session-18"></a>
+
 # 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work until about 06:53 UTC, system clock), Cipherleaf: select several sticky notes and delete them together (A26), cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** [EX-2026-10-27-sticky-multi-select](execution/2026-10-27-sticky-multi-select.md), the commit (`31dc920`, 06:53:05 UTC) and the project chat (draft PR #17 announced 06:53:36 UTC). **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
@@ -1494,6 +1603,8 @@ Not run: the real app, a real-exe test on Windows. Nothing is accepted.
 Nothing is accepted.
 
 ---
+
+<a id="session-17"></a>
 
 # 📘 Session: 2026-10-23 (after 22:25:50 UTC; work times not recorded), Cipherleaf: V1.0.1 audit fixes (A23), cloud thread session
 
@@ -1517,6 +1628,8 @@ Not run: free-space check, real-PC USB removal, idle, Win+L, sleep, a screen rea
 
 ---
 
+<a id="session-16"></a>
+
 # 📘 Session: 2026-10-23 (after the owner's merge at 20:45:05 UTC; work times not recorded), Cipherleaf: V1.0 portable build, cloud thread session
 
 **Executor:** Claude (Claude Code) in the cloud thread session, with a PC remote session for the build (model output). **Record basis:** GitHub (merge time, merge commit), the PC session's report.
@@ -1530,6 +1643,8 @@ Not run: free-space check, real-PC USB removal, idle, Win+L, sleep, a screen rea
 Not run: testA, testB, testC c2/c2q, testD1, USB removal, idle lock, Win+L and sleep on a real PC, `cargo audit`. Nothing is accepted.
 
 ---
+
+<a id="session-15"></a>
 
 # 📘 Session: 2026-10-23 (owner message 20:12:53 UTC; times of the other work not recorded), Cipherleaf: Credits for open source and the suggested passphrase removed (A22), cloud thread session
 
@@ -1548,6 +1663,8 @@ Not run: testA, testB, testC c2/c2q, testD1, USB removal, idle lock, Win+L and s
 The owner reviews draft PR #3 (A21 and A22) and decides on the merge; then the stable portable build and the private GitHub release "CipherLeaf V1.0" follow. Open: the licence for Cipherleaf itself, the notices gaps (WebView2 loader licence text, KeePassXC bundled-library source offer including Qt under LGPL, the `Licenses` folder contents to produce at build), the version numbers (`Cargo.toml` and `package.json` 0.1.0, `tauri.conf.json` 1.0.0) and `cargo fmt` (not clean). See STATUS. The A21 resume steps below still apply.
 
 ---
+
+<a id="session-14"></a>
 
 # 📘 Session: 2026-10-23 (owner messages 18:32:20 to 18:47:35 UTC), Cipherleaf: Notes first, security and passwords optional (A21), cloud thread session
 
@@ -1580,6 +1697,8 @@ The owner reviews draft PR #3 and A21 on a real PC and merges it when satisfied;
 
 ---
 
+<a id="session-13"></a>
+
 # 📘 Session: 2026-10-23 (about 17:00 to 21:45 UTC clock) — Cipherleaf — PC catch-up, test-folder cleanup, stale records fixed
 
 **Executor:** Claude (Opus 5.5) as a thread session of the owner's project; the work on the PC was read-only except the deletions below. **Reconstructed:** times are approximate system-clock readings (the PC clock read about 21:40 when the folders were deleted).
@@ -1597,6 +1716,8 @@ Unchanged from [STATUS.md](STATUS.md): the owner picks the next task from the ha
 
 ---
 
+<a id="session-12"></a>
+
 # 📘 Session: 2026-10-23 (17:04–17:35 UTC) — Cipherleaf — Unlock after moving the portable folder; Start over (A20)
 
 **Record basis:** written at the time, from the session transcript (owner message times 17:04:30, 17:16:33 and 17:26:10 UTC), the system clock on the owner's PC for the test and the repository. Executor: Claude (Claude Code) in a cloud thread, plus a Remote Control session on the owner's PC.
@@ -1608,6 +1729,8 @@ Unchanged from [STATUS.md](STATUS.md): the owner picks the next task from the ha
 **Resume at:** the Rust tests and a real-exe check of the new screens on the PC; the owner's review; the owner decides whether to merge into `main` and `feat/a9-keepassxc`.
 
 ---
+
+<a id="session-11"></a>
 
 # 📘 Session: 2026-10-23 (after about 14:17, until about 16:04 UTC) — Cipherleaf — Passwords-file backup and restore, safe Quit (A19), rebuilt
 
@@ -1636,6 +1759,8 @@ The owner tries the new exe (lock a few times and look at `data\backups`; Settin
 
 ---
 
+<a id="session-10"></a>
+
 # 📘 Session: 2026-10-23 (about 13:55–14:20 UTC) — Cipherleaf — Restore from backup and readable passphrase finished (A18), rebuilt
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1661,6 +1786,8 @@ The owner tries the new exe and replaces the outdated ZIP copies. Not tested: ch
 
 ---
 
+<a id="session-09"></a>
+
 # 📘 Session: 2026-10-23 (about 11:00–13:55 UTC) — Cipherleaf — Passphrase and restore work paused, GitHub repository created
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1685,6 +1812,8 @@ Finish the restore work (rebuild, re-run the real-exe tests, records, commit), t
 **Correction (added 2026-10-23, later the same day):** point 1 above says the restore work was uncommitted and not in the portable build. It was finished afterwards: committed as `1273093` (A18) and put into the rebuilt portable build and ZIP. See the entry above this one and [EX-14](execution/2026-10-23-restore-from-backup.md).
 
 ---
+
+<a id="session-08"></a>
 
 # 📘 Session: 2026-10-23 (from about 08:28 UTC) — Cipherleaf — Code review, lock and data-loss fixes (A17), rebuild
 
@@ -1809,6 +1938,8 @@ Text typed just before Lock or close is now saved first, and several related loc
 
 ---
 
+<a id="session-07"></a>
+
 # 📘 Session: 2026-10-22 (owner's messages from 23:14:05 UTC, the last ones after 23:39 UTC at times not recorded; commits 23:20:52 to 23:51:59 UTC, from `git log`), Cipherleaf: fresh portable build, calculator border fix and app icon (A15), wider pages and Paper as the default look (A16), PC session (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -1896,6 +2027,8 @@ In forty minutes the owner got a fresh build he could share privately, and his f
 **What was built and committed:** High (three reports and `git log`). **Exact times of the A16 messages:** not recorded. **Usage:** unknown.
 
 ---
+
+<a id="session-06"></a>
 
 # 📘 Session: 2026-10-22 (22:58 UTC onward) — Cipherleaf — Commit of A10–A14 and the first release build
 
@@ -2021,6 +2154,8 @@ The work is saved in Git and there is a first portable build that starts, keeps 
 
 ---
 
+<a id="session-05"></a>
+
 # 📘 Session: 2026-10-22 (22:40 UTC onward) — Cipherleaf — A14: a small calculator inside each sticky note
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -2129,6 +2264,8 @@ A small calculator is one click away inside every sticky note, sharing the same 
 **Not higher because:** a real sticky window and real clicks were not tried, and the owner hasn't reviewed it.
 
 ---
+
+<a id="session-04"></a>
 
 # 📘 Session: 2026-10-22 (22:26 UTC onward) — Cipherleaf — A13: calculator under Sticky notes, reworded and trimmed block editor, name kept
 
@@ -2263,6 +2400,8 @@ The three named items are done to the extent they can be checked without the rea
 See [EX-07](execution/2026-10-22-a13-calculator-and-wording.md) and [acceptance.md](acceptance.md) (X8, X9).
 
 ---
+
+<a id="session-03"></a>
 
 # 📘 Session: 2026-10-22 (21:32 UTC onward) — Cipherleaf — PBS reconciliation before continuing development
 
@@ -2409,6 +2548,8 @@ The project now has what the PBS framework asks for at this size: a ledger of wh
 - Decision Records — not adopted. Compact-set confirmation for `acceptance.md` and `sessions.md` — awaiting the owner (STATUS question 8).
 
 ---
+
+<a id="session-02"></a>
 
 # 📘 Session: 2026-10-22 (15:49–18:10 UTC) — Cipherleaf — First hands-on run, KeePassXC inside the window, redesign, Notion-style notes, equations, and portability questions
 
@@ -2558,6 +2699,8 @@ The project went from "never launched" to a working, restyled app with a block e
 See [acceptance.md](acceptance.md) and EX-02 to EX-05 for the individual checks and their limits.
 
 ---
+
+<a id="session-01"></a>
 
 # 📘 Session: 2026-10-22 (10:53–13:30 UTC) — Cipherleaf — Plan, first build, PBS adoption, and the KeePassXC amendment
 
