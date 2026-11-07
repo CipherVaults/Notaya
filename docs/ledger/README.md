@@ -17,7 +17,7 @@
 | [`codex-runs.csv`](codex-runs.csv) | Codex run (`codex exec` or one Codex app task) | Codex's own token report and its quota reading before and after |
 | [`quota-readings.csv`](quota-readings.csv) | reading of a usage limit at a known time | Claude's `/usage` screen or claude.ai usage page, Codex `/status`, the session record's rate-limit block, the credit balance |
 
-CSV is used so the files open in Excel, Notion or any chart tool, and so a later dashboard can read them directly. Every row says where its numbers came from (`source`) and what they do not show (`notes`).
+A dashboard page (an Artifact) is built from the CSV files with `python3 -I tools/usage-ledger/build_dashboard.py OUT.html` and published to the same link each time; the page never owns a fact. CSV is used so the files open in Excel, Notion or any chart tool, and so a later dashboard can read them directly. Every row says where its numbers came from (`source`) and what they do not show (`notes`).
 
 ## What is measured, and the units
 
