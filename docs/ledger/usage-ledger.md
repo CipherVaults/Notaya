@@ -20,6 +20,7 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 - **Totals after this reading** (newest row of each session, 15 rows): 19.98 million weighted tokens; 602,997 output tokens; reported cost **USD 31.93** across the 10 cloud sessions that report one. The five Gaming-PC rows carry tokens but no dollar figure.
 - **Against the USD 100 credit:** reported spend is USD 31.93. For the PC rows (6.0 million weighted Opus tokens, about 0.6 million Sonnet) a **rough estimate** of USD 20 to 29 follows from the dollars-per-million-weighted-tokens range of reported rows (Opus 2.93 to 4.18, Sonnet 1.76 to 2.35). It is an estimate, not a record, and whether PC sessions draw from the cloud credit is not shown.
 - **Quota at 22:25 UTC:** Claude five-hour window "allowed", not using overage, resets 2026-11-08 00:00 UTC. Weekly limit, Codex limits and the credit balance were not read.
+- **This thread** (22:24 to about 22:35 UTC): a row is in the CSV with empty numbers, because a running session's own record has no usage block. Its numbers are to be read later from its session id and added as a newer row.
 - **Codex:** no run.
 - **New:** the dashboard page ("Notaya usage ledger", an Artifact) is built from the three CSV files by `tools/usage-ledger/build_dashboard.py`; the CSV files stay the owner of the facts.
 
