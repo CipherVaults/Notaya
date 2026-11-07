@@ -14,6 +14,12 @@ Existing boundaries can be imperfect. If the operating system has evolved, propo
 
 A well-written ownership table does not establish that the document obeys it. Test representative actual passages against that table. A true, carefully dated or qualified fact can still be misplaced. Ask why the receiving document needs it. Conversely, a numerical gate may be a deliberately accepted planning constraint. Do not remove or generalize it merely because numbers can age; establish its authority, purpose and appropriate owner first.
 
+## 🔎 Notice drift at meaningful work boundaries
+
+At a substantive stop, amendment, handoff or re-entry, compare the affected record with its adopted purpose/profile and any later approved change. Look for lost decision/evidence/unfinished-work retrievability, stale “latest” indexes, misleading date coverage and current instructions contradicting their owner—not merely heading counts. Do not scan or reformat the whole archive after every small action.
+
+When bounded maintenance is authorized, correct affected current pointers and record structure while preserving original facts, source links and chronology; use a dated addendum/reconciled view where rewriting would imply knowledge that did not exist. Missing times or decisions stay unknown. If a format-policy change or write is outside authority, propose the precise repair instead. Respect a legitimate new profile, and keep a tiny update compact. Read back the repair and check that a fresh reader can find the effective decision, evidence limit and next action.
+
 ## 🧭 Before editing
 
 1. Confirm the actual request, destination and permitted scope.

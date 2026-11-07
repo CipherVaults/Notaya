@@ -84,7 +84,7 @@ Use the full [Plan](../../../assets/templates/plan.md) and [Goal](../../../asset
 
 ## 5. Copy and adapt the raw files
 
-Each file in `templates/` is the reusable artifact itself. Copy the entire file, then:
+Each file in the package-relative `assets/templates/` shelf is the reusable artifact itself. Copy the entire file, then:
 
 1. Replace every placeholder, whether written as `{{placeholder}}`, `<Placeholder>`, or `[Placeholder]`, with a real value or an explicit “Unknown,” “Not applicable,” or “Not yet agreed.” An unresolved placeholder is not a fact or approval.
 2. Remove non-applicable repeat blocks and empty optional categories, while preserving the document's identity and method.
