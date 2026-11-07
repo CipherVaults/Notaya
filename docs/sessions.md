@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 42 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Handover guide for Mohamed (PR #57)](#session-42) |
 | 41 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [First feature discussion: every decision and its reasons](#session-41) |
 | 40 | 2026-11-07 | Ahmed (`AE0101`) | cloud (bound to Ahmed's Gaming-PC) | [Second records PR (#55)](#session-40) |
 | 39 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Ahmed's side begins: his rules, records PR #54, usage ledger](#session-39) |
@@ -62,6 +63,98 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-42"></a>
+
+# 📘 Session: 2026-11-07 · Ahmed · cloud · Handover guide for Mohamed
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and Claude project "Notaya". Machine: **cloud** (thread "Build a handover guide for Mohamed"). Time: 22:24:41 UTC (thread start) to the merge of PR #57 (merge time in `git log`). Records editor: the same thread.
+
+**What it covers:** 2026-11-07 (Ahmed's message 22:24:27 UTC; coordinator's follow-up 22:28:16 UTC), Notaya: a published guide that carries Ahmed's side's methods and findings to Mohamed's machine, and its Markdown copy in `docs/handoff/` (EX-2026-11-07-47, PR #57).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Thread "Build a handover guide for Mohamed" (writer of the page, the Markdown copy and these records) | Configured `claude-sonnet-5-5`; last served model not read here | Not recorded | The session's own configuration. Not proof of the model that served every turn |
+| Coordinator (asked for the page, then for the Markdown copy and the merge) | Not read here | Not recorded | Its relay messages of 22:24:41 and 22:28:16 UTC |
+| Codex | None ran | n/a | No Codex run was ordered |
+
+**Record basis:** written at the end of the work by the thread, from the sources named in [EX-2026-11-07-47](execution/2026-11-07-handover-guide-for-mohamed.md) section 2, `git log` and the container clock. Usage: **not recorded** in the [ledger](ledger/README.md); the coordinator said another thread handles the ledger refresh (22:28:16 UTC).
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC).
+- Start: 22:24:41 UTC (thread started). Page published about 22:30 UTC (container clock). Claim pushed about 22:35 UTC.
+- End: when PR #57 was merged (see `git log`).
+- Session type: documentation (reading aid, no product decision).
+- Contributors: Ahmed (the ask, 22:24:27); the coordinator (the relays); this thread.
+- Active working time: not measured.
+- Reason for summary: Ahmed's rule (A37 item 5): every session that changes the repository gets a full entry.
+
+## 🎯 Session Goal
+
+Ahmed asked for something that carries "the frameworks that we work with and the methodologies that we use" over to Mohamed's machine, so that Mohamed has the same established findings when Ahmed's cycle ends, and so that it is clear which part belongs to which machine and account. The goal was a plain-language guide, then (coordinator, 22:28:16) a copy in the repository where Mohamed's Claude can read it.
+
+## 🧭 Starting State
+
+`main` at `987bfc5` (PR #56 merged). A38 and the session index had just been added. No handover document for Mohamed existed. The project had no published artifacts.
+
+## 🛠️ Actions Taken
+
+1. Read the records named in EX-47 section 2.
+2. Published the guide as a private page.
+3. Claimed the work (claims row, EX-47, session 42), opened draft PR #57, wrote the Markdown copy, the Execution Summary, this entry and one STATUS line, ran the checks, merged.
+
+## 🧠 Key Insights
+
+- An artifact is not shared memory: Mohamed's Claude can only read what is committed. The Markdown copy is what makes the guide usable by the other side.
+- The guide's main job is separating three kinds of item: rules both already have, Ahmed's decisions that Mohamed has not agreed to, and things that need both partners.
+
+## 📌 Decisions Made
+
+- Read "Muhammad Zaid" as Mohamed Sayed (`AbyssWatcher2`), the partner. Ahmed said his voice transcription makes such errors (20:16:10, 20:17:28).
+- The guide is not sent to Mohamed. Ahmed decides that.
+- No rule was changed. The guide only reads A34, A37 and A38 and asks Mohamed to confirm.
+
+## ⚠️ Difficulties / Friction
+
+None beyond size: the source records are long and were read in parts (see "not read in full" in EX-47).
+
+## 🔧 Adjustments Made
+
+None.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk: the guide is a snapshot of 2026-11-07 22:30 UTC and will go stale as Ahmed's decisions change. Its header and last section say so.
+- Risk: the "exists today" column repeats Ahmed's inventory (code at `9474511`), not re-checked.
+
+## 📍 Current Position
+
+**As of:** merge of PR #57. **Before:** no handover guide. **After:** `docs/handoff/2026-11-07-handover-guide-for-mohamed.md` exists on `main`. **Current standing:** produced, verified (EX-47 section 3), integrated on merge; not accepted. **Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. Ahmed: decide when and how to tell Mohamed.
+2. Mohamed: read the guide; confirm or change the A34 reading (STATUS question 27); say which of Ahmed's method rules he wants on his side.
+3. The coordinator: keep the guide current when a rule changes, by updating the owning record first.
+
+**Do not reopen / repeat:** the reading of the 2026-11-07 records for this purpose.
+
+## ❓ Open Questions
+
+Mohamed's answers to the questions at the end of section 12 of the guide. Needed from: Mohamed.
+
+## 🧾 Session Outcome
+
+Mohamed's Claude can start from one document that says what Ahmed's side has set up, which parts are Ahmed's alone, and which need both partners.
+
+## 🔍 Confidence Level
+
+**Accuracy of the rules quoted:** High; each is taken from A37, A38, `CLAUDE.md`, the collaboration guide or entry 41. **Completeness:** Medium; older records were not re-read in full.
+
 ---
 
 <a id="session-41"></a>
