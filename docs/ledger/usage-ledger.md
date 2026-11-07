@@ -4,6 +4,41 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-07, measured limits and credit from Ahmed's screens (22:32 UTC)
+
+**Who and where:** Ahmed's side (AE0101). The figures are read off three screenshots Ahmed sent at 22:32 UTC (the claude.ai plan-usage popup and the project's Usage screen, on his PC); the cloud thread "Publish the Notaya usage ledger" wrote them in. Source and time are in every row of [`quota-readings.csv`](quota-readings.csv) and [`project-usage-screen.csv`](project-usage-screen.csv).
+
+### Measured (screenshots, 22:32 UTC)
+
+| What | Reading | Resets or expires |
+|---|---|---|
+| Claude five-hour limit (plan: Pro) | **46% used** | 2026-11-08 00:00 UTC (screen: 2:00 AM GMT+2) |
+| Claude weekly limit, all models | **6% used** | Friday 2026-11-13 02:00 UTC (screen: Fri 4:00 AM GMT+2) |
+| Cloud credit (USD 100) | **USD 48 left, so USD 52 used** | 2026-11-08 **19:09 UTC** (screen: 9:09 PM GMT+2, Nov 8); replaces the assumed 19:00 |
+| Project usage (all 15 threads) | **157.7M tokens**, cache hit 97%; Opus 4 threads, Sonnet 11 | not applicable |
+
+Project tokens by kind: Opus: input 17.8k, output 455.8k, cache write 1.8M, cache read 104.9M. Sonnet: input 28.9k, output 268.6k, cache write 2.5M, cache read 47.7M. Weighted with the ledger's formula that is about 24.3 million (Opus 15.0M, Sonnet 9.3M); the CSV rows read earlier in the evening added up to 19.98 million.
+
+### The gap between USD 52 and USD 31.93
+
+The credit screen says **USD 52 used**. The ledger rows that carry a dollar figure add up to **USD 31.93**. So **USD 20.07 is not itemised by thread**; the screen gives no per-thread dollars and the ledger does not guess which thread it belongs to. What the records do show:
+
+- **Ten sessions report a cost** (the cloud sessions read through `get_session`), and for those the ledger tokens match the project's Usage screen to the first digits (for example "Map everything Notaya already does": 17,932,052 tokens in the ledger, 17.9M on screen; "Learn the PBS hub": 17,104,094 and 17.1M). Those ten rows are therefore complete up to their snapshot time.
+- **Six rows have no dollar figure** (five threads, one of them in two rows): the Gaming-PC Remote Control threads and the cloud threads bound to Gaming-PC whose record gave no cost. They hold tokens, or none yet for this thread. The earlier token-based estimate for them was USD 20 to 29. The gap of USD 20.07 sits at the low end of that range, which fits, but it does **not prove** that the PC threads draw from the credit: no record says so.
+- **Three threads kept working after the snapshot the ledger holds** (tokens on screen against the ledger's last row): "Catch up Notaya records and start the ledger" 39.5M against 30.9M, "Write today's session summary" 29.9M against 11.5M, "Set up Notaya review and coordination" 4.3M against 3.9M. This thread (5.6M, still running) and the coordinator (15.9M against 15.5M) also grew.
+- The reported dollar figures are at API list prices; the credit may be charged differently (for example one-hour cache writes cost more than the ledger's 1.25 weight).
+
+The gap is therefore most likely the threads with no dollar figure plus work done after the last reading. The ledger cannot split it further until each thread's cost is read from a cost-bearing record.
+
+### What it means for pace
+
+- **Credit:** USD 48 left for about 20.6 hours, which is about USD 2.30 an hour if it were spread evenly. Tonight so far ran at roughly USD 52 in 3.4 hours (about USD 15 an hour), mostly the three Opus threads.
+- **Five-hour window:** 46% used with the window ending at 00:00 UTC.
+- **Weekly:** 6% used. Not close to a limit.
+- **Codex:** no run, no reading.
+
+---
+
 ## 2026-11-07, fourth reading and the dashboard (snapshot 22:25 UTC)
 
 **Who and where:** Ahmed's side (AE0101); cloud thread "Publish the Notaya usage ledger" (branch `claude/project-thread-h4cb12`), reading the session records of the cloud sessions at 22:25 UTC.
