@@ -73,7 +73,9 @@ section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .seg { height: 100%; }
 .seg.rep { background: var(--accent); }
 .seg.est1 { background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 7px); opacity: .75; }
-.seg.est2 { background: repeating-linear-gradient(135deg, var(--accent) 0 1.5px, transparent 1.5px 7px); opacity: .5; }
+.meter { height: 10px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.meter > div { height: 100%; background: var(--accent); }
+.meter > div.warn { background: var(--warn); }
 .ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin-top: 10px; }
 .legend span { display: inline-flex; gap: 7px; align-items: center; }
@@ -167,7 +169,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <h2 id="h-credit"><span class="em">💳</span> The $100 credit</h2>
     <div class="grid" id="creditStats"></div>
     <div class="panel">
-      <h3>Spent against the credit, at API list prices</h3>
+      <h3>Credit used, as read from the credit screen</h3>
       <div class="credit-bar" role="img" id="creditBar"></div>
       <div class="ticks"><span>$0</span><span>$25</span><span>$50</span><span>$75</span><span>$100</span></div>
       <div class="legend" id="creditLegend"></div>
@@ -192,6 +194,13 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
       <div class="rows" id="barRows"></div>
       <p class="small muted" style="margin-top:12px">Bars show weighted tokens (fresh input ×1, cache write ×1.25, cache read ×0.1, output ×5). Most of the volume is cache reads: threads re-reading large records.</p>
     </div>
+  </section>
+
+  <section id="screen" aria-labelledby="h-screen">
+    <h2 id="h-screen"><span class="em">🧮</span> The platform's own count</h2>
+    <p class="small muted" id="screenNote"></p>
+    <div class="grid" id="screenStats"></div>
+    <div class="tablewrap"><table id="screenTable"></table></div>
   </section>
 
   <section id="quota" aria-labelledby="h-quota">
@@ -243,9 +252,9 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <h2 id="h-gaps"><span class="em">⚠️</span> What is not measured</h2>
     <ul class="plain">
       <li><b>Mohamed's usage.</b> His sessions run on his own account and are not visible from this side. Only Ahmed's account appears here.</li>
-      <li><b>Percentages of the limits.</b> Session records say "allowed" and the reset time, not how full the window is. A reading from the Claude usage screen and Codex status is still needed for both weekly limits and the Codex 5-hour window.</li>
-      <li><b>Cost of PC sessions.</b> Sessions on Gaming-PC have tokens but no dollar figure. Whether they draw from the cloud credit is not shown by any record.</li>
-      <li><b>The credit balance and exact expiry.</b> Ahmed said "less than 24 hours" at 19:49 UTC on 2026-11-07. The 19:00 UTC time on 2026-11-08 is the coordinator's working assumption.</li>
+      <li><b>Limit history.</b> The Claude limits were read once, at 22:32 UTC, from Ahmed's screenshots. They are account-wide and include everything else on the account. The Codex limits have never been read.</li>
+      <li><b>Dollars per thread.</b> The credit screen gives one total. Only the cloud sessions carry a dollar figure of their own, so part of the spend is not itemised. Whether the Gaming-PC threads draw from the credit is not shown by any record.</li>
+      <li><b>Work after each reading.</b> Three long threads (records catch-up, session summary, set-up) kept working after the rows the ledger holds. The project's Usage screen shows their later totals.</li>
       <li><b>Before 2026-11-07 19:08 UTC.</b> Never recorded and not reconstructed.</li>
     </ul>
   </section>
@@ -275,24 +284,33 @@ $("pills").innerHTML = [
 ].map(([a, b]) => `<span class="pill">${esc(a)} <b>${esc(b)}</b></span>`).join("");
 
 /* credit */
-const rep = D.reported, lo = D.estimate[0], hi = D.estimate[1], tot = D.credit.total;
-const left = tot - rep;
+const M = D.measured || {};
+const cr = M.credit;
+const tot = cr ? cr.total : D.credit.total;
+const left = cr ? cr.left : tot - D.reported;
+const used = tot - left;
+const itemised = D.reported;
+const notItem = Math.max(0, used - itemised);
+const expIso = cr ? cr.expires : D.credit.expires;
+const expMs2 = Date.parse(expIso);
+const hLeft = (expMs2 - snapMs) / 36e5;
+const hrsSince = (snapMs - Date.parse("2026-11-07T19:08:00Z")) / 36e5;
 $("creditStats").innerHTML = `
-  <div class="stat"><span class="label">Reported spend</span><span class="value">${usd(rep)}</span><span class="sub">${S.filter(s=>s.cost!=null).length} sessions that report a cost</span></div>
-  <div class="stat"><span class="label">Not yet reported (estimate)</span><span class="value">${usd(lo)} to ${usd(hi)}</span><span class="sub">${S.filter(s=>s.est).length} sessions with tokens but no dollar figure</span></div>
-  <div class="stat"><span class="label">Left, on reported spend</span><span class="value">${usd(left)}</span><span class="sub">${usd(tot - rep - hi)} to ${usd(tot - rep - lo)} if the estimate counts too</span></div>
-  <div class="stat"><span class="label">Credit ends (assumed)</span><span class="value" id="cdown">about ${Math.round(hoursLeftAtSnap)} h</span><span class="sub">2026-11-08 19:00 UTC, left at snapshot ${hoursLeftAtSnap.toFixed(1)} h</span></div>`;
+  <div class="stat"><span class="label">Used (measured)</span><span class="value">${usd(used)}</span><span class="sub">${cr ? "credit screen, " + hhmm(cr.time) + " UTC" : "estimated from session records"}</span></div>
+  <div class="stat"><span class="label">Left (measured)</span><span class="value">${usd(left)}</span><span class="sub">${usd(left / hLeft)} an hour spread over ${hLeft.toFixed(1)} h</span></div>
+  <div class="stat"><span class="label">Itemised by session</span><span class="value">${usd(itemised)}</span><span class="sub">${S.filter(s => s.cost != null).length} sessions report a cost</span></div>
+  <div class="stat"><span class="label">Not itemised</span><span class="value">${usd(notItem)}</span><span class="sub">no per-session dollar figure</span></div>
+  <div class="stat"><span class="label">Credit ends</span><span class="value" id="cdown">about ${Math.round(hLeft)} h</span><span class="sub">${dayhhmm(expIso)} UTC${cr ? " (read from the screen)" : " (assumed)"}</span></div>`;
 const pct = (v) => Math.max(0, Math.min(100, v / tot * 100));
-$("creditBar").setAttribute("aria-label", `Reported ${usd(rep)} of ${usd(tot)}, estimated further ${usd(lo)} to ${usd(hi)}`);
-$("creditBar").innerHTML = `<div class="seg rep" style="width:${pct(rep)}%"></div><div class="seg est1" style="width:${pct(lo)}%"></div><div class="seg est2" style="width:${pct(hi - lo)}%"></div>`;
-$("creditLegend").innerHTML = `<span><i class="sw rep"></i>Reported by session records (${usd(rep)})</span><span><i class="sw est1"></i>Estimate, low end (${usd(lo)})</span><span><i class="sw est2"></i>Estimate, up to the high end (${usd(hi)})</span>`;
-const rr = D.rates;
-$("creditNote").innerHTML = `The reported figure is at API list prices and comes straight from the cloud session records. The estimate is only a guess for sessions that carry no dollar figure (the Gaming-PC sessions): their weighted tokens times the dollars-per-million-tokens range seen in reported sessions (Opus ${rr["Opus 5.5"] ? usd(rr["Opus 5.5"][0]) + " to " + usd(rr["Opus 5.5"][1]) : "n/a"}, Sonnet ${rr["Sonnet 5.5"] ? usd(rr["Sonnet 5.5"][0]) + " to " + usd(rr["Sonnet 5.5"][1]) : "n/a"}). Whether those PC sessions draw from the credit at all is not shown by any record.`;
-/* live countdown: only text, falls back to the snapshot figure */
+$("creditBar").setAttribute("aria-label", `Used ${usd(used)} of ${usd(tot)}: itemised ${usd(itemised)}, not itemised ${usd(notItem)}, left ${usd(left)}`);
+$("creditBar").innerHTML = `<div class="seg rep" style="width:${pct(itemised)}%"></div><div class="seg est1" style="width:${pct(notItem)}%"></div>`;
+$("creditLegend").innerHTML = `<span><i class="sw rep"></i>Itemised by session records (${usd(itemised)})</span><span><i class="sw est1"></i>Used but not itemised by thread (${usd(notItem)})</span><span><i class="sw" style="background:var(--surface-2);border:1px solid var(--line)"></i>Left (${usd(left)})</span>`;
+const est = D.estimate;
+$("creditNote").innerHTML = `<b>Why ${usd(used)} and not ${usd(itemised)}?</b> The credit screen counts everything charged to the credit. The session records give a dollar figure for only ${S.filter(s => s.cost != null).length} cloud sessions. The Gaming-PC threads and two cloud threads carry tokens but no figure, and three long threads kept working after the readings the ledger holds. The screen gives no per-thread dollars, so the ${usd(notItem)} is not assigned to any thread. A token-based guess for the threads without a figure was ${usd(est[0])} to ${usd(est[1])}; the gap fits that range, which suggests the PC threads draw from the credit but does not prove it. Pace so far: about ${usd(used / hrsSince)} an hour since 19:08 UTC.`;
 (function () {
-  const h = (expMs - Date.now()) / 36e5;
+  const h = (expMs2 - Date.now()) / 36e5;
   if (h > 0) $("cdown").textContent = "about " + (h >= 10 ? Math.round(h) : h.toFixed(1)) + " h";
-  else $("cdown").textContent = "past (assumed)";
+  else $("cdown").textContent = "past";
 })();
 
 /* totals */
@@ -321,15 +339,25 @@ $("barRows").innerHTML = sorted.map((s) => {
 }).join("");
 
 /* quota cards */
-const qClaude5 = D.quota.find(q => q.tool === "Claude" && /five/.test(q.limit));
-const qCredit = D.quota.find(q => /credit/.test(q.limit));
 const win0 = Date.parse(D.window.start), win1 = Date.parse(D.window.end);
-$("quotaCards").innerHTML = `
-  <div class="qcard"><span class="t">Claude · 5-hour window</span><span class="s ok">${qClaude5 ? "Allowed" : "not read"}</span><span class="small">${qClaude5 ? "Not using overage. Resets " + esc(dayhhmm(qClaude5.resets)) + " UTC. Read " + esc(qClaude5.time.replace("T", " ")) + " UTC by the " + esc(qClaude5.by) + "." : ""}</span><span class="small muted">The record gives a status, not a percentage.</span></div>
-  <div class="qcard"><span class="t">Claude · weekly limit</span><span class="s none">Not read</span><span class="small muted">Needs a reading from the Claude usage screen.</span></div>
-  <div class="qcard"><span class="t">Codex · 5-hour window</span><span class="s none">Not read</span><span class="small muted">No Codex run yet. Take a reading with Codex status before and after the first run.</span></div>
-  <div class="qcard"><span class="t">Codex · weekly limit</span><span class="s none">Not read</span><span class="small muted">Same: read it before and after each run.</span></div>
-  <div class="qcard"><span class="t">Cloud credit</span><span class="s none">Balance not read</span><span class="small muted">${qCredit ? "Ahmed, " + esc(qCredit.time.slice(11, 16)) + " UTC: " + esc(qCredit.reading) + "." : ""}</span></div>`;
+const q5 = M.five, qw = M.week;
+const meter = (p) => `<div class="meter" role="img" aria-label="${p}% used"><div class="${p >= 80 ? "warn" : ""}" style="width:${p}%"></div></div>`;
+const pc = (q, label, none) => q ? `<div class="qcard"><span class="t">${label}</span><span class="s">${q.pct}% used</span>${meter(q.pct)}<span class="small">Resets ${esc(dayhhmm(q.resets))} UTC.</span><span class="small muted">Read ${esc(hhmm(q.time))} UTC from the claude.ai plan screen (plan: Pro). Account-wide.</span></div>` : `<div class="qcard"><span class="t">${label}</span><span class="s none">Not read</span><span class="small muted">${none}</span></div>`;
+$("quotaCards").innerHTML =
+  pc(q5, "Claude · 5-hour window", "Needs a reading from the Claude usage screen.") +
+  pc(qw, "Claude · weekly limit (all models)", "Needs a reading from the Claude usage screen.") +
+  `<div class="qcard"><span class="t">Codex · 5-hour window</span><span class="s none">Not read</span><span class="small muted">No Codex run yet. Read Codex status before and after the first run.</span></div>
+   <div class="qcard"><span class="t">Codex · weekly limit</span><span class="s none">Not read</span><span class="small muted">Same: read it before and after each run.</span></div>`;
+
+/* project usage screen */
+const SC = D.screen || [];
+if (!SC.length) { $("screen").hidden = true; } else {
+  const pj = M.project ? M.project.reading : "";
+  $("screenNote").textContent = `Read from the project's Usage screen at ${hhmm(SC[0].time)} UTC (Ahmed's screenshot). It counts every thread of the project, including the Gaming-PC ones, as input + output + cache write + cache read. For the cloud sessions it matches the ledger rows; the threads that kept working after the ledger's last reading show more here.`;
+  const mm = pj.match(/([\d.]+M) tokens, (\d+) threads \(([^)]*)\), cache hit (\d+%)/);
+  $("screenStats").innerHTML = mm ? `<div class="stat"><span class="label">Project tokens</span><span class="value">${mm[1]}</span><span class="sub">${mm[2]} threads (${esc(mm[3])})</span></div><div class="stat"><span class="label">Cache hit</span><span class="value">${mm[4]}</span><span class="sub">most reads come from cache</span></div><div class="stat"><span class="label">Ledger rows total</span><span class="value">${mil(D.totals.input + D.totals.cw + D.totals.cr + D.totals.out)}</span><span class="sub">raw tokens in the CSV rows; the gap is work after those readings</span></div>` : "";
+  $("screenTable").innerHTML = `<thead><tr><th>Thread</th><th>Model</th><th>Last active (at the reading)</th><th class="r">Tokens</th><th class="r">Cache hit</th><th class="r">Share</th></tr></thead><tbody>` + SC.map(r => `<tr><td>${esc(r.thread)}</td><td><span class="tag"><i class="dot ${/Opus/.test(r.model) ? "opus" : "sonnet"}"></i>${esc(r.model)}</span></td><td class="nw">${esc(r.last)}</td><td class="r num">${esc(r.tokens)}</td><td class="r num">${esc(r.cache)}</td><td class="r num">${esc(r.share)}</td></tr>`).join("") + "</tbody>";
+}
 
 /* gantt */
 $("ganttNote").textContent = `Window ${hhmm(D.window.start)} to ${hhmm(D.window.end)} UTC (it resets at 00:00 UTC). Each bar runs from a session's start to its last update. The black line is the snapshot. Account-wide: every session below shares this one window.`;

@@ -16,6 +16,7 @@
 | [`claude-sessions.csv`](claude-sessions.csv) | Claude session (a thread, the coordinator, a Remote Control session), or one task inside a session when it was split | the session record (`get_session` usage block) or the transcript scanner below |
 | [`codex-runs.csv`](codex-runs.csv) | Codex run (`codex exec` or one Codex app task) | Codex's own token report and its quota reading before and after |
 | [`quota-readings.csv`](quota-readings.csv) | reading of a usage limit at a known time | Claude's `/usage` screen or claude.ai usage page, Codex `/status`, the session record's rate-limit block, the credit balance |
+| [`project-usage-screen.csv`](project-usage-screen.csv) | thread on the project's Usage screen (Project settings, Usage), per reading | a screenshot of that screen: tokens, cache hit and share as the platform shows them; a cross-check for the session rows, and the only place the PC threads' totals are counted by the platform |
 
 A dashboard page (an Artifact) is built from the CSV files with `python3 -I tools/usage-ledger/build_dashboard.py OUT.html` and published to the same link each time; the page never owns a fact. CSV is used so the files open in Excel, Notion or any chart tool, and so a later dashboard can read them directly. Every row says where its numbers came from (`source`) and what they do not show (`notes`).
 
@@ -25,11 +26,11 @@ A dashboard page (an Artifact) is built from the CSV files with `python3 -I tool
 
 **Claude, weighted tokens (derived).** One comparison number per row: `input × 1 + cache write × 1.25 + cache read × 0.1 + output × 5`. The weights follow the relative list prices of the API (a cache read costs a tenth of fresh input, output five times fresh input, a 5-minute cache write 1.25 times). They make a session that re-reads a large cached context comparable with one that writes a lot. They are a yardstick, not a bill: 1-hour cache writes really cost more than 1.25, and the subscription limits are not published per token.
 
-**Claude, reported cost in US dollars (measured by the platform).** The session record of a cloud thread carries a `cost_usd` figure at API list prices. It is the closest measure of what a session draws from a dollar credit such as the cloud credit Ahmed mentioned on 2026-11-07. Whether a particular session is billed to that credit, to the plan's limits, or both, is **not** shown by the record and is not assumed.
+**Claude, reported cost in US dollars (measured by the platform).** The session record of a cloud thread carries a `cost_usd` figure at API list prices. It is the closest measure of what a session draws from a dollar credit such as the cloud credit Ahmed mentioned on 2026-11-07. Whether a particular session is billed to that credit, to the plan's limits, or both, is **not** shown by the record and is not assumed. **The measured spend is the credit screen:** since 2026-11-07 22:32 UTC a reading of it (USD used, USD left, expiry) is in `quota-readings.csv`. It is the authority for how much of the credit is gone; the per-session `cost_usd_reported` figures are the part that is itemised by thread, and the rest is shown as not itemised, never spread over threads by guess.
 
 **Codex (measured when a receipt exists).** Model, reasoning effort, input, cached input and output tokens from Codex's own report, and the 5-hour and weekly quota percentages read before and after the run.
 
-**Quota readings (measured, at a time).** A percentage or status of a limit, its window (5-hour, weekly, credit) and its reset time. Readings are account-wide: other work on the same account in the same window moves them too, so a change between two readings is an upper bound for the work between them, not an exact cost.
+**Quota readings (measured, at a time).** A percentage or status of a limit, its window (5-hour, weekly, credit) and its reset time. Since 22:32 UTC on 2026-11-07 the readings carry real percentages (read from the claude.ai plan-usage popup; Ahmed's screenshot), the credit balance and expiry, and the project's token totals. Times on those screens are GMT+2; the ledger stores UTC. Readings are account-wide: other work on the same account in the same window moves them too, so a change between two readings is an upper bound for the work between them, not an exact cost.
 
 **Not measured, and never guessed:** a session whose record or transcript was not reachable is written with empty number columns and the reason in `notes`. A model or effort that was not recorded stays "not recorded". Wall-clock time between a thread's start and its last update is not active working time.
 
@@ -44,6 +45,8 @@ A dashboard page (an Artifact) is built from the CSV files with `python3 -I tool
 - `snapshot_utc`: when the numbers were read. A running session's numbers grow after the snapshot; a later row with a later snapshot replaces nothing, it adds a reading.
 
 `codex-runs.csv`: `date_utc, partner, machine, run_label, task, ordered_by, model, reasoning, start_utc, end_utc, input, cached_input, output, quota_5h_before, quota_5h_after, quota_week_before, quota_week_after, result, source, notes`
+
+`project-usage-screen.csv`: `reading_utc, thread_title, model_shown, last_activity_shown, tokens_shown, cache_hit_shown, share_shown, source, notes`
 
 `quota-readings.csv`: `time_utc, tool, account, limit, reading, resets_utc, read_by, source, notes`
 

@@ -24,8 +24,8 @@ LEDGER = ROOT / "docs" / "ledger"
 TEMPLATE = Path(__file__).with_name("dashboard-template.html")
 
 CREDIT_TOTAL_USD = 100
-# Ahmed (project chat, 2026-11-07 19:49:26 UTC): "less than 24 hours". The
-# coordinator's note puts it around 2026-11-08 19:00 UTC. The exact time was not read.
+# Fallbacks used only when quota-readings.csv has no measured credit row. Ahmed (project
+# chat, 2026-11-07 19:49:26 UTC): "less than 24 hours"; the coordinator assumed 19:00 UTC.
 CREDIT_EXPIRES_UTC = "2026-11-08T19:00:00Z"
 
 
@@ -128,8 +128,31 @@ def main(out):
         est_low += lo
         est_high += hi
 
+    # Measured readings (screens), newest first in quota-readings.csv: first match of each wins.
+    quota = read("quota-readings.csv")
+
+    def first(pred):
+        return next((q for q in quota if pred(q)), None)
+
+    measured = {"five": None, "week": None, "credit": None, "project": None}
+    q = first(lambda q: q["tool"] == "Claude" and "five" in q["limit"] and "%" in q["reading"])
+    if q:
+        measured["five"] = {"pct": float(re.search(r"(\d+)%", q["reading"]).group(1)), "resets": q["resets_utc"], "time": q["time_utc"], "by": q["read_by"]}
+    q = first(lambda q: q["tool"] == "Claude" and "weekly" in q["limit"] and "%" in q["reading"])
+    if q:
+        measured["week"] = {"pct": float(re.search(r"(\d+)%", q["reading"]).group(1)), "resets": q["resets_utc"], "time": q["time_utc"], "by": q["read_by"]}
+    q = first(lambda q: "credit" in q["limit"] and re.search(r"USD (\d+) of USD (\d+) left", q["reading"]))
+    if q:
+        m = re.search(r"USD (\d+) of USD (\d+) left", q["reading"])
+        measured["credit"] = {"left": float(m.group(1)), "total": float(m.group(2)), "expires": q["resets_utc"], "time": q["time_utc"], "by": q["read_by"]}
+    q = first(lambda q: "project usage" in q["limit"])
+    if q:
+        measured["project"] = {"reading": q["reading"], "time": q["time_utc"]}
+
+    screen = read("project-usage-screen.csv") if (LEDGER / "project-usage-screen.csv").exists() else []
+
     reported = sum(s["cost"] for s in sessions if s["cost"] is not None)
-    snap = max(s["snapshot"] for s in sessions)
+    snap = max([s["snapshot"] for s in sessions] + [q["time_utc"] for q in quota])
     snap_iso = iso(snap)
 
     def tot(k):
@@ -150,6 +173,10 @@ def main(out):
     data = {
         "snapshot": snap_iso,
         "credit": {"total": CREDIT_TOTAL_USD, "expires": CREDIT_EXPIRES_UTC},
+        "measured": measured,
+        "screen": [{"thread": r["thread_title"], "model": r["model_shown"], "last": r["last_activity_shown"],
+                    "tokens": r["tokens_shown"], "cache": r["cache_hit_shown"], "share": r["share_shown"],
+                    "time": r["reading_utc"]} for r in screen],
         "reported": round(reported, 2),
         "estimate": [round(est_low, 2), round(est_high, 2)],
         "rates": {k: [round(v[0], 2), round(v[1], 2)] for k, v in rate_range.items()},
@@ -161,7 +188,7 @@ def main(out):
         "quota": [
             {"time": q["time_utc"], "tool": q["tool"], "account": q["account"], "limit": q["limit"],
              "reading": q["reading"], "resets": q["resets_utc"], "by": q["read_by"], "notes": q["notes"]}
-            for q in read("quota-readings.csv")
+            for q in quota
         ],
         "codex": read("codex-runs.csv"),
         "window": {"start": "2026-11-07T19:00:00Z", "end": "2026-11-08T00:00:00Z"},
