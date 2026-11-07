@@ -19,9 +19,13 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 ### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-52: Dependency and licence study for the planned features
 
 - [2026-11-07-dependency-licence-study.md](2026-11-07-dependency-licence-study.md): a study and records; draft PR. Whiteboard strokes (perfect-freehand), global shortcuts (Tauri plugin, Rust side only), Greek/Cyrillic PDF font (Noto Sans subset; Arabic and Hebrew already exist), Excel (own writer; `rust_xlsxwriter` as the upgrade), MCP bridge (rmcp; named pipe needs an explicit access rule) ([the study](../plan/2026-11-07-dependency-licence-study.md)). **Produced** (verified only by the checks in its section 3); not accepted. No dependency is approved or installed.
-### 2026-11-07 (Ahmed's messages 23:53:46 and 23:54:20 UTC), EX-2026-11-07-51: version plan updated with Ahmed's answers
+### 2026-11-07 (Ahmed's messages 23:53:46 and 23:54:20 UTC), EX-2026-11-07-53: version plan updated with Ahmed's answers
 
 - [2026-11-07-version-plan-answers.md](2026-11-07-version-plan-answers.md): a plan update and records; the next PR after #62. Versions after 1.9 renumbered to 2.0–2.5; the AI CLI answers folded in; two authority rows; the Notion hub updated. **Produced** (verified only by its section 3); not accepted.
+
+### 2026-11-07 (Ahmed's messages 23:39:31 and 23:49:01 UTC, coordinator's request 23:49:23 UTC), EX-2026-11-07-51: Notaya Manual, first edition
+
+- [2026-11-07-notaya-manual-first-edition.md](2026-11-07-notaya-manual-first-edition.md): a new document and records; PR #63. A plain-language manual of what Notaya 1.5.1 does today with a "Coming soon" section, published as an artifact, source in [`docs/manual/`](../manual/README.md). Produced; not run against the app; not accepted.
 
 ### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-50: Phase 2 version plan, V1.6 to V1.15
 

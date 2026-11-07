@@ -1,4 +1,4 @@
-# EX-2026-11-07-51: version plan updated with Ahmed's answers (V1.6 to V1.9, then V2.0 to V2.5)
+# EX-2026-11-07-53: version plan updated with Ahmed's answers (V1.6 to V1.9, then V2.0 to V2.5)
 
 **Who and where (A38):** Ahmed's side (`AE0101`); Claude cloud thread "Plan versions 1.6 to 1.8 and beyond" (machine: cloud). Same session as [EX-2026-11-07-50](2026-11-07-version-plan.md). Model configured `claude-opus-5-5[1m]`, effort high. One helper (Sonnet 5.5) renumbered the Notion board cards.
 
@@ -21,7 +21,7 @@ Short form (4 sections). Small: a plan update and records. Times are UTC: messag
 
 ## 3. Verification and Evidence
 
-- **Checks run:** the plan has no remaining "1.10" to "1.15" except in the quoted answer about renumbering; the repository copy differs from the shared-files copy only by its header note. EX-51 checked free on `origin/main` and the open branches.
+- **Checks run:** the plan has no remaining "1.10" to "1.15" except in the quoted answer about renumbering; the repository copy differs from the shared-files copy only by its header note. The ID first chosen, EX-51, collided with the Manual's report (PR #63, merged first); renumbered to **EX-53** at merge.
 - **Notion:** the workspace's SQL query allowance ran out during this work, so the helper checked the board through a saved view instead (its report is in the PR description).
 - **Not run:** app checks (no code changed).
 - **Result state:** produced; verified only as above; integrated on merge; not accepted.

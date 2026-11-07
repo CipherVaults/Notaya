@@ -8,7 +8,7 @@
 - **Result state:** *produced*. This is a plan for Ahmed to read and adjust. It is not accepted, and **nothing here is a go to build**: building a version starts on Ahmed's word, and each security-behaviour change, new dependency or vault-format change still needs his own words (CLAUDE.md, A37).
 
 
-> **Repository copy (EX-2026-11-07-50, updated in EX-2026-11-07-51).** The working copy lives in the Claude project's shared files (`notes/2026-11-07-version-plan.md`); this committed copy is what Mohamed's Claude and later threads can read. The study files named below (inventory, dashboards, whiteboard, import/export, Notion parity, AI CLI action list) are in the project's shared files, not in this repository. **This is a plan, not a go to build**: nothing here is greenlit until Ahmed says so (A37 item 9 and its dated note; Ahmed 23:39:31 UTC authorized planning only).
+> **Repository copy (EX-2026-11-07-50, updated in EX-2026-11-07-53).** The working copy lives in the Claude project's shared files (`notes/2026-11-07-version-plan.md`); this committed copy is what Mohamed's Claude and later threads can read. The study files named below (inventory, dashboards, whiteboard, import/export, Notion parity, AI CLI action list) are in the project's shared files, not in this repository. **This is a plan, not a go to build**: nothing here is greenlit until Ahmed says so (A37 item 9 and its dated note; Ahmed 23:39:31 UTC authorized planning only).
 
 ---
 
