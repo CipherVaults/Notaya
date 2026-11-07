@@ -4,6 +4,21 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-07, 23:40 UTC: statements from the chat after the 22:32 screenshots (no new measurement)
+
+**Who and where:** Ahmed's side (AE0101); written by the cloud thread "Record Phase 1 decisions and update handover" (PR #61) from the project chat. Nothing here was read from a screen; the measured figures are the 22:32 UTC block below.
+
+| What | Statement | By whom, when | Status |
+|---|---|---|---|
+| Credit left | about USD 41, about 19.5 hours to expiry (2026-11-08 19:09 UTC) | the coordinator, 23:36:52 | A statement, source not given. The last measured balance is USD 48 left at 22:32 |
+| After the credit | cloud work counts against the Pro five-hour and weekly limits; nothing stops | the coordinator, 22:39:11, from Ahmed's screenshot of the credit help text | A reading of the screen, not seen by this thread |
+| Pace | at the evening's pace (about USD 15 an hour for the first hours) the credit would not outlast about 3 more hours of Opus-heavy work; Ahmed wants the credit used before it expires | the coordinator, 22:36:10; Ahmed, 23:37:36 | Estimate and preference |
+| Model choice | a guide (`notes/model-choice-guide.md`, project files) suggests Sonnet 5.5 high for reading and records, Opus 5.5 high for design, Codex `gpt-6.1-sol` xhigh for building | the model-economics thread, about 23:00 | A reading, not yet accepted by Ahmed (A43) |
+
+**Rows added:** one `claude-sessions.csv` row for this thread (usage not measured) and one `quota-readings.csv` row for the 23:36 statement. **Not done:** the coordinator's and the study threads' usage after 22:32 is not read; Codex still has no run. The next ledger refresh should read the Phase 2 threads' cost-bearing records and a five-hour and weekly reading.
+
+---
+
 ## 2026-11-07, measured limits and credit from Ahmed's screens (22:32 UTC)
 
 **Who and where:** Ahmed's side (AE0101). The figures are read off three screenshots Ahmed sent at 22:32 UTC (the claude.ai plan-usage popup and the project's Usage screen, on his PC); the cloud thread "Publish the Notaya usage ledger" wrote them in. Source and time are in every row of [`quota-readings.csv`](quota-readings.csv) and [`project-usage-screen.csv`](project-usage-screen.csv).

@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-07 (Ahmed's messages 22:21:39 to 23:39:31 UTC, coordinator's request 23:39:45 UTC), EX-2026-11-07-48: Phase 1 feature decisions recorded, handover guide updated
+
+- [2026-11-07-phase-1-decisions-recorded.md](2026-11-07-phase-1-decisions-recorded.md): records only; PR #61. Twenty authority rows, amendments A40 to A43 (second-half feature meanings, AI CLI safety principles, rules for every feature, Phase 2 begins), session entry 43, STATUS lines, a ledger note, and the living handover guide for Mohamed (both copies). **Verified** by the checks in its section 3; integrated when PR #61 is merged; not accepted.
+
 ### 2026-11-07 (Ahmed's message 22:24:27 UTC, coordinator's request 22:28:16 UTC), EX-2026-11-07-47: handover guide for Mohamed
 
 - [2026-11-07-handover-guide-for-mohamed.md](2026-11-07-handover-guide-for-mohamed.md): records only; PR #57. A Markdown copy of the handover guide in `docs/handoff/` (what Ahmed's side has set up and decided, each item marked shared rule, Ahmed's side or needs both), session entry 42, a STATUS line. **Verified** by the checks in its section 3; integrated when PR #57 is merged; not accepted.
