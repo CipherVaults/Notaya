@@ -141,7 +141,7 @@ Write the first edition of the manual: what Notaya does today, in plain language
 ## 🔜 Next Steps
 
 1. Ahmed: read the manual and say what to change or share the link with Mohamed.
-2. The coordinator: add the manual to the handover guide's change log (A39) and to the Notion hub's GUIDE card; ask for real-app screenshots when a PC session is free.
+2. Real-app screenshots when a PC session is free (the handover guide and the Notion GUIDE card were updated at 23:55 to 23:57 UTC at the coordinator's request).
 3. Each release: a new edition (steps in `docs/manual/README.md`).
 
 **Do not reopen / repeat:** re-reading the inventory to rebuild the manual; the choice of format.

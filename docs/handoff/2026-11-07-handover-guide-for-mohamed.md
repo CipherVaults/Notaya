@@ -1,8 +1,8 @@
 # Notaya handover guide for Mohamed (2026-11-07)
 
-**Who and where:** written for **Mohamed Sayed (`AbyssWatcher2`)** and his Claude, from **Ahmed's side (`AE0101`)**, by a Claude cloud thread in Ahmed's Claude project "Notaya" (machine: cloud). First written 2026-11-07, about 22:30 UTC (container clock), from the repository at `main` = `987bfc5` (merge of PR #56); updated 2026-11-07 about 23:50 UTC from `main` = `9e3e4e3` plus records PR #61 (see the change log). A published page with the same content (private to Ahmed unless he shares it): <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>. This Markdown copy exists because the repository is the only memory the two Claudes share.
+**Who and where:** written for **Mohamed Sayed (`AbyssWatcher2`)** and his Claude, from **Ahmed's side (`AE0101`)**, by a Claude cloud thread in Ahmed's Claude project "Notaya" (machine: cloud). First written 2026-11-07, about 22:30 UTC (container clock), from the repository at `main` = `987bfc5` (merge of PR #56); updated 2026-11-07 about 23:56 UTC from `main` = `67b27e4` plus the manual PR #63 (see the change log). A published page with the same content (private to Ahmed unless he shares it): <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>. This Markdown copy exists because the repository is the only memory the two Claudes share.
 
-**Living document (Ahmed, 2026-11-07 22:33:37 UTC, [A39](../plan/approval-and-amendments.md)).** This guide is kept up to date at every milestone or decision on Ahmed's side, in both copies (this file and the published page), so that when Ahmed's cycle ends Mohamed has something solid with few or no gaps. **Last updated: 2026-11-07 23:52 UTC** (Phase 1 decisions, records PR #61). See the change log at the end.
+**Living document (Ahmed, 2026-11-07 22:33:37 UTC, [A39](../plan/approval-and-amendments.md)).** This guide is kept up to date at every milestone or decision on Ahmed's side, in both copies (this file and the published page), so that when Ahmed's cycle ends Mohamed has something solid with few or no gaps. **Last updated: 2026-11-07 23:56 UTC** (the Notaya Manual, first edition, PR #63; before that the Phase 2 plan pointer and the Phase 1 decisions, PR #61). See the change log at the end.
 
 **What this is.** A reading aid: what Ahmed's side has set up, studied and decided so far, so that Mohamed's machine and Claude can carry the same methods when Ahmed's cycle ends. **It is not an authority record.** If it disagrees with `docs/plan/approval-and-amendments.md` or `docs/STATUS.md`, those win.
 
@@ -129,6 +129,7 @@ Repository files own the facts. Project memory, chats and Notion are pointers on
 | What went wrong or nearly did | `docs/failure-intelligence.md` |
 | What does Notaya promise about security? | `docs/security-design.md` (read before touching crypto, storage, IPC commands, CSP, clipboard or auto-lock) |
 | What does Notaya already do? | The code, and the full inventory `notes/2026-11-07-notaya-full-feature-inventory.md` in Ahmed's project files (it is not in the repository) |
+| What does Notaya do today, in plain words? | **The Notaya Manual**, first edition for 1.5.1 (2026-11-07): `docs/manual/notaya-manual-first-edition.html` and its published page <https://claude.ai/artifact/K6HUfVdCJbuSFNCkiiCu3K> (private to Ahmed unless he shares it). It also lists the known limits and a draft "Coming soon". Each release gets a new edition (`docs/manual/README.md`). The repository records win where they differ. |
 | The original plan | `docs/plan/approved-plan-2026-10-22.md`. **Never edit it**; record changes as amendments. |
 
 Take the next free `EX-` and `A` numbers only after checking `origin/main` and every open branch (commands in the collaboration guide, section 4). Check `claims.md` for the current next-free line.
@@ -234,7 +235,7 @@ All of these are **Ahmed's** decisions from the 2026-11-07 discussion (full tabl
 | Right-click menus | ✅ | Menus in sidebar items, page tabs, sticky notes, editor text ("Turn into...") and database rows; plus links and images, several items at once, keyboard hints, Copy link to page, and the empty sidebar space (on trial). Every menu customizable in Settings. No "Ask AI about this". | Menus behind "..." buttons and the Menu key; no mouse right-click. |
 | Tray menu | ✅ | Open, New page, New sticky note, Calculator, Quick search, Lock now, Show/hide all stickies, Close stickies, Quit. | Open Notaya, Close sticky notes, Quit. |
 | Dashboards (Power BI-style, inside Notaya) | ✅ | Three steps: dashboard pages with live tiles from Notaya databases (never stale); filters, Reset and click-through; named reusable calculations. The AI can build them. Details left to planning. | Bar, line, donut and number charts, one per view. |
-| Guide, tour, About | ✅ | Guide: an in-app manual (feature list with images and icons) plus an outside copy kept in step; Tour: light, skippable, never forced; About: credits for both partners, open-source references and licences, Notaya's own licence once both partners choose. | About lists open-source credits only. |
+| Guide, tour, About | ✅ | Guide: an in-app manual (feature list with images and icons) plus an outside copy kept in step; Tour: light, skippable, never forced; About: credits for both partners, open-source references and licences, Notaya's own licence once both partners choose. | About lists open-source credits only. The outside manual's first edition exists (2026-11-07, PR #63); the in-app manual and the tour are not built. |
 
 Set aside or rejected by Ahmed: "Ask AI about this" in any menu; Favorites and New notebook on the app bar; pins and strings on the Windows desktop; moving databases between pages as part of the sidebar change; "everything into v1.6" and "v1.6 stays one release".
 
@@ -301,6 +302,7 @@ Newest first. Each line: when (UTC), what changed, which side's decision it reco
 
 | When (UTC) | Change | Whose decision |
 |---|---|---|
+| 2026-11-07 23:56 | Added the Notaya Manual, first edition (for 1.5.1): a row in "Where each record lives" (section 6) and a note in the Guide row of the feature table (section 11). Source in `docs/manual/`, published page linked, PR #63. Versions after 1.9 are numbered 2.0 to 2.5 in the manual, as the coordinator directed. | Ahmed's side (agreed GUIDE feature, 23:04; "push ahead", 23:39:31) |
 | 2026-11-07 23:52 | Added a pointer to the Phase 2 version plan (EX-2026-11-07-50, draft PR #62) in section 9, at the version-planning thread's request. | Ahmed's side (23:39:31); plan not yet reviewed by Ahmed |
 | 2026-11-07 23:50 | Phase 1 decisions: sections 1, 2, 6, 8 (model choice, credit), 9 (Phase 1 done, Phase 2 may start), 10 (AI CLI safety direction), 11 (right-click, tray, dashboards, guide/tour/About, banner, Whiteboard, Notebook mode and Default style), 12 and 15 updated; new rules: no trademarked names, customizable menus. Records: A40 to A43, entry 43, PR #61. | Ahmed's side (22:40:55 to 23:39:31) |
 | 2026-11-07 22:45 | Marked as a living document (A39); added this change log. | Ahmed's side (22:33:37) |

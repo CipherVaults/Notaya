@@ -13,4 +13,4 @@ The external, updatable reference manual for Notaya (the agreed GUIDE feature, A
 3. Copy the file to the project's shared notes folder and republish the artifact to the same link.
 4. Record it (Execution Summary, STATUS line) like any other work.
 
-The in-app manual planned for 1.10 reuses this text.
+The in-app manual planned for 2.0 reuses this text.
