@@ -16,6 +16,9 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-52: Dependency and licence study for the planned features
+
+- [2026-11-07-dependency-licence-study.md](2026-11-07-dependency-licence-study.md): a study and records; draft PR. Whiteboard strokes (perfect-freehand), global shortcuts (Tauri plugin, Rust side only), Greek/Cyrillic PDF font (Noto Sans subset; Arabic and Hebrew already exist), Excel (own writer; `rust_xlsxwriter` as the upgrade), MCP bridge (rmcp; named pipe needs an explicit access rule) ([the study](../plan/2026-11-07-dependency-licence-study.md)). **Produced** (verified only by the checks in its section 3); not accepted. No dependency is approved or installed.
 ### 2026-11-07 (Ahmed's messages 23:53:46 and 23:54:20 UTC), EX-2026-11-07-51: version plan updated with Ahmed's answers
 
 - [2026-11-07-version-plan-answers.md](2026-11-07-version-plan-answers.md): a plan update and records; the next PR after #62. Versions after 1.9 renumbered to 2.0–2.5; the AI CLI answers folded in; two authority rows; the Notion hub updated. **Produced** (verified only by its section 3); not accepted.
