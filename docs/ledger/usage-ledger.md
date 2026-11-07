@@ -4,6 +4,27 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-07, fourth reading and the dashboard (snapshot 22:25 UTC)
+
+**Who and where:** Ahmed's side (AE0101); cloud thread "Publish the Notaya usage ledger" (branch `claude/project-thread-h4cb12`), reading the session records of the cloud sessions at 22:25 UTC.
+
+**Scope:** (a) the coordinator's cumulative reading, which replaces its 20:33 row; (b) three cloud threads that no earlier reading covered: the import and export study, the feature inventory, the PR #56 merge. The handover-guide thread and this thread were running and are not counted.
+
+| Session | Model (last served) | Effort | Output tokens | Weighted tokens | Reported cost (USD) |
+|---|---|---|---:|---:|---:|
+| Coordinator (mother thread), cumulative to 22:25, running | Opus 5.5 | low | 131,499 | 2,546,534 | 8.06 |
+| Study Notaya's current import and export | Sonnet 5.5 | high | 20,862 | 815,399 | 1.46 |
+| Map everything Notaya already does | Opus 5.5 | high | 44,012 | 2,383,156 | 6.98 |
+| Merge tonight's session summary PR (PR #56) | Sonnet 5.5 | high | 1,333 | 122,723 | 0.29 |
+
+- **Totals after this reading** (newest row of each session, 15 rows): 19.98 million weighted tokens; 602,997 output tokens; reported cost **USD 31.93** across the 10 cloud sessions that report one. The five Gaming-PC rows carry tokens but no dollar figure.
+- **Against the USD 100 credit:** reported spend is USD 31.93. For the PC rows (6.0 million weighted Opus tokens, about 0.6 million Sonnet) a **rough estimate** of USD 20 to 29 follows from the dollars-per-million-weighted-tokens range of reported rows (Opus 2.93 to 4.18, Sonnet 1.76 to 2.35). It is an estimate, not a record, and whether PC sessions draw from the cloud credit is not shown.
+- **Quota at 22:25 UTC:** Claude five-hour window "allowed", not using overage, resets 2026-11-08 00:00 UTC. Weekly limit, Codex limits and the credit balance were not read.
+- **Codex:** no run.
+- **New:** the dashboard page ("Notaya usage ledger", an Artifact) is built from the three CSV files by `tools/usage-ledger/build_dashboard.py`; the CSV files stay the owner of the facts.
+
+---
+
 ## 2026-11-07, the rest of the coordinator session and the two PC threads (snapshots 22:02 to 22:06 UTC)
 
 **Scope:** (a) the two Remote Control sessions on Gaming-PC that the first reading could not measure, now measured from their transcripts on the PC; (b) the records thread that wrote the session summary of the whole coordinator session (PR #56), up to 22:06 UTC.

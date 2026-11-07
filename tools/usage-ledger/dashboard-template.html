@@ -1,0 +1,391 @@
+<title>Notaya Usage Ledger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a ledger page. Credit first, then totals, the sessions chart, quota windows, the full table, then where the records live. */
+:root {
+  --bg: #f1f5f3;
+  --surface: #ffffff;
+  --surface-2: #e9efec;
+  --ink: #12201c;
+  --muted: #55665f;
+  --line: #cfdad5;
+  --accent: #0d5f54;
+  --accent-ink: #ffffff;
+  --sonnet: #12968a;
+  --opus: #6a5acd;
+  --both: #8a8f8d;
+  --warn: #9a4d00;
+  --warn-bg: #fbeedd;
+  --good: #14693b;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1513; --surface: #16201e; --surface-2: #1d2a27; --ink: #e3eeea; --muted: #92a69f;
+    --line: #2b3b37; --accent: #5fd3c2; --accent-ink: #0c1412; --sonnet: #14a090; --opus: #7a76e6;
+    --both: #7d8885; --warn: #f0b36b; --warn-bg: #2e2415; --good: #6fd29b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1513; --surface: #16201e; --surface-2: #1d2a27; --ink: #e3eeea; --muted: #92a69f;
+  --line: #2b3b37; --accent: #5fd3c2; --accent-ink: #0c1412; --sonnet: #14a090; --opus: #7a76e6;
+  --both: #7d8885; --warn: #f0b36b; --warn-bg: #2e2415; --good: #6fd29b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 56px;
+}
+main { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 20px; font-weight: 650; display: flex; gap: 10px; align-items: baseline; }
+h2 .em { font-size: 18px; }
+h3 { font-size: 15px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; flex-direction: column; gap: 12px; }
+.kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); }
+.pill b { color: var(--ink); font-weight: 600; }
+
+section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; min-width: 0; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.stat { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); min-width: 0; }
+.stat .label { font-size: 12.5px; color: var(--muted); }
+.stat .value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.stat .sub { font-size: 12.5px; color: var(--muted); }
+
+/* credit bar */
+.credit-bar { position: relative; height: 26px; background: var(--surface-2); border-radius: 4px; overflow: hidden; display: flex; margin-top: 6px; }
+.seg { height: 100%; }
+.seg.rep { background: var(--accent); }
+.seg.est1 { background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 7px); opacity: .75; }
+.seg.est2 { background: repeating-linear-gradient(135deg, var(--accent) 0 1.5px, transparent 1.5px 7px); opacity: .5; }
+.ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+.legend span { display: inline-flex; gap: 7px; align-items: center; }
+.sw { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.sw.rep { background: var(--accent); }
+.sw.est1 { background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 7px); border: 1px solid var(--accent); }
+.sw.est2 { background: repeating-linear-gradient(135deg, var(--accent) 0 1.5px, transparent 1.5px 7px); border: 1px solid var(--line); }
+.sw.sonnet { background: var(--sonnet); } .sw.opus { background: var(--opus); } .sw.both { background: var(--both); }
+
+.note { background: var(--warn-bg); color: var(--ink); border-left: 3px solid var(--warn); padding: 10px 14px; font-size: 13.5px; border-radius: 0 4px 4px 0; max-width: 78ch; }
+
+/* tables */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-2); letter-spacing: .02em; white-space: nowrap; position: sticky; top: 0; }
+th button { all: unset; cursor: pointer; font: inherit; color: inherit; display: inline-flex; gap: 4px; align-items: center; }
+th button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+td.r, th.r { text-align: right; }
+td.nw { white-space: nowrap; }
+td.task { min-width: 230px; }
+td .sub { display: block; font-size: 12px; color: var(--muted); }
+.tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot.sonnet { background: var(--sonnet); } .dot.opus { background: var(--opus); } .dot.both { background: var(--both); }
+.badge { font-size: 11.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.badge.live { border-color: var(--good); color: var(--good); }
+.badge.est { border-color: var(--warn); color: var(--warn); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips .grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chips .glabel { font-size: 12.5px; color: var(--muted); margin-right: 2px; }
+.chip { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* bar chart of weighted tokens */
+.rows { display: flex; flex-direction: column; gap: 6px; }
+.row { display: grid; grid-template-columns: minmax(120px, 270px) 1fr; gap: 12px; align-items: center; }
+.row .name { font-size: 13px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+.row .name small { display: block; color: var(--muted); font-size: 11.5px; }
+.track { position: relative; height: 22px; display: flex; align-items: center; min-width: 0; }
+.bar { height: 14px; border-radius: 0 4px 4px 0; min-width: 2px; }
+.bar.sonnet { background: var(--sonnet); } .bar.opus { background: var(--opus); } .bar.both { background: var(--both); }
+.bar.none { background: transparent; border: 1px dashed var(--muted); width: 28px; }
+.val { font-family: var(--font-mono); font-size: 12px; color: var(--ink); margin-left: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.axis { margin-left: calc(min(270px, 100%) + 12px); }
+
+/* window timeline */
+.gantt { display: flex; flex-direction: column; gap: 4px; }
+.grow { display: grid; grid-template-columns: minmax(110px, 230px) 1fr; gap: 12px; align-items: center; }
+.glane { position: relative; height: 16px; background: var(--surface-2); border-radius: 3px; background-image: linear-gradient(to right, var(--line) 1px, transparent 1px); background-size: 20% 100%; }
+.gbar { position: absolute; top: 3px; height: 10px; border-radius: 3px; min-width: 3px; }
+.gbar.sonnet { background: var(--sonnet); } .gbar.opus { background: var(--opus); } .gbar.both { background: var(--both); }
+.now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
+.gaxis { display: grid; grid-template-columns: minmax(110px, 230px) 1fr; gap: 12px; }
+.gaxis .labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+
+.cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.qcard { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.qcard .t { font-size: 12.5px; color: var(--muted); }
+.qcard .s { font-weight: 600; font-size: 16px; }
+.qcard .s.ok { color: var(--good); }
+.qcard .s.none { color: var(--warn); }
+.files { display: grid; gap: 10px; }
+.file { display: grid; grid-template-columns: minmax(150px, 230px) 1fr; gap: 6px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.file:last-child { border-bottom: 0; }
+.file code { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 78ch; }
+ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 78ch; }
+@media (max-width: 640px) {
+  .row, .grow, .gaxis { grid-template-columns: 1fr; gap: 3px; }
+  .axis { margin-left: 0; }
+  .file { grid-template-columns: 1fr; }
+  .stat .value { font-size: 21px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar, .seg { transition: width .4s ease; }
+}
+</style>
+
+<main>
+  <header>
+    <div class="kicker">Notaya · Ahmed's side (AE0101)</div>
+    <h1>Notaya usage ledger</h1>
+    <p>Where Claude and Codex work went on this project, what it cost against the $100 cloud credit, and how the 5-hour and weekly limits stand. Numbers come from <span class="mono">docs/ledger/</span> in the repository.</p>
+    <div class="pills" id="pills"></div>
+  </header>
+
+  <section id="credit" aria-labelledby="h-credit">
+    <h2 id="h-credit"><span class="em">💳</span> The $100 credit</h2>
+    <div class="grid" id="creditStats"></div>
+    <div class="panel">
+      <h3>Spent against the credit, at API list prices</h3>
+      <div class="credit-bar" role="img" id="creditBar"></div>
+      <div class="ticks"><span>$0</span><span>$25</span><span>$50</span><span>$75</span><span>$100</span></div>
+      <div class="legend" id="creditLegend"></div>
+    </div>
+    <p class="note" id="creditNote"></p>
+  </section>
+
+  <section id="totals" aria-labelledby="h-totals">
+    <h2 id="h-totals"><span class="em">📊</span> Totals so far</h2>
+    <div class="grid" id="totalStats"></div>
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+      <div class="tablewrap"><table id="modelTable"></table></div>
+      <div class="tablewrap"><table id="machineTable"></table></div>
+    </div>
+    <p class="small muted" id="weightNote"></p>
+  </section>
+
+  <section id="chart" aria-labelledby="h-chart">
+    <h2 id="h-chart"><span class="em">🔎</span> Where the tokens went</h2>
+    <div class="panel">
+      <div class="legend" style="margin: 0 0 12px"><span><i class="sw opus"></i>Opus 5.5</span><span><i class="sw sonnet"></i>Sonnet 5.5</span><span><i class="sw both"></i>Both models</span><span><i class="dot" style="border:1px dashed var(--muted);width:14px;border-radius:2px;height:10px"></i>No numbers yet</span></div>
+      <div class="rows" id="barRows"></div>
+      <p class="small muted" style="margin-top:12px">Bars show weighted tokens (fresh input ×1, cache write ×1.25, cache read ×0.1, output ×5). Most of the volume is cache reads: threads re-reading large records.</p>
+    </div>
+  </section>
+
+  <section id="quota" aria-labelledby="h-quota">
+    <h2 id="h-quota"><span class="em">⏱️</span> Usage limits: 5-hour and weekly</h2>
+    <div class="cards" id="quotaCards"></div>
+    <div class="panel">
+      <h3>The current Claude 5-hour window, session by session</h3>
+      <p class="small muted" style="margin:4px 0 12px" id="ganttNote"></p>
+      <div class="gantt" id="gantt"></div>
+      <div class="gaxis" style="margin-top:6px"><span></span><div class="labels" id="gaxis"></div></div>
+    </div>
+    <p class="small muted">Pacing limits are not set for Notaya. Ahmed's rule (2026-11-07 20:41 UTC): no spending cap per hour; the coordinator watches both limits so work is not cut off by surprise. FFmpeg's 80% and 90% ceilings are not adopted here.</p>
+  </section>
+
+  <section id="table" aria-labelledby="h-table">
+    <h2 id="h-table"><span class="em">📒</span> Every session</h2>
+    <p class="small muted">Each row says whose side the work is on (partner), which Claude account, and which machine ran it (rule A38). The newest reading of a session replaces its older one.</p>
+    <div class="chips" id="filters"></div>
+    <div class="tablewrap"><table id="sessionTable"></table></div>
+    <h3 style="margin-top:6px">Codex runs</h3>
+    <div class="panel" id="codexBox"></div>
+  </section>
+
+  <section id="where" aria-labelledby="h-where">
+    <h2 id="h-where"><span class="em">📁</span> Where this is tracked</h2>
+    <div class="panel">
+      <div class="files">
+        <div class="file"><code>docs/ledger/claude-sessions.csv</code><span>One row per Claude session or task: partner, machine, model, effort, four token counts, weighted tokens, reported cost, and where each number came from.</span></div>
+        <div class="file"><code>docs/ledger/codex-runs.csv</code><span>One row per Codex run: tokens from Codex's own report and the 5-hour and weekly percentages before and after. Empty so far.</span></div>
+        <div class="file"><code>docs/ledger/quota-readings.csv</code><span>Each time someone read a limit (Claude usage screen, Codex status, credit balance), with who read it and when it resets.</span></div>
+        <div class="file"><code>docs/ledger/usage-ledger.md</code><span>The plain-language reading, newest on top: totals, what they mean for pace, and what was not measured.</span></div>
+        <div class="file"><code>docs/ledger/README.md</code><span>The rules: units, columns, and how to refresh at every session stop.</span></div>
+        <div class="file"><code>tools/usage-ledger/</code><span>The transcript scanner for PC sessions, and the script that builds this page from the CSV files.</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>How a new reading gets in</h3>
+      <ol class="steps" style="margin-top:8px">
+        <li>Cloud threads and the coordinator: copy the usage block of each session record into <span class="mono">claude-sessions.csv</span>.</li>
+        <li>Sessions on the PC: run the scanner on the session's transcript and copy its line.</li>
+        <li>Codex: after each run, write its tokens and the quota before and after.</li>
+        <li>Limits: add a reading whenever someone looks at them, and once at each session stop.</li>
+        <li>Rebuild this page from the CSV files and publish it to the same link.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="gaps" aria-labelledby="h-gaps">
+    <h2 id="h-gaps"><span class="em">⚠️</span> What is not measured</h2>
+    <ul class="plain">
+      <li><b>Mohamed's usage.</b> His sessions run on his own account and are not visible from this side. Only Ahmed's account appears here.</li>
+      <li><b>Percentages of the limits.</b> Session records say "allowed" and the reset time, not how full the window is. A reading from the Claude usage screen and Codex status is still needed for both weekly limits and the Codex 5-hour window.</li>
+      <li><b>Cost of PC sessions.</b> Sessions on Gaming-PC have tokens but no dollar figure. Whether they draw from the cloud credit is not shown by any record.</li>
+      <li><b>The credit balance and exact expiry.</b> Ahmed said "less than 24 hours" at 19:49 UTC on 2026-11-07. The 19:00 UTC time on 2026-11-08 is the coordinator's working assumption.</li>
+      <li><b>Before 2026-11-07 19:08 UTC.</b> Never recorded and not reconstructed.</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+const D = /*LEDGER_DATA*/null;
+const $ = (id) => document.getElementById(id);
+const nf = new Intl.NumberFormat("en-US");
+const usd = (v) => "$" + v.toFixed(2);
+const mil = (v) => (v / 1e6).toFixed(2) + "M";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mcls = (m) => m === "Opus 5.5" ? "opus" : m === "Sonnet 5.5" ? "sonnet" : "both";
+const hhmm = (iso) => iso ? iso.slice(11, 16) : "n/a";
+const dayhhmm = (iso) => iso ? iso.slice(5, 10) + " " + iso.slice(11, 16) : "not recorded";
+const S = D.sessions;
+const snapMs = Date.parse(D.snapshot);
+const expMs = Date.parse(D.credit.expires);
+const hoursLeftAtSnap = (expMs - snapMs) / 36e5;
+
+/* header pills */
+$("pills").innerHTML = [
+  ["Snapshot", dayhhmm(D.snapshot) + " UTC"],
+  ["Sessions", S.length],
+  ["Partner", "Ahmed (AE0101)"],
+  ["Machines", Object.keys(D.byMachine).join(" · ")],
+].map(([a, b]) => `<span class="pill">${esc(a)} <b>${esc(b)}</b></span>`).join("");
+
+/* credit */
+const rep = D.reported, lo = D.estimate[0], hi = D.estimate[1], tot = D.credit.total;
+const left = tot - rep;
+$("creditStats").innerHTML = `
+  <div class="stat"><span class="label">Reported spend</span><span class="value">${usd(rep)}</span><span class="sub">${S.filter(s=>s.cost!=null).length} sessions that report a cost</span></div>
+  <div class="stat"><span class="label">Not yet reported (estimate)</span><span class="value">${usd(lo)} to ${usd(hi)}</span><span class="sub">${S.filter(s=>s.est).length} sessions with tokens but no dollar figure</span></div>
+  <div class="stat"><span class="label">Left, on reported spend</span><span class="value">${usd(left)}</span><span class="sub">${usd(tot - rep - hi)} to ${usd(tot - rep - lo)} if the estimate counts too</span></div>
+  <div class="stat"><span class="label">Credit ends (assumed)</span><span class="value" id="cdown">about ${Math.round(hoursLeftAtSnap)} h</span><span class="sub">2026-11-08 19:00 UTC, left at snapshot ${hoursLeftAtSnap.toFixed(1)} h</span></div>`;
+const pct = (v) => Math.max(0, Math.min(100, v / tot * 100));
+$("creditBar").setAttribute("aria-label", `Reported ${usd(rep)} of ${usd(tot)}, estimated further ${usd(lo)} to ${usd(hi)}`);
+$("creditBar").innerHTML = `<div class="seg rep" style="width:${pct(rep)}%"></div><div class="seg est1" style="width:${pct(lo)}%"></div><div class="seg est2" style="width:${pct(hi - lo)}%"></div>`;
+$("creditLegend").innerHTML = `<span><i class="sw rep"></i>Reported by session records (${usd(rep)})</span><span><i class="sw est1"></i>Estimate, low end (${usd(lo)})</span><span><i class="sw est2"></i>Estimate, up to the high end (${usd(hi)})</span>`;
+const rr = D.rates;
+$("creditNote").innerHTML = `The reported figure is at API list prices and comes straight from the cloud session records. The estimate is only a guess for sessions that carry no dollar figure (the Gaming-PC sessions): their weighted tokens times the dollars-per-million-tokens range seen in reported sessions (Opus ${rr["Opus 5.5"] ? usd(rr["Opus 5.5"][0]) + " to " + usd(rr["Opus 5.5"][1]) : "n/a"}, Sonnet ${rr["Sonnet 5.5"] ? usd(rr["Sonnet 5.5"][0]) + " to " + usd(rr["Sonnet 5.5"][1]) : "n/a"}). Whether those PC sessions draw from the credit at all is not shown by any record.`;
+/* live countdown: only text, falls back to the snapshot figure */
+(function () {
+  const h = (expMs - Date.now()) / 36e5;
+  if (h > 0) $("cdown").textContent = "about " + (h >= 10 ? Math.round(h) : h.toFixed(1)) + " h";
+  else $("cdown").textContent = "past (assumed)";
+})();
+
+/* totals */
+const T = D.totals;
+$("totalStats").innerHTML = `
+  <div class="stat"><span class="label">Weighted tokens</span><span class="value">${mil(T.weighted)}</span><span class="sub">one comparison number</span></div>
+  <div class="stat"><span class="label">Output tokens</span><span class="value">${nf.format(T.out)}</span><span class="sub">what Claude wrote</span></div>
+  <div class="stat"><span class="label">Cache reads</span><span class="value">${mil(T.cr)}</span><span class="sub">${(T.cr / (T.input + T.cw + T.cr + T.out) * 100).toFixed(0)}% of all raw tokens</span></div>
+  <div class="stat"><span class="label">Codex runs</span><span class="value">${D.codex.length}</span><span class="sub">none ordered yet</span></div>`;
+function groupTable(el, title, obj, withDot) {
+  const rows = Object.entries(obj).sort((a, b) => b[1].weighted - a[1].weighted);
+  el.innerHTML = `<thead><tr><th>${title}</th><th class="r">Sessions</th><th class="r">Weighted</th><th class="r">Reported cost</th></tr></thead><tbody>` +
+    rows.map(([k, v]) => `<tr><td>${withDot ? `<span class="tag"><i class="dot ${mcls(k)}"></i>${esc(k)}</span>` : esc(k)}</td><td class="r num">${v.n}</td><td class="r num">${mil(v.weighted)}</td><td class="r num">${v.costed ? usd(v.cost) : "none"}${v.costed && v.costed < v.n ? `<span class="sub">${v.costed} of ${v.n} report one</span>` : ""}</td></tr>`).join("") + "</tbody>";
+}
+groupTable($("modelTable"), "By model", D.byModel, true);
+groupTable($("machineTable"), "By machine", D.byMachine, false);
+$("weightNote").textContent = "Weighted tokens are a yardstick for comparing sessions, not a bill. Subscription limits are not published per token.";
+
+/* bar chart */
+const sorted = [...S].sort((a, b) => (b.weighted || 0) - (a.weighted || 0));
+const maxW = Math.max(...S.map(s => s.weighted || 0));
+$("barRows").innerHTML = sorted.map((s) => {
+  const w = s.weighted;
+  const bar = w ? `<div class="bar ${mcls(s.model)}" style="width:${(w / maxW * 78).toFixed(1)}%"></div><span class="val">${mil(w)}${s.cost != null ? " · " + usd(s.cost) : ""}</span>` : `<div class="bar none"></div><span class="val">not measured</span>`;
+  return `<div class="row" title="${esc(s.task)}"><div class="name">${esc(s.task)}<small>${esc(s.machine)} · ${esc(s.model)}</small></div><div class="track">${bar}</div></div>`;
+}).join("");
+
+/* quota cards */
+const qClaude5 = D.quota.find(q => q.tool === "Claude" && /five/.test(q.limit));
+const qCredit = D.quota.find(q => /credit/.test(q.limit));
+const win0 = Date.parse(D.window.start), win1 = Date.parse(D.window.end);
+$("quotaCards").innerHTML = `
+  <div class="qcard"><span class="t">Claude · 5-hour window</span><span class="s ok">${qClaude5 ? "Allowed" : "not read"}</span><span class="small">${qClaude5 ? "Not using overage. Resets " + esc(dayhhmm(qClaude5.resets)) + " UTC. Read " + esc(qClaude5.time.replace("T", " ")) + " UTC by the " + esc(qClaude5.by) + "." : ""}</span><span class="small muted">The record gives a status, not a percentage.</span></div>
+  <div class="qcard"><span class="t">Claude · weekly limit</span><span class="s none">Not read</span><span class="small muted">Needs a reading from the Claude usage screen.</span></div>
+  <div class="qcard"><span class="t">Codex · 5-hour window</span><span class="s none">Not read</span><span class="small muted">No Codex run yet. Take a reading with Codex status before and after the first run.</span></div>
+  <div class="qcard"><span class="t">Codex · weekly limit</span><span class="s none">Not read</span><span class="small muted">Same: read it before and after each run.</span></div>
+  <div class="qcard"><span class="t">Cloud credit</span><span class="s none">Balance not read</span><span class="small muted">${qCredit ? "Ahmed, " + esc(qCredit.time.slice(11, 16)) + " UTC: " + esc(qCredit.reading) + "." : ""}</span></div>`;
+
+/* gantt */
+$("ganttNote").textContent = `Window ${hhmm(D.window.start)} to ${hhmm(D.window.end)} UTC (it resets at 00:00 UTC). Each bar runs from a session's start to its last update. The black line is the snapshot. Account-wide: every session below shares this one window.`;
+const pos = (ms) => Math.max(0, Math.min(100, (ms - win0) / (win1 - win0) * 100));
+$("gantt").innerHTML = S.filter(s => s.start).map((s) => {
+  const a = Date.parse(s.start), b = Date.parse(s.end || s.start);
+  const l = pos(a), w = Math.max(0.5, pos(b) - l);
+  return `<div class="grow" title="${esc(s.task)}: ${hhmm(s.start)} to ${hhmm(s.end)}"><div class="name small">${esc(s.task.length > 46 ? s.task.slice(0, 44) + "…" : s.task)}</div><div class="glane"><div class="gbar ${mcls(s.model)}" style="left:${l}%;width:${w}%"></div><div class="now" style="left:${pos(snapMs)}%"></div></div></div>`;
+}).join("");
+$("gaxis").innerHTML = ["19:00", "20:00", "21:00", "22:00", "23:00", "00:00"].map(t => `<span>${t}</span>`).join("");
+
+/* session table with filters and sorting */
+const state = { machine: "All", model: "All", sort: "start", dir: 1 };
+const machines = ["All", ...Object.keys(D.byMachine)];
+const models = ["All", ...Object.keys(D.byModel)];
+function chipGroup(label, key, items) {
+  return `<div class="grp"><span class="glabel">${label}</span>` + items.map(i => `<button class="chip" type="button" data-k="${key}" data-v="${esc(i)}" aria-pressed="${state[key] === i}">${esc(i)}</button>`).join("") + "</div>";
+}
+function renderFilters() {
+  $("filters").innerHTML = chipGroup("Machine", "machine", machines) + chipGroup("Model", "model", models);
+}
+const cols = [
+  ["start", "Started (UTC)"], ["partner", "Partner"], ["account", "Account"], ["machine", "Machine"],
+  ["task", "Session or task"], ["model", "Model"], ["effort", "Effort"], ["weighted", "Weighted", "r"],
+  ["out", "Output", "r"], ["cost", "Cost", "r"], ["snapshot", "Read at"],
+];
+function renderTable() {
+  let rows = S.filter(s => (state.machine === "All" || s.machine === state.machine) && (state.model === "All" || s.model === state.model));
+  const k = state.sort;
+  rows.sort((a, b) => {
+    const x = a[k] ?? -1, y = b[k] ?? -1;
+    return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y))) * state.dir;
+  });
+  const head = cols.map(([key, label, c]) => `<th class="${c || ""}" aria-sort="${state.sort === key ? (state.dir > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-sort="${key}">${label}${state.sort === key ? (state.dir > 0 ? " ▲" : " ▼") : ""}</button></th>`).join("");
+  const body = rows.map((s) => `<tr>
+    <td class="nw mono">${esc(dayhhmm(s.start))}</td>
+    <td class="nw">${esc(s.partner)}</td>
+    <td class="nw">${esc(s.account)}</td>
+    <td>${esc(s.machine)}${s.where !== s.machine ? `<span class="sub">${esc(s.where)}</span>` : ""}</td>
+    <td class="task">${esc(s.task)}<span class="sub">${esc(s.role)}${s.running ? ' <span class="badge live">running at snapshot</span>' : ""}</span></td>
+    <td><span class="tag"><i class="dot ${mcls(s.model)}"></i>${esc(s.model)}</span></td>
+    <td class="nw">${esc(s.effort)}</td>
+    <td class="r num">${s.weighted != null ? nf.format(s.weighted) : "n/a"}</td>
+    <td class="r num">${s.out != null ? nf.format(s.out) : "n/a"}</td>
+    <td class="r num">${s.cost != null ? usd(s.cost) : s.est ? `<span class="badge est" title="Estimate from observed dollars per million tokens">est. ${usd(s.est[0])} to ${usd(s.est[1])}</span>` : "n/a"}</td>
+    <td class="nw mono">${esc(s.snapshot.slice(5, 16).replace("T", " "))}</td></tr>`).join("");
+  $("sessionTable").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body || '<tr><td colspan="11">No sessions match this filter.</td></tr>'}</tbody>`;
+}
+document.addEventListener("click", (e) => {
+  const c = e.target.closest("[data-k]");
+  if (c) { state[c.dataset.k] = c.dataset.v; renderFilters(); renderTable(); return; }
+  const s = e.target.closest("[data-sort]");
+  if (s) { const key = s.dataset.sort; state.dir = state.sort === key ? -state.dir : (["weighted", "out", "cost"].includes(key) ? -1 : 1); state.sort = key; renderTable(); }
+});
+renderFilters(); renderTable();
+
+/* codex */
+$("codexBox").innerHTML = D.codex.length ? "" : `<p>No Codex run has been ordered yet. When one is, its row lands in <span class="mono">codex-runs.csv</span> with Codex's own token report and the 5-hour and weekly percentages before and after.</p><p class="small muted" style="margin-top:8px">Account: Ahmed's Codex (nothing recorded). Model planned for the developer hand: gpt-6.1-sol at xhigh reasoning.</p>`;
+</script>
