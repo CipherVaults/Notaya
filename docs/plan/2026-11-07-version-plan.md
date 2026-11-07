@@ -1,22 +1,43 @@
-# Notaya version plan: 1.6, 1.7, 1.8 and beyond
+# Notaya version plan: 1.6 to 1.9, then 2.0 to 2.5
 
 - **Who and where:** Ahmed's side (`AE0101`), written by Claude in the cloud thread "Plan versions 1.6 to 1.8 and beyond", 2026-11-07, started 23:39:51 UTC (container clock).
 - **Asked by:** Ahmed, project chat 2026-11-07 23:39:31 UTC: "push full throttle ... plan out for all of these structures and possibly updating Notion Hub ... spreading out the features across how many versions ... very small features and big features ... that CLI list and all of the features that we've discussed previously". This is **Phase 2 (planning and staging)** in Ahmed's order of work (21:14:10 UTC: discuss, then plan and stage, then build).
 - **Baseline:** `CipherVaults/Notaya` `main` at `9e3e4e3` (merge of PR #60), app version **1.5.1** (accepted by Mohamed 2026-11-05). Nothing after 1.5.1 is built.
 - **Read in full before writing:** the full feature inventory (`2026-11-07-notaya-full-feature-inventory.md`), the dashboards, whiteboard and import/export studies, the Notion parity study (`2026-11-07-notion-parity-study.md`, 23:41 UTC), the AI CLI action list (`2026-11-07-ai-cli-action-list.md`, see section 5), the model-choice guide, `docs/STATUS.md` (next permitted action), the amendments record (A37 and its dated note), the agreed-feature list in project memory, and the Version Feature Board (28 planned and candidate cards).
+- **Updated:** 2026-11-07, about 23:56 UTC (container clock), with Ahmed's answers (section 0) and the renumbering 1.10–1.15 to 2.0–2.5.
 - **Result state:** *produced*. This is a plan for Ahmed to read and adjust. It is not accepted, and **nothing here is a go to build**: building a version starts on Ahmed's word, and each security-behaviour change, new dependency or vault-format change still needs his own words (CLAUDE.md, A37).
 
 
-> **Repository copy (EX-2026-11-07-50).** The working copy lives in the Claude project's shared files (`notes/2026-11-07-version-plan.md`); this committed copy is what Mohamed's Claude and later threads can read. The study files named below (inventory, dashboards, whiteboard, import/export, Notion parity, AI CLI action list) are in the project's shared files, not in this repository. **This is a plan, not a go to build**: nothing here is greenlit until Ahmed says so (A37 item 9 and its dated note; Ahmed 23:39:31 UTC authorized planning only).
+> **Repository copy (EX-2026-11-07-50, updated in EX-2026-11-07-51).** The working copy lives in the Claude project's shared files (`notes/2026-11-07-version-plan.md`); this committed copy is what Mohamed's Claude and later threads can read. The study files named below (inventory, dashboards, whiteboard, import/export, Notion parity, AI CLI action list) are in the project's shared files, not in this repository. **This is a plan, not a go to build**: nothing here is greenlit until Ahmed says so (A37 item 9 and its dated note; Ahmed 23:39:31 UTC authorized planning only).
 
 ---
 
+## 0. Ahmed's answers (2026-11-07 23:53:46 and 23:54:20 UTC, project chat)
+
+Recorded by the planning thread from Ahmed's two messages (quoted parts in quotation marks). They change the plan as shown.
+
+| Topic | Ahmed's answer | What changes in the plan |
+|---|---|---|
+| Version numbers | "after 1.9, it should be 2.0 ... It's just natural" | The old 1.10 to 1.15 are now **2.0 to 2.5** (plan IDs too: 1.10-1 is now 2.0-1, and so on) |
+| Order | "it's up to you" | The coordinator's order stands (this plan's order) |
+| Names in About | "should be moving to 1.6. It's tiny" | Confirmed in 1.6 (1.6-14) |
+| AI and handwriting | "The AI shouldn't bother with handwriting" | Confirmed: on the whiteboard the AI works with shapes, text and notes, never freehand drawing |
+| AI levels | "I agree with the 4 levels"; the AI "should be able to have full authority", for example to delete whole pages or hubs when asked | Confirmed: Off, Look, Edit, Full. Full can delete large parts (still to the recycle bin, with the window confirm) |
+| Hidden notebooks | "the idea of hide notebooks from AI. That's good" | Added to 1.6-6: notebooks the person hides from the AI in Settings |
+| Big-change confirm | "optional ... not something that's all like have to be forced"; "20 I guess is good enough" | A Settings switch (on by default is a spec choice), threshold 20 items |
+| Files for the AI | "something that's inside of the app itself ... when it's installed and when it's portable, something that's containable" | The exchange folder lives **inside Notaya's own data folder** (works for the installed and the portable copy), not a folder picked anywhere on the PC (1.7-12) |
+| Page lock, "lock now" | "I don't want to answer anything about locking pages right now" | Deferred; not in any version yet |
+| Board snapshots (the AI looks at a picture of a board) | "pictures, I agree" | Allowed (spec details in 2.3 and 2.4) |
+| Two AIs at once | fine "as long as Claude and Codex do not collide", working "on two separate things", with good coordination | Allowed in 1.6-6, each AI its own pairing and level; the clash protection of 1.6-2 refuses a write to an item another writer just changed; the activity log shows which AI did what |
+| The bridge (how the AI reaches Notaya) | "I'm not sure" | Kept as the proposal (a companion program speaking MCP over a local pipe); decided in the 1.6 spec |
+
+
 ## 1. The short version
 
-1. **Nine versions, 1.6 to 1.14, in four waves.** Each version has one clear theme, a few big pieces and a handful of small ones, so no release is crammed (Ahmed 20:41:50 UTC: "stage it ... to what is actually doable").
+1. **Ten versions, 1.6 to 1.9 and then 2.0 to 2.5, in four waves.** Each version has one clear theme, a few big pieces and a handful of small ones, so no release is crammed (Ahmed 20:41:50 UTC: "stage it ... to what is actually doable").
 2. **Foundation first.** Version 1.6 builds the AI CLI and its safety net (activity log, page version history, "something changed" signals, one list of named actions), plus quick fixes you will notice on day one. Everything later is built on top of that and ships with its own AI actions from the start.
 3. **Then comfort, then pages, then files.** 1.7 makes the app yours (right-click menus, shortcuts, app bar, tray, Ctrl+F, banner). 1.8 makes pages rich enough to hold your Notion hubs (columns, coloured callouts, folding headings, mentions and backlinks, view links, code languages, Mermaid). 1.9 brings tabs and the full import/export upgrade that the Notion migration needs.
-4. **Then the big rooms.** 1.10 the sticky corkboard, calculator upgrades and the in-app manual and tour. 1.11 and 1.12 dashboards (its three agreed steps). 1.13 and 1.14 the whiteboard. 1.15 Notebook mode, which reuses the whiteboard's engine (a good candidate to be called **2.0**).
+4. **Then the big rooms, as version 2.** After 1.9 comes **2.0** (Ahmed, 23:54:20 UTC): 2.0 the sticky corkboard, calculator upgrades and the in-app manual and tour. 2.1 and 2.2 dashboards (its three agreed steps). 2.3 and 2.4 the whiteboard. 2.5 Notebook mode, which reuses the whiteboard's engine.
 5. **The Notion migration runs alongside**, not as one version: the pilot can start after 1.8 (pages) and the bulk import after 1.9 (import into an existing place, re-import without duplicates).
 6. **Sizes, not dates.** Every item has a size (XS, S, M, L, XL). No dates are promised.
 
@@ -47,12 +68,12 @@ flowchart TD
   C["1.7 Comfort: right-click menus, shortcuts, app bar, tray, Ctrl+F, banner"]
   P["1.8 Pages: columns, callouts, folding headings, mentions, code and Mermaid"]
   T["1.9 Tabs and files: tabs, export upgrade, Excel, import into place, re-import"]
-  K["1.10 Corkboard, calculator, manual and tour"]
-  D1["1.11 Dashboards I: live tiles, filters, click-through"]
-  D2["1.12 Dashboards II: measures, finance starter"]
-  W1["1.13 Whiteboard I: canvas, pens with pressure, shapes, text"]
-  W2["1.14 Whiteboard II: templates, timer, board notes, frames, export"]
-  N["1.15 Notebook mode (candidate 2.0)"]
+  K["2.0 Corkboard, calculator, manual and tour"]
+  D1["2.1 Dashboards I: live tiles, filters, click-through"]
+  D2["2.2 Dashboards II: measures, finance starter"]
+  W1["2.3 Whiteboard I: canvas, pens with pressure, shapes, text"]
+  W2["2.4 Whiteboard II: templates, timer, board notes, frames, export"]
+  N["2.5 Notebook mode"]
   M["Notion migration: pilot after 1.8, bulk after 1.9"]
   F --> C --> P --> T
   F --> D1
@@ -93,7 +114,7 @@ The hard rules behind it:
 | 1.6-3 | **Activity log** | M | A list of who changed what and when: you or "with Claude"; kept encrypted; can't be quietly edited | Shown in Settings in 1.6; the full panel comes in 1.8. Gate: security design |
 | 1.6-4 | **Page version history, first step** | L | Every page keeps earlier versions; open the timeline, view an old version, restore it | Needed for "AI edits can be undone". Highlighting what changed comes in 1.8 |
 | 1.6-5 | **Recycle bin for everything** | M | Notebooks, sections, database rows and sticky notes also go to Trash first (today only pages and databases do) | Action list 10.6; boards and dashboards join when they exist |
-| 1.6-6 | **AI CLI, first release** (action-list steps A and B) | XL | Claude or Codex, from outside, can read and explain everything in Notaya and then edit notebooks, sections, pages, blocks, databases and sticky notes; deletes always ask you first in the Notaya window; "Claude is working" marker with a Stop button | Door: the "Notaya bridge" speaking MCP over a local pipe only your Windows account can open, with pairing; **off by default**; levels Off, Look, Edit, Full set only in Settings; locked stays locked. Section 5. **Gate:** security behaviour, new promises P30–P33, maybe a dependency |
+| 1.6-6 | **AI CLI, first release** (action-list steps A and B) | XL | Claude or Codex, from outside, can read and explain everything in Notaya and then edit notebooks, sections, pages, blocks, databases and sticky notes; deletes always ask you first in the Notaya window; "Claude is working" marker with a Stop button | Door: the "Notaya bridge" speaking MCP over a local pipe only your Windows account can open, with pairing; **off by default**; levels Off, Look, Edit, Full set only in Settings (confirmed by Ahmed 23:53:46 UTC); notebooks you hide from the AI; an optional big-change confirm (20 items); Claude and Codex may both be connected, each with its own pairing and level, kept apart by the clash protection; locked stays locked. Section 5. **Gate:** security behaviour, new promises P30–P33, maybe a dependency |
 | 1.6-7 | **Fix: inline databases vanish from exports** | S | A database inside a page now appears in its PDF, Word, Markdown and HTML export | Bug confirmed in code (inventory 3.9) |
 | 1.6-8 | **Fix: the Import window's out-of-date sentence** | XS | It no longer says databases are not imported (they are) | `ImportDialog.tsx` |
 | 1.6-9 | **"+ New notebook" always visible** | XS | A modest "+ New notebook" line at the bottom of the notebook list (agreed 21:41 UTC) | Today it shows only on mouse-over |
@@ -101,7 +122,7 @@ The hard rules behind it:
 | 1.6-11 | **Icons pass** | S | Every icon checked in every theme; faded ones strengthened; Favorite star: clear outline when off, gold when on | Agreed 21:49 UTC |
 | 1.6-12 | **Reopen where you left off** | S | Notaya opens on the page you were on, also after unlocking | Open tabs are restored once tabs exist (1.9) |
 | 1.6-13 | **Drag databases in the sidebar** | S | Drag a database to reorder it among the pages (agreed 21:52 UTC) | Moving between notebooks stays a menu action |
-| 1.6-14 | **Names in About** (moved up from 1.7) | XS | "Made by Mohamed Sayed and Ahmed Emara, with Claude and ChatGPT" | Addition (moved earlier because it is tiny). The full About page with licences is 1.10 |
+| 1.6-14 | **Names in About** (moved up from 1.7) | XS | "Made by Mohamed Sayed and Ahmed Emara, with Claude and ChatGPT" | Addition (moved earlier because it is tiny). The full About page with licences is 2.0 |
 | 1.6-15 | **The checks 1.5.1 never had** | S | The installer on a clean Windows user, the tray "Close sticky notes", the keyboard-layout shortcut, Word/PDF of the Notion import, Start with Windows at a real sign-in | From the board's "Later" card; done during the 1.6 PC round on throwaway data |
 
 **Why this size is fair:** one XL (the CLI), one L (history), four M, the rest small. The small items are independent and can be built in parallel lanes.
@@ -112,7 +133,7 @@ The hard rules behind it:
 
 | # | Item | Size | What it means for you | Notes |
 |---|---|---|---|---|
-| 1.7-1 | **Right-click menus everywhere agreed** | L | Sidebar items (rename, icon, duplicate, move, export, delete), editor text (cut, copy, paste, "Turn into…"), database rows (open, duplicate, delete), links and pictures (open, copy link, copy image, save image), several items at once, keyboard hints, "Copy link to page"; empty sidebar space on trial | Tabs and sticky-note menus arrive with tabs (1.9) and the corkboard (1.10). No "Ask AI about this" (agreed) |
+| 1.7-1 | **Right-click menus everywhere agreed** | L | Sidebar items (rename, icon, duplicate, move, export, delete), editor text (cut, copy, paste, "Turn into…"), database rows (open, duplicate, delete), links and pictures (open, copy link, copy image, save image), several items at once, keyboard hints, "Copy link to page"; empty sidebar space on trial | Tabs and sticky-note menus arrive with tabs (1.9) and the corkboard (2.0). No "Ask AI about this" (agreed) |
 | 1.7-2 | **Customize the menus** | S | Settings: hide or turn off menu items | Agreed 22:45 UTC |
 | 1.7-3 | **Duplicate page** | S | New: copy a page (with its sub-pages if you choose) | Needed by the menus; also a Notion parity gap |
 | 1.7-4 | **Settings > Shortcuts** | M | One list of every action and its keys; rebind; warns about clashes; reset one or all | Agreed 21:37 UTC |
@@ -123,7 +144,7 @@ The hard rules behind it:
 | 1.7-9 | **Ctrl+H: find and replace** | S | Replace one or all in the open page | Agreed as an extra |
 | 1.7-10 | **Home banner and page header** | M | Banner picture per time of day (picture or folder, shuffle, reset to built-in); taller banner like Notion; big page icon overlapping the banner; Settings with live preview (height, icon size, icon position); Change and Reposition buttons; per-page override | Agreed 23:08 UTC. Uses the existing picture store |
 | 1.7-11 | **Full-width per page** | XS | One page can be wide while others stay normal | Parity study (P3); fits the per-page override |
-| 1.7-12 | **AI CLI: files in and out** (action-list step C) | M | The AI can import, export and back up, but only through one exchange folder you pick in Settings; every file written is logged and asks you first | Action list 8.8; import into a place and re-import follow in 1.9. **Gate:** security behaviour (a file door) |
+| 1.7-12 | **AI CLI: files in and out** (action-list step C) | M | The AI can import, export and back up, but only through one exchange folder inside Notaya's own data folder (installed or portable; Ahmed 23:53:46 UTC); every file written is logged and asks you first | Action list 8.8; import into a place and re-import follow in 1.9. **Gate:** security behaviour (a file door) |
 
 #### Version 1.8 — "Pages that can hold your hubs"
 
@@ -163,68 +184,68 @@ The hard rules behind it:
 
 **After 1.9:** the Notion **bulk import** (parity M3 to M5) and a monthly refresh can run.
 
-### Wave 2: the sticky corkboard and dashboards
+### Wave 2 (version 2): the sticky corkboard and dashboards
 
-#### Version 1.10 — "Corkboard, calculator, manual"
-
-| # | Item | Size | What it means for you | Notes |
-|---|---|---|---|---|
-| 1.10-1 | **Sticky corkboard** | L | In-app corkboard with Grid and Free modes; drag; box-select; coloured pins; coloured strings between notes; right-click menu; create from the tray | Agreed 20:31–20:33 UTC; desktop floating notes and Keep on top already exist |
-| 1.10-2 | **Calculator: history panel** | S | History on the right side of the calculator | Agreed 21:37 UTC |
-| 1.10-3 | **Calculator: unit converters** | M | Windows-style offline converters (length, weight, temperature, area, volume, time, data…) | No internet features (agreed) |
-| 1.10-4 | **In-app Manual** | L | A browsable feature guide inside Notaya with pictures, clear icons and longer explanations; the same content kept as an outside guide we update with every release | Agreed 23:04 UTC. The outside guide starts in 1.6 and grows each release |
-| 1.10-5 | **Tour** | S | A short, skippable overview; replay from Settings | Agreed 23:04 UTC; placed after the app bar, tabs and menus have settled so it does not go stale |
-| 1.10-6 | **About page, the professional side** | S | Credits for both partners, proper open-source references and licences, Notaya's own notes | Agreed 23:04 UTC. A public licence still needs both partners |
-| 1.10-7 | **Notaya's own icon set** | M | Line icons drawn for Notaya, usable for pages, notebooks and databases (pictures allowed for notebooks and databases too) | Parity P2. Our own artwork, no brand assets |
-
-#### Version 1.11 — "Dashboards I: live tiles and filters" (agreed steps 1 and 2)
+#### Version 2.0 — "Corkboard, calculator, manual"
 
 | # | Item | Size | What it means for you | Notes |
 |---|---|---|---|---|
-| 1.11-1 | **Dashboard pages with live tiles** | XL | A new item next to pages and databases; pages of tiles you drag and resize: number cards, bar/column, line, donut **and pie**, table, text; always read live from your databases | Agreed 23:02 UTC step 1. **Gate:** vault format (new item kind) |
-| 1.11-2 | **Filters, slicers, Reset and click-through** | L | Slicers (drop-down, list, buttons, date range, search), click a bar to filter the others, an active-filters strip with Reset, open details, open the record | Agreed step 2 |
-| 1.11-3 | **Embed a dashboard in a page** | S | Show a dashboard (or one tile) inside a page | Study suggestion |
+| 2.0-1 | **Sticky corkboard** | L | In-app corkboard with Grid and Free modes; drag; box-select; coloured pins; coloured strings between notes; right-click menu; create from the tray | Agreed 20:31–20:33 UTC; desktop floating notes and Keep on top already exist |
+| 2.0-2 | **Calculator: history panel** | S | History on the right side of the calculator | Agreed 21:37 UTC |
+| 2.0-3 | **Calculator: unit converters** | M | Windows-style offline converters (length, weight, temperature, area, volume, time, data…) | No internet features (agreed) |
+| 2.0-4 | **In-app Manual** | L | A browsable feature guide inside Notaya with pictures, clear icons and longer explanations; the same content kept as an outside guide we update with every release | Agreed 23:04 UTC. The outside guide starts in 1.6 and grows each release |
+| 2.0-5 | **Tour** | S | A short, skippable overview; replay from Settings | Agreed 23:04 UTC; placed after the app bar, tabs and menus have settled so it does not go stale |
+| 2.0-6 | **About page, the professional side** | S | Credits for both partners, proper open-source references and licences, Notaya's own notes | Agreed 23:04 UTC. A public licence still needs both partners |
+| 2.0-7 | **Notaya's own icon set** | M | Line icons drawn for Notaya, usable for pages, notebooks and databases (pictures allowed for notebooks and databases too) | Parity P2. Our own artwork, no brand assets |
 
-#### Version 1.12 — "Dashboards II: measures" (agreed step 3)
-
-| # | Item | Size | What it means for you | Notes |
-|---|---|---|---|---|
-| 1.12-1 | **Named reusable calculations (measures)** | XL | "Total spent = sum of Amount where Kind is Expense", defined once, used anywhere; a sentence builder and the existing formula language; previous period, share of total, top N | Agreed step 3; sandboxed in the Rust core |
-| 1.12-2 | **Matrix tile, partial-period marks, data-health tiles, snapshots** | M | The study's "honesty" features | Study section 4.5; snapshots optional |
-| 1.12-3 | **Finance starter template** | M | A starter that builds your report shape from a made-up dataset (never your real data) | Study question 7 |
-| 1.12-4 | **Database page layout, property descriptions, quick filter chips** | M | Rows open with your chosen layout; properties can have a description; quick filter chips on a view | Parity P2 items that your finance system uses |
-
-### Wave 3: the whiteboard
-
-#### Version 1.13 — "Whiteboard I: draw and arrange"
+#### Version 2.1 — "Dashboards I: live tiles and filters" (agreed steps 1 and 2)
 
 | # | Item | Size | What it means for you | Notes |
 |---|---|---|---|---|
-| 1.13-1 | **Board canvas** | L | Its own section like Sticky notes; infinite canvas, pan and zoom, backgrounds and patterns, undo, autosave | Agreed 23:16–23:23 UTC. **Gate:** vault format; a stroke library (study first) |
-| 1.13-2 | **Pens with pressure** | L | Pen, pencil, marker, highlighter, eraser, your own pens; **drawing-tablet pressure**, tablet eraser end, palm rejection; mouse and touch | Core (Ahmed owns a tablet). Tested only on Ahmed's PC |
-| 1.13-3 | **Shapes, lines, text** | M | Shapes, arrows, text boxes, automatic shapes | |
-| 1.13-4 | **Select, move, ruler, insert space** | M | Select, lasso, group, align; the ruler with the degree dial; insert space | OneNote Draw tab as the style model |
+| 2.1-1 | **Dashboard pages with live tiles** | XL | A new item next to pages and databases; pages of tiles you drag and resize: number cards, bar/column, line, donut **and pie**, table, text; always read live from your databases | Agreed 23:02 UTC step 1. **Gate:** vault format (new item kind) |
+| 2.1-2 | **Filters, slicers, Reset and click-through** | L | Slicers (drop-down, list, buttons, date range, search), click a bar to filter the others, an active-filters strip with Reset, open details, open the record | Agreed step 2 |
+| 2.1-3 | **Embed a dashboard in a page** | S | Show a dashboard (or one tile) inside a page | Study suggestion |
 
-#### Version 1.14 — "Whiteboard II: templates and board notes"
-
-| # | Item | Size | What it means for you | Notes |
-|---|---|---|---|---|
-| 1.14-1 | **Connectors** | M | Arrows that stay attached to boxes | |
-| 1.14-2 | **Board sticky notes, linked or separate** | M | Per note: linked to a real sticky note, or a separate copy | Ahmed 23:23 UTC. Needs the 1.10 corkboard |
-| 1.14-3 | **Pictures and frames** | M | Pictures on the board; named frames; present frame by frame | |
-| 1.14-4 | **First five templates** | M | Weekly planner, Kanban, mind map, SWOT, lined page; save your own | Our own originals, no Microsoft assets |
-| 1.14-5 | **Timer and stopwatch** | S | A countdown on the board | Ahmed's addition |
-| 1.14-6 | **Export and print** | S | PNG, PDF (a page per frame), copy | |
-
-### Wave 4: Notebook mode
-
-#### Version 1.15 — "Notebook mode" (a good candidate to call **2.0**)
+#### Version 2.2 — "Dashboards II: measures" (agreed step 3)
 
 | # | Item | Size | What it means for you | Notes |
 |---|---|---|---|---|
-| 1.15-1 | **Notebook mode, chosen per notebook** | XL | Names: "Default style" (Notion-like) and "Notebook mode"; coloured section tabs on top, the page list with sub-pages on the right, pages as free canvases (click anywhere to type, drag boxes) | Agreed 23:27–23:29 UTC. Reuses the whiteboard engine |
-| 1.15-2 | **Free-canvas single pages** | M | Switch one page in a Default-style notebook to a free canvas | Agreed |
-| 1.15-3 | **Everything still works** | M | Search, Ctrl+F, export, history, lock and the AI CLI on canvas pages | Agreed |
+| 2.2-1 | **Named reusable calculations (measures)** | XL | "Total spent = sum of Amount where Kind is Expense", defined once, used anywhere; a sentence builder and the existing formula language; previous period, share of total, top N | Agreed step 3; sandboxed in the Rust core |
+| 2.2-2 | **Matrix tile, partial-period marks, data-health tiles, snapshots** | M | The study's "honesty" features | Study section 4.5; snapshots optional |
+| 2.2-3 | **Finance starter template** | M | A starter that builds your report shape from a made-up dataset (never your real data) | Study question 7 |
+| 2.2-4 | **Database page layout, property descriptions, quick filter chips** | M | Rows open with your chosen layout; properties can have a description; quick filter chips on a view | Parity P2 items that your finance system uses |
+
+### Wave 3 (version 2): the whiteboard
+
+#### Version 2.3 — "Whiteboard I: draw and arrange"
+
+| # | Item | Size | What it means for you | Notes |
+|---|---|---|---|---|
+| 2.3-1 | **Board canvas** | L | Its own section like Sticky notes; infinite canvas, pan and zoom, backgrounds and patterns, undo, autosave | Agreed 23:16–23:23 UTC. **Gate:** vault format; a stroke library (study first) |
+| 2.3-2 | **Pens with pressure** | L | Pen, pencil, marker, highlighter, eraser, your own pens; **drawing-tablet pressure**, tablet eraser end, palm rejection; mouse and touch | Core (Ahmed owns a tablet). Tested only on Ahmed's PC |
+| 2.3-3 | **Shapes, lines, text** | M | Shapes, arrows, text boxes, automatic shapes | |
+| 2.3-4 | **Select, move, ruler, insert space** | M | Select, lasso, group, align; the ruler with the degree dial; insert space | OneNote Draw tab as the style model |
+
+#### Version 2.4 — "Whiteboard II: templates and board notes"
+
+| # | Item | Size | What it means for you | Notes |
+|---|---|---|---|---|
+| 2.4-1 | **Connectors** | M | Arrows that stay attached to boxes | |
+| 2.4-2 | **Board sticky notes, linked or separate** | M | Per note: linked to a real sticky note, or a separate copy | Ahmed 23:23 UTC. Needs the 2.0 corkboard |
+| 2.4-3 | **Pictures and frames** | M | Pictures on the board; named frames; present frame by frame | |
+| 2.4-4 | **First five templates** | M | Weekly planner, Kanban, mind map, SWOT, lined page; save your own | Our own originals, no Microsoft assets |
+| 2.4-5 | **Timer and stopwatch** | S | A countdown on the board | Ahmed's addition |
+| 2.4-6 | **Export and print** | S | PNG, PDF (a page per frame), copy | |
+
+### Wave 4 (version 2): Notebook mode
+
+#### Version 2.5 — "Notebook mode"
+
+| # | Item | Size | What it means for you | Notes |
+|---|---|---|---|---|
+| 2.5-1 | **Notebook mode, chosen per notebook** | XL | Names: "Default style" (Notion-like) and "Notebook mode"; coloured section tabs on top, the page list with sub-pages on the right, pages as free canvases (click anywhere to type, drag boxes) | Agreed 23:27–23:29 UTC. Reuses the whiteboard engine |
+| 2.5-2 | **Free-canvas single pages** | M | Switch one page in a Default-style notebook to a free canvas | Agreed |
+| 2.5-3 | **Everything still works** | M | Search, Ctrl+F, export, history, lock and the AI CLI on canvas pages | Agreed |
 
 ### Later (not placed yet)
 
@@ -255,13 +276,14 @@ The action list (about 300 actions in about 25 areas) proposes three build steps
 | Part | What it is | Version |
 |---|---|---|
 | The door | The **Notaya bridge**: a small companion program that speaks MCP (the standard tool protocol Claude Code and Codex already use) and talks to the running Notaya over a Windows named pipe only Ahmed's account can open; no network port; first-time **pairing** shown in the Notaya window; pairings removable in Settings | 1.6 |
-| Off by default, four levels | **Off** (default), **Look** (read only), **Edit** (create, change, move; deletes to the bin after Ask), **Full** (Edit plus files through the exchange folder, look and non-security settings, emptying the bin with Strong). Set only in Settings > AI access; the AI can never see or change it | 1.6 (Full's file part in 1.7) |
-| Confirmations | None for ordinary edits (undoable); **Ask** (one click in the Notaya window); **Strong** (type a word). Only in the Notaya window, never in the AI's chat | 1.6 |
+| Off by default, four levels | **Off** (default), **Look** (read only), **Edit** (create, change, move; deletes to the bin after Ask), **Full** (Edit plus files through the exchange folder, look and non-security settings, emptying the bin with Strong). Set only in Settings > AI access; the AI can never see or change it. Full can delete large parts (whole pages or hubs) when asked, still to the recycle bin with the window confirm. Plus **hidden notebooks** the AI cannot see (Ahmed: "That's good") | 1.6 (Full's file part in 1.7) |
+| Confirmations | None for ordinary edits (undoable); **Ask** (one click in the Notaya window); **Strong** (type a word). Only in the Notaya window, never in the AI's chat. The **big-change confirm** (one request touching more than 20 items) is an optional Settings switch, not forced (Ahmed 23:53:46 UTC) | 1.6 |
+| Two AIs at once | Claude and Codex may both be connected, each with its own pairing and level; a write to an item the other just changed is refused ("read it again"); the log shows which AI did what; the coordinator keeps them on separate work | 1.6 |
 | Locked stays locked; the person wins | Every action refuses while locked; a write clashing with your typing is refused ("read it again") | 1.6 |
 | Undo and log | Each AI request is one "change set" in the tamper-evident (hash-chained, encrypted) activity log, marked "with Claude" or "with Codex"; page edits also land in version history | 1.6 |
 | Step A, Look | Read and explain everything that exists: tree, pages as Markdown, databases, search, sticky notes, calculator, settings; `ai.*`, `ui.open`, `ui.notify` | 1.6 |
 | Step B, Edit | Edit actions for notebooks, sections, pages, blocks, databases, sticky notes, with small saves, the recycle bins, `activity.undo` and version history | 1.6 |
-| Step C, Files | The exchange folder, `import.*`, `export.*`, `backup.now` | 1.7 (1.7-12) |
+| Step C, Files | The exchange folder (inside Notaya's own data folder, installed or portable), `import.*`, `export.*`, `backup.now` | 1.7 (1.7-12) |
 | Never for the AI | Passwords, keyfiles, security on or off, restore and start over, the AI switch itself, opening programs, web links or Windows folders, the clipboard | always |
 
 ### 5.3 Actions that arrive with later versions
@@ -271,10 +293,10 @@ The action list (about 300 actions in about 25 areas) proposes three build steps
 | 1.7 | Files through the exchange folder (import, export, backup); menus, shortcuts, app bar (the AI can arrange the bar), find and replace in a page, banner and page-header settings |
 | 1.8 | Columns, callouts, folding headings, mentions and backlinks, view links, code language and Mermaid, history (list, view, restore), activity log read |
 | 1.9 | Tabs (open, pin, close, group), export with contents page and Excel, import into a place, re-import, the "did not carry" report, counts check |
-| 1.10 | Corkboard (positions, pins, strings, modes), calculator history and converters, open the manual page for a feature |
-| 1.11–1.12 | Dashboards: create, add tile, set filter, add slicer, define a measure, snapshot |
-| 1.13–1.14 | Whiteboard: shapes, text, notes, connectors, frames, templates, timer (agreed direction: the AI works with shapes, text and notes, not freehand drawing; to confirm) |
-| 1.15 | Switch a notebook or page to Notebook mode and back; place boxes on a canvas page |
+| 2.0 | Corkboard (positions, pins, strings, modes), calculator history and converters, open the manual page for a feature |
+| 2.1–2.2 | Dashboards: create, add tile, set filter, add slicer, define a measure, snapshot |
+| 2.3–2.4 | Whiteboard: shapes, text, notes, connectors, frames, templates, timer (confirmed by Ahmed 23:54:20 UTC: the AI works with shapes, text and notes, never freehand drawing; it may look at a picture of a board) |
+| 2.5 | Switch a notebook or page to Notebook mode and back; place boxes on a canvas page |
 
 ---
 
@@ -291,7 +313,7 @@ Not a version of its own: it follows the features it needs (parity study section
 | M4 | Fill-ins through the connector (saved views, layouts, descriptions, covers) | 1.9 + the AI CLI | – |
 | M5 | Check: counts, sample compare, your ten most-used pages | M4 | Your walk through ten pages |
 | M6 | Final copy; then a monthly refresh from your own export | M5 | – |
-| – | Finance formulas: the connector cannot read formula text; rebuild by hand with Claude, or read them with a read-only Notion key | 1.12 (measures) | Yes (questions 6, 7) |
+| – | Finance formulas: the connector cannot read formula text; rebuild by hand with Claude, or read them with a read-only Notion key | 2.2 (measures) | Yes (questions 6, 7) |
 
 ---
 
@@ -313,12 +335,12 @@ Not a version of its own: it follows the features it needs (parity study section
 | 1.7 | about 33 | Right-click menus (L) |
 | 1.8 | about 30 | Mentions and backlinks (L) |
 | 1.9 | about 30 | Tabs (L), re-import (L) |
-| 1.10 | about 25 | Corkboard (L), Manual (L) |
-| 1.11 | about 20 | Dashboards I (XL + L) |
-| 1.12 | about 21 | Measures (XL) |
-| 1.13 | about 18 | Canvas and pens (L + L) |
-| 1.14 | about 17 | Board notes, templates |
-| 1.15 | about 18 | Notebook mode (XL) |
+| 2.0 | about 25 | Corkboard (L), Manual (L) |
+| 2.1 | about 20 | Dashboards I (XL + L) |
+| 2.2 | about 21 | Measures (XL) |
+| 2.3 | about 18 | Canvas and pens (L + L) |
+| 2.4 | about 17 | Board notes, templates |
+| 2.5 | about 18 | Notebook mode (XL) |
 
 1.6 is the heaviest on purpose: it is the foundation. If it runs long, items 1.6-12 to 1.6-14 can move to 1.7 without harm.
 
@@ -335,8 +357,8 @@ Not a version of its own: it follows the features it needs (parity study section
 | 1.8 | Mentions, columns and new block attributes in the vault (an older Notaya may not open it; backup first) | Vault format |
 | 1.8 | File, audio and video blocks (size limits, no network) | Security behaviour |
 | 1.9 | A font bundled for Arabic and Greek in PDF (licence) | Dependency |
-| 1.11 | The dashboard item kind | Vault format |
-| 1.13 | The whiteboard item kind; a stroke-drawing library (a small licence study first) | Vault format, dependency |
+| 2.1 | The dashboard item kind | Vault format |
+| 2.3 | The whiteboard item kind; a stroke-drawing library (a small licence study first) | Vault format, dependency |
 | Migration | M0 count; a read-only Notion key (optional) | Ahmed's yes |
 
 ---
@@ -354,14 +376,13 @@ These are cheap to do while the cloud credit lasts and make 1.6 faster once Ahme
 
 ## 10. Open questions for Ahmed (numbered)
 
-1. **Order:** is "foundation first (1.6), then comfort (1.7), then pages (1.8), then tabs and files (1.9)" right for you, with dashboards in 1.11–1.12 and the whiteboard in 1.13–1.14?
-2. **Dashboards earlier?** If dashboards matter more to you than the corkboard and the manual, 1.10 and 1.11 can swap. My recommendation: keep the order, because dashboards benefit from tabs and the file work.
-3. **Version names:** keep counting (1.10, 1.11 …), or call Notebook mode **2.0**?
-4. **About names in 1.6** (moved up from 1.7 because it is tiny): OK?
-5. **Columns and the other four Notion page gaps in 1.8** (parity questions 2 and 3): OK?
-6. **The AI and the whiteboard:** the AI works with shapes, text and notes, never freehand drawing. OK?
-7. **Go for the planning work in section 9** (specs and studies only, nothing built)?
-8. **The AI CLI's own ten questions** (levels, hidden notebooks, where confirmations appear, the big-change threshold, the exchange folder, page locks, "lock now", board snapshots, two AIs at once, the bridge) are in the action list, section 12. They shape the 1.6 spec, so they are worth answering first.
+Answered on 2026-11-07 at 23:53:46 and 23:54:20 UTC (section 0): order (coordinator's call, kept), version names (2.0 after 1.9), About names in 1.6 (yes), the AI and handwriting (never), and the AI CLI's levels, hidden notebooks, big-change confirm, file door, snapshots and two AIs. Still open:
+
+1. **Columns and the other four Notion page gaps in 1.8** (parity questions 2 and 3): OK?
+2. **Go for the planning work in section 9** (specs and studies only, nothing built)?
+3. **Page lock and "lock now" for the AI:** deferred at Ahmed's word ("I don't want to answer anything about locking pages right now"); asked again when the 1.6 spec needs it.
+4. **The bridge** (how the AI reaches Notaya): Ahmed is not sure; the 1.6 spec explains the proposal in plain words and asks once more.
+5. **Where confirmations appear** (only in the Notaya window, recommended): not answered; the 1.6 spec keeps the recommendation unless Ahmed says otherwise.
 
 ---
 

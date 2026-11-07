@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-07 (Ahmed's messages 23:53:46 and 23:54:20 UTC), EX-2026-11-07-51: version plan updated with Ahmed's answers
+
+- [2026-11-07-version-plan-answers.md](2026-11-07-version-plan-answers.md): a plan update and records; the next PR after #62. Versions after 1.9 renumbered to 2.0–2.5; the AI CLI answers folded in; two authority rows; the Notion hub updated. **Produced** (verified only by its section 3); not accepted.
+
 ### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-50: Phase 2 version plan, V1.6 to V1.15
 
 - [2026-11-07-version-plan.md](2026-11-07-version-plan.md): a plan and records; PR #62. Every agreed feature staged across V1.6 to V1.15 in four waves with sizes, dependencies and gates ([the plan](../plan/2026-11-07-version-plan.md)); the Notion hub updated to match; session entry 44. **Produced** (verified only by the checks in its section 3); not accepted. Nothing is greenlit to build.
