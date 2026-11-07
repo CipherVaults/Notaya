@@ -1,0 +1,898 @@
+<title>Notaya Manual</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a reading column with a sticky contents rail; each feature is a titled entry with plain text and an optional "good to know" line.
+   Palette is Notaya's own Sunrise look (src/styles/app.css) so the manual feels like the app. */
+:root {
+  --bg: #fffaf3;
+  --rail: #fbefe0;
+  --elevated: #ffffff;
+  --surface: rgba(120, 60, 20, 0.05);
+  --surface-2: rgba(120, 60, 20, 0.095);
+  --border: rgba(120, 60, 20, 0.16);
+  --text: #2b1d14;
+  --muted: #6b5444;
+  --faint: #8f7766;
+  --accent: #ff6a3d;
+  --accent-ink: #b33d12;
+  --accent-soft: rgba(255, 106, 61, 0.12);
+  --note-bg: rgba(255, 166, 77, 0.16);
+  --note-ink: #7a4310;
+  --ok: #2f7a4b;
+  --ok-soft: rgba(47, 122, 75, 0.13);
+  --soon: #3b6fb0;
+  --soon-soft: rgba(59, 111, 176, 0.12);
+  --code-bg: #fbf1e4;
+  --band-1: #ff6a3d;
+  --band-2: #ffa64d;
+  --band-3: #ffe08a;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1411;
+    --rail: #231b16;
+    --elevated: #2a211b;
+    --surface: rgba(255, 230, 210, 0.05);
+    --surface-2: rgba(255, 230, 210, 0.09);
+    --border: rgba(255, 230, 210, 0.14);
+    --text: #f7ece2;
+    --muted: #bfae9f;
+    --faint: #9a8979;
+    --accent: #ff8a5f;
+    --accent-ink: #ff9a74;
+    --accent-soft: rgba(255, 138, 95, 0.16);
+    --note-bg: rgba(255, 190, 110, 0.12);
+    --note-ink: #f0c490;
+    --ok: #7fcf9d;
+    --ok-soft: rgba(127, 207, 157, 0.14);
+    --soon: #8fb7ea;
+    --soon-soft: rgba(143, 183, 234, 0.14);
+    --code-bg: #221a15;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1411;
+  --rail: #231b16;
+  --elevated: #2a211b;
+  --surface: rgba(255, 230, 210, 0.05);
+  --surface-2: rgba(255, 230, 210, 0.09);
+  --border: rgba(255, 230, 210, 0.14);
+  --text: #f7ece2;
+  --muted: #bfae9f;
+  --faint: #9a8979;
+  --accent: #ff8a5f;
+  --accent-ink: #ff9a74;
+  --accent-soft: rgba(255, 138, 95, 0.16);
+  --note-bg: rgba(255, 190, 110, 0.12);
+  --note-ink: #f0c490;
+  --ok: #7fcf9d;
+  --ok-soft: rgba(127, 207, 157, 0.14);
+  --soon: #8fb7ea;
+  --soon-soft: rgba(143, 183, 234, 0.14);
+  --code-bg: #221a15;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-ink); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0.05em 0.4em;
+  white-space: nowrap;
+}
+code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+
+/* ---------- Masthead ---------- */
+.masthead {
+  background: linear-gradient(115deg, var(--band-1) 0%, var(--band-2) 55%, var(--band-3) 100%);
+  color: #2b1d14;
+}
+.masthead-in {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding-block: 2.6rem 2.2rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 1rem;
+}
+.edition {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(2.3rem, 7vw, 3.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+.masthead p { margin: 0; max-width: 56ch; font-size: 1.08rem; line-height: 1.55; }
+.stamp-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.stamp {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: rgba(255, 250, 243, 0.62);
+  border: 1px solid rgba(43, 29, 20, 0.22);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  color: #2b1d14;
+}
+
+/* ---------- Page frame ---------- */
+.frame {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding-block: 1.6rem 3rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+@media (min-width: 940px) {
+  .frame { grid-template-columns: 250px minmax(0, 1fr); gap: 3rem; }
+}
+.rail { min-width: 0; }
+@media (min-width: 940px) {
+  .rail { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; padding-right: 0.5rem; }
+}
+.search {
+  width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0.55rem 0.8rem;
+}
+.search::placeholder { color: var(--faint); }
+.toc-toggle { margin-top: 0.8rem; }
+.toc-toggle > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--muted);
+  list-style: none;
+  padding: 0.3rem 0;
+}
+.toc-toggle > summary::-webkit-details-marker { display: none; }
+@media (min-width: 940px) { .toc-toggle > summary { display: none; } }
+.toc { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 1px; }
+.toc a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 0.93rem;
+  padding: 0.38rem 0.6rem;
+  border-radius: 8px;
+}
+.toc a:hover { background: var(--surface-2); }
+.toc a.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.toc svg { width: 1.05rem; height: 1.05rem; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; color: var(--muted); }
+.toc a.on svg { color: var(--accent-ink); }
+
+/* ---------- Content ---------- */
+main { min-width: 0; max-width: 780px; }
+section { margin-bottom: 3.4rem; scroll-margin-top: 1rem; }
+section > header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.4rem; }
+section > header .ico {
+  width: 2.5rem; height: 2.5rem; flex: none;
+  display: grid; place-items: center;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.ico svg { width: 1.35rem; height: 1.35rem; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+h2 { margin: 0; font-size: 1.75rem; line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
+h3 { margin: 2rem 0 0.5rem; font-size: 1.12rem; letter-spacing: -0.005em; text-wrap: balance; }
+.lede { color: var(--muted); font-size: 1.05rem; margin: 0.3rem 0 1.2rem; max-width: 62ch; }
+p { margin: 0.5rem 0; max-width: 68ch; }
+ul, ol { padding-left: 1.25rem; margin: 0.5rem 0; max-width: 68ch; }
+li { margin: 0.25rem 0; }
+
+.feat { padding: 0.95rem 0; border-top: 1px solid var(--border); }
+.feat:first-of-type { border-top: 0; }
+.feat h3 { margin: 0 0 0.25rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.feat p { margin: 0.25rem 0; }
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.12rem 0.55rem;
+  white-space: nowrap;
+}
+.tag.ok { background: var(--ok-soft); color: var(--ok); }
+.tag.soon { background: var(--soon-soft); color: var(--soon); }
+.know {
+  margin: 0.5rem 0 0.2rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--note-bg);
+  color: var(--note-ink);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  max-width: 68ch;
+}
+.know b { font-weight: 600; }
+.steps { counter-reset: s; list-style: none; padding: 0; display: grid; gap: 0.7rem; }
+.steps li {
+  counter-increment: s;
+  display: grid;
+  grid-template-columns: 1.9rem minmax(0, 1fr);
+  gap: 0.7rem;
+  margin: 0;
+}
+.steps li::before {
+  content: counter(s);
+  width: 1.9rem; height: 1.9rem;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.scroll { overflow-x: auto; margin: 0.8rem 0; border: 1px solid var(--border); border-radius: 10px; background: var(--elevated); }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.8rem; border-top: 1px solid var(--border); }
+thead th {
+  border-top: 0;
+  background: var(--surface);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+tbody tr:first-child td, tbody tr:first-child th { border-top: 0; }
+tbody th { font-weight: 600; white-space: nowrap; }
+td.k { white-space: nowrap; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.8rem; margin: 0.8rem 0; }
+.card { background: var(--elevated); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; min-width: 0; }
+.card b { display: block; margin-bottom: 0.2rem; }
+.card span { color: var(--muted); font-size: 0.92rem; }
+
+.diagram { margin: 1rem 0; border: 1px solid var(--border); border-radius: 12px; background: var(--elevated); padding: 0.8rem; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 520px; height: auto; }
+.diagram text { font-family: var(--font-body); }
+.diagram figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 0.4rem; }
+
+.soon-list { display: grid; gap: 0.8rem; margin: 1rem 0; }
+.ver { background: var(--elevated); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; }
+.ver h3 { margin: 0 0 0.2rem; font-size: 1.02rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem; }
+.ver h3 small { font-family: var(--font-mono); font-size: 0.75rem; color: var(--soon); font-weight: 500; }
+.ver p { margin: 0; color: var(--muted); font-size: 0.93rem; }
+
+.empty { display: none; padding: 1.5rem; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; }
+.empty.show { display: block; }
+.colophon { border-top: 1px solid var(--border); padding-top: 1.2rem; color: var(--muted); font-size: 0.9rem; }
+.colophon p { max-width: 72ch; }
+mark.hit { background: var(--accent-soft); color: inherit; border-radius: 3px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-start" viewBox="0 0 24 24"><path d="M5 19c0-6 4-12 14-14 0 10-6 14-12 14"/><path d="M5 19l4-4"/><circle cx="14.5" cy="9.5" r="1.3"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol>
+    <symbol id="i-page" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 10h17M9.5 10v9.5"/></symbol>
+    <symbol id="i-sticky" viewBox="0 0 24 24"><path d="M5 4h14v10l-5 6H5z"/><path d="M14 20v-6h5"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4v12M3.5 12.5L7 16l3.5-3.5M17 20V8M13.5 11.5L17 8l3.5 3.5"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.5 0 2-1 1.5-2-.6-1.2.2-2.5 1.6-2.5H17a4 4 0 004-4c0-5-4-9.5-9-9.5z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16" cy="10" r="1"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><rect x="3" y="6.5" width="18" height="11" rx="2"/><path d="M7 10.5h.01M10.5 10.5h.01M14 10.5h.01M17 10.5h.01M8 14h8"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.2h.01"/></symbol>
+    <symbol id="i-soon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6h.01"/></symbol>
+  </defs>
+</svg>
+
+<header class="masthead">
+  <div class="masthead-in">
+    <div class="edition">First edition &middot; covers Notaya 1.5.1</div>
+    <h1>Notaya Manual</h1>
+    <p>What Notaya does today, in plain words: your notes, databases, sticky notes, calculator, import and export, and how your notes are kept private.</p>
+    <div class="stamp-row">
+      <span class="stamp">Last updated 2026-11-07</span>
+      <span class="stamp">Windows 10 and 11</span>
+      <span class="stamp">Notes stay on your PC</span>
+    </div>
+  </div>
+</header>
+
+<div class="frame">
+  <nav class="rail" aria-label="Contents">
+    <label for="q" class="sr" style="position:absolute;left:-9999px">Search the manual</label>
+    <input id="q" class="search" type="search" placeholder="Search the manual" autocomplete="off">
+    <details class="toc-toggle" id="tocbox" open>
+      <summary>Contents</summary>
+      <ol class="toc" id="toc">
+        <li><a href="#getting-started"><svg><use href="#i-start"/></svg>Getting started</a></li>
+        <li><a href="#find-your-way"><svg><use href="#i-compass"/></svg>Find your way around</a></li>
+        <li><a href="#notes-and-pages"><svg><use href="#i-page"/></svg>Notes and pages</a></li>
+        <li><a href="#databases"><svg><use href="#i-db"/></svg>Databases</a></li>
+        <li><a href="#sticky-and-calculator"><svg><use href="#i-sticky"/></svg>Sticky notes and calculator</a></li>
+        <li><a href="#import-and-export"><svg><use href="#i-swap"/></svg>Import and export</a></li>
+        <li><a href="#look-and-windows"><svg><use href="#i-palette"/></svg>Look and Windows</a></li>
+        <li><a href="#privacy-and-backups"><svg><use href="#i-lock"/></svg>Privacy and backups</a></li>
+        <li><a href="#keyboard-shortcuts"><svg><use href="#i-key"/></svg>Keyboard shortcuts</a></li>
+        <li><a href="#good-to-know"><svg><use href="#i-warn"/></svg>Limits and known issues</a></li>
+        <li><a href="#coming-soon"><svg><use href="#i-soon"/></svg>Coming soon</a></li>
+        <li><a href="#about-this-edition"><svg><use href="#i-info"/></svg>About this edition</a></li>
+      </ol>
+    </details>
+  </nav>
+
+  <main id="main">
+    <div class="empty" id="empty">Nothing in the manual matches that. Try a shorter word, such as "export", "lock" or "table".</div>
+
+    <!-- ===================== GETTING STARTED ===================== -->
+    <section id="getting-started">
+      <header><span class="ico"><svg><use href="#i-start"/></svg></span><h2>Getting started</h2></header>
+      <p class="lede">Notaya is a notes app for Windows. Your notes are saved on your own PC. Nothing is sent anywhere.</p>
+
+      <div class="feat">
+        <h3>Two ways to install</h3>
+        <ul>
+          <li><b>Setup</b> (<code>Notaya-V1.5.1-setup.exe</code>) installs Notaya for your Windows user. It does not ask for an administrator. It adds a Start menu entry and, if you tick it, a desktop shortcut. Your notes are kept in <code>%LOCALAPPDATA%\Notaya Notes</code>. Uninstalling never deletes your notes.</li>
+          <li><b>Portable</b> (<code>Notaya-V1.5.1-portable.zip</code>) needs no install. Unzip it anywhere and run <code>Notaya\Notaya.exe</code>. Your notes stay in a <code>data</code> folder next to the program, so you can carry them on a drive.</li>
+        </ul>
+        <p>You need Windows 10 or 11 with the WebView2 runtime. If it is missing, Notaya tells you in a plain message box when it starts.</p>
+        <div class="know"><b>Good to know:</b> the program is not code-signed yet, so Windows SmartScreen may warn you the first time. Only one copy of Notaya runs at a time. Starting it again brings the running window to the front.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Your first start</h3>
+        <ol class="steps">
+          <li><div>The first screen offers <b>Start new notes</b> or <b>Import</b> (to bring in notes from another app, or from a portable copy of Notaya).</div></li>
+          <li><div>New notes open <b>without a password</b>. This is on purpose, so you can start writing at once. Your notes are stored in the encrypted format, but the key is built in, so they are not private yet. Turn on a password any time in Settings, under Security. See <a href="#privacy-and-backups">Privacy and backups</a>.</div></li>
+          <li><div>Notaya opens on <b>Home</b>. Make a notebook, add a section, and add a page.</div></li>
+        </ol>
+      </div>
+
+      <div class="feat">
+        <h3>How your notes are organized</h3>
+        <div class="cards">
+          <div class="card"><b>Notebook</b><span>The biggest container, with a name, an emoji and a colour.</span></div>
+          <div class="card"><b>Section</b><span>A group of pages inside a notebook.</span></div>
+          <div class="card"><b>Page</b><span>A document. A page can hold sub-pages, as deep as you like.</span></div>
+          <div class="card"><b>Database</b><span>A table of rows that can also be a board, calendar, chart and more.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FIND YOUR WAY ===================== -->
+    <section id="find-your-way">
+      <header><span class="ico"><svg><use href="#i-compass"/></svg></span><h2>Find your way around</h2></header>
+      <p class="lede">A top bar, a sidebar on the left, and the page in the middle.</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 640 330" role="img" aria-label="Layout of the Notaya window: top bar across the top, sidebar on the left, page area on the right">
+          <rect x="1" y="1" width="638" height="328" rx="12" fill="var(--bg)" stroke="var(--border)" stroke-width="2"/>
+          <path d="M1 13a12 12 0 0112-12h614a12 12 0 0112 12v33H1z" fill="var(--rail)"/>
+          <line x1="1" y1="46" x2="639" y2="46" stroke="var(--border)"/>
+          <circle cx="24" cy="23" r="8" fill="var(--accent)"/>
+          <text x="40" y="27" font-size="12" font-weight="600" fill="var(--text)">Notaya</text>
+          <text x="120" y="27" font-size="12" fill="var(--muted)">&#9776;  &#8592; &#8594;</text>
+          <rect x="230" y="12" width="190" height="22" rx="11" fill="var(--surface-2)"/>
+          <text x="325" y="27" font-size="11" text-anchor="middle" fill="var(--muted)">Search · Ctrl K</text>
+          <text x="590" y="27" font-size="11" text-anchor="middle" fill="var(--muted)">Lock  &#8212;  &#9633;  &#215;</text>
+          <rect x="1" y="47" width="170" height="281" fill="var(--rail)"/>
+          <line x1="171" y1="47" x2="171" y2="329" stroke="var(--border)"/>
+          <text x="16" y="72" font-size="12" font-weight="600" fill="var(--text)">Home</text>
+          <text x="16" y="94" font-size="12" fill="var(--text)">Sticky notes</text>
+          <text x="16" y="116" font-size="12" fill="var(--text)">Settings</text>
+          <text x="16" y="148" font-size="10" letter-spacing="1" fill="var(--faint)">FAVORITES</text>
+          <text x="16" y="168" font-size="12" fill="var(--muted)">Weekly plan</text>
+          <text x="16" y="198" font-size="10" letter-spacing="1" fill="var(--faint)">NOTEBOOKS</text>
+          <text x="16" y="218" font-size="12" fill="var(--text)">&#9662; Work</text>
+          <text x="30" y="238" font-size="12" fill="var(--muted)">&#9662; Projects</text>
+          <text x="44" y="258" font-size="12" fill="var(--muted)">Plan</text>
+          <text x="16" y="312" font-size="12" fill="var(--muted)">New page · Trash</text>
+          <rect x="196" y="66" width="404" height="70" rx="10" fill="url(#g)"/>
+          <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="0.55" stop-color="#ffa64d"/><stop offset="1" stop-color="#ffe08a"/></linearGradient></defs>
+          <text x="214" y="205" font-size="22" font-weight="700" fill="var(--text)">Page title</text>
+          <text x="214" y="228" font-size="11" fill="var(--muted)">Notebook / Section  ·  Saved &amp; encrypted  ·  &#9734; Favorite  ·  &#8230;</text>
+          <rect x="214" y="248" width="300" height="8" rx="4" fill="var(--surface-2)"/>
+          <rect x="214" y="268" width="360" height="8" rx="4" fill="var(--surface-2)"/>
+          <rect x="214" y="288" width="240" height="8" rx="4" fill="var(--surface-2)"/>
+        </svg>
+        <figcaption>A schematic of the window. The top bar, the sidebar and the page header are described below.</figcaption>
+      </figure>
+
+      <div class="feat">
+        <h3>Top bar</h3>
+        <p>The logo and name, a button to show or hide the sidebar, Back and Forward arrows, the search box (<kbd>Ctrl</kbd>+<kbd>K</kbd>), a Lock button (only when you have a password) and the Windows minimize, maximize and close buttons.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Sidebar</h3>
+        <p>Home, Sticky notes and Settings at the top. Then your Favorites and your Notebooks, shown as a tree of notebooks, sections, pages and sub-pages. Databases appear in the tree next to pages. At the bottom you find <b>New page</b>, <b>New database</b> and <b>Trash</b> with a count. Drag the edge to resize it (200 to 420 pixels). Hide it with <kbd>Ctrl</kbd>+<kbd>\</kbd>.</p>
+        <p>Every row has a <b>&#8230;</b> menu. It appears when you point at the row. For a notebook it offers Add section, Edit notebook, Move up and down, Export and Delete. For a section: New page, New database, Rename, Move, Export and Delete. For a page: Add a page inside, Add a database inside, Add or remove favorite, Move up and down, Move to another section, Export and Move to trash.</p>
+        <ul>
+          <li>Drag sections to reorder them inside a notebook. Drag pages to reorder them inside a section.</li>
+          <li>With the keyboard: arrow keys move through the tree, <kbd>Enter</kbd> opens, and <kbd>Shift</kbd>+<kbd>F10</kbd> (or the Menu key) opens a row's menu.</li>
+          <li>Deleting a notebook asks first and makes a safety backup before it deletes anything.</li>
+        </ul>
+        <div class="know"><b>Good to know:</b> the right mouse button does not open these menus yet. Use the &#8230; button. Pages move between sections only through the "Move to" list, which shows the first 8 sections.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Home</h3>
+        <p>A colourful banner that changes once a day, a greeting for the time of day, today's date, your Favorites (8), your Recent pages (8) and your Notebooks as cards (24). If you have no password, a one-time note reminds you that your notes are not private.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Search: <kbd>Ctrl</kbd>+<kbd>K</kbd></h3>
+        <p>One box searches pages, databases, database rows, notebooks and sticky notes as you type, and shows a short snippet for each hit. It matches every word you type, in any case. The same box lists actions: New page, New sticky note, Go to Notes, Appearance &amp; settings, Export, Import pages, Back up vault now, and Lock vault.</p>
+        <p>Your last 5 searches appear under the box. Click the x to forget one, or choose "Clear recent searches". They are stored with your notes, encrypted when you have a password.</p>
+        <div class="know"><b>Good to know:</b> opening a result takes you to the page but does not highlight the match inside it. There is no find bar for the open page yet (see <a href="#coming-soon">Coming soon</a>).</div>
+      </div>
+
+      <div class="feat">
+        <h3>Back and forward</h3>
+        <p>Go back with <kbd>Backspace</kbd>, <kbd>Alt</kbd>+<kbd>&#8592;</kbd>, the mouse's back button, or the arrow in the top bar. Go forward with <kbd>Shift</kbd>+<kbd>Backspace</kbd>, <kbd>Alt</kbd>+<kbd>&#8594;</kbd>, the forward button, or the arrow. Backspace does nothing while you are typing in a text box. Notaya remembers the last 100 places you visited.</p>
+        <div class="know"><b>Good to know:</b> Notaya always opens on Home. It does not yet reopen the page you were on, and the back list is lost when you restart or lock.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Trash</h3>
+        <p>Deleted pages and databases wait in Trash. You can <b>Restore</b> one, <b>Delete forever</b>, or <b>Empty trash</b>. Moving a page to Trash shows an Undo message first.</p>
+      </div>
+    </section>
+
+    <!-- ===================== NOTES AND PAGES ===================== -->
+    <section id="notes-and-pages">
+      <header><span class="ico"><svg><use href="#i-page"/></svg></span><h2>Notes and pages</h2></header>
+      <p class="lede">Pages are made of blocks. Type to write, or press <kbd>/</kbd> to add something else.</p>
+
+      <div class="feat">
+        <h3>The page header</h3>
+        <p>Above the text you see the breadcrumb (notebook and section), the save state ("Saved &amp; encrypted", or "Saved on this drive" without a password), a word count, the <b>Favorite</b> star, and a <b>&#8230;</b> menu with Move to section, Export, and Move to trash. Notaya saves as you type. There is no Save button.</p>
+        <p>Click <b>Add icon</b> on the title to pick one of about 600 emoji or upload a small picture. Click <b>Add cover</b> to pick a gradient, a colour or your own picture, and drag to reposition it.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Ways to add things</h3>
+        <ul>
+          <li><b>The "/" menu.</b> Type <kbd>/</kbd> on an empty line. It groups about 26 items: Text, Lists, Insert, Database, Direction and Quick.</li>
+          <li><b>The ribbon.</b> A strip above the page with tabs <b>Home</b> and <b>Insert</b>. A <b>Table</b> tab appears when the cursor is in a table. Collapse it and Notaya remembers.</li>
+          <li><b>The text toolbar.</b> Select some text and a small toolbar appears: Turn into, font, size, bold, italic, underline, strike, code, 18 text colours, 18 highlight colours, link, alignment, equation, remove formatting.</li>
+          <li><b>Markdown typing.</b> <code>#</code> then space makes a heading, <code>-</code> a bullet list, <code>1.</code> a numbered list, <code>&gt;</code> a quote, <code>[ ]</code> a check box, <code>---</code> a divider, and three backticks a code block.</li>
+          <li><b>Drag handle.</b> Point at a block, then drag its handle to move it, or open its menu.</li>
+        </ul>
+      </div>
+
+      <h3>Blocks you can use</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Block</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><th>Text and headings</th><td>Normal text and headings 1 to 3 in the "/" menu. A fourth heading level is in the ribbon.</td></tr>
+          <tr><th>Lists</th><td>Bullets, numbers, and check lists that can nest.</td></tr>
+          <tr><th>Collapsible section</th><td>A block that folds and unfolds. The <b>Shelf</b> version is a shaded box with a title that folds.</td></tr>
+          <tr><th>Highlight box</th><td>A coloured call-out box for something that matters.</td></tr>
+          <tr><th>Quote and divider</th><td>A quote block and a horizontal line.</td></tr>
+          <tr><th>Table</th><td>Starts at 3 by 3. The Table tab adds and deletes rows and columns, sets a header row, and merges or splits cells. Drag column edges to resize.</td></tr>
+          <tr><th>Code</th><td>A code block with colouring. Notaya picks the language itself.</td></tr>
+          <tr><th>Diagram</th><td>Type <code>```mermaid</code> and a space, or use "/" and choose Diagram. Write the diagram as text and Notaya draws it. Use <b>Sample</b> to start from an example, and <b>Show code</b> or <b>Hide code</b> to switch. Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> or <kbd>Esc</kbd> to leave the code box.</td></tr>
+          <tr><th>Equation</th><td>Block or inline maths. Type <code>$x^2$</code> for an inline one.</td></tr>
+          <tr><th>Picture</th><td>Paste, drop, or use "/" or the ribbon. See below.</td></tr>
+          <tr><th>Sub-page</th><td>A page inside the page, shown as a row.</td></tr>
+          <tr><th>Link to page</th><td>A row that opens another page. You can also link a word to a page or a heading with the link tool.</td></tr>
+          <tr><th>Database (inline)</th><td>A whole database inside the page, or a "Linked view" of a database made elsewhere. Found in the "/" menu.</td></tr>
+          <tr><th>Today's date</th><td>Inserts today's date or a time stamp as plain text.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="feat">
+        <h3>Pictures</h3>
+        <p>You can paste a picture, drop one on the page, or add one from the "/" menu or the ribbon. Then place it: drag it anywhere on the page and send it to the front or back, drag it left or right so text wraps around it, set its width as a percentage, crop it to a ratio (1:1, 4:3, 3:2, 16:9, 9:16), align it, and add a caption. Notaya accepts PNG, JPEG, GIF and WebP up to 25 MB each. SVG pictures are refused for safety.</p>
+        <div class="know"><b>Good to know:</b> free placement is off inside columns, lists and tables. Exports place free pictures in the text flow.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Arabic and right-to-left writing</h3>
+        <p>Each block picks its direction from the first strong letter, so Arabic and Hebrew blocks run right to left on their own. <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line that can have its own direction. The ribbon and the "/" menu (Direction) can force a direction. Right-to-left works in pages and databases. A line's own direction is not kept in exports.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Favorites</h3>
+        <p>Click the star in the page header, or use "Add to favorites" in the sidebar menu. Favorites show at the top of the sidebar and on Home.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Page templates</h3>
+        <p>Row pages inside a database can be saved as a template. Templates for ordinary pages do not exist yet.</p>
+      </div>
+
+      <div class="know"><b>Good to know:</b> older pages and imported pages can contain side-by-side columns and comment marks. They show and keep their content, but you cannot create new ones yet. There is no duplicate page, table of contents block, page history or backlinks yet.</div>
+    </section>
+
+    <!-- ===================== DATABASES ===================== -->
+    <section id="databases">
+      <header><span class="ico"><svg><use href="#i-db"/></svg></span><h2>Databases</h2></header>
+      <p class="lede">A database is a table of rows. Each row is also a page. You can look at the same rows as a table, a board, a calendar, a timeline, a list, a gallery or a chart.</p>
+
+      <div class="feat">
+        <h3>Make one</h3>
+        <p>Use <b>New database</b> at the bottom of the sidebar, the "&#8230;" menu on a section or page, or "/" inside a page. Start blank, or from a CSV file. A database can be a full page or sit inside another page.</p>
+        <div class="know"><b>Good to know:</b> once a vault holds a database, versions 1.4.0 and older cannot open it. Notaya makes a backup first.</div>
+      </div>
+
+      <h3>Properties (columns)</h3>
+      <p>There are 23 kinds. Pick one when you add a column.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Kind</th><th>Use it for</th></tr></thead>
+        <tbody>
+          <tr><th>Text, Title</th><td>Words. Title is the row's name.</td></tr>
+          <tr><th>Number</th><td>Numbers with formats.</td></tr>
+          <tr><th>Select, Multi-select, Status</th><td>Pick one or several labels, or a stage such as To do, Doing, Done.</td></tr>
+          <tr><th>Date</th><td>A date or range, with an optional reminder.</td></tr>
+          <tr><th>Person</th><td>A name, as plain text.</td></tr>
+          <tr><th>Files</th><td>Attach files to a row (up to 900 MB each).</td></tr>
+          <tr><th>Checkbox, URL, Email, Phone</th><td>What the names say.</td></tr>
+          <tr><th>Formula</th><td>A value worked out from other columns.</td></tr>
+          <tr><th>Relation, Rollup</th><td>Link rows of two databases both ways, and summarize the linked rows.</td></tr>
+          <tr><th>Created time, Created by, Last edited time, Last edited by, ID</th><td>Filled in by Notaya.</td></tr>
+          <tr><th>Place</th><td>A place name.</td></tr>
+          <tr><th>Button</th><td>A button in a row that runs actions when you press it.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Views</h3>
+      <div class="cards">
+        <div class="card"><b>Table</b><span>Freeze columns, wrap text, row numbers, resize and reorder, footers with calculations.</span></div>
+        <div class="card"><b>Board</b><span>Cards in columns. Drag a card to change its group. Swimlanes.</span></div>
+        <div class="card"><b>Calendar</b><span>Month or week.</span></div>
+        <div class="card"><b>Timeline</b><span>Bars along dates, zoom, dependency arrows.</span></div>
+        <div class="card"><b>List</b><span>A compact list of titles.</span></div>
+        <div class="card"><b>Gallery</b><span>Cards with a cover.</span></div>
+        <div class="card"><b>Chart</b><span>Bar, line, donut or a single number.</span></div>
+      </div>
+      <p>A database can hold several views. Each view tab can be renamed, duplicated, moved or deleted. Every view has its own <b>filters</b> (nested and/or, including relative dates such as "this week"), <b>sorts</b> (several at once) and <b>groups</b> (including date and number buckets, and sub-groups).</p>
+
+      <div class="feat">
+        <h3>Formulas, relations and rollups</h3>
+        <p>Formulas use a language modeled on Notion's. Relations connect two databases both ways. Rollups summarize the rows you linked. The formula preview can lag by about a second while you type.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Rows as pages</h3>
+        <p>Open a row as a full page, a side peek or a centre peek. Its properties sit above its text. Turn on <b>sub-items</b> to nest rows, and <b>dependencies</b> to link rows that must happen in order. Row templates give new rows a starting shape. Use "Save as template" on any row page.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Charts</h3>
+        <p>The Chart view draws a bar, line or donut chart, or one big number. Choose what goes along the bottom (a property, with dates grouped by day, week or month), an optional second grouping (stacked or side by side), and what to measure: count, sum, average, median, minimum, maximum and more. Add a title, colour and labels. <b>Click a bar, slice or point to see the rows behind it.</b></p>
+        <div class="know"><b>Good to know:</b> each view shows one chart. There are no multi-chart dashboards or pie charts yet.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Automations and buttons</h3>
+        <p>Automations run inside Notaya on a trigger: a row is added, a property changes, or a date arrives (with a number of minutes before or after). If the row matches a filter, Notaya can set a property, add a row, show a message or move the row to Trash. A Button property runs the same actions when you press it.</p>
+        <div class="know"><b>Good to know:</b> automations run only while Notaya is open and unlocked. Date triggers catch up for up to 7 days afterwards. A chain can have 3 steps, and one run can add up to 50 rows. Reminders appear as a message inside Notaya. They are not Windows notifications.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Undo, lock and export</h3>
+        <p><kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Ctrl</kbd>+<kbd>Y</kbd> undo and redo up to 50 changes (cells, titles, new and deleted rows, row order). Undo is dropped when you close the last view of that database. The database menu also has <b>Lock database</b> (to stop edits), <b>Import CSV</b>, and export of the current view as CSV, Markdown, HTML, Word or PDF.</p>
+      </div>
+    </section>
+
+    <!-- ===================== STICKY AND CALCULATOR ===================== -->
+    <section id="sticky-and-calculator">
+      <header><span class="ico"><svg><use href="#i-sticky"/></svg></span><h2>Sticky notes and calculator</h2></header>
+      <p class="lede">Quick notes that float on your desktop, and a calculator you can open as many times as you like.</p>
+
+      <div class="feat">
+        <h3>The sticky board</h3>
+        <p>Open <b>Sticky notes</b> in the sidebar (<kbd>Ctrl</kbd>+<kbd>3</kbd>). Your notes appear as slightly tilted cards, newest edit first. Buttons: <b>Select</b>, <b>Calculator</b>, <b>Open all</b>, <b>Close all</b> and <b>New note</b>.</p>
+      </div>
+
+      <div class="feat">
+        <h3>A sticky note on the desktop</h3>
+        <p>Each note opens in its own small window that you can move and resize anywhere on the desktop. Notaya remembers where you put it. Choose a colour (Lemon, Blossom, Mint, Sky, Lavender, Peach, Cloud or Charcoal), make text bold or italic, add a check list, open a calculator, and switch on <b>Keep on top</b> so the note stays above other windows. Delete asks you to click twice. Closing a note keeps it.</p>
+        <div class="know"><b>Good to know:</b> notes hide when your vault locks and come back when you unlock.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Select and delete several</h3>
+        <p>Press <b>Select</b> (or <kbd>Ctrl</kbd>+click a card), tick cards by clicking or with <kbd>Space</kbd>, then use Select all, Select none or Delete. Notaya asks before it deletes, and does it in one step. <kbd>Esc</kbd> leaves select mode.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Calculators</h3>
+        <p>Basic and scientific (sine, arcsine and so on, with Deg and Rad). Each calculator is its own small window that stays on top. Open as many as you want, from the board or from inside a sticky note. Calculations are worked out by Notaya's own code. They are not run as program text. Your history is shared between calculators (up to 500 lines) and saved with your notes, encrypted when you have a password. <b>Copy</b> copies only the result.</p>
+        <div class="know"><b>Good to know:</b> the history can contain sums you would rather keep private. Clear it from the calculator.</div>
+      </div>
+    </section>
+
+    <!-- ===================== IMPORT AND EXPORT ===================== -->
+    <section id="import-and-export">
+      <header><span class="ico"><svg><use href="#i-swap"/></svg></span><h2>Import and export</h2></header>
+      <p class="lede">Bring notes in from other apps, and take them out in common formats.</p>
+
+      <div class="feat">
+        <h3>Import pages</h3>
+        <p>Open the import window from the hover icon in the Notebooks header, from "Import pages from another app" in an empty sidebar, or from Ctrl+K. Pick files or a whole folder, in any mix. Notaya reads <b>Markdown</b>, <b>text</b>, <b>HTML</b>, <b>Word (.docx)</b>, <b>PDF</b> (text only), <b>ZIP</b> files (including exports from Notion and Notaya's own export) and folders. A progress bar and a <b>Cancel</b> button appear while it works. At the end you get a list of what was imported and anything left out, with the reason.</p>
+        <p>Imports always create a <b>new notebook</b>. Files up to 2 GB are accepted (4 GB unpacked from a ZIP).</p>
+      </div>
+
+      <div class="feat">
+        <h3>Notion exports become real databases</h3>
+        <p>If you import a Notion export (Markdown and CSV, HTML, or both together), Notaya turns tables into databases with Status, Number formats, Select, Multi-select and two-way relations. Row pages are folded into the rows. Icons, covers and call-outs come across.</p>
+        <div class="know"><b>Good to know:</b> Notion's views and people do not carry over, and formulas arrive as their values. Video, audio and embeds are left out. Page order follows file names, not Notion's order. Importing the same export twice makes a second notebook. The import window still says "Databases (tables) are not imported". That sentence is out of date. They are imported.</div>
+      </div>
+
+      <div class="feat">
+        <h3>Other imports</h3>
+        <ul>
+          <li><b>Import CSV</b> in a database's menu adds rows (up to 2 GB, 100,000 rows and 100 columns).</li>
+          <li><b>Restore from backup</b> and <b>import from a portable copy</b> are separate features. See <a href="#privacy-and-backups">Privacy and backups</a>.</li>
+        </ul>
+      </div>
+
+      <div class="feat">
+        <h3>Export</h3>
+        <p>Open <b>Export</b> from a page's &#8230; menu, a sidebar &#8230; menu (page, section or notebook), or Ctrl+K. Choose what to export: one page, chosen pages, a section, several sections, a notebook or several notebooks. <b>Include sub-pages</b> is on by default. Choose <b>HTML</b>, <b>Markdown</b>, <b>PDF</b> or <b>Word</b>, and one file or separate files in a ZIP (a ZIP can be imported again). Notaya opens the Save window itself.</p>
+        <p>PDF supports Arabic, Hebrew and Chinese, Japanese and Korean text. Web links in a PDF are clickable.</p>
+        <div class="know"><b>Good to know:</b> exported files are <b>not encrypted</b>. Notaya warns you. A database placed inside a page is <b>missing from page exports</b> (a known issue, listed below). PDFs have no printed contents page and no clickable links between pages. Greek, Cyrillic and emoji can print as "?" in a PDF. Diagrams export as their code, not as a picture. Database views export from the database's own menu (CSV, Markdown, HTML, Word, PDF). There is no Excel file export yet.</div>
+      </div>
+    </section>
+
+    <!-- ===================== LOOK AND WINDOWS ===================== -->
+    <section id="look-and-windows">
+      <header><span class="ico"><svg><use href="#i-palette"/></svg></span><h2>Look and Windows</h2></header>
+      <p class="lede">Open Settings from the sidebar or with <kbd>Ctrl</kbd>+<kbd>,</kbd>. It has sections for Appearance, Windows, Error log, Security, Backups and About.</p>
+
+      <div class="feat">
+        <h3>Themes</h3>
+        <p><b>Sunrise</b> (the default, warm light with coral and amber), <b>Sunrise dark</b>, <b>Black</b>, <b>Graphite</b>, <b>White</b>, <b>Paper</b>, and <b>Match Windows</b>, which follows your system's light or dark setting.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Appearance</h3>
+        <p>Accent colour (presets or your own), font (Inter, Segoe, Serif or Mono), text size (12 to 20), page width (Narrow, Normal, Wide or Full), density, window material (Solid, Mica or Acrylic), the lock-screen background and the colour new sticky notes start with.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Windows</h3>
+        <ul>
+          <li><b>Tray icon.</b> Click it to open Notaya. Right-click for Open Notaya, Close sticky notes and Quit Notaya.</li>
+          <li><b>Close to tray.</b> The close button hides Notaya instead of quitting. With a password, it locks first.</li>
+          <li><b>Start with Windows</b> and <b>Start minimized</b> are switches in Settings.</li>
+        </ul>
+      </div>
+
+      <div class="feat">
+        <h3>Error log</h3>
+        <p>Settings, Error log shows crash and error records kept on your PC. They never contain note text. You can open the folder.</p>
+      </div>
+
+      <div class="feat">
+        <h3>About</h3>
+        <p>Shows the version, where your notes live, how they are encrypted, and the licences of the open-source software Notaya is built on.</p>
+      </div>
+    </section>
+
+    <!-- ===================== PRIVACY ===================== -->
+    <section id="privacy-and-backups">
+      <header><span class="ico"><svg><use href="#i-lock"/></svg></span><h2>Privacy and backups</h2></header>
+      <p class="lede">Security is optional. You decide whether your notes need a password.</p>
+
+      <div class="feat">
+        <h3>Turn on a password</h3>
+        <p>Settings, Security, <b>Turn on</b>. Choose a master password of at least 10 characters that Notaya rates "Strong". You can add a key file as well. Notaya re-encrypts your notes with the new key. <b>Turn off</b> needs your password. With security off, your notes are stored in the encrypted format with a public built-in key, so they are not confidential.</p>
+        <div class="know"><b>Good to know:</b> if you forget the master password and have no key file, nobody can recover your notes, including us. Keep your backups.</div>
+      </div>
+
+      <div class="feat">
+        <h3>How notes are protected</h3>
+        <p>Each record is encrypted with XChaCha20-Poly1305. Your key comes from your password with Argon2id (a deliberately slow method that uses 256 MiB of memory), plus an optional key file. Any change to the file is detected. Keys stay inside Notaya's core and never reach the screen layer.</p>
+        <p>Notaya makes no connections to the internet for your notes. The page that displays Notaya allows only Notaya's own scripts and images. The Windows web component (WebView2) that draws the window may itself contact Microsoft when it starts.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Lock</h3>
+        <p>Lock with the button in the top bar or <kbd>Ctrl</kbd>+<kbd>L</kbd>. Notaya also locks when you are idle (1 to 60 minutes, your choice), when you press <kbd>Win</kbd>+<kbd>L</kbd>, when Windows sleeps, when the drive is removed, and, if you choose, when you minimize. Every window saves first. Sticky notes hide while locked. Locking only exists when you have a password.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Screenshot protection</h3>
+        <p>An optional switch (off by default, password only) that blocks screenshots of the Notaya window.</p>
+      </div>
+
+      <div class="feat">
+        <h3>Backups</h3>
+        <p>Notaya backs up automatically when you lock and when you quit (the newest 10 are kept), once an hour while the vault is open (3 kept), and before big deletions (5 kept). Settings, Backups also has <b>Back up now</b>, a list, <b>Restore</b> and a button to open the data folder.</p>
+        <p><b>Restore from backup</b> and <b>Start over</b> are also on the lock screen. They never delete your current notes. Notaya sets them aside in a file named <code>restore-undo-</code> or <code>set-aside-</code>.</p>
+        <div class="know"><b>Good to know:</b> when you turn on a password, Notaya offers to delete earlier unprotected backups, so none remain readable without it.</div>
+      </div>
+    </section>
+
+    <!-- ===================== SHORTCUTS ===================== -->
+    <section id="keyboard-shortcuts">
+      <header><span class="ico"><svg><use href="#i-key"/></svg></span><h2>Keyboard shortcuts</h2></header>
+      <p class="lede">Today these are fixed. A page to change them is planned.</p>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Keys</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Search and actions</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>New page in the current section</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>1</kbd></td><td>Go to Notes</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>3</kbd></td><td>Go to Sticky notes</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>,</kbd></td><td>Settings</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>\</kbd></td><td>Show or hide the sidebar</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Lock (with a password)</td></tr>
+          <tr><td class="k"><kbd>Backspace</kbd>, <kbd>Alt</kbd>+<kbd>&#8592;</kbd>, mouse back</td><td>Back</td></tr>
+          <tr><td class="k"><kbd>Shift</kbd>+<kbd>Backspace</kbd>, <kbd>Alt</kbd>+<kbd>&#8594;</kbd>, mouse forward</td><td>Forward</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Undo / redo in a page, and in a database (50 steps)</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td><td>Bold, italic, underline</td></tr>
+          <tr><td class="k"><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Indent / outdent a list item</td></tr>
+          <tr><td class="k"><kbd>/</kbd></td><td>Block menu on an empty line</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+click a link</td><td>Open a web link (http and https only)</td></tr>
+          <tr><td class="k"><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>New line inside a block (can change text direction)</td></tr>
+          <tr><td class="k"><kbd>Shift</kbd>+<kbd>F10</kbd> or Menu key</td><td>Open the menu of the selected sidebar row</td></tr>
+          <tr><td class="k"><kbd>Esc</kbd>, <kbd>Delete</kbd></td><td>On the sticky board in select mode: leave, or delete the ticked notes</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== LIMITS ===================== -->
+    <section id="good-to-know">
+      <header><span class="ico"><svg><use href="#i-warn"/></svg></span><h2>Limits and known issues</h2></header>
+      <p class="lede">Things that do not work the way you might expect today. Several are scheduled to be fixed (see <a href="#coming-soon">Coming soon</a>).</p>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Area</th><th>What to know</th></tr></thead>
+        <tbody>
+          <tr><th>Exports</th><td>A database inside a page is silently left out of page exports. Export the database itself from its menu.</td></tr>
+          <tr><th>Import</th><td>Always makes a new notebook. A second import of the same files duplicates them. The window's "databases are not imported" sentence is wrong.</td></tr>
+          <tr><th>Menus</th><td>Right-click does not open Notaya menus. Use the &#8230; button.</td></tr>
+          <tr><th>Search</th><td>Searches every item in memory with no index, so very large vaults will feel slower. Results do not highlight the match in the page.</td></tr>
+          <tr><th>Find in page</th><td>No Notaya find bar yet. <kbd>Ctrl</kbd>+<kbd>F</kbd> is not wired to Notaya's own search.</td></tr>
+          <tr><th>Start of the app</th><td>Always opens on Home, also after unlocking.</td></tr>
+          <tr><th>Notebook list</th><td>The "+ New notebook" and Import buttons in the Notebooks header show only when you point at it.</td></tr>
+          <tr><th>Charts</th><td>One chart per view, no pie, no dashboards or slicers.</td></tr>
+          <tr><th>Databases</th><td>The timeline slows above about 500 rows. Calendar week has no hour grid. Files over a few hundred MB in a row are slow.</td></tr>
+          <tr><th>Pictures</th><td>PNG, JPEG, GIF, WebP only. 25 MB each.</td></tr>
+          <tr><th>PDF</th><td>No contents page. Greek, Cyrillic and emoji can show as "?".</td></tr>
+          <tr><th>Icons</th><td>Some icons are faint in dark themes. The Favorite star is hard to see when it is off.</td></tr>
+          <tr><th>Not tested on a real PC</th><td>The installers of versions 1.5.0 and 1.5.1, "Start with Windows" at a real sign-in, and the tray entry "Close sticky notes" have not been run in the real app. They are expected to work.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ===================== COMING SOON ===================== -->
+    <section id="coming-soon">
+      <header><span class="ico"><svg><use href="#i-soon"/></svg></span><h2>Coming soon</h2></header>
+      <p class="lede">Nothing on this list is built yet. It is a draft plan, shown here so you know the direction. It is not a promise and has no dates. Items can move.</p>
+
+      <div class="know" style="margin-bottom:1rem"><b>Where the plan lives:</b> the full staging is in the <a href="https://github.com/CipherVaults/Notaya/pull/62">version plan (draft pull request #62)</a>, file <code>docs/plan/2026-11-07-version-plan.md</code>. This manual gets a new edition for each release.</div>
+
+      <div class="soon-list">
+        <div class="ver"><h3>1.6 &middot; The foundation <small>planned</small></h3><p>A safe way for an AI assistant such as Claude or Codex to read and edit your notes from outside, off by default, with deletes that always ask you. A log of who changed what, page version history, a recycle bin for everything, and the fixes in the table above (inline databases in exports, the import sentence, a visible New notebook button, Import and Export buttons in the top bar, clearer icons, reopening where you left off, dragging databases in the sidebar, names in About).</p></div>
+        <div class="ver"><h3>1.7 &middot; Your app, your way <small>planned</small></h3><p>Right-click menus, a shortcuts page where you can change keys, a top bar you can customize, a richer tray menu, Ctrl+F as Notaya's own find bar with find and replace, your own Home banner picture per time of day, duplicate page.</p></div>
+        <div class="ver"><h3>1.8 &middot; Pages that can hold your hubs <small>planned</small></h3><p>Columns you can make, coloured call-outs, folding headings, @ mentions with "linked from", links to a saved database view, a language picker and copy button on code blocks, diagrams as a code language with zoom and download, and a view of what changed between page versions.</p></div>
+        <div class="ver"><h3>1.9 &middot; Tabs and files in and out <small>planned</small></h3><p>Page tabs, a PDF that reads like a book with a contents page, Excel (.xlsx) export for databases, databases inside notebook exports, import into an existing place, and re-import without duplicates.</p></div>
+        <div class="ver"><h3>2.0 &middot; Corkboard, calculator, manual <small>planned</small></h3><p>A sticky-note corkboard with free layout, pins and strings, a calculator history panel and unit converters, this manual inside the app, a skippable tour, and a fuller About page.</p></div>
+        <div class="ver"><h3>2.1 to 2.2 &middot; Dashboards <small>planned</small></h3><p>Dashboard pages with live tiles fed from your databases, slicers and click-through filters, and named reusable calculations.</p></div>
+        <div class="ver"><h3>2.3 to 2.4 &middot; Whiteboard <small>planned</small></h3><p>A freeform canvas with pens (including pressure on a drawing tablet), shapes, templates, board sticky notes, and a timer.</p></div>
+        <div class="ver"><h3>2.5 &middot; Notebook mode <small>planned</small></h3><p>A second layout you can choose per notebook, with coloured section tabs and pages that are free canvases.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== ABOUT THIS EDITION ===================== -->
+    <section id="about-this-edition">
+      <header><span class="ico"><svg><use href="#i-info"/></svg></span><h2>About this edition</h2></header>
+      <div class="colophon">
+        <p><b>Edition:</b> first edition, 2026-11-07, for Notaya 1.5.1 (accepted by Mohamed on 2026-11-05).</p>
+        <p><b>Written for:</b> Ahmed Emara (GitHub <code>AE0101</code>), by Claude in a cloud thread. Notaya is made by Mohamed Sayed and Ahmed Emara with Claude and ChatGPT.</p>
+        <p><b>Sources:</b> the full feature inventory of 2026-11-07, which read the app's code at repository commit <code>9474511</code> and the project records, plus the draft version plan for the "Coming soon" section and the 1.5.1 release notes. I did not run the app while writing this. Where a feature has not been tried in the real app, the Limits section says so. If something here disagrees with what you see, the app is right and this manual needs a fix.</p>
+        <p><b>Keeping it current:</b> every release adds a new edition. Each edition re-reads the app against its release notes, moves finished items out of "Coming soon", and lists the changes here. The inside-the-app manual (planned for 2.0) will reuse this text.</p>
+        <p><b>Change log:</b> 2026-11-07, first edition. Planned versions after 1.9 are numbered 2.0 to 2.5 (the 1.10 to 1.15 of the first plan draft).</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  var q = document.getElementById("q");
+  var empty = document.getElementById("empty");
+  var sections = Array.prototype.slice.call(document.querySelectorAll("main section"));
+  var units = Array.prototype.slice.call(document.querySelectorAll("main .feat, main .scroll tbody tr, main .ver, main .card, main .know"));
+  var links = Array.prototype.slice.call(document.querySelectorAll("#toc a"));
+
+  function norm(s) { return (s || "").toLowerCase(); }
+  function apply() {
+    var term = norm(q.value).trim();
+    var any = false;
+    units.forEach(function (u) { u.hidden = false; });
+    if (!term) {
+      sections.forEach(function (s) { s.hidden = false; });
+      empty.classList.remove("show");
+      return;
+    }
+    sections.forEach(function (s) {
+      var hits = 0;
+      var feats = s.querySelectorAll(".feat, tbody tr, .ver");
+      var headHit = norm(s.querySelector("h2").textContent).indexOf(term) !== -1;
+      Array.prototype.forEach.call(feats, function (u) {
+        var match = headHit || norm(u.textContent).indexOf(term) !== -1;
+        u.hidden = !match;
+        if (match) hits++;
+      });
+      if (!feats.length) hits = norm(s.textContent).indexOf(term) !== -1 ? 1 : 0;
+      s.hidden = hits === 0;
+      if (hits) any = true;
+    });
+    empty.classList.toggle("show", !any);
+  }
+  q.addEventListener("input", apply);
+  q.addEventListener("keydown", function (e) { if (e.key === "Escape") { q.value = ""; apply(); } });
+
+  /* highlight the contents entry of the section in view */
+  var map = {};
+  links.forEach(function (a) { map[a.getAttribute("href").slice(1)] = a; });
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting && map[en.target.id]) {
+          links.forEach(function (a) { a.classList.remove("on"); });
+          map[en.target.id].classList.add("on");
+        }
+      });
+    }, { rootMargin: "-10% 0px -75% 0px" });
+    sections.forEach(function (s) { io.observe(s); });
+  }
+  /* on a phone the contents start folded */
+  var box = document.getElementById("tocbox");
+  if (box && window.matchMedia && !window.matchMedia("(min-width: 940px)").matches) { box.open = false; }
+})();
+</script>

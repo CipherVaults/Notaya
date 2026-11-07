@@ -20,6 +20,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 - [2026-11-07-dependency-licence-study.md](2026-11-07-dependency-licence-study.md): a study and records; draft PR. Whiteboard strokes (perfect-freehand), global shortcuts (Tauri plugin, Rust side only), Greek/Cyrillic PDF font (Noto Sans subset; Arabic and Hebrew already exist), Excel (own writer; `rust_xlsxwriter` as the upgrade), MCP bridge (rmcp; named pipe needs an explicit access rule) ([the study](../plan/2026-11-07-dependency-licence-study.md)). **Produced** (verified only by the checks in its section 3); not accepted. No dependency is approved or installed.
 
+### 2026-11-07 (Ahmed's messages 23:39:31 and 23:49:01 UTC, coordinator's request 23:49:23 UTC), EX-2026-11-07-51: Notaya Manual, first edition
+
+- [2026-11-07-notaya-manual-first-edition.md](2026-11-07-notaya-manual-first-edition.md): a new document and records; PR #63. A plain-language manual of what Notaya 1.5.1 does today with a "Coming soon" section, published as an artifact, source in [`docs/manual/`](../manual/README.md). Produced; not run against the app; not accepted.
+
 ### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-50: Phase 2 version plan, V1.6 to V1.15
 
 - [2026-11-07-version-plan.md](2026-11-07-version-plan.md): a plan and records; PR #62. Every agreed feature staged across V1.6 to V1.15 in four waves with sizes, dependencies and gates ([the plan](../plan/2026-11-07-version-plan.md)); the Notion hub updated to match; session entry 44. **Produced** (verified only by the checks in its section 3); not accepted. Nothing is greenlit to build.
