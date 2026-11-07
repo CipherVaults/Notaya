@@ -2,6 +2,8 @@
 
 **Who and where:** Ahmed (AE0101), written by Claude (Sonnet 5.5, high effort) in a cloud thread. **Date and time:** 2026-11-07, about 23:50 to 00:30 UTC (system clock of the cloud machine). **Baseline:** Notaya `main` at `67b27e4` (v1.5.1 plus the plan records). **Asked for by:** the coordinator, from section 9.2 of the version plan. **Result state:** *produced*. This is a study, not a decision. Nothing was installed or added to Notaya; Ahmed's own words are still needed before any of this is built (one "new library" approval each).
 
+> **Dated note (2026-11-07 23:56 UTC, from the coordinator):** the versions after 1.9 were renumbered. Where this study says 1.10 to 1.15, read 2.0 to 2.5 (so "1.13/1.14 whiteboard" is now in the 2.x line, "1.12 dashboards" too, and the 1.10-6 About page is in 2.0). The old numbers are kept below as written; check the current plan for the exact new version of each item.
+
 ## 1. The short answer
 
 | # | Need | Recommendation | New code in the program | Licence | When |
