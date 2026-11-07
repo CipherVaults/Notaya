@@ -1,6 +1,6 @@
 # Optional exact template assets
 
-Preserve the target project's adopted records first. These 25 blanks support the linked lifecycle guides; they are not 25 skills or a required file checklist. Copy only a selected asset into the authorized destination when a new record is needed. Read its contract and relevant guide before filling it. Original source bytes, emoji, hierarchy, placeholders and final newlines are preserved.
+Preserve the target project's adopted records first. These 25 blanks support the linked lifecycle guides; they are not 25 skills or a required file checklist. Copy only a selected asset into the authorized destination when a new record is needed. Read its contract and relevant guide before filling it. Twenty-four assets retain the preserved baseline's exact bytes, including emoji, hierarchy, placeholders and final newlines. The portable, sanitized [Source Ownership Map](../assets/templates/source-ownership-map.md) adds an alternate-entry-route field; see [origin and compatibility](origin-and-compatibility.md) for the historical original-source preservation boundary.
 
 For a small task, the owner's request and an existing compact record may suffice. For a substantive Session Summary, use the established full format; when a new candidate format is requested, choose one of the two complete profiles below. Never substitute the historical quick skeleton.
 

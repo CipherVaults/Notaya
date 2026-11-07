@@ -88,6 +88,8 @@ Within the approved envelope, the executor chooses and revises the route. Ordina
 
 A material scope expansion, weakened criterion, newly consequential action, changed resource commitment, or product-direction decision needs the appropriate amendment or new authority. Record the blocked dependent step and continue independent authorized work when useful. A recoverable defect is not automatically a reason to stop the whole Goal.
 
+Treat an adopted milestone order as an implementation constraint, not a backlog to spread work across. Close the active milestone against its actual criteria, evidence and required decision before advancing; do not invent another approval when standing authority already permits the transition. Authorized read-only preparation and ordinary within-milestone adaptations remain allowed. If work is blocked or oversized, preserve working and partial results, distinguish the unmet condition from a recoverable defect, and propose the smallest useful uncertainty investigation or scope amendment. A bounded spike requires applicable authority and a stopping boundary; it is not feature completion. On an explicitly authorized deferral or reorder, check dependencies and revised acceptance, keep unfinished functionality out of the stable result, and preserve its evidence, unknowns and return trigger. Deferred is not complete. Use existing records only within writing authority; a read-only task returns findings without creating or updating them.
+
 ### 6. Produce evidence and integrate the result
 
 Capture inspectable observations at useful boundaries. Preserve failures and important partial results. If workers are used, integrate their baselines, outputs, assumptions, and evidence. If a single executor does all the work, still check the resulting whole where the outcome requires it.
@@ -187,7 +189,7 @@ Correct a mistaken current statement transparently. Retain the earlier evidence 
 - **Findings:** each finding needs a basis, consequence, responsible owner, and actual disposition. Distinguish a defect from an optional preference. Resolution means the response was established, not merely promised.
 - **Amendments:** state exact before/after text or precise conditions. Name effects on permission, risk, outcome, and evidence. Proposed amendments are not effective until the required decision exists.
 - **Recommendation and decision:** keep an AI recommendation separate from an actual human decision. Record which items were accepted, rejected, or deferred and any conditions. Approval of planning does not by itself approve execution.
-- **Incorporation:** verify that the approved change reached the intended records. Prepared text, attempted write, saved change, and destination readback are different states. If readback is unavailable, say so.
+- **Incorporation:** derive the effective requirements from the approved original and applicable amendments; update affected tests, artifact scope, acceptance and continuation, including legitimately retired criteria. Preserve prior criteria and results with their original applicability. Verify that the approved change reached the intended records. Prepared text, attempted write, saved change, and destination readback are different states. If readback is unavailable, say so.
 - **History:** preserve withdrawals, corrections, and superseding decisions. A changed contract should be reconstructable without guessing which draft was approved.
 
 ## 🧾 Writing Evidence
@@ -290,13 +292,15 @@ At a meaningful boundary, ask:
 
 Read the destination's purpose and relevant content before editing. Update one owner deliberately; inspect the change and read back before moving on when migration or scope-drift risk warrants it. Do not spread one recovered fact into Architecture, Methodology, Roadmap, Current State, and history just because all those documents exist.
 
-Common boundaries include a material worker return, a verification outcome, an authority change, a coherent checkpoint, recovery, acceptance, and closure. Small routine edits can share one reconciliation. Important state should not drift across multiple execution cycles.
+Common boundaries include a material worker return, a verification outcome, an authority change, a coherent checkpoint, recovery, acceptance, and closure. Small routine edits can share one reconciliation. Important state should not drift across multiple execution cycles. If a documentation worker is behind, the integrating executor keeps the existing small checkpoint accurate with the last confirmed result, active action, next gate and blocker. Mark deeper reconciliation pending; a brief checkpoint does not replace an adopted substantive Session. Reconcile a late return against newer facts before promoting it.
 
 ## 🧷 Recovery: inspect before replaying
 
 The routine entry route is: project entry guidance → Current State → active Goal and amendments → Continuation → relevant live operational state → needed Plan, Acceptance, Evidence, and technical or domain context. This is a reading route, not an application hierarchy.
 
-Check the latest authority before resuming. A later pause or superseding instruction changes current permission while the older approval remains historical. Reconcile the current-facing authority chain, including lower instructions and pending queues, rather than adding only a banner. Then inspect what actually survived, including pending operations. A saved narrative may lag behind a completed output. Conversely, an output may exist without having passed the required check.
+Check the latest authority before resuming. A later pause or superseding instruction changes current permission while the older approval remains historical. Reconcile the current-facing authority chain, including lower instructions and pending queues, rather than adding only a banner. Use one identified existing current entry to reach the actual Goal/decision, artifact, evidence frontier and next action; retain detailed owners rather than copying every fact into that entry. Reconcile only the known affected alternative entry routes. Mark a misleading old pause or queue historical with its later decision pointer, without erasing its source. A newly edited status label does not create owner intent.
+
+For the same confused thread or a successor, provide the smallest verified correction: applicable authority, actual artifact, unfinished step and limit. A concise receiver readback can expose a material conflict; it is not a new approval form. A genuine newer stop still controls. Then inspect what actually survived, including pending operations. A saved narrative may lag behind a completed output. Conversely, an output may exist without having passed the required check.
 
 | Recovered state | Appropriate response |
 |---|---|
@@ -314,6 +318,8 @@ If an authorized recovery mechanism exists, keep its actual state visible. Do no
 ## 🧪 Validate the actual use path
 
 A candidate can pass synthetic recovery exercises while its real checkpoint still tells the next actor to repeat completed work. Check the actual current checkpoint, source identities, lower current-facing instructions and pending queues after a meaningful reconciliation. Keep the synthetic trial and real-state validation as distinct evidence.
+
+Derive the useful consumer operation from the Goal: for example, open the delivered copy, reach the intended item and use its required attachment or output. Include the dependency hops that matter to this result, not an exhaustive universal journey. A wrong-but-existing target or a package that works only in the producer folder can pass inventory checks. Preserve those narrower checks and verify the missing consumer claim.
 
 Bind a result to the user's actual entry route and configuration. A test launched through a different shortcut, profile, account, workflow or input can be valid for that route while failing to establish the user's intended experience. Preserve the old result within its valid scope and test only the missing claim.
 

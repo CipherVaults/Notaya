@@ -7,6 +7,7 @@
 **Ownership contract status / decision:** [Proposed / adopted / superseded; actual decision source and effective scope]
 **Last verified:** [Date/time zone]
 **Project entry:** [Verified location]
+**Other current-facing entry routes, if relevant:** [Finite list of actual alternate starts and their canonical-owner pointers; omit if there is only one route]
 **Authority boundary:** [Latest instruction / approved Goal reference; do not write “approved” without its source]
 
 ## 🧭 Canonical owners
