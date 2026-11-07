@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 45 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Notaya Manual, first edition (PR #63)](#session-45) |
 | 44 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 2 version plan, V1.6 to V1.15 (PR #62)](#session-44) |
 | 43 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 1 closes: menus, AI safety, dashboards, banner, Whiteboard, Notebook mode (PR #61)](#session-43) |
 | 42 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Handover guide for Mohamed (PR #57)](#session-42) |
@@ -65,6 +66,90 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-45"></a>
+
+# 📘 Session: 2026-11-07 · Ahmed · cloud · Notaya Manual, first edition
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and Claude project "Notaya". Machine: **cloud** (thread "Write the Notaya manual, first edition"; no PC tool used). Time: 23:49:23 UTC (thread start, the coordinator's relay) to the merge of PR #63.
+
+**What it covers:** 2026-11-07, Notaya: the first edition of the external manual (the agreed GUIDE feature, Ahmed 23:04 UTC) for what Notaya 1.5.1 does today ([EX-2026-11-07-51](execution/2026-11-07-notaya-manual-first-edition.md), [`docs/manual/`](manual/README.md)).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Thread "Write the Notaya manual, first edition" (reader, writer of the manual and these records) | Configured `claude-sonnet-5-5[1m]` (session configuration); the serving model was not re-read | Not recorded (the coordinator chose Sonnet 5.5 for reading, records and writing, per the model-choice guide) | The session's own configuration only. It proves nothing about the serving model |
+| Coordinator (relayed Ahmed's messages and the brief) | Not read here | Not recorded | Its relay of 23:49:23 UTC |
+| Codex | None ran | n/a | No code |
+
+**Record basis:** written at the end of the work by this thread from the sources in EX-51 section 2, the container clock and `git log`. Usage: **not measured** (see the ledger row of this session).
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC).
+- Start: 23:49:23 UTC (relay). End: when PR #63 is merged (see `git log`). Times of single steps: not recorded.
+- Session type: documentation (a manual), records.
+- Contributors: Ahmed (the agreed feature, 23:04 UTC; "go full throttle", 23:39:31); the coordinator (the brief); this thread.
+- Active working time: not measured.
+- Reason for summary: Ahmed's rule (A37 item 5): every session that changes the repository gets a full entry.
+
+## 🎯 Session Goal
+
+Write the first edition of the manual: what Notaya does today, in plain language, one clear section per feature area, with icons where useful, a "Coming soon" section that points to the version plan, published as an artifact with its source saved.
+
+## 🧭 Starting State
+
+`main` at `67b27e4` (PR #62 merged). App 1.5.1. No manual existed: the inventory listed "guide" as missing, and the artifact list held only the handover guide and the usage ledger. The Phase 2 version plan had just landed, so "Coming soon" could cite it.
+
+## 🛠️ Actions Taken
+
+1. Read the repository rules and records, the full feature inventory, the version plan and the 1.5.1 release notes.
+2. Wrote and checked one page, then published it (artifact link in the PR description and in `docs/manual/README.md`).
+3. Claimed the work first, opened draft PR #63, then added the manual source, this report, the index rows, the STATUS line and the ledger row.
+
+## 🧠 Key Insights
+
+- The inventory is detailed enough to write the manual without opening the code again, but it is a reading of the code, not a run. That limit is said on the page ("About this edition") and in the Limits table.
+- The inventory's honest gaps are the most useful part for a reader: they became the "Limits and known issues" table, so the manual does not promise features that do not exist (for example right-click menus, Ctrl+F, Excel export).
+- One fact needed a second source: PDF export handles Arabic, Hebrew and CJK (since V1.4.0), while Greek, Cyrillic and emoji still print as "?".
+
+## 📌 Decisions Made
+
+- None by Ahmed in this session beyond the agreed GUIDE feature and his 23:39:31 UTC go. This thread's own choices (reversible): the manual uses Notaya's own Sunrise colours and fonts; it is one HTML page rather than a Claude Doc, because Ahmed asked for an updatable reference with icons and the coordinator asked for an artifact; the source is also kept in the repository because the repository is the only memory the two Claudes share; "Coming soon" shows versions, not dates, and is marked as a draft.
+
+## ⚠️ Difficulties / Friction
+
+- The first publish was refused once because the source file changed between approval and publish (the shared folder is a network mount); a second publish worked.
+- The plugin GitHub server failed to connect; the GitHub tools of the session worked. A reviewer could not be requested on the PR (the PR author is Ahmed's own identity); the assignee was set.
+
+## 🔧 Adjustments Made
+
+- Two wordings were corrected after the first draft: right-to-left support was limited to pages and databases (a line's own direction is not kept in exports), and the backup sentence now says Notaya offers to delete unprotected backups when a password is turned on.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk: every claim comes from the inventory and the release notes, not from running Notaya. Some entries may be slightly stale, and the page says so.
+- Risk: the numbers EX-51 and session 45 were chosen after checking `origin/main` and the open branches; another thread may take them. Re-check before merging.
+- Risk: the manual duplicates facts that the records own. The records win if they disagree.
+
+## 📍 Current Position
+
+**As of:** draft PR #63. **Before:** no manual. **After:** a published first edition and its source in the repository; unreviewed by Ahmed. **Current standing:** produced, not verified against the real app, not integrated until PR #63 is merged, not accepted.
+
+## 🔜 Next Steps
+
+1. Ahmed: read the manual and say what to change or share the link with Mohamed.
+2. The coordinator: add the manual to the handover guide's change log (A39) and to the Notion hub's GUIDE card; ask for real-app screenshots when a PC session is free.
+3. Each release: a new edition (steps in `docs/manual/README.md`).
+
+**Do not reopen / repeat:** re-reading the inventory to rebuild the manual; the choice of format.
+
+- Integration / review: on merge of PR #63
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: Ahmed's review of the manual
+
 ---
 
 <a id="session-44"></a>
