@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 44 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 2 version plan, V1.6 to V1.15 (PR #62)](#session-44) |
 | 43 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 1 closes: menus, AI safety, dashboards, banner, Whiteboard, Notebook mode (PR #61)](#session-43) |
 | 42 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Handover guide for Mohamed (PR #57)](#session-42) |
 | 41 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [First feature discussion: every decision and its reasons](#session-41) |
@@ -64,6 +65,97 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-44"></a>
+
+# 📘 Session: 2026-11-07 · Ahmed · cloud · Phase 2 version plan
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and Claude project "Notaya". Machine: **cloud** (thread "Plan versions 1.6 to 1.8 and beyond"; bound to Ahmed's Gaming-PC, no PC tool used). Time: 23:39:51 UTC (thread start) to the merge of PR #62. Entry number 43 is the Phase 1 records thread (EX-2026-11-07-48, PR #61), which started first.
+
+**What it covers:** 2026-11-07 (Ahmed's message 23:39:31 UTC), Notaya: Phase 2 planning. Every feature agreed in the discussion (Phase 1), the Notion parity gaps and the AI CLI action list, staged across versions V1.6 to V1.15 ([plan](plan/2026-11-07-version-plan.md), [EX-2026-11-07-50](execution/2026-11-07-version-plan.md)); the Notaya Notion hub updated to match.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Thread "Plan versions 1.6 to 1.8 and beyond" (planner; writer of the plan, the roadmap page and these records) | Configured `claude-opus-5-5[1m]`; last served `claude-opus-5-5` (get_session, about 23:46 UTC) | high (session configuration) | The session's own record. Proves the configured model and the last served model at that moment, not every turn |
+| Helper sub-agent (Version Feature Board cards) | Sonnet 5.5 (requested by the planner) | Not recorded | The helper's own report to the planner; its counts are in the PR description |
+| Coordinator (relayed Ahmed's message and the two study notices) | Not read here | Not recorded | Its relay messages of 23:39:51 and 23:41:28 UTC |
+| Parallel threads whose files were folded in | "Map Notion workspace for full Notaya parity", "Draft the full AI CLI action list" | Not read here | Their files in the project's shared folder (23:41 and 23:44 UTC) |
+| Codex | None ran | n/a | Planning only |
+
+**Record basis:** written at the end of the work by this thread, from the sources in EX-50 section 2, the container clock and `git log`. Usage: **not measured** (see the ledger row of this session).
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC).
+- Start: 23:39:51 UTC (thread started). Plan first written about 23:45 UTC; AI CLI list folded in about 23:50 UTC (container clock).
+- End: when PR #62 is merged (see `git log`).
+- Session type: planning (Phase 2), records.
+- Contributors: Ahmed (the ask, 23:39:31); the coordinator (relays); this thread; one helper for the Notion cards; two parallel study threads (inputs).
+- Active working time: not measured.
+- Reason for summary: Ahmed's rule (A37 item 5): every session that changes the repository gets a full entry.
+
+## 🎯 Session Goal
+
+Turn the finished feature discussion into a staged plan: which feature goes in which version, how big each is, what depends on what, and what still needs Ahmed's own words; then show it in the Notion hub. Ahmed's words: "spreading out the features across how many versions ... very small features and big features ... that CLI list and all of the features that we've discussed previously ... push ahead full throttle".
+
+## 🧭 Starting State
+
+`main` at `9e3e4e3` (PR #60). App version 1.5.1 (accepted). The Notion board held Ahmed's 19:55 UTC list (V1.6: 13 small and 4 big; V1.7: 4; V1.8: OneNote mode) and six Later candidates. The order of work was discuss, then plan, then build (21:14:10); the roadmap was to be staged, not crammed into 1.6 (20:41:50). Two studies were still being written in parallel threads.
+
+## 🛠️ Actions Taken
+
+1. Read the inventory, the three earlier studies, STATUS, A37 and its note, the agreed-feature list and the board.
+2. Drafted the plan while the two parallel studies were finishing; folded in the Notion parity study (23:41) and the AI CLI action list (23:44) as they arrived.
+3. Added versions V1.9 to V1.15 and four properties to the Notion board; a helper updated and created the cards; this thread rewrote the roadmap page.
+4. Claimed the work, opened draft PR #62, committed the plan copy and these records.
+
+## 🧠 Key Insights
+
+- **One list of named actions** serves right-click menus, the app bar, shortcuts, the tray, the command palette and the AI CLI. Building it once in 1.6 makes each later comfort feature cheaper (an addition, marked as such in the plan).
+- **The AI CLI needs its safety net in the same version**: version history, activity log, recycle bin for everything, "something changed" signals and small saves. That is why 1.6 is heavier than the others, on purpose.
+- **Pages, not databases, are Notaya's gap for the Notion north star** (parity study): columns, callouts, folding headings, mentions and view links went into one version (1.8) so the migration pilot can start right after it.
+- Moving the Notion migration into a track that follows the features avoids a "Notion version" that would block everything else.
+
+## 📌 Decisions Made
+
+- None by Ahmed in this session beyond his 23:39:31 UTC go for planning (recorded by the Phase 1 records thread, EX-48, PR #61). Every staging choice in the plan is **a proposal for Ahmed**, with eight numbered questions (plan section 10).
+- This thread's own choices (reversible): Notaya's own names only (OneNote mode is "Notebook mode", Notion-style tabs are "Page tabs"); Names in About moved from 1.7 to 1.6 (tiny); AI CLI steps A and B in 1.6, step C (files) in 1.7.
+
+## ⚠️ Difficulties / Friction
+
+- Two inputs arrived during the work, so the plan was written in two passes. The AI CLI list changed three 1.6 items (small saves made 1.6-2 an L; the recycle bin grew to M; a new 1.7-12 for files).
+- The GitHub plugin server failed to connect; the GitHub tools of the session worked.
+
+## 🔧 Adjustments Made
+
+- The board's "Size" (small/big) was kept for continuity and a finer "Effort" (XS to XL) added beside it.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk: sizes are judgement, not measurements; 1.6 may run long. The plan names the three items that can move to 1.7 without harm.
+- Risk: the plan relies on the inventory's code reading at `9474511`, not re-checked.
+- Risk: the handover guide (A39) was being updated by the Phase 1 records thread (EX-48, PR #61) at the same time; at this thread's request it added a pointer to this plan (section 9 and change log, 23:52 UTC).
+- Mistake (small): this thread took EX-50 after misreading the claim board; EX-48 is the Phase 1 records thread and **EX-2026-11-07-49 is unused**.
+
+## 📍 Current Position
+
+**As of:** PR #62 (merged with `main` after PR #61; both entries kept, newest on top). **Before:** a feature list on the board with three versions. **After:** a staged plan for V1.6 to V1.15 in the repository and the shared files, and a matching Notion hub. **Current standing:** produced; not accepted. **Live owner:** Ahmed (reads the plan and answers its questions).
+
+## 🔜 Next Steps
+
+1. Ahmed: read the plan; answer its eight questions and the AI CLI list's ten.
+2. The coordinator, on Ahmed's go for more planning: the 1.6 spec (Opus high; the CLI security model at xhigh) and a small dependency and licence study (Sonnet high).
+3. Building V1.6 waits for Ahmed's word, and its gates (security behaviour, dependency, vault format) for his own words.
+
+**Do not reopen / repeat:** the reading of the inventory and the studies for staging; the board's schema change.
+
+- Integration / review: on merge of PR #62
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: Ahmed's answers; the 1.6 spec
+
 ---
 
 <a id="session-43"></a>
