@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 43 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 1 closes: menus, AI safety, dashboards, banner, Whiteboard, Notebook mode (PR #61)](#session-43) |
 | 42 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Handover guide for Mohamed (PR #57)](#session-42) |
 | 41 | 2026-11-07 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [First feature discussion: every decision and its reasons](#session-41) |
 | 40 | 2026-11-07 | Ahmed (`AE0101`) | cloud (bound to Ahmed's Gaming-PC) | [Second records PR (#55)](#session-40) |
@@ -63,6 +64,268 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-43"></a>
+
+# 📘 Session: 2026-11-07 · Ahmed · cloud · Phase 1 closes: menus, AI safety, dashboards, banner, Whiteboard, Notebook mode
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and Claude project "Notaya". Machine: **cloud**. The discussion ran in the project chat with the coordinator (`session_01PwVKYnc7mgNpxB4bx9bMbB`, bound to Ahmed's Gaming-PC but running in the cloud for this work) and the cloud study threads named below; the records editor is the cloud thread "Record Phase 1 decisions and update handover" (`session_01PwVKYkRJ6jsBTQAYCb8L62`, started 23:39:46 UTC). Time covered: 21:57 to 23:39:45 UTC.
+
+**What it covers:** 2026-11-07 (Ahmed's messages 22:11:17 to 23:39:31 UTC, project chat), Notaya: the second half of the feature talks, from the right-click and tray menus through the AI CLI safety principles, Power BI-style dashboards, the guide, tour and About, the banner, the Whiteboard and Notebook mode, to the go for Phase 2 (planning). Continues [session 41](#session-41), which covered 19:08 to 22:00 UTC. Recorded as [A40 to A43](plan/approval-and-amendments.md), records PR #61 ([EX-2026-11-07-48](execution/2026-11-07-phase-1-decisions-recorded.md)).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Coordinator (talks with Ahmed in the project chat, starts and steers threads), `session_01PwVKYnc7mgNpxB4bx9bMbB` | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` (as recorded in the [usage ledger](ledger/claude-sessions.csv) at 20:33 UTC; not re-read for this entry) | **low** (the platform capped the project chat at low; its attempt to switch to high at 23:00:47 did not take, 23:00:48) | The ledger row and the coordinator's own correction in the chat. Configuration, not proof of the serving model for every turn |
+| Thread "Design Power BI-style dashboards in Notaya" (cloud, started 22:54:58 UTC; reported 22:58:43) | Not recorded here | Not recorded here | Thread list and its output file `notes/2026-11-07-notaya-dashboards-study.md` (27 KB; its headings and the agreed section 10 were read, not every line) |
+| Thread "Learn the model economics guide" (cloud, about 22:58 to 23:00 UTC) | Not recorded here | Not recorded here | Its output file `notes/model-choice-guide.md` (read in full for this entry) |
+| Thread "Design the freeform whiteboard" (cloud, started 23:16:26 UTC; reported 23:19:07) | Not recorded here | Not recorded here | Its output file `notes/2026-11-07-notaya-whiteboard-study.md` (27 KB; headings and section 0 read) |
+| Thread for the Notion parity study (cloud, started 23:35:47 UTC) | Not recorded here | Not recorded here | Its output `notes/2026-11-07-notion-parity-study.md` appeared at about 23:41 UTC; this thread read only its header and short version, not the whole study |
+| Records editor of this entry and PR #61: thread "Record Phase 1 decisions and update handover" | Configured `claude-sonnet-5-5[1m]`; last served `claude-sonnet-5-5` (this thread's own `get_session`, 23:42 UTC) | high (`get_session`, same time) | The session's own configuration. Not proof of the model that served every turn |
+| Codex | None ran | n/a | No Codex run was ordered; `codex-runs.csv` is still header only |
+
+**Record basis.** Written from 23:40 UTC (container clock) by the records editor, after Ahmed's last message in scope (23:39:31) and the coordinator's reply (23:39:33). Sources: the whole project chat from 21:57:29 to 23:39:33 UTC, read in full (Ahmed's words quoted from it with their server timestamps); `CLAUDE.md`, STATUS, the authority record, claims, [session 41](#session-41) and [session 42](#session-42) of this file, the handover guide, the ledger files and `git log`; the model-choice guide in full; the headings and agreed sections of the dashboards and Whiteboard studies. The screenshots Ahmed sent (22:32:23 usage screens, 22:54 to 22:55 Excel and Power BI material, 23:16:48 and 23:27 OneNote pictures) were **not visible** to this thread; what they showed is taken from his words and the coordinator's replies. The Power BI and Excel files and his Notion finance hub were not opened by this thread.
+
+**Usage headline:** not recorded for this thread (a running session's record carries no usage block); the coordinator's and the study threads' usage is in the [ledger](ledger/usage-ledger.md) up to 22:32 UTC. Measured at 22:32 UTC: USD 52 of the USD 100 credit used, five-hour window 46%, weekly 6%. The coordinator said at 23:36:52 that about 19.5 hours and USD 41 remained (its own statement; no screenshot). Codex: no run.
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC). Ahmed's PC clock is UTC+2; all times here are UTC (the chat's server timestamps).
+- Start of the period: 21:57 UTC (after session 41's last message). The first message in scope is Ahmed's 22:11:17 (where are the records on his PC); the feature talk resumed at 22:39:39.
+- End of the period: 23:39:45 UTC (the relay that started this thread). Entry written 23:40 to the merge of PR #61 (merge time in `git log`).
+- Session type: product discussion (design talk, not planning and not building) plus method questions; this thread: documentation.
+- Project stage: after V1.5.1 (accepted 2026-11-05); Phase 1 of Ahmed's three phases ends here, Phase 2 may start.
+- Contributors: Ahmed (all decisions); the coordinator; four study threads; this thread.
+- Reason for summary: Ahmed's rule (A37 item 5) and the coordinator's request (23:39:45): write every Phase 1 decision into the repository records, and update the living handover guide (A39).
+
+## 🎯 Session Goal
+
+Finish the conversation Ahmed started at 20:22: "we have discussed every feature and every part of the app, so we are aligned before the starting even of the planning phase" (21:14:10). This second half had to settle the features that were still open when session 41 ended (right-click menus, tray menu, dashboards, guide, tour, About, the banner, the Whiteboard, OneNote mode), fix how the AI CLI is kept safe, and answer Ahmed's method questions (who merges, what happens when the credit ends, which model for which job). The intended stopping point was again **agreement on what each feature means**, then a hand-over to planning. That point was reached for every feature except the AI CLI's detailed list of actions, which was handed to a thread (23:29:59, 23:37:40).
+
+## 🧭 Starting State
+
+`main` at `9e3e4e3` (records PR #60 merged; the ledger now has the measured limits). Session 41 had agreed fifteen features and left right-click, tray, dashboards, guide, tour, About, banner, Whiteboard and OneNote mode open or half open. PR #56 (session 41) and PR #57 and #59 (handover guide, living-document rule A39) were merged. The Notion hub existed outside the repository.
+
+## 🛠️ Actions Taken
+
+Chronology of the project chat, UTC (Ahmed's quotes are in the authority rows; here the order and the reasons).
+
+1. **22:11 to 22:22 — records feedback.** Ahmed asked where the records are on his PC (22:11:17), then asked that titles show who and where (22:15:49, [A38](plan/approval-and-amendments.md), already recorded) and said "I don't want anything to be shortened. And secondly, do I have to merge myself for each critical thing?" (22:21:39). The coordinator answered that cloud threads can merge, and PR #56 was merged at 22:22 (coordinator's report; recorded in session 41's records).
+2. **22:24 to 22:36 — handover guide and ledger page.** Ahmed asked for a guide for Mohamed's machine (22:24:27, recorded in session 42) and where his usage ledger page was. The guide and the ledger page were published (22:28 to 22:31); Ahmed sent three usage screenshots (22:32:23), which corrected the picture: USD 52 of 100 used, five-hour 46%, weekly 6%, credit expiring 21:09 his time on 8 November (19:09 UTC). At 22:33:37 he made the guide a living document (A39).
+3. **22:37 to 22:39 — what happens when the credit ends.** The coordinator could not see the billing rules and said so; Ahmed's own screenshot of the credit screen's help text answered it (22:39:09: "It answers our question basically directly"). The coordinator's reading: after the credit is used or expires, cloud work counts against the Pro limits and nothing stops.
+4. **22:39 to 22:43 — right-click menus and the tray menu.** The coordinator had asked this at 21:53:24 and re-stated it (22:39:42: five places). Ahmed (22:40:55): "Yeah, that's critical. Yes, I forgot about it", and asked the coordinator to bring its own ideas and test for bugs and quality of life across the development. The coordinator added six optional ideas and proposed the tray menu (22:41:31). Ahmed (22:43:42) accepted the tray menu, accepted most extras (empty space "on trial"), made every menu customizable and left "Ask AI about this" out; a number slip ("point 4" for 5) was cleared at 22:45:28.
+5. **22:45 to 22:49 — security by design for the AI CLI.** Ahmed (22:45:28) said security has to be built in from the left of every feature because he fears what a CLI could do (deleting, writing, changing, even malware). The coordinator proposed eight protections (22:46:13). Ahmed (22:49:30) agreed in principle but did not want "brakes" or hidden-instruction defences over-engineered: "way above our pay grade ... We are not cybersecurity experts, but we have to do our best", with the on/off switch, a sealed-in AI and backups as the safety net. The coordinator simplified accordingly (22:49:37). Recorded as [A41](plan/approval-and-amendments.md).
+6. **22:54 to 23:03 — dashboards.** Ahmed (22:54:45) explained why he wants Power BI-style dashboards in Notaya: the chain Notion, then Excel, then Power BI goes stale and is hard for him and for an AI; "It's not a subsidy to Excel or Power BI", only the fundamentals, dynamic and clickable, fed by the databases. He shared his Excel and Power BI files and his Personal Financial System hub in Notion (22:55:17). A study thread read them (22:54:58 to 22:58:43). At 23:01:24 Ahmed said it was "a bit complicated for me to decide on my own"; the coordinator proposed three steps; Ahmed agreed (23:02:31).
+7. **22:58 to 23:00 — model economics.** Ahmed (22:58:04) asked whether the coordinator had read his model-economics artifact. It had not; a thread read it and wrote the model-choice guide (23:00:15). Ahmed said "Yes, switch to high" for the coordinator's effort (23:00:47); the platform refused (23:00:48) and the chat stays at low.
+8. **23:02 to 23:05 — guide, tour, About.** The coordinator proposed three small features (23:02:40); Ahmed (23:04:48) described each in his own way: the guide as an in-app manual plus an updatable outside copy, the tour as a light skippable overview, the About as the professional credits side.
+9. **23:05 to 23:09 — the banner.** The coordinator proposed a time-of-day picker (23:05:31). Ahmed (23:08:39) agreed and added the main complaint: Notaya's banner is slimmer than Notion's and the page icon is not clear; both should be adjustable with a visible demonstration. The coordinator wrote down eight points (23:09:13).
+10. **23:16 to 23:24 — the Whiteboard.** Ahmed (23:16:16) described a freeform canvas with templates like Microsoft's retired Whiteboard, "the critical core offline features", a timer, and OneNote's ruler and shapes as inspiration. A study thread researched it (23:16:26 to 23:19:07: no complete template list exists, so about 60 original templates in 12 categories are proposed, 13 questions). Ahmed answered the four main questions at 23:23:44.
+11. **23:27 to 23:30 — Notebook mode.** Ahmed (23:27:33) described OneNote's strength (sections, pages, free text boxes on an infinite space) against Notion's weakness for him ("you actually just have the tabs"), said he needs both looks and cannot use copyrighted names. The coordinator proposed a per-notebook choice (23:27:40); Ahmed (23:29:14) accepted, asked for neutral names (Default style and Notebook mode) and agreed the AI can switch it.
+12. **23:30 to 23:39 — the last topic, the Notion study, credit and the go.** The coordinator offered a thread to collect the AI actions (23:29:59). Ahmed (23:35:36) added a deep study of his whole Notion workspace first. He asked how long the credit lasts (23:36:49: 19.5 hours by the coordinator's count) and said he wants to use it fully (23:37:36). The coordinator listed three jobs (23:37:40), and Ahmed said "Yes, push full throttle ... Don't wait for my authority" (23:39:31). Four threads then started: the Notion study (23:35:47, already running), the AI CLI action list, this records thread, and the version plan with the Notion hub.
+
+## 🧠 Key Insights
+
+### Ahmed designs by pictures from products he knows, and decides in small, quick answers
+
+- **Insight:** the banner (Notion's wider banner), Notebook mode (OneNote's sections and free boxes), the Whiteboard (Microsoft's retired app) and dashboards (his own Power BI report) all came as "look at this screenshot". He often says "I'm not sure yet how to implement it" and expects Claude to propose, then answers yes, no or "on trial".
+- **Why it matters:** a proposal with a small number of clear choices gets a quick answer; a vague question ("what did you have in mind?") does not.
+- **What it changes:** keep proposing in plain words with a short list; mark what is the coordinator's addition; record "on trial" and "customizable" explicitly (the empty-sidebar menu is exactly that).
+
+### Security is the one place where Ahmed wants restraint and care at the same time
+
+- **Insight:** he is afraid of what an AI with deleting and writing power could do, and also does not want a home-made security system. Both at once means: seal it in, keep the switch inside Notaya, use well-known patterns, rely on backups, and keep the rules few and simple.
+- **Why it matters:** the AI CLI is the first outside door into the vault, so it changes a security promise.
+- **What it changes:** [A41](plan/approval-and-amendments.md) records the direction; the real promises still have to be written into `docs/security-design.md`, tested and reviewed, and shown to Mohamed before building.
+
+### Naming is a product rule, not a detail
+
+- **Insight:** Ahmed said twice (23:27:33, 23:29:14) that Notaya cannot use copyrighted names. The coordinator then agreed to keep trademarked names out "everywhere". Earlier lists used OneNote and Microsoft Whiteboard as shorthand.
+- **What it changes:** [A42](plan/approval-and-amendments.md): neutral names in the app ("Notebook mode", "Default style", "Whiteboard" as a plain word is the coordinator's reading to confirm in planning). The records may still name the products as inspirations, because they are records, not screens.
+
+### The credit is a deadline, not a limit
+
+- **Insight:** USD 48 of 100 left at 22:32 and about 19.5 hours (coordinator's count) mean time is the scarcer thing; and after expiry nothing stops, it only moves onto the Pro limits (22:39:11).
+- **What it changes:** put reading, studies and records inside the credit window (Sonnet 5.5 high where possible), keep Opus for design and review, and take a quota reading before and after the first heavy day after expiry.
+
+## 📌 Decisions Made
+
+**Who decides.** Every product decision below is Ahmed's, in his own words in the project chat. The coordinator's proposals count only where Ahmed agreed. **None of these is permission to build.** Status words as in session 41: **Agreed** (Ahmed confirmed the restated meaning), **Partly** (some points agreed, details left for planning).
+
+### The method and the working rules
+
+- **Agreed (22:21:39):** nothing in the records is shortened; cloud threads merge ([A37](plan/approval-and-amendments.md) item 3 stands).
+- **Agreed (22:40:55):** the coordinator offers its own ideas, tests for bugs and quality of life, and lists additions clearly ([A42](plan/approval-and-amendments.md)).
+- **Agreed (23:27:33, 23:29:14):** no copyrighted or trademarked names inside Notaya ([A42](plan/approval-and-amendments.md)).
+- **Agreed (22:43:42):** every right-click menu is customizable; none is fixed.
+- **Agreed (22:58:04, 23:00:47):** model and effort are chosen per task from the economics artifact; the chat stays at low (platform cap) ([A43](plan/approval-and-amendments.md)).
+- **Agreed (23:39:31):** Phase 2 (planning and staging) starts now, in parallel threads, without waiting for Ahmed; it does not replace his go to build ([A43](plan/approval-and-amendments.md)).
+- **Agreed (23:35:36):** a read-only deep study of his Notion workspace for parity and for migration and backup both ways, offline features only.
+
+### The features: what was agreed and why
+
+"Exists today" comes from the full inventory (code at `9474511`; nothing was run). "Coordinator's addition" marks an idea Ahmed did not ask for; it is included only where he agreed, as noted.
+
+| Feature | Status | What was agreed | Ahmed's reasons (his words) | Exists today | Coordinator's additions |
+|---|---|---|---|---|---|
+| **Right-click menus** | Agreed (22:40:55, 22:43:42) | Right-click opens the matching menu in: sidebar items (rename, change icon, duplicate, move, export, delete); page tabs (pin, group, close, close others, reopen closed); sticky notes (the corkboard menu); editor text (cut, copy, paste, "Turn into..."); database rows (open, duplicate, delete). Also: links and images (open, copy link, copy image, save image), the empty sidebar space (New page, New database, Paste; **on trial**), several items at once, keyboard hints, Copy link to page. **Every menu customizable in Settings.** **Not**: "Ask AI about this" | "Yeah, that's critical. Yes, I forgot about it"; "if it's not suitable, we can either turn it off or from the setting, or hide it. Like it should be like something that's customizable, not fixed" | Menus behind "..." buttons and the Menu key; no mouse right-click | Links/images, empty space, several items, hints and Copy link (all accepted, 22:43:42) |
+| **Tray menu** | Agreed (22:43:42) | Open, New page, New sticky note, Calculator, Quick search, Lock now, Show/hide all stickies, Close stickies, Quit | "I agree with your suggestions regarding the tray option" | Open Notaya, Close sticky notes, Quit | Quick search, Lock now and Show/hide (accepted) |
+| **Dashboards (Power BI-style)** | Agreed in shape (23:02:31); details left to planning | Dashboard pages with live tiles from Notaya databases (number cards, the existing charts, tables); filters, Reset and click-through; named reusable calculations; the AI CLI builds them | "why don't we actually design things like Power BI inside of Notaya?"; Excel is "a very difficult and annoying thing, both for me as a human and for AI"; it "wouldn't go stale"; "It's not a subsidy to Excel or Power BI"; "a bit complicated for me to decide on my own" | Bar, line, donut and number charts, one per view; click a bar to see its rows | The three steps (23:01:30); the study's honesty features and ten open questions, left for planning |
+| **Guide** | Agreed (23:04:48) | An in-app manual: browsable feature list, images, clear icons, deeper explanations; plus an outside copy we keep updated in step with the app | "it would be able to be updated from us, not just limited to the app ... we need to have a reference"; "almost like ... a manual in a sense for the app inside of the app" | None | The outside copy as an artifact (Ahmed's own words) |
+| **Tour** | Agreed (23:04:48) | A light overview, skippable, never forced, replayable from Settings | "it can be skipped. It's not just something that's forced on the user" | None | Replay from Settings (accepted, 23:05:31) |
+| **About** | Agreed (23:04:48) | Credits for both partners, proper open-source references and licences, Notaya's own licence and design notes (the licence choice needs both partners) | "the professional side of it, the app" | About lists open-source credits only | — |
+| **Home banner** | Agreed (23:08:39) | Settings picker per time of day (image or folder per period, shuffle, reset to built-in); **taller banner by default**; **big clear page icon overlapping the banner**; Settings with **live preview** for banner height, icon size and icon position (left, centre, overlap); **Change** and **Reposition** buttons; **per-page override**; every setting reachable by the AI CLI | "Notion has the banner a little bit wider, so it gets you to see more of the picture. Our banner is slimmer"; "free to the user"; "with a clear demonstration for how it looks" | A built-in gradient that changes once a day with a greeting; cover banners and page icons exist but are small | Live preview, Change/Reposition, per-page override (accepted, 23:08:39) |
+| **Whiteboard** | Agreed in meaning (23:16:16, 23:23:44); nine finer questions left | Its own section; infinite freeform canvas; core offline features of Microsoft's Whiteboard rebuilt in Notaya's own style (backgrounds, colours, shapes, pens, fonts, sizes, timer); OneNote's Draw tab as inspiration; mouse, pen, touch and **pressure-sensitive drawing tablets** (test on Ahmed's tablet); first templates weekly planner, Kanban, mind map, SWOT, lined page, expand later; a board sticky note is linked to a real sticky or a separate copy, per note | "encapsulate all of the critical core offline features of whiteboard, because it's now missing"; "I have one of these [drawing tablets]"; "I don't want to have to choose between either" | Nothing | About 60 own templates in 12 categories (from the study); the five first templates (accepted) |
+| **Notebook mode** (with **Default style**) | Agreed (23:27:33, 23:29:14) | Chosen **per notebook**, changeable later. Notebook mode: coloured section tabs on top, page list with sub-pages on the right, pages are free infinite canvases (click for a text box, drag boxes). A single page in a Default-style notebook can switch to a free canvas. Shares the whiteboard engine. Search, Ctrl+F, export, history, lock and the AI CLI all work. The AI can switch modes | "you can actually literally write in that free design of basically boxes ... in that infinite amount of space"; "I need both because they are very much useful on their own"; "we cannot have copyrighted names" | The ribbon and notebook/section/page layout are OneNote-like already; Notion-style block pages | Per-notebook choice, per-page free canvas, shared engine (accepted) |
+| **AI CLI safety principles** | Agreed as direction (22:45:28, 22:49:30) | See [A41](plan/approval-and-amendments.md): security in every feature from the start; sealed in; off by default, switch only in Settings; proven patterns; backups and version history as the safety net; one simple confirm for deletes and big changes | "I'm afraid of the attack surface"; "not weaken the design"; "way above our pay grade ... We are not cybersecurity experts, but we have to do our best" | No outside entry point | The eight-point list (22:46:13), simplified at 22:49:37 |
+| **AI CLI action list** | **Partly** | Every feature carries named actions; a thread collects them into one list for Ahmed to review (offered 23:29:59, started 23:39:33) | — | About 120 internal commands the UI already uses | — |
+
+### Deferred or rejected along the way
+
+- **Rejected (Ahmed, 22:43:42 and 22:45:28):** "Ask AI about this" in any menu.
+- **On trial (22:43:42):** the right-click menu on empty sidebar space; it may be hidden or turned off.
+- **Left to planning:** the nine finer Whiteboard questions, the ten dashboard questions, how many versions and what goes into each, the AI CLI's action list and exact security promises.
+- **Not touched:** the Notion-parity north star remains direction only (20:51:32); the new study (23:35:36) is an input.
+
+## ⚠️ Difficulties / Friction
+
+- **Number slip.** Ahmed said "point 4" meaning point 5 (22:43:42); the coordinator caught it and Ahmed corrected it the next minute (22:45:28). Voice transcription again produced "futures" for features, "bins" for pens, "Muhammad Zaid" for Mohamed, "subsidy" for substitute.
+- **The effort switch.** Ahmed asked for the coordinator at high effort (23:00:47); the platform capped the project chat at low and the coordinator had first reported success, then corrected itself (23:00:48, an edit).
+- **Screenshots not visible to this thread.** Several decisions rest on pictures (OneNote, Notion banner, Power BI, usage screens); the records quote Ahmed's words and the coordinator's replies, not the pictures.
+- **Records not visible from every place.** This thread cannot read the other threads' sessions (no usage figures) or the project memory file directly; it reads only what the coordinator relayed and the files in the shared folder.
+- **Another thread's output arrived while this entry was being written** (the Notion parity study, about 23:41 UTC); it is cited, not summarized, and was not read in full.
+- **IDs.** Parallel threads were told to take IDs; this thread reserved A40 to A43, EX-2026-11-07-48 and session 43 in its first commit.
+
+## 🔧 Adjustments Made
+
+- **Shifted from:** right-click as a bare proposal. **To:** a customizable system of menus with trial items. **Because:** Ahmed, 22:43:42.
+- **Shifted from:** "Ask AI about this" as one of six extras. **To:** left out. **Because:** Ahmed, 22:43:42, 22:45:28.
+- **Shifted from:** eight safety measures (some elaborate). **To:** few, simple, proven ones. **Because:** Ahmed, 22:49:30.
+- **Shifted from:** a Power BI-style design as one study. **To:** an agreed three-step shape with the details left to planning. **Because:** Ahmed, 23:01:24 and 23:02:31.
+- **Shifted from:** a tall list of OneNote-style features. **To:** Notebook mode chosen per notebook, next to the Default style. **Because:** Ahmed, 23:27:33.
+- **Shifted from:** "OneNote mode" and "the Notion style" as working names. **To:** Notebook mode and Default style. **Because:** Ahmed, 23:29:14.
+- **Shifted from:** the coordinator at high effort. **To:** low (platform cap), heavy work in threads. **Because:** the platform, 23:00:48.
+- **Shifted from:** "discuss everything" as the working phase. **To:** Phase 2 planning may start in parallel. **Because:** Ahmed, 23:39:31.
+
+## ❌ Mistakes / Risks Noted
+
+### A wrong claim about success, corrected
+
+- **What happened:** the coordinator first said it was running at high effort (23:00:48), then edited the message: the switch did not take.
+- **Actual impact:** none; nothing depended on it.
+- **Failure Intelligence:** not entered. Ordinary friction; the correction is in the chat and here.
+
+### Decisions living only in chat and project memory
+
+- **Risk:** until this PR, the second half of the feature agreements lived only in the project chat and the coordinator's memory, which Mohamed's Claude and a fresh session cannot see.
+- **Correction:** this entry, A40 to A43 and the authority rows, the STATUS lines and the updated handover guide.
+
+### Believed but not seen
+
+- The "exists today" column, the Ctrl+F browser bar, the faint star and the inline-database export bug are still readings of code, not runs. The Whiteboard and dashboards studies are readings too (and the Whiteboard study found no complete list of Microsoft's templates, so the suggested ones are the study's own).
+
+### Security promise not yet written
+
+- **Risk:** the AI CLI safety principles (A41) are direction; no promise is in `docs/security-design.md`, so nothing may be built on them until it is, with Ahmed's own words and a security review.
+
+### Names
+
+- **Risk:** the working names in earlier lists (OneNote mode, Whiteboard in Microsoft's sense) could leak into screens. **Correction:** [A42](plan/approval-and-amendments.md); to be checked at planning.
+
+## 📍 Current Position
+
+**As of:** 2026-11-07, about 23:45 UTC (container clock); `main` at `9e3e4e3` before PR #61.
+
+**Before this session part:**
+
+- Fifteen features had an agreed meaning (session 41); right-click, tray, dashboards, guide, tour, About, banner, Whiteboard and OneNote mode were open or half open.
+
+**After it:**
+
+- **Agreed:** all of the above, plus the AI CLI safety direction, neutral names, customizable menus and the working rules (A40 to A43).
+- **Partly discussed:** the AI CLI's action list (a thread is collecting it); the finer Whiteboard and dashboard questions (planning).
+- **Not discussed:** nothing of the roadmap list remains undiscussed; the Notion-parity study (started 23:35:47) and the version plan (started about 23:39) are Phase 2 inputs.
+- No version is assigned to any feature. Nothing is built. Codex has not run.
+
+**Current standing:** "Phase 1 is closed except the AI CLI action list; Phase 2 (planning and staging) may start; building waits for Ahmed's per-feature go."
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md), "Exact next permitted action".
+
+## 🔜 Next Steps
+
+1. **Read first:** this entry and [session 41](#session-41) (the feature tables), A40 to A43, STATUS "Exact next permitted action", the handover guide section 11, and the shared notes: full inventory, dashboards study, Whiteboard study, Notion parity study, model-choice guide.
+2. **Phase 2, in parallel threads (A43):** the AI CLI action list (for Ahmed to review); the Notion parity study's results (what is missing from Notaya and from the agreed list); a staging plan across versions 1.6, 1.7, 1.8 and on, by what is doable, with a list of very small, small and big features; the Notion hub updated.
+3. **Before the AI CLI is built:** a written security design (promises, tests, review), shown to Mohamed (A41); also the checks of believed bugs in the real app on throwaway data in `D:\Notaya Tests` (inline-database export, Ctrl+F, the star).
+4. **Then Ahmed's go per feature or version,** then Codex builds and the coordinator inspects every diff (A37).
+5. **At every stop:** a full entry at the top of this file, ledger rows (with the credit and quota readings), STATUS lines, the handover guide in both copies (A39) and the Notion hub.
+
+**Do not reopen or repeat:** the decisions above unless Ahmed reopens them; the reading of the records (done); the studies (refresh only what a change touches).
+
+**Continuation boundary:** studies, planning and records may go on now; product code waits for Ahmed's go per feature.
+
+## ❓ Open Questions
+
+- **AI CLI action list:** does Ahmed accept it when the thread delivers it? Needed from: Ahmed. Blocks: the CLI plan.
+- **AI CLI mechanics:** how an outside program reaches Notaya and proves it is allowed; whether the AI may work while the window is open; where deletes are confirmed; how the log is kept tamper-proof. Needed from: the security design, then Ahmed. Blocks: the CLI build.
+- **Whiteboard:** the nine finer questions of the study (templates beyond the first five, tools, storage, tablet testing details). Needed from: Ahmed, in planning.
+- **Dashboards:** the ten open questions of the study. Needed from: Ahmed, in planning.
+- **"Whiteboard" as a screen name:** is the plain word fine, or is a different word wanted (A42)? Needed from: Ahmed, in planning.
+- **Notion parity:** the study's results and the five heavily used features it says both Notaya and the agreed list lack (as it reports; not re-checked here). Needed from: Ahmed.
+- **The handover guide:** when and how Ahmed tells Mohamed. Needed from: Ahmed.
+- Still open from before: Mohamed's confirmation of the A34 readings (STATUS question 27); the other questions listed in STATUS.
+
+## 🧾 Session Outcome
+
+Phase 1 of Ahmed's plan is finished: every feature on his list now has an agreed meaning, in his words, with what exists and what is new; the AI CLI has a safety direction that is careful but not over-engineered; the app has neutral names and customizable menus as rules. The records now hold all of it: A40 to A43, the authority rows, this entry, STATUS lines and an updated handover guide for Mohamed. The project moves to Phase 2 with parallel threads, per-task model choice and a credit that should be used before it expires.
+
+Nothing was built, on purpose.
+
+## 🔍 Confidence Level
+
+**Ahmed's words, times and decisions:** High. **Reason:** quoted from the project chat with its server timestamps; every agreed feature has Ahmed's confirming message. **Not higher because:** his messages are voice transcriptions (readings marked) and several screenshots were not visible to this thread.
+
+**What exists in the app:** Medium. **Reason:** it comes from the inventory and the studies (reading of code at `9474511`), not re-checked. **Not higher because:** nothing was run.
+
+**The coordinator's and threads' actions:** Medium. **Reason:** from their posted messages and output files. **Not higher because:** their transcripts were not read; the Notion study was not read in full.
+
+**Usage figures:** Low for this part of the evening. Only the 22:32 screenshots are measured; the 23:36 figures are the coordinator's statement.
+
+## 💬 Personal Note
+
+Ahmed says again and again that he is "a director" and "not a cybersecurity expert". Tonight showed the practical meaning: he decides fast when the choice is small and clear, he is worried about the right thing (what the AI could do to his notes), and he does not want that worry to make the product weaker. A later reader should keep both halves: be careful, and keep the features.
+
+## 📚 Artifacts / Documents Created or Updated
+
+- This entry (`docs/sessions.md`), its index row, and a dated addendum under [session 41](#session-41).
+- [EX-2026-11-07-48](execution/2026-11-07-phase-1-decisions-recorded.md) and its index row.
+- Authority rows for Ahmed's messages from 22:21:39 to 23:39:31 UTC and amendments A40 to A43 in [approval-and-amendments.md](plan/approval-and-amendments.md).
+- STATUS: "As of", mission state, Continuation and "Exact next permitted action" lines, and open question 29.
+- Claims row (first commit); usage ledger: a dated note and quota/credit readings from the chat.
+- The handover guide for Mohamed, repository copy and published page (A39).
+- Outside the repository, not canonical (inputs): `notes/2026-11-07-notaya-dashboards-study.md`, `notes/2026-11-07-notaya-whiteboard-study.md`, `notes/model-choice-guide.md`, `notes/2026-11-07-notion-parity-study.md` (project shared files); the coordinator's project memory; the Notaya Notion hub (not updated by this thread).
+
+## 🤝 Collaborator Contribution
+
+- **Dashboards study thread** — Asked to: read Ahmed's Excel/Power BI material and finance hub, map them to Notaya (22:54:58). Produced: the study with a design proposal, named AI actions, security notes and ten open questions. Integrated by: the coordinator (23:01:30) and this entry. Accepted: the three-step shape (23:02:31); the rest is for planning.
+- **Model-economics thread** — Asked to: read the artifact and write which model for which job. Produced: `model-choice-guide.md`. Integrated by: the coordinator (23:00:15); recorded in A43 as a reading, not an accepted rule.
+- **Whiteboard study thread** — Asked to: study Microsoft's Whiteboard and what Notaya has. Produced: the study (about 60 templates, 13 questions). Integrated by: the coordinator (23:19:07, 23:21:33) and this entry.
+- **Notion parity study thread** — Asked to: study Ahmed's whole Notion workspace (23:35:36). Produced: `notion-parity-study.md` (about 23:41 UTC). Integrated by: not yet.
+
+## 🗂️ Documentation Updates Needed
+
+- **Notion hub:** the Version Feature Board and Human Roadmap should show these meanings and, after staging, their versions. Status: pending (a thread was started at 23:39:33).
+- **`docs/security-design.md`:** the AI CLI promises, when designed. Status: pending (A41).
+- **Handover guide:** kept current at each decision (A39); updated in this PR.
+- **`docs/plan/import-what-carries-over.md`:** still lists databases as left out (session 41). Status: pending.
+- **A gap list of Notion features Notaya lacks:** the Notion parity study and EX-2026-11-03-41 on draft PR #45 (Mohamed's, postponed). Status: pending, for staging.
+
+## 🚫 Deferred Work
+
+- Staging, planning and every build: Phase 2 and Ahmed's go per feature.
+- The AI CLI build: after its action list, security design and review.
+- The Notion backup north star: direction only; the study is an input.
+
 ---
 
 <a id="session-42"></a>
@@ -538,6 +801,8 @@ Ahmed calls himself "a director, in a sense, and user", not a developer (19:49:2
 - The Notion backup north star: direction only.
 - Moving databases to other pages or notebooks: a later topic, with the AI CLI.
 - Single notes on the Windows desktop: mostly exists; any change waits for planning.
+
+**Dated addendum (2026-11-07 23:45 UTC, records PR #61, [session 43](#session-43)):** the "Not discussed" and "Partly discussed" lists in this entry (right-click menus, tray menu, dashboards, guide, tour, About, banner, Whiteboard, OneNote mode, the AI CLI safety design) were settled by Ahmed between 22:40 and 23:29 UTC the same evening. What was agreed, with his reasons, is in session 43 and in [A40 to A43](plan/approval-and-amendments.md). "OneNote mode" is named **Notebook mode** from 23:29:14 UTC, next to the **Default style**. This entry is not otherwise changed.
 
 ---
 
