@@ -1,8 +1,325 @@
-# Cipherleaf: session history
+# Notaya (first named Cipherleaf): session history
 
 Dated project memory, newest first. Each entry preserves what happened, why, how understanding changed and where to resume. It owns chronology and reasoning, not the live state ([STATUS.md](STATUS.md)), permission ([approval-and-amendments.md](plan/approval-and-amendments.md)), concrete work and checks ([`execution/`](execution/)) or acceptance ([acceptance.md](acceptance.md)). Older entries are not rewritten; a later correction is added as a dated note.
 
 The three older entries below were written on 2026-10-22 (UTC), after the work, as a **reconstruction** from the session transcript (timestamps of the owner's messages), the repository, the Execution Summaries and the records. They were the first entries in this file; nothing earlier existed. The three newest entries (A13, A14, the commit and build) were written at the end of their own work. Details the reconstruction could not recover are marked.
+
+---
+
+**Dated note (2026-11-07, records catch-up EX-2026-11-07-44):** the sentence above about "the three newest entries" is from 2026-10-22 and no longer describes the top of this file. Since 2026-11-07 every new entry uses the full PBS form (the Models, Effort, Roles and Provenance block and the thirteen sections), at Ahmed's rule ([A37](plan/approval-and-amendments.md) item 5): one file, newest on top, oldest at the bottom. Entries marked "backfilled 2026-11-07" were written that day as reconstructions for periods that had no entry; they sit at the place their own end time gives them, not at the top. Known order faults among the 2026-10-27 entries are left as they are until a scoped repair (EX-2026-11-07-44, documentation updates needed).
+
+---
+
+# 📘 Session: 2026-11-07 (Ahmed's messages 19:09:26 to 20:23:20 UTC; work 19:08:49 to about 20:45 UTC, session records and container clock), Notaya: Ahmed's side begins, his working rules (A37), the Notion hub, a full reading of the records, and the records catch-up with Notaya's own usage ledger, a coordinated multi-thread session in the Claude project "Notaya"
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Coordinator (the project's "mother thread"; talks with Ahmed in the project chat, starts and steers threads) | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` | low | The session record (`get_session`, read 20:21 UTC). Configuration, not independent proof of the serving backend for every turn |
+| Thread "Explore what Notaya does and what's in flight" (cloud, 19:09 to 19:11) | Configured `claude-opus-5-5[1m]`; the session's own model field says `claude-sonnet-5-5[1m]`; last served `claude-opus-5-5` | medium | Session record. The fields disagree (a model switch); which model served each turn is not established |
+| Thread "Set up Notaya review and coordination" (Remote Control session on Ahmed's PC, Gaming-PC, from 19:10:06) | Not recorded | Not recorded | Its record is not readable from the cloud; its transcript is on the PC (see the usage ledger) |
+| Thread "Learn the PBS hub and FFmpeg lessons" (cloud, bound to Gaming-PC, 19:49 to 20:16) | `claude-sonnet-5-5` | high | Session record |
+| Thread "Build the Notaya Notion hub" (cloud, 19:54 to 20:16) | `claude-sonnet-5-5` | high | Session record |
+| Thread "Plan and build Notaya v1.6" (Remote Control session on the PC, started 19:55:28, stopped about 19:56) | Not recorded | Not recorded | Record not readable from the cloud; it reported making only an empty test folder and an empty local branch |
+| Reader threads "Read Notaya execution reports in full", "Read Notaya plans, handoffs and releases in full" (cloud, Sonnet 5.5) and "Read Notaya security design and session summary" (cloud, Opus 5.5) | `claude-sonnet-5-5[1m]`, `claude-sonnet-5-5[1m]`, `claude-opus-5-5[1m]` | high | Session records; their digests are in the project's shared files (`notes/2026-11-07-notaya-read-*.md`, outside the repository) |
+| Records editor of this entry and of PR #54 (thread "Catch up Notaya records and start the ledger", cloud, bound to Gaming-PC) | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` | high | Session record read 20:20 UTC |
+| Codex | None ran in this session | — | No Codex run was ordered; Codex CLI 0.167.0 was installed earlier the same day (hand-off note) |
+
+**Record basis:** written at the end of the work by the records editor, from the project chat (Ahmed's messages with their server timestamps), the session records of the threads, the reading digests, `git log` of `main` and this thread's own work. The coordinator's and the other threads' internal steps were not seen directly; what they did is taken from their posted messages and outputs. Usage figures are in the [usage ledger](ledger/usage-ledger.md).
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC).
+- Start: 19:08:49 UTC (the coordinator session was created; Ahmed's first message 19:09:26).
+- Continuation: one evening; threads ran in parallel.
+- End / stopping point: about 20:45 UTC (container clock), when records PR #54 was complete and merged; the coordinator session was still running.
+- Session type: re-entry, planning conversation, documentation.
+- Project stage: after V1.5.1 (accepted 2026-11-05); before any v1.6 work.
+- Main focus: start Ahmed's side of the project on a firm footing: his rules in the records, the records read in full, and a usage ledger.
+- Contributors: Ahmed (all decisions); the coordinator and eight threads (see the table above).
+- Active working time: not measured.
+- Reason for summary: a change of direction (new partner side, new roles and authority) and the end of a work block.
+
+## 🎯 Session Goal
+
+Ahmed was starting work on Notaya on a new PC and in a new kind of environment (a Claude project with a coordinator and threads). He wanted the environment checked, Claude to understand the project, the AI Project Bootstrap System (PBS) and what the FFmpeg Encoder project had learned, and his own way of working set down, before any feature work. The intended stopping point, as it became clear during the evening, was: his rules written into the repository, the stale records fixed, a usage ledger started for Notaya, and then a conversation about features, one by one, with nothing built before his go.
+
+The session aimed to:
+
+- check that the PC, Codex, GitHub and the hand-off were in place;
+- understand PBS from its Notion hub and skill, and the FFmpeg Encoder lessons;
+- set down how Ahmed works: who leads, who merges, how to talk to him, how much documentation;
+- build a Notion hub with a version feature board and a roadmap;
+- record all of it in the repository, with a usage ledger of Notaya's own.
+
+## 🧭 Starting State
+
+`main` was at `7661503`: Ahmed had merged hand-off PR #53 at 19:22:15 UTC, minutes before this session (see the next entry below). V1.5.1 was the latest release and accepted. The repository records stopped on 2026-11-05: STATUS, `claims.md` and `AGENTS.md` still said "Codex leads, Claude reviews" and "a Claude never merges", the authority table had no rows after 2026-11-05 11:08:39 UTC, and `sessions.md` had no entries for the partner guide, V1.4.0, V1.5.0 or the hand-off. There was no usage ledger.
+
+## 🛠️ Actions Taken
+
+### 1. Setup check (19:09 to 19:26 UTC)
+
+Ahmed's first message (19:09:26) used the first-session prompt from PR #53: Codex leads, Claude coordinates and reviews and never merges; six steps, then stop. The coordinator started a cloud thread to look at the repository and a Remote Control session on his PC (Gaming-PC) for the steps. The PC session reported PR #53 merged, Security Guidance enabled, Codex and GitHub signed in and the build tools installed. At 19:25:43 Ahmed asked whether everything was in place; the coordinator confirmed at 19:26:05.
+
+### 2. Learning from the FFmpeg Encoder project (19:28 to 19:49 UTC)
+
+At 19:28:38 Ahmed asked for a question to put to his FFmpeg Encoder project, to learn from its experience ("We do not take its word as Bible"). The coordinator wrote it; the FFmpeg side answered with a lessons artifact, which Ahmed posted at 19:49:26 together with the link to the PBS Notion hub.
+
+### 3. Ahmed's way of working (19:49 to 19:56 UTC)
+
+In his 19:49:26 message Ahmed asked Claude to read the whole PBS Notion hub, keep him updated, be creative but list additions clearly, take full authority over development, threads, Codex, Git and GitHub, write clear multi-point commit messages, put the bulk of the coding on Codex (GPT-6.1 Sol, extra high), choose models per task, choose PC or cloud per task, use computer use on his PC for visual tests, and talk to him in plain, non-developer words. He mentioned a $100 cloud credit expiring in less than 24 hours. The coordinator asked three questions; at 19:54:38 Ahmed answered: his OK is enough, merges need no wait for him, a full release on the coordinator's judgment, short summaries, and build a Notion hub inspired by the FFmpeg Encoder hub. The coordinator started the Notion hub thread and a PBS-reading thread.
+
+### 4. The roadmap and the stop (19:55 to 19:56 UTC)
+
+At 19:55:14 Ahmed posted "Notaya Ideas", a roadmap for v1.6, v1.7 and v1.8. The coordinator started a thread on his PC to plan and build v1.6. Ahmed corrected this within a minute (19:56:04: the features are discussed one by one after the hub, PBS and FFmpeg lessons; 19:56:28: "we need to talk first and plan, before any work"). The coordinator stopped the v1.6 thread; it had made only an empty test folder and an empty local branch, and nothing was committed.
+
+### 5. PBS understanding and the question list (19:57 to 20:04 UTC)
+
+Ahmed chose PBS first (19:57:12). The coordinator gave its understanding in plain words; Ahmed asked whether the skill and the whole hub had been read (19:58:12). The honest answer was "not completely"; the reading thread then read the hub and the skill in full except some trial write-ups and index pages. The Notion hub was ready at 19:59:22 (a Version Feature Board with every version from 1.0 to 1.8, a Human Roadmap). At 20:04:34 Ahmed asked for all open questions in one place; the coordinator posted a numbered list of seven at 20:04:42, including the suggestion to "skip FFmpeg's heavy paperwork and usage ledger".
+
+### 6. Documentation is not optional (20:12 to 20:19 UTC)
+
+At 20:12:10 Ahmed rejected that suggestion firmly: thorough, expensive documentation is the core of PBS; records are read in full, never skimmed; the session summary is one file, newest on top, however long; the usage ledger is critical; Codex is the developer hand and the coordinator is the mother thread that inspects, merges and pushes; the coordinator chooses models; Claude threads first while the credit lasts; watch the hourly usage and keep a heartbeat; keep the Notion hub and the PBS records updated at each milestone. At 20:15:35 he answered the roadmap questions (banner images per time-of-day cycle that stay as defaults; a Whiteboard section like Sticky notes, with templates; v1.6 stays one release, quality first, documented for Mohamed), and corrected two transcription errors (20:16:10 "PBS", 20:17:28 "pens"). A comparison of Notaya's records with FFmpeg's was posted at 20:16:52; the coordinator split the full reading of about 1.8 MB of records across three reader threads (20:16:59 to 20:17:05) and asked for permission to update the records. Ahmed gave it at 20:19:06, with the condition that the ledger be Notaya's own.
+
+### 7. The records catch-up (20:19 to about 20:45 UTC, this thread)
+
+The records thread read `CLAUDE.md`, STATUS, the amendments record, `claims.md`, `AGENTS.md`, the hand-off note, the comparison report, the project chat in full, the PBS session-summary method and template, the source reports for the backfilled entries (EX-38, EX-40, EX-42, the V1.4.0 and V1.5.0 resume notes), and the three reader digests as they arrived. It claimed the work (claims row, first commit), opened draft PR #54, and then:
+
+- added eighteen authority rows for 2026-11-07 and amendment **A37** (Ahmed's working rules), with dated status corrections for A28, A30, A31 to A33, A34 and A35;
+- at 20:23:25 the coordinator relayed Ahmed's 20:23:20 message ("we are both independent developers working on the same project ... from my Claude side, that has authority there, and same from his side"), which settled the remaining permission question; it became A37 item 1;
+- rewrote the authority and role lines of `CLAUDE.md` and `AGENTS.md` for the two independent sides, added Ahmed's PC paths, and kept "both partners" for a public repository and a licence;
+- corrected stale rows in `claims.md`, STATUS (title, partners, mission state, next permitted action, two dated corrections, question 28, where-things-live rows), the failure log header, and added dated notes to the hand-off note and the first-session prompt;
+- added the missing acceptance row X28 for V1.4.0;
+- created the **usage ledger** in `docs/ledger/` (method, three CSV files, a summary) and a read-only transcript scanner in `tools/usage-ledger/`, and seeded it with this session's figures from the session records;
+- wrote this entry, an entry for the PR #53 hand-off, and backfilled entries for the partner guide (2026-10-29), V1.4.0 and V1.5.0;
+- wrote Execution Summary EX-2026-11-07-44 and its index row; ran the checks and a security review of the diff; merged PR #54.
+
+## 🧠 Key Insights
+
+### The records, not the chat, are the memory
+
+Everything Ahmed decided this evening lived only in the project chat and in the coordinator's private memory until this PR. A future Claude, a Codex session or Mohamed's Claude cannot see either. That is why the coordinator's own earlier suggestion to "skip the paperwork" was wrong for this project: the paperwork is the only thing that survives a change of session, model or vendor.
+
+### Two independent sides, not one owner
+
+The earlier records assumed one owner (Mohamed) and a friend with equal access, which left a gap: whose words govern a Claude that works for Ahmed? Ahmed's 20:23:20 answer makes it simple and symmetric: each partner's words govern his own setup, and only a few things (public repository, licence, GitHub settings, a direct conflict) need both or Mohamed.
+
+### Some of the roadmap already exists in part
+
+The reading threads found that Mermaid, banners and covers, a tray menu, export and import, sticky multi-select and charts already exist in some form. Each v1.6 item needs a "what is missing" check before it is planned, or work will be repeated.
+
+### Measured usage is available
+
+The session records of cloud threads carry exact token counts and a cost figure, and a transcript carries the same per reply. The ledger can therefore start with measured numbers instead of estimates, at least for cloud threads.
+
+## 📌 Decisions Made
+
+- **Confirmed (Ahmed):** two independent sides; each partner's words govern his own Claude and Codex (20:23:20).
+- **Confirmed (Ahmed):** on his side the coordinator is the mother thread; Codex is the developer hand; the coordinator inspects every Codex diff, merges and pushes, and chooses models (19:49:26, 20:12:10).
+- **Confirmed (Ahmed):** his OK is enough without Mohamed's review; merges need no wait; a full release on the coordinator's judgment (19:54:38).
+- **Confirmed (Ahmed):** thorough documentation, one full-form session file newest on top, a mandatory usage ledger, the Notion hub and PBS records updated at each milestone (20:12:10).
+- **Confirmed (Ahmed):** the ledger belongs to Notaya alone (20:19:06).
+- **Confirmed (Ahmed):** v1.6 stays one release, quality first; banner and Whiteboard meanings (20:15:35, 20:17:28).
+- **Deferred (Ahmed):** every roadmap feature, until it is discussed and greenlit (19:56:04, 19:56:28).
+- **Rejected (Ahmed):** the coordinator's suggestion to skip FFmpeg-style paperwork and the ledger (20:12:10).
+- **Records editor's choices, within the permission:** the branch is the session's `claude/project-thread-d6mjh1` (the harness assigns it; the coordinator had suggested `AE0101/records-catch-up`); the ledger uses CSV files plus a Markdown summary; the weighted-token formula follows the API's relative prices; acceptance is not delegated by A37 (Ahmed did not say so).
+
+## ⚠️ Difficulties / Friction
+
+- Ahmed's voice transcription produced several misheard words ("BBS" for PBS, "codecs" for Codex, "bins" for pens, "steel" for stale, "Hamatai" for Mohamed). The records quote his words as written and give the reading next to them.
+- The coordinator twice moved faster than Ahmed wanted: it started a v1.6 build thread before he had greenlit anything, and it proposed skipping the heavy paperwork. Ahmed corrected both within minutes.
+- Session records of Remote Control sessions on the PC are not readable from the cloud, so two threads have no usage figures yet.
+- STATUS is very long and layered with dated history; adding the new state without rewriting old text keeps it honest but makes it harder to read.
+
+## 🔧 Adjustments Made
+
+- Shifted from: Codex leads, Claude reviews and never merges (19:09:26 prompt).
+  - To: the Claude coordinator leads and merges; Codex is the developer hand.
+  - Because: Ahmed's own later messages (19:49:26, 19:54:38, 20:12:10).
+  - Consequence: `AGENTS.md`, `CLAUDE.md` and A37 rewritten for his side.
+- Shifted from: building v1.6 straight away.
+  - To: talk and plan first, feature by feature.
+  - Because: Ahmed, 19:56:04 and 19:56:28.
+  - Consequence: the v1.6 thread stopped; nothing was built.
+- Shifted from: lighter records and no ledger (the coordinator's 20:04:42 suggestion).
+  - To: full PBS records and a mandatory ledger.
+  - Because: Ahmed, 20:12:10.
+  - Consequence: this PR, the full-form entries and the ledger.
+
+## ❌ Mistakes / Risks Noted
+
+### A build thread started before the go
+
+- What happened: at 19:55:28 the coordinator started "Plan and build Notaya v1.6" on Ahmed's PC right after he posted his ideas list.
+- Actual impact: an empty test folder and an empty local branch on the PC; nothing committed or pushed.
+- Potential impact: product work outside what Ahmed approved.
+- Correction / current status: stopped within a minute on Ahmed's word; the rule "nothing is built before his go per feature" is now in A37 item 9 and STATUS.
+- Failure Intelligence: not entered; no harm, caught at once, and the rule now lives in the records.
+
+### Records ahead of the repository
+
+- What could happen: a future session reads the repository, sees "Codex leads" and "a Claude never merges", and acts against Ahmed's rules, or takes the coordinator's memory as authority.
+- Correction / current status: fixed by this PR; the repository now holds the rules.
+
+## 📍 Current Position
+
+**As of:** 2026-11-07, about 20:45 UTC.
+
+**Before this session:**
+
+- `main` `7661503`; records stopped on 2026-11-05; no ledger; Ahmed's rules only in chat.
+
+**After this session:**
+
+- Ahmed's rules are recorded (A37 and eighteen authority rows), and `CLAUDE.md`, `AGENTS.md`, claims and STATUS match them (integrated with PR #54).
+- The usage ledger exists and holds this session's measured figures for the cloud threads; two PC threads are not measured yet.
+- `sessions.md` has full-form entries for today, the PR #53 hand-off, V1.5.0, V1.4.0 and the partner guide.
+- The Notion hub exists in Ahmed's Notion (outside the repository).
+- Nothing is being built; the roadmap is recorded, not greenlit.
+
+**Current standing:** the records now describe Ahmed's side as it is, and the project is ready for the conversation Ahmed asked for before any feature work.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md) "Exact next permitted action".
+
+## 🔜 Next Steps
+
+1. Read STATUS "Exact next permitted action" and A37 before anything else.
+2. Coordinator: finish the conversation with Ahmed (PBS and FFmpeg lessons confirmed, his go), then discuss v1.6 features one by one, each with a check of what already exists.
+3. On Ahmed's PC: fast-forward `D:\Notaya` to the new `main` and check it equals `origin/main`; run the ledger scanner on the two PC session transcripts and add their rows.
+4. At every following session stop: a full entry at the top of this file, a ledger row, the STATUS lines, the Notion hub at milestones.
+
+**Do not reopen / repeat:** the reading of all records (done today by three threads; digests in the project's shared files), the ledger design, the A37 rules.
+
+**Continuation boundary:** records and planning may go on now; product code waits for Ahmed's go per feature.
+
+## ❓ Open Questions
+
+- Pacing limits for the ledger (STATUS question 28) — Needed from: Ahmed. Blocks: nothing immediate.
+- Mohamed's confirmation of the A34 readings (STATUS question 27) — Needed from: Mohamed. Blocks: nothing on Ahmed's side.
+
+## 🧾 Session Outcome
+
+The evening turned a new partner, a new PC and a new working environment into a recorded way of working. Ahmed's rules, which existed only in chat, are now in the repository where every future Claude, Codex session and Mohamed's Claude will find them. Two moves that went faster than Ahmed wanted were stopped before they did anything. The records that had drifted since 2026-11-05 are caught up, the missing session entries for V1.4.0, V1.5.0 and the partner guide are written, and Notaya has its own usage ledger with measured numbers. No product work was done, on purpose.
+
+## 🔍 Confidence Level
+
+**Ahmed's words and times:** High. **Why:** copied from the project chat's server timestamps. **Not higher because:** some words are voice transcriptions; the readings are marked.
+
+**Who did what in the other threads:** Medium. **Why:** from their posted messages and session records. **Not higher because:** their transcripts were not read.
+
+**Usage figures:** High for the cloud threads read; none for the two PC threads. **Not higher because:** the figures are snapshots of sessions that kept running.
+
+## 📚 Artifacts / Documents Created or Updated
+
+- Records PR #54 (all the repository files above) — Status: merged by the coordinator side under A37 item 3. Canonical owners: the records named in it.
+- Notaya Project Hub in Ahmed's Notion — Purpose: version feature board and human roadmap. Status: built and updated by its thread; not canonical (the repository wins).
+- Reading digests in the project's shared files (`notes/2026-11-07-*.md`) — Purpose: the full read of the records. Not canonical; inputs to this PR.
+
+## 🤝 Collaborator Contribution
+
+- Reader threads (three) — Asked to: read the execution reports; the plans, handoffs and releases; the security design and session file, each in full. Produced: three digests. Integrated by: the records editor (stale items and backfilled entries in this PR). Accepted: not decided.
+- Notion hub thread — Produced the hub and updated it with Ahmed's answers. Not part of this PR.
+
+## 🗂️ Documentation Updates Needed
+
+- `sessions.md` — Needed: entries for periods still missing (2026-10-22 23:14 to 23:55; 2026-10-28 11:19 to 14:33 installer; 2026-10-28 16:24 to 17:42 cleanup, rename, V1.4.0 start), the 2026-10-27 entries out of order, and the stale intro line. Status: pending (a scoped ordering repair needs its own baseline).
+- `docs/execution/README.md` — Needed: the stale result-state words of the EX-37, EX-40 and EX-42 rows. Status: a dated note added in this PR; the rows themselves not rewritten.
+- `docs/security-design.md` — Needed: title and opening line (A9 to A24), P9/P22 "not yet tested", the crypto binding string after A32. Status: pending; untouched in this records PR because no security promise changed.
+- The saved skills (`cipherleaf-change-workflow` and the others) still say Cipherleaf, Kevin and "never merge". Status: pending; to be offered to Ahmed as a skill update.
+
+---
+
+# 📘 Session: 2026-11-07 (commits 18:27:46 to 18:57:45 UTC, merge 19:22:15 UTC, from `git log`), Notaya: hand-off to Ahmed's PC and Codex, `AGENTS.md`, PBS skill v1.1, toolchain and smoke test (PR #53), Remote Control session on Ahmed's PC started from Mohamed's account
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor and records writer (Remote Control session on Ahmed's PC, started from Mohamed's Claude account) | Not recorded | Not recorded | The hand-off note says who wrote it; no session record or transcript was read for this entry |
+| Merger | Ahmed (`AE0101`, "Ahmed Emara" in `git log`) | — | `git log` of `main`: merge commit `7661503` |
+
+**Record basis:** a **reconstruction**, written on 2026-11-07 at about 20:40 UTC by the records editor of PR #54, from `docs/handoff/2026-11-07-codex-lead-handoff.md`, `docs/handoff/first-session-prompt-ahmed-claude.md`, `AGENTS.md` and `git log`. The conversation that started this work is not in the repository; its instruction words and times are **not recorded**. Usage: not measured (Mohamed's account).
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC).
+- Start: not recorded (first commit 18:27:46 UTC).
+- End: merge of PR #53 at 19:22:15 UTC.
+- Session type: hand-off and environment setup.
+- Main focus: prepare Ahmed's PC and Codex to continue Notaya.
+- Contributors: a Claude session on Ahmed's PC; Ahmed (merge).
+- Active working time: not measured.
+- Reason for summary: a change of roles (hand-off); missing from this file until the 2026-11-07 records catch-up.
+
+## 🎯 Session Goal
+
+Hand Notaya over to Ahmed's own PC and tools so that he could continue development with Codex, with a single entry file for Codex and a note of everything the next agent needs.
+
+## 🛠️ Actions Taken
+
+1. **`AGENTS.md`** (18:27:46): an entry file for Codex that points at `CLAUDE.md` as the single source of rules, with roles as then set ("Codex leads development, Claude coordinates and reviews") and the hand-over steps.
+2. **The hand-off note** `docs/handoff/2026-11-07-codex-lead-handoff.md`: the new setup, Ahmed's PC paths (`D:\Notaya`; tests in `D:\Notaya Tests`), the release state (V1.5.1 accepted), the open items (PR #45, Q25, clippy warnings, the not-run checks), skills to use and leave off, the toolchain on Ahmed's PC and first steps.
+3. **PBS skill refreshed to method version 1.1** (18:31:15): the eight files that differed were copied from Ahmed's installed copy, in their own commit.
+4. **Toolchain and smoke test** recorded (18:46:37): Rust 1.99.1 (MSVC) installed (a first install lost `rustc.exe`, a clean reinstall held), Codex CLI 0.167.0 installed, GitHub CLI signed in as `AE0101`. On `main` `4fc269d` plus docs-only commits: `npm ci`, `tsc`, `npm run build` ok; `npm audit` 0; `cargo test --lib` 517 passed, 0 failed, 1 ignored; `cargo clippy --lib` 0 errors, 137 warnings (not fixed).
+5. **The apostrophe problem** found and worked around: in `D:\Claude's Projects\Notaya` the Rust resource compiler failed (`RC2135`) because `tauri-winres` mangles the `'`; the repository was moved to `D:\Notaya`.
+6. **First-session prompt** for Ahmed's own Claude account (18:57:45).
+7. **Merged** by Ahmed at 19:22:15 UTC (`7661503`).
+
+## 🧠 Key Insights
+
+The repository path on Windows must not contain an apostrophe, or the build fails in a way that looks unrelated. The hand-off proved that the repository alone can carry a project from one partner's setup to another's: the note was enough for a new session to start.
+
+## 📌 Decisions Made
+
+- Confirmed (Ahmed, by merging): the hand-off, `AGENTS.md` and PBS v1.1 go onto `main`.
+- The role split in this work ("Codex leads, Claude reviews and never merges") was the setup of that moment; Ahmed replaced it the same evening (A37, next entry above).
+
+## ⚠️ Difficulties / Friction
+
+The first Rust install lost a file for an unknown reason (no antivirus detection was seen); the apostrophe in the folder name broke the build.
+
+## 🔧 Adjustments Made
+
+- Shifted from: the repository in `D:\Claude's Projects\Notaya`.
+  - To: `D:\Notaya`.
+  - Because: the resource compiler failed on the apostrophe; `subst` and junctions did not help.
+  - Consequence: every record now names `D:\Notaya` as Ahmed's copy.
+
+## ❌ Mistakes / Risks Noted
+
+No consequential mistake recorded. Risk: 137 clippy warnings and several unrun checks of V1.5.1 remain (listed in the hand-off note).
+
+## 📍 Current Position
+
+**As of:** 2026-11-07 19:22:15 UTC.
+
+**Before this session:** `main` `4fc269d`; Ahmed's PC not set up.
+
+**After this session:** `main` `7661503`; Ahmed's PC ready (toolchain, Codex, GitHub); `AGENTS.md` and the hand-off note on `main`.
+
+**Current standing:** ready for Ahmed's first session on his own account.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. Ahmed starts his first session with the first-session prompt (done at 19:09:26 UTC; next entry above).
+
+**Do not reopen / repeat:** the toolchain install and the smoke test on `4fc269d`.
+
+## ❓ Open Questions
+
+The clippy warnings (clean up as their own PR?), Q25 and PR #45, as listed in the hand-off note. Needed from: a partner. Blocks: nothing immediate.
+
+## 🧾 Session Outcome
+
+Notaya moved from Mohamed's setup to Ahmed's PC and tools without losing anything the repository knew. The PC builds and passes the full test suite, and Codex has an entry file. The roles written here lasted one evening before Ahmed set his own.
+
+## 🔍 Confidence Level
+
+**What was committed and when:** High (`git log`). **Check results:** Medium, they are the hand-off note's own report and were not re-run. **Who asked for the work and when:** Low, not recorded.
 
 ---
 
@@ -28,6 +345,276 @@ A browser mock proves the web code, not the app's settings, so anything that dep
 V1.5.1 is published and **not accepted**. The owner tries it and accepts it or reports problems, (the records PR #50 was merged at 08:17:10 UTC, `cf6dae6`). For the friend: [the resume note](handoff/2026-11-04-v1-5-1-resume-note.md) lists what ran, what did not (setup installer, tray entry, keyboard-layout shortcut, Clippy, the Playwright mock check) and ideas for a next release. Nothing new starts without a partner's own words.
 
 **Addendum 2026-11-05 (after 11:08 UTC, written by a PC session started from the coordinator's relay; the entry above is not rewritten):** the owner wrote "I approve this version" at 11:08:39 UTC (cited and relayed by the coordinator at 11:08:44 UTC). It was read as the **acceptance of release V1.5.1**; recorded in `acceptance.md` (X27), `STATUS.md`, the authority row and EX-43 section 8f. The not-run list did not change. It grants no new permission. The PC copy was fast-forwarded at 07:16:29, 08:17:41 (`cf6dae6`) and 08:21:38 UTC (`2812d65`), from the reflog. Records PRs #50 and #51 were merged by the owner; this addendum is in the third records PR (draft). Where to resume: the owner's next instruction; items for the friend as already listed in the resume note.
+
+---
+
+# 📘 Session: 2026-11-03 19:20 to 2026-11-04 about 15:05 UTC (owner's messages 2026-11-03 19:20:58 to 2026-11-04 14:30:06 UTC), Notaya V1.5.0: right-to-left text, PDF letters, full local databases with automations, Notion import rework, three PC rounds and the release, cloud thread with PC sessions (backfilled 2026-11-07)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor (cloud thread `claude/project-thread-utju09`, with two helper agents at a time on the owner's 19:34:07 word) | Not recorded | Not recorded | EX-42 names Claude (Claude Code) in a cloud thread; models of the thread and helpers not recorded |
+| PC test sessions (Remote Control on Mohamed's PC, rounds 1 to 3 and the release build) | Not recorded | Not recorded | EX-42 sections 8b, 8c, 13 |
+| Reviewer | A read-only reviewer agent (the built-in `security-review` could not run in that clone) | Not recorded | EX-42 sections 5 and 8 |
+
+**Record basis:** a **reconstruction**, written on 2026-11-07 by the records editor of PR #54 (see the 2026-11-07 entry at the top), because this period had no entry. Sources read in full: [EX-2026-11-03-42](execution/2026-11-03-v1-5-0-rtl-and-databases.md), the [V1.5.0 resume note](handoff/2026-11-04-v1-5-0-resume-note.md), the A35 row, STATUS, `git log`, and the 2026-11-07 reading digest of the execution reports. Nothing was re-run. Usage: not recorded at the time.
+
+## 🕒 Time
+
+- Date range: 2026-11-03 19:20 UTC to 2026-11-04 about 15:05 UTC.
+- Start: the owner's message 19:20:58 UTC.
+- Continuation: cloud work overnight; PC round 1 from 05:54:15 UTC; round 2 around 09:40 to 10:30; round 3 about 11:23 to 13:45; remaining checks 14:18 to about 14:50 (PC clock).
+- End: v1.5.0 published after the owner's "Publish" (14:30:06 UTC).
+- Session type: implementation, PC testing, release.
+- Contributors: Mohamed (scope, tests with his own Notion exports, merge, "Publish"); Claude threads.
+- Active working time: not measured.
+- Reason for summary: a release (big stop); missing until the 2026-11-07 catch-up.
+
+## 🎯 Session Goal
+
+Mohamed asked for Arabic and other right-to-left text that stays right-to-left everywhere (typing, import, backup, export), and "Full database like notion i mean everthing", "except the automations" (19:20:58 to 19:28:12). On 2026-11-04 09:05:57 he added the automations and the Button property ("Let's try to finish them all"). The stopping point was the published release.
+
+## 🛠️ Actions Taken
+
+1. **Right-to-left** in every route (each block takes its direction from its first strong letter; a manual choice is stored in the page; import and export keep it) and **PDF letters** for Arabic, Hebrew and Chinese/Japanese/Korean (embedded font subset, a hand-written shaper, no new dependency).
+2. **Databases** in the Rust core: about twenty property kinds, Notion-style formulas, filters, sorts, groups, relations and rollups, templates, sub-items, seven views (table, board, calendar, timeline, list, gallery, chart), CSV and Notion CSV import, export to five formats, files in cells, in-app reminders, a safety backup before the first database (V1.4.0 cannot open such a vault).
+3. **Compared with Notion** in a test workspace built in Mohamed's Notion with his permission; three engine differences fixed.
+4. **Security review** by a read-only reviewer: four findings fixed (a formula regex that could overflow the stack, unbounded rollup depth, old Office formats on the open list, `mailto:`/`tel:` links).
+5. **PC round 1** (`cc44d37`): all areas passed except "From a CSV file…" (fixed); notes led to database export menus and the version bump.
+6. **Notion ZIP import reworked** after Mohamed's screenshot (rows appeared twice; relations, people and status as text): each row page moves into its row; real Relation and Status properties.
+7. **Automations and Button** (P29): triggers, filters and a closed list of actions in the Rust core, with limits (3 steps, 200 actions, 50 rows).
+8. **PC rounds 2 and 3** with Mohamed's second Notion notebook: BUG-2 to BUG-6 found and fixed (relation cells, row pages, PDF direction, alignment, two export folders picked together); a combined HTML plus Markdown/CSV Notion import added ("will be in v1.5", 10:16 to 10:26).
+9. **Merge and release:** Mohamed merged PR #47 at 14:24:53 UTC (`c27f68e`) and wrote "Publish" at 14:30:06; the PC session built from that commit (500 Rust tests), smoke-tested the portable build and published v1.5.0.
+
+## 🧠 Key Insights
+
+Notion's exports are messy in ways no hand-made sample shows; real exports from the owner found five bugs that cloud tests could not. Text direction belongs to each block, not to the page. A security review by a separate reader again found real defects.
+
+## 📌 Decisions Made
+
+- Confirmed (Mohamed): RTL and databases in one release; automations added later (09:05:57); a new `database` record kind with an automatic backup before the first database; 50 MB file cap; PDF must print Arabic, Hebrew and CJK.
+- Claude's choices put to the owner (EX-42 section 4): the row file API, the inline-picture allowlist, the CSV formula guard.
+
+## ⚠️ Difficulties / Friction
+
+The built-in `security-review` could not run in the cloud clone (`origin/HEAD` not set), so the review was done by a reader agent. Real Notion data was needed and came from Mohamed's own exports. In round 3 a test session sent one click and Ctrl+A to the owner's foreground window (disclosed in EX-42; nothing seen to change).
+
+## 🔧 Adjustments Made
+
+- Shifted from: no automations (19:28:12). To: automations and Button (09:05:57). Because: the owner asked. Consequence: P29 and a second PC round on them.
+- Shifted from: importing Notion CSVs one by one. To: making real databases from a Notion ZIP, rows once. Because: the owner's screenshot. Consequence: the reworked importer.
+
+## ❌ Mistakes / Risks Noted
+
+- The click sent to the owner's foreground window in round 3: no impact seen; the rule "never touch the live window" (FI-01) covers it; no new FI entry was made at the time.
+- Risk left: databases, automations and the Notion import were tested on the PC, but the setup installer of this build was not run and MSVC clippy was run only on `c482411` (135 warnings).
+
+## 📍 Current Position
+
+**As of:** 2026-11-04 about 15:05 UTC.
+
+**Before:** V1.4.0 released and accepted (`ee8c32e`).
+
+**After:** v1.5.0 published (tag on `c27f68e`); not accepted on its own.
+
+**Current standing:** released; the owner's feedback the same evening became V1.5.1 (next entry above).
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. The owner tries V1.5.0 (he did, and listed fifteen fixes at 17:02:11 UTC, which became V1.5.1).
+
+**Do not reopen / repeat:** PC rounds 1 to 3.
+
+## ❓ Open Questions
+
+None recorded beyond the known gaps in EX-42 section 10.
+
+## 🧾 Session Outcome
+
+Notaya gained a full local database system and right-to-left text everywhere in one release, tested against real Notion exports from the owner's own workspace. Five import bugs were found only because real data was used.
+
+## 🔍 Confidence Level
+
+**What was built, tested and released:** High (EX-42 and `git log`). **Exact times inside the cloud work:** Medium. **Models and usage:** unknown.
+
+---
+
+# 📘 Session: 2026-10-28 17:01 to 2026-11-03 18:23 UTC (owner's messages 2026-10-28 17:01:14 to 2026-11-03 18:23:19 UTC), Notaya V1.4.0: tray, Notaya vault format, export and import, shelf and links, error log, three PC rounds, the release and the first acceptance, cloud threads with PC sessions (backfilled 2026-11-07)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor (cloud thread `claude/project-thread-fdn5gx`, shared branch from 2026-10-29) | Not recorded | Not recorded | EX-37, EX-40 and the V1.4.0 resume note |
+| PC test sessions (Remote Control on Mohamed's PC, 2026-11-03) | Not recorded | Not recorded | EX-40 |
+| Reviewers | Independent read-only reviewers (two for A31, export and import reviews, a security review of the round-trip diff) | Not recorded | EX-37, EX-40 |
+
+**Record basis:** a **reconstruction**, written on 2026-11-07 by the records editor of PR #54, because this period had no entry. Sources read in full: [EX-2026-11-03-40](execution/2026-11-03-v1-4-0-pc-tests.md), the [V1.4.0 resume note](handoff/2026-10-28-v1-4-0-resume-note.md), the 2026-11-07 reading digests (which cover EX-37 and A31 to A33), STATUS and `git log`. Nothing was re-run. Usage: not recorded at the time.
+
+## 🕒 Time
+
+- Date range: 2026-10-28 17:01 UTC to 2026-11-03 18:23 UTC.
+- Work blocks: 2026-10-28 17:01 to about 22:21 and 2026-10-29 02:04 to 08:51 (cloud; the owner's Claude usage ran out at 08:51:39 and he asked for a resume note); paused 2026-10-29 to 2026-11-03 (the friend did no work in the meantime: "my friend did nothing", 2026-11-03 06:52:53); 2026-11-03 06:54 to 18:23 (PC rounds, merge, release, acceptance).
+- Session type: implementation, PC testing, release.
+- Contributors: Mohamed; Claude threads.
+- Active working time: not measured.
+- Reason for summary: a release and the project's first acceptance; missing until the 2026-11-07 catch-up.
+
+## 🎯 Session Goal
+
+Mohamed first asked to "remove and re release notaya v 1.3.0", then corrected it to V1.4.0 (17:21:07, V1.3.0 kept). The scope grew over the evening and night (A31 to A33) and was frozen at 2026-10-29 02:53:32 UTC ("databases and charts later"). The stopping point was a published V1.4.0.
+
+## 🛠️ Actions Taken
+
+1. **Tray and start with Windows** (A31): close hides to the tray (a vault with a master password locks first), Settings > Windows switches, the uninstaller's "Delete the application data" box removed. Two independent reviews found and fixed real problems (a protected vault could be left unlocked in the tray).
+2. **Full migration to Notaya** (A32): vault format `NOTA` v2 in `vault.nota`, old `vault.clf` read and re-encrypted at the first unlock and kept as `vault-before-notaya.clf`; app identifier `app.notaya.notes`.
+3. **Other V1.4.0 features** (A33): calculator history of 500, more text and highlight colours, export of pages, sections and notebooks to Markdown, HTML, PDF and Word (one file or ZIP), import of the same and of Notion ZIPs, shelf and page links, a local error log.
+4. **Stop and hand-over** (2026-10-29 08:51:39): the owner's usage ran out; a resume note was written for the friend; the friend's PC was named for builds (08:59:37). The partner guide was written the same morning (entry below).
+5. **PC rounds on 2026-11-03** (Mohamed's PC, throwaway data): round 1 on `7b0ab92` (350 tests, runners, migration from real V1.3.0 copies, export and import); round 2 (setup upgrade, tray with real clicks, log rotation, shelf and links, 40 exports and 48 imports by real dialogs) found five round-trip losses; Mohamed said "Fix them before" (10:19:42); round 3 on `fb4255e` and a retest on `4393350` passed after one more fix found on the spot.
+6. **Merge, release, acceptance:** Mohamed merged PR #39 at 15:48:16 UTC (`452212d`), wrote "Publish" at 15:50:55; the PC session built from a clean clone (380 tests) and published v1.4.0; Mohamed wrote **"i accept"** at 18:23:19 UTC, the project's first acceptance.
+
+## 🧠 Key Insights
+
+Round trips (export, then import) find losses that single-direction tests miss. A shared branch and a resume note let work pause for five days and resume without loss. Release builds are not byte-reproducible (the release exe differs from the tested build by 28 bytes), so the exact shipped file should be tested.
+
+## 📌 Decisions Made
+
+- Confirmed (Mohamed): V1.4.0 instead of re-releasing V1.3.0; migration option C (full Notaya naming); scope freeze; fix the round-trip losses before release; fix bugs on the spot and retest only the area; at most two full PC rounds per release (a third only with his approval).
+- Confirmed (Mohamed): acceptance of the V1.4.0 release (18:23:19 UTC); recorded in STATUS and, since 2026-11-07, as acceptance row X28.
+
+## ⚠️ Difficulties / Friction
+
+The owner's Claude usage ran out mid-work (2026-10-29 08:51:39). A real Rust panic could not be provoked to test the error log. After a WebView2 child process is killed the window stays blank and nothing is logged.
+
+## 🔧 Adjustments Made
+
+- Shifted from: re-releasing V1.3.0. To: V1.4.0. Because: the owner's correction (17:21:07). Consequence: V1.3.0 stays published.
+- Shifted from: releasing with known round-trip losses. To: fixing them first. Because: "Fix them before" (10:19:42). Consequence: round 3.
+
+## ❌ Mistakes / Risks Noted
+
+- The release exe was not smoke-tested in the real app (only a same-source test build was). Risk, not an observed fault.
+- One optional-security run timed out once (cause unknown; the rerun passed).
+
+## 📍 Current Position
+
+**As of:** 2026-11-03 18:23:19 UTC.
+
+**Before:** V1.3.0 released, not accepted.
+
+**After:** V1.4.0 merged (`452212d`), released and **accepted**.
+
+**Current standing:** accepted release; the next work (V1.5.0) started at 19:20 UTC the same evening (entry above).
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. The next release starts only on the owner's words (it did, at 19:20:58 UTC).
+
+**Do not reopen / repeat:** PC rounds 1 to 3 and the retest.
+
+## ❓ Open Questions
+
+Databases and charts were deferred ("discuss later"); they became V1.5.0.
+
+## 🧾 Session Outcome
+
+V1.4.0 gave Notaya its own vault format, export and import in four formats, a tray and an error log, and it became the first release the owner accepted. The five-day pause in the middle showed that the shared branch and resume note work.
+
+## 🔍 Confidence Level
+
+**What was built, tested, released and accepted:** High (EX-40, STATUS, `git log`). **Details of the 2026-10-28 and 10-29 cloud work:** Medium (from the digests of EX-37 and A31 to A33). **Models and usage:** unknown.
+
+---
+
+# 📘 Session: 2026-10-29 (owner's messages 07:55:55 to 08:59:37 UTC), Notaya: two partners and their two Claudes, the collaboration guide, claim board and setup steps (A34, PR #40), cloud thread session (backfilled 2026-11-07)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor (cloud thread `claude/project-thread-6bb493`) | Not recorded | Not recorded | [EX-2026-10-29-38](execution/2026-10-29-shared-work-with-a-friend.md) |
+
+**Record basis:** a **reconstruction**, written on 2026-11-07 by the records editor of PR #54, because this change of direction had no entry. Sources read in full: EX-38, the A34 row, STATUS question 27, the V1.4.0 resume note and `git log` (PR #40 merged as `253ce56`, 2026-10-29 08:52:53 UTC). Usage: not recorded.
+
+## 🕒 Time
+
+- Date: 2026-10-29 (UTC).
+- Start: the owner's message 07:55:55 UTC.
+- End: PR #40 merged at 08:52:53 UTC (`git log`); the owner named the friend's PC for builds at 08:59:37.
+- Session type: documentation (method, not product).
+- Contributors: Mohamed; a Claude cloud thread.
+- Active working time: not measured.
+- Reason for summary: a change of direction (a second partner); missing until the 2026-11-07 catch-up.
+
+## 🎯 Session Goal
+
+"so now i want me and my freind work on the same project and his claude code and my claude code can continiu flawless and can be picked uped where it lefts" (07:55:55). The goal was a written way for two people, each with their own Claude, to start, claim, stop and pick up work using only the repository.
+
+## 🛠️ Actions Taken
+
+1. Wrote `docs/handoff/collaboration-guide.md` (who the partners are, where permission comes from, claims and ID reservation, branch names, shared branches, draft PRs, how to stop and pick up, test safety, the security review rule, prompt cards), `claims.md`, `friend-setup.md` and `owner-invite-steps.md`.
+2. Added start step 7 and the section "Working with more than one person" to `CLAUDE.md`, A34 (proposed), two authority rows and STATUS question 27.
+3. The first version made the friend a restricted collaborator (with `CODEOWNERS`). Mohamed said "it's not exactly what i want but it's very close" (08:33:01), then "i want him to have the full work acess" (08:39:33) and "from the beginegn to after finishing V1.4.0" (08:40:02). The PR was reworked in place; `CODEOWNERS` was removed.
+4. Claude's readings were put to Mohamed as question 27: the friend's words give permission like his; a public repository and a licence need both; GitHub settings stay Mohamed's click; V1.4.0 is a shared branch; real notes and PCs stay private.
+5. PR #40 was merged (08:52:53 UTC). At 08:51:39 the owner's Claude usage ran out and the V1.4.0 resume note was written for the friend; at 08:59:37 the friend's PC was named for builds and tests.
+
+## 🧠 Key Insights
+
+With two Claudes on two accounts, nothing in either account's memory or chat is shared; only committed files are. Claims and reserved IDs prevent two sessions from taking the same work or number.
+
+## 📌 Decisions Made
+
+- Confirmed (Mohamed): the friend gets full work access from the beginning to after V1.4.0.
+- Proposed, never confirmed by Mohamed: Claude's readings (a) to (e) of question 27. (On 2026-11-07 Ahmed, the friend, settled how the two sides fit for his own side: A37 item 1.)
+- Offered, not built: a session-briefing hook, a Windows build in GitHub Actions, GitHub Issues as a claim board.
+
+## ⚠️ Difficulties / Friction
+
+The first design did not match what Mohamed meant by "work on the same project"; it took two corrections. GitHub repository settings cannot be changed from a cloud thread, so the invitation steps were written for Mohamed to click.
+
+## 🔧 Adjustments Made
+
+- Shifted from: a restricted collaborator with code owners. To: a full partner. Because: Mohamed, 08:33:01 to 08:40:02. Consequence: `CODEOWNERS` removed; "the owner" in `CLAUDE.md` means either partner.
+
+## ❌ Mistakes / Risks Noted
+
+No consequential mistake. Risk: question 27 stayed unanswered, so the partner rules rested on Claude's reading until 2026-11-07.
+
+## 📍 Current Position
+
+**As of:** 2026-10-29 about 09:00 UTC.
+
+**Before:** one owner, one Claude.
+
+**After:** the guide, claim board and setup steps on `main`; the friend (`AE0101`, Ahmed Emara) a full partner; V1.4.0 a shared branch, paused.
+
+**Current standing:** ready for the friend to start; he started on 2026-11-07.
+
+**Live owner / continuation anchor:** [handoff/collaboration-guide.md](handoff/collaboration-guide.md), [handoff/claims.md](handoff/claims.md).
+
+## 🔜 Next Steps
+
+1. Mohamed answers question 27 (not recorded).
+2. The friend follows `friend-setup.md` (done on 2026-11-07 on Ahmed's PC).
+
+**Do not reopen / repeat:** the guide's structure.
+
+## ❓ Open Questions
+
+Question 27 — Needed from: Mohamed. Blocks: nothing on Ahmed's side since A37.
+
+## 🧾 Session Outcome
+
+Notaya became a two-partner project with written rules for sharing work through the repository alone. The same morning those rules were used for real: when Mohamed's usage ran out, V1.4.0 was handed over in a resume note.
+
+## 🔍 Confidence Level
+
+**What was written and merged:** High (EX-38, `git log`). **Mohamed's view of the readings:** unknown (never recorded).
 
 ---
 

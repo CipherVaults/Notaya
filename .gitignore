@@ -28,6 +28,11 @@ release
 *.pfx
 *.p12
 *.csv
+# Exception (2026-11-07, A37): the usage ledger's own tables hold only token
+# counts and costs, never passwords; only these three files are let through.
+!/docs/ledger/claude-sessions.csv
+!/docs/ledger/codex-runs.csv
+!/docs/ledger/quota-readings.csv
 *.kdbx
 /data/
 

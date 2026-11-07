@@ -1,5 +1,7 @@
 # First session prompt for Ahmed's own Claude account (2026-11-07)
 
+**Dated note (2026-11-07, records catch-up EX-2026-11-07-44):** Ahmed used this prompt at 19:09:26 UTC. Its role lines ("Codex ... leads development", "You never merge or release by yourself") were superseded the same evening by his own later messages, recorded as [A37](../plan/approval-and-amendments.md): his Claude coordinator is the mother thread that leads, inspects every Codex diff, merges and pushes; Codex is the developer hand. For a new session today, use the rules in `CLAUDE.md` and `AGENTS.md`, not the role lines below. The block is kept unchanged as history.
+
 Open Claude Code **in `D:\Notaya`** (not in `D:\Claude's Projects`; the repo path must have no apostrophe), sign in with Ahmed's own Claude account, and paste the block below as the very first message. Context: [2026-11-07-codex-lead-handoff.md](2026-11-07-codex-lead-handoff.md).
 
 ```

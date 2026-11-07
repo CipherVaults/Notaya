@@ -4,6 +4,8 @@
 
 **Last substantive update:** 2026-10-28 (FI-05 entered; FI-04 entered 2026-10-23; FI-01 to FI-03 entered on 2026-10-22, FI-01 moved here from STATUS)
 
+**Dated correction (2026-11-07, records catch-up EX-2026-11-07-44):** the line above was not updated when FI-06 and FI-07 were entered on 2026-11-05 (V1.5.1 records); the last substantive update is therefore 2026-11-05. No new entry is added on 2026-11-07: nothing in the records catch-up met the admission boundary.
+
 **Maintainer:** Claude (Claude Code), for the owner
 
 **Scope:** consequential failures, near-misses and system gaps in the work on this project.
