@@ -143,6 +143,8 @@ None.
 
 **Do not reopen / repeat:** the reading of the 2026-11-07 records for this purpose.
 
+**Dated addendum (2026-11-07 22:45 UTC, records PR #59, [A39](plan/approval-and-amendments.md)):** at 22:33:37 UTC Ahmed said the guide is a living document to be updated continuously as development goes on. The guide now carries a "last updated" line and a change log, A39 records the rule, and project memory tells later threads to update both copies at every milestone or decision. Step 3 of Next Steps above is therefore a standing rule, not a suggestion. The entry above is not otherwise changed.
+
 ## ❓ Open Questions
 
 Mohamed's answers to the questions at the end of section 12 of the guide. Needed from: Mohamed.
