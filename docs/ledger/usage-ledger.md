@@ -4,6 +4,26 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-07, the rest of the coordinator session and the two PC threads (snapshots 22:02 to 22:06 UTC)
+
+**Scope:** (a) the two Remote Control sessions on Gaming-PC that the first reading could not measure, now measured from their transcripts on the PC; (b) the records thread that wrote the session summary of the whole coordinator session (PR #56), up to 22:06 UTC.
+
+| Session | Model (last served) | Effort | Output tokens | Weighted tokens | Reported cost (USD) |
+|---|---|---|---:|---:|---:|
+| Set up Notaya review and coordination (PC, 19:10 to 19:26) | Opus 5.5 and Sonnet 5.5 | not recorded | 10,884 | 810,870 | not reported |
+| Plan and build Notaya v1.6, stopped (PC, 19:55 to 19:56) | Sonnet 5.5 | not recorded | 3,492 | 251,473 | not reported |
+| Session summary, PR #56 (PC, from 21:56), running | Opus 5.5 | not recorded | 53,340 | 1,793,924 | not reported |
+
+Raw, the two earlier PC threads together: fresh input 72; cache write 416,922; cache read 4,692,381; output 14,376 (33 replies). This thread to 22:06: fresh input 92; cache write 331,342; cache read 11,129,544; output 53,340 (44 replies).
+
+- **The first evening reading is now complete for the PC side:** the two PC threads add 1.06 million weighted tokens to the 10.67 million of the eight cloud sessions measured at 20:21 to 20:33.
+- **Pace:** as before, cache reads are most of the volume. This thread re-read a very large context (the whole project chat, two study files, the session file of about 2,300 lines and part of the 1.8 MB Blue reference).
+- **Not measured from here:** the coordinator after 20:33 UTC, the two cloud threads "Study Notaya's current import and export" (20:56 to 21:00) and "Map everything Notaya already does" (21:00 to 21:10), and the end of this thread after 22:06. Their session records are cloud records, which this PC thread cannot read; the coordinator can add them at its next ledger refresh.
+- **Quota:** no reading was taken in this block. Ahmed's rule of 20:41:50 UTC (no cap; watch the 5-hour and weekly limits of Claude and Codex) answers STATUS question 28; the next refresh should add a reading of both limits.
+- **Codex:** no run.
+
+---
+
 ## 2026-11-07, second records PR (snapshot 20:47 UTC)
 
 **Scope:** the second work block of the records thread (20:38 to 20:47 UTC, PR #55), counted from 20:38 so that it does not overlap the first reading below.
