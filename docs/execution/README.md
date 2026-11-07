@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-50: Phase 2 version plan, V1.6 to V1.15
+
+- [2026-11-07-version-plan.md](2026-11-07-version-plan.md): a plan and records; PR #62. Every agreed feature staged across V1.6 to V1.15 in four waves with sizes, dependencies and gates ([the plan](../plan/2026-11-07-version-plan.md)); the Notion hub updated to match; session entry 44. **Produced** (verified only by the checks in its section 3); not accepted. Nothing is greenlit to build.
+
 ### 2026-11-07 (Ahmed's message 22:24:27 UTC, coordinator's request 22:28:16 UTC), EX-2026-11-07-47: handover guide for Mohamed
 
 - [2026-11-07-handover-guide-for-mohamed.md](2026-11-07-handover-guide-for-mohamed.md): records only; PR #57. A Markdown copy of the handover guide in `docs/handoff/` (what Ahmed's side has set up and decided, each item marked shared rule, Ahmed's side or needs both), session entry 42, a STATUS line. **Verified** by the checks in its section 3; integrated when PR #57 is merged; not accepted.
