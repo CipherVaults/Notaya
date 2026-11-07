@@ -6,6 +6,8 @@
 
 **Baseline when written:** `origin/main` `42de167`. **In flight:** V1.4.0 (tray, the Notaya migration, colors, export and import) on branch `claude/project-thread-fdn5gx`, draft [PR #39](https://github.com/AbyssWatcher2/Notaya/pull/39), "do not merge yet", stopped for the night at Mohamed's word (2026-10-29 03:08 UTC). At 08:40:02 UTC he said the friend has full work access "from the beginning to after finishing V1.4.0", so **V1.4.0 is shared work from the start, as a shared branch** (section 5b). Its resume note is on that branch (`docs/handoff/2026-10-28-v1-4-0-resume-note.md`) and lists what is unfinished. Work started from `main` in the areas V1.4.0 changes will collide with it (see "Choosing work").
 
+**Dated note (2026-11-07, [EX-2026-11-07-45](../execution/2026-11-07-records-gaps-closed.md)):** the lines in this guide that name V1.4.0 as work in flight, paused, or the main job (the baseline line above, section 5b, the stop-and-pick-up examples, section 10) describe 2026-10-29. V1.4.0 was merged on 2026-11-03 (PR #39, `452212d`), released and **accepted** by Mohamed ("i accept", 18:23:19 UTC, [acceptance](../acceptance.md) X28); V1.5.0 and V1.5.1 followed. Nothing is in flight from those releases; new work starts from the latest `main` with its own claims row. `NOTAYA_HOME` (with `CIPHERLEAF_HOME` as a fallback) is on `main` since V1.4.0. Since 2026-11-07 the two partners are independent sides, and on Ahmed's side his coordinator merges ([A37](../plan/approval-and-amendments.md), `CLAUDE.md`); the rules in this guide still hold for Mohamed's side and for anything that needs both partners.
+
 ## 1. People and roles
 
 | Role | Who | May |

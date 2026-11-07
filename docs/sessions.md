@@ -10,6 +10,115 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
+**Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 17:00 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
+
+---
+
+# 📘 Session: 2026-11-07 (coordinator's request 20:38:17 UTC; work 20:38 to about 21:00 UTC, container clock), Notaya: second records PR, the gaps of the first catch-up closed (PR #55, EX-2026-11-07-45), cloud thread session
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Records editor (thread "Catch up Notaya records and start the ledger", cloud, bound to Gaming-PC; the same session as PR #54) | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` | high | Session record read 20:45 UTC |
+| Coordinator (asked for this PR) | As in the entry below | low | Its message of 20:38:17 UTC |
+| Codex | None ran | — | No Codex run was ordered |
+
+**Record basis:** written at the end of the work by the records editor, from this thread's own work, the sources named in [EX-2026-11-07-45](execution/2026-11-07-records-gaps-closed.md) (read in full), `git log` and the container clock. Usage is in the [ledger](ledger/usage-ledger.md).
+
+## 🕒 Time
+
+- Date: 2026-11-07 (UTC).
+- Start: 20:38:17 UTC (the coordinator's request, one minute after PR #54 was merged).
+- End: when PR #55 was merged (its merge time is in `git log`; about 21:00 UTC by the container clock).
+- Session type: documentation.
+- Contributors: Ahmed (the permission, 20:19:06 UTC); the coordinator (the request); this thread.
+- Active working time: not measured.
+- Reason for summary: Ahmed's rule (A37 item 5): every session that changes the repository gets a full entry.
+
+## 🎯 Session Goal
+
+Close the gaps the first catch-up listed (EX-44, section 7), in a second records-only PR:
+
+- the missing session periods;
+- the 2026-10-27 order;
+- the stale lines of the security design;
+- the exported skills;
+- the guide lines about V1.4.0.
+
+Merge it when done.
+
+## 🛠️ Actions Taken
+
+1. Restarted the branch from `main` `2564711`, then pushed a claims row (EX-2026-11-07-45) and set the first PR's row to done. Opened draft PR #55.
+2. Read EX-10, EX-11, EX-12, EX-32 to EX-36 and the digests' gap lists in full. Wrote three backfilled entries.
+3. Put the twelve 2026-10-27 entries in order of their end time, added separators, and checked by script that no line was lost.
+4. Added dated corrections to `security-design.md`, after checking the binding string in the code and the PC test evidence in EX-33, EX-34 and EX-40.
+5. Added dated notes to the two partner guides and the three exported skills.
+6. Wrote EX-45 and its index row, the STATUS lines, the ledger rows and this entry. Ran the checks, merged.
+
+## 🧠 Key Insights
+
+- The exported `cipherleaf-*` skills are Mohamed's, and their "never merge" lines are still right for his side. The fix was a side-aware note, not a rewrite.
+- The security design said P9 and P22 were untested when most of them had been tested on the PC. One part had no test anywhere: the Start with Windows registry value written by the real exe. Writing the correction surfaced that remaining gap.
+
+## 📌 Decisions Made
+
+- Read Ahmed's 20:19:06 permission ("today's handoff fixes for the steel status") as covering these stale-record fixes. The coordinator's request alone would not be permission.
+- Corrections in `security-design.md` and the skills are dated notes; their old text is kept (CLAUDE.md, "No broad rewrites").
+- Reordering whole entries without changing their text is not a rewrite.
+
+## ⚠️ Difficulties / Friction
+
+The pop-out calculator entry has no end time in its heading, so its place came from `git log`.
+
+## 🔧 Adjustments Made
+
+- Shifted from: rewriting the skills' merge lines. To: a dated note per skill. Because: they hold Mohamed's own rules. Consequence: both sides read correctly.
+
+## ❌ Mistakes / Risks Noted
+
+- An estimated time ("to about 23:46") in one new heading was caught and replaced with the recorded facts before commit.
+- Risk: account copies of the skills (outside the repository) may still carry the old lines.
+
+## 📍 Current Position
+
+**As of:** 2026-11-07 about 21:00 UTC.
+
+**Before:** the gaps of EX-44 section 7 were open.
+
+**After:** they are closed. What is still open is in EX-45 section 4:
+
+- the EX-20 entry;
+- older stale lines in `acceptance.md` and the STATUS "What exists" table;
+- the account copies of the skills;
+- the PC fast-forward and the PC ledger rows.
+
+**Current standing:** produced, verified and integrated on merge; not accepted.
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md), "Exact next permitted action".
+
+## 🔜 Next Steps
+
+1. The coordinator: when PC work restarts, fast-forward `D:\Notaya` and add the two PC sessions to the ledger.
+2. The conversation Ahmed asked for, before any v1.6 work.
+
+**Do not reopen / repeat:** the backfill of the periods named in EX-44.
+
+## ❓ Open Questions
+
+Question 28 (pacing limits for the ledger). Needed from: Ahmed.
+
+## 🧾 Session Outcome
+
+The record set now has no missing period for a big stop. The 2026-10-27 day reads newest first. The security design says what was really tested. The skills and guides no longer mislead a new session on either side.
+
+## 🔍 Confidence Level
+
+**The new entries and corrections:** High; every fact is taken from a named report, `git log` or the code. **Ordering of the pop-out entry:** Medium; it is placed by its last commit, not by a recorded end time.
+
+---
+
 # 📘 Session: 2026-11-07 (Ahmed's messages 19:09:26 to 20:23:20 UTC; work 19:08:49 to about 20:45 UTC, session records and container clock), Notaya: Ahmed's side begins, his working rules (A37), the Notion hub, a full reading of the records, and the records catch-up with Notaya's own usage ledger, a coordinated multi-thread session in the Claude project "Notaya"
 
 ## 🤖 Models, Effort, Roles and Provenance
@@ -618,6 +727,94 @@ Notaya became a two-partner project with written rules for sharing work through 
 
 ---
 
+# 📘 Session: 2026-10-28 16:07 to about 17:00 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Release thread (cloud, branch `claude/project-thread-fhcwas`) and its PC session | Not recorded | Not recorded | [EX-2026-10-28-34](execution/2026-10-28-notaya-v1-3-0-release.md), addendum |
+| Cleanup (PC session) | Not recorded | Not recorded | [EX-2026-10-28-36](execution/2026-10-28-test-leftovers-cleanup.md) |
+| Rename (cloud thread) | Not recorded | Not recorded | [EX-2026-10-28-35](execution/2026-10-28-github-repo-renamed.md) |
+
+**Record basis:** a **reconstruction**, written on 2026-11-07 by the second records PR of Ahmed's side (EX-2026-11-07-45), because this period had no entry: the V1.3.0 entry below ends before the merge, and the publish itself was only in STATUS and the EX-34 addendum. Sources read in full: EX-34 (with its addendum), EX-35, EX-36, their index rows and the authority rows from 16:07:53 to 16:48:41 UTC. Nothing was re-run. Usage: not recorded at the time.
+
+## 🕒 Time
+
+- Date: 2026-10-28 (UTC).
+- Start: the owner merged PR #34 at 16:07:47 UTC.
+- End: the rename was checked at about 16:49 UTC; the index gives the rename work to about 17:00 UTC. The next block (the folder move and V1.4.0) starts at 17:01:14 UTC (the V1.4.0 entry above).
+- Work blocks: 16:07 to 16:12 (merge, stray folder, publish); 16:24 to 16:45 (cleanup, PC clock); 16:46 to about 17:00 (rename).
+- Session type: release and housekeeping.
+- Contributors: Mohamed; Claude cloud threads; a PC session.
+- Active working time: not measured.
+- Reason for summary: a release (V1.3.0) and a rename of the repository; missing until 2026-11-07.
+
+## 🎯 Session Goal
+
+Ship V1.3.0 ("Delete it / And i merged", 16:07:53; "Publish", 16:10:23), free the PC of test leftovers ("yes please", 16:24:57; "delete them", 16:39:05; "keep everyhting in test folder that we did", 16:43:19), and give the repository the app's name ("Yes please rename", 16:46:38; "renamed it", 16:48:41).
+
+## 🛠️ Actions Taken
+
+1. **Merge:** Mohamed merged PR #34 with a merge commit at 16:07:47 UTC (`9a982da`); the build commit `f970331` is in `main`; the PC copy `E:\Project\cipherleaf` was fast-forwarded (16:08:25, PC clock).
+2. **Stray folder (FI-05):** after a read-only re-check (172 WebView2 cache files, no vault), the PC session deleted only `%LOCALAPPDATA%\Notaya Notes` (16:09:31).
+3. **Publish:** after re-checking the hashes, the PC session ran `gh release create` at 16:11 UTC. Release v1.3.0 was published at 16:11:23 UTC, tag on `f970331`, two assets whose digests equal the tested files. Checked through `gh` and the GitHub API.
+4. **Cleanup (EX-36):** deleted about 8.5 GB of throwaway folders in `%TEMP%` and the test folder (`run2`), and `E:\Project\cipherleaf\vendor` (old KeePassXC files, untracked), each checked first. One 4.2 GB folder was blocked by Bitdefender; the owner deleted it himself after a restart (sizes as EX-36 lists them). On "delete them" (16:39:05), 3,037 small test folders and 25 logs went too. `v130` and `v130b` were kept (16:43:19).
+5. **Rename (EX-35):** the cloud thread's API call was refused by the proxy (HTTP 403); Mohamed renamed the repository in GitHub settings. Checked: `AbyssWatcher2/Notaya`, and the old address still redirects for git. About 85 old links in `docs/` were left as they are (they redirect; no broad rewrites).
+
+## 🧠 Key Insights
+
+A release is only "verified" when the published asset digests are compared with the tested files, which the addendum did. Deleting by exact name, after a check, kept the cleanup safe: one broad wildcard delete was blocked by the session's own safety check and was replaced by exact names.
+
+## 📌 Decisions Made
+
+- Confirmed (Mohamed): merge PR #34; delete the stray folder; publish v1.3.0; the cleanup list, then the small test folders; keep `v130` and `v130b`; rename the repository.
+- Not accepted: V1.3.0 was released but never accepted (STATUS, Continuation).
+
+## ⚠️ Difficulties / Friction
+
+Repository settings cannot be changed from a cloud thread (proxy 403), so the rename was Mohamed's click. Bitdefender blocked one delete.
+
+## 🔧 Adjustments Made
+
+- Shifted from: deleting `v130b`. To: keeping it. Because: the owner was testing the setup from it (16:26:54). Consequence: kept, and later all test folders were kept (16:43:19).
+
+## ❌ Mistakes / Risks Noted
+
+No new mistake. The FI-05 stray folder, made by a test earlier the same afternoon, was removed with the owner's word.
+
+## 📍 Current Position
+
+**As of:** 2026-10-28 about 17:00 UTC.
+
+**Before:** V1.3.0 built and tested, not merged; repository named CipherLeaf; test leftovers on the PC.
+
+**After:** V1.3.0 integrated (`9a982da`) and published; repository `AbyssWatcher2/Notaya`; leftovers cleaned. Not accepted.
+
+**Current standing:** historical; V1.4.0 started at 17:01 UTC (entry above). The repository is now at `CipherVaults/Notaya` (the address the GitHub API returns on 2026-11-07; when it moved is not recorded here).
+
+**Live owner / continuation anchor:** [STATUS.md](STATUS.md).
+
+## 🔜 Next Steps
+
+1. (At the time) point the PC remote at the new address and fast-forward after the records PR (EX-35, open items).
+
+**Do not reopen / repeat:** the cleanup; it is done and logged.
+
+## ❓ Open Questions
+
+Then: the repository description and topics, for Mohamed to paste (EX-35). The registry key and shortcuts after his own setup test (EX-36).
+
+## 🧾 Session Outcome
+
+V1.3.0, the first Notaya release with a Windows setup, went out with its files checked against the tested ones, the PC was cleaned of test leftovers, and the repository took the app's name.
+
+## 🔍 Confidence Level
+
+**Merge, release and rename:** High (EX-34 addendum, EX-35, GitHub API at the time). **Cleanup sizes:** Medium (PowerShell output only, EX-36 section 3). **Models and usage:** unknown.
+
+---
+
 # 📘 Session: 2026-10-28 (owner's messages 14:35:46 and 15:27:09 UTC; work 14:36 to about 16:10 UTC), Notaya: prepare V1.3.0 with the Windows setup, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in a cloud thread started by the coordinator; builds and tests in one Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC), the PC report, the repository at `main` `52841f1` then `37774c6`. **Reconstructed:** nothing; written at the end. **Big stop:** a release prepared, not published.
@@ -649,6 +846,99 @@ Where to resume: the owner merges PR #34 ("Create a merge commit") and runs the 
 3. On 2026-10-28 at 14:34:32 UTC he said to delete the native proposal and resolve the thread. PR #11 was closed without merging; this records the decision as **dropped**. The branch could not be deleted from the cloud (the proxy refuses ref deletes).
 
 Where to resume: nothing open for the native idea. The postponed items are in STATUS question 26.
+
+---
+
+# 📘 Session: 2026-10-28 11:19 to 14:32 UTC (owner's messages 11:19:57 to 14:31:46 UTC), Notaya: the Windows installer (A30), from the plan re-check to the PC tests and the merge, cloud thread with a PC session (backfilled 2026-11-07)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor (cloud thread, branch `claude/project-thread-xphhp4`, draft PR #23) | Not recorded | Not recorded | [EX-2026-10-28-32](execution/2026-10-28-installer-plan-recheck.md), [EX-2026-10-28-33](execution/2026-10-28-windows-installer.md) |
+| PC tests (Remote Control session on Mohamed's PC) | Not recorded | Not recorded | EX-33, section 3 |
+| Reviewer (independent, read-only Claude agent, at `ba83a68`) | Not recorded | Not recorded | EX-33, section 3 (model output, nothing run) |
+
+**Record basis:** a **reconstruction**, written on 2026-11-07 by the second records PR of Ahmed's side (EX-2026-11-07-45), because this period had no entry. Sources read in full: EX-32, EX-33, their index rows, and the authority rows from 11:19:57 to 14:29:40 UTC. Nothing was re-run. Usage: not recorded at the time.
+
+## 🕒 Time
+
+- Date: 2026-10-28 (UTC).
+- Start: the owner's message 11:19:57 UTC ("Now continue the setup part").
+- End: the owner merged PR #23 at 14:31:46 UTC (`7874005`); the PC copy was fast-forwarded at 14:32:23 UTC.
+- Work blocks: 11:20 to about 12:00 (plan re-check, docs only); 12:25 on (build in the cloud); 12:50 to 13:10 (first PC run, then files vanished); 13:53 to 14:03 (second block, new test folder); 14:06 to 14:30 (full PC rerun). Times are the owner's message timestamps and the container and PC clocks, as the reports give them.
+- Session type: planning, then implementation and PC testing.
+- Contributors: Mohamed; a Claude cloud thread; a PC session.
+- Active working time: not measured.
+- Reason for summary: a new way to install Notaya (a change to where notes live, P22) and a standing test rule; missing until 2026-11-07.
+
+## 🎯 Session Goal
+
+"Now continue the setup part" and "So we will do 2 things windows installer and portable version in the release" (11:19:57, 11:21:06). After the ten decisions were set out, "All recommendations" (11:56:21) and "Ok for all go now" (12:24:16): build the Windows setup and test it on the PC. The stopping point was the PC tests on throwaway data and a report; a release only on the owner's word.
+
+## 🛠️ Actions Taken
+
+1. **Plan re-check (EX-32):** the installer plan was updated for Notaya on `main` `a4574be` (V1.2.0): names, notes folder, the identifier that must stay, the target version V1.3.0. All ten decisions recorded as answered with the recommendations.
+2. **Build (EX-33, A30):** `portable.rs` chooses the data folder (`portable.txt` or a `data` folder next to the exe means portable; otherwise `%LOCALAPPDATA%\Notaya Notes`); a new copy-only import from a portable copy, with the folder dialog opened in Rust; the first screen offers Start new notes or Import; per-user NSIS setup settings; a build script and a test runner. 145 Rust tests under Wine (16 new).
+3. **Found while building:** the setup puts the program in `%LOCALAPPDATA%\Notaya`, so the notes folder was named `Notaya Notes` instead; the owner said "Yes" (12:37:12).
+4. **Independent review** (model output, at `ba83a68`): no way found to overwrite or delete notes; five fixes made, three limits documented.
+5. **First PC run** (12:50 UTC): tests and build passed, then a silent install's files and runner scripts vanished and could not be re-copied ("Access denied"). Bitdefender was the likely cause; not confirmed. The session changed no antivirus setting.
+6. **New test folder:** the owner restored the files (13:53:55), they were blocked again, and he made `E:\Project\Notaya Tests Excluded`, excluded from Bitdefender: from 14:03:51 all PC tests run only there (a standing rule).
+7. **Full rerun** ("Rerun everything again", 14:04:13): 145 tests, build, the four runners, silent install, upgrade over itself and uninstall (notes kept), and the import through the real folder dialog all passed. The installed exe differs from the built one in 3 bytes (a bundle-type marker the Tauri bundler writes). Two old `Notaya.lnk` shortcuts could not be deleted; the owner said "Just leave them now" (14:29:40).
+8. **Merge:** the owner marked PR #23 ready and merged it (14:31:46 UTC, `7874005`); the PC copy `E:\Project\cipherleaf` was fast-forwarded (14:32:23).
+
+## 🧠 Key Insights
+
+An antivirus can delete test files without leaving a readable trace, so the tests need a folder it excludes. A runner that copies an exe into a bare temp folder would now make an "installed" copy and touch the real profile; the runners were changed to add `portable.txt`. Measuring the 3-byte difference showed the installed exe is not the tested exe byte for byte, and why.
+
+## 📌 Decisions Made
+
+- Confirmed (Mohamed): both a setup and a portable ZIP in every release (11:21:06); all ten installer decisions as recommended (11:56:21); the go to build and the NSIS tool download (12:24:16); the notes folder `Notaya Notes` (12:37:12); all PC tests only in `E:\Project\Notaya Tests Excluded` (14:03:51); leave the two shortcuts (14:29:40).
+- Integrated by Mohamed: PR #23 merged (14:31:46). Not accepted.
+
+## ⚠️ Difficulties / Friction
+
+Files deleted and blocked during the first run (cause unproven). Two shortcuts that nobody could delete. Two attempts of the import test failed because of the test script, not the app.
+
+## 🔧 Adjustments Made
+
+- Shifted from: notes in `%LOCALAPPDATA%\Notaya\data` (decision 3). To: `%LOCALAPPDATA%\Notaya Notes\data`. Because: the setup's own program folder. Consequence: confirmed by the owner, 12:37:12.
+- Shifted from: tests in the PC's temp folder. To: `E:\Project\Notaya Tests Excluded`. Because: the vanished files. Consequence: a standing rule (the path later moved to `E:\Project\Notaya\Notaya Tests Excluded` with the repository, EX-37).
+
+## ❌ Mistakes / Risks Noted
+
+- The first silent install created a Desktop and a Start menu shortcut in the owner's real profile; they stayed (the owner's word).
+- Not verified at the time: shortcut handling of a fresh install and uninstall, the interactive setup, an upgrade from an older version (EX-33, "Not run on the PC").
+
+## 📍 Current Position
+
+**As of:** 2026-10-28 14:32:23 UTC.
+
+**Before:** V1.2.0, portable ZIP only.
+
+**After:** the setup code on `main` (`7874005`), PC-verified for build, tests, runners, silent install, upgrade, uninstall and the dialog import. Not released, not accepted.
+
+**Current standing:** released later the same day in V1.3.0 (entry above, and the 16:07 entry).
+
+**Live owner / continuation anchor:** [EX-2026-10-28-33](execution/2026-10-28-windows-installer.md).
+
+## 🔜 Next Steps
+
+1. (At the time) the release decision; the owner wrote "Release" at 14:35:46 (the V1.3.0 entry above).
+
+**Do not reopen / repeat:** the Bitdefender investigation (its cause stays unproven; the excluded folder solved it).
+
+## ❓ Open Questions
+
+The empty `HKCU\Software\Notaya\Notaya` key left after an uninstall (known, not fixed). The cause of the deletions (not confirmed).
+
+## 🧾 Session Outcome
+
+Notaya got a real Windows setup that keeps notes outside the program folder and never deletes them on uninstall, plus a safe test folder on the owner's PC that every later test used.
+
+## 🔍 Confidence Level
+
+**What was built, tested and merged:** High (EX-33 and the authority rows). **The cause of the vanished files:** low (unproven). **Models and usage:** unknown.
 
 ---
 
@@ -698,6 +988,24 @@ Not changed: code, the security design (no promise changed), the plan snapshot. 
 
 ---
 
+# 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
+
+**Executor:** Claude (Claude Code, "Kevin") in the cloud thread "Design new app icon and name" (branch `claude/project-thread-669o55`, draft PR #24). **Record basis:** the thread's messages (UTC timestamps), the system clock and `git log`. Written at the time.
+
+## What happened
+
+1. **Options (13:31 to 15:51 UTC):** three icon rounds (leaf ideas turned down at 13:46:09, "I don't need leaf"), six themes, six rounds of names screened on the web. The owner picked icon 5 (two sticky notes, 14:00:13) and Sunrise (14:29:43). His own names PocketNote and MicroNote were found to clash with existing apps and a trademark record, and he was told. All of it is in `docs/design/`.
+2. **Effort (16:16:23):** "From now every thread is opus with high effort"; this thread switched to high and told the coordinator.
+3. **Go (16:59:11):** "proceed with this and The app name is Notaya". The name was screened (no exact match; "Nota" is common) and the owner told. **17:03:39:** Sunrise is the default, the dark one optional.
+4. **Built (`6003e81`):** the rename, the icon and the two Sunrise looks ([A28](plan/A28-rename-notaya-icon-sunrise.md)). The identifier, data paths, vault format constants, environment variables and browser-profile keys were kept on purpose so existing notes open; existing vaults keep the look they saved (a judgement call, stated to the owner).
+5. Checked in the cloud: `tsc`, build, mock screens, an independent review. Not run: Rust tests, release build, real-exe test (they need the PC).
+
+## Where to resume
+
+Run the PC checks on throwaway data ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) section 4), then the owner merges PR #24 and his PC copy is fast-forwarded. Nothing is accepted.
+
+---
+
 # 📘 Session: 2026-10-27 (owner's messages 16:51:37 to 16:57:39 UTC; work 16:53 to about 17:05 UTC, system clock), Cipherleaf: record every step, PC copy on `main`, cloud thread session
 
 **Executor:** Claude (Claude Code, "Kevin") in the records thread; the PC step in a Remote Control session on the owner's PC. **Record basis:** the thread messages (UTC timestamps), `git log` after fetching `main`, the PC session's `git` output.
@@ -715,21 +1023,7 @@ Not changed: code. Nothing is accepted.
 >
 > **Added 2026-10-27 17:16 UTC (system clock):** the independent review found no blockers; its two should-fix items and the swatch nit were fixed and pushed. The owner said "stop now at resume point" at 17:13:39 UTC; work stopped before the PC tests. Resume point: the addendum of [EX-2026-10-30](execution/2026-10-27-notaya-rename.md).
 
-# 📘 Session: 2026-10-27 (owner's messages 13:31:51 to 17:03:39 UTC; work to about 17:15 UTC, system clock), Notaya: icon, theme and name options, then the rename, cloud thread session
-
-**Executor:** Claude (Claude Code, "Kevin") in the cloud thread "Design new app icon and name" (branch `claude/project-thread-669o55`, draft PR #24). **Record basis:** the thread's messages (UTC timestamps), the system clock and `git log`. Written at the time.
-
-## What happened
-
-1. **Options (13:31 to 15:51 UTC):** three icon rounds (leaf ideas turned down at 13:46:09, "I don't need leaf"), six themes, six rounds of names screened on the web. The owner picked icon 5 (two sticky notes, 14:00:13) and Sunrise (14:29:43). His own names PocketNote and MicroNote were found to clash with existing apps and a trademark record, and he was told. All of it is in `docs/design/`.
-2. **Effort (16:16:23):** "From now every thread is opus with high effort"; this thread switched to high and told the coordinator.
-3. **Go (16:59:11):** "proceed with this and The app name is Notaya". The name was screened (no exact match; "Nota" is common) and the owner told. **17:03:39:** Sunrise is the default, the dark one optional.
-4. **Built (`6003e81`):** the rename, the icon and the two Sunrise looks ([A28](plan/A28-rename-notaya-icon-sunrise.md)). The identifier, data paths, vault format constants, environment variables and browser-profile keys were kept on purpose so existing notes open; existing vaults keep the look they saved (a judgement call, stated to the owner).
-5. Checked in the cloud: `tsc`, build, mock screens, an independent review. Not run: Rust tests, release build, real-exe test (they need the PC).
-
-## Where to resume
-
-Run the PC checks on throwaway data ([EX-2026-10-30](execution/2026-10-27-notaya-rename.md) section 4), then the owner merges PR #24 and his PC copy is fast-forwarded. Nothing is accepted.
+---
 
 # 📘 Session: 2026-10-27 (owner's messages 16:36:37 and 16:36:45 UTC; work from about 16:37 UTC, system clock), Cipherleaf: records catch-up, cloud thread session
 
@@ -743,16 +1037,7 @@ Run the PC checks on throwaway data ([EX-2026-10-30](execution/2026-10-27-notaya
 
 Not changed: code, the security design (no promise changed), the handoff files, the plan snapshot. Outside the repo and not changed here: the GitHub About text and the three saved skills still mention KeePassXC. Nothing is accepted.
 
-# 📘 Session: 2026-10-27 (owner's "Yes test" 07:21:42 UTC; work 07:22 to 08:20 UTC, PC system clock), Cipherleaf: combined test of the four changes, PC thread session
-
-**Executor:** a Claude Code session on the owner's PC (model output). **Record basis:** that thread's messages. **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
-
-## What happened
-
-1. The owner paused the no-network plan and said "Yes test" (07:21:42 UTC). The four draft PRs (#17 to #20) were combined in a throwaway copy in the order 18, 17, 20, 19; the code conflicts were the sticky notes toolbar (#17 and #19) and KeePassXC code left in #19. The calculator amendment was renumbered A25. Merge commits `e589baf`, `ef548eb` and `996ae34` were pushed to the PR branches (no force push).
-2. Combined: 128/128 Rust tests, optional security 47/47, restore 13/13, lock flow as designed, 23/23 new checks. The owner merged #18, #17, #20 and #19 at 08:04:20 to 08:05:20 UTC; `main` `4600561` then passed 128/128 and 27/27 (200-line history survives a restart). Details: [EX-2026-10-27-25](execution/2026-10-27-combined-test.md).
-
-Not run: a hand click-through, the release ZIP (made next, EX-2026-10-27-24). Nothing is accepted.
+---
 
 # 📘 Session: 2026-10-27 (owner "Yes please" 08:21:52 UTC; work about 08:22 to 08:40 UTC, system clock), Cipherleaf: V1.1.0 portable build, thread session on the owner's PC
 
@@ -766,28 +1051,21 @@ Not run: a hand click-through, the release ZIP (made next, EX-2026-10-27-24). No
 
 Not run: the new features in the real window on this exe, a plain first start, an upgrade of a real V1.0.1 data folder. Not released (the owner runs `gh release create`). Nothing is accepted.
 
-# 📘 Session: 2026-10-27 (06:45 to about 06:56 UTC, system clock), Cipherleaf: ribbon editor, cloud thread session
+---
 
-**Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** the project-thread timestamps, the system clock and the repository.
+# 📘 Session: 2026-10-27 (owner's "Yes test" 07:21:42 UTC; work 07:22 to 08:20 UTC, PC system clock), Cipherleaf: combined test of the four changes, PC thread session
 
-## What happened
-
-1. The owner sent four asks at 06:45:11 UTC; the coordinator gave item 4 (a OneNote-style ribbon, keeping the "/" menu) to this thread. The other three run in parallel threads.
-2. Built the ribbon (Home, Insert, contextual Table tab, hide button) reusing the selection toolbar's pop-ups; details in [EX-2026-10-27-ribbon](execution/2026-10-27-ribbon-editor.md).
-3. `tsc`, the build and a new 24-check mock UI script passed; an independent review found one medium and three low issues, all fixed.
-
-Not run: the real app, a real-exe test on Windows. Nothing is accepted.
-# 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), Cipherleaf: KeePassXC removed (A24), cloud thread session
-
-**Executor:** Claude (Claude Code) in a cloud thread session started by the project coordinator, with a documentation agent and an independent review agent (model output). **Record basis:** the project-chat timestamp of the owner's message, the system clock and the repository.
+**Executor:** a Claude Code session on the owner's PC (model output). **Record basis:** that thread's messages. **Reconstructed** on 2026-10-27 in the records catch-up; no entry was written at the time.
 
 ## What happened
 
-1. The owner sent four asks in the project chat at 06:45:11 UTC. This thread got item 1, "remove KeePass entirely"; the calculator pop-out, sticky-note multi-delete and ribbon editor went to other threads.
-2. KeePassXC was removed from the Rust core, the UI, the mock, the docs, the notices, packaging and the real-exe scripts (A24, [EX-2026-10-27-23](execution/2026-10-27-keepassxc-removed.md)). Quit no longer waits for KeePassXC. Existing `.kdbx` files are left alone.
-3. Checks in the cloud: `tsc`, UI build, and `cargo test --lib` cross-built for Windows (GNU) and run under Wine, 124 of 124 (167 on `main`; the difference is the removed tests). An independent review found no High or Medium issue; its small items were applied.
+1. The owner paused the no-network plan and said "Yes test" (07:21:42 UTC). The four draft PRs (#17 to #20) were combined in a throwaway copy in the order 18, 17, 20, 19; the code conflicts were the sticky notes toolbar (#17 and #19) and KeePassXC code left in #19. The calculator amendment was renumbered A25. Merge commits `e589baf`, `ef548eb` and `996ae34` were pushed to the PR branches (no force push).
+2. Combined: 128/128 Rust tests, optional security 47/47, restore 13/13, lock flow as designed, 23/23 new checks. The owner merged #18, #17, #20 and #19 at 08:04:20 to 08:05:20 UTC; `main` `4600561` then passed 128/128 and 27/27 (200-line history survives a restart). Details: [EX-2026-10-27-25](execution/2026-10-27-combined-test.md).
 
-Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts), the app itself. Nothing is accepted.
+Not run: a hand click-through, the release ZIP (made next, EX-2026-10-27-24). Nothing is accepted.
+
+---
+
 # 📘 Session: 2026-10-27 (from 06:45 UTC, container clock), Cipherleaf: pop-out calculators (A24), cloud thread session
 
 **Executor:** Claude (Claude Code) in a cloud thread session, with an independent review agent (model output). **Record basis:** the transcript and this repository.
@@ -803,6 +1081,36 @@ Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts),
 Resume: draft PR into `main`; the PC check and the owner's review. Nothing is accepted.
 
 **Correction (2026-10-27, records catch-up):** the heading and item 2 of this entry say A24; the amendment is **A25** since `996ae34` (item 4 already says so). This entry is not rewritten. The PR (#19) was merged by the owner at 08:05:20 UTC (`4600561`) and released in V1.1.0.
+
+---
+
+# 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work about 06:46 to 07:10 UTC, system clock), Cipherleaf: KeePassXC removed (A24), cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread session started by the project coordinator, with a documentation agent and an independent review agent (model output). **Record basis:** the project-chat timestamp of the owner's message, the system clock and the repository.
+
+## What happened
+
+1. The owner sent four asks in the project chat at 06:45:11 UTC. This thread got item 1, "remove KeePass entirely"; the calculator pop-out, sticky-note multi-delete and ribbon editor went to other threads.
+2. KeePassXC was removed from the Rust core, the UI, the mock, the docs, the notices, packaging and the real-exe scripts (A24, [EX-2026-10-27-23](execution/2026-10-27-keepassxc-removed.md)). Quit no longer waits for KeePassXC. Existing `.kdbx` files are left alone.
+3. Checks in the cloud: `tsc`, UI build, and `cargo test --lib` cross-built for Windows (GNU) and run under Wine, 124 of 124 (167 on `main`; the difference is the removed tests). An independent review found no High or Medium issue; its small items were applied.
+
+Not run: the owner's PC (MSVC build and tests, release build, real-exe scripts), the app itself. Nothing is accepted.
+
+---
+
+# 📘 Session: 2026-10-27 (06:45 to about 06:56 UTC, system clock), Cipherleaf: ribbon editor, cloud thread session
+
+**Executor:** Claude (Claude Code) in a cloud thread, with an independent review agent (model output). **Record basis:** the project-thread timestamps, the system clock and the repository.
+
+## What happened
+
+1. The owner sent four asks at 06:45:11 UTC; the coordinator gave item 4 (a OneNote-style ribbon, keeping the "/" menu) to this thread. The other three run in parallel threads.
+2. Built the ribbon (Home, Insert, contextual Table tab, hide button) reusing the selection toolbar's pop-ups; details in [EX-2026-10-27-ribbon](execution/2026-10-27-ribbon-editor.md).
+3. `tsc`, the build and a new 24-check mock UI script passed; an independent review found one medium and three low issues, all fixed.
+
+Not run: the real app, a real-exe test on Windows. Nothing is accepted.
+
+---
 
 # 📘 Session: 2026-10-27 (owner request 06:45:11 UTC; work until about 06:53 UTC, system clock), Cipherleaf: select several sticky notes and delete them together (A26), cloud thread session
 
@@ -1129,6 +1437,94 @@ Text typed just before Lock or close is now saved first, and several related loc
 **The Lock button and closing the window keep typed text:** Medium-High. A real-exe test on a throwaway vault, three cases.
 
 **Idle lock, Win+L, sleep, drive removal, KeePassXC paths:** Low. Not tested in the real exe.
+
+---
+
+# 📘 Session: 2026-10-22 (owner's messages from 23:14:05 UTC, the last ones after 23:39 UTC at times not recorded; commits 23:20:52 to 23:51:59 UTC, from `git log`), Cipherleaf: fresh portable build, calculator border fix and app icon (A15), wider pages and Paper as the default look (A16), PC session (backfilled 2026-11-07)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Executor (Claude Code on the owner's PC, `E:\Project\cipherleaf`) | Sonnet 5.5 (as each report records it) | Not recorded | [EX-2026-10-22-10](execution/2026-10-22-fresh-portable-build.md), [EX-2026-10-22-11](execution/2026-10-22-icon-border-fix-and-rebuild.md), [EX-2026-10-22-12](execution/2026-10-22-page-width-and-paper-default.md) |
+
+**Record basis:** a **reconstruction**, written on 2026-11-07 by the second records PR of Ahmed's side (EX-2026-11-07-45), because this period had no entry (the A17 entry below it only mentions it in passing). Sources read in full: the three reports above, their index rows, the authority rows from 23:14:05 to 23:26:19 UTC, and `git log` (`969ab07` 23:20:52, `0f53d3b` and `c3d23be` 23:34:48, `3a22c56` 23:47:00, `5783d2c` 23:51:59 UTC). Nothing was re-run. Usage: not recorded at the time.
+
+## 🕒 Time
+
+- Date: 2026-10-22 (UTC).
+- Start: the owner's message 23:14:05 UTC ("Fresh vault. Fresh portable build...").
+- End: the records commit `5783d2c` at 23:51:59 UTC; the index gives about 23:55 UTC.
+- Work blocks: 23:14 to 23:25 (EX-10), 23:24 to 23:40 (EX-11), 23:40 to 23:55 (EX-12), system clock and transcript as the reports state.
+- Session type: small builds and visual changes, one licensing decision.
+- Contributors: Mohamed (the owner); Claude on his PC.
+- Active working time: not measured.
+- Reason for summary: a gap in the session file; EX-10 also settled a licensing question (KeePassXC kept for private use).
+
+## 🎯 Session Goal
+
+Give the owner a fresh portable build to try and hand to others, then fix what he saw in it: "Fresh vault. Fresh portable build. KeePassXC keep it for now it will be for me and close people and friends so nothing will be released for public" (23:14:05); "See this white border remove it in the calculator" (23:24:31); "Make the app icon cipherleaf everywhere" (23:26:19); a wider page and Paper as the default look, then "Commit and rebuild the portable build and ZIP" (after 23:39; exact times not recorded).
+
+## 🛠️ Actions Taken
+
+1. **Fresh portable build (EX-10):** checked the source was clean (HEAD `6f64b72`, code equal to `2105a57`), rebuilt the exe, refreshed `E:\Project\Cipherleaf-portable\` with no `data\` folder (a fresh vault on first run), and smoke-tested a temporary copy. The owner's dev vault was not copied. Records committed on "Commit them" (23:20:44) as `969ab07`.
+2. **Where the build is (23:22:19):** answered with the folder and a ZIP of it.
+3. **Border and icon (EX-11, A15):** the white border was the app's global focus outline; both calculators now turn it off. A new icon (`assets/cipherleaf-icon.svg`) replaced the Tauri icon. The first rebuild still carried the old icon from the build cache; after `cargo clean -p cipherleaf` the second one had the right icon. Exe, portable folder and ZIP rebuilt; committed as `0f53d3b` and `c3d23be`.
+4. **Wider pages and Paper (EX-12, A16):** widths 760, 1040 and 1320 px plus a new Full (1680 px); Home and notebook pages follow the setting; Paper is the default look and a little clearer. Code commit `3a22c56`, records `5783d2c`. The exe and ZIP were rebuilt; the ZIP was made **without** the `data\` folder that the owner's own run had just created in the portable folder.
+
+## 🧠 Key Insights
+
+A rebuild can silently reuse cached output: only extracting the exe's icon showed that the first rebuild still had the old one. A portable folder stops being "fresh" as soon as someone runs it, so a ZIP must be made from a checked list of files, not by zipping the folder as it is.
+
+## 📌 Decisions Made
+
+- Confirmed (the owner, 23:14:05): KeePassXC stays bundled, for private use by him, close people and friends; nothing public. Licences, source and README travel with each copy (A9 Q5). Later superseded: KeePassXC was removed in A24 (2026-10-27).
+- Confirmed (the owner): A15 (the app icon) and A16 (page widths and Paper default), and the commits ("Commit them", "rebuild and commit", "Commit and rebuild the portable build and ZIP").
+- No acceptance: each report ends "Accepted state: none".
+
+## ⚠️ Difficulties / Friction
+
+The build cache kept the old icon. Release builds are not byte-identical between runs, so a hash only identifies one build. Exact times of the A16 messages were not recorded.
+
+## 🔧 Adjustments Made
+
+- Shifted from: "the portable folder has no `data\`". To: it has the owner's vault since about 23:36 to 23:40 UTC. Because: his own run of the build (found in EX-12). Consequence: the folder was left as it was; the ZIP was made without `data\`.
+- A wrong "about 23:35 UTC" time for the earlier ZIP was corrected to 23:22 UTC (EX-11).
+
+## ❌ Mistakes / Risks Noted
+
+- No consequential mistake recorded.
+- Risk noted at the time: the GPL point must be revisited if a public release is ever planned. It became moot when KeePassXC was removed (A24).
+
+## 📍 Current Position
+
+**As of:** 2026-10-22 about 23:55 UTC.
+
+**Before:** the first release build (EX-09), the Tauri icon, a narrower page, a different default look.
+
+**After:** a portable folder and ZIP with the Cipherleaf icon, wider pages and the Paper default, all committed on the PC (no push).
+
+**Current standing:** historical; every later release replaced these files.
+
+**Live owner / continuation anchor:** the A17 entry below this one (the next morning's code review).
+
+## 🔜 Next Steps
+
+1. (At the time) the owner tries the build and says what to change; A2 and A8 decisions. He did, the next morning (A17).
+
+**Do not reopen / repeat:** these builds; they are superseded.
+
+## ❓ Open Questions
+
+None left from this period. A2 and A8 are still open in STATUS (question 9).
+
+## 🧾 Session Outcome
+
+In forty minutes the owner got a fresh build he could share privately, and his first visual corrections (border, icon, page width, look) were in it and committed.
+
+## 🔍 Confidence Level
+
+**What was built and committed:** High (three reports and `git log`). **Exact times of the A16 messages:** not recorded. **Usage:** unknown.
 
 ---
 
