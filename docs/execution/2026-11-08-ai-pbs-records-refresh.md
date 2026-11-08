@@ -29,5 +29,6 @@
 - **Handover guide, section 17:** add C2 (merged 11:38) and the 11:38 state; the Build thread owns it; republish the page (A39).
 - **Merge order (done):** PR #83 (session entries 48 and 50, EX-60 and EX-62) merged at 16:40 UTC; this PR's merge with `main` kept every entry (50, 49, 48).
 - **Dated correction (2026-11-08 about 16:50 UTC):** the authority rows are now verbatim (read from the project chat; 09:03:55 and 11:48:49 as relayed by the coordinator); the quota-strategy message is 01:09:11; questions 49 to 53 held nothing beyond the rows. The second-hand rows of PR #89 were replaced. Only the handover guide section 17 and the failure-intelligence call remain.
+- **Dated correction (2026-11-08 about 16:55 UTC):** the failure-intelligence entries were requested by the coordinator (16:46 UTC) and written: FI-08 and FI-09 in `docs/failure-intelligence.md`, from EX-55 section 5 only (no PC log or chat read beyond Ahmed's 08:30:44 message). FI-10 is the next free entry.
 - Consider a failure-intelligence entry (the false "finished" lane and the 30-minute idle); it is the coordinator's call under the admission boundary.
 - Result state: **produced**. Acceptance: pending (Ahmed).
