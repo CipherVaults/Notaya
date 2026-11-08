@@ -15,7 +15,7 @@ assert(['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname) && target.p
 const output = path.join('D:/Notaya-lanes/out/A-shots', new Date().toISOString().replace(/[:.]/g, '-'));
 fs.mkdirSync(output, { recursive: true });
 // Chrome's temporary profile and Playwright artifacts stay with this lane's throwaway data.
-const browserTemp = path.join(process.env.NOTAYA_HOME || 'D:/Notaya Tests/v1-6-AF', 'lane-a-browser-temp');
+const browserTemp = path.join(process.env.NOTAYA_HOME || 'D:/Notaya Tests/v1-6-AG', 'lane-a-browser-temp');
 fs.mkdirSync(browserTemp, { recursive: true });
 process.env.TEMP = browserTemp;
 process.env.TMP = browserTemp;
@@ -183,7 +183,7 @@ async function functionalChecks(page, databaseId) {
     await page.evaluate(async () => {
       const { invoke } = await import('/dev-mock/core.ts');
       const { useApp } = await import('/src/store/app.ts');
-      await invoke('enable_security', { removeUnprotectedCopies: false });
+      await invoke('enable_security', { password: crypto.randomUUID(), removeUnprotectedCopies: false });
       await invoke('lock_vault');
       await useApp.getState().refreshStatus();
     });
