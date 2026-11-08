@@ -15,7 +15,7 @@ assert(['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname) && target.p
 const output = path.join('D:/Notaya-lanes/out/A-shots', new Date().toISOString().replace(/[:.]/g, '-'));
 fs.mkdirSync(output, { recursive: true });
 // Chrome's temporary profile and Playwright artifacts stay with this lane's throwaway data.
-const browserTemp = path.join('D:/Notaya Tests/v1-6-A', 'lane-a-browser-temp');
+const browserTemp = path.join(process.env.NOTAYA_HOME || 'D:/Notaya Tests/v1-6-AF', 'lane-a-browser-temp');
 fs.mkdirSync(browserTemp, { recursive: true });
 process.env.TEMP = browserTemp;
 process.env.TMP = browserTemp;
@@ -100,12 +100,53 @@ async function functionalChecks(page, databaseId) {
   });
   assert.equal(await page.getByRole('tab', { name: chosen, exact: true }).getAttribute('aria-selected'), 'true');
   assert.equal(await page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith('dbview:'))), false);
+  const rowContext = await page.evaluate(async (id) => {
+    const { invoke } = await import('/dev-mock/core.ts');
+    const { useApp } = await import('/src/store/app.ts');
+    const db = await invoke('get_database', { id });
+    const result = await invoke('query_view', { request: { databaseId: id, viewId: db.views[0].id } });
+    const tree = useApp.getState().tree;
+    const notebookId = tree.sections.find((s) => s.id === db.sectionId).notebookId;
+    const other = tree.notebooks.find((n) => n.id !== notebookId);
+    useApp.getState().openNotebook(other.id);
+    return { tree, title: result.rows[0].title, notebookId, oldNotebookId: other.id, notebookName: tree.notebooks.find((n) => n.id === notebookId).name };
+  }, databaseId);
+  await top.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search notes and sticky notes, or type a command').fill(rowContext.title);
+  await page.getByRole('option').filter({ hasText: rowContext.title }).first().click();
+  const exportButton = top.getByRole('button', { name: 'Export', exact: true });
+  await exportButton.click(); // Also waits for row -> database -> notebook resolution.
+  const exportState = await page.evaluate(async () => {
+    const { useApp } = await import('/src/store/app.ts');
+    const s = useApp.getState();
+    return { kind: s.activeKind, notebookId: s.activeNotebookId, target: s.exportTarget };
+  });
+  assert.equal(exportState.kind, 'row');
+  assert.equal(exportState.notebookId, rowContext.oldNotebookId);
+  assert.deepEqual(exportState.target, { notebookId: rowContext.notebookId, initial: 'notebook' });
+  const wholeNotebook = page.getByRole('radio', { name: /Whole notebook/ });
+  assert(await wholeNotebook.isChecked());
+  assert((await wholeNotebook.locator('..').innerText()).includes(rowContext.notebookName), 'Dialog names the row notebook');
+  await page.keyboard.press('Escape');
+  await page.evaluate(async (id) => {
+    const { useApp } = await import('/src/store/app.ts');
+    const tree = useApp.getState().tree;
+    useApp.getState().setTree({ ...tree, databases: tree.databases.filter((d) => d.id !== id) });
+  }, databaseId);
+  await page.waitForFunction(() => document.querySelector('.title-bar button[title^="Export unavailable"]')?.disabled);
+  assert(await exportButton.isDisabled(), 'An unresolved row never offers the previously selected notebook');
+  await page.evaluate(async ({ tree, id }) => {
+    const { useApp } = await import('/src/store/app.ts');
+    useApp.getState().setTree(tree);
+    useApp.getState().openDatabase(id);
+  }, { tree: rowContext.tree, id: databaseId });
+  await page.getByRole('tablist', { name: 'Views' }).waitFor();
   const controls = await top.locator('[data-tauri-drag-region]').count();
   assert(controls > 0, 'Drag regions remain in the top bar');
   for (const name of ['Import', 'Export', 'Minimize', 'Maximize', 'Close']) {
     assert(await top.getByRole('button', { name, exact: true }).isVisible());
   }
-  report.checks.push({ theme: await page.locator('html').getAttribute('data-theme'), result: 'Import/Export dialogs, keyboard New notebook, database view save/hydration/back/forward, no dbview browser key, top-bar controls and drag attributes passed (mock only)' });
+  report.checks.push({ theme: await page.locator('html').getAttribute('data-theme'), result: 'Import/Export dialogs, cross-notebook search-to-row export scope, unresolved row disabled, keyboard New notebook, database view save/hydration/back/forward, no dbview browser key, top-bar controls and drag attributes passed (mock only)' });
 }
 
 (async () => {
@@ -116,11 +157,41 @@ async function functionalChecks(page, databaseId) {
     // Only this local mock origin and in-page resources are needed.
     await context.route('**/*', (route) => new URL(route.request().url()).origin === target.origin ? route.continue() : route.abort());
     const page = await context.newPage();
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem('af-upgrade-seeded')) return;
+      sessionStorage.setItem('af-upgrade-seeded', '1');
+      localStorage.setItem('dbview:legacy-one', 'legacy-view');
+      localStorage.setItem('dbview:legacy-two', 'another-view');
+      localStorage.setItem('notaya.layout', '{"open":true,"width":264}');
+      localStorage.setItem('cipherleaf.layout', 'keep-legacy-layout');
+      localStorage.setItem('other:dbview:keep', 'keep-unrelated');
+    });
     page.on('pageerror', (error) => report.pageErrors.push({ theme, message: error.message }));
     const url = new URL(target);
     url.search = new URLSearchParams({ db: '1', theme }).toString();
     await page.goto(url.href);
     await page.getByRole('button', { name: 'New notebook', exact: true }).waitFor();
+    const checkStorage = async () => {
+      const keys = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+      assert(!Object.keys(keys).some((key) => key.startsWith('dbview:')), 'Upgrade removes legacy database/view associations');
+      assert.equal(keys['notaya.layout'], '{"open":true,"width":264}');
+      assert.equal(keys['cipherleaf.layout'], 'keep-legacy-layout');
+      assert.equal(keys['other:dbview:keep'], 'keep-unrelated');
+    };
+    await checkStorage();
+    // Exercise the mock lock state, then reload as the real lock event does (mock events are inert).
+    await page.evaluate(async () => {
+      const { invoke } = await import('/dev-mock/core.ts');
+      const { useApp } = await import('/src/store/app.ts');
+      await invoke('enable_security', { removeUnprotectedCopies: false });
+      await invoke('lock_vault');
+      await useApp.getState().refreshStatus();
+    });
+    await checkStorage();
+    await page.reload();
+    await page.getByRole('button', { name: 'New notebook', exact: true }).waitFor();
+    await checkStorage();
+    report.checks.push({ theme, result: 'Pre-seeded dbview keys removed; unrelated layout keys preserved after load, mock lock and reload' });
     await page.evaluate(() => document.fonts.ready);
     // Open via the sidebar, rather than replacing production navigation with a test-only route.
     await page.getByRole('treeitem', { name: 'Tasks', exact: true }).click();
