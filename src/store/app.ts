@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { onItemsChanged, type BinEntry } from "@/lib/changes";
 import { api } from "@/lib/ipc";
 import { getKey, setKey } from "@/lib/storage";
 import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
@@ -33,6 +34,7 @@ interface AppState {
   settings: VaultSettings | null;
   view: View;
   tree: NotesTree;
+  bin: BinEntry[];
   stickies: Sticky[];
   activeNotebookId: string | null;
   activeSectionId: string | null;
@@ -111,6 +113,7 @@ export const useApp = create<AppState>((set, get) => ({
   settings: null,
   view: "notes",
   tree: EMPTY_TREE,
+  bin: [],
   stickies: [],
   activeNotebookId: null,
   activeSectionId: null,
@@ -137,16 +140,18 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   loadVault: async () => {
-    const [settings, tree, stickies] = await Promise.all([
+    const [settings, tree, stickies, bin] = await Promise.all([
       api.getSettings(),
       api.listNotes(),
       api.listStickies(),
+      api.listBin?.() ?? Promise.resolve([]),
     ]);
     const restored = await restoreLastPlace((settings as VaultSettings).lastPlace, tree);
     set({
       settings,
       tree,
       stickies,
+      bin,
       ...restored,
     });
   },
@@ -252,3 +257,37 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
     return home;
   }
 }
+
+
+// Coalesce a batch signal into one refresh; serialize overlapping signals so old
+// reads cannot replace a newer tree. The editors decide independently whether to reload.
+let refreshing = false;
+let refreshAgain = false;
+onItemsChanged((change) => {
+  if (!change.tree || !useApp.getState().status?.unlocked) return;
+  refreshAgain = true;
+  if (refreshing) return;
+  refreshing = true;
+  void (async () => {
+    try {
+      while (refreshAgain) {
+        refreshAgain = false;
+        const [tree, stickies, bin] = await Promise.all([api.listNotes(), api.listStickies(), api.listBin()]);
+        if (!useApp.getState().status?.unlocked) return;
+        useApp.setState({ tree, stickies, bin });
+        const app = useApp.getState();
+        if (app.activeKind !== "row" && app.activePageId && ![...tree.pages, ...tree.databases].some((p) => p.id === app.activePageId)) app.openPage(null);
+        if (app.activeKind === "row" && app.activePageId) {
+          const id = app.activePageId;
+          try {
+            const row = await api.getPage(id);
+            if (useApp.getState().activePageId === id && (row.trashedAt != null || !tree.databases.some((db) => db.id === row.parent && db.trashedAt == null))) app.openPage(null);
+          } catch { if (useApp.getState().activePageId === id) app.openPage(null); }
+        }
+        if (app.activeSectionId && !tree.sections.some((s) => s.id === app.activeSectionId)) app.openSection(null);
+        if (app.activeNotebookId && !tree.notebooks.some((n) => n.id === app.activeNotebookId)) app.openNotebook(null);
+      }
+    } catch { /* A lock can overtake a refresh; the unlock loads a fresh tree. */ }
+    finally { refreshing = false; }
+  })();
+});

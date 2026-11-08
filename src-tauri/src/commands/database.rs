@@ -76,7 +76,7 @@ pub fn meta_list(s: &Session) -> Vec<DatabaseMeta> {
     let mut v: Vec<DatabaseMeta> = s
         .items()
         .filter_map(|i| match i {
-            Item::Database(d) => Some(DatabaseMeta {
+            Item::Database(d) if !s.in_bin(&d.id) || d.trashed_at.is_some() => Some(DatabaseMeta {
                 id: d.id.clone(),
                 section_id: d.section_id.clone(),
                 parent: d.parent.clone(),
@@ -438,6 +438,7 @@ pub(crate) fn create_database_core(
     title: String,
     starter_kind: String,
 ) -> Result<DatabaseFull> {
+    s.run_as(actor, |s| {
     limit("Name", &title, MAX_NAME)?;
     match s.get(&section_id) {
         Some(Item::Section(_)) => {}
@@ -458,12 +459,13 @@ pub(crate) fn create_database_core(
     db.sanitize()?;
     s.put(Item::Database(db.clone()))?;
     Ok(DatabaseFull { database: db, notice: if first { Some(FIRST_DATABASE_NOTICE.into()) } else { None } })
+    })
 }
 
 
 #[tauri::command]
-pub fn get_database(state: State<'_, AppState>, id: String) -> Result<Database> {
-    get_database_person(&state, id)
+pub fn get_database(state: State<'_, AppState>, id: String) -> Result<crate::changes::Revisioned<Database>> {
+    state.with_mut(|s| { let db = get_database_core(s, &Actor::Person, id.clone())?; Ok(s.revisioned(&id, db)) })
 }
 
 fn get_database_person(state: &AppState, id: String) -> Result<Database> {
@@ -471,12 +473,14 @@ fn get_database_person(state: &AppState, id: String) -> Result<Database> {
 }
 
 pub(crate) fn get_database_core(s: &mut Session, _actor: &Actor, id: String) -> Result<Database> {
+    s.run_as(_actor, |s| {
     let mut db = database(s, &id)?;
     let (now, _) = clock::local_now();
     if apply_repeats(s, &mut db, now)? {
         s.put(Item::Database(db.clone()))?;
     }
     Ok(db)
+    })
 }
 
 
@@ -520,8 +524,14 @@ fn apply_template(r: &mut Row, t: &Template) {
 /// get their other side made here; removed properties are cleaned out of the rows and out of
 /// other databases that point at them.
 #[tauri::command]
-pub fn save_database(state: State<'_, AppState>, database_json: String) -> Result<Database> {
-    save_database_person(&state, database_json)
+pub fn save_database(state: State<'_, AppState>, database_json: String, base_rev: Option<u64>) -> Result<crate::changes::Revisioned<Database>> {
+    if database_json.len() > 30_000_000 { return Err(Error::invalid("This database definition is too large.")); }
+    let incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
+    let id = incoming.id.clone();
+    state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
+        let db = save_database_core(s, &Actor::Person, database_json)?;
+        Ok(s.revisioned(&id, db))
+    }))
 }
 
 fn save_database_person(state: &AppState, database_json: String) -> Result<Database> {
@@ -535,11 +545,13 @@ fn save_database_person(state: &AppState, database_json: String) -> Result<Datab
 }
 
 pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json: String) -> Result<Database> {
+    s.run_as(_actor, |s| {
     if database_json.len() > 30_000_000 {
         return Err(Error::invalid("This database definition is too large."));
     }
     let mut incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
     let old = database(s, &incoming.id)?;
+    if matches!(_actor, Actor::Ai { .. }) && s.in_bin(&incoming.id) { return Err(Error::invalid("This database is in the bin. Restore it before editing.")); }
     if old.locked && incoming.locked {
         return Err(Error::invalid("This database is locked. Unlock it to change its properties."));
     }
@@ -685,6 +697,7 @@ pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json:
     changed_items.push(Item::Database(incoming.clone()));
     s.put_many(changed_items)?;
     Ok(incoming)
+    })
 }
 
 
@@ -802,6 +815,7 @@ pub(crate) fn create_row_core(
     cells: String,
     template_id: String,
 ) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
     limit("Title", &title, 300)?;
     let given = parse_given(&cells)?;
     let id = add_row_inner(s, &database_id, title, &given, &template_id)?;
@@ -809,6 +823,7 @@ pub(crate) fn create_row_core(
     automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
     automation::finish(run);
     row_result(s, &id)
+    })
 }
 
 
@@ -921,6 +936,7 @@ pub(crate) fn set_cells_core(
     title: Option<String>,
     patch: String,
 ) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
     if let Some(t) = &title {
         limit("Title", t, 300)?;
     }
@@ -932,6 +948,7 @@ pub(crate) fn set_cells_core(
         automation::finish(run);
     }
     row_result(s, &row_id)
+    })
 }
 
 
@@ -980,6 +997,7 @@ fn press_button_person(state: &AppState, row_id: String, prop_id: String) -> Res
 }
 
 pub(crate) fn press_button_core(s: &mut Session, _actor: &Actor, row_id: String, prop_id: String) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
     let r = row(s, &row_id)?;
     let db = database(s, &r.db)?;
     if db.prop(&prop_id).map_or(true, |p| p.kind != PropKind::Button) {
@@ -989,6 +1007,7 @@ pub(crate) fn press_button_core(s: &mut Session, _actor: &Actor, row_id: String,
     automation::fire(s, &mut run, &row_id, &automation::Event::Button(&prop_id), 0);
     automation::finish(run);
     row_result(s, &row_id)
+    })
 }
 
 
@@ -1002,6 +1021,7 @@ fn duplicate_row_person(state: &AppState, row_id: String) -> Result<RowResult> {
 }
 
 pub(crate) fn duplicate_row_core(s: &mut Session, _actor: &Actor, row_id: String) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
     let src = row(s, &row_id)?;
     let mut db = database(s, &src.db)?;
     let mut r = new_row(s, &mut db, if src.title.is_empty() { String::new() } else { format!("{} (copy)", src.title) })?;
@@ -1022,6 +1042,7 @@ pub(crate) fn duplicate_row_core(s: &mut Session, _actor: &Actor, row_id: String
     automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
     automation::finish(run);
     row_result(s, &id)
+    })
 }
 
 
@@ -1036,6 +1057,7 @@ fn reorder_rows_person(state: &AppState, ids: Vec<String>) -> Result<()> {
 }
 
 pub(crate) fn reorder_rows_core(s: &mut Session, _actor: &Actor, ids: Vec<String>) -> Result<()> {
+    s.run_as(_actor, |s| {
     let mut changed = Vec::new();
     for (i, id) in ids.iter().enumerate() {
         let mut r = row(s, id)?;
@@ -1043,6 +1065,7 @@ pub(crate) fn reorder_rows_core(s: &mut Session, _actor: &Actor, ids: Vec<String
         changed.push(Item::Row(r));
     }
     s.put_many(changed)
+    })
 }
 
 
@@ -1289,6 +1312,7 @@ pub(crate) fn set_database_look_core(
     favorite: bool,
     locked: bool,
 ) -> Result<DatabaseMeta> {
+    s.run_as(_actor, |s| {
     limit("Name", &title, MAX_NAME)?;
     limit("Icon", &icon, 40)?;
     let mut d = database(s, &id)?;
@@ -1299,6 +1323,7 @@ pub(crate) fn set_database_look_core(
     d.updated = now_ms();
     s.put(Item::Database(d))?;
     meta_list(s).into_iter().find(|m| m.id == id).ok_or(Error::NotFound)
+    })
 }
 
 
@@ -1313,6 +1338,7 @@ fn move_database_person(state: &AppState, id: String, section_id: String) -> Res
 }
 
 pub(crate) fn move_database_core(s: &mut Session, _actor: &Actor, id: String, section_id: String) -> Result<()> {
+    s.run_as(_actor, |s| {
     if !matches!(s.get(&section_id), Some(Item::Section(_))) {
         return Err(Error::NotFound);
     }
@@ -1321,6 +1347,7 @@ pub(crate) fn move_database_core(s: &mut Session, _actor: &Actor, id: String, se
     d.parent = String::new();
     d.updated = now_ms();
     s.put(Item::Database(d))
+    })
 }
 
 
@@ -1335,6 +1362,7 @@ fn enable_sub_items_person(state: &AppState, id: String) -> Result<Database> {
 }
 
 pub(crate) fn enable_sub_items_core(s: &mut Session, _actor: &Actor, id: String) -> Result<Database> {
+    s.run_as(_actor, |s| {
     let mut d = database(s, &id)?;
     if !d.sub_parent_prop.is_empty() {
         return Ok(d);
@@ -1358,6 +1386,7 @@ pub(crate) fn enable_sub_items_core(s: &mut Session, _actor: &Actor, id: String)
     d.sanitize()?;
     s.put(Item::Database(d.clone()))?;
     Ok(d)
+    })
 }
 
 
@@ -1372,6 +1401,7 @@ fn enable_dependencies_person(state: &AppState, id: String) -> Result<Database> 
 }
 
 pub(crate) fn enable_dependencies_core(s: &mut Session, _actor: &Actor, id: String) -> Result<Database> {
+    s.run_as(_actor, |s| {
     let mut d = database(s, &id)?;
     if !d.blocked_by_prop.is_empty() {
         return Ok(d);
@@ -1395,6 +1425,7 @@ pub(crate) fn enable_dependencies_core(s: &mut Session, _actor: &Actor, id: Stri
     d.sanitize()?;
     s.put(Item::Database(d.clone()))?;
     Ok(d)
+    })
 }
 
 
@@ -1501,6 +1532,7 @@ fn due_reminders_now_person(state: &AppState) -> Result<Vec<Reminder>> {
 }
 
 pub(crate) fn due_reminders_now_core(s: &mut Session, _actor: &Actor) -> Result<Vec<Reminder>> {
+    s.run_as(_actor, |s| {
     automation::tick_dates(s);
     let mut guard = SHOWN_REMINDERS.lock().unwrap_or_else(|e| e.into_inner());
     let shown = guard.get_or_insert_with(HashSet::new);
@@ -1514,6 +1546,7 @@ pub(crate) fn due_reminders_now_core(s: &mut Session, _actor: &Actor) -> Result<
     let mut out = automation::take_notices();
     out.append(&mut due);
     Ok(out)
+    })
 }
 
 

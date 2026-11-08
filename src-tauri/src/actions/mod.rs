@@ -353,7 +353,7 @@ pub(crate) mod tests {
             order: 0,
             created: 1,
             updated: 1,
-        };
+        trashed_at: None, };
         let section = Section {
             id: "10000000000000000000000000000002".into(),
             notebook_id: "10000000000000000000000000000001".into(),
@@ -362,7 +362,7 @@ pub(crate) mod tests {
             order: 0,
             created: 1,
             updated: 1,
-        };
+        trashed_at: None, };
         let mut second = section.clone();
         second.id = "10000000000000000000000000000003".into();
         second.name = "Other".into();
