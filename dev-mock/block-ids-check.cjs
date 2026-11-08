@@ -6,6 +6,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { waitForMockState, installEquationFixture } = require('./block-ids-waits.cjs');
 
 const target = new URL(process.argv[2] || 'http://127.0.0.1:1421/');
 assert(target.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname), 'Use the loopback mock server');
@@ -37,20 +38,44 @@ const { chromium } = require(process.env.NOTAYA_PLAYWRIGHT_MODULE || 'playwright
         'if (cmd === "save_page") window.__blockIdsSaveCalls.push(structuredClone(args));\n' + marker) });
     });
     await page.goto(target.href);
+    // A first import of pm/history can make Vite optimize a new dependency and
+    // reload the document. Do it BEFORE observing saves or changing the page.
+    // Reacquire the module in the current document if that reload interrupts us.
+    const preload = () => waitForMockState(page, 'the mock and equation fixture modules to load', async () => {
+      const mock = await import('/dev-mock/core.ts');
+      const fixture = await import('/dev-mock/equation-fixture.ts');
+      window.__blockIdsModules = { ...mock, ...fixture };
+      return document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount;
+    });
+    await preload();
+    // Start measurements in a fresh document after dependency warmup. The mock
+    // data and the save-call recorder are both reset by this explicit reload.
+    try {
+      await page.reload();
+    } catch (error) {
+      // Vite may already be performing the reload we requested. The following
+      // readiness probe must still find the modules in the current document.
+      if (!/interrupted by another navigation|net::ERR_ABORTED/i.test(error.message)) throw error;
+    }
+    await preload();
     await page.getByText('Reading list', { exact: true }).first().click();
     const editor = page.locator('.ProseMirror').first();
-    await editor.waitFor();
-    const legacy = await page.evaluate(async () => {
-      const { invoke } = await import('/dev-mock/core.ts');
+    await waitForMockState(page, 'the editable Reading list page', () => {
+      const element = document.querySelector('.ProseMirror');
+      return document.readyState === 'complete' && element?.isConnected && element.editor?.isEditable
+        && document.querySelector('input[placeholder="Untitled"]')?.value === 'Reading list';
+    });
+    const legacy = await waitForMockState(page, 'the legacy Reading list fixture', async () => {
+      const { invoke } = window.__blockIdsModules;
       return JSON.parse((await invoke('get_page', { id: 'p3' })).content);
     });
     const containsBid = (node) => !!node.attrs?.bid || (node.content || []).some(containsBid);
     assert(!containsBid(legacy), 'The fixture must be a legacy page without bids');
-    await page.waitForFunction(() => {
+    const ids = await waitForMockState(page, 'all top-level block ids on the Reading list page', () => {
       const doc = document.querySelector('.ProseMirror')?.editor?.getJSON();
-      return doc?.content?.length && doc.content.every((node) => /^[0-9a-f]{16}$/i.test(node.attrs?.bid));
+      return doc?.content?.length && doc.content.every((node) => /^[0-9a-f]{16}$/i.test(node.attrs?.bid))
+        && doc.content.map((node) => node.attrs.bid);
     });
-    const ids = await editor.evaluate((element) => element.editor.getJSON().content.map((node) => node.attrs.bid));
     // PageEditor's save debounce is 500 ms; opening must stay clean past it.
     await page.waitForTimeout(1200);
     assert.equal(await page.evaluate(() => window.__blockIdsSaveCalls.length), 0, 'Opening a legacy page must make NO save_page call');
@@ -58,7 +83,8 @@ const { chromium } = require(process.env.NOTAYA_PLAYWRIGHT_MODULE || 'playwright
 
     await editor.evaluate((element) => element.editor.commands.focus('end'));
     await page.keyboard.type('block id edit');
-    await page.waitForFunction(() => window.__blockIdsSaveCalls.length > 0);
+    await waitForMockState(page, 'the real edit to reach save_page for p3', () =>
+      window.__blockIdsSaveCalls?.some((save) => save.id === 'p3' && save.text.endsWith('block id edit')));
     await page.waitForTimeout(700);
     const saves = await page.evaluate(() => window.__blockIdsSaveCalls);
     assert.equal(saves.length, 1, 'A real edit must save once');
@@ -78,14 +104,14 @@ const { chromium } = require(process.env.NOTAYA_PLAYWRIGHT_MODULE || 'playwright
 
     // Exercise the equation's real node-view editor and history transactions.
     const equationId = 'eeeeeeeeeeeeeeee';
-    await editor.evaluate(async (element, bid) => {
-      const { equationFixtureTransaction } = await import('/dev-mock/equation-fixture.ts');
-      // setContent followed by a quick edit shares one undo event and restores
-      // the old Reading list page. Keep fixture setup out of edit history.
-      element.editor.view.dispatch(equationFixtureTransaction(element.editor.state, bid));
-      element.editor.commands.blur();
-    }, equationId);
-    const equation = () => editor.evaluate((element) => element.editor.getJSON().content.find((node) => node.type === 'mathBlock'));
+    // setContent followed by a quick edit shares one undo event and restores
+    // the old Reading list page. Keep fixture setup out of edit history.
+    await waitForMockState(page, 'the saved Reading list editor and isolated equation fixture',
+      installEquationFixture, { bid: equationId, previousContent: saves[0].content });
+    const equation = () => waitForMockState(page, 'the single equation in the current editor', () => {
+      const nodes = document.querySelector('.ProseMirror')?.editor?.getJSON().content.filter((node) => node.type === 'mathBlock');
+      return nodes?.length === 1 && nodes[0];
+    });
     assert.deepEqual((await equation()).attrs, { bid: equationId, latex: 'x^2' }, 'The fixture equation must be installed before editing');
     await page.locator('.math-block').click();
     const area = page.locator('.math-editor textarea');
@@ -95,6 +121,7 @@ const { chromium } = require(process.env.NOTAYA_PLAYWRIGHT_MODULE || 'playwright
     await area.fill(exact);
     assert.deepEqual((await equation()).attrs, { bid: equationId, latex: exact });
     await area.press('Escape');
+    await area.waitFor({ state: 'detached' });
     assert.equal(await editor.evaluate((element) => element.editor.commands.undo()), true, 'The equation edit must be undoable');
     assert.deepEqual((await equation()).attrs, { bid: equationId, latex: 'x^2' });
     assert.equal(await editor.evaluate((element) => element.editor.commands.redo()), true, 'The equation edit must be redoable');
