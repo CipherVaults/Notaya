@@ -176,7 +176,7 @@ ul.plain, ol.steps { margin: 0; padding-left: 20px; display: flex; flex-directio
   <section id="how" aria-labelledby="h-how">
     <h2 id="h-how">🧮 How the forecast is built</h2>
     <ol class="steps">
-      <li><b>Supply.</b> Codex's week holds about <span id="hWpw"></span> full 5-hour windows <span class="badge m">measured</span>. Ahmed has used 26% of this week. His week resets on 2026-11-14 at 15:44 UTC and every 7 days after. Ahmed has two banked resets; each refills the whole week and the 5-hour window, and is used only after the week is fully spent (Ahmed, 08:57 UTC).</li>
+      <li><b>Supply.</b> Codex's week holds about <span id="hWpw"></span> full 5-hour windows <span class="badge m">measured</span>. Ahmed has used <span id="hUsed"></span>% of this week. His week resets on 2026-11-14 at 15:44 UTC and every 7 days after. Ahmed has two banked resets; each refills the whole week and the 5-hour window, and is used only after the week is fully spent (Ahmed, 08:57 UTC).</li>
       <li><b>Work.</b> Each version has a size in plan points (small = 1, medium = 3, large = 6, extra large = 12) from the version plan. Points × extra work ÷ points per window = windows needed.</li>
       <li><b>Claude's share.</b> Directing, inspecting every diff, merging and records draw from Claude's own weekly limit, which Ahmed capped at 70%. If Claude's allowance is empty, Codex waits, even if Codex has plenty left.</li>
       <li><b>The calendar.</b> Day by day the model spends what both allowances and the daily window cap allow, adds a pause after each version, and records when each version finishes. Banked resets are used when the weekly allowance is empty and the next weekly reset is over a day away.</li>
@@ -227,6 +227,7 @@ const day = (ms) => ms == null ? "after Jan 2028" : new Date(ms).toLocaleDateStr
 const dayY = (ms) => ms == null ? "after Jan 2028" : new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const hhmm = (iso) => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false }) + " UTC" : "not recorded";
 const inputOf = (k) => (F.inputsTable.find((r) => r.key === k) || {}).value;
+const num5h = (k) => { const v = inputOf(k); return v === "" || v == null ? null : Number(v); };
 const NS = "http://www.w3.org/2000/svg";
 function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in (attrs || {})) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
 function cellsOf(row) { return row.map((c) => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.html != null ? c.html : esc(c.t)}</td>`).join(""); }
@@ -242,15 +243,20 @@ $("pills").innerHTML = [
 
 /* ---------- gauges ---------- */
 function gauge(label, pct, sub, kind, cap) {
+  if (pct === null || !isFinite(pct)) {
+    return `<div class="stat"><span class="label">${esc(label)}</span><span class="value">not read</span>
+    <div class="meter ${kind}" role="img" aria-label="${esc(label)}: not read"><i style="width:0%"></i></div>
+    <span class="sub">${sub}</span></div>`;
+  }
   return `<div class="stat"><span class="label">${esc(label)}</span><span class="value">${fmt(pct)}% used</span>
     <div class="meter ${kind}" role="img" aria-label="${esc(label)}: ${pct}% used"><i style="width:${Math.min(100, pct)}%"></i>${cap ? `<u style="left:${cap}%" title="the ${cap}% cap"></u>` : ""}</div>
     <span class="sub">${sub}</span></div>`;
 }
 $("gauges").innerHTML =
   gauge("Claude, this week", F.inp.claudeUsed, `The black line is Ahmed's ${F.inp.claudeCap}% cap. Resets Fri 13 Nov 02:00 UTC. <span class="badge m">measured</span>`, "claude", F.inp.claudeCap) +
-  gauge("Claude, this 5-hour window", Number(inputOf("claude_5h_used_pct")), `Resets 10:30 UTC today. <span class="badge m">measured</span>`, "claude") +
+  gauge("Claude, this 5-hour window", num5h("claude_5h_used_pct"), num5h("claude_5h_used_pct") === null ? `Not read at the as-of time (the last reading belongs to a window that has since reset). The next heartbeat reading fills it.` : `Resets ${hhmm(inputOf("claude_5h_reset_utc"))}. <span class="badge m">measured</span>`, "claude") +
   gauge("Codex, this week", F.inp.codexUsed, `Resets Sat 14 Nov 15:44 UTC (earlier reading). About ${fmt((1 - F.inp.codexUsed / 100) * F.params.wpw, 1)} windows left. <span class="badge m">measured</span>`, "codex") +
-  gauge("Codex, this 5-hour window", Number(inputOf("codex_5h_used_pct")), `38% left. Codex credits: 0. <span class="badge m">measured</span>`, "codex");
+  gauge("Codex, this 5-hour window", num5h("codex_5h_used_pct"), num5h("codex_5h_used_pct") === null ? `Not read: the window reset at 15:48 UTC today (it had run out at about 12:01). Codex credits: 0.` : `${fmt(100 - num5h("codex_5h_used_pct"))}% left. Codex credits: 0. <span class="badge m">measured</span>`, "codex");
 $("gaugeNote").textContent = "Both screens are account-wide: everything on the account moves them, not just Notaya. The $100 cloud credit ran out on 2026-11-07 at about 23:59 UTC (Ahmed), so cloud work now counts against the Claude limits.";
 
 /* ---------- forecast ---------- */
@@ -437,12 +443,13 @@ const CATC = { "Coordinator chat": "#6a5acd", "Directing the build": "#b8591a", 
 
 /* ---------- how and details ---------- */
 $("hWpw").textContent = fmt(F.params.wpw, 1);
+$("hUsed").textContent = fmt(F.inp.codexUsed);
 table("inputsTable", [{ t: "Input" }, { t: "Value" }, { t: "Range" }, { t: "Kind" }, { t: "Where it comes from" }],
   F.inputsTable.map((r) => [{ t: r.key, cls: "nw" }, { t: r.value, cls: "num" }, { t: r.low || r.high ? `${r.low || "-"} to ${r.high || "-"}` : "", cls: "num nw" },
     { html: `<span class="badge ${r.kind === "measured" ? "m" : r.kind === "rough" ? "r" : r.kind === "rule" ? "m" : "u"}">${esc(r.kind)}</span>` }, { html: esc(r.source) + (r.notes ? `<span class="sub">${esc(r.notes)}</span>` : "") }]));
 $("unknowns").innerHTML = [
   "<b>Mohamed.</b> He has no Codex, only a Claude Pro subscription (Ahmed, 08:57 UTC). Whether he builds, and how much of his week he gives, is his choice: the default is that he does not. The slider shows what it would add, on a guess that Claude building a plan point itself costs about 2% of a Claude week.",
-    "<b>How much of the plan is already built.</b> About 18 of 45 points of 1.6 is my estimate from which lanes merged, not a measurement.",
+    "<b>How much of the plan is already built.</b> About 25 of 45 points of 1.6 is my estimate from which lanes merged, not a measurement.",
   "<b>Claude's cost per lane.</b> The weakest number: nobody has yet read Claude's weekly percentage before and after a lane. The new rule in the ledger README asks for that reading each time.",
   "<b>Gates.</b> New libraries, vault format changes and security behaviour need Ahmed's own words; time spent waiting for them is not modelled.",
   "<b>Quality risks.</b> A failed test run (like C4b) or a lane Claude sends back costs windows. The 'extra work' number is a guess for that.",
@@ -465,7 +472,7 @@ table("quotaTable", [{ t: "Time (UTC)" }, { t: "Tool" }, { t: "Limit" }, { t: "R
   D.quota.map((q) => [{ t: hhmm(q.time.length === 17 ? q.time.replace("Z", ":00Z") : q.time), cls: "nw" }, { t: q.tool }, { t: q.limit }, { t: q.reading }, { t: q.resets, cls: "nw" }, { t: q.by }]));
 $("gapList").innerHTML = [
   "Mohamed's usage (his own account), and any Claude or Codex use outside Notaya on Ahmed's accounts: the limit screens count everything, the ledger rows only Notaya threads.",
-  "Codex runs after 00:44 UTC on 2026-11-08 (lane A's second pass, C4b and the others) are in the 26% weekly reading but not in <span class=\"mono\">codex-runs.csv</span>; the PC session has to read them.",
+  "Codex runs after 00:44 UTC on 2026-11-08 (lane A's second pass, C4b and the others) are in the weekly reading (47% at 14:20 UTC) but not in <span class=\"mono\">codex-runs.csv</span>; the PC session has to read them.",
   "Sessions on the PC (Remote Control) are not readable from the cloud; their rows stay empty until the scanner is run there.",
   "Running sessions' own usage (including this thread's) is read at the next refresh.",
   "Money: Codex has no dollar figure here; Claude's dollar figures stop when the credit ran out (2026-11-07 about 23:59 UTC).",

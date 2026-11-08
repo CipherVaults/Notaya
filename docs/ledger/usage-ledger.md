@@ -4,6 +4,57 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-08, 16:03 UTC: readings at about 16:00 (Codex week 47%, Claude week 37%) and a recalibrated forecast
+
+**Who and where:** Ahmed's side (`AE0101`); written by the cloud thread "Redesign the usage ledger with forecasts" (session 50 in [sessions.md](../sessions.md), [EX-2026-11-08-62](../execution/2026-11-08-ledger-refresh-1600.md)) at Ahmed's word (16:02:35 UTC: "update the usage ledger as well if you can", relayed by the coordinator at 16:02:44). Machine: cloud. Every reading below was **relayed** by the coordinator (from Ahmed's Codex page at 14:20 UTC, from the Build thread's note and from a Claude weekly reading at about 16:00 UTC); this thread saw no screen. The heartbeat's own log (`quota-readings.csv`) has nothing after 10:11 UTC in the repository yet.
+
+### What was read (measured, relayed)
+
+| Limit | Reading | Resets |
+|---|---|---|
+| Codex, weekly (Plus) | **47% used** (53% left) at 14:20 UTC; it was 26% at 08:27 and 32% at 10:11 | 2026-11-14 15:44 UTC |
+| Codex, 5-hour | ran out at about 12:01 UTC; **reset at 15:48 UTC**; the new window's use is **not read** | new window ends about 20:48 UTC |
+| Claude, weekly (Pro) | **37% used** at about 16:00 UTC (cap 70%); it was 22% at 08:27 and 29% at 10:11 | Fri 2026-11-13 02:00 UTC |
+| Claude, 5-hour | **not read** at 16:00 UTC | not read |
+
+Merged since 08:27 (from the STATUS lines): lanes C4 (#85), AF (#86), C2 (the recycle bin, #88), the records PR #90, and AG (#93, seen on `origin/main` while writing).
+
+### What it changes (derived)
+
+- **A week holds about 6.3 windows** (was 6.1; range 5.8 to 6.8): 47% of the week over about three windows (the third ended at 12:01). The count of windows comes from the heartbeat log and the Build thread's note, not from a meter, so the range stays wide.
+- **1.6 is about 25 of its 45 points done** (was about 18; my estimate from which lanes merged, not a measurement), so the rest of 1.6 is **20 points** (range 17 to 23, was 27). Speed is **about 10.5 points per window** (range 8 to 13); counted by merged work only it is nearer 8.3, because some lanes were built and then fixed.
+- **Claude's cost is higher than my first guess.** Claude's week rose 15 points (22% to 37%) in about 7.5 hours, during which about 1.3 Codex windows ran, plus the coordinator chat, the records threads and the roadmap thread. I now use **6% of Claude's week per Codex window** (range 3 to 11; was 3) and **3% a day** for chat and records (range 2 to 6). That 15-point jump is an **upper bound** on lane cost, because it also carries everything else on the account. If Claude's cost per window really is near the top of the range, Claude's 70% cap, not Codex, becomes the limit.
+
+### The forecast now (rough; the model is the one from 08:30)
+
+Default settings: 10.5 points per window, 6.3 windows a week, extra work 1.25, 2 banked Codex resets (used only after the week is fully spent), at most 3 windows a day, Claude 6% of its week per window and 3% a day, a one-day pause after each version. Mohamed does not build.
+
+| Version | Plan points | Code done (likely) | Best to worst | Paid by |
+|---|---:|---|---|---|
+| 1.6 (rest) | 20 | 9 Nov | 9 Nov to 13 Nov | Ahmed's quota |
+| 1.7 | 36 | 14 Nov | 10 Nov to 27 Nov | Ahmed's quota |
+| 1.8 | 37 | 16 Nov | 11 Nov to 11 Dec | Ahmed's quota |
+| 1.9 | 59 | 23 Nov | 14 Nov to 1 Jan | Ahmed's quota |
+| 2.0 | 25 | 25 Nov | 15 Nov to 9 Jan | Ahmed's quota |
+| 2.1 | 20 | 27 Nov | 16 Nov to 16 Jan | Ahmed's quota |
+| 2.2 | 21 | 29 Nov | 17 Nov to 29 Jan | Ahmed's quota |
+| 2.3 | 18 | 1 Dec | 18 Nov to 5 Feb | Ahmed's quota |
+| 2.4 | 17 | 5 Dec | 19 Nov to 12 Feb | after his banked resets: his weekly allowance only |
+| 2.5 | 18 | 7 Dec | 19 Nov to 19 Feb | after his banked resets: his weekly allowance only |
+
+**Against 08:30:** the likely finish of 2.5 moved from about 2 December to about **7 December** (five days later); the worst case moved from 31 January to **19 February**. Ahmed's own quota still reaches **2.3** (it reached 2.0 on the 08:30 numbers). The cause is Claude's higher cost per window and a slightly slower speed, not Codex's capacity. This is a forecast, not a measurement; produced, not accepted. The dashboard at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY> was rebuilt from these files; its 5-hour gauges now say "not read" instead of showing a stale number.
+
+### Usage rows added
+
+- `claude-sessions.csv`: the thread "Build a version roadmap showcase artifact" (Sonnet 5.5, high, started 00:58 UTC): input 1,750, cache write 489,553, cache read 5,823,528, output 56,298, reported cost 3.11 USD; read by the coordinator at 16:03 UTC and **relayed**, not read by this thread. The usage of this thread, the Build thread and the coordinators was not read here (the session list shows only archived and idle sessions): **not recorded**.
+- `quota-readings.csv`: three relayed rows (Codex week 47%, Codex window reset 15:48, Claude week 37%).
+
+### Not done
+
+The "explanation" Ahmed asked to make clear in the **roadmap artifact** is that artifact's thread's work, not this thread's. The Build thread's Codex meter log and the heartbeat rows after 10:11 UTC are not in the repository yet; the model should be fed from them when they are.
+
+---
+
 ## 2026-11-08, 08:30 UTC: the new ledger page, readings at 08:27, and a forecast for 1.6 to 2.5 with banked resets
 
 **Who and where:** Ahmed's side (`AE0101`); written by the cloud thread "Redesign the usage ledger with forecasts" (session 48 in [sessions.md](../sessions.md), [EX-2026-11-08-60](../execution/2026-11-08-ledger-redesign-and-forecast.md)) at Ahmed's request (project chat 08:27:53 UTC: lean on Codex, and build a forecast of what the quotas can finish; 08:29:17 and 08:35:26 UTC: the forecast is for Notaya, taken from FFmpeg Encoder's only for its purpose, not its look). Machine: cloud. The readings are Ahmed's two screenshots of about 08:27 UTC, relayed by the coordinator.

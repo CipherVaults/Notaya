@@ -1,5 +1,5 @@
 version,theme,plan_points,points_low,points_high,done_points,basis
-1.6 (rest),The foundation: the AI can work with Notaya safely,27,24,30,18,"Spec sizes 1.6 at about 45 points (S=1, M=3, L=6, XL=12). Done so far is an ESTIMATE (about 18, range 15 to 21): lanes C1, B, A, D merged, E built and held (PR #70), C4b built but failed cargo test. Left: C2, C3, C4b fix, C5 (the AI server), integration and the PC round"
+1.6 (rest),The foundation: the AI can work with Notaya safely,20,17,23,25,"Spec sizes 1.6 at about 45 points (S=1, M=3, L=6, XL=12). Done so far is an ESTIMATE (about 25, range 22 to 28): lanes C1, B, A, D, C4, AF and C2 merged; E built and held (PR #70). Left: AG fix, C3, C4d fix, C5 (the AI server), integration and the PC round"
 1.7,Your app your way: menus keys bars,36,,,,Version plan size check (2026-11-07)
 1.8,Pages that can hold your hubs,37,,,,Version plan size check
 1.9,Tabs and files in and out,59,,,,Version plan size check plus the survey's 13 extra points
