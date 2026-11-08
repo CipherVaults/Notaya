@@ -36,6 +36,10 @@ fn current_exe() -> Result<std::path::PathBuf> {
 
 #[tauri::command]
 pub fn get_shell_prefs(state: State<'_, AppState>) -> Result<ShellPrefs> {
+    get_shell_prefs_person(state)
+}
+
+fn get_shell_prefs_person(state: State<'_, AppState>) -> Result<ShellPrefs> {
     if !state.is_unlocked() {
         return Err(Error::Locked);
     }
@@ -53,6 +57,10 @@ pub fn get_shell_prefs(state: State<'_, AppState>) -> Result<ShellPrefs> {
 /// the entry, the error says so and the file is not changed.
 #[tauri::command]
 pub fn set_shell_prefs(state: State<'_, AppState>, prefs: ShellPrefsInput) -> Result<ShellPrefs> {
+    set_shell_prefs_person(state, prefs)
+}
+
+fn set_shell_prefs_person(state: State<'_, AppState>, prefs: ShellPrefsInput) -> Result<ShellPrefs> {
     if !state.is_unlocked() {
         return Err(Error::Locked);
     }

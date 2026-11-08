@@ -628,7 +628,7 @@ mod action_parity_tests {
         compare(
             |state| {
                 state.with_mut(|s| {
-                    fire(s, &mut Run::at(0), "row", &Event::Button("button"), 0);
+                    fire(s, &mut Run::at(0), "10000000000000000000000000000008", &Event::Button("button"), 0);
                     Ok(())
                 })
             },
@@ -637,7 +637,7 @@ mod action_parity_tests {
                     s,
                     &Actor::Automation,
                     &mut Run::at(0),
-                    "row",
+                    "10000000000000000000000000000008",
                     &Event::Button("button"),
                     0,
                 );

@@ -17,6 +17,7 @@ use tauri_plugin_dialog::DialogExt;
 
 use super::database::{self as dbc, ctx_of, first_database_backup, parse_cells, write_cells, FIRST_DATABASE_NOTICE, MAX_ROWS_PER_DATABASE};
 use crate::database::csv::{self, Guess};
+use crate::actions::Actor;
 use crate::database::types::*;
 use crate::database::value::{self, Val};
 use crate::error::{Error, Result};
@@ -260,6 +261,10 @@ fn read_picked(path: &PathBuf) -> Result<String> {
 /// database (matching columns by name). `None` if the dialog was cancelled.
 #[tauri::command(async)]
 pub fn import_csv(app: AppHandle, state: State<'_, AppState>, database_id: Option<String>, section_id: Option<String>) -> Result<Option<CsvImportResult>> {
+    import_csv_person(app, state, database_id, section_id)
+}
+
+fn import_csv_person(app: AppHandle, state: State<'_, AppState>, database_id: Option<String>, section_id: Option<String>) -> Result<Option<CsvImportResult>> {
     // Check the target before asking for a file.
     state.with(|s| match (&database_id, &section_id) {
         (Some(id), _) => dbc::database(s, id).map(|_| ()),
@@ -425,6 +430,10 @@ pub fn table_doc(lines: Vec<Vec<String>>, title: &str) -> crate::export::ExportD
 /// `None` if the save dialog was cancelled.
 #[tauri::command(async)]
 pub fn export_database(app: AppHandle, state: State<'_, AppState>, database_id: String, view_id: Option<String>, format: String) -> Result<Option<crate::export::ExportSummary>> {
+    export_database_person(app, state, database_id, view_id, format)
+}
+
+fn export_database_person(app: AppHandle, state: State<'_, AppState>, database_id: String, view_id: Option<String>, format: String) -> Result<Option<crate::export::ExportSummary>> {
     use crate::export::{self, Format};
     let format = Format::parse(&format)?;
     let (lines, title) = state.with(|s| Ok((export_lines(s, &database_id, view_id.as_deref(), false)?, dbc::database(s, &database_id)?.title.clone())))?;
@@ -450,6 +459,10 @@ pub fn export_database(app: AppHandle, state: State<'_, AppState>, database_id: 
 /// Exports a database (or one of its views, with its filter, sort and visible properties) as CSV.
 #[tauri::command(async)]
 pub fn export_csv(app: AppHandle, state: State<'_, AppState>, database_id: String, view_id: Option<String>) -> Result<Option<CsvExported>> {
+    export_csv_person(app, state, database_id, view_id)
+}
+
+fn export_csv_person(app: AppHandle, state: State<'_, AppState>, database_id: String, view_id: Option<String>) -> Result<Option<CsvExported>> {
     let (lines, title) = state.with(|s| Ok((export_lines(s, &database_id, view_id.as_deref(), true)?, dbc::database(s, &database_id)?.title.clone())))?;
     let safe: String = title.chars().map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c }).collect();
     let Some(chosen) = app
@@ -520,6 +533,10 @@ fn store_files(r: &mut Row, prop_id: &str, files: Vec<Value>) -> Result<()> {
 /// it can never be shown as a web page. Returns the property's files.
 #[tauri::command(async)]
 pub fn attach_file(state: State<'_, AppState>, request: Request<'_>) -> Result<Vec<Value>> {
+    attach_file_person(state, request)
+}
+
+fn attach_file_person(state: State<'_, AppState>, request: Request<'_>) -> Result<Vec<Value>> {
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err(Error::invalid("Expected file data."));
     };
@@ -549,14 +566,20 @@ pub fn attach_to_row(s: &mut crate::vault::Session, row_id: &str, prop_id: &str,
 /// Takes a file out of the row's Files property; the stored copy is removed with it.
 #[tauri::command(async)]
 pub fn remove_file(state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<Vec<Value>> {
-    state.with_mut(|s| {
-        let mut r = files_target(s, &row_id, &prop_id)?;
-        let list: Vec<Value> = file_list(&r, &prop_id).into_iter().filter(|f| f.get("id").and_then(|i| i.as_str()) != Some(file_id.as_str())).collect();
-        store_files(&mut r, &prop_id, list.clone())?;
-        s.put(Item::Row(r))?;
-        s.collect_garbage()?;
-        Ok(list)
-    })
+    remove_file_person(&state, row_id, prop_id, file_id)
+}
+
+fn remove_file_person(state: &AppState, row_id: String, prop_id: String, file_id: String) -> Result<Vec<Value>> {
+    state.with_mut(|s| remove_file_core(s, &Actor::Person, row_id, prop_id, file_id))
+}
+
+pub(crate) fn remove_file_core(s: &mut crate::vault::Session, _actor: &Actor, row_id: String, prop_id: String, file_id: String) -> Result<Vec<Value>> {
+    let mut r = files_target(s, &row_id, &prop_id)?;
+    let list: Vec<Value> = file_list(&r, &prop_id).into_iter().filter(|f| f.get("id").and_then(|i| i.as_str()) != Some(file_id.as_str())).collect();
+    store_files(&mut r, &prop_id, list.clone())?;
+    s.put(Item::Row(r))?;
+    s.collect_garbage()?;
+    Ok(list)
 }
 
 /// The stored name of a file in a row, and its bytes.
@@ -610,6 +633,10 @@ pub fn can_open(name: &str) -> bool {
 /// Asks where to save a file of a row and writes it there. `None` if cancelled.
 #[tauri::command(async)]
 pub fn save_file_as(app: AppHandle, state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<Option<String>> {
+    save_file_as_person(app, state, row_id, prop_id, file_id)
+}
+
+fn save_file_as_person(app: AppHandle, state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<Option<String>> {
     let (name, bytes) = file_of(&state, &row_id, &prop_id, &file_id)?;
     let ext = extension(&name);
     let mut dlg = app.dialog().file().set_title("Save file").set_file_name(&name);
@@ -632,6 +659,10 @@ pub fn save_file_as(app: AppHandle, state: State<'_, AppState>, row_id: String, 
 /// Only types that cannot run code are opened this way; the rest must be saved first.
 #[tauri::command(async)]
 pub fn open_file(app: AppHandle, state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<()> {
+    open_file_person(app, state, row_id, prop_id, file_id)
+}
+
+fn open_file_person(app: AppHandle, state: State<'_, AppState>, row_id: String, prop_id: String, file_id: String) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;
     let (name, bytes) = file_of(&state, &row_id, &prop_id, &file_id)?;
     if !can_open(&name) {
@@ -650,6 +681,40 @@ pub fn open_file(app: AppHandle, state: State<'_, AppState>, row_id: String, pro
 }
 
 const OPEN_PREFIX: &str = "notaya-open";
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+    use crate::database::types::{PropKind, Property};
+    use crate::vault::Session;
+
+    fn seed_file(s: &mut Session) -> Result<String> {
+        let mut db = dbc::database(s, "10000000000000000000000000000007")?;
+        db.props.push(Property { id: "files".into(), name: "Files".into(), kind: PropKind::Files, ..Property::default() });
+        s.put(Item::Database(db))?;
+        let files = attach_to_row(s, "10000000000000000000000000000008", "files", "test.txt", b"throwaway")?;
+        Ok(files[0]["id"].as_str().unwrap().to_string())
+    }
+
+    #[test]
+    fn remove_file_person_and_core_match_and_collect_the_bytes() {
+        compare(
+            |state| {
+                let id = state.with_mut(seed_file)?;
+                let files = remove_file_person(state, "10000000000000000000000000000008".into(), "files".into(), id.clone())?;
+                assert!(state.with(|s| Ok(s.get_attachment(&id).is_err()))?);
+                Ok(files)
+            },
+            |s, _| {
+                let id = seed_file(s)?;
+                let files = remove_file_core(s, &Actor::Person, "10000000000000000000000000000008".into(), "files".into(), id.clone())?;
+                assert!(s.get_attachment(&id).is_err());
+                Ok(files)
+            },
+        );
+    }
+}
 
 fn open_dir() -> PathBuf {
     std::env::temp_dir()

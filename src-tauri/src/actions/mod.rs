@@ -230,6 +230,18 @@ pub(crate) mod tests {
 
     static NEXT: AtomicUsize = AtomicUsize::new(0);
 
+    const FIXTURE_IDS: [&str; 9] = [
+        "10000000000000000000000000000001", // notebook
+        "10000000000000000000000000000002", // section
+        "10000000000000000000000000000003", // second section
+        "10000000000000000000000000000004", // page
+        "10000000000000000000000000000005", // trashed page
+        "10000000000000000000000000000006", // sticky
+        "10000000000000000000000000000007", // database
+        "10000000000000000000000000000008", // row
+        "10000000000000000000000000000009", // view
+    ];
+
     /// Two independent vaults with the same fixed records. No UI, no default
     /// Paths::resolve, no production data. Files are kept as throwaway evidence.
     pub(crate) fn compare<T: Serialize>(
@@ -288,10 +300,11 @@ pub(crate) mod tests {
         // Existing record order is stable; each fixture creates at most one item
         // of a given kind (a notebook also creates its first section).
         items.sort_by_key(|(id, v)| {
+            let fresh = id.len() == 32 && !FIXTURE_IDS.contains(&id.as_str()) && id != crate::model::SETTINGS_ID;
             (
                 v["kind"].as_str().unwrap().to_string(),
-                id.len() == 32,
-                if id.len() == 32 { String::new() } else { id.clone() },
+                fresh,
+                if fresh { String::new() } else { id.clone() },
             )
         });
         Value::Array(items.into_iter().map(|(_, v)| v).collect())
@@ -300,7 +313,7 @@ pub(crate) mod tests {
     fn canonical(v: Value, ids: &mut BTreeMap<String, String>, key: &str) -> Value {
         match v {
             Value::String(s)
-                if s.len() == 32 && s.bytes().all(|b| b.is_ascii_hexdigit()) && s != crate::model::SETTINGS_ID =>
+                if s.len() == 32 && s.bytes().all(|b| b.is_ascii_hexdigit()) && s != crate::model::SETTINGS_ID && !FIXTURE_IDS.contains(&s.as_str()) =>
             {
                 let next = format!("fresh-{}", ids.len());
                 Value::String(ids.entry(s).or_insert(next).clone())
@@ -333,7 +346,7 @@ pub(crate) mod tests {
 
     fn seed_items() -> Vec<Item> {
         let n = Notebook {
-            id: "nb".into(),
+            id: "10000000000000000000000000000001".into(),
             name: "Notebook".into(),
             color: String::new(),
             icon: String::new(),
@@ -342,8 +355,8 @@ pub(crate) mod tests {
             updated: 1,
         };
         let section = Section {
-            id: "sec".into(),
-            notebook_id: "nb".into(),
+            id: "10000000000000000000000000000002".into(),
+            notebook_id: "10000000000000000000000000000001".into(),
             name: "Section".into(),
             color: String::new(),
             order: 0,
@@ -351,17 +364,17 @@ pub(crate) mod tests {
             updated: 1,
         };
         let mut second = section.clone();
-        second.id = "sec2".into();
+        second.id = "10000000000000000000000000000003".into();
         second.name = "Other".into();
         second.order = 1;
-        let page: Page = serde_json::from_value(json!({"id":"page", "sectionId":"sec", "title":"\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ", "content":"{\"type\":\"doc\",\"content\":[]}", "text":"\u{200f}exact\ttext  ", "order":0, "favorite":false, "parent":"", "trashedAt":null, "created":1, "updated":1})).unwrap();
+        let page: Page = serde_json::from_value(json!({"id":"10000000000000000000000000000004", "sectionId":"10000000000000000000000000000002", "title":"\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ", "content":"{\"type\":\"doc\",\"content\":[]}", "text":"\u{200f}exact\ttext  ", "order":0, "favorite":false, "parent":"", "trashedAt":null, "created":1, "updated":1})).unwrap();
         let mut trashed = page.clone();
-        trashed.id = "trash".into();
+        trashed.id = "10000000000000000000000000000005".into();
         trashed.trashed_at = Some(2);
         trashed.order = 1;
-        let sticky: Sticky = serde_json::from_value(json!({"id":"sticky", "content":"exact", "text":"exact", "color":"#ffeeaa", "x":140.0, "y":140.0, "w":320.0, "h":320.0, "onTop":true, "open":true, "created":1, "updated":1})).unwrap();
-        let mut db = Database::new("db".into(), "sec".into(), "Finance".into(), 1);
-        db.views[0].id = "view".into();
+        let sticky: Sticky = serde_json::from_value(json!({"id":"10000000000000000000000000000006", "content":"exact", "text":"exact", "color":"#ffeeaa", "x":140.0, "y":140.0, "w":320.0, "h":320.0, "onTop":true, "open":true, "created":1, "updated":1})).unwrap();
+        let mut db = Database::new("10000000000000000000000000000007".into(), "10000000000000000000000000000002".into(), "Finance".into(), 1);
+        db.views[0].id = "10000000000000000000000000000009".into();
         db.props.push(Property {
             id: "number".into(),
             name: "Amount".into(),
@@ -374,7 +387,7 @@ pub(crate) mod tests {
             kind: PropKind::Button,
             ..Property::default()
         });
-        let mut row = Row::new("row".into(), "db", "Row".into(), 1);
+        let mut row = Row::new("10000000000000000000000000000008".into(), "10000000000000000000000000000007", "Row".into(), 1);
         row.cells = r#"{"number":1234.567890123}"#.into();
         let mut settings = Settings::default();
         settings.calc_history = vec![CalcEntry {

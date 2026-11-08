@@ -39,6 +39,10 @@ pub fn log_info(state: State<'_, AppState>) -> LogInfo {
 /// Opens the logs folder in Explorer. The path is never taken from the UI.
 #[tauri::command]
 pub fn open_log_folder(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
+    open_log_folder_person(app, state)
+}
+
+fn open_log_folder_person(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;
     let folder = logging::folder(&state.paths);
     // A person may open it before anything was logged.

@@ -339,43 +339,43 @@ mod action_parity_tests {
     #[test]
     fn delete_stickies_person_and_core_match() {
         compare(
-            |state| delete_stickies_person(state, vec!["sticky".into()]),
-            |s, _paths| delete_stickies_core(s, &Actor::Person, vec!["sticky".into()]),
+            |state| delete_stickies_person(state, vec!["10000000000000000000000000000006".into()]),
+            |s, _paths| delete_stickies_core(s, &Actor::Person, vec!["10000000000000000000000000000006".into()]),
         );
     }
     #[test]
     fn delete_sticky_person_and_core_match() {
         compare(
-            |state| delete_sticky_person(state, "sticky".into()),
-            |s, _paths| delete_sticky_core(s, &Actor::Person, "sticky".into()),
+            |state| delete_sticky_person(state, "10000000000000000000000000000006".into()),
+            |s, _paths| delete_sticky_core(s, &Actor::Person, "10000000000000000000000000000006".into()),
         );
     }
     #[test]
     fn close_sticky_person_and_core_match() {
         compare(
-            |state| close_sticky_person(state, "sticky".into()),
-            |s, _paths| close_sticky_core(s, &Actor::Person, "sticky".into()),
+            |state| close_sticky_person(state, "10000000000000000000000000000006".into()),
+            |s, _paths| close_sticky_core(s, &Actor::Person, "10000000000000000000000000000006".into()),
         );
     }
     #[test]
     fn open_sticky_person_and_core_match() {
         compare(
-            |state| open_sticky_person(state, "sticky".into()),
-            |s, _paths| open_sticky_core(s, &Actor::Person, "sticky".into()),
+            |state| open_sticky_person(state, "10000000000000000000000000000006".into()),
+            |s, _paths| open_sticky_core(s, &Actor::Person, "10000000000000000000000000000006".into()),
         );
     }
     #[test]
     fn set_sticky_geometry_person_and_core_match() {
         compare(
-            |state| set_sticky_geometry_person(state, "sticky".into(), 150.0, 160.0, 350.0, 360.0),
-            |s, _paths| set_sticky_geometry_core(s, &Actor::Person, "sticky".into(), 150.0, 160.0, 350.0, 360.0),
+            |state| set_sticky_geometry_person(state, "10000000000000000000000000000006".into(), 150.0, 160.0, 350.0, 360.0),
+            |s, _paths| set_sticky_geometry_core(s, &Actor::Person, "10000000000000000000000000000006".into(), 150.0, 160.0, 350.0, 360.0),
         );
     }
     #[test]
     fn set_sticky_style_person_and_core_match() {
         compare(
-            |state| set_sticky_style_person(state, "sticky".into(), " #ffeeaa ".into(), true),
-            |s, _paths| set_sticky_style_core(s, &Actor::Person, "sticky".into(), " #ffeeaa ".into(), true),
+            |state| set_sticky_style_person(state, "10000000000000000000000000000006".into(), " #ffeeaa ".into(), true),
+            |s, _paths| set_sticky_style_core(s, &Actor::Person, "10000000000000000000000000000006".into(), " #ffeeaa ".into(), true),
         );
     }
     #[test]
@@ -384,7 +384,7 @@ mod action_parity_tests {
             |state| {
                 save_sticky_person(
                     state,
-                    "sticky".into(),
+                    "10000000000000000000000000000006".into(),
                     "{\"type\":\"doc\",\"content\":[]}".into(),
                     "\u{200f}exact\ttext  ".into(),
                 )
@@ -393,7 +393,7 @@ mod action_parity_tests {
                 save_sticky_core(
                     s,
                     &Actor::Person,
-                    "sticky".into(),
+                    "10000000000000000000000000000006".into(),
                     "{\"type\":\"doc\",\"content\":[]}".into(),
                     "\u{200f}exact\ttext  ".into(),
                 )
@@ -403,8 +403,8 @@ mod action_parity_tests {
     #[test]
     fn get_sticky_person_and_core_match() {
         compare(
-            |state| get_sticky_person(state, "sticky".into()),
-            |s, _paths| get_sticky_core(s, &Actor::Person, "sticky".into()),
+            |state| get_sticky_person(state, "10000000000000000000000000000006".into()),
+            |s, _paths| get_sticky_core(s, &Actor::Person, "10000000000000000000000000000006".into()),
         );
     }
     #[test]

@@ -1115,8 +1115,8 @@ mod action_parity_tests {
     #[test]
     fn set_page_look_person_and_core_match() {
         compare(
-            |state| set_page_look_person(state, "page".into(), "x".into(), "gradient:sunrise".into()),
-            |s, _paths| set_page_look_core(s, &Actor::Person, "page".into(), "x".into(), "gradient:sunrise".into()),
+            |state| set_page_look_person(state, "10000000000000000000000000000004".into(), "x".into(), "gradient:sunrise".into()),
+            |s, _paths| set_page_look_core(s, &Actor::Person, "10000000000000000000000000000004".into(), "x".into(), "gradient:sunrise".into()),
         );
     }
     #[test]
@@ -1129,43 +1129,43 @@ mod action_parity_tests {
     #[test]
     fn delete_page_person_and_core_match() {
         compare(
-            |state| delete_page_person(state, "page".into()),
-            |s, _paths| delete_page_core(s, &Actor::Person, "page".into()),
+            |state| delete_page_person(state, "10000000000000000000000000000004".into()),
+            |s, _paths| delete_page_core(s, &Actor::Person, "10000000000000000000000000000004".into()),
         );
     }
     #[test]
     fn restore_page_person_and_core_match() {
         compare(
-            |state| restore_page_person(state, "trash".into()),
-            |s, _paths| restore_page_core(s, &Actor::Person, "trash".into()),
+            |state| restore_page_person(state, "10000000000000000000000000000005".into()),
+            |s, _paths| restore_page_core(s, &Actor::Person, "10000000000000000000000000000005".into()),
         );
     }
     #[test]
     fn trash_page_person_and_core_match() {
         compare(
-            |state| trash_page_person(state, "page".into()),
-            |s, _paths| trash_page_core(s, &Actor::Person, "page".into()),
+            |state| trash_page_person(state, "10000000000000000000000000000004".into()),
+            |s, _paths| trash_page_core(s, &Actor::Person, "10000000000000000000000000000004".into()),
         );
     }
     #[test]
     fn reorder_person_and_core_match() {
         compare(
-            |state| reorder_person(state, vec!["page".into()]),
-            |s, _paths| reorder_core(s, &Actor::Person, vec!["page".into()]),
+            |state| reorder_person(state, vec!["10000000000000000000000000000004".into()]),
+            |s, _paths| reorder_core(s, &Actor::Person, vec!["10000000000000000000000000000004".into()]),
         );
     }
     #[test]
     fn move_page_person_and_core_match() {
         compare(
-            |state| move_page_person(state, "page".into(), "sec2".into()),
-            |s, _paths| move_page_core(s, &Actor::Person, "page".into(), "sec2".into()),
+            |state| move_page_person(state, "10000000000000000000000000000004".into(), "10000000000000000000000000000003".into()),
+            |s, _paths| move_page_core(s, &Actor::Person, "10000000000000000000000000000004".into(), "10000000000000000000000000000003".into()),
         );
     }
     #[test]
     fn set_page_favorite_person_and_core_match() {
         compare(
-            |state| set_page_favorite_person(state, "page".into(), true),
-            |s, _paths| set_page_favorite_core(s, &Actor::Person, "page".into(), true),
+            |state| set_page_favorite_person(state, "10000000000000000000000000000004".into(), true),
+            |s, _paths| set_page_favorite_core(s, &Actor::Person, "10000000000000000000000000000004".into(), true),
         );
     }
     #[test]
@@ -1174,7 +1174,7 @@ mod action_parity_tests {
             |state| {
                 create_subpage_person(
                     state,
-                    "page".into(),
+                    "10000000000000000000000000000004".into(),
                     "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
                 )
             },
@@ -1182,7 +1182,7 @@ mod action_parity_tests {
                 create_subpage_core(
                     s,
                     &Actor::Person,
-                    "page".into(),
+                    "10000000000000000000000000000004".into(),
                     "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
                 )
             },
@@ -1194,7 +1194,7 @@ mod action_parity_tests {
             |state| {
                 save_page_person(
                     state,
-                    "page".into(),
+                    "10000000000000000000000000000004".into(),
                     "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
                     "{\"type\":\"doc\",\"content\":[]}".into(),
                     "\u{200f}exact\ttext  ".into(),
@@ -1204,7 +1204,7 @@ mod action_parity_tests {
                 save_page_core(
                     s,
                     &Actor::Person,
-                    "page".into(),
+                    "10000000000000000000000000000004".into(),
                     "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
                     "{\"type\":\"doc\",\"content\":[]}".into(),
                     "\u{200f}exact\ttext  ".into(),
@@ -1215,8 +1215,8 @@ mod action_parity_tests {
     #[test]
     fn get_page_person_and_core_match() {
         compare(
-            |state| get_page_person(state, "page".into()),
-            |s, _paths| get_page_core(s, &Actor::Person, "page".into()),
+            |state| get_page_person(state, "10000000000000000000000000000004".into()),
+            |s, _paths| get_page_core(s, &Actor::Person, "10000000000000000000000000000004".into()),
         );
     }
     #[test]
@@ -1225,7 +1225,7 @@ mod action_parity_tests {
             |state| {
                 create_page_person(
                     state,
-                    "sec2".into(),
+                    "10000000000000000000000000000003".into(),
                     "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
                 )
             },
@@ -1233,7 +1233,7 @@ mod action_parity_tests {
                 create_page_core(
                     s,
                     &Actor::Person,
-                    "sec2".into(),
+                    "10000000000000000000000000000003".into(),
                     "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
                 )
             },
@@ -1242,40 +1242,40 @@ mod action_parity_tests {
     #[test]
     fn delete_section_person_and_core_match() {
         compare(
-            |state| delete_section_person(state, "sec".into()),
-            |s, paths| delete_section_core(s, &Actor::Person, paths, "sec".into()),
+            |state| delete_section_person(state, "10000000000000000000000000000002".into()),
+            |s, paths| delete_section_core(s, &Actor::Person, paths, "10000000000000000000000000000002".into()),
         );
     }
     #[test]
     fn update_section_person_and_core_match() {
         compare(
-            |state| update_section_person(state, "sec".into(), "Changed".into(), " #ffeeaa ".into()),
-            |s, _paths| update_section_core(s, &Actor::Person, "sec".into(), "Changed".into(), " #ffeeaa ".into()),
+            |state| update_section_person(state, "10000000000000000000000000000002".into(), "Changed".into(), " #ffeeaa ".into()),
+            |s, _paths| update_section_core(s, &Actor::Person, "10000000000000000000000000000002".into(), "Changed".into(), " #ffeeaa ".into()),
         );
     }
     #[test]
     fn create_section_person_and_core_match() {
         compare(
-            |state| create_section_person(state, "nb".into(), "Changed".into(), " #ffeeaa ".into()),
-            |s, _paths| create_section_core(s, &Actor::Person, "nb".into(), "Changed".into(), " #ffeeaa ".into()),
+            |state| create_section_person(state, "10000000000000000000000000000001".into(), "Changed".into(), " #ffeeaa ".into()),
+            |s, _paths| create_section_core(s, &Actor::Person, "10000000000000000000000000000001".into(), "Changed".into(), " #ffeeaa ".into()),
         );
     }
     #[test]
     fn delete_notebook_person_and_core_match() {
         compare(
-            |state| delete_notebook_person(state, "nb".into()),
-            |s, paths| delete_notebook_core(s, &Actor::Person, paths, "nb".into()),
+            |state| delete_notebook_person(state, "10000000000000000000000000000001".into()),
+            |s, paths| delete_notebook_core(s, &Actor::Person, paths, "10000000000000000000000000000001".into()),
         );
     }
     #[test]
     fn update_notebook_person_and_core_match() {
         compare(
-            |state| update_notebook_person(state, "nb".into(), "Changed".into(), " #ffeeaa ".into(), "x".into()),
+            |state| update_notebook_person(state, "10000000000000000000000000000001".into(), "Changed".into(), " #ffeeaa ".into(), "x".into()),
             |s, _paths| {
                 update_notebook_core(
                     s,
                     &Actor::Person,
-                    "nb".into(),
+                    "10000000000000000000000000000001".into(),
                     "Changed".into(),
                     " #ffeeaa ".into(),
                     "x".into(),
@@ -1316,7 +1316,7 @@ mod action_boundary_tests {
             |state| {
                 save_page_person(
                     state,
-                    "page".into(),
+                    "10000000000000000000000000000004".into(),
                     "title  ".into(),
                     "content\t  ".into(),
                     "\u{200f}text  ".into(),
@@ -1329,7 +1329,7 @@ mod action_boundary_tests {
                         pairing_id: "test".into(),
                         label: "Codex".into(),
                     },
-                    "page".into(),
+                    "10000000000000000000000000000004".into(),
                     "title  ".into(),
                     "content\t  ".into(),
                     "\u{200f}text  ".into(),
