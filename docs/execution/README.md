@@ -22,7 +22,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ### 2026-11-08 (Ahmed's message 00:51:23 UTC), EX-2026-11-08-58: Notion hub sync with the version plan (record copied into the repo)
 
-- [2026-11-08-notion-hub-sync-with-version-plan.md](2026-11-08-notion-hub-sync-with-version-plan.md): the record of the Notion board and roadmap sync. Records only. **Produced**; not accepted.
+- [2026-11-08-notion-hub-sync-with-version-plan.md](2026-11-08-notion-hub-sync-with-version-plan.md): the record of the Notion board and roadmap sync. Records only. **Produced**; not accepted. A dated second sync (2026-11-08 about 15:25 to 15:35 UTC: Build state and Build note on the V1.6 cards, hub checkpoint, roadmap) is appended to the same file; no new EX number.
 
 ### 2026-11-08 (Ahmed's message 00:51:23 UTC), EX-2026-11-08-57: usage ledger, first Codex cycle, pace forecast
 
