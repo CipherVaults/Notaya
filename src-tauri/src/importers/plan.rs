@@ -1289,7 +1289,9 @@ mod tests {
         let blocks = ja["content"].as_array().unwrap();
         let links: Vec<&str> = blocks[0]["content"].as_array().unwrap().iter().filter_map(|t| t["marks"][0]["attrs"]["href"].as_str()).collect();
         assert_eq!(links, [format!("notaya:page/{}", pb.id), format!("notaya:page/{}", pc.id)]);
-        assert_eq!(blocks[1], serde_json::json!({ "type": "pageLink", "attrs": { "pageId": pb.id } }), "the row is a page link again");
+        let bid = blocks[1]["attrs"]["bid"].as_str().expect("the page link has a block id");
+        assert!(bid.len() == 16 && bid.bytes().all(|b| b.is_ascii_hexdigit()));
+        assert_eq!(blocks[1], serde_json::json!({ "type": "pageLink", "attrs": { "bid": bid, "pageId": pb.id } }), "the row is a page link again");
         assert_eq!(blocks[2]["type"], "paragraph", "a row to a page that was not exported stays text");
         // A row inside a list too (after the empty line a list item starts with).
         assert_eq!(blocks[3]["content"][0]["content"][1]["type"], "pageLink", "{}", pa.content);

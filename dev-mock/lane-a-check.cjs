@@ -10,8 +10,22 @@ const root = path.resolve(__dirname, '..');
 const cache = new Map();
 const saves = [];
 const notices = [];
+// The sidebar deliberately omits these pages; existing get_page still reads them (and rows).
+const hiddenPages = new Map();
 let failSave = false;
 global.location = { search: '?db=1' };
+const browserKeys = new Map([
+  ['dbview:old-database', 'old-view'], ['dbview:another-database', 'another-view'],
+  ['notaya.appearance', '{"theme":"paper"}'], ['notaya.layout', '{"open":false,"width":300}'],
+  ['cipherleaf.layout', 'legacy-layout'], ['dbview', 'keep'], ['other:dbview:database', 'keep'],
+]);
+const unrelatedKeys = new Map([...browserKeys].filter(([key]) => !key.startsWith('dbview:')));
+const browserStorage = {
+  get length() { return browserKeys.size; },
+  key: (i) => [...browserKeys.keys()][i] ?? null,
+  removeItem: (key) => { assert(key.startsWith('dbview:'), 'Cleanup must only remove dbview: keys'); browserKeys.delete(key); },
+};
+global.localStorage = browserStorage;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function load(file) {
@@ -43,6 +57,7 @@ function load(file) {
   return module.exports;
 }
 async function invoke(command, args = {}) {
+  if (command === 'get_page' && hiddenPages.has(args.id)) return structuredClone(hiddenPages.get(args.id));
   if (command === 'set_last_place') {
     saves.push(structuredClone(args.lastPlace));
     if (failSave) { failSave = false; throw new Error('Test-only failed save'); }
@@ -50,13 +65,31 @@ async function invoke(command, args = {}) {
   return backend.invoke(command, args);
 }
 const backend = load(path.join(__dirname, 'core.ts'));
-const { useApp, restoreLastPlace } = load(path.join(root, 'src/store/app.ts'));
+const { useApp, restoreLastPlace, rowExportNotebook, cleanupLegacyDatabaseViews } = load(path.join(root, 'src/store/app.ts'));
 const { startLastPlacePersistence, startNavHistory, goBack, goForward } = load(path.join(root, 'src/lib/navHistory.ts'));
 const { flushAll } = load(path.join(root, 'src/lib/flush.ts'));
 let checks = 0;
 async function check(name, test) { await test(); checks++; console.log('ok ', name); }
 
 (async () => {
+  await check('startup removes all legacy dbview: keys and preserves unrelated keys byte-for-byte', async () => {
+    assert.deepEqual(browserKeys, unrelatedKeys);
+    cleanupLegacyDatabaseViews(); // Reloading does not alter any remaining key.
+    assert.deepEqual(browserKeys, unrelatedKeys);
+  });
+  await check('unavailable storage does not prevent startup cleanup', async () => {
+    Object.defineProperty(global, 'localStorage', { configurable: true, get() { throw new Error('Test-only blocked storage'); } });
+    try { assert.doesNotThrow(cleanupLegacyDatabaseViews); }
+    finally { Object.defineProperty(global, 'localStorage', { configurable: true, writable: true, value: browserStorage }); }
+    let attempted = false;
+    const lockedStorage = { ...browserStorage, get length() { return browserKeys.size; }, removeItem: () => { attempted = true; throw new Error('Test-only denied removal'); } };
+    browserKeys.set('dbview:blocked', 'old-view');
+    global.localStorage = lockedStorage;
+    try { assert.doesNotThrow(cleanupLegacyDatabaseViews); }
+    finally { global.localStorage = browserStorage; cleanupLegacyDatabaseViews(); }
+    assert(attempted, 'The removal failure was exercised');
+    assert.deepEqual(browserKeys, unrelatedKeys);
+  });
   const tree = await invoke('list_notes');
   const tasks = tree.databases.find((d) => d.title === 'Tasks');
   const db = await invoke('get_database', { id: tasks.id });
@@ -84,6 +117,75 @@ async function check(name, test) { await test(); checks++; console.log('ok ', na
     assert.equal(state.activeKind, 'row');
     assert.equal(state.activePageId, rowId);
     assert.equal(state.activeSectionId, tasks.sectionId);
+  });
+  await check('search-to-row across notebooks exports the row database notebook', async () => {
+    const row = await invoke('get_page', { id: rowId });
+    const hit = (await invoke('search', { query: row.title })).find((h) => h.kind === 'row' && h.id === rowId);
+    assert(hit, 'Row is reachable through search');
+    useApp.setState({ tree });
+    useApp.getState().openNotebook('n2');
+    useApp.getState().openRow(hit.id); // The same navigation as CommandPalette's row result.
+    assert.equal(useApp.getState().activeNotebookId, 'n2', 'Previously selected notebook stays selected');
+    const notebook = await rowExportNotebook(useApp.getState().tree, useApp.getState().activePageId);
+    assert.equal(notebook.id, 'n1');
+    assert.notEqual(notebook.id, useApp.getState().activeNotebookId);
+  });
+  await check('row export has no fallback for missing or binned row/database or missing parents', async () => {
+    assert.equal(await rowExportNotebook(tree, 'gone'), null);
+    for (const mutate of [
+      (t) => { t.databases = t.databases.filter((d) => d.id !== tasks.id); },
+      (t) => { t.databases.find((d) => d.id === tasks.id).trashedAt = 1; },
+      (t) => { t.databases.find((d) => d.id === tasks.id).sectionId = 's3'; },
+      (t) => { t.sections = []; },
+      (t) => { t.notebooks = []; },
+    ]) {
+      const changed = structuredClone(tree); mutate(changed);
+      assert.equal(await rowExportNotebook(changed, rowId), null);
+    }
+    const row = await invoke('get_page', { id: rowId });
+    hiddenPages.set(rowId, { ...row, trashedAt: 1 });
+    try { assert.equal(await rowExportNotebook(tree, rowId), null); }
+    finally { hiddenPages.delete(rowId); }
+  });
+  await check('live subpages beneath a row restore, including a nested descendant', async () => {
+    const row = await invoke('get_page', { id: rowId });
+    hiddenPages.set('row-child', { ...row, id: 'row-child', parent: rowId });
+    hiddenPages.set('row-grandchild', { ...row, id: 'row-grandchild', parent: 'row-child' });
+    for (const id of ['row-child', 'row-grandchild']) {
+      assert(!tree.pages.some((p) => p.id === id));
+      const state = await restoreLastPlace({ kind: 'page', id }, tree);
+      assert.equal(state.activePageId, id);
+      assert.equal(state.activeKind, 'page');
+      assert.equal(state.activeNotebookId, tree.sections.find((s) => s.id === tasks.sectionId).notebookId);
+      assert.equal(state.activeSectionId, tasks.sectionId);
+    }
+  });
+  await check('row descendants reject missing, binned, cross-section and cyclic ancestors', async () => {
+    const child = structuredClone(hiddenPages.get('row-child'));
+    const row = await invoke('get_page', { id: rowId });
+    try {
+      for (const patch of [{ parent: 'gone' }, { trashedAt: 1 }, { sectionId: 's3' }, { parent: 'row-grandchild' }]) {
+        hiddenPages.set('row-child', { ...child, ...patch });
+        assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, tree)).activePageId, null);
+      }
+      hiddenPages.set('row-child', child);
+      for (const patch of [{ trashedAt: 1 }, { parent: 'gone' }, { parent: 'row-grandchild' }]) {
+        hiddenPages.set(rowId, { ...row, ...patch });
+        assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, tree)).activePageId, null);
+      }
+      hiddenPages.delete(rowId);
+      for (const patch of [{ trashedAt: 1 }, { parent: 'gone' }, { parent: 'row-grandchild' }]) {
+        const changed = structuredClone(tree);
+        Object.assign(changed.databases.find((d) => d.id === tasks.id), patch);
+        assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, changed)).activePageId, null);
+      }
+      const changed = structuredClone(tree);
+      changed.databases = changed.databases.filter((d) => d.id !== tasks.id);
+      assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, changed)).activePageId, null);
+    } finally {
+      hiddenPages.set('row-child', child);
+      hiddenPages.delete(rowId);
+    }
   });
   await check('saved database view resolves; a deleted view falls back to Home', async () => {
     const selected = db.views[1];

@@ -117,3 +117,5 @@ Status: C1, B and D merged (PRs #74, #75, #76); E held (PR #70); A held. Write a
 **Update 08:05 UTC:** lane A is merged (PR #79). C2 may start now from `main` `2e49b7b`. C4b (`AE0101/v1-6-c4b`, `ee51e5f`) is built but failed `cargo test` (exit 101) and is being fixed; it is not merged.
 
 **Update 08:31 UTC (A46):** every lane prompt now starts with `AGENTS.md` and `docs/handoff/codex-partner-briefing.md`, then the lane's brief and spec sections. Codex also takes bug fixes, test fixes, polish and a first-pass security and UX review in a fresh session (Claude does one lean inspection and the final security call).
+
+**Update 11:07 UTC:** lanes C4 (PR #85) and AF (PR #86) are merged. C2 is running; C3 starts when C2 is pushed and checked, then C5. Lane E (PR #70) stays held until C5. Rules learned: at most 3 lanes at once; a stop at a write-area boundary is idle, never finished; mechanical edits outside the area are made and listed under "outside write area, mechanical".
