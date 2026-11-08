@@ -30,6 +30,7 @@ fn row_as_page(s: &Session, r: &crate::database::types::Row) -> Page {
         _ => String::new(),
     };
     Page {
+        source: None,
         id: r.id.clone(),
         section_id,
         title: r.title.clone(),
@@ -113,8 +114,9 @@ pub(crate) fn create_notebook_core(
         Item::Notebook(n) => Some(n.order),
         _ => None,
     }));
-    let nb = Notebook { id: new_id(), name, color, icon, order, created: now, updated: now, trashed_at: None, };
+    let nb = Notebook { source: None, id: new_id(), name, color, icon, order, created: now, updated: now, trashed_at: None, };
     let first_section = Section {
+        source: None,
         id: new_id(),
         notebook_id: nb.id.clone(),
         name: "General".into(),
@@ -228,6 +230,7 @@ pub(crate) fn create_section_core(
         _ => None,
     }));
     s.put(Item::Section(Section {
+        source: None,
         id: new_id(),
         notebook_id,
         name,
@@ -320,6 +323,7 @@ pub(crate) fn create_page_core(s: &mut Session, _actor: &Actor, section_id: Stri
         _ => None,
     }));
     let p = Page {
+        source: None,
         id: new_id(),
         section_id,
         title,
@@ -438,6 +442,7 @@ fn add_subpage(s: &mut Session, parent_id: &str, title: String) -> Result<Page> 
         _ => None,
     }));
     let p = Page {
+        source: None,
         id: new_id(),
         section_id: parent.section_id.clone(),
         title,
@@ -900,6 +905,7 @@ mod subpage_tests {
 
     fn page_in(s: &mut Session, section_id: &str, title: &str) -> Page {
         let p = Page {
+            source: None,
             id: new_id(),
             section_id: section_id.into(),
             title: title.into(),
@@ -927,8 +933,8 @@ mod subpage_tests {
         let mut s = vault();
         let sec_a = new_id();
         let sec_b = new_id();
-        s.put(Item::Section(Section { id: sec_a.clone(), notebook_id: new_id(), name: "A".into(), color: String::new(), order: 0, created: 1, updated: 1, trashed_at: None, })).unwrap();
-        s.put(Item::Section(Section { id: sec_b.clone(), notebook_id: new_id(), name: "B".into(), color: String::new(), order: 0, created: 1, updated: 1, trashed_at: None, })).unwrap();
+        s.put(Item::Section(Section { source: None, id: sec_a.clone(), notebook_id: new_id(), name: "A".into(), color: String::new(), order: 0, created: 1, updated: 1, trashed_at: None, })).unwrap();
+        s.put(Item::Section(Section { source: None, id: sec_b.clone(), notebook_id: new_id(), name: "B".into(), color: String::new(), order: 0, created: 1, updated: 1, trashed_at: None, })).unwrap();
         let top = page_in(&mut s, &sec_a, "top");
         let child = add_subpage(&mut s, &top.id, "child".into()).unwrap();
         let grandchild = add_subpage(&mut s, &child.id, "grandchild".into()).unwrap();
@@ -966,6 +972,7 @@ mod look_tests {
     fn new_page(s: &mut Session) -> String {
         let id = new_id();
         s.put(Item::Page(Page {
+            source: None,
             id: id.clone(),
             section_id: new_id(),
             title: "t".into(),

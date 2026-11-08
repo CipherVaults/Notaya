@@ -903,6 +903,7 @@ impl Plan {
             .enumerate()
             .map(|(i, nb)| {
                 Item::Notebook(Notebook {
+                    source: None,
                     id: nb.id.clone(),
                     name: nb.name.clone(),
                     color: NOTEBOOK_COLOR.into(),
@@ -918,6 +919,7 @@ impl Plan {
         for (i, name) in self.sections.iter().enumerate() {
             let nb = self.section_notebook.get(i).copied().unwrap_or(0).min(notebooks.len().saturating_sub(1));
             items.push(Item::Section(Section {
+                source: None,
                 id: section_ids[i].clone(),
                 notebook_id: notebooks[nb].id.clone(),
                 name: name.clone(),
@@ -936,6 +938,7 @@ impl Plan {
                 if dropped.contains(&q) { parent = self.pages[q].parent } else { break }
             }
             items.push(Item::Page(Page {
+                source: None,
                 id: p.id.clone(),
                 section_id: section_ids[p.section].clone(),
                 title: p.title.clone(),

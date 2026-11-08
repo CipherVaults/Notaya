@@ -26,6 +26,10 @@ pub struct ReplacedEdit {
     pub previous: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Zeroize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceTag { pub app: String, pub id: String }
+
 /// The settings record always uses this id.
 pub const SETTINGS_ID: &str = "00000000000000000000000000000000";
 
@@ -60,6 +64,8 @@ impl Item {
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase")]
 pub struct Notebook {
+    #[serde(default)]
+    pub source: Option<SourceTag>,
     pub id: String,
     pub name: String,
     pub color: String,
@@ -74,6 +80,8 @@ pub struct Notebook {
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase")]
 pub struct Section {
+    #[serde(default)]
+    pub source: Option<SourceTag>,
     pub id: String,
     pub notebook_id: String,
     pub name: String,
@@ -88,6 +96,8 @@ pub struct Section {
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase")]
 pub struct Page {
+    #[serde(default)]
+    pub source: Option<SourceTag>,
     pub id: String,
     pub section_id: String,
     pub title: String,
@@ -174,6 +184,7 @@ pub struct Sticky {
 #[derive(Clone, Serialize, Deserialize, Zeroize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
+    pub ai: crate::ai::pairing::Settings,
     /// Previous AI values replaced by a person. Encrypted; never sent by get_settings.
     #[serde(default)]
     pub replaced_edits: Vec<ReplacedEdit>,
@@ -246,6 +257,7 @@ pub struct CalcEntry {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            ai: crate::ai::pairing::Settings::default(),
             replaced_edits: Vec::new(),
             // Sunrise is the default look (A28). Sunrise dark and the others are chosen in Settings.
             theme: "sunrise".into(),

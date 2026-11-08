@@ -461,6 +461,7 @@ fn get_settings_person(state: &AppState) -> Result<Settings> {
 pub(crate) fn get_settings_core(s: &Session, _actor: &Actor) -> Result<Settings> {
     let mut settings = s.settings();
     // The calculator history has its own commands; the settings screen doesn't need it.
+    settings.ai = crate::ai::pairing::Settings::default();
     settings.calc_history.clear();
     settings.search_history.clear();
     settings.replaced_edits.clear();
@@ -485,6 +486,7 @@ pub(crate) fn save_settings_core(s: &mut Session, _actor: &Actor, settings: Sett
     let mut settings = settings.sanitized();
     // Histories and the last location change only through their dedicated commands.
     let stored = s.settings();
+    settings.ai = stored.ai;
     settings.calc_history = stored.calc_history;
     settings.search_history = stored.search_history;
     settings.last_place = stored.last_place;

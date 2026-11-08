@@ -372,6 +372,8 @@ pub struct Template {
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase")]
 pub struct Database {
+    #[serde(default)]
+    pub source: Option<crate::model::SourceTag>,
     pub id: String,
     /// Where it sits in the tree (like a page). Inline databases keep the section of their page.
     pub section_id: String,
@@ -440,6 +442,7 @@ impl Database {
     /// A new database: a title property, a Status-free starter (Tags), and one table view.
     pub fn new(id: String, section_id: String, title: String, now: i64) -> Database {
         let mut db = Database {
+            source: None,
             id,
             section_id,
             parent: String::new(),
@@ -475,6 +478,8 @@ impl Database {
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase")]
 pub struct Row {
+    #[serde(default)]
+    pub source: Option<crate::model::SourceTag>,
     pub id: String,
     pub db: String,
     pub title: String,
@@ -511,6 +516,7 @@ pub struct Row {
 impl Row {
     pub fn new(id: String, db: &str, title: String, now: i64) -> Row {
         Row {
+            source: None,
             id,
             db: db.into(),
             title,

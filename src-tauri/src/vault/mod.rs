@@ -841,6 +841,7 @@ mod tests {
 
     fn page(text: &str) -> Item {
         Item::Page(Page {
+            source: None,
             id: new_id(),
             section_id: new_id(),
             title: "Diary".into(),

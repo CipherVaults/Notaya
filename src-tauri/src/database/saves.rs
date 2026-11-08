@@ -565,6 +565,7 @@ mod tests {
                 if bin_container {
                     let section_id = new_id();
                     s.put(Item::Section(crate::model::Section {
+                        source: None,
                         id: section_id.clone(),
                         notebook_id: new_id(),
                         name: "private container".into(),

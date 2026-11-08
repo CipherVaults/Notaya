@@ -786,6 +786,7 @@ mod tests {
         let big = "x".repeat(33 * 1024 * 1024);
         let mk = |title: &str, content: String| {
             Item::Page(Page {
+                source: None,
                 id: new_id(),
                 section_id: new_id(),
                 title: title.into(),
