@@ -4,15 +4,15 @@
 - **Asked by:** Ahmed, project chat 2026-11-07 23:39:31 UTC: "push full throttle ... plan out for all of these structures and possibly updating Notion Hub ... spreading out the features across how many versions ... very small features and big features ... that CLI list and all of the features that we've discussed previously". This is **Phase 2 (planning and staging)** in Ahmed's order of work (21:14:10 UTC: discuss, then plan and stage, then build).
 - **Baseline:** `CipherVaults/Notaya` `main` at `9e3e4e3` (merge of PR #60), app version **1.5.1** (accepted by Mohamed 2026-11-05). Nothing after 1.5.1 is built.
 - **Read in full before writing:** the full feature inventory (`2026-11-07-notaya-full-feature-inventory.md`), the dashboards, whiteboard and import/export studies, the Notion parity study (`2026-11-07-notion-parity-study.md`, 23:41 UTC), the AI CLI action list (`2026-11-07-ai-cli-action-list.md`, see section 5), the model-choice guide, `docs/STATUS.md` (next permitted action), the amendments record (A37 and its dated note), the agreed-feature list in project memory, and the Version Feature Board (28 planned and candidate cards).
-- **Updated:** 2026-11-07, about 23:56 UTC (container clock), with Ahmed's answers (section 0) and the renumbering 1.10–1.15 to 2.0–2.5.
+- **Updated:** 2026-11-07, about 23:56 UTC (container clock), with Ahmed's answers (section 0) and the renumbering 1.10–1.15 to 2.0–2.5. Updated again 2026-11-08 about 00:05 UTC (container clock) with Ahmed's answers of 23:58:44 UTC (tablets, emoji in PDF, Excel), the Notion survey's round-2 gaps (coordinator's note 23:59:42 UTC) and the exchange folder placed next to the data folder (EX-2026-11-08-54).
 - **Result state:** *produced*. This is a plan for Ahmed to read and adjust. It is not accepted, and **nothing here is a go to build**: building a version starts on Ahmed's word, and each security-behaviour change, new dependency or vault-format change still needs his own words (CLAUDE.md, A37).
 
 
-> **Repository copy (EX-2026-11-07-50, updated in EX-2026-11-07-53).** The working copy lives in the Claude project's shared files (`notes/2026-11-07-version-plan.md`); this committed copy is what Mohamed's Claude and later threads can read. The study files named below (inventory, dashboards, whiteboard, import/export, Notion parity, AI CLI action list) are in the project's shared files, not in this repository. **This is a plan, not a go to build**: nothing here is greenlit until Ahmed says so (A37 item 9 and its dated note; Ahmed 23:39:31 UTC authorized planning only).
+> **Repository copy (EX-2026-11-07-50, updated in EX-2026-11-07-53 and EX-2026-11-08-54).** The working copy lives in the Claude project's shared files (`notes/2026-11-07-version-plan.md`); this committed copy is what Mohamed's Claude and later threads can read. The study files named below (inventory, dashboards, whiteboard, import/export, Notion parity, AI CLI action list) are in the project's shared files, not in this repository. **This is a plan, not a go to build**: nothing here is greenlit until Ahmed says so (A37 item 9 and its dated note; Ahmed 23:39:31 UTC authorized planning only).
 
 ---
 
-## 0. Ahmed's answers (2026-11-07 23:53:46 and 23:54:20 UTC, project chat)
+## 0. Ahmed's answers (2026-11-07 23:53:46, 23:54:20 and 23:58:44 UTC, project chat)
 
 Recorded by the planning thread from Ahmed's two messages (quoted parts in quotation marks). They change the plan as shown.
 
@@ -25,10 +25,14 @@ Recorded by the planning thread from Ahmed's two messages (quoted parts in quota
 | AI levels | "I agree with the 4 levels"; the AI "should be able to have full authority", for example to delete whole pages or hubs when asked | Confirmed: Off, Look, Edit, Full. Full can delete large parts (still to the recycle bin, with the window confirm) |
 | Hidden notebooks | "the idea of hide notebooks from AI. That's good" | Added to 1.6-6: notebooks the person hides from the AI in Settings |
 | Big-change confirm | "optional ... not something that's all like have to be forced"; "20 I guess is good enough" | A Settings switch (on by default is a spec choice), threshold 20 items |
-| Files for the AI | "something that's inside of the app itself ... when it's installed and when it's portable, something that's containable" | The exchange folder lives **inside Notaya's own data folder** (works for the installed and the portable copy), not a folder picked anywhere on the PC (1.7-12) |
+| Files for the AI | "something that's inside of the app itself ... when it's installed and when it's portable, something that's containable" | The exchange folder sits **next to Notaya's own data folder** (not inside it, so the data folder keeps only encrypted files; coordinator's default relayed 23:55:39 UTC, used in the 1.6 spec), travels with the installed and the portable copy, and is never a folder picked anywhere on the PC (1.7-12) |
 | Page lock, "lock now" | "I don't want to answer anything about locking pages right now" | Deferred; not in any version yet |
 | Board snapshots (the AI looks at a picture of a board) | "pictures, I agree" | Allowed (spec details in 2.3 and 2.4) |
 | Two AIs at once | fine "as long as Claude and Codex do not collide", working "on two separate things", with good coordination | Allowed in 1.6-6, each AI its own pairing and level; the clash protection of 1.6-2 refuses a write to an item another writer just changed; the activity log shows which AI did what |
+| Tablets (23:58:44) | "I want it to be broad, not just specific to my tablet" | 2.3-2: pressure from any tablet or pen screen Windows supports |
+| PDF and emoji (23:58:44) | emoji "should be there, and PDFs exports definitely it's critical" | New 1.7-13 (moved up from 1.9-3): Greek, Cyrillic and emoji in PDF |
+| Excel (23:58:44) | charts "Yes, definitely, if possible. If not, it should be plain tables"; "the imports from Excel should actually add to databases" | 1.9-5 now includes charts (library `rust_xlsxwriter`); new 1.9-11 Excel import into databases (library `calamine`) |
+| Notion survey, round 2 (coordinator's note of 23:59:42 UTC; order is the coordinator's call, Ahmed 23:54:20) | The full read-only survey found nine more things Ahmed's Notion uses | Placed in 1.8 and 1.9 (see the rows marked "Survey round 2"); hub home pages are rebuilt from Claude's read through the connector, not from the export (section 6). Formula reading, German copies, right-to-left and notebook layout stay open as questions 30 to 33 in the project chat |
 | The bridge (how the AI reaches Notaya) | "I'm not sure" | Kept as the proposal (a companion program speaking MCP over a local pipe); decided in the 1.6 spec |
 
 
@@ -144,11 +148,12 @@ The hard rules behind it:
 | 1.7-9 | **Ctrl+H: find and replace** | S | Replace one or all in the open page | Agreed as an extra |
 | 1.7-10 | **Home banner and page header** | M | Banner picture per time of day (picture or folder, shuffle, reset to built-in); taller banner like Notion; big page icon overlapping the banner; Settings with live preview (height, icon size, icon position); Change and Reposition buttons; per-page override | Agreed 23:08 UTC. Uses the existing picture store |
 | 1.7-11 | **Full-width per page** | XS | One page can be wide while others stay normal | Parity study (P3); fits the per-page override |
-| 1.7-12 | **AI CLI: files in and out** (action-list step C) | M | The AI can import, export and back up, but only through one exchange folder inside Notaya's own data folder (installed or portable; Ahmed 23:53:46 UTC); every file written is logged and asks you first | Action list 8.8; import into a place and re-import follow in 1.9. **Gate:** security behaviour (a file door) |
+| 1.7-12 | **AI CLI: files in and out** (action-list step C) | M | The AI can import, export and back up, but only through one exchange folder next to Notaya's own data folder (installed or portable; Ahmed 23:53:46 UTC "containable", placement beside the data folder is the coordinator's default of 23:55:39 UTC); every file written is logged and asks you first | Action list 8.8; import into a place and re-import follow in 1.9. **Gate:** security behaviour (a file door) |
+| 1.7-13 | **Greek, Cyrillic and emoji in PDF** (moved up from 1.9) | M | No more "?" in PDF for these scripts and for emoji (Arabic and Hebrew already work) | Ahmed 23:58:44 UTC: emoji "should be there", PDF export "definitely ... critical". Noto Sans subset and the Noto Emoji font (OFL; black-and-white emoji, about a megabyte or more). **Gate:** dependency (fonts) |
 
 #### Version 1.8 — "Pages that can hold your hubs"
 
-**Theme:** the page features your Notion Home and hubs are built from (parity study, the five P1 gaps), plus code blocks and the history views.
+**Theme:** the page features your Notion Home and hubs are built from (parity study, the five P1 gaps, plus the four page gaps the full survey found), plus code blocks and the history views.
 
 | # | Item | Size | What it means for you | Notes |
 |---|---|---|---|---|
@@ -157,13 +162,17 @@ The hard rules behind it:
 | 1.8-3 | **Folding headings** | M | A heading that folds its section; imported toggles keep their open/closed state | Parity P1 |
 | 1.8-4 | **@ mentions, backlinks and date chips** | L | Type @ to mention a page or a date; each page shows "Linked from" | Parity P1/P2. **Gate:** vault format (new inline kind) |
 | 1.8-5 | **Link to a saved view of a database** | S | A link opens a database on a chosen view (for example "Overdue") | Parity P1 |
-| 1.8-6 | **Code blocks: language picker, copy, wrap** | M | Every code block gets a language picker | Agreed 20:38 UTC |
+| 1.8-6 | **Code blocks: language picker, copy, wrap, exact text** | M | Every code block gets a language picker; Copy gives back the text **byte for byte** (spaces, tabs, line ends and invisible characters untouched), so the 9 PBS prompts and the JSON manifest still work after the move | Agreed 20:38 UTC; exact-copy rule from survey round 2 |
 | 1.8-7 | **Mermaid as a code language** | M | Choose "Mermaid" (or paste Mermaid text and it is spotted) and it is drawn; code folded behind a click; zoom, download as picture, copy, wrap; the old Diagram block merges into this | Agreed 20:38 UTC; keep today's safety limits |
 | 1.8-8 | **History: see what changed** | M | Old versions show added and removed text highlighted | Builds on 1.6-4 |
 | 1.8-9 | **Activity panel** | M | A panel listing recent changes, AI ones marked "with Claude"; click to open the page or its version | Builds on 1.6-3 |
-| 1.8-10 | **File, audio, video and web-link cards** | M | Attach any file to a page; play audio and video kept in the vault; a link card for a web address (no internet fetch) | Parity P2. **Gate:** vault size limits; no network |
+| 1.8-10 | **File, audio, video and web-link cards** | M | Attach any file to a page (ZIP, CSV, receipt, text and Markdown files open again from the page); play audio and video kept in the vault; a link card for a web address (no internet fetch) | Raised to P1 by survey round 2 (the PBS hub keeps a 56-file ZIP and a receipt inside folding sections). **Gate:** vault size limits; no network |
+| 1.8-11 | **Links to one block in another page** | M | A link can land on one paragraph or heading inside another page, not just the page; it keeps working after the target moves | Survey round 2: about 57 in the PBS family. Every block gets a stable id. **Gate:** vault format |
+| 1.8-12 | **Contents block** | S | A block that lists the page's headings and jumps to them; updates itself | Survey round 2: on 8 or more pages, often inside a "Jump to a section" fold. Uses the heading ids of 1.8-11 |
+| 1.8-13 | **Text direction per block, kept exactly** | M | Each block can be set right-to-left or left-to-right (automatic stays the default), a page can have its own default, and the invisible direction characters inside titles and lines are **kept exactly as stored**, never "cleaned" | Survey round 2 (German course, Arabic hubs). Builds on the accepted V1.5 automatic direction. How Notion stores it is question 32 (open) |
+| 1.8-14 | **Remember each item's Notion id on import** | S | Every imported page, block and row keeps its Notion id, so links and mentions find the right copy even when titles repeat (three copies of each German lesson) | Survey round 2 (0.4 point 3). The base for re-import (1.9-8) and the sync ledger (1.9-17) |
 
-**After 1.8:** the Notion migration **pilot** (three pages: Home, one registry, one long guide) can run on throwaway data (parity study M2).
+**After 1.8:** the Notion migration **pilot** can run on throwaway data (parity study M2), on **Workspace Home, the Projects and Ideas registry and one finance database** (survey round 2). A pilot run that goes wrong is simply re-run into a fresh throwaway vault, so the pilot does not wait for re-import (1.9-8); this keeps 1.8 at a buildable size instead of pulling the whole import set forward. The finance database is compared value for value only after the formula route is settled (question 30).
 
 #### Version 1.9 — "Tabs and files in and out"
 
@@ -173,16 +182,23 @@ The hard rules behind it:
 |---|---|---|---|---|
 | 1.9-1 | **Page tabs** | L | Browser-style tabs: + new tab, pin, groups, close, move left/right, reopen closed (Ctrl+Shift+T); tab right-click menu; open tabs restored on restart | Agreed 21:28 UTC. Each tab must save before a lock |
 | 1.9-2 | **PDF that reads like a book** | M | A printed contents page, bookmarks nested like the sidebar, clickable links between pages | Agreed (export study) |
-| 1.9-3 | **Arabic, Greek and emoji in PDF** | M | No more "?" in PDF for these scripts | Parity P1 risk for bilingual guides. **Gate:** may need a bundled font (licence check) |
+| 1.9-3 | *(moved to 1.7-13: PDF export is critical, Ahmed 23:58:44 UTC)* | – | – | – |
 | 1.9-4 | **Word contents page** | S | A Word export starts with a table of contents | |
-| 1.9-5 | **Excel (.xlsx) for databases** | M | Export a database or a view as a real Excel file with numbers and dates | Agreed. Prefer a small own writer (no new library) |
+| 1.9-5 | **Excel (.xlsx) for databases, with charts** | L | Export a database or a view as a real Excel file with numbers and dates, and the view's chart as a real Excel chart where it can be done; otherwise plain tables (Ahmed 23:58:44 UTC: charts "if possible ... if not, it should be plain tables") | Charts need the Excel library `rust_xlsxwriter` (MIT/Apache-2.0) from the start instead of our own small writer (dependency study, section 6). **Gate:** dependency |
 | 1.9-6 | **Databases inside page and notebook exports** | M | A notebook export includes its databases, and they come back in on re-import | Agreed (export study gap 6) |
 | 1.9-7 | **Import into an existing place** | M | Import into this notebook, section or page, not always a new notebook | Parity P1 |
 | 1.9-8 | **Re-import without duplicates** (by Notion id) | L | A second import of the same export updates what is there and lists what changed; edits you made in Notaya are kept as a second version, not overwritten | Parity P1; the monthly refresh (parity 10.3, option A) |
 | 1.9-9 | **"What did not carry over" report and counts check** | S | After an import: pages, rows and pictures counted against the export, and a list of what was simplified | Addition from the parity study (section 8) |
 | 1.9-10 | **Keep Notion's original dates** | S | Imported pages keep their Notion created and edited dates | Parity P2 (to check first) |
+| 1.9-11 | **Import Excel files into databases** | M | Pick an .xlsx file: each sheet becomes a database (or adds rows to an existing one), with numbers and dates kept | Ahmed 23:58:44 UTC: "the imports from Excel should actually add to databases". Uses the reader library `calamine` (MIT). **Gate:** dependency |
+| 1.9-12 | **Saved views carried across** | M | Each Notion database comes in with its saved views (filters including AND/OR groups, sorts, grouping, board column order, hidden properties), so "Overdue" in Notion is "Overdue" in Notaya | Survey round 2 (the "Notion-view reader"; 187 saved views in the workspace). Read through the connector by the AI and written through the AI CLI |
+| 1.9-13 | **Property descriptions** | S | A property can carry a description shown on hover, like Notion's | Survey round 2: the finance databases rely on them (38 of 69 on Events) |
+| 1.9-14 | **Row page layouts** | M | A row's page can pin chosen properties at the top, group the rest into named sections, hide empty ones and fold groups | Survey round 2: Events and Summaries in the finance system |
+| 1.9-15 | **Status groups: check the import** (to do, in progress, complete) | XS | Notion's Status options land in the right group when imported | Survey round 2 asked for groups, but Notaya's Status property **already has the three groups** (`database/types.rs`, read for the 1.6 spec on `a1bb70d`). Only check that the Notion importer and boards use them; no new feature |
+| 1.9-16 | **Page templates, a default per database, and repeating templates** | M | Templates for ordinary pages (not only database rows); a database can name its default template; a template can make a new row by itself every day (for example the habit tracker) | Survey round 2. Row templates already exist (inventory) |
+| 1.9-17 | **Sync ledger** | M | Notaya keeps one list of everything that came from Notion: Notion id, Notaya page, last edited, state. The monthly AI-driven refresh reads it to touch only what changed and to report what it could not see | Survey round 2 (0.6). Builds on 1.8-14 |
 
-**After 1.9:** the Notion **bulk import** (parity M3 to M5) and a monthly refresh can run.
+**After 1.9:** the Notion **bulk import** (parity M3 to M5) and the manual, AI-driven refresh can run.
 
 ### Wave 2 (version 2): the sticky corkboard and dashboards
 
@@ -222,7 +238,7 @@ The hard rules behind it:
 | # | Item | Size | What it means for you | Notes |
 |---|---|---|---|---|
 | 2.3-1 | **Board canvas** | L | Its own section like Sticky notes; infinite canvas, pan and zoom, backgrounds and patterns, undo, autosave | Agreed 23:16–23:23 UTC. **Gate:** vault format; a stroke library (study first) |
-| 2.3-2 | **Pens with pressure** | L | Pen, pencil, marker, highlighter, eraser, your own pens; **drawing-tablet pressure**, tablet eraser end, palm rejection; mouse and touch | Core (Ahmed owns a tablet). Tested only on Ahmed's PC |
+| 2.3-2 | **Pens with pressure** | L | Pen, pencil, marker, highlighter, eraser, your own pens; **pressure from any drawing tablet or pen screen** that Windows supports (not tuned to one brand or model), tablet eraser end, palm rejection; mouse and touch | Core. Ahmed 23:58:44 UTC: "broad, not just specific to my tablet": built on the standard Windows pen input, tested on his tablet plus mouse and touch |
 | 2.3-3 | **Shapes, lines, text** | M | Shapes, arrows, text boxes, automatic shapes | |
 | 2.3-4 | **Select, move, ruler, insert space** | M | Select, lasso, group, align; the ruler with the degree dial; insert space | OneNote Draw tab as the style model |
 
@@ -251,8 +267,9 @@ The hard rules behind it:
 
 | Item | Why later | Source |
 |---|---|---|
-| Synced blocks, table of contents block, button block, page templates outside databases | Rare in Ahmed's Notion (parity P3) | Parity study |
-| Repeating database templates; gallery cover from page content | P3 | Parity study |
+| Synced blocks | Only one found, and its source cannot be read through the connector; it comes in as a plain copy and is listed in the "did not carry" report | Survey round 2 (P3) |
+| A button block inside a page | Notion's button actions cannot be read through the connector; the habit tracker's four buttons are rebuilt by hand with Notaya's existing Button property and automations | Survey round 2 |
+| Gallery cover from page content | P3 | Parity study |
 | Notion "companion tool" for automatic backup (a separate program with a read-only Notion key) | Needs Ahmed's yes on a key and a security review | Parity 10.3 option C |
 | Write back from Notaya to Notion | Last; needs Ahmed's yes on writes | Parity 10.4 |
 | Whiteboard later list: effect pens, handwriting to text, laser pointer, layers, mind-map mode | Whiteboard study "LATER" | Whiteboard study |
@@ -283,7 +300,7 @@ The action list (about 300 actions in about 25 areas) proposes three build steps
 | Undo and log | Each AI request is one "change set" in the tamper-evident (hash-chained, encrypted) activity log, marked "with Claude" or "with Codex"; page edits also land in version history | 1.6 |
 | Step A, Look | Read and explain everything that exists: tree, pages as Markdown, databases, search, sticky notes, calculator, settings; `ai.*`, `ui.open`, `ui.notify` | 1.6 |
 | Step B, Edit | Edit actions for notebooks, sections, pages, blocks, databases, sticky notes, with small saves, the recycle bins, `activity.undo` and version history | 1.6 |
-| Step C, Files | The exchange folder (inside Notaya's own data folder, installed or portable), `import.*`, `export.*`, `backup.now` | 1.7 (1.7-12) |
+| Step C, Files | The exchange folder (next to Notaya's own data folder, installed or portable), `import.*`, `export.*`, `backup.now` | 1.7 (1.7-12) |
 | Never for the AI | Passwords, keyfiles, security on or off, restore and start over, the AI switch itself, opening programs, web links or Windows folders, the clipboard | always |
 
 ### 5.3 Actions that arrive with later versions
@@ -291,8 +308,8 @@ The action list (about 300 actions in about 25 areas) proposes three build steps
 | Version | New AI actions (names follow the action list) |
 |---|---|
 | 1.7 | Files through the exchange folder (import, export, backup); menus, shortcuts, app bar (the AI can arrange the bar), find and replace in a page, banner and page-header settings |
-| 1.8 | Columns, callouts, folding headings, mentions and backlinks, view links, code language and Mermaid, history (list, view, restore), activity log read |
-| 1.9 | Tabs (open, pin, close, group), export with contents page and Excel, import into a place, re-import, the "did not carry" report, counts check |
+| 1.8 | Columns, callouts, folding headings, mentions and backlinks, view links, block links and the contents block, text direction per block, code language and Mermaid, history (list, view, restore), activity log read; open a page by its Notion id |
+| 1.9 | Tabs (open, pin, close, group), export with contents page and Excel (with charts), Excel import into databases, import into a place, re-import, the "did not carry" report, counts check; saved views, property descriptions, row page layouts, Status groups, templates; **list the sync ledger** and **compare a page with its Notion original** (the AI reads Notion through the connector, Notaya never goes online) |
 | 2.0 | Corkboard (positions, pins, strings, modes), calculator history and converters, open the manual page for a feature |
 | 2.1–2.2 | Dashboards: create, add tile, set filter, add slicer, define a measure, snapshot |
 | 2.3–2.4 | Whiteboard: shapes, text, notes, connectors, frames, templates, timer (confirmed by Ahmed 23:54:20 UTC: the AI works with shapes, text and notes, never freehand drawing; it may look at a picture of a board) |
@@ -306,14 +323,15 @@ Not a version of its own: it follows the features it needs (parity study section
 
 | Step | What | Can start after | Needs Ahmed |
 |---|---|---|---|
-| M0 | Read-only count of the whole Notion workspace (counts and types only) | Now | Yes (parity question 1) |
-| M1 | Fix the build list from the counts | M0 | – |
-| M2 | Pilot on three pages (Home, one registry, one long guide) on throwaway data | 1.8 | Pick the three pages (question 4) |
+| M0 | Read-only survey of the whole Notion workspace | **Done** (approved 23:49:01 UTC; parity study section 0) | – |
+| M1 | Fix the build list from the survey | **Done** in this plan (1.8-10 to 1.8-14, 1.9-12 to 1.9-17) | – |
+| M2 | Pilot on Workspace Home, the Projects and Ideas registry and one finance database, on throwaway data, with the "ten most-used pages" test | 1.8 | Finance numbers only after the formula route (question 30) |
 | M3 | Bulk import with the "did not carry" report and counts | 1.9 | – |
-| M4 | Fill-ins through the connector (saved views, layouts, descriptions, covers) | 1.9 + the AI CLI | – |
+| M4 | **Hub home pages rebuilt from Claude's read through the connector** (about 15 homes: columns, colour callouts, mentions, view links and folds survive there, not in the export), plus saved views, layouts, descriptions and covers | 1.9 + the AI CLI | – |
 | M5 | Check: counts, sample compare, your ten most-used pages | M4 | Your walk through ten pages |
 | M6 | Final copy; then a monthly refresh from your own export | M5 | – |
-| – | Finance formulas: the connector cannot read formula text; rebuild by hand with Claude, or read them with a read-only Notion key | 2.2 (measures) | Yes (questions 6, 7) |
+| – | Finance formulas: the connector reads neither formula text nor values. Route proposed in the survey (0.7): read the text read-only in Ahmed's own Notion, rebuild, then compare every value with Notion's CSV export; zero differences is the pass mark | Formula route answer | Yes (question 30, open) |
+| – | Ongoing backup: manual, AI-driven, quality-checked, never automatic (Ahmed 23:49 UTC); first copy from the export, then the AI upgrades homes and views; monthly runs touch only what changed, using the sync ledger (1.9-17) | 1.9 | – |
 
 ---
 
@@ -332,9 +350,9 @@ Not a version of its own: it follows the features it needs (parity study section
 | Version | Points | Big pieces |
 |---|---:|---|
 | 1.6 | about 45 | AI CLI (XL), version history (L), small saves (L) |
-| 1.7 | about 33 | Right-click menus (L) |
-| 1.8 | about 30 | Mentions and backlinks (L) |
-| 1.9 | about 30 | Tabs (L), re-import (L) |
+| 1.7 | about 36 | Right-click menus (L) |
+| 1.8 | about 37 | Mentions and backlinks (L) |
+| 1.9 | about 46 | Tabs (L), re-import (L), Excel with charts (L); the survey's database items add about 13 |
 | 2.0 | about 25 | Corkboard (L), Manual (L) |
 | 2.1 | about 20 | Dashboards I (XL + L) |
 | 2.2 | about 21 | Measures (XL) |
@@ -342,7 +360,7 @@ Not a version of its own: it follows the features it needs (parity study section
 | 2.4 | about 17 | Board notes, templates |
 | 2.5 | about 18 | Notebook mode (XL) |
 
-1.6 is the heaviest on purpose: it is the foundation. If it runs long, items 1.6-12 to 1.6-14 can move to 1.7 without harm.
+1.6 is the heaviest on purpose: it is the foundation. If it runs long, items 1.6-12 to 1.6-14 can move to 1.7 without harm. 1.9 grew with the survey's database items; if it runs long, 1.9-13, 1.9-14 and 1.9-16 (descriptions, row layouts, templates) can be split off into a short 1.9.x before 2.0 without touching the migration order, since the finance pilot waits for the formula answer anyway.
 
 ---
 
@@ -354,9 +372,10 @@ Not a version of its own: it follows the features it needs (parity study section
 | 1.7 | The AI's exchange folder (a file door) | Security behaviour |
 | 1.6 | Any library the CLI channel needs | Dependency |
 | 1.7 | Global shortcuts (likely a Tauri plugin) | Dependency |
-| 1.8 | Mentions, columns and new block attributes in the vault (an older Notaya may not open it; backup first) | Vault format |
+| 1.8 | Mentions, columns, stable block ids, Notion ids and per-block direction in the vault (an older Notaya may not open it; backup first) | Vault format |
 | 1.8 | File, audio and video blocks (size limits, no network) | Security behaviour |
-| 1.9 | A font bundled for Arabic and Greek in PDF (licence) | Dependency |
+| 1.7 | Fonts for Greek, Cyrillic and emoji in PDF (Noto, OFL) | Dependency |
+| 1.9 | `rust_xlsxwriter` (Excel export with charts) and `calamine` (Excel import) | Dependency |
 | 2.1 | The dashboard item kind | Vault format |
 | 2.3 | The whiteboard item kind; a stroke-drawing library (a small licence study first) | Vault format, dependency |
 | Migration | M0 count; a read-only Notion key (optional) | Ahmed's yes |
@@ -383,6 +402,8 @@ Answered on 2026-11-07 at 23:53:46 and 23:54:20 UTC (section 0): order (coordina
 3. **Page lock and "lock now" for the AI:** deferred at Ahmed's word ("I don't want to answer anything about locking pages right now"); asked again when the 1.6 spec needs it.
 4. **The bridge** (how the AI reaches Notaya): Ahmed is not sure; the 1.6 spec explains the proposal in plain words and asks once more.
 5. **Where confirmations appear** (only in the Notaya window, recommended): not answered; the 1.6 spec keeps the recommendation unless Ahmed says otherwise.
+
+Also open, asked in the project chat as **30 to 33** (from the survey, not repeated here): the formula route, the three German course copies, how Notion stores right-to-left, and the notebook layout. The plan places the features so that none of these answers changes the version order.
 
 ---
 
