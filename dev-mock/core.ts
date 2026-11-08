@@ -1,7 +1,8 @@
+import { emit } from "./event";
 // Dev-only stand-in for @tauri-apps/api/core, used by `npm run mock` to preview
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
-import { databaseCommand, databaseMetas, reorderDatabases, NOT_HANDLED } from "./database";
+import { databaseCommand, databaseMetas, reorderDatabases, NOT_HANDLED, coordinationItems, removeCoordinatedItems } from "./database";
 
 const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
@@ -146,10 +147,10 @@ const stickies = [
 
 type Args = Record<string, unknown>;
 
-export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
+async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
-  if (cmd !== "list_notes" && cmd !== "search") {
+  if (!["list_notes", "search", "list_bin", "restore_bin_item", "empty_trash"].includes(cmd)) {
     const dbr = databaseCommand(cmd, args, tree, options);
     if (dbr !== NOT_HANDLED) return ok(dbr);
   }
@@ -248,16 +249,13 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
       Object.assign(shellPrefs, args.prefs as Args);
       return ok({ ...shellPrefs });
     case "list_notes":
-      return ok({ ...(params.get("nb") === "none" ? { ...tree, notebooks: [], sections: [], pages: [] } : tree), databases: databaseMetas() });
+      return ok(liveTree());
     // The real app makes a verified backup first and fails the delete if that fails; ?failDelete=1 mimics that.
     case "delete_notebook":
     case "delete_section": {
       if (params.get("failDelete") === "1") throw "Could not make a backup copy first (the drive is full), so nothing was deleted.";
-      const secs = new Set(cmd === "delete_notebook" ? tree.sections.filter((x) => x.notebookId === args.id).map((x) => x.id) : [String(args.id)]);
-      tree.pages = tree.pages.filter((p) => !secs.has(p.sectionId));
-      tree.sections = tree.sections.filter((x) => !secs.has(x.id));
-      if (cmd === "delete_notebook") tree.notebooks = tree.notebooks.filter((n) => n.id !== args.id);
-      return ok({ ...tree });
+      binTimes.set(String(args.id), Date.now());
+      return ok(liveTree());
     }
     case "update_section": {
       const sec = tree.sections.find((x) => x.id === args.id);
@@ -280,10 +278,11 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     }
     case "get_page": {
       const saved = savedPages.get(String(args.id));
-      const meta = tree.pages.find((x) => x.id === args.id) as { icon?: string; cover?: string } | undefined;
+      const meta = tree.pages.find((x) => x.id === args.id);
+      if (!meta) throw "Page not found.";
       // A page the mock has no cover for gets the dusk gradient (the editor checks lean on it); ?cover=none turns it off.
       const cover = params.get("cover") === "none" ? "" : meta?.cover ?? "gradient:dusk";
-      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, ...(meta ? { icon: meta.icon ?? "" } : {}), cover, ...(saved ?? {}) });
+      return ok({ ...meta, content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", icon: meta.icon ?? "", cover, ...(saved ?? {}) });
     }
     case "create_subpage":
       return ok({ ...tree.pages[0], id: "p" + Math.floor(Math.random() * 1e6), parent: args.parentId, title: args.title, content: "", text: "", cover: "" });
@@ -312,18 +311,59 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
       pictures.set(id, URL.createObjectURL(new Blob([bytes as BlobPart], { type: png ? "image/png" : "image/jpeg" })));
       return ok(id);
     }
-    case "save_page":
-      // Remember what was saved, so a page keeps its content while the mock runs (the first page is the fixed sample otherwise).
+    case "save_page": {
       savedPages.set(String(args.id), { ...(savedPages.get(String(args.id)) ?? {}), title: String(args.title ?? ""), content: String(args.content ?? ""), text: String(args.text ?? "") });
-      return ok({ ...tree.pages[0] });
-    case "list_stickies":
-      return ok([...stickies]);
-    case "get_sticky":
-      return ok(stickies[0]);
+      const pg = tree.pages.find((p) => p.id === args.id);
+      if (!pg) throw "That item no longer exists.";
+      pg.title = String(args.title); pg.preview = String(args.text).slice(0, 160); pg.updated = Date.now();
+      return ok({ ...pg });
+    }
+    case "editing": return ok(null);
+    case "list_bin": return ok(mockBin());
+    case "restore_bin_item": {
+      const id = String(args.id);
+      let parent = parentId(id);
+      const seen = new Set<string>();
+      while (parent && !seen.has(parent)) {
+        seen.add(parent);
+        if (mockInBin(parent) && !args.restoreContainers) throw "parent_in_bin: Restore the containing items too?";
+        if (args.restoreContainers) { binTimes.delete(parent); const pg = tree.pages.find((p) => p.id === parent); if (pg) pg.trashedAt = null; databaseCommand("restore_page", { id: parent }, tree); }
+        parent = parentId(parent);
+      }
+      binTimes.delete(id);
+      const pg = tree.pages.find((p) => p.id === id); if (pg) pg.trashedAt = null;
+      databaseCommand("restore_page", { id }, tree);
+      return ok(liveTree());
+    }
+    case "trash_page": {
+      const pg = tree.pages.find((p) => p.id === args.id); if (!pg) throw "That item no longer exists.";
+      pg.trashedAt = Date.now(); pg.favorite = false; return ok(liveTree());
+    }
+    case "restore_page": {
+      binTimes.delete(String(args.id));
+      const pg = tree.pages.find((p) => p.id === args.id); if (pg) pg.trashedAt = null;
+      return ok(liveTree());
+    }
+    case "delete_page": {
+      removeMockTree(String(args.id)); return ok(liveTree());
+    }
+    case "empty_trash": {
+      for (const item of mockBin()) removeMockTree(item.id);
+      return ok(liveTree());
+    }
+    case "list_stickies": return ok(stickies.filter((s) => !mockInBin(s.id)));
+    case "get_sticky": {
+      const sticky = stickies.find((s) => s.id === args.id); if (!sticky) throw "That item no longer exists.";
+      return ok({ ...sticky, trashedAt: binTimes.get(sticky.id) ?? null });
+    }
+    case "save_sticky": {
+      const sticky = stickies.find((s) => s.id === args.id); if (!sticky) throw "That item no longer exists.";
+      sticky.content = String(args.content); sticky.text = String(args.text); sticky.updated = Date.now(); return ok(null);
+    }
     case "delete_sticky":
     case "delete_stickies": {
       const gone = new Set((args.ids as string[] | undefined) ?? [String(args.id)]);
-      for (let i = stickies.length - 1; i >= 0; i--) if (gone.has(stickies[i].id)) stickies.splice(i, 1);
+      for (const sticky of stickies) if (gone.has(sticky.id)) { binTimes.set(sticky.id, Date.now()); sticky.open = false; }
       return ok(null);
     }
     // The real app opens a calculator window; here, open ?label=calc-1 in a new tab to see one.
@@ -460,12 +500,16 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
       const score = len > 24 ? 4 : len > 14 ? 3 : len > 8 ? 2 : 1;
       return ok({ score, guessesLog10: len, crackTime: score > 2 ? "centuries" : "2 minutes", warning: null, suggestions: [] });
     }
-    case "search":
-      return ok([
-        { kind: "page", id: "p1", title: "Morning pages", subtitle: "", snippet: "Slept badly, but the plan for the week is clear", score: 3 },
-        { kind: "sticky", id: "k1", title: "Call the bank before Friday", subtitle: "", snippet: "ask about the card", score: 1 },
-        ...(databaseCommand("search", args, tree) as unknown[]),
-      ]);
+    case "search": {
+      const q = String(args.query ?? "").toLowerCase();
+      if (!q.trim()) return ok([]);
+      const hits = [
+        ...tree.pages.filter((p) => (p.title + p.preview).toLowerCase().includes(q)).map((p) => ({ kind: "page", id: p.id, title: p.title, subtitle: "", snippet: p.preview, score: 3 })),
+        ...stickies.filter((s) => s.text.toLowerCase().includes(q)).map((s) => ({ kind: "sticky", id: s.id, title: s.text, subtitle: "", snippet: s.text, score: 1 })),
+        ...(databaseCommand("search", args, tree) as { id: string }[]),
+      ];
+      return ok(hits.filter((hit) => !mockInBin(hit.id)));
+    }
     default:
       return ok(null);
   }
@@ -475,4 +519,62 @@ export function convertFileSrc(id: string): string {
   const picked = pictures.get(id);
   if (picked) return picked;
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><rect width="40" height="30" fill="#888"/><text x="4" y="18" font-size="8">${id}</text></svg>`)}`;
+}
+
+
+const binTimes = new Map<string, number>();
+const revs = new Map<string, number>();
+const mockItems = (): Record<string, unknown>[] => [
+  ...tree.notebooks.map((x) => ({ ...x, kind: "notebook" })),
+  ...tree.sections.map((x) => ({ ...x, kind: "section" })),
+  ...tree.pages.map((x) => ({ ...x, kind: "page" })),
+  ...stickies.map((x) => ({ ...x, kind: "sticky" })), ...coordinationItems(),
+];
+function parentId(id: string): string {
+  const item = mockItems().find((x) => x.id === id);
+  return String(item?.notebookId ?? item?.db ?? (item?.parent || item?.sectionId) ?? "");
+}
+function mockWithin(id: string, root: string): boolean {
+  const seen = new Set<string>();
+  while (id && !seen.has(id)) { if (id === root) return true; seen.add(id); id = parentId(id); }
+  return false;
+}
+function mockInBin(id: string): boolean {
+  const seen = new Set<string>();
+  while (id && !seen.has(id)) {
+    seen.add(id);
+    if (binTimes.has(id) || mockItems().find((x) => x.id === id)?.trashedAt != null) return true;
+    id = parentId(id);
+  }
+  return false;
+}
+function liveTree() {
+  if (params.get("nb") === "none") return { notebooks: [], sections: [], pages: [], databases: [] };
+  return { notebooks: tree.notebooks.filter((x) => !mockInBin(x.id)), sections: tree.sections.filter((x) => !mockInBin(x.id)), pages: tree.pages.filter((x) => !mockInBin(x.id) || x.trashedAt != null), databases: databaseMetas().filter((x) => !mockInBin(x.id) || x.trashedAt != null) };
+}
+function mockBin() {
+  return mockItems().filter((x) => binTimes.has(String(x.id)) || x.trashedAt != null).map((x) => ({ id: String(x.id), kind: String(x.kind), title: String(x.name ?? x.title ?? x.text ?? ""), icon: String(x.icon ?? ""), trashedAt: binTimes.get(String(x.id)) ?? x.trashedAt, parentInBin: mockInBin(parentId(String(x.id))) }));
+}
+function removeMockTree(root: string) {
+  const ids = new Set(mockItems().filter((x) => mockWithin(String(x.id), root)).map((x) => String(x.id)));
+  tree.notebooks = tree.notebooks.filter((x) => !ids.has(x.id)); tree.sections = tree.sections.filter((x) => !ids.has(x.id)); tree.pages = tree.pages.filter((x) => !ids.has(x.id));
+  for (let i = stickies.length - 1; i >= 0; i--) if (ids.has(stickies[i].id)) stickies.splice(i, 1);
+  removeCoordinatedItems(ids);
+  for (const id of ids) { binTimes.delete(id); savedPages.delete(id); }
+}
+
+/** Revisions and an event after each mock write, matching the production signal contract. */
+export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
+  const value = await invokeCore<unknown>(cmd, args, options);
+  const write = /^(save_page|save_database|save_sticky|set_cells|create_row|delete_|trash_page|restore_|empty_trash|set_page_look|set_page_favorite|set_sticky_|close_sticky|open_sticky|hide_stickies|reorder)/.test(cmd);
+  const ids = (args.ids as string[] | undefined) ?? [String(args.id ?? args.rowId ?? (cmd === "save_database" ? JSON.parse(String(args.databaseJson)).id : ""))];
+  if (write) {
+    for (const id of ids.filter(Boolean)) revs.set(id, (revs.get(id) ?? 0) + 1);
+    await emit("items-changed", { ids: ids.filter(Boolean), kinds: ids.map((id) => String(mockItems().find((x) => x.id === id)?.kind ?? "page")), tree: true, by: "person", revs: Object.fromEntries(revs) });
+  }
+  if (cmd === "save_sticky") return (revs.get(String(args.id)) ?? 0) as T;
+  if (value && typeof value === "object" && !Array.isArray(value) && ["get_page", "save_page", "get_database", "save_database", "get_sticky"].includes(cmd)) {
+    return structuredClone({ ...value, rev: revs.get(String(args.id ?? (value as { id: string }).id)) ?? 0 }) as T;
+  }
+  return structuredClone(value) as T;
 }

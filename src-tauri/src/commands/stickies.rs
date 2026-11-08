@@ -18,7 +18,7 @@ pub(crate) fn list_stickies_core(s: &Session, _actor: &Actor) -> Result<Vec<Stic
     let mut list: Vec<Sticky> = s
         .items()
         .filter_map(|i| match i {
-            Item::Sticky(x) => Some(x.clone()),
+            Item::Sticky(x) if x.trashed_at.is_none() => Some(x.clone()),
             _ => None,
         })
         .collect();
@@ -38,6 +38,7 @@ pub fn create_sticky(app: AppHandle, state: State<'_, AppState>, open: bool) -> 
 }
 
 pub(crate) fn create_sticky_core(s: &mut Session, _actor: &Actor, open: bool) -> Result<(Sticky, bool)> {
+    s.run_as(_actor, |s| {
     let settings = s.settings();
     let count = s.items().filter(|i| matches!(i, Item::Sticky(_))).count() as f64;
     let now = now_ms();
@@ -54,15 +55,16 @@ pub(crate) fn create_sticky_core(s: &mut Session, _actor: &Actor, open: bool) ->
         open,
         created: now,
         updated: now,
-    };
+    trashed_at: None, };
     s.put(Item::Sticky(st.clone()))?;
     Ok((st, s.protects_capture()))
+    })
 }
 
 
 #[tauri::command]
-pub fn get_sticky(state: State<'_, AppState>, id: String) -> Result<Sticky> {
-    get_sticky_person(&state, id)
+pub fn get_sticky(state: State<'_, AppState>, id: String) -> Result<crate::changes::Revisioned<Sticky>> {
+    state.with(|s| { let st = sticky(s, &id)?; Ok(s.revisioned(&id, st)) })
 }
 
 pub(crate) fn get_sticky_core(s: &Session, _actor: &Actor, id: String) -> Result<Sticky> {
@@ -71,8 +73,11 @@ pub(crate) fn get_sticky_core(s: &Session, _actor: &Actor, id: String) -> Result
 
 
 #[tauri::command]
-pub fn save_sticky(state: State<'_, AppState>, id: String, content: String, text: String) -> Result<()> {
-    save_sticky_person(&state, id, content, text)
+pub fn save_sticky(state: State<'_, AppState>, id: String, content: String, text: String, base_rev: Option<u64>) -> Result<u64> {
+    state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
+        save_sticky_core(s, &Actor::Person, id.clone(), content, text)?;
+        Ok(s.rev(&id))
+    }))
 }
 
 pub(crate) fn save_sticky_core(
@@ -82,14 +87,17 @@ pub(crate) fn save_sticky_core(
     content: String,
     text: String,
 ) -> Result<()> {
+    s.run_as(_actor, |s| {
     limit("Sticky note", &content, 2_000_000)?;
     limit("Sticky note", &text, 2_000_000)?;
 
     let mut st = sticky(s, &id)?;
+    if matches!(_actor, Actor::Ai { .. }) && st.trashed_at.is_some() { return Err(Error::invalid("This note is in the bin. Restore it before editing.")); }
     st.content = content;
     st.text = text;
     st.updated = now_ms();
     s.put(Item::Sticky(st))
+    })
 }
 
 
@@ -110,6 +118,7 @@ pub(crate) fn set_sticky_style_core(
     color: String,
     on_top: bool,
 ) -> Result<Sticky> {
+    s.run_as(_actor, |s| {
     let color = check_color(&color)?;
 
     let mut st = sticky(s, &id)?;
@@ -117,6 +126,7 @@ pub(crate) fn set_sticky_style_core(
     st.on_top = on_top;
     s.put(Item::Sticky(st.clone()))?;
     Ok(st)
+    })
 }
 
 
@@ -134,6 +144,7 @@ pub(crate) fn set_sticky_geometry_core(
     w: f64,
     h: f64,
 ) -> Result<()> {
+    s.run_as(_actor, |s| {
     if ![x, y, w, h].iter().all(|v| v.is_finite()) {
         return Ok(());
     }
@@ -144,6 +155,7 @@ pub(crate) fn set_sticky_geometry_core(
     st.w = w.clamp(220.0, 1200.0);
     st.h = h.clamp(180.0, 1200.0);
     s.put(Item::Sticky(st))
+    })
 }
 
 
@@ -155,10 +167,13 @@ pub fn open_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> Re
 }
 
 pub(crate) fn open_sticky_core(s: &mut Session, _actor: &Actor, id: String) -> Result<(Sticky, bool)> {
+    s.run_as(_actor, |s| {
     let mut st = sticky(s, &id)?;
+    if st.trashed_at.is_some() { return Err(Error::NotFound); }
     st.open = true;
     s.put(Item::Sticky(st.clone()))?;
     Ok((st, s.protects_capture()))
+    })
 }
 
 
@@ -170,9 +185,11 @@ pub fn close_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> R
 }
 
 pub(crate) fn close_sticky_core(s: &mut Session, _actor: &Actor, id: String) -> Result<()> {
+    s.run_as(_actor, |s| {
     let mut st = sticky(s, &id)?;
     st.open = false;
     s.put(Item::Sticky(st))
+    })
 }
 
 
@@ -189,6 +206,7 @@ pub fn hide_all(app: &AppHandle, state: &AppState) -> Result<()> {
 }
 
 pub(crate) fn hide_stickies_core(s: &mut Session, _actor: &Actor) -> Result<()> {
+    s.run_as(_actor, |s| {
     let open: Vec<Sticky> = s
         .items()
         .filter_map(|i| match i {
@@ -201,6 +219,7 @@ pub(crate) fn hide_stickies_core(s: &mut Session, _actor: &Actor) -> Result<()> 
         s.put(Item::Sticky(st))?;
     }
     Ok(())
+    })
 }
 
 // Async: it waits for the windows to save, which must not happen on the main thread.
@@ -209,25 +228,28 @@ pub fn hide_stickies(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     hide_all(&app, &state)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn delete_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<()> {
+    if state.is_unlocked() { crate::state::flush_windows(&app); }
     delete_sticky_person(&state, id.clone())?;
     ui::close_sticky(&app, &id);
     Ok(())
 }
 
 pub(crate) fn delete_sticky_core(s: &mut Session, _actor: &Actor, id: String) -> Result<()> {
-    sticky(s, &id)?;
-    s.remove_many(&[id.clone()])?;
-    s.collect_garbage()?;
-    Ok(())
+    s.run_as(_actor, |s| {
+    let mut st = sticky(s, &id)?;
+    st.trashed_at.get_or_insert_with(now_ms);
+    st.open = false;
+    s.put(Item::Sticky(st))
+    })
 }
 
 
 /// Deletes several sticky notes in one vault write. Ids that no longer exist (deleted
 /// in their own window meanwhile) are skipped; if any other id is not a sticky note,
 /// nothing is removed.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn delete_stickies(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> Result<()> {
     let mut ids = ids;
     ids.sort();
@@ -238,6 +260,7 @@ pub fn delete_stickies(app: AppHandle, state: State<'_, AppState>, ids: Vec<Stri
     if ids.len() > 10_000 {
         return Err(Error::Invalid("Too many sticky notes at once.".into()));
     }
+    if state.is_unlocked() { crate::state::flush_windows(&app); }
     delete_stickies_person(&state, ids.clone())?;
     for id in &ids {
         ui::close_sticky(&app, id);
@@ -246,6 +269,7 @@ pub fn delete_stickies(app: AppHandle, state: State<'_, AppState>, ids: Vec<Stri
 }
 
 pub(crate) fn delete_stickies_core(s: &mut Session, _actor: &Actor, ids: Vec<String>) -> Result<()> {
+    s.run_as(_actor, |s| {
     let mut ids = ids;
     ids.sort();
     ids.dedup();
@@ -267,9 +291,10 @@ pub(crate) fn delete_stickies_core(s: &mut Session, _actor: &Actor, ids: Vec<Str
     if found.is_empty() {
         return Ok(());
     }
-    s.remove_many(&found)?;
-    s.collect_garbage()?;
-    Ok(())
+    let mut changed = Vec::new();
+    for id in found { let mut st = sticky(s, &id)?; st.trashed_at.get_or_insert_with(now_ms); st.open = false; changed.push(Item::Sticky(st)); }
+    s.put_many(changed)
+    })
 }
 
 

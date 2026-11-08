@@ -77,9 +77,9 @@ struct Ids {
 
 fn source(v: &Vault) -> (Ids, Vec<(&'static str, Vec<&'static str>)>) {
     let att = v.with_mut(|s| s.put_attachment("image/png", PNG)).unwrap();
-    let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
+    let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0, trashed_at: None, });
     let sec = |id: &str, nbid: &str, name: &str, order| {
-        Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 })
+        Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0, trashed_at: None, })
     };
     let id = |_: &str| new_id();
     let (nb_a, nb_b, sec_j, sec_i, sec_w, j1, jc, j2, i1, w1) = (id("nbA"), id("nbB"), id("secJ"), id("secI"), id("secW"), id("j1"), id("jc"), id("j2"), id("i1"), id("w1"));
@@ -183,8 +183,8 @@ fn colors_code_tasks_captions_and_shelves_come_back() {
     ] });
     let (nb, sec, pid) = (new_id(), new_id(), new_id());
     let items = vec![
-        Item::Notebook(Notebook { id: nb.clone(), name: "Colors".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-        Item::Section(Section { id: sec.clone(), notebook_id: nb, name: "Main".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+        Item::Notebook(Notebook { id: nb.clone(), name: "Colors".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+        Item::Section(Section { id: sec.clone(), notebook_id: nb, name: "Main".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
         Item::Page(Page {
             id: pid.clone(),
             section_id: sec,
@@ -323,8 +323,8 @@ fn arabic_hebrew_and_english_keep_their_direction() {
     ] });
     let (nb, sec, pid) = (new_id(), new_id(), new_id());
     let items = vec![
-        Item::Notebook(Notebook { id: nb.clone(), name: "Directions".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-        Item::Section(Section { id: sec.clone(), notebook_id: nb, name: "Main".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+        Item::Notebook(Notebook { id: nb.clone(), name: "Directions".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+        Item::Section(Section { id: sec.clone(), notebook_id: nb, name: "Main".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
         Item::Page(Page {
             id: pid.clone(),
             section_id: sec,
@@ -574,10 +574,24 @@ fn linking(id: &str, section: &str, parent: &str, title: &str, order: i64, inlin
 /// to pages that were not exported come back as their text; nothing dead or `notaya:` is left.
 #[test]
 fn links_between_exported_pages_come_back_as_links_between_the_imported_pages() {
+    // Check generated row ids, then compare every other field with the original row shape.
+    fn omit_row_ids(node: &mut serde_json::Value) {
+        if node["type"] == "pageLink" {
+            let bid = node["attrs"]["bid"].as_str().expect("the page link has a block id");
+            assert!(bid.len() == 16 && bid.bytes().all(|b| b.is_ascii_hexdigit()));
+            node["attrs"].as_object_mut().unwrap().remove("bid");
+        }
+        if let Some(children) = node.get_mut("content").and_then(serde_json::Value::as_array_mut) {
+            for child in children {
+                omit_row_ids(child);
+            }
+        }
+    }
+
     let root = temp();
     let src = new_vault(&root.join("src-data"));
-    let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
-    let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 });
+    let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0, trashed_at: None, });
+    let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0, trashed_at: None, });
     let (n1, n2, s1, s2, pa, pb, pc, pt) = (new_id(), new_id(), new_id(), new_id(), new_id(), new_id(), new_id(), new_id());
     let ids = [(pa.clone(), "pa"), (pb.clone(), "pb"), (pc.clone(), "pc"), (pt.clone(), "ptrash")];
     let name_of = |id: &str| ids.iter().find(|(i, _)| i == id).map_or("?", |(_, n)| *n);
@@ -654,8 +668,11 @@ fn links_between_exported_pages_come_back_as_links_between_the_imported_pages() 
                 (b, vec![link(a), link(c)]),
                 (c, vec![link(b), row(a)]),
             ] {
+                let mut content: serde_json::Value = serde_json::from_str(&from.content).unwrap();
+                omit_row_ids(&mut content);
+                let content = serde_json::to_string(&content).unwrap();
                 for w in want {
-                    if !from.content.contains(&w) {
+                    if !content.contains(&w) {
                         failures.push(format!("{label}: '{}' lacks {w}: {}", from.title, from.content));
                     }
                 }
@@ -676,9 +693,9 @@ fn links_between_exported_pages_come_back_as_links_between_the_imported_pages() 
 fn page_link_rows_inside_a_shelf_come_back_as_rows_inside_a_shelf() {
     let root = temp();
     let src = new_vault(&root.join("src-data"));
-    let nb = Item::Notebook(Notebook { id: new_id(), name: "Book".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
+    let nb = Item::Notebook(Notebook { id: new_id(), name: "Book".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
     let Item::Notebook(n) = &nb else { unreachable!() };
-    let section = Item::Section(Section { id: new_id(), notebook_id: n.id.clone(), name: "Sec".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+    let section = Item::Section(Section { id: new_id(), notebook_id: n.id.clone(), name: "Sec".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
     let Item::Section(sec) = &section else { unreachable!() };
     let (pa, pb) = (new_id(), new_id());
     let mut a = page(&pa, &sec.id, "", "Holder", 0, None);

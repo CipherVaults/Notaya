@@ -15,6 +15,17 @@ pub fn new_id() -> String {
     hex::encode(crate::crypto::random_bytes::<16>())
 }
 
+/// The encrypted previous value of an AI edit replaced by a person's whole save.
+#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplacedEdit {
+    pub id: String,
+    pub rev: u64,
+    pub by: String,
+    pub status: String,
+    pub previous: String,
+}
+
 /// The settings record always uses this id.
 pub const SETTINGS_ID: &str = "00000000000000000000000000000000";
 
@@ -56,6 +67,8 @@ pub struct Notebook {
     pub order: i64,
     pub created: i64,
     pub updated: i64,
+    #[serde(default)]
+    pub trashed_at: Option<i64>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
@@ -68,6 +81,8 @@ pub struct Section {
     pub order: i64,
     pub created: i64,
     pub updated: i64,
+    #[serde(default)]
+    pub trashed_at: Option<i64>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
@@ -152,11 +167,16 @@ pub struct Sticky {
     pub open: bool,
     pub created: i64,
     pub updated: i64,
+    #[serde(default)]
+    pub trashed_at: Option<i64>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Zeroize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
+    /// Previous AI values replaced by a person. Encrypted; never sent by get_settings.
+    #[serde(default)]
+    pub replaced_edits: Vec<ReplacedEdit>,
     /// "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system"
     pub theme: String,
     pub accent: String,
@@ -226,6 +246,7 @@ pub struct CalcEntry {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            replaced_edits: Vec::new(),
             // Sunrise is the default look (A28). Sunrise dark and the others are chosen in Settings.
             theme: "sunrise".into(),
             accent: "mono".into(),

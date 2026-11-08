@@ -4,6 +4,7 @@ import { Check, ChevronRight, Download, LayoutTemplate, Loader2, MoreHorizontal,
 import { toast } from "sonner";
 import { registerFlush, trackSave } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
+import { watchItemChanges, type Revisioned } from "@/lib/changes";
 import type { Page } from "@/lib/types";
 import { cn, debounce, formatDate } from "@/lib/utils";
 import { useApp } from "@/store/app";
@@ -61,13 +62,17 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   const titleRef = useRef(page.title);
   const editorRef = useRef<Editor | null>(null);
   const dirtyRef = useRef(false);
+  const savingRef = useRef(0);
+  const recheckRef = useRef<(() => void) | null>(null);
+  const revRef = useRef((page as Revisioned<Page>).rev ?? 0);
   const inflightRef = useRef<Promise<void> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const slashController = useRef<SlashController>({ state: null, onKey: () => false });
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
   const securityOn = useApp((s) => s.status?.securityOn ?? false);
-  const readOnly = page.trashedAt !== null;
+  const [trashedAt, setTrashedAt] = useState(page.trashedAt);
+  const readOnly = trashedAt != null;
   const [rowFavorite, setRowFavorite] = useState(page.favorite);
 
   // Saves run one after another, so an older save can never land after a newer one.
@@ -79,9 +84,14 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
     const content = JSON.stringify(editor.getJSON());
     const text = editor.getText();
     dirtyRef.current = false;
+    savingRef.current++;
     const run = async () => {
       try {
-        const meta = await api.savePage(page.id, title, content, text);
+        const meta = await api.savePage(page.id, title, content, text, revRef.current);
+        revRef.current = meta.rev;
+        setTrashedAt(meta.trashedAt);
+        if (editorRef.current && !editorRef.current.isDestroyed) editorRef.current.setEditable(meta.trashedAt == null);
+        if (!dirtyRef.current && savingRef.current === 1) void api.editing(page.id, false).catch(() => {});
         const t = useApp.getState().tree;
         setTree({ ...t, pages: t.pages.map((p) => (p.id === meta.id ? meta : p)) });
         setUpdated(meta.updated);
@@ -91,7 +101,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
         dirtyRef.current = true; // keep the edit so the next save retries it
         setSaveState("error");
         toast.error(`Couldn't save: ${errorText(e)}`);
-      }
+      } finally { savingRef.current--; recheckRef.current?.(); }
     };
     const p = (inflightRef.current ?? Promise.resolve()).then(run);
     inflightRef.current = p;
@@ -119,9 +129,10 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
 
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
+    void api.editing(page.id, true).catch(() => {});
     setSaveState("saving");
     save();
-  }, [save]);
+  }, [save, page.id]);
 
   const extensions = useMemo(
     () => pageExtensions({ onState: setSlash, onKey: (e) => slashController.current.onKey(e) }),
@@ -140,11 +151,38 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   });
   editorRef.current = editor;
 
+
+  useEffect(() => {
+    const watcher = watchItemChanges(page.id, () => revRef.current,
+      () => dirtyRef.current || savingRef.current > 0, async (alive) => {
+      const fresh = await api.getPage(page.id);
+      if (!alive() || dirtyRef.current || savingRef.current > 0 || fresh.rev < revRef.current) return;
+      const e = editorRef.current;
+      if (!e || e.isDestroyed) return;
+      setTrashedAt(fresh.trashedAt);
+      e.setEditable(fresh.trashedAt == null);
+      const scroller = wrapRef.current?.closest<HTMLElement>(".overflow-y-auto");
+      const scroll = scroller?.scrollTop ?? 0;
+      const selection = e.state.selection;
+      e.chain().setContent(parseContent(fresh.content), { emitUpdate: false }).setMeta("addToHistory", false).run();
+      const max = e.state.doc.content.size;
+      e.commands.setTextSelection({ from: Math.min(selection.from, max), to: Math.min(selection.to, max) });
+      if (scroller) scroller.scrollTop = scroll;
+      titleRef.current = fresh.title;
+      setTitle(fresh.title); setIcon(fresh.icon); setCover(fresh.cover);
+      setUpdated(fresh.updated); setWords(fresh.text.split(/\s+/).filter(Boolean).length);
+      revRef.current = fresh.rev;
+    });
+    recheckRef.current = watcher.recheck;
+    return () => { recheckRef.current = null; watcher.dispose(); };
+  }, [page.id]);
+
   // Flush any pending save when leaving the page.
   useEffect(
     () => () => {
       save.cancel();
       if (editorRef.current && dirtyRef.current) void doSave();
+      void inflightRef.current?.then(() => { if (!dirtyRef.current) void api.editing(page.id, false).catch(() => {}); });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -200,6 +238,8 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   };
   const trash = async () => {
     save.cancel();
+    await flushNow();
+    if (dirtyRef.current) return;
     setTree(await api.trashPage(page.id));
     if (isRow && !embedded) useApp.getState().openDatabase(page.parent);
     else if (!embedded) useApp.getState().openPage(null);
@@ -314,7 +354,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
                   </MenuItem>
                 )}
                 <MenuItem danger icon={<Trash2 size={15} />} onSelect={trash}>
-                  Move to trash
+                  Move to bin
                 </MenuItem>
               </MenuContent>
             </Menu>
@@ -356,7 +396,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
             className={cn("mb-4 w-full min-w-0 bg-transparent font-bold leading-tight tracking-tight text-fg outline-none placeholder:text-faint/70", embedded ? "text-[2rem]" : "text-[2.6rem]")}
           />
           </div>
-          {isRow && rowDb && <RowProperties dbId={rowDb.id} rowId={page.id} title={title} readOnly={readOnly} />}
+          {isRow && rowDb && <div data-database={rowDb.id}><RowProperties dbId={rowDb.id} rowId={page.id} title={title} readOnly={readOnly} /></div>}
 
           <div ref={wrapRef} className={cn("relative", embedded ? "-ml-12 pl-12" : "-ml-16 pl-16")}>
             <BlockHandle editor={editor} container={wrapRef} />

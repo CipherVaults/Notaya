@@ -1,5 +1,7 @@
+mod changes;
 mod actions;
 mod backup;
+mod blocks;
 mod commands;
 mod crypto;
 mod database;
@@ -217,6 +219,9 @@ pub fn run() {
             backup_cmd::start_over,
             backup_cmd::import_portable_notes,
             notes::list_notes,
+            notes::list_bin,
+            notes::restore_bin_item,
+            vault_cmd::editing,
             notes::create_notebook,
             notes::update_notebook,
             notes::delete_notebook,

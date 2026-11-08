@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { onItemsChanged, type BinEntry } from "@/lib/changes";
 import { api } from "@/lib/ipc";
 import { getKey, setKey } from "@/lib/storage";
 import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
@@ -33,6 +34,7 @@ interface AppState {
   settings: VaultSettings | null;
   view: View;
   tree: NotesTree;
+  bin: BinEntry[];
   stickies: Sticky[];
   activeNotebookId: string | null;
   activeSectionId: string | null;
@@ -93,11 +95,25 @@ function saveLayout(open: boolean, width: number) {
 
 const EMPTY_TREE: NotesTree = { notebooks: [], sections: [], pages: [], databases: [] };
 
+/** One startup sweep for pre-1.6 navigation metadata; no marker or other keys are written. */
+export function cleanupLegacyDatabaseViews() {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("dbview:")) localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage can be unavailable; that must not prevent opening Notaya.
+  }
+}
+cleanupLegacyDatabaseViews();
+
 export const useApp = create<AppState>((set, get) => ({
   status: null,
   settings: null,
   view: "notes",
   tree: EMPTY_TREE,
+  bin: [],
   stickies: [],
   activeNotebookId: null,
   activeSectionId: null,
@@ -124,16 +140,18 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   loadVault: async () => {
-    const [settings, tree, stickies] = await Promise.all([
+    const [settings, tree, stickies, bin] = await Promise.all([
       api.getSettings(),
       api.listNotes(),
       api.listStickies(),
+      api.listBin?.() ?? Promise.resolve([]),
     ]);
     const restored = await restoreLastPlace((settings as VaultSettings).lastPlace, tree);
     set({
       settings,
       tree,
       stickies,
+      bin,
       ...restored,
     });
   },
@@ -179,7 +197,20 @@ function locationParents(tree: NotesTree, id: string) {
   return sectionParents(tree, (tree.pages.find((p) => p.id === id) ?? tree.databases.find((d) => d.id === id))?.sectionId);
 }
 
-/** Resolve against the freshly unlocked tree; a deleted item or parent always goes to Home. */
+/** Rows are absent from the sidebar tree. Their parent is their containing database. */
+export async function rowExportNotebook(tree: NotesTree, rowId: string) {
+  try {
+    const row = await api.getPage(rowId);
+    if (row.trashedAt !== null) return null;
+    const database = tree.databases.find((d) => d.id === row.parent && d.trashedAt === null && d.sectionId === row.sectionId);
+    const section = tree.sections.find((s) => s.id === database?.sectionId);
+    return tree.notebooks.find((n) => n.id === section?.notebookId) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve against the unlocked tree and core reads for pages hidden beneath rows. */
 export async function restoreLastPlace(place: LastPlace | null | undefined, tree: NotesTree) {
   const activeNotebookId = tree.notebooks[0]?.id ?? null;
   const home = {
@@ -195,7 +226,7 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
   try {
     const item = place.kind === "row"
       ? await api.getPage(place.id)
-      : place.kind === "database" ? tree.databases.find((d) => d.id === place.id) : tree.pages.find((p) => p.id === place.id);
+      : place.kind === "database" ? tree.databases.find((d) => d.id === place.id) : tree.pages.find((p) => p.id === place.id) ?? await api.getPage(place.id);
     if (!item || item.trashedAt !== null) return home;
     const parents = sectionParents(tree, item.sectionId);
     if (!parents.activeSectionId || !tree.notebooks.some((n) => n.id === parents.activeNotebookId)) return home;
@@ -203,15 +234,18 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
     const seen = new Set([item.id]);
     if (place.kind === "row") {
       const db = tree.databases.find((d) => d.id === parent && d.trashedAt === null && d.sectionId === item.sectionId);
-      if (!db) return home;
+      if (!db || seen.has(db.id)) return home;
+      seen.add(db.id);
       parent = db.parent;
     }
     while (parent) {
       if (seen.has(parent)) return home;
       seen.add(parent);
-      const page = tree.pages.find((p) => p.id === parent && p.trashedAt === null && p.sectionId === item.sectionId);
-      if (!page) return home;
-      parent = page.parent;
+      const ancestor = tree.pages.find((p) => p.id === parent)
+        ?? tree.databases.find((d) => d.id === parent)
+        ?? await api.getPage(parent);
+      if (ancestor.trashedAt !== null || ancestor.sectionId !== item.sectionId) return home;
+      parent = ancestor.parent;
     }
     if (place.kind === "database" && place.viewId) {
       const database = await api.getDatabase(place.id);
@@ -219,7 +253,41 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
     }
     return { ...home, ...parents, activePageId: item.id, activeKind: place.kind, activeDatabaseViewId: place.kind === "database" ? place.viewId ?? null : null };
   } catch {
-    // A row that no longer exists (or cannot be read) must not prevent opening the vault.
+    // A location or ancestor that cannot be read must not prevent opening the vault.
     return home;
   }
 }
+
+
+// Coalesce a batch signal into one refresh; serialize overlapping signals so old
+// reads cannot replace a newer tree. The editors decide independently whether to reload.
+let refreshing = false;
+let refreshAgain = false;
+onItemsChanged((change) => {
+  if (!change.tree || !useApp.getState().status?.unlocked) return;
+  refreshAgain = true;
+  if (refreshing) return;
+  refreshing = true;
+  void (async () => {
+    try {
+      while (refreshAgain) {
+        refreshAgain = false;
+        const [tree, stickies, bin] = await Promise.all([api.listNotes(), api.listStickies(), api.listBin()]);
+        if (!useApp.getState().status?.unlocked) return;
+        useApp.setState({ tree, stickies, bin });
+        const app = useApp.getState();
+        if (app.activeKind !== "row" && app.activePageId && ![...tree.pages, ...tree.databases].some((p) => p.id === app.activePageId)) app.openPage(null);
+        if (app.activeKind === "row" && app.activePageId) {
+          const id = app.activePageId;
+          try {
+            const row = await api.getPage(id);
+            if (useApp.getState().activePageId === id && (row.trashedAt != null || !tree.databases.some((db) => db.id === row.parent && db.trashedAt == null))) app.openPage(null);
+          } catch { if (useApp.getState().activePageId === id) app.openPage(null); }
+        }
+        if (app.activeSectionId && !tree.sections.some((s) => s.id === app.activeSectionId)) app.openSection(null);
+        if (app.activeNotebookId && !tree.notebooks.some((n) => n.id === app.activeNotebookId)) app.openNotebook(null);
+      }
+    } catch { /* A lock can overtake a refresh; the unlock loads a fresh tree. */ }
+    finally { refreshing = false; }
+  })();
+});
