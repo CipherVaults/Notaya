@@ -58,8 +58,17 @@ export const BlockIds = Extension.create({
   addProseMirrorPlugins() {
     return [new Plugin({
       key: blockIdsKey,
-      appendTransaction(transactions, _old, state) {
+      appendTransaction(transactions, old, state) {
         if (!transactions.some((tr) => tr.docChanged || tr.getMeta(blockIdsKey))) return null;
+        // A pasted copy can precede its source. Keep the identity at the mapped
+        // original position, rather than letting the first duplicate steal it.
+        const originals = new Map<string, number>();
+        old.doc.descendants((node, pos) => {
+          if (!BLOCK_TYPES.includes(node.type.name) || !validBid(node.attrs.bid)) return;
+          let mapped = pos;
+          for (const tr of transactions) mapped = tr.mapping.map(mapped, 1);
+          if (state.doc.nodeAt(mapped)?.attrs.bid === node.attrs.bid) originals.set(node.attrs.bid, mapped);
+        });
         const reserved = new Set<string>();
         state.doc.descendants((node) => {
           if (BLOCK_TYPES.includes(node.type.name) && validBid(node.attrs.bid)) reserved.add(node.attrs.bid);
@@ -69,7 +78,7 @@ export const BlockIds = Extension.create({
         state.doc.descendants((node, pos) => {
           if (!BLOCK_TYPES.includes(node.type.name)) return;
           let id: unknown = node.attrs.bid;
-          if (!validBid(id) || seen.has(id)) {
+          if (!validBid(id) || seen.has(id) || (originals.has(id) && originals.get(id) !== pos)) {
             do {
               id = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
             } while (reserved.has(id as string));

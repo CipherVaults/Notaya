@@ -1,88 +1,170 @@
 //! Transactional edits: a refused operation leaves the input document unchanged.
-use std::collections::HashSet;
-use serde_json::{json, Value};
-use crate::error::{Error, Result};
 use super::{ensure_ids, ids};
+use crate::error::{Error, Result};
+use serde_json::{json, Value};
+use std::collections::HashSet;
 
-fn invalid() -> Error { Error::invalid("Invalid block document or operation.") }
-fn kind(node: &Value) -> &str { node["type"].as_str().unwrap_or("") }
-fn children(node: &Value) -> &[Value] { node["content"].as_array().map(Vec::as_slice).unwrap_or(&[]) }
+fn invalid() -> Error {
+    Error::invalid("Invalid block document or operation.")
+}
+fn kind(node: &Value) -> &str {
+    node["type"].as_str().unwrap_or("")
+}
+fn children(node: &Value) -> &[Value] {
+    node["content"].as_array().map(Vec::as_slice).unwrap_or(&[])
+}
 fn block(node: &Value) -> bool {
-    ids::addressable(node) && !matches!(kind(node), "listItem" | "taskItem" | "tableRow" | "tableCell" | "tableHeader" | "column")
+    ids::addressable(node)
+        && !matches!(
+            kind(node),
+            "listItem" | "taskItem" | "tableRow" | "tableCell" | "tableHeader" | "column"
+        )
 }
 
 /// The editor's content expressions, including the importer invariants. Reject
 /// malformed input rather than silently dropping or normalizing its text.
 pub fn validate(doc: &Value) -> Result<()> {
-    if kind(doc) != "doc" || doc.to_string().len() > crate::importers::doc::MAX_RENDER_BYTES { return Err(invalid()); }
+    if kind(doc) != "doc" || doc.to_string().len() > crate::importers::doc::MAX_RENDER_BYTES {
+        return Err(invalid());
+    }
     check(doc, 0, &mut 0)
 }
 
 fn check(node: &Value, depth: usize, count: &mut usize) -> Result<()> {
     *count += 1;
-    if depth > 64 || *count > 200_000 || !node.is_object() { return Err(invalid()); }
-    if node.get("attrs").is_some_and(|a| !a.is_object()) || node.get("content").is_some_and(|c| !c.is_array()) { return Err(invalid()); }
+    if depth > 64 || *count > 200_000 || !node.is_object() {
+        return Err(invalid());
+    }
+    if node.get("attrs").is_some_and(|a| !a.is_object())
+        || node.get("content").is_some_and(|c| !c.is_array())
+    {
+        return Err(invalid());
+    }
     let kids = children(node);
     let inline = |n: &Value| matches!(kind(n), "text" | "hardBreak" | "mathInline");
     let nonempty = !kids.is_empty();
     let shape = match kind(node) {
         "doc" => depth == 0 && nonempty && kids.iter().all(block),
         "paragraph" | "heading" => kids.iter().all(inline),
-        "codeBlock" => kids.iter().all(|n| kind(n) == "text" && n.get("marks").is_none_or(|m| m.as_array().is_some_and(Vec::is_empty))),
+        "codeBlock" => kids.iter().all(|n| {
+            kind(n) == "text"
+                && n.get("marks")
+                    .is_none_or(|m| m.as_array().is_some_and(Vec::is_empty))
+        }),
         "bulletList" | "orderedList" => nonempty && kids.iter().all(|n| kind(n) == "listItem"),
         "taskList" => nonempty && kids.iter().all(|n| kind(n) == "taskItem"),
-        "listItem" | "taskItem" => nonempty && kind(&kids[0]) == "paragraph" && kids.iter().all(block),
-        "blockquote" | "callout" | "toggle" | "column" | "tableCell" | "tableHeader" => nonempty && kids.iter().all(block),
+        "listItem" | "taskItem" => {
+            nonempty && kind(&kids[0]) == "paragraph" && kids.iter().all(block)
+        }
+        "blockquote" | "callout" | "toggle" | "column" | "tableCell" | "tableHeader" => {
+            nonempty && kids.iter().all(block)
+        }
         "columns" => (2..=5).contains(&kids.len()) && kids.iter().all(|n| kind(n) == "column"),
         "table" => nonempty && kids.iter().all(|n| kind(n) == "tableRow"),
-        "tableRow" => nonempty && kids.iter().all(|n| matches!(kind(n), "tableCell" | "tableHeader")),
+        "tableRow" => {
+            nonempty
+                && kids
+                    .iter()
+                    .all(|n| matches!(kind(n), "tableCell" | "tableHeader"))
+        }
         "text" => kids.is_empty() && node["text"].as_str().is_some_and(|s| !s.is_empty()),
-        "hardBreak" | "mathInline" | "horizontalRule" | "image" | "mathBlock" | "mermaidBlock" | "pageLink" | "databaseBlock" => kids.is_empty(),
+        "hardBreak" | "mathInline" | "horizontalRule" | "image" | "mathBlock" | "mermaidBlock"
+        | "pageLink" | "databaseBlock" => kids.is_empty(),
         _ => false,
     };
-    if !shape { return Err(invalid()); }
+    if !shape {
+        return Err(invalid());
+    }
     if let Some(marks) = node.get("marks") {
         let marks = marks.as_array().ok_or_else(invalid)?;
-        if !inline(node) && !marks.is_empty() { return Err(invalid()); }
+        if !inline(node) && !marks.is_empty() {
+            return Err(invalid());
+        }
         let mut seen = HashSet::new();
         for m in marks {
-            if !matches!(kind(m), "bold" | "italic" | "underline" | "strike" | "code" | "link" | "highlight" | "textStyle" | "comment")
-                || !seen.insert(kind(m)) || m.get("attrs").is_some_and(|a| !a.is_object()) { return Err(invalid()); }
+            if !matches!(
+                kind(m),
+                "bold"
+                    | "italic"
+                    | "underline"
+                    | "strike"
+                    | "code"
+                    | "link"
+                    | "highlight"
+                    | "textStyle"
+                    | "comment"
+            ) || !seen.insert(kind(m))
+                || m.get("attrs").is_some_and(|a| !a.is_object())
+            {
+                return Err(invalid());
+            }
         }
-        if seen.contains("code") && marks.len() > 1 { return Err(invalid()); }
+        if seen.contains("code") && marks.len() > 1 {
+            return Err(invalid());
+        }
     }
     if let Some(dir) = node["attrs"].get("dir") {
-        if !dir.is_null() && !matches!(dir.as_str(), Some("rtl" | "ltr" | "auto")) { return Err(invalid()); }
-    }
-    if kind(node) == "heading" && node["attrs"].get("level").is_some_and(|v| !v.as_u64().is_some_and(|n| (1..=4).contains(&n))) { return Err(invalid()); }
-    if matches!(kind(node), "tableCell" | "tableHeader") {
-        for key in ["colspan", "rowspan"] {
-            if node["attrs"].get(key).is_some_and(|v| !v.as_u64().is_some_and(|n| n > 0 && n <= 20_000)) { return Err(invalid()); }
+        if !dir.is_null() && !matches!(dir.as_str(), Some("rtl" | "ltr" | "auto")) {
+            return Err(invalid());
         }
     }
-    for child in kids { check(child, depth + 1, count)?; }
+    if kind(node) == "heading"
+        && node["attrs"]
+            .get("level")
+            .is_some_and(|v| !v.as_u64().is_some_and(|n| (1..=4).contains(&n)))
+    {
+        return Err(invalid());
+    }
+    if matches!(kind(node), "tableCell" | "tableHeader") {
+        for key in ["colspan", "rowspan"] {
+            if node["attrs"]
+                .get(key)
+                .is_some_and(|v| !v.as_u64().is_some_and(|n| n > 0 && n <= 20_000))
+            {
+                return Err(invalid());
+            }
+        }
+    }
+    for child in kids {
+        check(child, depth + 1, count)?;
+    }
     Ok(())
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum Position<'a> { Start, End, Before(&'a str), After(&'a str) }
+pub enum Position<'a> {
+    Start,
+    End,
+    Before(&'a str),
+    After(&'a str),
+}
 
 fn path(node: &Value, id: &str) -> Result<Vec<usize>> {
     fn find(node: &Value, id: &str, here: &mut Vec<usize>) -> bool {
-        if ids::addressable(node) && node["attrs"]["bid"].as_str() == Some(id) { return true; }
+        if ids::addressable(node) && node["attrs"]["bid"].as_str() == Some(id) {
+            return true;
+        }
         for (i, child) in children(node).iter().enumerate() {
             here.push(i);
-            if find(child, id, here) { return true; }
+            if find(child, id, here) {
+                return true;
+            }
             here.pop();
         }
         false
     }
     let mut here = Vec::new();
-    if !id.is_empty() && find(node, id, &mut here) { Ok(here) } else { Err(Error::NotFound) }
+    if !id.is_empty() && find(node, id, &mut here) {
+        Ok(here)
+    } else {
+        Err(Error::NotFound)
+    }
 }
 
 fn at_mut<'a>(mut doc: &'a mut Value, path: &[usize]) -> &'a mut Value {
-    for &i in path { doc = &mut doc["content"][i]; }
+    for &i in path {
+        doc = &mut doc["content"][i];
+    }
     doc
 }
 
@@ -94,7 +176,9 @@ fn prepared(doc: &Value) -> Result<Value> {
 }
 
 fn finish(original: &mut Value, mut next: Value) -> Result<()> {
-    if children(&next).is_empty() { next["content"] = json!([{"type":"paragraph"}]); }
+    if children(&next).is_empty() {
+        next["content"] = json!([{"type":"paragraph"}]);
+    }
     validate(&next)?;
     ensure_ids(&mut next);
     *original = next;
@@ -111,13 +195,20 @@ fn put(doc: &mut Value, pos: Position<'_>, nodes: Vec<Value>) -> Result<()> {
             (p, i + usize::from(matches!(pos, Position::After(_))))
         }
     };
-    let list = at_mut(doc, &parent)["content"].as_array_mut().ok_or_else(invalid)?;
+    let list = at_mut(doc, &parent)["content"]
+        .as_array_mut()
+        .ok_or_else(invalid)?;
     list.splice(index..index, nodes);
     Ok(())
 }
 
 pub fn insert(doc: &mut Value, pos: Position<'_>, mut nodes: Vec<Value>) -> Result<()> {
-    if nodes.is_empty() { return Err(invalid()); }
+    if nodes.is_empty() {
+        return Err(invalid());
+    }
+    for node in &nodes {
+        check(node, 1, &mut 0)?;
+    }
     let mut next = prepared(doc)?;
     ids::freshen(&mut nodes, &next);
     put(&mut next, pos, nodes)?;
@@ -126,39 +217,54 @@ pub fn insert(doc: &mut Value, pos: Position<'_>, mut nodes: Vec<Value>) -> Resu
 
 /// Replace one addressed node; its identity survives a type/content change.
 pub fn replace(doc: &mut Value, id: &str, node: Value) -> Result<()> {
+    check(&node, 1, &mut 0)?;
     let mut next = prepared(doc)?;
     let p = path(&next, id)?;
     let mut nodes = vec![node];
     // Assign fragment identities against the old document before restoring the
     // addressed identity; existing unrelated ids are never changed.
     ids::freshen(&mut nodes, &next);
-    if !ids::addressable(&nodes[0]) { return Err(invalid()); }
+    if !ids::addressable(&nodes[0]) {
+        return Err(invalid());
+    }
     nodes[0]["attrs"]["bid"] = Value::String(id.to_owned());
     *at_mut(&mut next, &p) = nodes.remove(0);
     finish(doc, next)
 }
 
 fn selection(doc: &Value, selected: &[String]) -> Result<HashSet<String>> {
-    if selected.is_empty() { return Err(invalid()); }
+    if selected.is_empty() {
+        return Err(invalid());
+    }
     let mut set = HashSet::new();
     let mut paths = Vec::new();
     for id in selected {
-        if !set.insert(id.clone()) { return Err(invalid()); }
+        if !set.insert(id.clone()) {
+            return Err(invalid());
+        }
         paths.push(path(doc, id)?);
     }
     paths.sort();
-    if paths.windows(2).any(|p| p[1].starts_with(&p[0])) { return Err(invalid()); }
+    if paths.windows(2).any(|p| p[1].starts_with(&p[0])) {
+        return Err(invalid());
+    }
     Ok(set)
 }
 
 /// Cut in document order, independent of the caller's selection order.
 fn cut(node: &mut Value, selected: &HashSet<String>, out: &mut Vec<Value>) {
-    if let Some(kids) = node["content"].as_array_mut() {
+    if let Some(kids) = node.get_mut("content").and_then(Value::as_array_mut) {
         let mut i = 0;
         while i < kids.len() {
-            if kids[i]["attrs"]["bid"].as_str().is_some_and(|id| selected.contains(id)) {
+            if kids[i]["attrs"]["bid"]
+                .as_str()
+                .is_some_and(|id| selected.contains(id))
+            {
                 out.push(kids.remove(i));
-            } else { cut(&mut kids[i], selected, out); i += 1; }
+            } else {
+                cut(&mut kids[i], selected, out);
+                i += 1;
+            }
         }
     }
 }
@@ -181,7 +287,12 @@ pub fn move_blocks(doc: &mut Value, selected: &[String], pos: Position<'_>) -> R
 
 /// Two-page move is atomic in memory. The action caller must save both pages in
 /// one Session::put_many transaction after checking both permissions/revisions.
-pub fn move_between(source: &mut Value, target: &mut Value, selected: &[String], pos: Position<'_>) -> Result<()> {
+pub fn move_between(
+    source: &mut Value,
+    target: &mut Value,
+    selected: &[String],
+    pos: Position<'_>,
+) -> Result<()> {
     let mut from = prepared(source)?;
     let mut to = prepared(target)?;
     let set = selection(&from, selected)?;
@@ -191,8 +302,12 @@ pub fn move_between(source: &mut Value, target: &mut Value, selected: &[String],
     let mut dest = HashSet::new();
     ids::collect(&to, &mut dest);
     let mut moved = HashSet::new();
-    for n in &nodes { ids::collect(n, &mut moved); }
-    if moved.iter().any(|id| dest.contains(id)) { return Err(invalid()); }
+    for n in &nodes {
+        ids::collect(n, &mut moved);
+    }
+    if moved.iter().any(|id| dest.contains(id)) {
+        return Err(invalid());
+    }
     put(&mut to, pos, nodes)?;
     let mut new_source = source.clone();
     finish(&mut new_source, from)?;
@@ -204,30 +319,56 @@ pub fn move_between(source: &mut Value, target: &mut Value, selected: &[String],
 }
 
 pub fn set_direction(doc: &mut Value, id: &str, direction: &str) -> Result<()> {
-    if !matches!(direction, "ltr" | "rtl" | "auto") { return Err(invalid()); }
+    if !matches!(direction, "ltr" | "rtl" | "auto") {
+        return Err(invalid());
+    }
     let mut next = prepared(doc)?;
     let p = path(&next, id)?;
     let node = at_mut(&mut next, &p);
-    if !matches!(kind(node), "paragraph" | "heading") { return Err(invalid()); }
-    node["attrs"]["dir"] = if direction == "auto" { Value::Null } else { Value::String(direction.into()) };
+    if !matches!(kind(node), "paragraph" | "heading") {
+        return Err(invalid());
+    }
+    node["attrs"]["dir"] = if direction == "auto" {
+        Value::Null
+    } else {
+        Value::String(direction.into())
+    };
     finish(doc, next)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    fn p(id: &str, text: &str) -> Value { json!({"type":"paragraph","attrs":{"bid":id},"content":[{"type":"text","text":text}]}) }
-    fn doc() -> Value { json!({"type":"doc","content":[p("1111111111111111","أ  "),p("2222222222222222","?Deutsch\u{200e}"),p("3333333333333333","e\u{301}")]}) }
+    use crate::blocks::{
+        delete, ensure_ids, insert, move_between, move_blocks, replace, set_direction, validate,
+        Position,
+    };
+    use serde_json::{json, Value};
+    fn p(id: &str, text: &str) -> Value {
+        json!({"type":"paragraph","attrs":{"bid":id},"content":[{"type":"text","text":text}]})
+    }
+    fn doc() -> Value {
+        json!({"type":"doc","content":[p("1111111111111111","أ  "),p("2222222222222222","?Deutsch\u{200e}"),p("3333333333333333","e\u{301}")]})
+    }
 
     #[test]
     fn insert_replace_delete_move_and_direction_preserve_text_and_ids() {
         let mut d = doc();
-        insert(&mut d, Position::Before("1111111111111111"), vec![p("1111111111111111", "new")]).unwrap();
+        insert(
+            &mut d,
+            Position::Before("1111111111111111"),
+            vec![p("1111111111111111", "new")],
+        )
+        .unwrap();
         assert_ne!(d["content"][0]["attrs"]["bid"], "1111111111111111");
         assert_eq!(d["content"][1]["attrs"]["bid"], "1111111111111111");
         replace(&mut d, "2222222222222222", json!({"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"\u{200f}?German  "}]})).unwrap();
         set_direction(&mut d, "2222222222222222", "rtl").unwrap();
-        move_blocks(&mut d, &["3333333333333333".into(), "2222222222222222".into()], Position::Start).unwrap();
+        move_blocks(
+            &mut d,
+            &["3333333333333333".into(), "2222222222222222".into()],
+            Position::Start,
+        )
+        .unwrap();
         assert_eq!(d["content"][0]["attrs"]["bid"], "2222222222222222");
         assert_eq!(d["content"][0]["content"][0]["text"], "\u{200f}?German  ");
         delete(&mut d, &["1111111111111111".into()]).unwrap();
@@ -251,9 +392,22 @@ mod tests {
             assert!(insert(&mut d, Position::End, vec![node]).is_err());
             assert_eq!(d, before);
         }
-        assert!(move_blocks(&mut d, &["1111111111111111".into()], Position::After("1111111111111111")).is_err());
+        assert!(move_blocks(
+            &mut d,
+            &["1111111111111111".into()],
+            Position::After("1111111111111111")
+        )
+        .is_err());
         assert_eq!(d, before);
-        delete(&mut d, &["1111111111111111".into(),"2222222222222222".into(),"3333333333333333".into()]).unwrap();
+        delete(
+            &mut d,
+            &[
+                "1111111111111111".into(),
+                "2222222222222222".into(),
+                "3333333333333333".into(),
+            ],
+        )
+        .unwrap();
         assert_eq!(d["content"][0]["type"], "paragraph");
     }
 
@@ -265,7 +419,10 @@ mod tests {
         ]},{"type":"table","content":[{"type":"tableRow","content":[{"type":"tableCell","content":[{"type":"paragraph"}]}]}]}]});
         assert!(ensure_ids(&mut d));
         assert!(!ensure_ids(&mut d));
-        let item = d["content"][0]["content"][0]["attrs"]["bid"].as_str().unwrap().to_owned();
+        let item = d["content"][0]["content"][0]["attrs"]["bid"]
+            .as_str()
+            .unwrap()
+            .to_owned();
         let list = d["content"][0]["attrs"]["bid"].as_str().unwrap().to_owned();
         let before = d.clone();
         assert!(delete(&mut d, &[list.clone(), item.clone()]).is_err());

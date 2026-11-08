@@ -4,10 +4,18 @@ mod ids;
 mod ops;
 
 pub use ids::ensure_ids;
-pub use ops::{delete, insert, move_between, move_blocks, replace, set_direction, validate, Position};
+pub use ops::{
+    delete, insert, move_between, move_blocks, replace, set_direction, validate, Position,
+};
 
+use crate::{
+    actions::Actor,
+    commands::notes,
+    error::{Error, Result},
+    model::{Item, Page},
+    vault::Session,
+};
 use serde_json::{json, Value};
-use crate::{actions::Actor, commands::notes, error::{Error, Result}, model::{Item, Page}, vault::Session};
 
 /// Empty legacy pages have the editor's ordinary empty paragraph.
 pub fn parse(content: &str) -> Result<Value> {
@@ -43,7 +51,13 @@ pub fn read(s: &mut Session, actor: &Actor, id: &str) -> Result<Page> {
 
 /// Exact blocks-format write. JSON serialization may change escaping/spacing;
 /// every stored string (including the title) keeps its original UTF-8 bytes.
-pub fn write(s: &mut Session, actor: &Actor, id: &str, title: String, mut doc: Value) -> Result<Page> {
+pub fn write(
+    s: &mut Session,
+    actor: &Actor,
+    id: &str,
+    title: String,
+    mut doc: Value,
+) -> Result<Page> {
     validate(&doc)?;
     ensure_ids(&mut doc);
     let text = plain_text(&doc);
@@ -59,8 +73,24 @@ pub fn plain_text(node: &Value) -> String {
         "mermaidBlock" => node["attrs"]["code"].as_str().unwrap_or("").to_owned(),
         "mathInline" | "mathBlock" => node["attrs"]["latex"].as_str().unwrap_or("").to_owned(),
         _ => {
-            let sep = if matches!(node["type"].as_str(), Some("paragraph" | "heading" | "codeBlock")) { "" } else { "\n" };
-            node["content"].as_array().map(|children| children.iter().map(plain_text).collect::<Vec<_>>().join(sep)).unwrap_or_default()
+            let sep = if matches!(
+                node["type"].as_str(),
+                Some("paragraph" | "heading" | "codeBlock")
+            ) {
+                ""
+            } else {
+                "\n"
+            };
+            node["content"]
+                .as_array()
+                .map(|children| {
+                    children
+                        .iter()
+                        .map(plain_text)
+                        .collect::<Vec<_>>()
+                        .join(sep)
+                })
+                .unwrap_or_default()
         }
     }
 }
@@ -71,7 +101,10 @@ mod tests {
 
     #[test]
     fn exact_arabic_and_direction_marks_survive_write_and_two_reads() {
-        let root = std::env::var_os("NOTAYA_HOME").map(std::path::PathBuf::from).expect("throwaway NOTAYA_HOME required").join(crate::model::new_id());
+        let root = std::env::var_os("NOTAYA_HOME")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir)
+            .join(crate::model::new_id());
         std::fs::create_dir_all(&root).unwrap();
         let mut session = Session::create_open(&root.join("vault.nota")).unwrap();
         let title = "\u{200f}عنوان\u{200e}  ";
@@ -85,20 +118,77 @@ mod tests {
             {"type":"paragraph","attrs":{"dir":"ltr"},"content":[{"type":"text","text":german}]},
             {"type":"codeBlock","attrs":{"language":"mermaid"},"content":[{"type":"text","text":code}]}
         ]});
-        let page = write(&mut session, &Actor::Person, "11111111111111111111111111111111", title.into(), doc).unwrap();
-        let first = read(&mut session, &Actor::Person, "11111111111111111111111111111111").unwrap();
-        let second = read(&mut session, &Actor::Person, "11111111111111111111111111111111").unwrap();
+        // A legacy page's first action read assigns and persists ids as well.
+        let mut legacy = notes::get_page_core(
+            &session,
+            &Actor::Person,
+            "11111111111111111111111111111111".into(),
+        )
+        .unwrap();
+        legacy.content = doc.to_string();
+        session.put(Item::Page(legacy)).unwrap();
+        let first = read(
+            &mut session,
+            &Actor::Person,
+            "11111111111111111111111111111111",
+        )
+        .unwrap();
+        let second = read(
+            &mut session,
+            &Actor::Person,
+            "11111111111111111111111111111111",
+        )
+        .unwrap();
+        assert_eq!(first.content, second.content);
+        let mut assigned: Value = serde_json::from_str(&first.content).unwrap();
+        assert!(!ensure_ids(&mut assigned));
+        assert_eq!(first.updated, 1);
+        let page = write(
+            &mut session,
+            &Actor::Person,
+            "11111111111111111111111111111111",
+            title.into(),
+            doc,
+        )
+        .unwrap();
+        let first = read(
+            &mut session,
+            &Actor::Person,
+            "11111111111111111111111111111111",
+        )
+        .unwrap();
+        let second = read(
+            &mut session,
+            &Actor::Person,
+            "11111111111111111111111111111111",
+        )
+        .unwrap();
         assert_eq!(first.content, second.content);
         assert_eq!(page.title.as_bytes(), title.as_bytes());
         let got: Value = serde_json::from_str(&second.content).unwrap();
         for (i, expected) in [line, german, code].iter().enumerate() {
-            assert_eq!(got["content"][i]["content"][0]["text"].as_str().unwrap().as_bytes(), expected.as_bytes());
+            assert_eq!(
+                got["content"][i]["content"][0]["text"]
+                    .as_str()
+                    .unwrap()
+                    .as_bytes(),
+                expected.as_bytes()
+            );
         }
         assert_eq!(got["content"][0]["attrs"]["dir"], "rtl");
         assert_eq!(got["content"][1]["attrs"]["dir"], "ltr");
         drop(session);
         let mut session = Session::unlock_open(&root.join("vault.nota")).unwrap();
-        assert_eq!(read(&mut session, &Actor::Person, "11111111111111111111111111111111").unwrap().content, second.content);
+        assert_eq!(
+            read(
+                &mut session,
+                &Actor::Person,
+                "11111111111111111111111111111111"
+            )
+            .unwrap()
+            .content,
+            second.content
+        );
         drop(session);
         std::fs::remove_dir_all(root).unwrap();
     }

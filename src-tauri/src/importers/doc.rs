@@ -769,6 +769,29 @@ mod tests {
         ImageOut::Text("[picture]".into())
     }
 
+    #[test]
+    fn rendered_block_ids_are_stable_and_do_not_change_schema_or_text() {
+        let blocks = [
+            Block::Paragraph(vec![t("\u{200f}مرحبا  \u{200e}?Deutsch")]),
+            Block::Bullets(vec![vec![Block::Paragraph(vec![t("one")])]]),
+            Block::Table(vec![vec![Cell { header: false, colspan: 1, blocks: vec![] }]]),
+        ];
+        let rendered = render_limited(&blocks, &no_images, &|_| None, MAX_RENDER_BYTES).unwrap();
+        let mut doc: Value = serde_json::from_str(&rendered.content).unwrap();
+        crate::blocks::validate(&doc).unwrap();
+        assert!(!crate::blocks::ensure_ids(&mut doc));
+        for path in [
+            &doc["content"][0],
+            &doc["content"][1]["content"][0],
+            &doc["content"][2]["content"][0],
+        ] {
+            let id = path["attrs"]["bid"].as_str().unwrap();
+            assert_eq!(id.len(), 16);
+            assert!(id.bytes().all(|b| b.is_ascii_hexdigit()));
+        }
+        assert_eq!(doc["content"][0]["content"][0]["text"], "\u{200f}مرحبا  \u{200e}?Deutsch");
+    }
+
     fn bold(s: &str) -> Inline {
         Inline::Text(s.into(), Marks { bold: true, ..Marks::default() })
     }

@@ -8,13 +8,34 @@ pub fn valid_id(id: &str) -> bool {
 }
 
 pub(super) fn addressable(node: &Value) -> bool {
-    matches!(node["type"].as_str(), Some(
-        "paragraph" | "heading" | "blockquote" | "bulletList" | "orderedList" |
-        "taskList" | "listItem" | "taskItem" | "codeBlock" | "horizontalRule" |
-        "image" | "table" | "tableRow" | "tableCell" | "tableHeader" | "callout" |
-        "toggle" | "columns" | "column" | "mathBlock" | "mermaidBlock" | "pageLink" |
-        "databaseBlock"
-    ))
+    matches!(
+        node["type"].as_str(),
+        Some(
+            "paragraph"
+                | "heading"
+                | "blockquote"
+                | "bulletList"
+                | "orderedList"
+                | "taskList"
+                | "listItem"
+                | "taskItem"
+                | "codeBlock"
+                | "horizontalRule"
+                | "image"
+                | "table"
+                | "tableRow"
+                | "tableCell"
+                | "tableHeader"
+                | "callout"
+                | "toggle"
+                | "columns"
+                | "column"
+                | "mathBlock"
+                | "mermaidBlock"
+                | "pageLink"
+                | "databaseBlock"
+        )
+    )
 }
 
 pub(super) fn collect(node: &Value, ids: &mut HashSet<String>) {
@@ -24,27 +45,38 @@ pub(super) fn collect(node: &Value, ids: &mut HashSet<String>) {
         }
     }
     if let Some(children) = node["content"].as_array() {
-        for child in children { collect(child, ids); }
+        for child in children {
+            collect(child, ids);
+        }
     }
 }
 
 fn assign(node: &mut Value, seen: &mut HashSet<String>, reserved: &mut HashSet<String>) -> bool {
     let mut changed = false;
     if addressable(node) {
-        let id = node["attrs"]["bid"].as_str().filter(|id| valid_id(id)).map(str::to_owned);
+        let id = node["attrs"]["bid"]
+            .as_str()
+            .filter(|id| valid_id(id))
+            .map(str::to_owned);
         if !id.as_ref().is_some_and(|id| seen.insert(id.clone())) {
             let id = loop {
                 let candidate = hex::encode(crate::crypto::random_bytes::<8>());
-                if reserved.insert(candidate.clone()) { break candidate; }
+                if reserved.insert(candidate.clone()) {
+                    break candidate;
+                }
             };
             seen.insert(id.clone());
-            if !node["attrs"].is_object() { node["attrs"] = json!({}); }
+            if !node["attrs"].is_object() {
+                node["attrs"] = json!({});
+            }
             node["attrs"]["bid"] = Value::String(id);
             changed = true;
         }
     }
-    if let Some(children) = node["content"].as_array_mut() {
-        for child in children { changed |= assign(child, seen, reserved); }
+    if let Some(children) = node.get_mut("content").and_then(Value::as_array_mut) {
+        for child in children {
+            changed |= assign(child, seen, reserved);
+        }
     }
     changed
 }
@@ -63,6 +95,10 @@ pub(super) fn freshen(nodes: &mut [Value], destination: &Value) {
     let mut seen = HashSet::new();
     collect(destination, &mut seen);
     let mut reserved = seen.clone();
-    for node in nodes.iter() { collect(node, &mut reserved); }
-    for node in nodes { assign(node, &mut seen, &mut reserved); }
+    for node in nodes.iter() {
+        collect(node, &mut reserved);
+    }
+    for node in nodes {
+        assign(node, &mut seen, &mut reserved);
+    }
 }
