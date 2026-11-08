@@ -952,6 +952,7 @@ impl<'a> Layout<'a> {
             }
             Block::Image(img) => self.image(img, ctx, out),
             Block::Table(rows) => self.table(rows, ctx, out),
+            Block::Database { table, .. } => self.blocks(&super::doc::database_blocks(table.as_ref()), ctx, out),
             Block::Rule => out.push(Strip {
                 h: 14.0,
                 ops: vec![Op::Line { x1: ctx.x, y1: 7.0, x2: ctx.x + ctx.w, y2: 7.0, width: 0.7, color: LINE }],
@@ -1471,7 +1472,7 @@ fn write_pdf(doc: &ExportDoc, images: &[PdfImage], pool: &Pool, placed: &Placed,
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::super::deflate::zlib_decompress;
     use super::super::doc::parse;
     use super::super::doc::tests::{every_node_json, titles};
@@ -1650,7 +1651,7 @@ mod tests {
 
     /// The text a viewer would extract from the content streams: the ActualText of a span when
     /// there is one, otherwise the characters of the glyphs through the font's ToUnicode map.
-    fn extract(pdf: &[u8]) -> String {
+    pub(in crate::export) fn extract(pdf: &[u8]) -> String {
         let objs = objects(pdf);
         let parse_hex = |s: &str| -> Vec<u8> { (0..s.len() / 2).map(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).unwrap()).collect() };
         let utf16 = |b: &[u8]| -> String { String::from_utf16(&b.chunks(2).map(|c| u16::from_be_bytes([c[0], c[1]])).collect::<Vec<_>>()).unwrap() };
@@ -1954,6 +1955,33 @@ mod tests {
         assert_eq!(out.chars_replaced, 0);
         let (strips, _) = strips_of("x = a", None, |c| TextStyle { mono: true, size: 9.0, ..TextStyle::body(c) }, Pool::new(None));
         assert!((spans(&strips[0])[0].0 - LEFT).abs() < 0.01);
+    }
+
+    #[test]
+    fn inline_database_exports_its_rows_and_rtl_cells() {
+        let doc = super::super::tests::inline_database_doc();
+        let out = render_at(&doc, 0);
+        assert_eq!((out.chars_replaced, out.chars_no_font), (0, 0));
+        let text = extract(&out.bytes);
+        assert!(text.contains("مهام"));
+        assert_eq!(text.matches("مرحبا 123 عالم").count(), 1, "{text}");
+        assert_eq!(text.matches("שלום").count(), 1);
+        assert!(!text.contains("HIDDEN_CELL") && !text.contains("TRASHED_CELL"));
+
+        let ctx = Ctx::root(0);
+        let mut lay = Layout { doc: &doc, images: Vec::new(), image_index: HashMap::new(), images_left_out: 0, chars_replaced: 0, chars_no_font: 0, pool: Pool::new(None) };
+        let mut strips = Vec::new();
+        let Part::Page { blocks, .. } = &doc.parts[0] else { panic!() };
+        lay.blocks(blocks, &ctx, &mut strips);
+        let rows: Vec<_> = strips.iter().filter(|s| s.ops.iter().any(|o| matches!(o, Op::Line { .. }))).collect();
+        assert_eq!(rows.len(), 3, "header and two live rows");
+        // Within the mixed Arabic cell the first word is right of 123, the last word left.
+        let ops = &rows[1].ops;
+        let number = ops.iter().position(|o| matches!(o, Op::Text { bytes, .. } if bytes == b"123")).unwrap();
+        let x = |o: &Op| match o { Op::Glyphs { x, .. } | Op::Text { x, .. } => *x, _ => panic!("text piece") };
+        let before = ops[..number].iter().rev().find(|o| matches!(o, Op::Glyphs { .. })).unwrap();
+        let after = ops[number + 1..].iter().find(|o| matches!(o, Op::Glyphs { .. })).unwrap();
+        assert!(x(before) > x(&ops[number]) && x(&ops[number]) > x(after));
     }
 
     #[test]

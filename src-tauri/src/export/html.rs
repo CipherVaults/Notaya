@@ -245,6 +245,7 @@ impl Renderer {
             }
             Block::Image(img) => self.image(img),
             Block::Table(rows) => self.table(rows, shift),
+            Block::Database { table, .. } => self.joined(&super::doc::database_blocks(table.as_ref()), shift),
             Block::Rule => "<hr>".to_string(),
             Block::PageLink { title, target } => page_link_row(title, target.as_ref()),
         })
@@ -752,6 +753,21 @@ mod tests {
         assert!(html.contains("<blockquote class=\"callout\" dir=\"auto\">"));
         assert!(html.contains("margin-inline-end:.6em"), "the icon's gap follows the direction");
         assert_well_formed(&html);
+    }
+
+    #[test]
+    fn inline_database_exports_its_rows_and_rtl_cells() {
+        let html = render(&super::super::tests::inline_database_doc()).unwrap();
+        assert!(html.contains("مهام"));
+        assert_eq!(html.matches("<tr>").count(), 3, "header and two live rows");
+        assert_eq!(html.matches("<td ").count(), 8);
+        assert!(html.contains("<table dir=\"rtl\">"));
+        assert!(html.contains("<td dir=\"auto\">مرحبا 123 عالم</td>"), "{html}");
+        assert!(html.contains("<td dir=\"auto\">שלום</td>"));
+        assert_eq!(super::super::doc::first_strong("مرحبا 123 عالم"), Some(Dir::Rtl));
+        assert!(html.find("Before").unwrap() < html.find("<table").unwrap());
+        assert!(html.find("</table>").unwrap() < html.find("After").unwrap());
+        assert!(!html.contains("HIDDEN_CELL") && !html.contains("TRASHED_CELL"));
     }
 
     #[test]
