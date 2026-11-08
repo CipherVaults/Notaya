@@ -93,6 +93,19 @@ function saveLayout(open: boolean, width: number) {
 
 const EMPTY_TREE: NotesTree = { notebooks: [], sections: [], pages: [], databases: [] };
 
+/** One startup sweep for pre-1.6 navigation metadata; no marker or other keys are written. */
+export function cleanupLegacyDatabaseViews() {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("dbview:")) localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage can be unavailable; that must not prevent opening Notaya.
+  }
+}
+cleanupLegacyDatabaseViews();
+
 export const useApp = create<AppState>((set, get) => ({
   status: null,
   settings: null,

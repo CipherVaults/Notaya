@@ -127,6 +127,9 @@
 /* Gold that stays visible on both light and dark surfaces. Off favorites keep an outline. */
 [data-mode="light"] { --favorite: #8c6500; }
 [data-mode="dark"] { --favorite: #f2c14e; }
+/* Warning backgrounds keep their amber tint; the icon needs a darker amber in light themes. */
+[data-mode="light"] { --warn-icon: #986500; }
+[data-mode="dark"] { --warn-icon: #e5a023; }
 svg.lucide-star { color: var(--muted); }
 svg.lucide-star[fill="currentColor"] { color: var(--favorite); }
 /* MenuItem and the editor/property menus used to fade an already muted icon a second time. */
@@ -154,6 +157,7 @@ span.opacity-70:has(> svg.lucide) { opacity: 1; }
   --color-accent-strong: var(--accent-strong);
   --color-danger: #e5484d;
   --color-warn: #e5a023;
+  --color-warn-icon: var(--warn-icon);
   --color-ok: #30a46c;
   --font-sans: var(--app-font);
   --font-mono: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
