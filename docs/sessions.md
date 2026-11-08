@@ -141,6 +141,8 @@ Produced: the README, the About text, the records. Not verified in the app, not 
 
 Paste the About text into the repository settings (Mohamed's click). Optionally, screenshots of 1.5.1 (needs Ahmed's word to install dependencies). Revise the README at each release.
 
+**Dated addendum (about 17:25 UTC):** Ahmed said yes to screenshots (17:04:11 UTC); a Remote Control session on his Gaming-PC took ten of the released 1.5.1 on a throwaway vault, with his own Notaya closed, and they were added to the README under `docs/manual/screenshots/` ([EX-63 addendum](execution/2026-11-08-readme-refresh-v1-5-1.md)). The screenshot step no longer waits on anyone; only the About paste does.
+
 ## ❓ Open Questions
 
 Does Ahmed want real screenshots of 1.5.1 in the README (needs `npm install`, which needs his word)?
