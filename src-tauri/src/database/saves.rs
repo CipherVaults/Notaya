@@ -4,17 +4,17 @@
 use super::types::{
     Column, Database, PropKind, Property, Row, View, MAX_PROPERTIES, MAX_VIEWS, TITLE_PROP,
 };
+use super::{clock, relations};
 use crate::{
     actions::Actor,
-    commands::database::{database, row, parse_cells, write_cells},
+    commands::database::{database, parse_cells, row, write_cells},
     error::{Error, Result},
     model::{new_id, now_ms, Item},
     vault::Session,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
-use std::collections::HashSet;
-use super::{clock, relations};
+use std::collections::{HashMap, HashSet};
 
 fn invalid() -> Error {
     Error::invalid("Invalid database small save.")
@@ -263,14 +263,21 @@ pub fn remove_view(
     save(s, actor, db)
 }
 
-pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json: String) -> Result<Database> {
+pub(crate) fn save_database_core(
+    s: &mut Session,
+    _actor: &Actor,
+    database_json: String,
+) -> Result<Database> {
     if database_json.len() > 30_000_000 {
         return Err(Error::invalid("This database definition is too large."));
     }
-    let mut incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
+    let mut incoming: Database = serde_json::from_str(&database_json)
+        .map_err(|_| Error::invalid("That database definition is not valid."))?;
     let old = database(s, &incoming.id)?;
     if old.locked && incoming.locked {
-        return Err(Error::invalid("This database is locked. Unlock it to change its properties."));
+        return Err(Error::invalid(
+            "This database is locked. Unlock it to change its properties.",
+        ));
     }
     // Fields the UI may not change.
     incoming.created = old.created;
@@ -284,10 +291,18 @@ pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json:
     // Date automations: Notaya keeps the time up to which dates were handled; a new one starts now.
     let now_min = clock::local_now().0;
     for a in &mut incoming.automations {
-        a.last_run = old.automations.iter().find(|o| o.id == a.id).map_or(now_min, |o| o.last_run);
+        a.last_run = old
+            .automations
+            .iter()
+            .find(|o| o.id == a.id)
+            .map_or(now_min, |o| o.last_run);
     }
     incoming.updated = now_ms();
     incoming.sanitize()?;
+    // Existing malformed back references must never be used for cleanup, even
+    // when the incoming save removes the offending property.
+    relations::validate(s, &old, false)?;
+    relations::validate(s, &incoming, true)?;
     // Property kinds cannot change in place (a value of the old kind would be wrong); the UI makes a new property.
     for p in &incoming.props {
         if let Some(op) = old.prop(&p.id) {
@@ -298,18 +313,31 @@ pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json:
     }
     // Check relations, rollups and formulas refer to things that exist.
     let mut changed_items: Vec<Item> = Vec::new();
+    let mut changed_databases: HashMap<String, Database> = HashMap::new();
     let mut incoming_extra: Vec<(String, Property)> = Vec::new(); // (target db id, new back property)
     for p in &mut incoming.props {
         match p.kind {
             PropKind::Relation => {
-                let target_exists = p.relation_db == incoming.id || matches!(s.get(&p.relation_db), Some(Item::Database(_)));
+                let target_exists = p.relation_db == incoming.id
+                    || matches!(s.get(&p.relation_db), Some(Item::Database(_)));
                 if !target_exists {
-                    return Err(Error::invalid(format!("The relation \"{}\" needs a database to link to.", p.name)));
+                    return Err(Error::invalid(format!(
+                        "The relation \"{}\" needs a database to link to.",
+                        p.name
+                    )));
                 }
                 if p.relation_back == "+" {
                     let back = Property {
                         id: new_id(),
-                        name: format!("Related to {} ({})", if incoming.title.is_empty() { "Untitled" } else { &incoming.title }, p.name),
+                        name: format!(
+                            "Related to {} ({})",
+                            if incoming.title.is_empty() {
+                                "Untitled"
+                            } else {
+                                &incoming.title
+                            },
+                            p.name
+                        ),
                         kind: PropKind::Relation,
                         relation_db: incoming.id.clone(),
                         relation_back: p.id.clone(),
@@ -334,29 +362,60 @@ pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json:
         if target == incoming.id {
             self_extra.push(back);
         } else {
-            let mut tdb = database(s, &target)?;
+            let mut tdb = match changed_databases.remove(&target) {
+                Some(db) => db,
+                None => database(s, &target)?,
+            };
             if tdb.props.len() >= MAX_PROPERTIES {
-                return Err(Error::invalid("The other database has too many properties."));
+                return Err(Error::invalid(
+                    "The other database has too many properties.",
+                ));
             }
-            let col = Column { prop: back.id.clone(), visible: true, width: 0 };
+            let col = Column {
+                prop: back.id.clone(),
+                visible: true,
+                width: 0,
+            };
             for v in &mut tdb.views {
                 v.columns.push(col.clone());
             }
             tdb.props.push(back);
             tdb.updated = now_ms();
-            changed_items.push(Item::Database(tdb));
+            changed_databases.insert(target, tdb);
         }
     }
     for b in self_extra {
-        let col = Column { prop: b.id.clone(), visible: true, width: 0 };
+        let col = Column {
+            prop: b.id.clone(),
+            visible: true,
+            width: 0,
+        };
         for v in &mut incoming.views {
             v.columns.push(col.clone());
         }
         incoming.props.push(b);
     }
     // Removed properties: cut them out of rows and out of properties that point at them.
-    let removed: Vec<Property> = old.props.iter().filter(|p| incoming.prop(&p.id).is_none()).cloned().collect();
-    let rows_here: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.db == incoming.id { Some(r.id.clone()) } else { None } } else { None }).collect();
+    let removed: Vec<Property> = old
+        .props
+        .iter()
+        .filter(|p| incoming.prop(&p.id).is_none())
+        .cloned()
+        .collect();
+    let rows_here: Vec<String> = s
+        .items()
+        .filter_map(|i| {
+            if let Item::Row(r) = i {
+                if r.db == incoming.id {
+                    Some(r.id.clone())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect();
     if !removed.is_empty() {
         let removed_ids: HashSet<&str> = removed.iter().map(|p| p.id.as_str()).collect();
         for rid in &rows_here {
@@ -370,31 +429,50 @@ pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json:
             }
         }
         // A removed relation also removes its other side; rollups on removed relations go too.
-        for p in removed.iter().filter(|p| p.kind == PropKind::Relation && !p.relation_back.is_empty()) {
+        for p in removed
+            .iter()
+            .filter(|p| p.kind == PropKind::Relation && !p.relation_back.is_empty())
+        {
             if p.relation_db == incoming.id {
+                if !relations::reciprocal(&old, p, &old) {
+                    return Err(invalid());
+                }
                 if let Some(i) = incoming.props.iter().position(|q| q.id == p.relation_back) {
                     incoming.props.remove(i);
                 }
-            } else if let Ok(mut tdb) = database(s, &p.relation_db) {
+            } else {
+                let mut tdb = match changed_databases.remove(&p.relation_db) {
+                    Some(db) => db,
+                    None => database(s, &p.relation_db)?,
+                };
+                if !relations::reciprocal(&old, p, &tdb) {
+                    return Err(invalid());
+                }
                 if tdb.props.iter().any(|q| q.id == p.relation_back) {
                     tdb.props.retain(|q| q.id != p.relation_back);
-                    tdb.props.retain(|q| !(q.kind == PropKind::Rollup && q.rollup_relation == p.relation_back));
+                    tdb.props.retain(|q| {
+                        !(q.kind == PropKind::Rollup && q.rollup_relation == p.relation_back)
+                    });
                     for v in &mut tdb.views {
-                        v.columns.retain(|c| tdb.props.iter().any(|q| q.id == c.prop));
+                        v.columns
+                            .retain(|c| tdb.props.iter().any(|q| q.id == c.prop));
                     }
-                    changed_items.push(Item::Database(tdb));
+                    changed_databases.insert(p.relation_db.clone(), tdb);
                 }
             }
         }
         let gone: HashSet<String> = removed.iter().map(|p| p.id.clone()).collect();
-        incoming.props.retain(|q| !(q.kind == PropKind::Rollup && gone.contains(&q.rollup_relation)));
+        incoming
+            .props
+            .retain(|q| !(q.kind == PropKind::Rollup && gone.contains(&q.rollup_relation)));
         let keep: HashSet<String> = incoming.props.iter().map(|q| q.id.clone()).collect();
         for v in &mut incoming.views {
             v.columns.retain(|c| keep.contains(&c.prop));
         }
     }
     // A new ID property numbers the rows that exist, oldest first.
-    let new_id_prop = incoming.props.iter().any(|p| p.kind == PropKind::Id) && !old.props.iter().any(|p| p.kind == PropKind::Id);
+    let new_id_prop = incoming.props.iter().any(|p| p.kind == PropKind::Id)
+        && !old.props.iter().any(|p| p.kind == PropKind::Id);
     if new_id_prop {
         let mut rows: Vec<Row> = rows_here.iter().filter_map(|id| row(s, id).ok()).collect();
         rows.sort_by_key(|r| (r.created, r.order));
@@ -411,11 +489,30 @@ pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json:
         incoming.next_id = old.next_id;
     }
     incoming.sanitize()?;
-    changed_items.push(Item::Database(incoming.clone()));
+    changed_databases.insert(incoming.id.clone(), incoming.clone());
+    // Validate the complete prospective graph before the one atomic write.
+    for db in changed_databases.values_mut() {
+        db.sanitize()?;
+    }
+    for db in changed_databases.values() {
+        relations::validate_with(s, db, false, &changed_databases)?;
+    }
+    // Retargeting an existing relation must not leave its former reciprocal
+    // property pointing at a different pair in the prospective graph.
+    for p in old
+        .props
+        .iter()
+        .filter(|p| p.kind == PropKind::Relation && !p.relation_back.is_empty())
+    {
+        if !changed_databases.contains_key(&p.relation_db) {
+            let target = database(s, &p.relation_db)?;
+            relations::validate_with(s, &target, false, &changed_databases)?;
+        }
+    }
+    changed_items.extend(changed_databases.into_values().map(Item::Database));
     s.put_many(changed_items)?;
     Ok(incoming)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -595,13 +692,28 @@ mod tests {
                 assert_eq!(error.fault_code(), None);
                 assert_eq!(snapshot(s), before);
 
-                let error = add_view(s, &actor, id, View {
-                    id: "blank".into(), name: name.into(), ..View::default()
-                }).err().unwrap();
-                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                let error = add_view(
+                    s,
+                    &actor,
+                    id,
+                    View {
+                        id: "blank".into(),
+                        name: name.into(),
+                        ..View::default()
+                    },
+                )
+                .err()
+                .unwrap();
+                assert!(
+                    matches!(&error, Error::Invalid(message) if message == "Invalid database small save.")
+                );
                 assert_eq!(snapshot(s), before);
-                let error = update_view(s, &actor, id, &view, &json!({"name":name, "wrap":true})).err().unwrap();
-                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                let error = update_view(s, &actor, id, &view, &json!({"name":name, "wrap":true}))
+                    .err()
+                    .unwrap();
+                assert!(
+                    matches!(&error, Error::Invalid(message) if message == "Invalid database small save.")
+                );
                 assert_eq!(snapshot(s), before);
 
                 let error = rename_view(s, &actor, id, &view, name.into())
@@ -676,6 +788,194 @@ mod tests {
             assert!(
                 add_property(s, &actor, "dddddddddddddddddddddddddddddddd", prop("q")).is_err()
             );
+        });
+    }
+
+    #[test]
+    fn hostile_and_oversized_identifiers_are_rejected_atomically() {
+        with_session(|s| {
+            let id = "dddddddddddddddddddddddddddddddd";
+            let before = snapshot(s);
+            for bad in [
+                "__proto__".into(),
+                "constructor".into(),
+                "prototype".into(),
+                "x".repeat(super::super::types::MAX_ID_BYTES + 1),
+            ] {
+                for property in [
+                    prop(&bad),
+                    Property {
+                        kind: PropKind::Select,
+                        options: vec![super::super::types::SelectOption {
+                            id: bad.clone(),
+                            name: "Option".into(),
+                            ..Default::default()
+                        }],
+                        ..prop("select")
+                    },
+                ] {
+                    let error = add_property(s, &Actor::Person, id, property).err().unwrap();
+                    assert!(
+                        matches!(error, Error::Invalid(ref msg) if msg == "Invalid database small save.")
+                    );
+                    assert_eq!(snapshot(s), before);
+                }
+                assert!(add_view(
+                    s,
+                    &Actor::Person,
+                    id,
+                    View {
+                        id: bad,
+                        ..Default::default()
+                    }
+                )
+                .is_err());
+                assert_eq!(snapshot(s), before);
+            }
+            // Short legacy ids and a name containing direction marks are exact.
+            let name = "\u{200f}\u{0639}\u{05d0} e\u{301}  ";
+            let db = add_property(
+                s,
+                &Actor::Person,
+                id,
+                Property {
+                    name: name.into(),
+                    ..prop("old-id")
+                },
+            )
+            .unwrap();
+            assert_eq!(db.prop("old-id").unwrap().name.as_bytes(), name.as_bytes());
+            let error = update_property(
+                s,
+                &Actor::Person,
+                id,
+                "old-id",
+                &json!({"options":[{"id":"__proto__"}]}),
+            )
+            .err()
+            .unwrap();
+            assert!(matches!(error, Error::Invalid(_)));
+        });
+    }
+
+    #[test]
+    fn hostile_back_references_cannot_change_schema_or_rows() {
+        with_session(|s| {
+            let a = "dddddddddddddddddddddddddddddddd";
+            let b = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+            let row_id = "ffffffffffffffffffffffffffffffff";
+            for (back_id, back_kind, back_db, back_prop) in [
+                ("title", PropKind::Title, "", ""),
+                ("ordinary", PropKind::Text, "", ""),
+                ("mismatch", PropKind::Relation, a, "different"),
+                ("wrong_db", PropKind::Relation, b, "rel"),
+            ] {
+                let original = Database::new(a.into(), "s".into(), "Source".into(), 1);
+                s.put(Item::Database(original.clone())).unwrap();
+                let mut target = Database::new(b.into(), "s".into(), "Target".into(), 1);
+                if back_kind != PropKind::Title {
+                    target.props.push(Property {
+                        kind: back_kind,
+                        relation_db: back_db.into(),
+                        relation_back: back_prop.into(),
+                        ..prop(back_id)
+                    });
+                }
+                s.put(Item::Database(target.clone())).unwrap();
+                let mut target_row = Row::new(row_id.into(), b, "Exact title".into(), 1);
+                target_row.cells = json!({back_id:"untouched"}).to_string();
+                s.put(Item::Row(target_row.clone())).unwrap();
+                let rel = Property {
+                    kind: PropKind::Relation,
+                    relation_db: b.into(),
+                    relation_back: back_id.into(),
+                    ..prop("rel")
+                };
+                let error = add_property(s, &Actor::Person, a, rel.clone())
+                    .err()
+                    .unwrap();
+                assert!(
+                    matches!(error, Error::Invalid(ref msg) if msg == "Invalid database small save.")
+                );
+                assert_eq!(snapshot(s), serde_json::to_string(&original).unwrap());
+
+                // Simulate a legacy malformed record; removal and row sync
+                // must re-check it rather than trusting its stored metadata.
+                let mut malformed = original.clone();
+                malformed.props.push(rel);
+                s.put(Item::Database(malformed.clone())).unwrap();
+                let before = snapshot(s);
+                assert!(remove_property(s, &Actor::Person, a, "rel").is_err());
+                assert_eq!(snapshot(s), before);
+                assert!(relations::relation_sync_diff(
+                    s,
+                    "source-row",
+                    None,
+                    &serde_json::from_value(json!({"rel":[row_id]})).unwrap(),
+                    &malformed
+                )
+                .is_err());
+                assert_eq!(
+                    serde_json::to_value(database(s, b).unwrap()).unwrap(),
+                    serde_json::to_value(&target).unwrap()
+                );
+                assert_eq!(row(s, row_id).unwrap().cells, target_row.cells);
+                assert_eq!(row(s, row_id).unwrap().title, target_row.title);
+            }
+        });
+    }
+
+    #[test]
+    fn multiple_back_relations_share_one_validated_target_save() {
+        with_session(|s| {
+            let a = "dddddddddddddddddddddddddddddddd";
+            let b = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+            s.put(Item::Database(Database::new(
+                b.into(),
+                "s".into(),
+                "Target".into(),
+                1,
+            )))
+            .unwrap();
+            let mut db = database(s, a).unwrap();
+            for id in ["rel1", "rel2"] {
+                db.props.push(Property {
+                    kind: PropKind::Relation,
+                    relation_db: b.into(),
+                    relation_back: "+".into(),
+                    ..prop(id)
+                });
+            }
+            let saved = save(s, &Actor::Person, db).unwrap();
+            let target = database(s, b).unwrap();
+            for p in saved.props.iter().filter(|p| p.kind == PropKind::Relation) {
+                assert!(relations::reciprocal(&saved, p, &target));
+            }
+            let c = "cccccccccccccccccccccccccccccccc";
+            let mut other = Database::new(c.into(), "s".into(), "Other target".into(), 1);
+            other.props.push(Property {
+                kind: PropKind::Relation,
+                relation_db: a.into(),
+                relation_back: "rel1".into(),
+                ..prop("back")
+            });
+            s.put(Item::Database(other)).unwrap();
+            let before = snapshot(s);
+            assert!(update_property(
+                s,
+                &Actor::Person,
+                a,
+                "rel1",
+                &json!({"relationDb":c,"relationBack":"back"})
+            )
+            .is_err());
+            assert_eq!(snapshot(s), before);
+            let mut full = target.clone();
+            full.props[1].name = "x".repeat(121);
+            s.put(Item::Database(full)).unwrap();
+            let before = snapshot(s);
+            assert!(remove_property(s, &Actor::Person, a, "rel2").is_err());
+            assert_eq!(snapshot(s), before);
         });
     }
 

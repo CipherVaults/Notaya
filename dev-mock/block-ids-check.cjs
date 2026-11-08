@@ -9,7 +9,7 @@ const path = require('node:path');
 
 const target = new URL(process.argv[2] || 'http://127.0.0.1:1421/');
 assert(target.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname), 'Use the loopback mock server');
-const browserTemp = path.join('D:/Notaya Tests/v1-6-C4b', 'block-ids-browser-temp');
+const browserTemp = path.join('D:/Notaya Tests/v1-6-C4d', 'block-ids-browser-temp');
 fs.mkdirSync(browserTemp, { recursive: true });
 process.env.TEMP = browserTemp;
 process.env.TMP = browserTemp;
@@ -75,7 +75,29 @@ const { chromium } = require(process.env.NOTAYA_PLAYWRIGHT_MODULE || 'playwright
     assert.equal(new Set(allIds).size, allIds.length, 'Saved ids must be unique');
     assert.deepEqual(errors, [], 'No browser errors');
     console.log('PASS real_edit_saves_content_and_stable_ids');
-    console.log('ALL OK (2 checks)');
+
+    // Exercise the equation's real node-view editor and history transactions.
+    const equationId = 'eeeeeeeeeeeeeeee';
+    await editor.evaluate((element, bid) => {
+      element.editor.commands.setContent({ type: 'doc', content: [
+        { type: 'mathBlock', attrs: { bid, latex: 'x^2' } }, { type: 'paragraph' },
+      ] });
+      element.editor.commands.blur();
+    }, equationId);
+    await page.locator('.math-block').click();
+    const area = page.locator('.math-editor textarea');
+    const exact = '\u200f\u0639\u05d0 e\u0301\u200e  ';
+    await area.fill(exact);
+    const equation = () => editor.evaluate((element) => element.editor.getJSON().content.find((node) => node.type === 'mathBlock'));
+    assert.deepEqual((await equation()).attrs, { bid: equationId, latex: exact });
+    await area.press('Escape');
+    await editor.evaluate((element) => element.editor.commands.undo());
+    assert.deepEqual((await equation()).attrs, { bid: equationId, latex: 'x^2' });
+    await editor.evaluate((element) => element.editor.commands.redo());
+    assert.deepEqual((await equation()).attrs, { bid: equationId, latex: exact });
+    assert.deepEqual(errors, [], 'No browser errors during equation edits or history');
+    console.log('PASS equation_edit_undo_redo_keeps_id_and_exact_text');
+    console.log('ALL OK (3 checks)');
   } finally {
     await browser.close();
   }

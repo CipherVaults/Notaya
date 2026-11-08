@@ -27,7 +27,65 @@ pub fn validate(doc: &Value) -> Result<()> {
     if kind(doc) != "doc" || doc.to_string().len() > crate::importers::doc::MAX_RENDER_BYTES {
         return Err(invalid());
     }
-    check(doc, 0, &mut 0)
+    check(doc, 0, &mut 0)?;
+    check_tables(doc, &mut 0)
+}
+
+/// Check expanded table geometry with at most one bounded row of occupancy.
+/// A rowspan reserves its columns in following rows; holes and overlaps are
+/// refused instead of asking the editor to repair an ambiguous grid.
+fn check_tables(node: &Value, page_cells: &mut usize) -> Result<()> {
+    use crate::importers::doc::{MAX_PAGE_CELLS, MAX_TABLE_CELLS, MAX_TABLE_COLS};
+    if kind(node) == "table" {
+        let rows = children(node);
+        if rows.len() > MAX_TABLE_CELLS {
+            return Err(invalid());
+        }
+        let mut remaining = [0usize; MAX_TABLE_COLS];
+        let mut width = None;
+        for (r, row) in rows.iter().enumerate() {
+            let mut col = 0;
+            for cell in children(row) {
+                while col < MAX_TABLE_COLS && remaining[col] > 0 {
+                    col += 1;
+                }
+                let cols = cell["attrs"]["colspan"].as_u64().unwrap_or(1) as usize;
+                let span = cell["attrs"]["rowspan"].as_u64().unwrap_or(1) as usize;
+                if cols > MAX_TABLE_COLS - col || span > rows.len() - r {
+                    return Err(invalid());
+                }
+                for occupied in &mut remaining[col..col + cols] {
+                    if *occupied != 0 {
+                        return Err(invalid());
+                    }
+                    *occupied = span;
+                }
+                col += cols;
+            }
+            let row_width = remaining.iter().rposition(|n| *n > 0).map_or(0, |i| i + 1);
+            if row_width == 0
+                || remaining[..row_width].contains(&0)
+                || width.is_some_and(|w| w != row_width)
+            {
+                return Err(invalid());
+            }
+            if width.is_none() {
+                let cells = row_width * rows.len();
+                if cells > MAX_TABLE_CELLS || cells > MAX_PAGE_CELLS.saturating_sub(*page_cells) {
+                    return Err(invalid());
+                }
+                *page_cells += cells;
+                width = Some(row_width);
+            }
+            for n in &mut remaining {
+                *n = n.saturating_sub(1);
+            }
+        }
+    }
+    for child in children(node) {
+        check_tables(child, page_cells)?;
+    }
+    Ok(())
 }
 
 fn check(node: &Value, depth: usize, count: &mut usize) -> Result<()> {
@@ -35,9 +93,7 @@ fn check(node: &Value, depth: usize, count: &mut usize) -> Result<()> {
     if depth > 64 || *count > 200_000 || !node.is_object() {
         return Err(invalid());
     }
-    if node.get("attrs").is_some_and(|a| !a.is_object())
-        || node.get("content").is_some_and(|c| !c.is_array())
-    {
+    if !super::attrs::valid(node, false) || node.get("content").is_some_and(|c| !c.is_array()) {
         return Err(invalid());
     }
     let kids = children(node);
@@ -94,7 +150,7 @@ fn check(node: &Value, depth: usize, count: &mut usize) -> Result<()> {
                     | "textStyle"
                     | "comment"
             ) || !seen.insert(kind(m))
-                || m.get("attrs").is_some_and(|a| !a.is_object())
+                || !super::attrs::valid(m, true)
             {
                 return Err(invalid());
             }
@@ -232,7 +288,7 @@ pub fn replace(doc: &mut Value, id: &str, node: Value) -> Result<()> {
     finish(doc, next)
 }
 
-fn selection(doc: &Value, selected: &[String]) -> Result<HashSet<String>> {
+fn selection(doc: &Value, selected: &[String]) -> Result<Vec<Vec<usize>>> {
     if selected.is_empty() {
         return Err(invalid());
     }
@@ -248,25 +304,33 @@ fn selection(doc: &Value, selected: &[String]) -> Result<HashSet<String>> {
     if paths.windows(2).any(|p| p[1].starts_with(&p[0])) {
         return Err(invalid());
     }
-    Ok(set)
+    Ok(paths)
 }
 
 /// Cut in document order, independent of the caller's selection order.
-fn cut(node: &mut Value, selected: &HashSet<String>, out: &mut Vec<Value>) {
-    if let Some(kids) = node.get_mut("content").and_then(Value::as_array_mut) {
-        let mut i = 0;
-        while i < kids.len() {
-            if kids[i]["attrs"]["bid"]
-                .as_str()
-                .is_some_and(|id| selected.contains(id))
-            {
-                out.push(kids.remove(i));
-            } else {
-                cut(&mut kids[i], selected, out);
-                i += 1;
+fn cut(node: &mut Value, selected: &[Vec<usize>], out: &mut Vec<Value>) {
+    fn walk(
+        node: &mut Value,
+        selected: &[Vec<usize>],
+        here: &mut Vec<usize>,
+        out: &mut Vec<Value>,
+    ) {
+        if let Some(kids) = node.get_mut("content").and_then(Value::as_array_mut) {
+            let mut kept = Vec::with_capacity(kids.len());
+            for (i, mut child) in std::mem::take(kids).into_iter().enumerate() {
+                here.push(i);
+                if selected.contains(here) {
+                    out.push(child);
+                } else {
+                    walk(&mut child, selected, here, out);
+                    kept.push(child);
+                }
+                here.pop();
             }
+            *kids = kept;
         }
     }
+    walk(node, selected, &mut Vec::new(), out);
 }
 
 pub fn delete(doc: &mut Value, selected: &[String]) -> Result<()> {
@@ -374,6 +438,118 @@ mod tests {
         delete(&mut d, &["1111111111111111".into()]).unwrap();
         assert!(!ensure_ids(&mut d));
         validate(&d).unwrap();
+    }
+
+    #[test]
+    fn typed_attributes_reject_bad_nodes_and_marks_without_rewriting_text() {
+        let mut d = doc();
+        let before = d.clone();
+        for node in [
+            json!({"type":"mathBlock","attrs":{"latex":123}}),
+            json!({"type":"mathInline","attrs":{"latex":null}}),
+            json!({"type":"mermaidBlock","attrs":{"code":{},"showCode":false}}),
+            json!({"type":"mermaidBlock","attrs":{"code":"secret","showCode":"true"}}),
+            json!({"type":"mathBlock","attrs":{"latex":"x".repeat(20_001)}}),
+            json!({"type":"mermaidBlock","attrs":{"code":"x".repeat(50_001)}}),
+            json!({"type":"image","attrs":{"src":{},"width":"90"}}),
+            json!({"type":"pageLink","attrs":{"pageId":123}}),
+            json!({"type":"databaseBlock","attrs":{"databaseId":[]}}),
+            json!({"type":"toggle","attrs":{"open":"yes"},"content":[{"type":"paragraph"}]}),
+            json!({"type":"paragraph","content":[{"type":"text","text":"secret","marks":[{"type":"link","attrs":{"href":42}}]}]}),
+            json!({"type":"paragraph","content":[{"type":"text","text":"secret","marks":[{"type":"textStyle","attrs":{"fontFamily":{}}}]}]}),
+            json!({"type":"paragraph","content":[{"type":"text","text":"secret","marks":[{"type":"comment","attrs":{"text":false}}]}]}),
+        ] {
+            let error = insert(&mut d, Position::End, vec![node.clone()])
+                .err()
+                .unwrap();
+            assert!(
+                matches!(error, crate::error::Error::Invalid(ref msg) if msg == "Invalid block document or operation.")
+            );
+            assert_eq!(d, before);
+            assert!(replace(&mut d, "1111111111111111", node).is_err());
+            assert_eq!(d, before);
+        }
+        let exact = "\u{200f}\u{0639}\u{05d0} e\u{301}\u{200e}  \n";
+        for (kind, attr) in [("mathBlock", "latex"), ("mermaidBlock", "code")] {
+            insert(
+                &mut d,
+                Position::End,
+                vec![json!({"type":kind,"attrs":{attr:exact}})],
+            )
+            .unwrap();
+            assert_eq!(
+                d["content"].as_array().unwrap().last().unwrap()["attrs"][attr]
+                    .as_str()
+                    .unwrap()
+                    .as_bytes(),
+                exact.as_bytes()
+            );
+        }
+    }
+
+    #[test]
+    fn forged_inline_ids_are_refused_by_delete_and_both_moves_atomically() {
+        for inline in ["text", "hardBreak", "mathInline"] {
+            for bid in [json!("1111111111111111"), Value::Null] {
+                let mut d = doc();
+                let child = &mut d["content"][1]["content"][0];
+                child["type"] = json!(inline);
+                child["attrs"] = json!({"bid":bid});
+                let before = d.clone();
+                let mut target = doc();
+                let target_before = target.clone();
+                assert!(delete(&mut d, &["1111111111111111".into()]).is_err());
+                assert_eq!(d, before);
+                assert!(move_blocks(&mut d, &["1111111111111111".into()], Position::End).is_err());
+                assert_eq!(d, before);
+                assert!(move_between(
+                    &mut d,
+                    &mut target,
+                    &["1111111111111111".into()],
+                    Position::End
+                )
+                .is_err());
+                assert_eq!(d, before);
+                assert_eq!(target, target_before);
+            }
+        }
+    }
+
+    #[test]
+    fn expanded_table_budgets_and_span_geometry_are_enforced() {
+        fn cell(cols: usize, rows: usize) -> Value {
+            json!({"type":"tableCell","attrs":{"colspan":cols,"rowspan":rows},"content":[{"type":"paragraph"}]})
+        }
+        fn table(width: usize, height: usize) -> Value {
+            json!({"type":"table","content":(0..height).map(|_| json!({"type":"tableRow","content":[cell(width, 1)]})).collect::<Vec<_>>()})
+        }
+        let accepted = json!({"type":"doc","content":[table(100, 200)]});
+        validate(&accepted).unwrap();
+        validate(&json!({"type":"doc","content":vec![table(100,200);5]})).unwrap();
+        let valid_span = json!({"type":"table","content":[
+            {"type":"tableRow","content":[cell(99,2),cell(1,1)]},
+            {"type":"tableRow","content":[cell(1,1)]}
+        ]});
+        validate(&json!({"type":"doc","content":[valid_span]})).unwrap();
+        for bad in [
+            json!({"type":"doc","content":[table(101,1)]}),
+            json!({"type":"doc","content":[table(100,201)]}),
+            json!({"type":"doc","content":vec![table(100,200);6]}),
+            json!({"type":"doc","content":[{"type":"table","content":[{"type":"tableRow","content":[cell(1,2)]}]}]}),
+            json!({"type":"doc","content":[{"type":"table","content":[{"type":"tableRow","content":[cell(2,1)]},{"type":"tableRow","content":[cell(1,1)]}]}]}),
+            json!({"type":"doc","content":[{"type":"table","content":[{"type":"tableRow","content":[cell(1,1),cell(1,2)]},{"type":"tableRow","content":[cell(2,1)]}]}]}),
+        ] {
+            assert!(validate(&bad).is_err());
+            let mut original = doc();
+            let before = original.clone();
+            assert!(insert(
+                &mut original,
+                Position::End,
+                bad["content"].as_array().unwrap().clone()
+            )
+            .is_err());
+            assert_eq!(original, before);
+        }
     }
 
     #[test]
