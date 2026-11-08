@@ -38,10 +38,16 @@ enum Tok {
 }
 
 fn lex(src: &str) -> Result<Vec<Tok>, String> {
+    if src.len() > 64 * 1024 {
+        return Err("Formula is too large".into());
+    }
     let c: Vec<char> = src.chars().collect();
     let mut i = 0;
     let mut out = Vec::new();
     while i < c.len() {
+        if out.len() >= 4096 {
+            return Err("Formula has too many tokens".into());
+        }
         let ch = c[i];
         if ch.is_whitespace() {
             i += 1;
@@ -139,13 +145,13 @@ impl P {
         }
     }
     fn expr(&mut self) -> Result<Expr, String> {
-        self.depth += 1;
-        if self.depth > 60 {
+        if self.depth >= 60 {
             return Err("Formula is nested too deeply".into());
         }
+        self.depth += 1;
         let r = self.ternary();
         self.depth -= 1;
-        r
+        checked(r?)
     }
     fn ternary(&mut self) -> Result<Expr, String> {
         let c = self.binary(0)?;
@@ -173,6 +179,17 @@ impl P {
         })
     }
     fn binary(&mut self, min: u8) -> Result<Expr, String> {
+        // Every recursive cycle (including unary and right-associative ^) visits
+        // expr or binary. Bound it before descending, including malformed input.
+        if self.depth >= 60 {
+            return Err("Formula is nested too deeply".into());
+        }
+        self.depth += 1;
+        let result = self.binary_inner(min);
+        self.depth -= 1;
+        checked(result?)
+    }
+    fn binary_inner(&mut self, min: u8) -> Result<Expr, String> {
         let mut left = self.unary()?;
         loop {
             let op = match self.peek() {
@@ -189,7 +206,7 @@ impl P {
             }
             self.i += 1;
             let rhs = self.binary(if right { p } else { p + 1 })?;
-            left = Expr::Binary(op, Box::new(left), Box::new(rhs));
+            left = checked(Expr::Binary(op, Box::new(left), Box::new(rhs)))?;
         }
         Ok(left)
     }
@@ -222,7 +239,7 @@ impl P {
                 _ => return Err("Expected a function name after .".into()),
             };
             let args = if self.eat(&Tok::LParen) { self.args()? } else { Vec::new() };
-            e = Expr::Method(Box::new(e), name, args);
+            e = checked(Expr::Method(Box::new(e), name, args))?;
         }
         Ok(e)
     }
@@ -309,6 +326,16 @@ fn tok_text(t: &Tok) -> String {
 /// evaluating or dropping one cannot overflow the stack.
 const MAX_DEPTH: usize = 120;
 
+// Children have already been checked: a rejected tree has at most MAX_DEPTH+1
+// levels and can be dropped normally on *every* error path. Never leak an AST.
+fn checked(e: Expr) -> Result<Expr, String> {
+    if depth_of(&e, MAX_DEPTH) > MAX_DEPTH {
+        Err("The formula is nested too deeply".into())
+    } else {
+        Ok(e)
+    }
+}
+
 fn depth_of(e: &Expr, limit: usize) -> usize {
     if limit == 0 {
         return usize::MAX / 2;
@@ -333,11 +360,7 @@ pub fn parse(src: &str) -> Result<Expr, String> {
     if p.i < p.t.len() {
         return Err(format!("Unexpected {}", tok_text(&p.t[p.i])));
     }
-    if depth_of(&e, MAX_DEPTH) > MAX_DEPTH {
-        std::mem::forget(e); // too deep to drop recursively
-        return Err("The formula is nested too deeply".into());
-    }
-    Ok(e)
+    checked(e)
 }
 
 /// Where `prop("Name")` and `id()` get their answers.
