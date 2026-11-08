@@ -1,0 +1,20 @@
+key,value,low,high,kind,source,notes
+asof_utc,2026-11-08T08:30:00Z,,,measured,Ahmed's two usage screenshots (relayed 2026-11-08 08:28:32 UTC),"Time of the screenshots is taken as about 08:27 UTC (Ahmed's message 08:27:53); the model starts at 08:30"
+claude_week_used_pct,22,,,measured,"Claude plan-usage popup (Pro), screenshot 2026-11-08 ~08:27 UTC","Weekly, all models. Account-wide"
+claude_week_reset_utc,2026-11-13T02:00:00Z,,,measured,"same popup: 'Resets Fri 4:00 AM' (GMT+2)",Converted to UTC
+claude_5h_used_pct,30,,,measured,same popup,"5-hour window; 'Resets at 12:30 PM' (GMT+2) = 10:30 UTC"
+claude_5h_reset_utc,2026-11-08T10:30:00Z,,,measured,same popup,
+claude_cap_pct,70,,,rule,"Ahmed, 2026-11-07 23:59:56 UTC (A45); repeated 2026-11-08 08:27",Claude uses at most 70% of its week; Codex up to 100% including resets
+codex_week_used_pct,26,,,measured,"Codex usage menu (Plus plan), screenshot ~08:27 UTC: '74% left'",Weekly limit
+codex_week_reset_utc,2026-11-14T15:44:18Z,,,measured,Codex rate_limits events read on the PC at 00:44 UTC (quota-readings.csv),The screenshot does not show a reset time; the earlier reading is kept
+codex_5h_used_pct,62,,,measured,Codex usage menu screenshot ~08:27 UTC: '38% left',5-hour window
+codex_credits,0,,,measured,Codex usage menu screenshot,"'0 credits'"
+codex_windows_per_week,6.1,5.5,7,measured,"Two readings: 97% of a 5-hour window = 15% of the week (00:44 UTC); 62% of the next window plus the earlier tail = 26% of the week (~08:27 UTC)","159% of windows used = 26% of the week, so one window = about 16.4% and a week = about 6.1 windows. Narrower than the 00:58 estimate (6.5; 5.5 to 7)"
+points_per_window,11,8,14,rough,"Roughly 18 plan points built or merged (lanes C1, B, A, D, E, and C4b built but failing its tests) in about 1.6 windows","The points done are MY ESTIMATE from the plan's sizes, not a measurement; the first estimate was 10.5 (7 to 14)"
+overhead,1.25,1.0,1.5,rough,Assumption carried from the 00:58 UTC forecast,"Extra Codex work for review fixes, a failed test run (C4b) and the PC round"
+banked_resets,2,0,2,rough,"Ahmed's statement as relayed (project memory 2026-11-08 01:09; coordinator note 08:28)",HOW a banked reset works is ASSUMED: used when the allowance is empty it restores the weekly allowance in full. Ahmed to confirm
+max_windows_per_day,3,2,4.8,rough,A guess about how many 5-hour windows can be used and reviewed in a day,"4.8 is the physical top (24 h / 5 h); two lanes at a time with review in between is nearer 3"
+claude_pct_per_window,3,1.5,6,rough,"A guess: each Codex window means about 2 or 3 lanes to brief, inspect, merge and record","The weakest number here. It will be pinned down by a Claude weekly reading before and after each lane (new rule, see README)"
+claude_baseline_pct_per_day,4,2,8,rough,"A guess: coordinator chat, ledger and records threads on a quiet day","Measured upper bound: weekly 6% (22:32 UTC) to 22% (08:27 UTC) in about 10 hours, with many parallel threads and part of it on the credit"
+mohamed_weeks_per_week,0,0,1,unknown,Not known,"Mohamed's Codex plan and quota are not visible from Ahmed's side. 0 = he does not build; 1 = he adds as much as Ahmed's week"
+pause_days_between_versions,1,0,3,rough,"A guess: the PC round on throwaway data, the security review and Ahmeds words between one version and the next","Gates that need Ahmeds own words (new dependencies, vault format, security behaviour) can stretch it; a version that waits on a gate is not modelled"
