@@ -174,7 +174,7 @@ impl Session {
             page_id: item.id().into(),
             version_id: version_id.clone(),
             at,
-            actor: crate::changes::by(actor),
+            actor: super::activity::actor_label(actor),
             change_set: self.change_set.clone().unwrap_or_else(new_id),
             title: body.title.clone(),
             words: body.text.split_whitespace().count(),
@@ -552,6 +552,68 @@ mod tests {
             )
             .unwrap();
             assert!(!String::from_utf8_lossy(&plain).contains("removed body sentinel"));
+        }
+    }
+
+    #[test]
+    fn permanent_delete_removes_page_and_row_history_and_undo_bodies() {
+        for row in [false, true] {
+            let (mut s, path, kept) = fixture();
+            let kept_history = s.store.all(Table::History).unwrap();
+            let id = new_id();
+            let mut item = if row {
+                Item::Row(crate::database::types::Row::new(id.clone(), "db", "Row".into(), 1))
+            } else {
+                let Item::Page(mut page) = s.get(&kept).unwrap().clone() else { panic!() };
+                page.id = id.clone();
+                Item::Page(page)
+            };
+            let mut body = VersionBody::from_item(&item).unwrap();
+            body.content = "deleted undo body sentinel".into();
+            body.text = body.content.clone();
+            body.apply(&mut item).unwrap();
+            s.put(item).unwrap();
+            edit(&mut s, &id, "deleted AI body sentinel", &ai());
+            let change_set = s.activity_list(Some("ai:Test AI"), None, 1).unwrap()[0].change_set.clone();
+            let versions = s.history_list(&id).unwrap();
+            assert!(versions.iter().any(|v| v.before_ai));
+            assert!(versions.iter().any(|v| s.history_get(&id, &v.version_id).unwrap().text == "deleted undo body sentinel"));
+            let kept_versions = serde_json::to_value(s.history_list(&kept).unwrap()).unwrap();
+            // A refused live delete must preserve the encrypted undo records too,
+            // including bodies that are not returned in activity-list metadata.
+            let history = s.store.all(Table::History).unwrap();
+            let activity = s.store.all(Table::Activity).unwrap();
+            let error = crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).err().unwrap();
+            assert_eq!(error.to_string(), "Only items in the bin can be permanently deleted.");
+            assert_eq!(s.store.all(Table::History).unwrap(), history);
+            assert_eq!(s.store.all(Table::Activity).unwrap(), activity);
+            crate::commands::notes::trash_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
+            // Include any versions taken by the bin operation in the deletion check.
+            let versions = s.history_list(&id).unwrap();
+            crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
+            assert!(s.get(&id).is_none());
+            assert!(!s.history_index.contains_key(&id));
+            for version in &versions {
+                assert!(s.store.get(Table::History, &parse_id(&version.version_id).unwrap()).unwrap().is_none());
+                assert!(s.store.get(Table::History, &body_id(&version.version_id).unwrap()).unwrap().is_none());
+            }
+            assert_eq!(s.store.all(Table::History).unwrap(), kept_history);
+            assert_eq!(serde_json::to_value(s.history_list(&kept).unwrap()).unwrap(), kept_versions);
+            drop(s);
+            let mut s = Session::unlock(&path, "throwaway", None).unwrap();
+            assert!(!s.history_index.contains_key(&id));
+            assert_eq!(s.store.all(Table::History).unwrap(), kept_history);
+            for (row, bytes) in s.store.all(Table::Activity).unwrap() {
+                let plain = crate::crypto::open(&s.dek,
+                    &super::super::aad(s.format, &s.vault_id, Table::Activity, &row), &bytes).unwrap();
+                let plain = String::from_utf8_lossy(&plain);
+                assert!(!plain.contains("deleted undo body sentinel"));
+                assert!(!plain.contains("deleted AI body sentinel"));
+            }
+            let summary = s.activity_undo(&Actor::Person, &change_set).unwrap();
+            assert_eq!((summary.restored, summary.skipped), (0, 1));
+            assert!(s.get(&id).is_none(), "undo cannot recreate a permanently deleted item");
+            s.activity_verify().unwrap();
         }
     }
 

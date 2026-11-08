@@ -151,7 +151,7 @@ type Args = Record<string, unknown>;
 async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
-  if (!["list_notes", "search", "list_bin", "restore_bin_item", "empty_trash"].includes(cmd)) {
+  if (!["list_notes", "search", "list_bin", "restore_bin_item", "restore_page", "delete_page", "empty_trash"].includes(cmd)) {
     const dbr = databaseCommand(cmd, args, tree, options);
     if (dbr !== NOT_HANDLED) return ok(dbr);
   }
@@ -327,31 +327,18 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
     }
     case "editing": return ok(null);
     case "list_bin": return ok(mockBin());
-    case "restore_bin_item": {
-      const id = String(args.id);
-      let parent = parentId(id);
-      const seen = new Set<string>();
-      while (parent && !seen.has(parent)) {
-        seen.add(parent);
-        if (mockInBin(parent) && !args.restoreContainers) throw "parent_in_bin: Restore the containing items too?";
-        if (args.restoreContainers) { binTimes.delete(parent); const pg = tree.pages.find((p) => p.id === parent); if (pg) pg.trashedAt = null; databaseCommand("restore_page", { id: parent }, tree); }
-        parent = parentId(parent);
-      }
-      binTimes.delete(id);
-      const pg = tree.pages.find((p) => p.id === id); if (pg) pg.trashedAt = null;
-      databaseCommand("restore_page", { id }, tree);
+    case "restore_bin_item":
+    case "restore_page":
+      restoreMockItem(String(args.id), cmd === "restore_bin_item" && !!args.restoreContainers);
       return ok(liveTree());
-    }
     case "trash_page": {
       const pg = tree.pages.find((p) => p.id === args.id); if (!pg) throw "That item no longer exists.";
       pg.trashedAt = Date.now(); pg.favorite = false; return ok(liveTree());
     }
-    case "restore_page": {
-      binTimes.delete(String(args.id));
-      const pg = tree.pages.find((p) => p.id === args.id); if (pg) pg.trashedAt = null;
-      return ok(liveTree());
-    }
     case "delete_page": {
+      const id = String(args.id);
+      if (!mockItems().some((item) => item.id === id)) throw "That item no longer exists.";
+      if (!mockInBin(id)) throw "Only items in the bin can be permanently deleted.";
       removeMockTree(String(args.id)); return ok(liveTree());
     }
     case "empty_trash": {
@@ -561,6 +548,29 @@ function liveTree() {
 }
 function mockBin() {
   return mockItems().filter((x) => binTimes.has(String(x.id)) || x.trashedAt != null).map((x) => ({ id: String(x.id), kind: String(x.kind), title: String(x.name ?? x.title ?? x.text ?? ""), icon: String(x.icon ?? ""), trashedAt: binTimes.get(String(x.id)) ?? x.trashedAt, parentInBin: mockInBin(parentId(String(x.id))) }));
+}
+function restoreMockItem(id: string, restoreContainers: boolean) {
+  if (!mockItems().some((item) => item.id === id)) throw "That item no longer exists.";
+  const containers: string[] = [];
+  const seen = new Set<string>();
+  for (let parent = parentId(id); parent && !seen.has(parent); parent = parentId(parent)) {
+    seen.add(parent);
+    const item = mockItems().find((item) => item.id === parent);
+    if ((item?.kind === "notebook" || item?.kind === "section") && binTimes.has(parent)) {
+      if (!restoreContainers) throw "parent_in_bin: Restore the containing items too?";
+      containers.push(parent);
+    }
+  }
+  for (const container of containers) binTimes.delete(container);
+  binTimes.delete(id);
+  const page = tree.pages.find((page) => page.id === id);
+  if (page) {
+    const parent = tree.pages.find((parent) => parent.id === page.parent);
+    const children = tree.pages.filter((child) => mockWithin(child.id, id));
+    if (parent?.trashedAt != null) page.parent = "";
+    for (const child of children) child.trashedAt = null;
+  }
+  databaseCommand("restore_page", { id }, tree);
 }
 function removeMockTree(root: string) {
   const ids = new Set(mockItems().filter((x) => mockWithin(String(x.id), root)).map((x) => String(x.id)));
