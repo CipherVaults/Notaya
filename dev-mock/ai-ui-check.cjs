@@ -20,10 +20,11 @@ const check = (name, actual, expected) => { assert.deepEqual(actual, expected, n
       return aiMock[method](...args);
     }, { method, args });
     const wait = async (predicate) => {
-      await page.waitForFunction(async (source) => {
-        const { aiMock } = await import('/dev-mock/ai.ts');
-        return new Function('s', `return (${source})(s)`)(aiMock.state());
-      }, predicate.toString());
+      for (let attempt = 0; attempt < 60; attempt++) {
+        if (predicate(await mock('state'))) return;
+        await page.waitForTimeout(100);
+      }
+      throw new Error(`Timed out after 6 seconds waiting for mock state: ${predicate.toString()}`);
     };
     // Reach the real SettingsView from the existing app before using the standalone marker host.
     await page.goto(origin);
@@ -68,17 +69,17 @@ const check = (name, actual, expected) => { assert.deepEqual(actual, expected, n
     await wait((s) => s.pairings.length === 2);
     check('new pairings start at Look', (await mock('state')).pairings.map((p) => p.level), ['look', 'look']);
     const firstCard = page.getByLabel('Access for Writing assistant', { exact: true });
-    await firstCard.getByRole('radio', { name: /^Edit/ }).check();
+    await firstCard.getByRole('radio', { name: /^Edit/ }).click();
     await wait((s) => s.pairings[0].level === 'edit');
     check('level is per AI', (await mock('state')).pairings.map((p) => p.level), ['edit', 'look']);
-    await firstCard.getByRole('radio', { name: /^Full/ }).check();
+    await firstCard.getByRole('radio', { name: /^Full/ }).click();
     await wait((s) => s.pairings[0].level === 'full');
     await mock('fail', 'ai_set_level');
-    await firstCard.getByRole('radio', { name: /^Look/ }).check();
+    await firstCard.getByRole('radio', { name: /^Look/ }).click();
     await page.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor();
     check('failed save keeps the stored level', (await mock('state')).pairings[0].level, 'full');
     check('failed level does not appear selected', await firstCard.getByRole('radio', { name: /^Full/ }).isChecked(), true);
-    await page.getByRole('checkbox', { name: 'Personal', exact: true }).check();
+    await page.getByRole('checkbox', { name: 'Personal', exact: true }).click();
     await wait((s) => s.hiddenNotebooks.length === 1);
     check('hidden notebook ids are sent', (await mock('state')).hiddenNotebooks, ['n1']);
     const big = page.getByRole('switch', { name: 'Ask before big changes', exact: true });
@@ -158,6 +159,7 @@ const check = (name, actual, expected) => { assert.deepEqual(actual, expected, n
     for (const theme of ['sunrise', 'sunrise-dark', 'black', 'graphite', 'white', 'paper']) {
       await page.goto(`${origin}/dev-mock/ai-harness.html?theme=${theme}`);
       await page.getByRole('heading', { name: 'AI access', exact: true }).waitFor();
+      await page.getByRole('switch', { name: 'AI access', exact: true }).waitFor();
       await page.getByRole('heading', { name: 'AI access', exact: true }).scrollIntoViewIfNeeded();
       check(`${theme}: AI panel renders`, await page.getByRole('switch', { name: 'AI access', exact: true }).isVisible(), true);
       if (process.env.NOTAYA_AI_SHOTS) await page.screenshot({ path: path.join(process.env.NOTAYA_AI_SHOTS, `ai-${theme}.png`) });
