@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-08 (Ahmed's messages 11:41:49 and 11:42:04 UTC), EX-2026-11-08-61: refresh of the AI-facing records and the 1.6 build-day session entry
+
+- [2026-11-08-ai-pbs-records-refresh.md](2026-11-08-ai-pbs-records-refresh.md): the Codex briefing, `AGENTS.md`, a `CLAUDE.md` note, the claims rows, STATUS and session entry 49 brought up to date as dated corrections. Records only. **Produced**; not accepted.
+
 ### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-59: Codex first, the Codex partner briefing and the roadmap forecast
 
 - [2026-11-08-codex-first-partner-briefing-and-forecast.md](2026-11-08-codex-first-partner-briefing-and-forecast.md): A46, the briefing file and the forecast page. Records and a forecast only. **Produced**; not accepted.
