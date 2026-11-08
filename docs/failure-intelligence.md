@@ -68,7 +68,7 @@ At 08:33 UTC the Build thread confirmed it and fixed it: a stop at the edge of a
 
 **Occurrence / observation date:** 2026-11-08, corrected at about 06:56 UTC (heartbeat log, [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5); the time of the false report itself is not recorded. Ahmed's side (`AE0101`); machine: Gaming-PC (Codex, heartbeat), cloud (the Build thread, which caught it).
 
-**Last resolution update:** 2026-11-08
+**Last resolution update:** 2026-11-08 (branch deletion approved 16:48:18 UTC; not yet done)
 
 **Classification:** Near-miss on the records and the branches (a false "done" that was caught before it was merged)
 
@@ -84,13 +84,15 @@ Codex stopped at a file outside its write area and ended with exit 0. The heartb
 
 #### Impact
 
-**Actual impact:** none on `main`. One stray, empty branch exists on `origin` (it cannot be deleted without Ahmed's word and is to be ignored); some time was lost before the lane was restarted (not measured).
+**Actual impact:** none on `main`. One stray branch with no work of its own exists on `origin` (deleting it needs Ahmed's word; see the dated follow-up below); some time was lost before the lane was restarted (not measured).
 
 **Potential impact:** an empty lane merged or recorded as verified; a later lane built on work that did not exist. (The sources do not say how the false report was first noticed.)
 
 #### Resolution
 
 The Build thread's log records the correction at about 06:56 UTC: the branch is to be ignored and C4 restarts as `AE0101/v1-6-c4b`; the write areas of C4 and C2 were widened (C4 may add `mod blocks;` to `lib.rs`; C2 may touch `lib.rs` registration lines, `src/lib/types.ts` and others). The same finding led to the idle rule of FI-09.
+
+**Dated follow-up (2026-11-08 about 16:55 UTC, refresh thread): the stray branch.** Checked on `origin`: `AE0101/v1-6-c4` is at `4e3c457`, one commit, a merge of lane B (`37886fd`) into lane C1's history (`85c8dcd`); both parents are already in `main` (PRs #74 and #75), so the branch holds no work of its own. The coordinator asked Ahmed (Q55) whether it could be deleted and he answered "yes" (2026-11-08 16:48:18 UTC, cited by the coordinator; [authority record](plan/approval-and-amendments.md)). **A deletion from the cloud container was refused** (`git push origin --delete` returned HTTP 403 from the environment's proxy; the GitHub tools offered here have no delete-branch call), and nothing was worked around. **The branch still exists.** It can be deleted from Ahmed's PC session (a Remote Control session, which has the repository credentials) or by Ahmed on GitHub; when done, add a line here.
 
 #### Prevention Rule
 
