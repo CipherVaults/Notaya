@@ -7,7 +7,8 @@
 - **Baseline:** `origin/main` `2ffaa2c` (merge of PR #88, 2026-11-08 11:38 UTC).
 - **Asked by:** Ahmed, project chat 2026-11-08 11:41:49 UTC ("make sure the AI PBS docs are up to date and aren't stale") and 11:42:04 ("especially our session summary"); the coordinator's relay of 11:41:55 and 11:42:07 asked that only out-of-date facts change and PBS rules are never weakened.
 - **Scope and write area:** `docs/handoff/codex-partner-briefing.md` (sections 2, 5, 6 and a dated header line), `AGENTS.md` (one dated note on where checks run, one short pacing section), `CLAUDE.md` (one dated note in "Cloud threads"), `docs/sessions.md` (entry 49 and its index row), `docs/STATUS.md` (one "As of" line), `docs/handoff/claims.md`, `docs/ledger/claude-sessions.csv` (this thread's row), this report and its index row. **Not touched:** the handover guide for Mohamed (the Build thread edits its section 17), lane branches, product code, the approved-plan snapshot, the amendments record.
-- **Out of scope:** new rules, any change of permission or security behaviour, the authority rows still missing (see section 4).
+- **Added at 16:45 UTC (second pass, after Ahmed's 16:39:49 UTC word to merge when ready):** the briefing, `AGENTS.md`, STATUS and entry 49 refreshed again for what merged since 11:45 (AG PR #93, C4d PR #92, PR #90's records, the 5% stop line, the lane start fix); three **second-hand** authority rows (11:48:49, about 09:03, 01:09:37) in the authority record, flagged as having no quoted words.
+- **Out of scope:** new rules, any change of permission or security behaviour, a new amendment (none added; A44 to A46 cover the content).
 - **Result state:** *produced*. Not integrated, not accepted.
 
 ## 2. Work Performed
@@ -24,7 +25,7 @@
 
 ## 4. Open Points and Next Step
 
-- **Authority rows are missing** for Ahmed's messages of about 01:09:37 (quota strategy) and 09:03 (permanent, automatic heartbeat) and the answers to questions 49 to 53; the coordinator holds the words. Next free amendment number: A47 (check `origin/main` first).
+- **Authority rows:** added at 16:45 UTC for about 01:09:37, about 09:03 and 11:48:49, but **second-hand and without quoted words** (this thread did not read the project chat; the content follows the records and the coordinator's notes). **Still to do:** replace each row's description with Ahmed's verbatim words and exact time, and add rows for the answers to questions 49 to 53 if any decision beyond the rows above sits in them. Next free amendment number: A47 (check `origin/main` first).
 - **Handover guide, section 17:** add C2 (merged 11:38) and the 11:38 state; the Build thread owns it; republish the page (A39).
 - **Merge order:** PR #83 (session entry 48, EX-60) first, then this PR; both insert at the top of `docs/sessions.md` and the claims tail.
 - Consider a failure-intelligence entry (the false "finished" lane and the 30-minute idle); it is the coordinator's call under the admission boundary.

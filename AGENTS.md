@@ -50,7 +50,7 @@ Where the checks run (dated note, 2026-11-08): on Ahmed's side the Gaming-PC hea
 ## Pacing and the heartbeat (dated note, 2026-11-08; details in section 6 of the briefing)
 
 - A permanent Windows task on Ahmed's Gaming-PC ("Notaya heartbeat", every 10 minutes) relaunches stopped lanes, pauses at limits and logs the Codex and Claude meters to `docs/ledger/quota-readings.csv`. A lane that stops early with no changes is idle, not finished; if the cause is the edge of your write area, make the small mechanical edit and list it, or stop and say so.
-- At most three Codex lanes at once. Banked Codex resets are used only after the whole weekly limit is spent, and only on Ahmed's side's decision, never by a script. Claude pauses at 70% of its weekly limit. If Ahmed's quotas end, Mohamed continues with Claude only (no Codex), so leave briefs and records complete enough to resume from.
+- Use the Codex 5-hour window until about 5% is left, then stop cleanly and resume at the reset (Ahmed, 2026-11-08 11:48:49 UTC, as recorded in STATUS). At most three Codex lanes at once. Banked Codex resets are used only after the whole weekly limit is spent, and only on Ahmed's side's decision, never by a script. Claude pauses at 70% of its weekly limit. If Ahmed's quotas end, Mohamed continues with Claude only (no Codex), so leave briefs and records complete enough to resume from.
 
 ## PBS (AI Project Bootstrap System)
 
