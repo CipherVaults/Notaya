@@ -590,9 +590,6 @@ impl Database {
                 return Err(Error::Other("Two properties share an id.".into()));
             }
             check_len("A property name", &p.name, MAX_NAME)?;
-            if p.name.trim().is_empty() {
-                p.name = "Untitled".into();
-            }
             check_len("A formula", &p.formula, MAX_FORMULA)?;
             check_len("An ID prefix", &p.id_prefix, 20)?;
             if p.options.len() > MAX_OPTIONS {

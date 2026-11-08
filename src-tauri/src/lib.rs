@@ -1,5 +1,6 @@
 mod actions;
 mod backup;
+mod blocks;
 mod commands;
 mod crypto;
 mod database;

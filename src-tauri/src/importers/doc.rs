@@ -168,8 +168,11 @@ pub fn render_limited(blocks: &[Block], image: &dyn Fn(usize) -> ImageOut, page:
     if content.is_empty() {
         content.push(json!({ "type": "paragraph" }));
     }
-    let doc = json!({ "type": "doc", "content": content });
-    Ok(Rendered { content: doc.to_string(), text: r.text.join("\n\n"), cut_rows: r.cut_rows })
+    let mut doc = json!({ "type": "doc", "content": content });
+    crate::blocks::ensure_ids(&mut doc);
+    let content = doc.to_string();
+    if content.len() > limit { return Err(TooLarge); }
+    Ok(Rendered { content, text: r.text.join("\n\n"), cut_rows: r.cut_rows })
 }
 
 /// Like [`render_limited`] with the normal limit; a page that is too large comes out empty.

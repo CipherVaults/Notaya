@@ -330,6 +330,15 @@ pub fn parse(content: &str, page_title: &dyn Fn(&str) -> Option<String>) -> Vec<
     parse_with(content, page_title, &|_| None)
 }
 
+#[cfg(test)]
+#[test]
+fn block_ids_are_metadata_for_every_export_node() {
+    let original = tests::every_node_json();
+    let mut with_ids: Value = serde_json::from_str(&original).unwrap();
+    crate::blocks::ensure_ids(&mut with_ids);
+    assert_eq!(parse(&original, &tests::titles), parse(&with_ids.to_string(), &tests::titles));
+}
+
 /// Like [`parse`]; `page_ref` says, by page id, where a link to another page goes when that page
 /// is part of the same export, so the writers can make it a real link.
 pub fn parse_with(content: &str, page_title: &dyn Fn(&str) -> Option<String>, page_ref: &dyn Fn(&str) -> Option<PageRef>) -> Vec<Block> {
