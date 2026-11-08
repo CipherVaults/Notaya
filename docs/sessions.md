@@ -10,7 +10,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
-**Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 17:00 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
+**Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 16:50 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
 
 
 ---
@@ -280,6 +280,8 @@ High for the merge list and times (git and the PR records). High for the heartbe
 - Open dependency / next action: PR #83 first; the missing authority rows; C4d, AG, C3
 
 **Dated addendum (2026-11-08 about 16:45 UTC, same refresh thread, before the merge of PR #89).** What happened after the 11:45 UTC cut-off, from `origin/main` (`b4c6577`), the PR descriptions of #90, #92 and #93, and the Build thread's lines in STATUS and EX-55 section 5; nothing here was read from a PC. **11:48:49** Ahmed's stop line for Codex: work until about 5% of the 5-hour window is left, stop cleanly, resume at the reset. **12:01** the window ran out after an overshoot of 4 points (94% at 11:58, 99% at 12:01). **12:04** the root cause of earlier lane deaths was found (the Codex install was visible only to the packaged Claude app; lanes now start from the real path through WMI). **12:03 to 14:03** the Build thread recorded C2 and these facts (PR #90). **About 15:48** the Codex window reset; at 15:52 the heartbeat read Codex 5-hour 0% and week 47%, Claude 5-hour 0% and week 37%. **16:07 AG merged (PR #93):** the screenshots script failure was a script defect (an async wait treated as done), the app saves the last database view correctly; 108 screenshots, all six themes. **16:32 C4d merged (PR #92):** all eight findings of the independent review of C4 fixed, including the high back-relation issue (relations are now validated as reciprocal before any row changes); 623 Rust tests passed on the PC. **No C3 branch existed on `origin` at 16:45.** With C4d and AG the merged lanes are nine (C1, B, D, A, C4, AF, C2, AG, C4d). **Gap closed in part:** three authority rows (11:48:49, about 09:03, 01:09:37) were added to the authority record as second-hand rows; their verbatim words are still to be added from the project chat, which this thread did not read. Ahmed (16:39:49 UTC, relayed by the coordinator): merge records PRs when Claude judges them ready, without asking.
+
+**Dated correction (2026-11-08 about 16:50 UTC, same refresh thread, follow-up records PR).** The "Records gaps" bullet and Next Step 2 above are closed: the thread read the project chat afterwards and the authority record now holds Ahmed's **verbatim** words for his messages at 01:09:11 (quota strategy: Codex first, three weeks of Codex with two banked resets, Claude only after, up to 70%), 01:09:37 (handover to Mohamed when his quota ends), 08:30:44 (idle Codex), 08:57:27 (answers to questions 49 to 52) and, as relayed by the coordinator, 09:03:55 (question 53) and 11:48:49 (the 5% stop line). The quota-strategy message is **01:09:11**, not 01:09:37 as this entry wrote; the two second-hand rows added in PR #89 were replaced. Questions 49 to 53 held no decision beyond those rows. Still open: the handover guide's section 17 (Build thread) and a failure-intelligence entry.
 
 ---
 
@@ -2350,7 +2352,7 @@ Notaya became a two-partner project with written rules for sharing work through 
 
 <a id="session-33"></a>
 
-# 📘 Session: 2026-10-28 16:07 to about 17:00 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
+# 📘 Session: 2026-10-28 16:07 to about 16:50 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
 
@@ -2366,7 +2368,7 @@ Notaya became a two-partner project with written rules for sharing work through 
 
 - Date: 2026-10-28 (UTC).
 - Start: the owner merged PR #34 at 16:07:47 UTC.
-- End: the rename was checked at about 16:49 UTC; the index gives the rename work to about 17:00 UTC. The next block (the folder move and V1.4.0) starts at 17:01:14 UTC (the V1.4.0 entry above).
+- End: the rename was checked at about 16:49 UTC; the index gives the rename work to about 16:50 UTC. The next block (the folder move and V1.4.0) starts at 17:01:14 UTC (the V1.4.0 entry above).
 - Work blocks: 16:07 to 16:12 (merge, stray folder, publish); 16:24 to 16:45 (cleanup, PC clock); 16:46 to about 17:00 (rename).
 - Session type: release and housekeeping.
 - Contributors: Mohamed; Claude cloud threads; a PC session.
@@ -2408,7 +2410,7 @@ No new mistake. The FI-05 stray folder, made by a test earlier the same afternoo
 
 ## 📍 Current Position
 
-**As of:** 2026-10-28 about 17:00 UTC.
+**As of:** 2026-10-28 about 16:50 UTC.
 
 **Before:** V1.3.0 built and tested, not merged; repository named CipherLeaf; test leftovers on the PC.
 

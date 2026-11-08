@@ -28,5 +28,6 @@
 - **Authority rows:** added at 16:45 UTC for about 01:09:37, about 09:03 and 11:48:49, but **second-hand and without quoted words** (this thread did not read the project chat; the content follows the records and the coordinator's notes). **Still to do:** replace each row's description with Ahmed's verbatim words and exact time, and add rows for the answers to questions 49 to 53 if any decision beyond the rows above sits in them. Next free amendment number: A47 (check `origin/main` first).
 - **Handover guide, section 17:** add C2 (merged 11:38) and the 11:38 state; the Build thread owns it; republish the page (A39).
 - **Merge order (done):** PR #83 (session entries 48 and 50, EX-60 and EX-62) merged at 16:40 UTC; this PR's merge with `main` kept every entry (50, 49, 48).
+- **Dated correction (2026-11-08 about 16:50 UTC):** the authority rows are now verbatim (read from the project chat; 09:03:55 and 11:48:49 as relayed by the coordinator); the quota-strategy message is 01:09:11; questions 49 to 53 held nothing beyond the rows. The second-hand rows of PR #89 were replaced. Only the handover guide section 17 and the failure-intelligence call remain.
 - Consider a failure-intelligence entry (the false "finished" lane and the 30-minute idle); it is the coordinator's call under the admission boundary.
 - Result state: **produced**. Acceptance: pending (Ahmed).
