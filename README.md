@@ -12,8 +12,36 @@ Security is an optional extra. It is off by default: Notaya opens straight to yo
 
 > **Current release: Notaya 1.5.1** (published 2026-11-05, accepted by Mohamed Sayed the same day). It comes as a setup (`Notaya-V1.5.1-setup.exe`) and a portable ZIP (`Notaya-V1.5.1-portable.zip`) on the repository's Releases page. The repository is private for now, the exe is not code-signed (Windows SmartScreen may warn), and this page describes 1.5.1 only. What is and is not proven is in [`docs/acceptance.md`](docs/acceptance.md); the project's state is in [`docs/STATUS.md`](docs/STATUS.md). There is also a plain-language manual of the whole app ([how it is kept](docs/manual/README.md); the page itself is [`notaya-manual-first-edition.html`](docs/manual/notaya-manual-first-edition.html), download it and open it in a browser) and the [release notes](docs/release-notes/v1.5.1.md).
 
+## Screenshots
+
+Taken from the released 1.5.1 on a fresh test vault with made-up demo content (the calculator in the sticky notes picture is a second capture placed over the board; details in [`docs/manual/screenshots/SOURCES.md`](docs/manual/screenshots/SOURCES.md)).
+
+<table>
+<tr>
+<td width="50%"><img src="docs/manual/screenshots/01-home.png" alt="Home: favorites, recent pages and notebooks"><br><sub>Home: favorites, recent pages and notebooks</sub></td>
+<td width="50%"><img src="docs/manual/screenshots/02-editor.png" alt="The editor: ribbon, headings, checklist, callout, table and equation"><br><sub>The editor: ribbon, headings, checklist, callout, table and equation</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/manual/screenshots/03-table.png" alt="A database as a table"><br><sub>A database as a table</sub></td>
+<td width="50%"><img src="docs/manual/screenshots/04-board.png" alt="The same database as a board, grouped by status"><br><sub>The same database as a board, grouped by status</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/manual/screenshots/05-chart.png" alt="The same database as a chart (click a bar to see its rows)"><br><sub>The same database as a chart (click a bar to see its rows)</sub></td>
+<td width="50%"><img src="docs/manual/screenshots/06-stickies.png" alt="Sticky notes on the board, with a calculator"><br><sub>Sticky notes on the board, with a calculator</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/manual/screenshots/07-search.png" alt="Search with Ctrl+K: pages, database rows and sticky notes"><br><sub>Search with Ctrl+K: pages, database rows and sticky notes</sub></td>
+<td width="50%"><img src="docs/manual/screenshots/08-themes.png" alt="Settings, Appearance: seven themes"><br><sub>Settings, Appearance: seven themes</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/manual/screenshots/09-arabic.png" alt="Arabic and English side by side, each line in its own direction"><br><sub>Arabic and English side by side, each line in its own direction</sub></td>
+<td width="50%"><img src="docs/manual/screenshots/10-mermaid.png" alt="A diagram written as text and drawn in the page"><br><sub>A diagram written as text and drawn in the page</sub></td>
+</tr>
+</table>
+
 ## Contents
 
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [How to use it](#how-to-use-it)
 - [Is it safe?](#is-it-safe)
