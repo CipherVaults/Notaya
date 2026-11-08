@@ -12,6 +12,41 @@ use std::{
 };
 use tauri::{AppHandle, Manager};
 
+const HANDSHAKE_LIMIT: usize = 8;
+const AUTHENTICATED_LIMIT: usize = 4;
+const IO_DEADLINE: Duration = Duration::from_secs(5);
+
+/// Separate budgets: waiting for a person never occupies an authenticated slot.
+#[derive(Default)]
+struct Slots {
+    handshake: Arc<AtomicUsize>,
+    authenticated: Arc<AtomicUsize>,
+    pairing: Arc<AtomicUsize>,
+}
+struct Slot(Arc<AtomicUsize>);
+impl Slot {
+    fn take(counter: &Arc<AtomicUsize>, limit: usize) -> Option<Self> {
+        counter.try_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n < limit).then_some(n + 1))
+            .ok().map(|_| Self(counter.clone()))
+    }
+}
+impl Drop for Slot {
+    fn drop(&mut self) { self.0.fetch_sub(1, Ordering::SeqCst); }
+}
+
+#[derive(Default)]
+struct Deadlines {
+    frame: Option<Instant>,
+    output: Option<Instant>,
+    output_started: Option<Instant>,
+}
+impl Deadlines {
+    fn expired(&self, now: Instant) -> bool {
+        [self.frame, self.output].into_iter().flatten().any(|at| now.duration_since(at) >= IO_DEADLINE)
+            || self.output_started.is_some_and(|at| now.duration_since(at) >= Duration::from_secs(30))
+    }
+}
+
 pub struct Rate {
     tokens: f64,
     at: Instant,
@@ -55,7 +90,7 @@ mod native {
         core::{PCWSTR, PWSTR},
         Win32::{
             Foundation::{
-                CloseHandle, GetLastError, LocalFree, ERROR_PIPE_CONNECTED, HANDLE, HLOCAL,
+                CloseHandle, GetLastError, LocalFree, ERROR_PIPE_CONNECTED, ERROR_PIPE_LISTENING, ERROR_NO_DATA, HANDLE, HLOCAL,
             },
             Security::{
                 Authorization::{
@@ -70,7 +105,7 @@ mod native {
             },
             System::{
                 Pipes::{
-                    ConnectNamedPipe, CreateNamedPipeW, PeekNamedPipe, PIPE_NOWAIT,
+                    ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe, PeekNamedPipe, PIPE_NOWAIT,
                     PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE,
                 },
                 Threading::{GetCurrentProcess, OpenProcessToken},
@@ -146,7 +181,7 @@ mod native {
                 PCWSTR(path.as_ptr()),
                 mode,
                 PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_NOWAIT | PIPE_REJECT_REMOTE_CLIENTS,
-                5,
+                (HANDSHAKE_LIMIT + AUTHENTICATED_LIMIT + 2) as u32,
                 65536,
                 65536,
                 0,
@@ -172,6 +207,7 @@ mod native {
             return;
         };
         let active = Arc::new(AtomicUsize::new(0));
+        let slots = Arc::new(Slots::default());
         let mut pipe = None;
         let mut epoch = state.ai.epoch.load(Ordering::SeqCst);
         loop {
@@ -198,29 +234,45 @@ mod native {
                     }
                 }
             }
-            if active.load(Ordering::SeqCst) < 4 {
+            // There is always a listener while enabled; stale/disconnected clients
+            // cannot strand it. Existing authenticated workers keep their budget.
+            if slots.handshake.load(Ordering::SeqCst) < HANDSHAKE_LIMIT {
                 if let Some(p) = pipe.as_ref() {
                     let connected = unsafe {
                         match ConnectNamedPipe(p.0, None) {
                             Ok(()) => true,
-                            Err(_) => GetLastError() == ERROR_PIPE_CONNECTED,
+                            Err(_) => match GetLastError() {
+                                ERROR_PIPE_CONNECTED => true,
+                                ERROR_PIPE_LISTENING => false,
+                                ERROR_NO_DATA => { let _ = DisconnectNamedPipe(p.0); false },
+                                _ => { let _ = DisconnectNamedPipe(p.0); false },
+                            },
                         }
                     };
                     if connected {
                         // Keep the old instance alive until its replacement exists: no squatting gap.
-                        let next = listener(&name, &sid, false).ok();
+                        let Ok(next) = listener(&name, &sid, false) else {
+                            // Retain this owned instance even when replacement
+                            // creation fails; disconnect and retry without a gap.
+                            unsafe { let _ = DisconnectNamedPipe(p.0); }
+                            std::thread::sleep(Duration::from_millis(25));
+                            continue;
+                        };
+                        let Some(handshake) = Slot::take(&slots.handshake, HANDSHAKE_LIMIT) else { continue; };
                         let accepted = pipe.take().unwrap();
-                        pipe = next;
+                        pipe = Some(next);
                         active.fetch_add(1, Ordering::SeqCst);
                         let count = active.clone();
                         let app = app.clone();
+                        let slots = slots.clone();
                         // HANDLE is moved by its numeric value; one owner closes it on the worker.
                         let raw = accepted.0 .0 as usize;
                         std::mem::forget(accepted);
                         std::thread::spawn(move || {
                             let handle = Handle(HANDLE(raw as *mut _));
-                            connection(&app, handle, epoch);
-                            count.fetch_sub(1, Ordering::SeqCst);
+                            // Count cleanup also runs if a worker panics.
+                            let _active = Slot(count);
+                            connection(&app, handle, epoch, &slots, handshake);
                         });
                     }
                 }
@@ -244,7 +296,7 @@ mod native {
             },
         }
     }
-    fn connection(app: &AppHandle, handle: Handle, epoch: u64) {
+    fn connection(app: &AppHandle, handle: Handle, epoch: u64, slots: &Slots, handshake: Slot) {
         let state = app.state::<crate::state::AppState>();
         let mut input = Vec::new();
         let mut output: VecDeque<Vec<u8>> = VecDeque::new();
@@ -259,7 +311,19 @@ mod native {
         let mut closing = false;
         let started = Instant::now();
         let mut closing_at = None::<Instant>;
+        let mut handshake = Some(handshake);
+        let mut authenticated = None;
+        let mut _pairing_slot = None;
+        let mut deadlines = Deadlines::default();
+        let mut active_id = None;
         loop {
+            if deadlines.expired(Instant::now()) { break; }
+            if pairing.lock().unwrap().is_some() && authenticated.is_none() {
+                let Some(slot) = Slot::take(&slots.authenticated, AUTHENTICATED_LIMIT) else { break; };
+                authenticated = Some(slot);
+                handshake = None;
+                _pairing_slot = None;
+            }
             if input.len() > wire::MAX_REQUEST + 65540
                 || output.iter().map(Vec::len).sum::<usize>() > wire::MAX_RESPONSE * 2
             {
@@ -349,6 +413,10 @@ mod native {
                     .is_some_and(|(_, at)| at.elapsed() > Duration::from_millis(250))
             {
                 let (name, _) = client.take().unwrap();
+                // Only one pending pairing approval, distinct from handshakes.
+                let Some(slot) = Slot::take(&slots.pairing, 1) else { break; };
+                _pairing_slot = Some(slot);
+                handshake = None;
                 busy.store(true, Ordering::SeqCst);
                 let pairing = pairing.clone();
                 let busy = busy.clone();
@@ -382,7 +450,7 @@ mod native {
                                 if settings.ai.pairings.len() >= 32 {
                                     return Err(crate::error::Error::invalid("too_big"));
                                 }
-                                settings.ai.pairings.push(p.clone());
+                                super::super::pairing::insert_unique(&mut settings.ai, p.clone())?;
                                 s.put(crate::model::Item::Settings(settings))
                             })
                             .is_ok();
@@ -406,11 +474,20 @@ mod native {
                     busy.store(false, Ordering::SeqCst);
                 });
             }
-            if started.elapsed() > Duration::from_secs(300) && pairing.lock().unwrap().is_none() {
+            if (handshake.is_some() && started.elapsed() >= IO_DEADLINE)
+                || (started.elapsed() > Duration::from_secs(300) && pairing.lock().unwrap().is_none()) {
                 break;
             }
             if !closing {
                 while let Ok(message) = rx.try_recv() {
+                    let completed = match &message {
+                        ServerMessage::Result { id, .. } | ServerMessage::Error { id: Some(id), .. } => active_id == Some(*id),
+                        _ => false,
+                    };
+                    if completed {
+                        active_id = None;
+                        busy.store(false, Ordering::SeqCst);
+                    }
                     let bytes = match encoded(&message) {
                         Ok(bytes) => bytes,
                         Err(_) => {
@@ -425,6 +502,8 @@ mod native {
                 }
             }
             if let Some(bytes) = output.front() {
+                deadlines.output.get_or_insert_with(Instant::now);
+                deadlines.output_started.get_or_insert_with(Instant::now);
                 let mut n = 0;
                 let result = unsafe {
                     WriteFile(
@@ -438,12 +517,17 @@ mod native {
                     break;
                 }
                 written += n as usize;
+                if n > 0 { deadlines.output = Some(Instant::now()); }
                 if written == bytes.len() {
                     if let Some(mut bytes) = output.pop_front() {
                         bytes.zeroize();
                     }
                     written = 0;
+                    deadlines.output_started = None;
                 }
+            } else {
+                deadlines.output = None;
+                deadlines.output_started = None;
             }
             if closing {
                 if output.is_empty()
@@ -467,6 +551,7 @@ mod native {
                     break;
                 }
                 input.extend_from_slice(&bytes[..n as usize]);
+                if n > 0 { deadlines.frame.get_or_insert_with(Instant::now); }
             }
             if input.len() >= 4 {
                 let length = u32::from_le_bytes(input[..4].try_into().unwrap()) as usize;
@@ -480,11 +565,13 @@ mod native {
                         wire::MAX_REQUEST,
                     );
                     frame.zeroize();
+                    deadlines.frame = (!input.is_empty()).then(Instant::now);
                     let Ok(message) = message else {
                         break;
                     };
                     if !rate.take() {
-                        output.push_back(encoded(&error(None, "rate_limited")).unwrap());
+                        let id = match message { ClientMessage::Call { id, .. } => Some(id), _ => None };
+                        output.push_back(encoded(&error(id, "rate_limited")).unwrap());
                         continue;
                     }
                     match message {
@@ -568,8 +655,10 @@ mod native {
                                 closing_at = Some(Instant::now());
                             }
                         }
-                        ClientMessage::Cancel { id: _ } => {
-                            cancelled.store(true, Ordering::SeqCst);
+                        ClientMessage::Cancel { id } => {
+                            if active_id == Some(id) && busy.load(Ordering::SeqCst) {
+                                cancelled.store(true, Ordering::SeqCst);
+                            }
                         }
                         ClientMessage::Call {
                             id,
@@ -578,7 +667,8 @@ mod native {
                             preview,
                         } => {
                             if !greeted || busy.swap(true, Ordering::SeqCst) {
-                                break;
+                                output.push_back(encoded(&error(Some(id), "rate_limited")).unwrap());
+                                continue;
                             }
                             let Some(p) = pairing.lock().unwrap().clone() else {
                                 output.push_back(encoded(&error(Some(id), "not_paired")).unwrap());
@@ -586,13 +676,13 @@ mod native {
                                 continue;
                             };
                             cancelled.store(false, Ordering::SeqCst);
+                            active_id = Some(id);
                             let stop = cancelled.clone();
-                            let busy = busy.clone();
                             let tx = tx.clone();
                             let app = app.clone();
                             std::thread::spawn(move || {
                                 let state = app.state::<crate::state::AppState>();
-                                let result = dispatch::call(
+                                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispatch::call(
                                     &state,
                                     &p,
                                     &action,
@@ -606,7 +696,7 @@ mod native {
                                             level: None,
                                         });
                                     },
-                                );
+                                ))).unwrap_or_else(|_| Err(crate::error::Error::invalid("invalid")));
                                 let message = match result {
                                     Ok(value) => ServerMessage::Result {
                                         id,
@@ -616,10 +706,10 @@ mod native {
                                     },
                                     Err(e) => error(Some(id), dispatch::error_code(&e)),
                                 };
-                                if !stop.load(Ordering::SeqCst) {
-                                    let _ = tx.try_send(message);
-                                }
-                                busy.store(false, Ordering::SeqCst);
+                                // Also acknowledge cancellation so the bridge can
+                                // advance its serialized queue. A committed result
+                                // is still delivered if cancellation arrived late.
+                                let _ = tx.send(message);
                             });
                         }
                     }
@@ -645,6 +735,35 @@ mod native {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn stalled_handshakes_and_pairing_do_not_take_authenticated_slots_and_release_on_drop() {
+        let slots=Slots::default();
+        let mut handshakes:Vec<_>=(0..HANDSHAKE_LIMIT).map(|_|Slot::take(&slots.handshake,HANDSHAKE_LIMIT).unwrap()).collect();
+        assert!(Slot::take(&slots.handshake,HANDSHAKE_LIMIT).is_none());
+        let pending=Slot::take(&slots.pairing,1).unwrap();
+        assert!(Slot::take(&slots.pairing,1).is_none());
+        let auth:Vec<_>=(0..AUTHENTICATED_LIMIT).map(|_|Slot::take(&slots.authenticated,AUTHENTICATED_LIMIT).unwrap()).collect();
+        assert!(Slot::take(&slots.authenticated,AUTHENTICATED_LIMIT).is_none());
+        handshakes.pop();
+        assert!(Slot::take(&slots.handshake,HANDSHAKE_LIMIT).is_some());
+        drop(handshakes);drop(pending);drop(auth);
+        assert_eq!(slots.handshake.load(Ordering::SeqCst),0);
+        assert_eq!(slots.authenticated.load(Ordering::SeqCst),0);
+        assert_eq!(slots.pairing.load(Ordering::SeqCst),0);
+    }
+    #[test]
+    fn incomplete_frames_and_stuck_or_dribbling_output_have_absolute_deadlines() {
+        let at=Instant::now();
+        let mut deadlines=Deadlines{frame:Some(at),..Default::default()};
+        assert!(!deadlines.expired(at+Duration::from_secs(4)));
+        assert!(deadlines.expired(at+IO_DEADLINE)); // Dribbling cannot extend a frame.
+        deadlines.frame=None;deadlines.output=Some(at);deadlines.output_started=Some(at);
+        assert!(deadlines.expired(at+IO_DEADLINE));
+        deadlines.output=Some(at+Duration::from_secs(29));
+        assert!(deadlines.expired(at+Duration::from_secs(30))); // Progress cannot hold a response forever.
+        deadlines.output=None;deadlines.output_started=None;
+        assert!(!deadlines.expired(at+Duration::from_secs(600))); // Idle authenticated sessions are fine.
+    }
     #[test]
     fn rate_has_a_bounded_initial_burst() {
         let mut rate = Rate::new();

@@ -205,9 +205,11 @@ pub fn prepare(s: &Session, pairing: &Pairing, name: &str, mut params: Value) ->
         .iter()
         .find(|a| a.name == name)
         .ok_or_else(invalid)?;
+    // Unsupported execution must also fail closed for previews and discovery.
     if !rules::allowed(p.level, spec) {
         return Err(code("level_too_low"));
     }
+    if name == "batch.run" { return Err(invalid()); }
     let expect = params
         .as_object_mut()
         .ok_or_else(invalid)?
@@ -272,6 +274,8 @@ pub fn prepare(s: &Session, pairing: &Pairing, name: &str, mut params: Value) ->
         }
     }
     if name == "activity.undo" {
+        let (restore, _) = s.activity_undo_plan(&actor(p), &text(&params, "changeSetId"))?;
+        targets.extend(s.ai_write_targets(&actor(p), &restore)?);
         // Discover every affected item before checking hidden notebooks, locks and leases.
         for e in s
             .activity_list(None, None, 100_000)?
@@ -593,6 +597,20 @@ fn doc(p: &Value) -> Result<Value> {
 }
 
 fn images(s: &Session, doc: &Value) -> Result<()> {
+    if let Some(marks) = doc["marks"].as_array() {
+        for mark in marks.iter().filter(|m| m["type"] == "link") {
+            let href = mark["attrs"]["href"].as_str().ok_or_else(invalid)?;
+            let lower = href.to_ascii_lowercase();
+            let internal = href.strip_prefix("notaya:page/").is_some_and(|rest| {
+                let id = rest.split('#').next().unwrap_or("");
+                !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+            });
+            if href.chars().any(char::is_control) || href.trim() != href
+                || !(internal || ["https://", "http://", "mailto:"].iter().any(|scheme| lower.starts_with(scheme))) {
+                return Err(invalid());
+            }
+        }
+    }
     if doc["type"] == "image" {
         let src = doc["attrs"]["src"].as_str().ok_or_else(invalid)?;
         let id = crate::export::doc::attachment_id(src).ok_or_else(invalid)?;
@@ -713,6 +731,16 @@ fn definition(s: &mut Session, a: &Actor, name: &str, q: &Value) -> Result<Value
 }
 
 pub fn execute(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> Result<Value> {
+    if r.spec.level == Required::Look { return execute_inner(s, p, r, paths); }
+    // VACUUM INTO cannot run inside a transaction. Make the existing safety
+    // copy first, under the same session lock, before any action writes.
+    let backup = matches!(r.spec.name,"notebook.trash" | "section.trash")
+        || (r.spec.name=="db.create" && !s.items().any(|i| matches!(i,Item::Database(_))));
+    if backup { crate::backup::make_safety_backup(paths,s).map_err(|e|crate::backup::safety_failure(&e))?; }
+    s.atomic_action(backup, |s| execute_inner(s, p, r, paths))
+}
+
+fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> Result<Value> {
     let a = actor(p);
     let q = &r.params;
     let id = text(q, "id");
@@ -722,8 +750,8 @@ pub fn execute(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> Res
         macro_rules! out {($e:expr)=>{value($e?)}}
         match name {
             "ai.hello"|"about.get"=>Ok(json!({"version":env!("CARGO_PKG_VERSION"),"locked":false})),
-            "ai.permissions.get"=>Ok(json!({"level":p.level,"actions":ACTIONS.iter().filter(|a|rules::allowed(p.level,a)).map(|a|a.name).collect::<Vec<_>>()})),
-            "ai.limits.get"=>Ok(json!({"requestBytes":8*1024*1024,"responseBytes":32*1024*1024,"batchActions":500,"rowsPerPage":200})),
+            "ai.permissions.get"=>Ok(json!({"level":p.level,"actions":ACTIONS.iter().filter(|a|a.name!="batch.run" && rules::allowed(p.level,a)).map(|a|a.name).collect::<Vec<_>>()})),
+            "ai.limits.get"=>Ok(json!({"requestBytes":8*1024*1024,"responseBytes":32*1024*1024,"batchActions":0,"rowsPerPage":200})),
             "settings.get"=>Ok(look_settings(s)),
             "ui.where"=>{let place=s.settings().last_place;value(place.filter(|p|s.get(&p.id).is_some_and(|i|live(s,i))))},
             "ui.open"|"ui.highlight"|"ui.notify"|"ui.wait_for_person"|"calc.open"=>Ok(json!({"action":name,"params":q})),
@@ -740,7 +768,9 @@ pub fn execute(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> Res
             }
             "notebook.get"|"section.get"|"db.get"|"sticky.get"=>value(s.get(&id).ok_or(Error::NotFound)?),
             "page.get"|"page.outline"|"block.list"=>{
-                let page=blocks::read(s,&a,&id)?;let content=blocks::parse(&page.content)?;
+                // Look reads preserve legacy content and revisions exactly. Stable
+                // identities are persisted only by an authorized write operation.
+                let page=notes::get_page_core(s,&a,id.clone())?;let content=blocks::parse(&page.content)?;
                 if name=="page.outline" {fn headings(v:&Value,out:&mut Vec<Value>){if v["type"]=="heading"{out.push(v.clone());}if let Some(c)=v["content"].as_array(){for v in c{headings(v,out);}}}let mut h=vec![];headings(&content,&mut h);return Ok(json!(h));}
                 if name=="block.list"{return Ok(content["content"].clone());}
                 Ok(json!({"id":page.id,"title":page.title,"format":q["format"].as_str().unwrap_or("markdown"),
@@ -1091,6 +1121,223 @@ mod tests {
         let state = AppState::new(paths);
         state.set_session(s);
         (state, p, section, page.id.clone())
+    }
+
+    fn snapshot(s: &Session) -> Value {
+        let items: BTreeMap<_, _> = s.items().map(|i| (i.id(), value(i).unwrap())).collect();
+        json!({"items": items, "revs": s.revs, "activity":s.activity_list(None,None,100_000).unwrap()})
+    }
+    fn make_db(s: &mut Session, paths: &Paths, section: &str) -> String {
+        let created = value(db::create_database_core(s, &Actor::Person, paths, section.into(),
+            String::new(), false, "Test database".into(), String::new()).unwrap()).unwrap();
+        created["database"]["id"].as_str().unwrap().into()
+    }
+    fn make_row(s: &mut Session, id: &str) -> String {
+        let created = value(db::create_row_core(s, &Actor::Person, id.into(), "Test row".into(), "{}".into(), String::new()).unwrap()).unwrap();
+        created["row"]["id"].as_str().unwrap().into()
+    }
+
+    #[test]
+    fn formula_requests_are_bounded_in_disposable_process() {
+        const CHILD: &str = "NOTAYA_C5D_FORMULA_CHILD";
+        if std::env::var_os(CHILD).is_none() {
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "ai::dispatch::tests::formula_requests_are_bounded_in_disposable_process", "--nocapture"])
+                .env(CHILD, "1").output().unwrap();
+            assert!(output.status.success(), "child failed: {} {}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+            return;
+        }
+        let (state, p, _, _) = fixture();
+        state.with_mut(|s| {
+            let mut settings = s.settings(); settings.ai.pairings[0].level = rules::Level::Look;
+            s.put(Item::Settings(settings))
+        }).unwrap();
+        let attacks = [format!("{}1", "+".repeat(100_000)), format!("{}1", "-".repeat(1000)),
+            format!("{}1", "+".repeat(1000)), format!("{}1", "1^".repeat(1000)),
+            format!("{}1 ?", "1+".repeat(1000)), format!("1{} ?", ".abs()".repeat(500)),
+            format!("{}1", "1+".repeat(5000)), format!("[{}1]", "1,".repeat(3000)),
+            format!("\"{}\"", "x".repeat(65536))];
+        for _ in 0..32 {
+            for expression in &attacks {
+                for (action, params) in [("calc.evaluate", json!({"expression":expression})),
+                    ("db.formula.test", json!({"formula":expression}))] {
+                    let error = call(&state, &p, action, params, false, ||false, ||{}).unwrap_err();
+                    assert_eq!(error_code(&error), "invalid");
+                }
+            }
+        }
+        assert_eq!(call(&state,&p,"calc.evaluate",json!({"expression":"-2^2+10"}),false,||false,||{}).unwrap()["value"].as_f64(), Some(6.0));
+    }
+
+    #[test]
+    fn failed_property_conversion_rolls_back_cells_journals_revisions_and_disk() {
+        let (state, p, section, _) = fixture();
+        state.with_actor(&actor(&p), |s| {
+            let id = make_db(s, &state.paths, &section);
+            saves::add_property(s,&Actor::Person,&id,Property{id:"text".into(),name:"Text".into(),kind:PropKind::Text,..Default::default()})?;
+            let row = make_row(s, &id);
+            db::set_cells_core(s,&Actor::Person,row.clone(),None,json!({"text":"keep exactly"}).to_string())?;
+            s.drain_changes();
+            let before = snapshot(s);
+            let disk_before = value(Session::unlock_open(&state.paths.vault)?.items().collect::<Vec<_>>())?;
+            let r = prepare(s,&p,"db.property.change_kind",json!({"databaseId":id,"id":"text","kind":"relation"}))?;
+            assert!(execute(s,&p,&r,&state.paths).is_err());
+            assert_eq!(snapshot(s),before);
+            assert!(s.drain_changes().is_none());
+            let reopened = Session::unlock_open(&state.paths.vault)?;
+            let disk_after = value(reopened.items().collect::<Vec<_>>())?;
+            fn ordered(v: Value) -> BTreeMap<String,Value> { v.as_array().unwrap().iter().map(|i|(i["id"].as_str().unwrap_or("settings").into(),i.clone())).collect() }
+            assert_eq!(ordered(disk_after),ordered(disk_before));
+            assert_eq!(serde_json::from_str::<Value>(&db::row(s,&row)?.cells).unwrap()["text"], "keep exactly");
+            Ok(())
+        }).unwrap();
+    }
+
+    #[test]
+    fn row_and_triggered_automation_failure_roll_back_together() {
+        let (state,p,section,_) = fixture();
+        state.with_actor(&actor(&p), |s| {
+            let id = make_db(s,&state.paths,&section);
+            let row = make_row(s,&id);
+            let mut d = db::database(s,&id)?;
+            d.automations.push(Automation{id:"bad".into(),name:"Bad".into(),enabled:true,
+                trigger:Trigger{kind:"propChanged".into(),..Default::default()},
+                actions:vec![Action{kind:"setProp".into(),prop:"missing".into(),value:"x".into(),..Default::default()}],..Default::default()});
+            s.run_as(&Actor::Person,|s|s.put(Item::Database(d)))?;
+            s.drain_changes(); let before=snapshot(s);
+            let r=prepare(s,&p,"db.row.set",json!({"rowId":row,"title":"must roll back"}))?;
+            assert!(execute(s,&p,&r,&state.paths).is_err());
+            assert_eq!(snapshot(s),before); assert!(s.drain_changes().is_none());
+            Ok(())
+        }).unwrap();
+    }
+
+    #[test]
+    fn bin_empty_late_failure_rolls_back_earlier_deletes() {
+        let (state,p,section,page)=fixture();
+        state.with_actor(&actor(&p),|s| {
+            let second=notes::create_page_core(s,&Actor::Person,section,"Second".into())?.id.clone();
+            notes::trash_page_core(s,&Actor::Person,page.clone())?;
+            notes::trash_page_core(s,&Actor::Person,second.clone())?;
+            let mut r=prepare(s,&p,"bin.empty",json!({}))?;
+            r.targets=vec![page.clone(),second.clone()];
+            // Simulate a late shared-core failure after the first deletion.
+            s.coordination.editing(&second,"main",true);
+            s.drain_changes(); let before=snapshot(s);
+            assert!(execute(s,&p,&r,&state.paths).is_err());
+            assert_eq!(snapshot(s),before); assert!(s.get(&page).is_some());
+            assert!(s.drain_changes().is_none());
+            Ok(())
+        }).unwrap();
+    }
+
+    #[test]
+    fn undo_rechecks_hidden_locked_and_leased_restored_destinations() {
+        for protected in ["hidden", "locked", "lease"] {
+            let (state,p,section,page)=fixture();
+            let set=state.with_mut(|s| {
+                let d=make_db(s,&state.paths,&section); let row=make_row(s,&d);
+                let mut child=commands::page(s,&page)?; child.parent=row.clone();
+                s.put(Item::Page(child))?;
+                s.run_action(&actor(&p),"page.move",|s| {
+                    let mut child=commands::page(s,&page)?;child.parent.clear();
+                    s.put(Item::Page(child))
+                })?;
+                let set=s.activity_list(None,None,100)?.into_iter().find(|e| e.action=="page.move").unwrap().change_set.clone();
+                // The old destination is absent from the moved page's current ancestry.
+                let (restore,_) = s.activity_undo_plan(&actor(&p),&set)?;
+                assert!(s.ai_write_targets(&actor(&p),&restore)?.contains(&d));
+                match protected {
+                    "hidden"=> { // Move the destination (only) under another, now-hidden notebook.
+                        notes::create_notebook_core(s,&Actor::Person,"Hidden".into(),String::new(),String::new())?;
+                        let nb=s.items().find_map(|i|match i {Item::Notebook(n) if n.name=="Hidden"=>Some(n.id.clone()),_=>None}).unwrap();
+                        let destination=s.items().find_map(|i|match i {Item::Section(x) if x.notebook_id==nb=>Some(x.id.clone()),_=>None}).unwrap();
+                        let mut db=db::database(s,&d)?;db.section_id=destination;s.put(Item::Database(db))?;
+                        let mut settings=s.settings();settings.ai.hidden_notebooks.push(nb);s.put(Item::Settings(settings))?;
+                    },
+                    "locked"=>{let mut db=db::database(s,&d)?;db.locked=true;s.put(Item::Database(db))?;},
+                    _=>s.coordination.editing(&row,"main",true),
+                }
+                assert!(s.activity_undo(&actor(&p),&set).is_err());
+                assert!(commands::page(s,&page)?.parent.is_empty());
+                Ok(set)
+            }).unwrap();
+            assert!(call(&state,&p,"activity.undo",json!({"changeSetId":set}),true,||false,||{}).is_err());
+        }
+    }
+
+    #[test]
+    fn undo_rechecks_destination_after_window_confirmation() {
+        let (state,p,section,page)=fixture();
+        let (destination,set)=state.with_mut(|s| {
+            let mut settings=s.settings();settings.ai.big_change_items=0;s.put(Item::Settings(settings))?;
+            let d=make_db(s,&state.paths,&section);let row=make_row(s,&d);
+            let mut child=commands::page(s,&page)?;child.parent=row;s.put(Item::Page(child))?;
+            s.run_action(&actor(&p),"page.move",|s|{let mut child=commands::page(s,&page)?;child.parent.clear();s.put(Item::Page(child))})?;
+            let set=s.activity_list(None,None,100)?.into_iter().find(|e|e.action=="page.move").unwrap().change_set.clone();
+            Ok((d,set))
+        }).unwrap();
+        let state=std::sync::Arc::new(state);let weak=std::sync::Arc::downgrade(&state);
+        state.ai.bind(move |event,v|{if event=="ai-confirm" {
+            let state=weak.upgrade().unwrap();state.with_mut(|s|{let mut d=db::database(s,&destination)?;d.locked=true;s.put(Item::Database(d))}).unwrap();
+            assert!(state.ai.confirms.answer("confirm",v["id"].as_str().unwrap(),true,v["word"].as_str()));
+        }});
+        assert!(call(&state,&p,"activity.undo",json!({"changeSetId":set}),false,||false,||{}).is_err());
+        assert!(state.with(|s|Ok(commands::page(s,&page)?.parent.is_empty())).unwrap());
+    }
+
+    #[test]
+    fn look_reads_and_previews_leave_locked_legacy_rows_unchanged() {
+        let (state,p,section,_) = fixture();
+        let row=state.with_mut(|s|{
+            let id=make_db(s,&state.paths,&section);let row=make_row(s,&id);
+            let mut r=db::row(s,&row)?;r.content=json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"legacy exact"}]}]}).to_string();s.put(Item::Row(r))?;
+            let mut d=db::database(s,&id)?;d.locked=true;s.put(Item::Database(d))?;
+            let mut settings=s.settings();settings.ai.pairings[0].level=rules::Level::Look;s.put(Item::Settings(settings))?;
+            Ok(row)
+        }).unwrap();
+        let before=state.with(|s|Ok(snapshot(s))).unwrap();
+        for action in ["page.get","page.outline","block.list"] {
+            for preview in [true,false] {
+                call(&state,&p,action,json!({"id":row}),preview,||false,||{}).unwrap();
+                assert_eq!(state.with(|s|Ok(snapshot(s))).unwrap(),before);
+            }
+        }
+    }
+
+    #[test]
+    fn unsupported_batches_fail_closed_for_execution_and_preview() {
+        let (state,p,_,page)=fixture();
+        for params in [json!({"steps":[]}),json!({"steps":[{"action":"ai_set_enabled","params":{}}]}),
+            json!({"steps":vec![json!({"action":"page.rename","params":{"id":page,"title":"bad"}});501]})] {
+            for preview in [false,true] {assert!(call(&state,&p,"batch.run",params.clone(),preview,||false,||{}).is_err());}
+        }
+        let permissions=call(&state,&p,"ai.permissions.get",json!({}),false,||false,||{}).unwrap();
+        assert!(!permissions.to_string().contains("batch.run"));
+    }
+
+    #[test]
+    fn unsafe_block_links_are_rejected_in_pages_templates_and_stickies() {
+        let (state,p,section,page)=fixture();
+        state.with_mut(|s|{
+            let id=make_db(s,&state.paths,&section);
+            let (sticky,_)=stickies::create_sticky_core(s,&Actor::Person,false)?;
+            for href in ["javascript:alert(1)","file:///D:/private","data:text/html,test"," https://example.com","https:\n//example.com"] {
+                let body=json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"exact text","marks":[{"type":"link","attrs":{"href":href}}]}]}]});
+                for (action,params) in [("page.write",json!({"id":page,"format":"blocks","content":body})),
+                    ("db.template.create",json!({"databaseId":id,"template":{"id":"t","name":"Template","content":body.to_string()}})),
+                    ("sticky.write",json!({"id":sticky.id,"content":body.to_string()}))] {
+                    // Preparation rejects page content early; the shared execution
+                    // validator also protects templates and stickies.
+                    match prepare(s,&p,action,params) {Err(_)=>{},Ok(r)=>assert!(execute(s,&p,&r,&state.paths).is_err())}
+                }
+            }
+            for href in ["https://example.com/a?b=1","mailto:a@example.com","notaya:page/abc_12#heading"] {
+                let body=json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"exact text","marks":[{"type":"link","attrs":{"href":href}}]}]}]});
+                images(s,&body)?;assert_eq!(body["content"][0]["content"][0]["marks"][0]["attrs"]["href"],href);
+            }
+            Ok(())
+        }).unwrap();
     }
     #[test]
     fn live_pairing_levels_off_hidden_leases_and_revisions_are_ordered() {

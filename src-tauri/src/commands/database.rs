@@ -393,7 +393,9 @@ pub(crate) fn first_database_backup(state: &AppState, s: &Session) -> Result<boo
 pub(crate) fn first_database_backup_core(s: &Session, _actor: &Actor, paths: &crate::portable::Paths) -> Result<bool> {
     let first = !s.items().any(|i| matches!(i, Item::Database(_)));
     if first {
-        backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        if !s.ai_safety_backup_ready() {
+            backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        }
     }
     Ok(first)
 }
@@ -667,7 +669,7 @@ pub(crate) fn create_row_core(
     let id = add_row_inner(s, &database_id, title, &given, &template_id)?;
     let mut run = automation::Run::default();
     automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
-    automation::finish(run);
+    automation::finish(s, run);
     row_result(s, &id)
     })
 }
@@ -749,7 +751,7 @@ pub(crate) fn set_cells_core(
     if !changed.is_empty() {
         let mut run = automation::Run::default();
         automation::fire(s, &mut run, &row_id, &automation::Event::Changed(&changed), 0);
-        automation::finish(run);
+        automation::finish(s, run);
     }
     row_result(s, &row_id)
     })
@@ -809,7 +811,7 @@ pub(crate) fn press_button_core(s: &mut Session, _actor: &Actor, row_id: String,
     }
     let mut run = automation::Run::default();
     automation::fire(s, &mut run, &row_id, &automation::Event::Button(&prop_id), 0);
-    automation::finish(run);
+    automation::finish(s, run);
     row_result(s, &row_id)
     })
 }
@@ -844,7 +846,7 @@ pub(crate) fn duplicate_row_core(s: &mut Session, _actor: &Actor, row_id: String
     s.put_many(items)?;
     let mut run = automation::Run::default();
     automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
-    automation::finish(run);
+    automation::finish(s, run);
     row_result(s, &id)
     })
 }

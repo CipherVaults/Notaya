@@ -668,6 +668,14 @@ impl Session {
     }
 
     pub fn activity_undo(&mut self, actor: &Actor, change_set: &str) -> Result<UndoSummary> {
+        let (restore, skipped) = self.activity_undo_plan(actor, change_set)?;
+        self.ai_write_targets(actor, &restore)?;
+        let restored = restore.len();
+        self.run_as(actor, |s| s.put_many(restore))?;
+        Ok(UndoSummary { restored, skipped })
+    }
+
+    pub(crate) fn activity_undo_plan(&self, actor: &Actor, change_set: &str) -> Result<(Vec<Item>, usize)> {
         self.activity_verify()?;
         let entries = self.entries()?;
         let selected: Vec<_> = entries
@@ -767,9 +775,7 @@ impl Session {
             }
             restore.push(item);
         }
-        let restored = restore.len();
-        self.run_as(actor, |s| s.put_many(restore))?;
-        Ok(UndoSummary { restored, skipped })
+        Ok((restore, skipped))
     }
 }
 

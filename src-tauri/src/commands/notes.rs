@@ -193,7 +193,9 @@ pub(crate) fn delete_notebook_core(
     s.run_as(_actor, |s| {
     let mut item = notebook(s, &id)?;
     if item.trashed_at.is_none() {
-        backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        if !s.ai_safety_backup_ready() {
+            backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        }
         item.trashed_at = Some(now_ms());
         s.put(Item::Notebook(item))?;
     }
@@ -294,7 +296,9 @@ pub(crate) fn delete_section_core(
     s.run_as(_actor, |s| {
     let mut item = section(s, &id)?;
     if item.trashed_at.is_none() {
-        backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        if !s.ai_safety_backup_ready() {
+            backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        }
         item.trashed_at = Some(now_ms());
         s.put(Item::Section(item))?;
     }

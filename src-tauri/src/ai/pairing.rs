@@ -49,6 +49,16 @@ pub fn create(name: String) -> (Pairing, Zeroizing<String>) {
     };
     (pairing, token)
 }
+
+/// Called while holding the session write lock, after the window's approval.
+/// A duplicate never replaces or upgrades an existing credential.
+pub fn insert_unique(settings: &mut Settings, pairing: Pairing) -> crate::error::Result<()> {
+    if settings.pairings.len() >= 32 || settings.pairings.iter().any(|p| p.name == pairing.name) {
+        return Err(crate::error::Error::invalid("pairing_refused"));
+    }
+    settings.pairings.push(pairing);
+    Ok(())
+}
 fn hash(token: &str) -> String {
     hex::encode(Sha256::digest(token.as_bytes()))
 }
@@ -76,6 +86,20 @@ pub fn authenticate(settings: &Settings, id: &str, token: &str) -> Option<Pairin
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn duplicate_client_pairing_never_replaces_an_approved_credential() {
+        let mut settings = Settings::default();
+        let (first, token) = create("Codex".into());
+        insert_unique(&mut settings, first.clone()).unwrap();
+        let (second, _) = create("Codex".into());
+        assert!(insert_unique(&mut settings, second).is_err());
+        assert_eq!(settings.pairings.len(), 1);
+        assert!(authenticate(&settings,&first.id,&token).is_some());
+        settings.pairings.clear(); // Only the person's revoke command removes it.
+        let (replacement, _) = create("Codex".into());
+        insert_unique(&mut settings, replacement).unwrap();
+        assert!(authenticate(&settings,&first.id,&token).is_none());
+    }
     #[test]
     fn token_is_returned_once_and_only_hash_is_persisted() {
         let (p, token) = create("Codex".into());

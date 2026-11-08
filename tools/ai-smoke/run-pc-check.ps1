@@ -3,11 +3,12 @@ param(
     [ValidateSet('Core', 'Live')][string]$Mode = 'Core',
     [switch]$NativeBridgeTests,
     [string]$AppExe,
-    [string]$BridgeExe
+    [string]$BridgeExe,
+    [ValidateSet('D:\Notaya Tests\v1-6-C5-smoke', 'D:\Notaya Tests\v1-6-C5\C5d-smoke')]
+    [string]$TestRoot = 'D:\Notaya Tests\v1-6-C5-smoke'
 )
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
-$testRoot = 'D:\Notaya Tests\v1-6-C5-smoke'
 $runHome = Join-Path $testRoot ('run-' + [Guid]::NewGuid().ToString('N'))
 
 function Assert-PlainPath([string]$Path) {

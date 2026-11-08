@@ -159,20 +159,41 @@ impl Store {
     /// itself fails, the transaction is rolled back so the connection is never
     /// left inside an open transaction.
     pub fn transaction<T>(&self, f: impl FnOnce(&Store) -> Result<T>) -> Result<T> {
-        self.conn.execute_batch("BEGIN IMMEDIATE")?;
-        match f(self) {
+        let nested = !self.conn.is_autocommit();
+        self.conn.execute_batch(if nested { "SAVEPOINT store_write" } else { "BEGIN IMMEDIATE" })?;
+        let rollback = if nested { "ROLLBACK TO store_write; RELEASE store_write" } else { "ROLLBACK" };
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
+        match result {
+            Err(panic) => {
+                let _ = self.conn.execute_batch(rollback);
+                std::panic::resume_unwind(panic)
+            }
+            Ok(result) => match result {
             Ok(v) => {
-                if let Err(e) = self.conn.execute_batch("COMMIT") {
-                    let _ = self.conn.execute_batch("ROLLBACK");
+                if let Err(e) = self.conn.execute_batch(if nested { "RELEASE store_write" } else { "COMMIT" }) {
+                    let _ = self.conn.execute_batch(rollback);
                     return Err(e.into());
                 }
                 Ok(v)
             }
             Err(e) => {
-                let _ = self.conn.execute_batch("ROLLBACK");
+                let _ = self.conn.execute_batch(rollback);
                 Err(e)
             }
+            }
         }
+    }
+
+    pub(super) fn begin_action(&self) -> Result<()> {
+        self.conn.execute_batch("BEGIN IMMEDIATE")?;
+        Ok(())
+    }
+    pub(super) fn commit_action(&self) -> Result<()> {
+        self.conn.execute_batch("COMMIT")?;
+        Ok(())
+    }
+    pub(super) fn rollback_action(&self) {
+        let _ = self.conn.execute_batch("ROLLBACK");
     }
 }
 
