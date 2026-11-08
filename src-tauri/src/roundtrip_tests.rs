@@ -574,6 +574,20 @@ fn linking(id: &str, section: &str, parent: &str, title: &str, order: i64, inlin
 /// to pages that were not exported come back as their text; nothing dead or `notaya:` is left.
 #[test]
 fn links_between_exported_pages_come_back_as_links_between_the_imported_pages() {
+    // Check generated row ids, then compare every other field with the original row shape.
+    fn omit_row_ids(node: &mut serde_json::Value) {
+        if node["type"] == "pageLink" {
+            let bid = node["attrs"]["bid"].as_str().expect("the page link has a block id");
+            assert!(bid.len() == 16 && bid.bytes().all(|b| b.is_ascii_hexdigit()));
+            node["attrs"].as_object_mut().unwrap().remove("bid");
+        }
+        if let Some(children) = node.get_mut("content").and_then(serde_json::Value::as_array_mut) {
+            for child in children {
+                omit_row_ids(child);
+            }
+        }
+    }
+
     let root = temp();
     let src = new_vault(&root.join("src-data"));
     let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
@@ -654,8 +668,11 @@ fn links_between_exported_pages_come_back_as_links_between_the_imported_pages() 
                 (b, vec![link(a), link(c)]),
                 (c, vec![link(b), row(a)]),
             ] {
+                let mut content: serde_json::Value = serde_json::from_str(&from.content).unwrap();
+                omit_row_ids(&mut content);
+                let content = serde_json::to_string(&content).unwrap();
                 for w in want {
-                    if !from.content.contains(&w) {
+                    if !content.contains(&w) {
                         failures.push(format!("{label}: '{}' lacks {w}: {}", from.title, from.content));
                     }
                 }
