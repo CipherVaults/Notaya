@@ -10,7 +10,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
-**Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 17:00 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
+**Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 16:50 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
 
 
 ---
@@ -21,6 +21,9 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 50 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger refresh at 16:00 UTC (EX-2026-11-08-62)](#session-50) |
+| 49 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [The 1.6 build day: Codex first, the heartbeat, seven lanes merged (EX-2026-11-08-61)](#session-49) |
+| 48 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger redesign and the 1.6 to 2.5 forecast (EX-2026-11-08-60)](#session-48) |
 | 47 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger: first Codex cycle and pace forecast (EX-2026-11-08-57)](#session-47) |
 | 46 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Checkpoint: plan settled, Notion read, 1.6 build begins (PRs #61 to #68)](#session-46) |
 | 45 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Notaya Manual, first edition (PR #63)](#session-45) |
@@ -68,6 +71,319 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-50"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger refresh at 16:00 UTC
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**. The readings are relayed by the coordinator from Ahmed's Codex page (14:20 UTC), the Build thread's note and a Claude weekly reading (about 16:00 UTC); this thread saw no screen.
+
+**What it covers:** the second work block of the thread "Redesign the usage ledger with forecasts" (the first is [session 48](#session-48)): [EX-2026-11-08-62](execution/2026-11-08-ledger-refresh-1600.md). (Numbering: session 49 is taken by the Build thread's branch, so this entry is 50; renumber on merge if the order changes.)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5` (configured) | not recorded | Its own usage was not read (a running session has no usage block) |
+| Coordinator (relays 16:02:44 and 16:03:17) | not read | not read | Messages only; the readings and the roadmap thread's usage row are its words |
+| "Build Notaya 1.6" thread | not read | not read | Its 5-hour window note (ran out 12:01, reset 15:48) is relayed |
+| "Build a version roadmap showcase artifact" thread | `claude-sonnet-5-5`, high (as relayed) | high | Usage relayed (reported 3.11 USD); not read by this thread |
+| Codex lanes | `gpt-6.1-sol`, `xhigh` | xhigh | Not read here; the weekly percentage comes from Ahmed's page |
+
+**Record basis:** `origin/main` at `8ee9019`; the ledger files; STATUS line 67 (12:03 UTC) and the later lane lines.
+
+## 🕒 Time
+
+- Ahmed's message: 16:02:35 UTC (relayed 16:02:44); coordinator note 16:03:17. System clock when work began: about 16:03 UTC.
+- Active working time: not measured. Session type: records, a page and a model; no product code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (16:02:35): make the explanation clear in the roadmap, and update the usage ledger if possible. The ledger part is this thread's; the roadmap part belongs to the roadmap artifact's thread.
+
+## 🧭 Starting State
+
+PR #83 (draft) carried the 08:30 ledger with Codex week 26% and Claude week 22%; `origin/main` had moved on (lanes C4, AF, C2, AG merged; records PR #90). Merged `origin/main` into the branch first (conflicts in `STATUS.md` and the Codex briefing, resolved by keeping both sides' lines).
+
+## 🛠️ Actions Taken
+
+1. Recorded the three relayed readings and the roadmap thread's usage row.
+2. Recalibrated `forecast-inputs.csv` and `forecast-versions.csv`; regenerated `pace-forecast.csv` with the model.
+3. Fixed the page so a blank 5-hour reading shows "not read"; replaced two hard-coded readings; rebuilt and checked it at two widths and both themes.
+4. Wrote the ledger block, EX-2026-11-08-62, this entry, the claims row and a STATUS line; republished the artifact to the same link.
+5. Ahmed (16:11:39 UTC, relayed): a white-ish theme like the roadmap, light by default, for the ledger and the roadmap. Gave the ledger the roadmap's palette and a Theme button (Light default, Dark, Auto) and republished. The roadmap page belongs to its own thread: its default needs `theme = 'light'` instead of `'auto'`; passed to the coordinator.
+
+## 🧠 Key Insights
+
+- **Codex week: 47% used; a week holds about 6.3 windows.** The Codex capacity assumption barely moved.
+- **Claude's cost is the new weak point.** Its week went from 22% to 37% in about 7.5 hours while about 1.3 Codex windows ran, so I raised the cost per window from 3% to 6% (range 3 to 11). That is an upper bound; if the truth is near the top, Claude's 70% cap binds before Codex does.
+- **The finish moved later:** 2.5 likely about 7 December (was 2 December), worst case 19 February (was 31 January); Ahmed's own quota (his weekly allowance plus the banked resets) now reaches 2.3, where the 08:30 numbers reached 2.0. The model spends a banked reset only when the weekly allowance is empty, and with Claude's share setting the pace Codex runs dry less often, so the banks last longer. Both are model results, not measurements.
+
+## 📌 Decisions Made
+
+None by Ahmed in this thread beyond the request above. No amendment.
+
+## ⚠️ Difficulties / Friction
+
+The usage of other threads could not be read from this thread (the session list shows only archived and idle sessions), so only the roadmap thread's row, relayed by the coordinator, was added. The 5-hour gauges had no current reading; the template would have shown 0%, so it was changed to say "not read". An accidental file named `--help` was created in the repository root by a mistaken command and removed at once (never committed).
+
+## 🔧 Adjustments Made
+
+Template: blank-input handling for the two 5-hour gauges. Inputs: calibration as in EX-62.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk: the 25-of-45 progress and the window count are estimates; Claude's cost per window is the weakest number.
+- Risk: the earlier commit trailer on this PR's first commit has a mistyped session id; not amended.
+
+## 📍 Current Position
+
+Dashboard republished at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>; PR #83 updated; nothing merged; nothing accepted.
+
+## 🔜 Next Steps
+
+1. The roadmap artifact's thread makes the explanation clear (not this thread).
+2. Feed the heartbeat's Codex meter log and Claude readings into the model when they reach `docs/ledger/`; read Claude's weekly percentage before and after each lane.
+3. Refresh at the next lane merge.
+
+## ❓ Open Questions
+
+None new. Still open from before: whether Mohamed builds with his Claude Pro.
+
+## 🧾 Session Outcome
+
+*Produced* and published as a private artifact; *verified* by build and browser check only; not integrated; not accepted.
+
+## 🔍 Confidence Level
+
+High for the relayed readings. Medium for 6.3 windows a week. Low for every date after 1.7 and lowest for Claude's cost per window.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `forecast-inputs.csv`, `forecast-versions.csv`, `pace-forecast.csv`, `quota-readings.csv`, `claude-sessions.csv`), `tools/usage-ledger/dashboard-template.html`, [EX-2026-11-08-62](execution/2026-11-08-ledger-refresh-1600.md).
+
+- Integration / review: on merge of PR #83 (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: the heartbeat logs and the next lane merge
+
+---
+
+<a id="session-49"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud + Gaming-PC · The 1.6 build day: Codex first, the heartbeat, seven lanes merged
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machines: **cloud** (the "Build Notaya 1.6" thread directs, inspects and merges; this refresh thread wrote the entry) and Ahmed's **Gaming-PC** (Codex lanes, the heartbeat and the checks). Time covered: **2026-11-08 about 01:10 UTC (where [entry 47](#session-47) stops) to about 11:45 UTC.**
+
+**What it covers:** the first day of building 1.6 as it happened after the checkpoint ([entry 46](#session-46)): the pause at Codex's limit, the lanes merged one by one, the change of method to "Codex first" (A46), the heartbeat that became a permanent task, the quota rules, and what went wrong on the way. Detail per lane lives in [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5 (the heartbeat log), the pull requests and the [usage ledger](ledger/usage-ledger.md); this entry joins them in one place and does not repeat them. The ledger redesign and forecast (08:28 UTC onward) are in [entry 48](#session-48) (PR #83, open when this was written).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Codex lanes A, B, C1, C2, C4/C4b/C4d, D, E, AF, AG | `gpt-6.1-sol` | reasoning `xhigh` | Process command lines and log headers quoted by the PC session ([EX-2026-11-08-57](execution/2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md)); the later runs (05:25 onward) are quoted from the heartbeat log. Not seen by this thread |
+| Independent review of lane A (a fresh Codex session that did not write it) | Codex, model not recorded in the sources read | not recorded | Its result (0 high, 2 medium, 2 low) is quoted from [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md); the review text was not read by this thread |
+| "Build Notaya 1.6" thread (briefs, inspection, merges, records) | `claude-sonnet-5-5` | high | `docs/ledger/claude-sessions.csv` (a reading from 00:51 UTC); its later usage is not in the ledger yet |
+| Heartbeat (PC, every 10 minutes) | a script; its Claude meter probe is one tiny `claude -p` call on a small model with no tools | not applicable | `docs/ledger/quota-readings.csv` rows and notes |
+| This thread (refresh of the AI-facing records) | `claude-sonnet-5-5` | high | `get_session` at 11:43 UTC: configured and last served model both `claude-sonnet-5-5`; a running session has no usage block, so its usage is "not recorded" |
+
+**Record basis (reconstructed).** This entry is written afterwards, from the repository on `origin/main` at `2ffaa2c` (11:38 UTC): `git log`, [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5, STATUS "Continuation", the authority record, the claims board, the ledger files, the pull request descriptions of #85, #86, #88, #70 and #83, and the coordinator's relay of 11:41:55 UTC. **Not read by this thread:** the project chat of 01:10 to 11:41 UTC, so Ahmed's words of 01:09:37, 08:57:27 (beyond what A46 quotes) and 09:03 are given by their effect as the records state it, not quoted. **Not seen:** any Codex or Claude usage screen, any lane log, any diff of the merged lanes, and the PC.
+
+## 🕒 Time
+
+- This thread: Ahmed's message 11:41:49 UTC ("make sure the AI PBS docs are up to date and aren't stale"), 11:42:04 ("especially our session summary"), the thread started 11:41:56. The times in the timeline below are UTC from the heartbeat log or the pull request merge times (git shows them in +02:00; converted).
+- Active working time of the building threads: not measured.
+- Session type: coordination of a build (Claude directs, Codex builds), plus the records refresh that wrote this entry.
+- Reason for summary: A37 item 5 (every session that changes the repository or ends a work block). The Build thread's own milestone entry was promised in EX-55 section 4 and had not been written; this entry stands in for it until it is.
+
+## 🎯 Session Goal
+
+Ahmed (00:15:27 and 00:18:27, [A44](plan/approval-and-amendments.md)): build 1.6 with Codex doing the building and Claude briefing, inspecting, merging and recording; (00:30:19) keep it going around both 5-hour windows without waiting to be asked; (08:27:53, [A46](plan/approval-and-amendments.md)) lean on Codex for everything it can do, onboard it as a partner, keep the app's feel and never weaken PBS.
+
+## 🧭 Starting State
+
+`main` = `acfdb0a` (PR #72, 00:58 UTC; `0c3374c`, PR #73, followed at 00:59 UTC). Notaya 1.5.1 accepted; 1.6 authorised. Lanes A, B, C1 and D were partly written and cut off by Codex's limit at 00:44 UTC; lane E was finished and pushed (draft PR #70, held until the AI server exists). Codex was paused until 05:25 UTC.
+
+## 🛠️ Actions Taken
+
+Timeline (UTC; Gaming-PC does the Codex work and the checks, the cloud thread reviews and merges):
+
+1. **05:25 to 06:24** Codex's window reset; the heartbeat started C1 and A (05:45); C1, A, D were pushed 06:17 to 06:23, B was already done. Reading at 06:24: 5-hour 36%, weekly 22%.
+2. **06:56** the heartbeat wrongly reported C4 finished and pushed an empty `AE0101/v1-6-c4`; ignored, C4 restarted as `v1-6-c4b`; C2 had stopped at the edge of its write area, so the areas were widened.
+3. **07:13 to 07:18** checks on the exact commits (C1 588 Rust tests passed, B 529, D bridge 16, A 521); merged **C1 (PR #74), B (PR #75), D (PR #76)**; A held for a conflict; records PRs #77 and #78 (the second corrected a time that had been estimated instead of read from the clock).
+4. **07:58 to 08:05** A fixed and **merged (PR #79)**; C4b pushed but `cargo test` failed (exit 101); records PR #80.
+5. **08:07 to 08:36** both restarted lanes (C4b fix, C2) stopped after 80 seconds and nothing relaunched them: about **30 minutes of idle Codex**, noticed by Ahmed from his usage screen.
+6. **08:27:53** Ahmed: lean on Codex for everything, onboard it as a partner (A46). **08:31 to 08:34** the Codex partner briefing and A46 merged (PR #81), then a draft forecast page (PR #82). **08:28 onward** the ledger-redesign thread took over the forecast ([entry 48](#session-48)).
+7. **08:35 to 08:53** four Codex lanes at once took the 5-hour window from 61% to 100% in 18 minutes; limit hit 08:53:35. Meanwhile lane E's check script was fixed and a **fresh Codex session reviewed merged lane A: 0 high, 2 medium, 2 low**, which became lane AF.
+8. **08:57:27** Ahmed: delete the draft forecast; banked Codex resets only after the whole weekly limit is spent; Mohamed has Claude (Pro) only, no Codex (PR #84 merged 08:58; recorded in A46). **08:59 to 09:09** Ahmed registered the permanent scheduled task "Notaya heartbeat" (first 30 minutes, at 09:01 every 10 minutes); it logs the Codex and Claude meters to the ledger.
+9. **10:45 to 10:49** the window reset; a stale "try again at 12:45 PM" line was misread as tomorrow and cost about 3 minutes; parsing fixed; three lanes started 10:48:46 (C4c fix, C2, AF).
+10. **11:05 to 11:07** C4b fix (`514c2e8`, 617 tests passed) and AF (`6240e49`) pushed; **merged C4 (PR #85) and AF (PR #86)**; records PR #87 (STATUS, lessons, heartbeat quota readings).
+11. **11:21 to 11:38** C2: its first push could not even start `cargo test --lib` (exit `0xc0000139`) because `AppState` held a Tauri `AppHandle`; it was changed to hold injected callbacks and a regression test was added. **C2 merged (PR #88, 11:38 UTC; 631 Rust tests passed, 0 failed, 1 ignored, `npm audit` 0, `tsc` and build passed on the head or its parent)**. Inspection note: the lease error text names "Ahmed" and must say "the person".
+12. **11:37** the heartbeat checkpointed C4d (fixes from the independent review of the block edits, including a high-severity back-relation issue) and AG (lane A screenshots script and a database-view restore check). Both still running at the end of this entry. **C3 is held until Codex's window resets, about 15:45 UTC.**
+
+## 🧠 Key Insights
+
+- **A "finished" lane is not a lane that stopped.** Twice a stop (exit 0, no changes, at the edge of a write area) looked like completion or like waiting; once it cost 30 minutes of the scarcest resource. The heartbeat now counts that as idle and relaunches; small mechanical edits outside an area are made and listed.
+- **Four lanes at once burn a window five times faster than they finish work** (cached rereading); three is the ceiling. Codex's week holds about six windows, so waste is felt at once.
+- **The independent review earned its place:** a fresh Codex session found two medium issues in merged lane A within minutes; a second review of the block edits found a high back-relation issue before C4 shipped anywhere. Both were fixed in follow-up lanes (AF, C4d), not by the author alone.
+- **Cloud threads cannot check Rust.** The container has no Wine and no Windows toolchain and installing them needs Ahmed's own word. Every Rust result in this entry was produced by the PC heartbeat on an exact commit; the cloud thread inspects and says "not run" for anything else.
+- **The records fell behind the day.** `docs/handoff/codex-partner-briefing.md` was written at 08:35 and was stale by 11:07 (it listed C4b "in progress" and "two lanes at a time"); STATUS stopped at 11:07; this entry did not exist. That is why this refresh was asked for.
+
+## 📌 Decisions Made
+
+By Ahmed, as the records quote them: the go and the roles (A44); Codex first and Codex as a partner (A46, 08:27:53); banked resets only after the whole week is spent, Mohamed Claude-only, delete the draft forecast (08:57:27, in A46); the permanent heartbeat (registered by Ahmed 08:59 to 09:09). By the building thread (within A44 and A37 item 3): merge each lane after inspection and checks; max three lanes; a boundary stop counts as idle; widen write areas for mechanical edits. **No decision by this thread.**
+
+## ⚠️ Difficulties / Friction
+
+Codex's sandbox cannot start the Rust tests or write git, so the heartbeat has to do both; the first C2 push could not start the tests at all; lane E's commit footer shows a mangled middle dot (`Â·`, not rewritten, no force-push); four-lane bursts hit the limit; PowerShell scripts and encodings caused small bugs (the stale-line parse).
+
+## 🔧 Adjustments Made
+
+The heartbeat interval went from 30 to 10 minutes and became a permanent scheduled task; the three-lane ceiling; the boundary stop rule; widened write areas (C4 may add `mod blocks;` to `lib.rs`; C2 may touch `lib.rs` registration lines, `src/lib/types.ts` and others); `AppState` no longer holds a Tauri handle.
+
+## ❌ Mistakes / Risks Noted
+
+- The heartbeat reported C4 finished when it was not (06:56); the 30-minute idle (08:07 to 08:36); four lanes at once (08:35); the stale-line misread (10:46). All four are in the heartbeat log; none changed product code on `main`. **A failure-intelligence entry has not been written** (the admission boundary in `failure-intelligence.md` decides; the idle and the false "finished" are candidates, the coordinator's call).
+- **Records gaps found by this refresh, not closed here:** the authority table has no rows for Ahmed's messages of about 01:09:37 (quota strategy: Codex builds with its weekly quota and banked resets, Claude develops only after Codex is used up and stops at 70%; he cannot pay for bigger plans; Mohamed continues when Ahmed's quotas end) and 09:03 (the heartbeat must be permanent and automatic, with exact meters); nor for the answers to questions 49 to 53. The words must come from the project chat, which this thread did not read; the coordinator should supply them for rows and an amendment (next free: A47). The handover guide's section 17 stops at 11:07 (C2 is missing; the Build thread owns that section); its published page is older still.
+- Risk: lane C2's real-window UI check (`dev-mock/c2-ui-check.cjs`) has not run; "verified" for C2 means the unit tests and audit only.
+
+## 📍 Current Position
+
+`origin/main` = `2ffaa2c`. Merged for 1.6: C1, B, D, A, C4, AF, C2; none accepted. Running: C4d, AG. Held: C3 (until about 15:45 UTC), E (PR #70, until C5). Not started: C5. Codex readings at 11:05: 5-hour 30%, weekly 36%. This PR refreshes the Codex briefing (sections 2, 5, 6), `AGENTS.md`, one dated note in `CLAUDE.md`, the claims board and the STATUS "As of" line.
+
+## 🔜 Next Steps
+
+1. (Done at 16:40 UTC: PR #83, entries 48 and 50, merged first; this PR was merged with `main` keeping 50, 49, 48 in order.)
+2. The coordinator supplies the verbatim words for the missing authority rows (about 01:09:37, 08:57:27, 09:03, questions 49 to 53) and decides on a failure-intelligence entry.
+3. The Build thread adds C2 to handover guide section 17 and republishes the published guide (A39).
+4. After C4d, AG and C3 land: refresh the briefing's section 5 again; a refresh like this one is needed at every lane merge, so consider making it part of the lane-merge routine.
+
+## ❓ Open Questions
+
+For Ahmed: nothing new from this thread. Open from before: the numbered list in the project chat (the next question number is 54 as the coordinator's notes have it).
+
+## 🧾 Session Outcome
+
+*Produced*: this entry, the refreshed briefing, `AGENTS.md`, the `CLAUDE.md` note, the claims rows and the STATUS line. *Verified* only in the sense that each fact was checked against `origin/main`, the pull request descriptions and the heartbeat log named above; the PC results are quoted, not re-run. *Not integrated* until merged; *not accepted*.
+
+## 🔍 Confidence Level
+
+High for the merge list and times (git and the PR records). High for the heartbeat log events (copied from EX-55). Medium for the reading of Ahmed's 01:09 and 09:03 messages (second-hand). Low for anything about lanes C4d, AG and C3 beyond "running" and "held" (relayed by the coordinator and the branch list only).
+
+## 📎 Where things live
+
+[EX-2026-11-08-61](execution/2026-11-08-ai-pbs-records-refresh.md), [`docs/handoff/codex-partner-briefing.md`](handoff/codex-partner-briefing.md), [`AGENTS.md`](../AGENTS.md), [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5, [`docs/ledger/`](ledger/usage-ledger.md), the lane briefs [`docs/plan/2026-11-08-v1-6-codex-briefs.md`](plan/2026-11-08-v1-6-codex-briefs.md).
+
+- Integration / review: on merge of this PR (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: PR #83 first; the missing authority rows; C4d, AG, C3
+
+**Dated addendum (2026-11-08 about 16:45 UTC, same refresh thread, before the merge of PR #89).** What happened after the 11:45 UTC cut-off, from `origin/main` (`b4c6577`), the PR descriptions of #90, #92 and #93, and the Build thread's lines in STATUS and EX-55 section 5; nothing here was read from a PC. **11:48:49** Ahmed's stop line for Codex: work until about 5% of the 5-hour window is left, stop cleanly, resume at the reset. **12:01** the window ran out after an overshoot of 4 points (94% at 11:58, 99% at 12:01). **12:04** the root cause of earlier lane deaths was found (the Codex install was visible only to the packaged Claude app; lanes now start from the real path through WMI). **12:03 to 14:03** the Build thread recorded C2 and these facts (PR #90). **About 15:48** the Codex window reset; at 15:52 the heartbeat read Codex 5-hour 0% and week 47%, Claude 5-hour 0% and week 37%. **16:07 AG merged (PR #93):** the screenshots script failure was a script defect (an async wait treated as done), the app saves the last database view correctly; 108 screenshots, all six themes. **16:32 C4d merged (PR #92):** all eight findings of the independent review of C4 fixed, including the high back-relation issue (relations are now validated as reciprocal before any row changes); 623 Rust tests passed on the PC. **No C3 branch existed on `origin` at 16:45.** With C4d and AG the merged lanes are nine (C1, B, D, A, C4, AF, C2, AG, C4d). **Gap closed in part:** three authority rows (11:48:49, about 09:03, 01:09:37) were added to the authority record as second-hand rows; their verbatim words are still to be added from the project chat, which this thread did not read. Ahmed (16:39:49 UTC, relayed by the coordinator): merge records PRs when Claude judges them ready, without asking.
+
+**Dated correction (2026-11-08 about 16:50 UTC, same refresh thread, follow-up records PR).** The "Records gaps" bullet and Next Step 2 above are closed: the thread read the project chat afterwards and the authority record now holds Ahmed's **verbatim** words for his messages at 01:09:11 (quota strategy: Codex first, three weeks of Codex with two banked resets, Claude only after, up to 70%), 01:09:37 (handover to Mohamed when his quota ends), 08:30:44 (idle Codex), 08:57:27 (answers to questions 49 to 52) and, as relayed by the coordinator, 09:03:55 (question 53) and 11:48:49 (the 5% stop line). The quota-strategy message is **01:09:11**, not 01:09:37 as this entry wrote; the two second-hand rows added in PR #89 were replaced. Questions 49 to 53 held no decision beyond those rows. Still open: the handover guide's section 17 (Build thread) and a failure-intelligence entry.
+
+**Dated correction (2026-11-08 about 16:55 UTC):** the coordinator asked for the failure-intelligence entries (16:46 UTC); they are written as **FI-08** (the false "finished" lane, about 06:56 UTC) and **FI-09** (the 30-minute Codex idle, 08:07 to 08:36 UTC) in [failure-intelligence.md](failure-intelligence.md). The "A failure-intelligence entry has not been written" line in Mistakes above no longer holds.
+
+---
+
+<a id="session-48"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger redesign and the 1.6 to 2.5 forecast
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**; the limit readings are Ahmed's screenshots of the Claude usage popup and the Codex usage menu on his PC, relayed by the coordinator. Time covered: **2026-11-08 08:28:33 UTC (thread start) to about 08:50 UTC** (system clock at the time of writing).
+
+**What it covers:** Ahmed's request to lean on Codex, to see on charts what uses what, and to forecast how many versions the quotas can finish ([EX-2026-11-08-60](execution/2026-11-08-ledger-redesign-and-forecast.md)); the new dashboard; the one shared forecast model; the 08:27 readings.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5` (configured) | not recorded | Its own record was not read (a running session's record has no usage block); identity quoted from the thread's configuration, not from a served-model reading |
+| Coordinator (relays 08:28:32, 08:29:20, 08:35:32) | not read | not read | Messages only |
+| "Build Notaya 1.6" thread (draft forecast, PR #82; relay 08:34:29) | not read | not read | Its draft was read in full from `main`; its numbers (22% at 06:24, 26% at 08:07) are relayed and not seen on a screen by this thread |
+| Codex lanes (the measured cycle) | `gpt-6.1-sol`, `xhigh` | xhigh | From `codex-runs.csv` (quoted by the PC session at 00:29 UTC); this thread ran nothing on Codex |
+
+**Record basis:** `main` at `d3d0f0b`; the ledger files; the version plan and 1.6 briefs; Ahmed's two screenshots (read as images); the FFmpeg Encoder forecast and ledger artifacts (read for purpose only, nothing copied).
+
+## 🕒 Time
+
+- Ahmed's messages: 08:27:53 (relayed 08:28:32), 08:29:17, 08:35:26. Thread start 08:28:33. Draft page published at about 08:37 (system clock).
+- Active working time: not measured.
+- Session type: records, a page and a model; no product code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (08:27:53): lean on Codex for everything it can do, and build a forecast of what the Codex and Claude quotas can finish across the long roadmap, with charts showing which part uses what; (08:29:17) inspired by FFmpeg Encoder's ledger for its purpose only; (08:35:26) the forecast is Notaya's own.
+
+## 🧭 Starting State
+
+`main` = `4ee829f`, then `d3d0f0b` (PR #81 Codex first and A46; PR #82 a draft roadmap forecast handed to this thread). The ledger had a table-heavy dashboard, a forecast from 00:58 UTC (6.5 windows a week, 10.5 points a window assumed) and no reading of Claude's week since 22:32 UTC on 11-07.
+
+## 🛠️ Actions Taken
+
+1. Read the repository's records, the ledger and its dashboard code, the two screenshots, the FFmpeg Encoder artifacts, the version plan and the 1.6 briefs; checked other branches for taken EX and session numbers.
+2. Wrote one forecast model and two input tables, the new dashboard template, the builder changes; rebuilt `pace-forecast.csv` from the model; looked at the page in a headless browser (desktop and phone, light and dark) and fixed the timeline scale, the table width and the phone layout.
+3. Folded in the Build thread's draft (readings, plan points, a cross-check of Claude's cost per point); marked it superseded and, after Ahmed's answer at 08:57:27 UTC, deleted it.
+4. Published to the same artifact link (version 5). Wrote the ledger block, README changes, EX-2026-11-08-60, this entry, the claims row and one STATUS line.
+
+## 🧠 Key Insights
+
+- **Codex's weekly limit sets the pace, and the two banked resets bring the finish forward a lot.** At the default settings 1.6 to 2.5 is built by about 2 December (best 22 November, worst about 31 January); without the banks about 16 December. Ahmed's own quota reaches version 2.0 (about 21 November); after that the work runs on weekly resets or on Mohamed's quota.
+- **A week holds about 6.1 windows** (was 6.5): 26% of the week after about 1.6 windows. Speed is about 11 plan points a window on an estimate that 18 of 1.6's 45 points are built.
+- **Claude's quota does not hold the pace back on the default guess** (about 3% of its week per window), but that is the weakest number; a rule now asks for Claude's weekly percentage before and after each lane to replace it.
+- **Cached rereading is 96 to 97% of tokens on both sides**, so shorter contexts are the lever that stretches a quota.
+- **Two forecasts were drafted at the same time** (this thread's and the Build thread's); they agreed within the guesses (the same plan points, the same windows per week, a Claude cost per point of the same size), and were folded into one.
+
+## 📌 Decisions Made
+
+None by Ahmed in this thread beyond the instruction above (recorded already as A46 and A45). No amendment.
+
+## ⚠️ Difficulties / Friction
+
+The first relay named an FFmpeg Encoder forecast; Ahmed corrected it twice (08:29:17 and 08:35:26), which was folded in before the page was published. The `project-usage-screen.csv` that the README had named was never committed, so it was created here. The artifact tool refused the first publish because the live version had not been read; the live page was found to equal the repository's old template, so nothing was lost.
+
+## 🔧 Adjustments Made
+
+The timeline was first drawn to the worst case (January), which made every likely bar a sliver; it is now drawn to the likely end with arrows for worst cases. The table's separate best, likely and worst columns were merged so "who pays" fits without scrolling.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk (closed at 08:57:27 UTC): the banked-reset mechanism was an assumption that moves the early dates by two weeks; Ahmed confirmed it.
+- Risk: the speed (11 points per window) comes from one and a half windows and from my estimate of what was built.
+- A first version of the speed paragraph in the ledger block said 6.5 windows a week; it was corrected to 6.1 before commit.
+
+## 📍 Current Position
+
+Dashboard published at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>; draft PR with the records open; nothing merged; nothing accepted.
+
+## 🔜 Next Steps
+
+1. Ahmed's question 49 (automatic quota control) and whether Mohamed builds with his Claude Pro.
+2. At each lane merge: read Claude's weekly percentage before and after; at each Codex reset, add the Codex readings and the run rows (lane A's second pass, C4b and C2 have none yet).
+3. Rebuild with `build_dashboard.py`, run `--forecast-csv`, republish to the same link.
+
+## ❓ Open Questions
+
+Answered by Ahmed at 08:57:27 UTC: a banked reset refills the whole Codex week and the 5-hour window and is used only after the week is fully spent; the old draft may be deleted (done); Mohamed has **no Codex**, only a Claude Pro subscription. **Still open:** Ahmed's question 49, that his quota be controlled automatically (not built here; handed to the coordinator), and whether Mohamed will build with his Claude Pro at all.
+
+## 🧾 Session Outcome
+
+*Produced* (page, model, inputs, readings, records) and published as a private artifact. *Verified* only by building it and looking at it in a headless browser; the forecast itself is not verified. Not integrated until merged; not accepted.
+
+## 🔍 Confidence Level
+
+High for the readings themselves and for the weekly capacity (two readings, 5.5 to 7 windows). Medium for the speed. Low for every date after 1.7, and lowest for Claude's cost per window and for the banked-reset mechanism.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `forecast-inputs.csv`, `forecast-versions.csv`, `pace-forecast.csv`, `quota-readings.csv`, `project-usage-screen.csv`), `tools/usage-ledger/` (`forecast-model.cjs`, `dashboard-template.html`, `build_dashboard.py`), the dashboard <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>, [EX-2026-11-08-60](execution/2026-11-08-ledger-redesign-and-forecast.md).
+
+- Integration / review: on merge of this PR (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: Ahmed's three answers above
+
 ---
 
 <a id="session-47"></a>
@@ -2038,7 +2354,7 @@ Notaya became a two-partner project with written rules for sharing work through 
 
 <a id="session-33"></a>
 
-# 📘 Session: 2026-10-28 16:07 to about 17:00 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
+# 📘 Session: 2026-10-28 16:07 to about 16:50 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
 
@@ -2054,7 +2370,7 @@ Notaya became a two-partner project with written rules for sharing work through 
 
 - Date: 2026-10-28 (UTC).
 - Start: the owner merged PR #34 at 16:07:47 UTC.
-- End: the rename was checked at about 16:49 UTC; the index gives the rename work to about 17:00 UTC. The next block (the folder move and V1.4.0) starts at 17:01:14 UTC (the V1.4.0 entry above).
+- End: the rename was checked at about 16:49 UTC; the index gives the rename work to about 16:50 UTC. The next block (the folder move and V1.4.0) starts at 17:01:14 UTC (the V1.4.0 entry above).
 - Work blocks: 16:07 to 16:12 (merge, stray folder, publish); 16:24 to 16:45 (cleanup, PC clock); 16:46 to about 17:00 (rename).
 - Session type: release and housekeeping.
 - Contributors: Mohamed; Claude cloud threads; a PC session.
@@ -2096,7 +2412,7 @@ No new mistake. The FI-05 stray folder, made by a test earlier the same afternoo
 
 ## 📍 Current Position
 
-**As of:** 2026-10-28 about 17:00 UTC.
+**As of:** 2026-10-28 about 16:50 UTC.
 
 **Before:** V1.3.0 built and tested, not merged; repository named CipherLeaf; test leftovers on the PC.
 

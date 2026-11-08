@@ -56,7 +56,7 @@ impl Coordination {
             related(id) && windows.values().any(|until| until.is_none_or(|t| t > now))
         }) {
             return Err(Error::invalid(
-                "person_editing: Ahmed is editing this; read it again in a moment.",
+                "person_editing: the person is editing this; read it again in a moment.",
             ));
         }
         if let Some(claim) = self.claims.iter().find_map(|(id, c)| {
@@ -266,7 +266,7 @@ mod tests {
                 .err()
                 .unwrap()
                 .to_string()
-                .starts_with("person_editing:")
+                .starts_with("person_editing: the person is editing this;")
         );
         assert!(s.check_write(&ai("Codex"), NB, None).is_err());
         save(&mut s, &Actor::Person, "person").unwrap();

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Popover } from "radix-ui";
-import { Check, Image as ImageIcon, Move, SmilePlus, X } from "lucide-react";
+import { Check, Image as ImageIcon, Move, SmilePlus, History, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageIcon, coverFill, parseCover, pictureCover, pictureSrc } from "@/lib/pageLook";
+import { MenuItem } from "@/components/ui";
 import { CoverPicker, IconPicker } from "./LookPickers";
 
 // A page's icon (an emoji or a small picture) and its cover banner. Both are chosen here: hover the title
@@ -258,4 +259,9 @@ export function PageIconAndActions({ icon, cover, readOnly, allowPicture = true,
       )}
     </div>
   );
+}
+
+/** Kept here with the page-header actions; the existing page menu hosts it. */
+export function HistoryMenuItem({ onSelect }: { onSelect: () => void }) {
+  return <MenuItem icon={<History size={15} />} onSelect={onSelect}>Version history</MenuItem>;
 }

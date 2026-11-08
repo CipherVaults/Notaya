@@ -1,5 +1,6 @@
 //! Rust-only block editing for action callers. This module grants no permission:
 //! the dispatcher must enforce pairing, level, confirmation, leases and revision.
+mod attrs;
 mod ids;
 mod ops;
 
@@ -143,6 +144,17 @@ mod tests {
         let mut assigned: Value = serde_json::from_str(&first.content).unwrap();
         assert!(!ensure_ids(&mut assigned));
         assert_eq!(first.updated, 1);
+        for node in [
+            json!({"type":"mathBlock","attrs":{"latex":123}}),
+            json!({"type":"mermaidBlock","attrs":{"code":{"secret":"content"}}}),
+        ] {
+            let error = write(&mut session, &Actor::Person, &first.id, "secret title".into(),
+                json!({"type":"doc","content":[node]})).err().unwrap();
+            assert!(matches!(error, Error::Invalid(ref msg) if msg == "Invalid block document or operation."));
+            let unchanged = notes::get_page_core(&session, &Actor::Person, first.id.clone()).unwrap();
+            assert_eq!(unchanged.content, first.content);
+            assert_eq!(unchanged.title, first.title);
+        }
         let page = write(
             &mut session,
             &Actor::Person,
