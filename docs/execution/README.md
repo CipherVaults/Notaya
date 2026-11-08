@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-08 (Ahmed's message 2026-11-07 23:58:44 UTC; coordinator's notes 23:59:42 and 00:02:40 UTC), EX-2026-11-08-54: version plan with the 23:58:44 answers and the Notion survey gaps; 1.6 spec committed
+
+- [2026-11-08-version-plan-survey-gaps.md](2026-11-08-version-plan-survey-gaps.md): a plan update, a copied document and records. Emoji and Greek/Cyrillic in PDF moved to 1.7-13; Excel export with charts and Excel import in 1.9; the survey's page gaps placed in 1.8 (1.8-11 to 1.8-14) and its database and sync items in 1.9 (1.9-12 to 1.9-17); exchange folder next to the data folder; [the 1.6 spec](../plan/2026-11-08-v1-6-spec.md) committed unchanged. **Produced** (verified only by its section 3); not accepted.
+
 ### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-52: Dependency and licence study for the planned features
 
 - [2026-11-07-dependency-licence-study.md](2026-11-07-dependency-licence-study.md): a study and records; draft PR. Whiteboard strokes (perfect-freehand), global shortcuts (Tauri plugin, Rust side only), Greek/Cyrillic PDF font (Noto Sans subset; Arabic and Hebrew already exist), Excel (own writer; `rust_xlsxwriter` as the upgrade), MCP bridge (rmcp; named pipe needs an explicit access rule) ([the study](../plan/2026-11-07-dependency-licence-study.md)). **Produced** (verified only by the checks in its section 3); not accepted. No dependency is approved or installed.

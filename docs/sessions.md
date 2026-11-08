@@ -243,6 +243,8 @@ Turn the finished feature discussion into a staged plan: which feature goes in w
 
 **Dated addendum (2026-11-07 about 23:58 UTC, [EX-2026-11-07-53](execution/2026-11-07-version-plan-answers.md)):** at 23:53:46 and 23:54:20 UTC Ahmed answered most of the plan's and the AI CLI list's questions (two authority rows). The versions after 1.9 are now **2.0 to 2.5** (the old 1.10 to 1.15); the order stays the coordinator's call; names in About stay in 1.6; the AI never draws freehand; four AI levels, hidden notebooks, an optional big-change confirm at 20 items, the AI's files inside Notaya's own data folder, two AIs allowed if kept apart. Page locks deferred; the bridge undecided. The plan, its repository copy and the Notion hub were updated in the same session. The title and index row of this entry keep "V1.15" as written at the time.
 
+**Dated addendum (2026-11-08 about 00:08 UTC, [EX-2026-11-08-54](execution/2026-11-08-version-plan-survey-gaps.md)):** Ahmed's 23:58:44 UTC answers (one authority row) and the Notion survey's round-2 gaps were folded into the plan: emoji and Greek/Cyrillic in PDF moved to 1.7-13; Excel export with charts (1.9-5) and Excel import (1.9-11); block links, contents block, per-block direction and Notion ids in 1.8; saved views, descriptions, row layouts, a Status-groups check, templates and a sync ledger in 1.9. The exchange folder now reads "next to" the data folder. The 1.6 spec (another thread's work) was committed unchanged. Same session, same models; results produced, not accepted.
+
 ---
 
 <a id="session-43"></a>
