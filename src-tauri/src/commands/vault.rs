@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
@@ -145,7 +145,12 @@ fn check_new_password(password: &str) -> Result<()> {
 
 /// Things to do right after unlocking: restore sticky notes and window effects.
 pub(super) fn after_unlock(app: &AppHandle, state: &AppState) {
-    state.bind_events(app);
+    let events_app = app.clone();
+    let sticky_app = app.clone();
+    state.bind_events(
+        move |changes| { let _ = events_app.emit("items-changed", changes); },
+        move |id| ui::close_sticky(&sticky_app, id),
+    );
     state.record_success();
     let Ok((protect, stickies)) = state.with(|s| {
         let stickies: Vec<Sticky> = s

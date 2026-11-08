@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime};
 
 use tauri::{AppHandle, Emitter, Manager};
@@ -85,11 +85,16 @@ impl Flush {
     }
 }
 
+/// The shell supplies runtime operations; core state and its tests never own an AppHandle.
+#[derive(Clone)]
+struct ChangeSink {
+    changed: Arc<dyn Fn(crate::changes::ItemsChanged) + Send + Sync>,
+    close_sticky: Arc<dyn Fn(&str) + Send + Sync>,
+}
+
 pub struct AppState {
     pub paths: Paths,
-    event_app: Mutex<Option<AppHandle>>,
-    #[cfg(test)]
-    pub(crate) change_events: Mutex<Vec<crate::changes::ItemsChanged>>,
+    change_sink: Mutex<Option<ChangeSink>>,
     session: Mutex<Option<Session>>,
     attempts: Mutex<Attempts>,
     /// Labels of windows that have called `window_ready` (they listen for `vault-locking`).
@@ -132,9 +137,7 @@ impl AppState {
     pub fn new(paths: Paths) -> Self {
         AppState {
             paths,
-            event_app: Mutex::new(None),
-            #[cfg(test)]
-            change_events: Mutex::new(Vec::new()),
+            change_sink: Mutex::new(None),
             session: Mutex::new(None),
             attempts: Mutex::new(Attempts { failures: 0, wait_until: None }),
             ready: Mutex::new(HashSet::new()),
@@ -267,28 +270,39 @@ impl AppState {
         let s = session.as_mut().ok_or(Error::Locked)?;
         let result = f(s);
         let mut close = Vec::new();
-        let app = guard(&self.event_app).clone();
+        let sink = guard(&self.change_sink).clone();
         // Some old cores perform several transactions. Publish durable partial writes even
         // if a later step failed; they must never leak into the next command's signal.
         if let Some(changes) = s.drain_changes() {
-            #[cfg(test)]
-            guard(&self.change_events).push(changes.clone());
-            if let Some(app) = app.as_ref() {
+            if let Some(sink) = sink.as_ref() {
                 for id in &changes.ids {
                     if matches!(s.get(id), Some(crate::model::Item::Sticky(st)) if st.trashed_at.is_some()) {
                         close.push(id.clone());
                     }
                 }
-                let _ = app.emit("items-changed", changes);
+                (sink.changed)(changes);
             }
         }
         drop(session);
         // Destroyed windows call unmark_ready, which also takes the session lock.
-        if let Some(app) = app { for id in close { ui::close_sticky(&app, &id); } }
+        if let Some(sink) = sink {
+            for id in close {
+                (sink.close_sticky)(&id);
+            }
+        }
         result
     }
 
-    pub fn bind_events(&self, app: &AppHandle) { *guard(&self.event_app) = Some(app.clone()); }
+    pub fn bind_events(
+        &self,
+        changed: impl Fn(crate::changes::ItemsChanged) + Send + Sync + 'static,
+        close_sticky: impl Fn(&str) + Send + Sync + 'static,
+    ) {
+        *guard(&self.change_sink) = Some(ChangeSink {
+            changed: Arc::new(changed),
+            close_sticky: Arc::new(close_sticky),
+        });
+    }
 
     /// Slows down repeated guessing: after 3 failures, waits 2, 4, 8 … up to 60 seconds.
     pub fn check_rate_limit(&self) -> Result<()> {
