@@ -590,6 +590,9 @@ impl Database {
                 return Err(Error::Other("Two properties share an id.".into()));
             }
             check_len("A property name", &p.name, MAX_NAME)?;
+            if p.name.trim().is_empty() {
+                p.name = "Untitled".into();
+            }
             check_len("A formula", &p.formula, MAX_FORMULA)?;
             check_len("An ID prefix", &p.id_prefix, 20)?;
             if p.options.len() > MAX_OPTIONS {
@@ -811,6 +814,21 @@ mod tests {
         d.props.push(Property { id: "x".into(), name: "A".into(), kind: PropKind::Text, ..Property::default() });
         d.props.push(Property { id: "x".into(), name: "B".into(), kind: PropKind::Text, ..Property::default() });
         assert!(d.sanitize().is_err());
+    }
+
+    #[test]
+    fn sanitize_restores_blank_property_names_and_keeps_nonblank_text_exact() {
+        for name in ["", "  ", "\t\r\n", "\u{2003}\u{00a0}"] {
+            let mut d = db();
+            d.props[0].name = name.into();
+            d.sanitize().unwrap();
+            assert_eq!(d.props[0].name, "Untitled");
+        }
+        let name = "  \u{200f}\u{639}\u{631}\u{628}\u{64a} ?Deutsch e\u{301}  ";
+        let mut d = db();
+        d.props[0].name = name.into();
+        d.sanitize().unwrap();
+        assert_eq!(d.props[0].name.as_bytes(), name.as_bytes());
     }
 
     #[test]

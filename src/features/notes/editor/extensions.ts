@@ -53,7 +53,8 @@ export const BlockIds = Extension.create({
     }];
   },
   onCreate() {
-    this.editor.view.dispatch(this.editor.state.tr.setMeta(blockIdsKey, true));
+    // Appended id assignments must not mark a legacy page dirty merely on open.
+    this.editor.view.dispatch(this.editor.state.tr.setMeta(blockIdsKey, true).setMeta("preventUpdate", true));
   },
   addProseMirrorPlugins() {
     return [new Plugin({

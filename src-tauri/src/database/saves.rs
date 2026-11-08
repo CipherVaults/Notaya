@@ -64,6 +64,7 @@ pub fn add_property(
     if db.props.len() >= MAX_PROPERTIES
         || db.prop(&property.id).is_some()
         || property.kind == PropKind::Title
+        || property.name.trim().is_empty()
     {
         return Err(invalid());
     }
@@ -85,6 +86,9 @@ pub fn update_property(
         .find(|p| p.id == id)
         .ok_or(Error::NotFound)?;
     *p = patch(p, changes, &["id", "kind"])?;
+    if p.name.trim().is_empty() {
+        return Err(invalid());
+    }
     save(s, actor, db)
 }
 
@@ -219,6 +223,9 @@ pub fn rename_view(
     id: &str,
     name: String,
 ) -> Result<Database> {
+    if name.trim().is_empty() {
+        return Err(invalid());
+    }
     update_view(s, actor, database_id, id, &serde_json::json!({"name":name}))
 }
 
@@ -281,7 +288,7 @@ mod tests {
     fn prop(id: &str) -> Property {
         Property {
             id: id.into(),
-            name: "  ".into(),
+            name: "  Property  ".into(),
             ..Property::default()
         }
     }
@@ -295,7 +302,7 @@ mod tests {
             let actor = Actor::Person;
             let db =
                 add_property(s, &actor, "dddddddddddddddddddddddddddddddd", prop("p")).unwrap();
-            assert_eq!(db.prop("p").unwrap().name.as_bytes(), b"  ");
+            assert_eq!(db.prop("p").unwrap().name.as_bytes(), b"  Property  ");
             assert_eq!(db.title, "\u{200f}عربي  ");
             let name = "\u{200e}?Deutsch\u{200f}  e\u{301}";
             let db = update_property(
@@ -351,7 +358,7 @@ mod tests {
                 &actor,
                 "dddddddddddddddddddddddddddddddd",
                 "v2",
-                "  ".into(),
+                name.into(),
             )
             .unwrap();
             update_view(
@@ -369,7 +376,7 @@ mod tests {
                 &["v2".into(), first.clone()],
             )
             .unwrap();
-            assert_eq!(db.views[0].name, "  ");
+            assert_eq!(db.views[0].name.as_bytes(), name.as_bytes());
             assert!(db.views[0].wrap);
             add_property(s, &actor, "dddddddddddddddddddddddddddddddd", prop("q")).unwrap();
             let db = reorder_properties(
@@ -400,6 +407,34 @@ mod tests {
             let before = snapshot(s);
             assert!(remove_view(s, &actor, "dddddddddddddddddddddddddddddddd", "v2").is_err());
             assert_eq!(snapshot(s), before);
+        });
+    }
+
+    #[test]
+    fn blank_small_save_names_are_rejected_atomically_with_content_free_errors() {
+        with_session(|s| {
+            let actor = Actor::Person;
+            let id = "dddddddddddddddddddddddddddddddd";
+            let db = add_property(s, &actor, id, prop("p")).unwrap();
+            let view = db.views[0].id.clone();
+            let before = snapshot(s);
+            for name in ["", "  ", "\t\r\n", "\u{2003}\u{00a0}"] {
+                let property = Property { name: name.into(), ..prop("q") };
+                let error = add_property(s, &actor, id, property).unwrap_err();
+                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                assert_eq!(error.fault_code(), None);
+                assert_eq!(snapshot(s), before);
+
+                let error = update_property(s, &actor, id, "p", &json!({"name":name})).unwrap_err();
+                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                assert_eq!(error.fault_code(), None);
+                assert_eq!(snapshot(s), before);
+
+                let error = rename_view(s, &actor, id, &view, name.into()).unwrap_err();
+                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                assert_eq!(error.fault_code(), None);
+                assert_eq!(snapshot(s), before);
+            }
         });
     }
 
