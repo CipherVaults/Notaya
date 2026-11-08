@@ -30,7 +30,7 @@
   --border: rgba(120, 60, 20, 0.14);
   --text: #2b1d14;
   --muted: #6b5444;
-  --faint: #8f7766;
+  --faint: #806750;
   --shadow: 0 14px 44px -14px rgba(90, 40, 10, 0.28), 0 0 0 1px rgba(120, 60, 20, 0.08);
   --code-bg: #fbf1e4;
 }
@@ -47,7 +47,7 @@
   --border: rgba(255, 230, 210, 0.11);
   --text: #f7ece2;
   --muted: #bfae9f;
-  --faint: #8c7c6e;
+  --faint: #b09a87;
   --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 230, 210, 0.06);
   --code-bg: #221a15;
 }
@@ -64,7 +64,7 @@
   --border: rgba(255, 255, 255, 0.11);
   --text: #f4f4f4;
   --muted: #a3a3a3;
-  --faint: #737373;
+  --faint: #909090;
   --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --code-bg: #0e0e0e;
 }
@@ -81,7 +81,7 @@
   --border: rgba(255, 255, 255, 0.1);
   --text: #ececec;
   --muted: #a8a8a8;
-  --faint: #777777;
+  --faint: #999999;
   --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --code-bg: #212121;
 }
@@ -98,7 +98,7 @@
   --border: rgba(0, 0, 0, 0.1);
   --text: #1f1f1f;
   --muted: #5f5f5f;
-  --faint: #939393;
+  --faint: #707070;
   --shadow: 0 14px 44px -14px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.06);
   --code-bg: #f6f6f4;
 }
@@ -115,13 +115,27 @@
   --border: rgba(70, 45, 10, 0.15);
   --text: #28231c;
   --muted: #65594a;
-  --faint: #85796a;
+  --faint: #756958;
   --shadow: 0 14px 44px -14px rgba(60, 40, 10, 0.3), 0 0 0 1px rgba(70, 45, 10, 0.08);
   --code-bg: #f3ecdd;
 }
 
 [data-density="compact"] {
   --row-pad: 3px;
+}
+
+/* Gold that stays visible on both light and dark surfaces. Off favorites keep an outline. */
+[data-mode="light"] { --favorite: #8c6500; }
+[data-mode="dark"] { --favorite: #f2c14e; }
+svg.lucide-star { color: var(--muted); }
+svg.lucide-star[fill="currentColor"] { color: var(--favorite); }
+/* MenuItem and the editor/property menus used to fade an already muted icon a second time. */
+span.opacity-70:has(> svg.lucide) { opacity: 1; }
+
+/* Keep labeled actions and the window buttons reachable when the window is narrow. */
+@media (max-width: 760px) {
+  .title-search-hint { display: none; }
+  .title-bar { gap: 4px; }
 }
 
 @theme inline {

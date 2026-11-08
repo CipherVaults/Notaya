@@ -183,6 +183,29 @@ pub struct Settings {
     /// encrypted with the vault, wiped from memory when the vault locks, and the UI reads and changes it only
     /// through the search-history commands.
     pub search_history: Vec<String>,
+    /// The last note location, encrypted here like calculator history. Older versions ignore it.
+    /// Only `set_last_place` changes it; ordinary appearance saves must preserve it.
+    #[serde(default)]
+    pub last_place: Option<LastPlace>,
+}
+
+/// Identifiers only: no titles, text or paths. A missing location opens Home.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Zeroize)]
+#[serde(rename_all = "camelCase")]
+pub struct LastPlace {
+    pub kind: String,
+    pub id: String,
+    #[serde(default)]
+    pub view_id: Option<String>,
+}
+
+impl LastPlace {
+    pub fn valid(&self) -> bool {
+        let valid_id = |id: &str| !id.is_empty() && id.len() <= 128 && id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_');
+        matches!(self.kind.as_str(), "page" | "row" | "database")
+            && valid_id(&self.id)
+            && self.view_id.as_deref().is_none_or(|id| self.kind == "database" && valid_id(id))
+    }
 }
 
 /// How many searches the history keeps, and the longest one it stores (in characters).
@@ -220,6 +243,7 @@ impl Default for Settings {
             sticky_default_color: "yellow".into(),
             calc_history: Vec::new(),
             search_history: Vec::new(),
+            last_place: None,
         }
     }
 }
@@ -256,6 +280,35 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn last_place_defaults_and_round_trips_without_breaking_old_readers() {
+        let old = r#"{"kind":"settings","theme":"paper"}"#;
+        let Item::Settings(mut settings) = serde_json::from_str::<Item>(old).unwrap() else { panic!("settings") };
+        assert!(settings.last_place.is_none());
+        settings.last_place = Some(LastPlace { kind: "database".into(), id: new_id(), view_id: Some(new_id()) });
+        let json = serde_json::to_string(&Item::Settings(settings.clone())).unwrap();
+        let Item::Settings(loaded) = serde_json::from_str::<Item>(&json).unwrap() else { panic!("settings") };
+        assert_eq!(loaded.last_place, settings.last_place);
+        // Like 1.5.1, a reader without this field ignores it and keeps the settings it knows.
+        #[derive(Deserialize)]
+        struct OldSettings { theme: String }
+        assert_eq!(serde_json::from_str::<OldSettings>(&json).unwrap().theme, "paper");
+    }
+
+    #[test]
+    fn last_place_accepts_only_bounded_identifiers_and_known_kinds() {
+        for kind in ["page", "row", "database"] {
+            let mut place = LastPlace { kind: kind.into(), id: new_id(), view_id: None };
+            assert!(place.valid());
+            place.view_id = Some(new_id());
+            assert_eq!(place.valid(), kind == "database");
+        }
+        for (kind, id) in [("settings", "p1"), ("page", ""), ("page", "../note"), ("page", "note title")] {
+            assert!(!LastPlace { kind: kind.into(), id: id.into(), view_id: None }.valid());
+        }
+        assert!(!LastPlace { kind: "page".into(), id: "a".repeat(129), view_id: None }.valid());
+    }
 
     #[test]
     fn sunrise_is_the_default_look_and_both_sunrise_looks_are_kept() {

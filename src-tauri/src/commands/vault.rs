@@ -9,7 +9,7 @@ use crate::backup;
 use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
-use crate::model::{Item, Settings, Sticky};
+use crate::model::{Item, LastPlace, Settings, Sticky};
 use crate::openvault;
 use crate::state::{self, AppState};
 use crate::ui;
@@ -395,13 +395,78 @@ pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Setti
     let mut settings = settings.sanitized();
     let protect = state.with_mut(|s| {
         // The calculator history changes only through the calculator commands.
-        settings.calc_history = s.settings().calc_history;
-        settings.search_history = s.settings().search_history;
+        let stored = s.settings();
+        settings.calc_history = stored.calc_history;
+        settings.search_history = stored.search_history;
+        settings.last_place = stored.last_place;
         s.put(Item::Settings(settings.clone()))?;
         Ok(s.protects_capture())
     })?;
     ui::set_capture_protection(&app, protect);
     get_settings(state)
+}
+
+/// Saves only the last location in the unlocked vault, without overwriting other settings.
+#[tauri::command]
+pub fn set_last_place(state: State<'_, AppState>, last_place: Option<LastPlace>) -> Result<()> {
+    state.with_mut(|s| save_last_place(s, last_place))
+}
+
+fn save_last_place(s: &mut Session, last_place: Option<LastPlace>) -> Result<()> {
+    if last_place.as_ref().is_some_and(|place| !place.valid()) {
+        return Err(Error::invalid("The last place is not valid."));
+    }
+    let mut settings = s.settings();
+    if settings.last_place == last_place {
+        return Ok(());
+    }
+    settings.last_place = last_place;
+    s.put(Item::Settings(settings))
+}
+
+#[cfg(test)]
+mod last_place_tests {
+    use super::*;
+    use crate::model::CalcEntry;
+
+    fn throwaway_path() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("notaya-last-place-{}", crate::model::new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join("throwaway.nota")
+    }
+
+    #[test]
+    fn the_location_reopens_from_the_vault_without_changing_other_settings() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let mut settings = session.settings();
+        settings.theme = "paper".into();
+        settings.calc_history.push(CalcEntry { expr: "2+2".into(), result: "4".into() });
+        settings.search_history.push("test search".into());
+        session.put(Item::Settings(settings)).unwrap();
+        let place = LastPlace { kind: "page".into(), id: crate::model::new_id(), view_id: None };
+        save_last_place(&mut session, Some(place.clone())).unwrap();
+        drop(session);
+        let mut reopened = Session::unlock_open(&path).unwrap();
+        let stored = reopened.settings();
+        assert_eq!(stored.last_place, Some(place));
+        assert_eq!(stored.theme, "paper");
+        assert_eq!(stored.calc_history[0].result, "4");
+        assert_eq!(stored.search_history, ["test search"]);
+        save_last_place(&mut reopened, None).unwrap();
+        drop(reopened);
+        assert!(Session::unlock_open(&path).unwrap().settings().last_place.is_none());
+    }
+
+    #[test]
+    fn invalid_locations_do_not_change_the_settings_record() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let before = serde_json::to_vec(&session.settings()).unwrap();
+        let bad = LastPlace { kind: "page".into(), id: "a title / not an id".into(), view_id: None };
+        assert!(save_last_place(&mut session, Some(bad)).is_err());
+        assert_eq!(serde_json::to_vec(&session.settings()).unwrap(), before);
+    }
 }
 
 /// Applies Mica/Acrylic to the calling window. Returns whether it took effect.

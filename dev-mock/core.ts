@@ -1,7 +1,7 @@
 // Dev-only stand-in for @tauri-apps/api/core, used by `npm run mock` to preview
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
-import { databaseCommand, databaseMetas, NOT_HANDLED } from "./database";
+import { databaseCommand, databaseMetas, reorderDatabases, NOT_HANDLED } from "./database";
 
 const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
@@ -36,12 +36,14 @@ const settings: Record<string, unknown> = {
   font: "inter",
   fontSize: Number(params.get("fs") ?? 15),
   editorWidth: "normal",
-  density: "comfortable",
+  density: params.get("density") === "compact" ? "compact" : "comfortable",
   unlockBackground: params.get("bg") ?? "midnight",
   idleLockMinutes: 5,
   lockOnMinimize: false,
   screenCaptureProtection: false,
   stickyDefaultColor: "yellow",
+  // Dev-only hydration fixture, e.g. ?lastKind=page&lastId=p1. No browser storage.
+  lastPlace: params.has("lastId") ? { kind: params.get("lastKind") ?? "page", id: params.get("lastId"), ...(params.has("lastView") ? { viewId: params.get("lastView") } : {}) } : null,
 };
 
 const savedPages = new Map<string, { title?: string; content?: string; text?: string; icon?: string; cover?: string }>();
@@ -220,10 +222,17 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     case "flush_done":
       return ok(null);
     case "get_settings":
-      return ok({ ...settings });
-    case "save_settings":
+      return ok(structuredClone(settings));
+    case "save_settings": {
+      const lastPlace = settings.lastPlace;
       Object.assign(settings, args.settings as Args);
-      return ok({ ...settings });
+      settings.lastPlace = lastPlace;
+      return ok(structuredClone(settings));
+    }
+    case "set_last_place":
+      if (!unlocked) throw "The vault is locked.";
+      settings.lastPlace = structuredClone(args.lastPlace ?? null);
+      return ok(null);
     case "set_backdrop":
       return ok(false);
     // The error log: nothing is recorded in the mock; the numbers are made up.
@@ -261,12 +270,13 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
       return ok({ ...tree, pages: [...tree.pages] });
     }
     case "reorder": {
+      reorderDatabases(args.ids as string[]);
       (args.ids as string[]).forEach((id, i) => {
         const item = [...tree.notebooks, ...tree.sections, ...tree.pages].find((x) => x.id === id);
         if (item) item.order = i;
       });
       for (const k of ["notebooks", "sections", "pages"] as const) (tree[k] as { order: number }[]).sort((a, b) => a.order - b.order);
-      return ok({ ...tree });
+      return ok({ ...tree, databases: databaseMetas() });
     }
     case "get_page": {
       const saved = savedPages.get(String(args.id));
@@ -440,7 +450,6 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
         pages: notebooks.length > 1 ? 4 : 3,
         images: 2,
         skipped: [
-          { item: "Tasks 0123abcd.csv", reason: "A Notion database (table) view. Tables are not imported; the pages inside a database are, when they were exported." },
           { item: "Picture holiday.heic (Project plan 0123abcd.html)", reason: "Not a PNG, JPEG, GIF or WebP picture." },
         ],
         notes: ["PDF import reads text only: pictures, scanned pages and the page layout are not imported."],
