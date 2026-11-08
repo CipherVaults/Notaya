@@ -10,7 +10,7 @@ use crate::actions::Actor;
 use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
-use crate::model::{Item, Settings, Sticky};
+use crate::model::{Item, LastPlace, Settings, Sticky};
 use crate::openvault;
 use crate::state::{self, AppState};
 use crate::ui;
@@ -473,11 +473,97 @@ fn save_settings_person(state: &AppState, settings: Settings) -> Result<bool> {
 
 pub(crate) fn save_settings_core(s: &mut Session, _actor: &Actor, settings: Settings) -> Result<bool> {
     let mut settings = settings.sanitized();
-    // The calculator history changes only through the calculator commands.
-    settings.calc_history = s.settings().calc_history;
-    settings.search_history = s.settings().search_history;
+    // Histories and the last location change only through their dedicated commands.
+    let stored = s.settings();
+    settings.calc_history = stored.calc_history;
+    settings.search_history = stored.search_history;
+    settings.last_place = stored.last_place;
     s.put(Item::Settings(settings.clone()))?;
     Ok(s.protects_capture())
+}
+
+/// Saves only the last location in the unlocked vault, without overwriting other settings.
+#[tauri::command]
+pub fn set_last_place(state: State<'_, AppState>, last_place: Option<LastPlace>) -> Result<()> {
+    set_last_place_person(&state, last_place)
+}
+
+fn set_last_place_person(state: &AppState, last_place: Option<LastPlace>) -> Result<()> {
+    state.with_mut(|s| set_last_place_core(s, &Actor::Person, last_place))
+}
+
+pub(crate) fn set_last_place_core(s: &mut Session, _actor: &Actor, last_place: Option<LastPlace>) -> Result<()> {
+    if last_place.as_ref().is_some_and(|place| !place.valid()) {
+        return Err(Error::invalid("The last place is not valid."));
+    }
+    let mut settings = s.settings();
+    if settings.last_place == last_place {
+        return Ok(());
+    }
+    settings.last_place = last_place;
+    s.put(Item::Settings(settings))
+}
+
+#[cfg(test)]
+mod last_place_tests {
+    use super::*;
+    use crate::model::CalcEntry;
+
+    fn throwaway_path() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("notaya-last-place-{}", crate::model::new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join("throwaway.nota")
+    }
+
+    #[test]
+    fn the_location_reopens_from_the_vault_without_changing_other_settings() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let mut settings = session.settings();
+        settings.theme = "paper".into();
+        settings.calc_history.push(CalcEntry { expr: "2+2".into(), result: "4".into() });
+        settings.search_history.push("test search".into());
+        session.put(Item::Settings(settings)).unwrap();
+        let place = LastPlace { kind: "page".into(), id: crate::model::new_id(), view_id: None };
+        set_last_place_core(&mut session, &Actor::Person, Some(place.clone())).unwrap();
+        drop(session);
+        let mut reopened = Session::unlock_open(&path).unwrap();
+        let stored = reopened.settings();
+        assert_eq!(stored.last_place, Some(place));
+        assert_eq!(stored.theme, "paper");
+        assert_eq!(stored.calc_history[0].result, "4");
+        assert_eq!(stored.search_history, ["test search"]);
+        set_last_place_core(&mut reopened, &Actor::Person, None).unwrap();
+        drop(reopened);
+        assert!(Session::unlock_open(&path).unwrap().settings().last_place.is_none());
+    }
+
+    #[test]
+    fn invalid_locations_do_not_change_the_settings_record() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let before = serde_json::to_vec(&session.settings()).unwrap();
+        let bad = LastPlace { kind: "page".into(), id: "a title / not an id".into(), view_id: None };
+        assert!(set_last_place_core(&mut session, &Actor::Person, Some(bad)).is_err());
+        assert_eq!(serde_json::to_vec(&session.settings()).unwrap(), before);
+    }
+
+    #[test]
+    fn appearance_saves_preserve_the_last_place_and_histories() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let mut stored = session.settings();
+        stored.last_place = Some(LastPlace { kind: "database".into(), id: crate::model::new_id(), view_id: Some(crate::model::new_id()) });
+        stored.calc_history.push(CalcEntry { expr: "2+2".into(), result: "4".into() });
+        stored.search_history.push("test search".into());
+        session.put(Item::Settings(stored.clone())).unwrap();
+        save_settings_core(&mut session, &Actor::Person, Settings { theme: "paper".into(), ..Settings::default() }).unwrap();
+        let saved = session.settings();
+        assert_eq!(saved.last_place, stored.last_place);
+        assert_eq!(saved.calc_history[0].result, "4");
+        assert_eq!(saved.search_history, stored.search_history);
+        assert_eq!(saved.theme, "paper");
+    }
 }
 
 /// Applies Mica/Acrylic to the calling window. Returns whether it took effect.
@@ -552,6 +638,15 @@ mod action_parity_tests {
         compare(
             |state| save_settings_person(state, input()),
             |s, _| save_settings_core(s, &Actor::Person, input()),
+        );
+    }
+
+    #[test]
+    fn set_last_place_person_and_core_match() {
+        let input = || Some(LastPlace { kind: "database".into(), id: "10000000000000000000000000000007".into(), view_id: Some("10000000000000000000000000000009".into()) });
+        compare(
+            |state| set_last_place_person(state, input()),
+            |s, _| set_last_place_core(s, &Actor::Person, input()),
         );
     }
 }

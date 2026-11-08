@@ -12,6 +12,8 @@ import { PageIcon } from "@/lib/pageLook";
 export default function DatabasePage({ databaseId }: { databaseId: string }) {
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
+  const viewId = useApp((s) => s.activeDatabaseViewId);
+  const setDatabaseView = useApp((s) => s.setDatabaseView);
   const meta = tree.databases.find((d) => d.id === databaseId);
   const section = tree.sections.find((s) => s.id === meta?.sectionId);
   const notebook = tree.notebooks.find((n) => n.id === section?.notebookId);
@@ -82,7 +84,7 @@ export default function DatabasePage({ databaseId }: { databaseId: string }) {
         </div>
       )}
       <div className="min-h-0 flex-1">
-        <DatabaseView key={databaseId} databaseId={databaseId} />
+        <DatabaseView key={databaseId} databaseId={databaseId} viewId={viewId ?? undefined} onViewChange={(id) => setDatabaseView(databaseId, id)} />
       </div>
     </div>
   );

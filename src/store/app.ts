@@ -8,6 +8,14 @@ export type View = "notes" | "stickies" | "settings";
 /** What the active item of the Notes view is: a page, a database (A35) or a row of a database (a page with cells). */
 export type ActiveKind = "page" | "database" | "row";
 
+/** Kept inside the vault's settings record, never in browser storage. */
+export interface LastPlace {
+  kind: ActiveKind;
+  id: string;
+  viewId?: string | null;
+}
+export type VaultSettings = Settings & { lastPlace?: LastPlace | null };
+
 /** A one-shot request for a view to do something once it is shown (e.g. from the command palette). */
 export type Intent = "new-page" | "new-notebook" | null;
 
@@ -22,7 +30,7 @@ export interface ExportTarget {
 
 interface AppState {
   status: VaultStatus | null;
-  settings: Settings | null;
+  settings: VaultSettings | null;
   view: View;
   tree: NotesTree;
   stickies: Sticky[];
@@ -31,6 +39,8 @@ interface AppState {
   activePageId: string | null;
   /** What `activePageId` is. Pages, databases and rows share the id space. */
   activeKind: ActiveKind;
+  /** Full-page database view selection. Database components must read this and call setDatabaseView. */
+  activeDatabaseViewId: string | null;
   showTrash: boolean;
   paletteOpen: boolean;
   intent: Intent;
@@ -56,6 +66,7 @@ interface AppState {
   openPage: (id: string | null) => void;
   openDatabase: (id: string) => void;
   openRow: (id: string) => void;
+  setDatabaseView: (databaseId: string, viewId: string) => void;
   setShowTrash: (v: boolean) => void;
   setPaletteOpen: (v: boolean) => void;
   setSidebarOpen: (v: boolean) => void;
@@ -92,6 +103,7 @@ export const useApp = create<AppState>((set, get) => ({
   activeSectionId: null,
   activePageId: null,
   activeKind: "page",
+  activeDatabaseViewId: null,
   showTrash: false,
   paletteOpen: false,
   intent: null,
@@ -117,14 +129,12 @@ export const useApp = create<AppState>((set, get) => ({
       api.listNotes(),
       api.listStickies(),
     ]);
-    const firstNotebook = tree.notebooks[0]?.id ?? null;
-    const firstSection = tree.sections.find((s) => s.notebookId === firstNotebook)?.id ?? null;
+    const restored = await restoreLastPlace((settings as VaultSettings).lastPlace, tree);
     set({
       settings,
       tree,
       stickies,
-      activeNotebookId: get().activeNotebookId ?? firstNotebook,
-      activeSectionId: get().activeSectionId ?? firstSection,
+      ...restored,
     });
   },
 
@@ -134,18 +144,21 @@ export const useApp = create<AppState>((set, get) => ({
 
   openNotebook: (id) => {
     const first = get().tree.sections.find((s) => s.notebookId === id)?.id ?? null;
-    set({ activeNotebookId: id, activeSectionId: first, activePageId: null, activeKind: "page", showTrash: false });
+    set({ activeNotebookId: id, activeSectionId: first, activePageId: null, activeKind: "page", activeDatabaseViewId: null, showTrash: false });
   },
-  openSection: (id) => set({ activeSectionId: id, activePageId: null, activeKind: "page", showTrash: false }),
+  openSection: (id) => set({ activeSectionId: id, activePageId: null, activeKind: "page", activeDatabaseViewId: null, showTrash: false }),
   openPage: (id) =>
     set(
       id
-        ? { activePageId: id, activeKind: get().tree.databases.some((d) => d.id === id) ? "database" : "page", showTrash: false, view: "notes" }
-        : { activePageId: null, activeKind: "page" },
+        ? { ...locationParents(get().tree, id), activePageId: id, activeKind: get().tree.databases.some((d) => d.id === id) ? "database" : "page", activeDatabaseViewId: get().activePageId === id ? get().activeDatabaseViewId : null, showTrash: false, view: "notes" }
+        : { activePageId: null, activeKind: "page", activeDatabaseViewId: null },
     ),
-  openDatabase: (id) => set({ activePageId: id, activeKind: "database", showTrash: false, view: "notes" }),
-  openRow: (id) => set({ activePageId: id, activeKind: "row", showTrash: false, view: "notes" }),
-  setShowTrash: (showTrash) => set({ showTrash, activePageId: null, activeKind: "page" }),
+  openDatabase: (id) => set({ ...locationParents(get().tree, id), activePageId: id, activeKind: "database", activeDatabaseViewId: get().activePageId === id ? get().activeDatabaseViewId : null, showTrash: false, view: "notes" }),
+  openRow: (id) => set({ activePageId: id, activeKind: "row", activeDatabaseViewId: null, showTrash: false, view: "notes" }),
+  setDatabaseView: (databaseId, viewId) => {
+    if (get().activeKind === "database" && get().activePageId === databaseId) set({ activeDatabaseViewId: viewId });
+  },
+  setShowTrash: (showTrash) => set({ showTrash, activePageId: null, activeKind: "page", activeDatabaseViewId: null }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setSidebarOpen: (sidebarOpen) => {
     set({ sidebarOpen });
@@ -156,3 +169,57 @@ export const useApp = create<AppState>((set, get) => ({
     saveLayout(get().sidebarOpen, sidebarWidth);
   },
 }));
+
+function sectionParents(tree: NotesTree, sectionId?: string) {
+  const section = tree.sections.find((s) => s.id === sectionId);
+  return { activeNotebookId: section?.notebookId ?? null, activeSectionId: section?.id ?? null };
+}
+
+function locationParents(tree: NotesTree, id: string) {
+  return sectionParents(tree, (tree.pages.find((p) => p.id === id) ?? tree.databases.find((d) => d.id === id))?.sectionId);
+}
+
+/** Resolve against the freshly unlocked tree; a deleted item or parent always goes to Home. */
+export async function restoreLastPlace(place: LastPlace | null | undefined, tree: NotesTree) {
+  const activeNotebookId = tree.notebooks[0]?.id ?? null;
+  const home = {
+    view: "notes" as View,
+    activeNotebookId,
+    activeSectionId: tree.sections.find((s) => s.notebookId === activeNotebookId)?.id ?? null,
+    activePageId: null as string | null,
+    activeKind: "page" as ActiveKind,
+    activeDatabaseViewId: null as string | null,
+    showTrash: false,
+  };
+  if (!place || !["page", "row", "database"].includes(place.kind) || typeof place.id !== "string") return home;
+  try {
+    const item = place.kind === "row"
+      ? await api.getPage(place.id)
+      : place.kind === "database" ? tree.databases.find((d) => d.id === place.id) : tree.pages.find((p) => p.id === place.id);
+    if (!item || item.trashedAt !== null) return home;
+    const parents = sectionParents(tree, item.sectionId);
+    if (!parents.activeSectionId || !tree.notebooks.some((n) => n.id === parents.activeNotebookId)) return home;
+    let parent = item.parent;
+    const seen = new Set([item.id]);
+    if (place.kind === "row") {
+      const db = tree.databases.find((d) => d.id === parent && d.trashedAt === null && d.sectionId === item.sectionId);
+      if (!db) return home;
+      parent = db.parent;
+    }
+    while (parent) {
+      if (seen.has(parent)) return home;
+      seen.add(parent);
+      const page = tree.pages.find((p) => p.id === parent && p.trashedAt === null && p.sectionId === item.sectionId);
+      if (!page) return home;
+      parent = page.parent;
+    }
+    if (place.kind === "database" && place.viewId) {
+      const database = await api.getDatabase(place.id);
+      if (!database.views.some((v) => v.id === place.viewId)) return home;
+    }
+    return { ...home, ...parents, activePageId: item.id, activeKind: place.kind, activeDatabaseViewId: place.kind === "database" ? place.viewId ?? null : null };
+  } catch {
+    // A row that no longer exists (or cannot be read) must not prevent opening the vault.
+    return home;
+  }
+}

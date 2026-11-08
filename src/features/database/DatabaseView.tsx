@@ -41,15 +41,6 @@ export interface DatabaseViewProps {
   compact?: boolean;
 }
 
-const VIEW_MEMORY = "dbview:";
-function rememberedView(dbId: string): string | undefined {
-  try {
-    return localStorage.getItem(VIEW_MEMORY + dbId) ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function filterGroups(gs: GroupOut[] | null, keep: Set<string>): GroupOut[] | null {
   if (!gs) return null;
   return gs.map((g) => {
@@ -69,7 +60,9 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const openDatabase = useApp((s) => s.openDatabase);
   const confirm = useConfirm();
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [viewId, setViewId] = useState<string | undefined>(viewIdProp ?? rememberedView(databaseId));
+  const [localViewId, setViewId] = useState<string | undefined>(viewIdProp);
+  // Full-page navigation is controlled by the vault-backed store; linked blocks own their view.
+  const viewId = onViewChange ? viewIdProp : localViewId;
   const [result, setResult] = useState<ViewResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -165,13 +158,6 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     setViewId(id);
     setResult(null);
     onViewChange?.(id);
-    if (!viewIdProp) {
-      try {
-        localStorage.setItem(VIEW_MEMORY + databaseId, id);
-      } catch {
-        /* just a convenience */
-      }
-    }
   };
 
   const patchRow = useCallback((row: DbRow) => setResult((r) => (r ? { ...r, rows: r.rows.map((x) => (x.id === row.id ? row : x)) } : r)), []);
