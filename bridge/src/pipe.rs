@@ -1,7 +1,7 @@
 //! Section 7 wire contract. Lane C5 can include this module (and `tools::Level`) or copy
 //! these serde types verbatim; it must use the same JSON fixtures and pipe-name function.
 //! Every frame has `v: 1` and a snake_case `type` tag. IDs on the pipe are bridge-owned u64s.
-use crate::tools::Level;
+use super::tools::Level;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::Value;
 use sha2::{Digest, Sha256};

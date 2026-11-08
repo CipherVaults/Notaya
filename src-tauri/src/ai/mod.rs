@@ -5,6 +5,9 @@ pub mod pipe;
 pub mod rules;
 pub mod wire;
 
+#[cfg(test)]
+mod smoke;
+
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{

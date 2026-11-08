@@ -40,6 +40,7 @@ import { useApp } from "@/store/app";
 import { Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "./ui";
 import NotebookDialog, { type NotebookDraft } from "@/features/notes/NotebookDialog";
 import { openExport } from "@/features/notes/ExportDialog";
+import { restoreFromBin } from "@/features/notes/restore";
 import NewDatabaseDialog, { type NewDatabaseTarget } from "@/features/database/NewDatabaseDialog";
 import { PageIcon } from "@/lib/pageLook";
 
@@ -51,7 +52,7 @@ const listedDatabases = (tree: NotesTree) =>
   tree.databases.filter((d) => d.trashedAt === null && !d.inline).sort((a, b) => a.order - b.order);
 
 /** Runs a tree-changing command and reports whether it worked (a failure is shown as a toast). */
-type Run = (fn: () => Promise<NotesTree>) => Promise<boolean>;
+type Run = (fn: () => Promise<NotesTree | null>) => Promise<boolean>;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -184,7 +185,9 @@ export default function Sidebar() {
 
   const run: Run = async (fn) => {
     try {
-      setTree(await fn());
+      const tree = await fn();
+      if (!tree) return false;
+      setTree(tree);
       return true;
     } catch (e) {
       toast.error(errorText(e));
@@ -1107,6 +1110,7 @@ function PageItem({
   onAddSub?: () => void;
   onAddDatabase?: () => void;
 }) {
+  const confirm = useConfirm();
   const setView = useApp((s) => s.setView);
   return (
     <Row
@@ -1174,7 +1178,7 @@ function PageItem({
             onSelect={async () => {
               await run(() => api.trashPage(page.id));
               if (useApp.getState().activePageId === page.id) useApp.getState().openPage(null);
-              toast("Moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(page.id)) } });
+              toast("Moved to trash", { action: { label: "Undo", onClick: () => run(() => restoreFromBin(page.id, confirm)) } });
             }}
           >
             Move to bin
@@ -1205,6 +1209,7 @@ function DatabaseItem({
   tree: NotesTree;
   siblings?: string[];
 }) {
+  const confirm = useConfirm();
   const setView = useApp((s) => s.setView);
   const setFavorite = async () => {
     try {
@@ -1273,7 +1278,7 @@ function DatabaseItem({
             onSelect={async () => {
               await run(() => api.trashPage(db.id));
               if (useApp.getState().activePageId === db.id) useApp.getState().openPage(null);
-              toast("Database moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(db.id)) } });
+              toast("Database moved to trash", { action: { label: "Undo", onClick: () => run(() => restoreFromBin(db.id, confirm)) } });
             }}
           >
             Move to bin
@@ -1289,9 +1294,11 @@ function DatabaseItem({
 export function TrashView() {
   const entries = useApp((s) => s.bin);
   const confirm = useConfirm();
-  const run = async (fn: () => Promise<NotesTree>) => {
+  const run = async (fn: () => Promise<NotesTree | null>) => {
     try {
-      useApp.getState().setTree(await fn());
+      const tree = await fn();
+      if (!tree) return;
+      useApp.getState().setTree(tree);
       const [bin, stickies] = await Promise.all([api.listBin(), api.listStickies()]);
       useApp.setState({ bin, stickies });
     } catch (e) { toast.error(errorText(e)); }
@@ -1316,8 +1323,7 @@ export function TrashView() {
               <div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div>
             </button> : <div className="min-w-0 flex-1"><div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div></div>}
             <BinButton variant="ghost" size="sm" onClick={async () => {
-              if (item.parentInBin && !await confirm({ title: "Restore containing items too?", body: "This item's notebook, section or parent is also in the bin. Restore them together?", confirm: "Restore together" })) return;
-              await run(() => api.restoreBinItem(item.id, item.parentInBin));
+              await run(() => restoreFromBin(item.id, confirm));
             }}><RotateCcw size={14} /> Restore</BinButton>
             <BinButton variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={async () => {
               if (await confirm({ title: "Delete for good?", body: "This item and its contents will be deleted for good.", confirm: "Delete for good", danger: true })) await run(() => api.deletePage(item.id));

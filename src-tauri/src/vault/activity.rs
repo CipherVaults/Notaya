@@ -18,6 +18,16 @@ const HEAD: RowId = [0; 16];
 const ZERO: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 const MAX_ENTRIES: u64 = 100_000;
 
+/// Journals display trusted pairing labels; content-free change signals use
+/// `changes::by` instead and never carry these labels.
+pub(super) fn actor_label(actor: &Actor) -> String {
+    match actor {
+        Actor::Person => "person".into(),
+        Actor::Automation => "automation".into(),
+        Actor::Ai { label, .. } => format!("ai:{label}"),
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub(super) struct Head {
     last_seq: u64,
@@ -365,7 +375,7 @@ impl Session {
                 meta: ActivityMeta {
                     seq: 0,
                     at,
-                    actor: crate::changes::by(actor),
+                    actor: actor_label(actor),
                     change_set: self.change_set.clone().unwrap_or_else(new_id),
                     action: self.action_name.unwrap_or("items.changed").into(),
                     items: described,
@@ -553,7 +563,7 @@ impl Session {
             meta: ActivityMeta {
                 seq: 0,
                 at: now_ms(),
-                actor: crate::changes::by(actor),
+                actor: actor_label(actor),
                 change_set: self.change_set.clone().unwrap_or_else(new_id),
                 action: action.into(),
                 items: vec![],

@@ -1,7 +1,7 @@
 //! Dual-era newline-delimited MCP, based on the coordinator's official-doc extracts:
 //! modern 2026-07-28 request metadata and legacy <= 2025-11-25 initialization.
 //! Modern subscriptions are NOT advertised: the offline extract omits their schema.
-use crate::{
+use super::{
     pipe::{ClientMessage, EventKind, Pairing, ServerMessage},
     tools::{self, Level},
 };
@@ -91,7 +91,7 @@ pub fn read_line<R: BufRead>(reader: &mut R) -> io::Result<Option<Vec<u8>>> {
         }
         let newline = available.iter().position(|b| *b == b'\n');
         let count = newline.map_or(available.len(), |i| i + 1);
-        if bytes.len() + count > crate::pipe::MAX_REQUEST {
+        if bytes.len() + count > super::pipe::MAX_REQUEST {
             return Err(io::ErrorKind::InvalidData.into());
         }
         bytes.extend_from_slice(&available[..count]);
@@ -592,7 +592,7 @@ impl Mcp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipe::{MAX_REQUEST, MAX_RESPONSE, read_frame, write_frame};
+    use super::super::pipe::{MAX_REQUEST, MAX_RESPONSE, read_frame, write_frame};
     use std::io::Cursor;
 
     fn output(effects: &[Effect]) -> Vec<Value> {

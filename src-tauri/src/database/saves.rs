@@ -652,7 +652,7 @@ mod tests {
                     serde_json::to_string(&db).unwrap(),
                 )?;
                 let changes = s.drain_changes().unwrap();
-                assert_eq!(changes.by, "ai:Codex");
+                assert_eq!(changes.by, "ai");
                 assert_eq!(changes.ids, vec![id, target, row_id]);
                 assert_eq!(changes.kinds, vec!["database", "database", "row"]);
                 assert!(changes.tree);
@@ -688,7 +688,7 @@ mod tests {
             let rev = s.rev(id);
             add_property(s, &ai, id, prop("p")).unwrap();
             let changes = s.drain_changes().unwrap();
-            assert_eq!(changes.by, "ai:Codex");
+            assert_eq!(changes.by, "ai");
             assert_eq!(changes.ids, vec![id]);
             assert_eq!(changes.revs[id], rev + 1);
             s.run_as(&Actor::Automation, |s| {

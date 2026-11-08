@@ -1081,6 +1081,7 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       const t = cmd === "trash_page" ? Date.now() : null;
       const d = dbById(id);
       if (d) {
+        if (cmd === "restore_page" && base.pages.some((page) => page.id === d.parent && page.trashedAt != null)) d.parent = "";
         if (cmd === "delete_page") { dbs.splice(dbs.indexOf(d), 1); for (let i = rows.length - 1; i >= 0; i--) if (rows[i].db === id) rows.splice(i, 1); } else d.trashedAt = t;
         return treeNow(base);
       }
