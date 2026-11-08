@@ -377,14 +377,14 @@ if (!SC.length) { $("screen").hidden = true; } else {
 }
 
 /* gantt */
-$("ganttNote").textContent = `Window ${hhmm(D.window.start)} to ${hhmm(D.window.end)} UTC (it resets at 00:00 UTC). Each bar runs from a session's start to its last update. The black line is the snapshot. Account-wide: every session below shares this one window.`;
+$("ganttNote").textContent = `Window ${hhmm(D.window.start)} to ${hhmm(D.window.end)} UTC (it resets at ${hhmm(D.window.end)} UTC). Each bar runs from a session's start to its last update. The black line is the snapshot. Account-wide: every session below shares this one window.`;
 const pos = (ms) => Math.max(0, Math.min(100, (ms - win0) / (win1 - win0) * 100));
 $("gantt").innerHTML = S.filter(s => s.start).map((s) => {
   const a = Date.parse(s.start), b = Date.parse(s.end || s.start);
   const l = pos(a), w = Math.max(0.5, pos(b) - l);
   return `<div class="grow" title="${esc(s.task)}: ${hhmm(s.start)} to ${hhmm(s.end)}"><div class="name small">${esc(s.task.length > 46 ? s.task.slice(0, 44) + "…" : s.task)}</div><div class="glane"><div class="gbar ${mcls(s.model)}" style="left:${l}%;width:${w}%"></div><div class="now" style="left:${pos(snapMs)}%"></div></div></div>`;
 }).join("");
-$("gaxis").innerHTML = ["19:00", "20:00", "21:00", "22:00", "23:00", "00:00"].map(t => `<span>${t}</span>`).join("");
+$("gaxis").innerHTML = ["00:00", "01:00", "02:00", "03:00", "04:00", "05:00"].map(t => `<span>${t}</span>`).join("");
 
 /* session table with filters and sorting */
 const state = { machine: "All", model: "All", sort: "start", dir: 1 };

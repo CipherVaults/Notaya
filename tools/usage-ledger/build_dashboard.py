@@ -192,7 +192,7 @@ def main(out):
         ],
         "codex": read("codex-runs.csv"),
         "forecast": read("pace-forecast.csv") if (LEDGER / "pace-forecast.csv").exists() else [],
-        "window": {"start": "2026-11-07T19:00:00Z", "end": "2026-11-08T00:00:00Z"},
+        "window": {"start": "2026-11-08T00:00:00Z", "end": "2026-11-08T05:00:00Z"},
         "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
     }
     html = TEMPLATE.read_text(encoding="utf-8").replace(
