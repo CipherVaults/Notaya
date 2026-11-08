@@ -39,4 +39,4 @@
 - **06:17 to 06:23** lanes C1 (`85c8dcd`), A (`9543b87`) and D (`2e01aef`) pushed; B (`37886fd`) was already finished at its checkpoint.
 - **06:24** latest Codex reading: 5-hour window 36%, weekly 22% (resets 5-hour 10:45 UTC, weekly 2026-11-14 15:44 UTC).
 - **06:56** correction: the heartbeat wrongly reported C4 as finished and pushed `AE0101/v1-6-c4` (`4e3c457`) with no C4 work (Codex had stopped at a file outside its write area); the branch is to be ignored and C4 restarts on `AE0101/v1-6-c4b`. C2 also stopped for three files outside its area; the areas were widened.
-- **07:25 to 07:45** PC checks on the exact commits: C1 588 passed, B 529, D bridge 16 (+517 core), A 521. Merged: C1 (PR #74), B (PR #75), D (PR #76). A held for a conflict with C1 in `commands/vault.rs`; E held (PR #70). Machine: Gaming-PC (Codex, checks), cloud (review, merge).
+- **07:13 to 07:18** PC checks on the exact commits: C1 588 passed, B 529, D bridge 16 (+517 core), A 521. Merged: C1 (PR #74), B (PR #75), D (PR #76). A held for a conflict with C1 in `commands/vault.rs`; E held (PR #70). Machine: Gaming-PC (Codex, checks), cloud (review, merge).
