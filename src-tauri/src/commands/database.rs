@@ -1,6 +1,8 @@
 //! Commands for databases (A35). Every value from the UI is checked here; the engine in
 //! `crate::database` works out what a view shows.
 
+use crate::actions::Actor;
+
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -74,7 +76,7 @@ pub fn meta_list(s: &Session) -> Vec<DatabaseMeta> {
     let mut v: Vec<DatabaseMeta> = s
         .items()
         .filter_map(|i| match i {
-            Item::Database(d) => Some(DatabaseMeta {
+            Item::Database(d) if !s.in_bin(&d.id) || d.trashed_at.is_some() => Some(DatabaseMeta {
                 id: d.id.clone(),
                 section_id: d.section_id.clone(),
                 parent: d.parent.clone(),
@@ -385,9 +387,13 @@ pub struct DatabaseFull {
 /// The first database changes what an older Notaya can read, so a backup comes first.
 /// Returns true when this is the first database (and the backup was made).
 pub(crate) fn first_database_backup(state: &AppState, s: &Session) -> Result<bool> {
+    first_database_backup_core(s, &Actor::Person, &state.paths)
+}
+
+pub(crate) fn first_database_backup_core(s: &Session, _actor: &Actor, paths: &crate::portable::Paths) -> Result<bool> {
     let first = !s.items().any(|i| matches!(i, Item::Database(_)));
     if first {
-        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
+        backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
     }
     Ok(first)
 }
@@ -396,41 +402,87 @@ pub(crate) const FIRST_DATABASE_NOTICE: &str = "Notaya made a backup copy first.
 
 #[tauri::command]
 pub fn create_database(state: State<'_, AppState>, section_id: String, parent: String, inline: bool, title: String, starter_kind: String) -> Result<DatabaseFull> {
+    create_database_person(&state, section_id, parent, inline, title, starter_kind)
+}
+
+fn create_database_person(
+    state: &AppState,
+    section_id: String,
+    parent: String,
+    inline: bool,
+    title: String,
+    starter_kind: String,
+) -> Result<DatabaseFull> {
     limit("Name", &title, MAX_NAME)?;
     state.with_mut(|s| {
-        match s.get(&section_id) {
-            Some(Item::Section(_)) => {}
-            _ => return Err(Error::NotFound),
-        }
-        if !parent.is_empty() && !matches!(s.get(&parent), Some(Item::Page(_)) | Some(Item::Row(_))) {
-            return Err(Error::NotFound);
-        }
-        // The first database changes what an older Notaya can read, so a backup comes first.
-        let first = first_database_backup(&state, s)?;
-        let now = now_ms();
-        let order = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.order) } else { None }).max().map_or(0, |m| m + 1);
-        let mut db = Database::new(new_id(), section_id, if title.trim().is_empty() { "Untitled database".into() } else { title }, now);
-        db.parent = parent;
-        db.inline = inline;
-        db.order = order;
-        starter(&mut db, &starter_kind);
-        db.sanitize()?;
-        s.put(Item::Database(db.clone()))?;
-        Ok(DatabaseFull { database: db, notice: if first { Some(FIRST_DATABASE_NOTICE.into()) } else { None } })
+        create_database_core(
+            s,
+            &Actor::Person,
+            &state.paths,
+            section_id,
+            parent,
+            inline,
+            title,
+            starter_kind,
+        )
     })
 }
 
-#[tauri::command]
-pub fn get_database(state: State<'_, AppState>, id: String) -> Result<Database> {
-    state.with_mut(|s| {
-        let mut db = database(s, &id)?;
-        let (now, _) = clock::local_now();
-        if apply_repeats(s, &mut db, now)? {
-            s.put(Item::Database(db.clone()))?;
-        }
-        Ok(db)
+pub(crate) fn create_database_core(
+    s: &mut Session,
+    actor: &Actor,
+    paths: &crate::portable::Paths,
+    section_id: String,
+    parent: String,
+    inline: bool,
+    title: String,
+    starter_kind: String,
+) -> Result<DatabaseFull> {
+    s.run_as(actor, |s| {
+    limit("Name", &title, MAX_NAME)?;
+    match s.get(&section_id) {
+        Some(Item::Section(_)) => {}
+        _ => return Err(Error::NotFound),
+    }
+    if !parent.is_empty() && !matches!(s.get(&parent), Some(Item::Page(_)) | Some(Item::Row(_))) {
+        return Err(Error::NotFound);
+    }
+    // The first database changes what an older Notaya can read, so a backup comes first.
+    let first = first_database_backup_core(s, actor, paths)?;
+    let now = now_ms();
+    let order = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.order) } else { None }).max().map_or(0, |m| m + 1);
+    let mut db = Database::new(new_id(), section_id, if title.trim().is_empty() { "Untitled database".into() } else { title }, now);
+    db.parent = parent;
+    db.inline = inline;
+    db.order = order;
+    starter(&mut db, &starter_kind);
+    db.sanitize()?;
+    s.put(Item::Database(db.clone()))?;
+    Ok(DatabaseFull { database: db, notice: if first { Some(FIRST_DATABASE_NOTICE.into()) } else { None } })
     })
 }
+
+
+#[tauri::command]
+pub fn get_database(state: State<'_, AppState>, id: String) -> Result<crate::changes::Revisioned<Database>> {
+    state.with_mut(|s| { let db = get_database_core(s, &Actor::Person, id.clone())?; Ok(s.revisioned(&id, db)) })
+}
+
+fn get_database_person(state: &AppState, id: String) -> Result<Database> {
+    state.with_mut(|s| get_database_core(s, &Actor::Person, id))
+}
+
+pub(crate) fn get_database_core(s: &mut Session, _actor: &Actor, id: String) -> Result<Database> {
+    s.run_as(_actor, |s| {
+    let mut db = database(s, &id)?;
+    let (now, _) = clock::local_now();
+    if apply_repeats(s, &mut db, now)? {
+        s.put(Item::Database(db.clone()))?;
+    }
+    Ok(db)
+    })
+}
+
 
 /// Repeating templates add their row when one is due (daily, weekly or monthly), once per
 /// period, when the database is opened. Returns true if the database record changed.
@@ -472,160 +524,28 @@ fn apply_template(r: &mut Row, t: &Template) {
 /// get their other side made here; removed properties are cleaned out of the rows and out of
 /// other databases that point at them.
 #[tauri::command]
-pub fn save_database(state: State<'_, AppState>, database_json: String) -> Result<Database> {
+pub fn save_database(state: State<'_, AppState>, database_json: String, base_rev: Option<u64>) -> Result<crate::changes::Revisioned<Database>> {
+    if database_json.len() > 30_000_000 { return Err(Error::invalid("This database definition is too large.")); }
+    let incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
+    let id = incoming.id.clone();
+    state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
+        let db = save_database_core(s, &Actor::Person, database_json)?;
+        Ok(s.revisioned(&id, db))
+    }))
+}
+
+fn save_database_person(state: &AppState, database_json: String) -> Result<Database> {
     if database_json.len() > 30_000_000 {
         return Err(Error::invalid("This database definition is too large."));
     }
-    let mut incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
-    state.with_mut(|s| {
-        let old = database(s, &incoming.id)?;
-        if old.locked && incoming.locked {
-            return Err(Error::invalid("This database is locked. Unlock it to change its properties."));
-        }
-        // Fields the UI may not change.
-        incoming.created = old.created;
-        incoming.section_id = old.section_id.clone();
-        incoming.parent = old.parent.clone();
-        incoming.inline = old.inline;
-        incoming.order = old.order;
-        incoming.favorite = old.favorite;
-        incoming.trashed_at = old.trashed_at;
-        incoming.next_id = old.next_id;
-        // Date automations: Notaya keeps the time up to which dates were handled; a new one starts now.
-        let now_min = clock::local_now().0;
-        for a in &mut incoming.automations {
-            a.last_run = old.automations.iter().find(|o| o.id == a.id).map_or(now_min, |o| o.last_run);
-        }
-        incoming.updated = now_ms();
-        incoming.sanitize()?;
-        // Property kinds cannot change in place (a value of the old kind would be wrong); the UI makes a new property.
-        for p in &incoming.props {
-            if let Some(op) = old.prop(&p.id) {
-                if op.kind != p.kind {
-                    return Err(Error::invalid("A property's type cannot be changed here."));
-                }
-            }
-        }
-        // Check relations, rollups and formulas refer to things that exist.
-        let mut changed_items: Vec<Item> = Vec::new();
-        let mut incoming_extra: Vec<(String, Property)> = Vec::new(); // (target db id, new back property)
-        for p in &mut incoming.props {
-            match p.kind {
-                PropKind::Relation => {
-                    let target_exists = p.relation_db == incoming.id || matches!(s.get(&p.relation_db), Some(Item::Database(_)));
-                    if !target_exists {
-                        return Err(Error::invalid(format!("The relation \"{}\" needs a database to link to.", p.name)));
-                    }
-                    if p.relation_back == "+" {
-                        let back = Property {
-                            id: new_id(),
-                            name: format!("Related to {} ({})", if incoming.title.is_empty() { "Untitled" } else { &incoming.title }, p.name),
-                            kind: PropKind::Relation,
-                            relation_db: incoming.id.clone(),
-                            relation_back: p.id.clone(),
-                            ..Property::default()
-                        };
-                        p.relation_back = back.id.clone();
-                        incoming_extra.push((p.relation_db.clone(), back));
-                    }
-                }
-                PropKind::Formula => {
-                    if let Err(e) = crate::database::formula::parse(&p.formula) {
-                        // A formula with a typo is kept (shown as an error in its cells) so work is not lost.
-                        let _ = e;
-                    }
-                }
-                _ => {}
-            }
-        }
-        // Back properties made in another database (or this one, for a self-relation).
-        let mut self_extra: Vec<Property> = Vec::new();
-        for (target, back) in incoming_extra {
-            if target == incoming.id {
-                self_extra.push(back);
-            } else {
-                let mut tdb = database(s, &target)?;
-                if tdb.props.len() >= MAX_PROPERTIES {
-                    return Err(Error::invalid("The other database has too many properties."));
-                }
-                let col = Column { prop: back.id.clone(), visible: true, width: 0 };
-                for v in &mut tdb.views {
-                    v.columns.push(col.clone());
-                }
-                tdb.props.push(back);
-                tdb.updated = now_ms();
-                changed_items.push(Item::Database(tdb));
-            }
-        }
-        for b in self_extra {
-            let col = Column { prop: b.id.clone(), visible: true, width: 0 };
-            for v in &mut incoming.views {
-                v.columns.push(col.clone());
-            }
-            incoming.props.push(b);
-        }
-        // Removed properties: cut them out of rows and out of properties that point at them.
-        let removed: Vec<Property> = old.props.iter().filter(|p| incoming.prop(&p.id).is_none()).cloned().collect();
-        let rows_here: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.db == incoming.id { Some(r.id.clone()) } else { None } } else { None }).collect();
-        if !removed.is_empty() {
-            let removed_ids: HashSet<&str> = removed.iter().map(|p| p.id.as_str()).collect();
-            for rid in &rows_here {
-                let mut r = row(s, rid)?;
-                let mut m = parse_cells(&r);
-                let before = m.len();
-                m.retain(|k, _| !removed_ids.contains(k.as_str()));
-                if m.len() != before {
-                    write_cells(&mut r, &m)?;
-                    changed_items.push(Item::Row(r));
-                }
-            }
-            // A removed relation also removes its other side; rollups on removed relations go too.
-            for p in removed.iter().filter(|p| p.kind == PropKind::Relation && !p.relation_back.is_empty()) {
-                if p.relation_db == incoming.id {
-                    if let Some(i) = incoming.props.iter().position(|q| q.id == p.relation_back) {
-                        incoming.props.remove(i);
-                    }
-                } else if let Ok(mut tdb) = database(s, &p.relation_db) {
-                    if tdb.props.iter().any(|q| q.id == p.relation_back) {
-                        tdb.props.retain(|q| q.id != p.relation_back);
-                        tdb.props.retain(|q| !(q.kind == PropKind::Rollup && q.rollup_relation == p.relation_back));
-                        for v in &mut tdb.views {
-                            v.columns.retain(|c| tdb.props.iter().any(|q| q.id == c.prop));
-                        }
-                        changed_items.push(Item::Database(tdb));
-                    }
-                }
-            }
-            let gone: HashSet<String> = removed.iter().map(|p| p.id.clone()).collect();
-            incoming.props.retain(|q| !(q.kind == PropKind::Rollup && gone.contains(&q.rollup_relation)));
-            let keep: HashSet<String> = incoming.props.iter().map(|q| q.id.clone()).collect();
-            for v in &mut incoming.views {
-                v.columns.retain(|c| keep.contains(&c.prop));
-            }
-        }
-        // A new ID property numbers the rows that exist, oldest first.
-        let new_id_prop = incoming.props.iter().any(|p| p.kind == PropKind::Id) && !old.props.iter().any(|p| p.kind == PropKind::Id);
-        if new_id_prop {
-            let mut rows: Vec<Row> = rows_here.iter().filter_map(|id| row(s, id).ok()).collect();
-            rows.sort_by_key(|r| (r.created, r.order));
-            let mut n = incoming.next_id.max(1);
-            for mut r in rows {
-                if r.number == 0 {
-                    r.number = n;
-                    n += 1;
-                    changed_items.push(Item::Row(r));
-                }
-            }
-            incoming.next_id = n;
-        } else {
-            incoming.next_id = old.next_id;
-        }
-        incoming.sanitize()?;
-        changed_items.push(Item::Database(incoming.clone()));
-        s.put_many(changed_items)?;
-        Ok(incoming)
-    })
+    let incoming: Database =
+        serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
+    let _ = &incoming;
+    state.with_mut(|s| save_database_core(s, &Actor::Person, database_json))
 }
+
+pub(crate) use crate::database::saves::save_database_core;
+
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -638,28 +558,35 @@ pub struct QueryRequest {
 
 #[tauri::command]
 pub fn query_view(state: State<'_, AppState>, request: QueryRequest) -> Result<ViewResult> {
-    state.with(|s| {
-        let db = database(s, &request.database_id)?;
-        let view = match request.view {
-            Some(mut v) => {
-                // Same limits as a saved view.
-                let mut tmp = db.clone();
-                if let Some(i) = tmp.views.iter().position(|x| x.id == v.id) {
-                    tmp.views[i] = v.clone();
-                } else {
-                    v.id = new_id();
-                    tmp.views.push(v.clone());
-                }
-                tmp.sanitize()?;
-                tmp.views.iter().find(|x| x.id == v.id).cloned().ok_or(Error::NotFound)?
-            }
-            None => db.view(&request.view_id).cloned().ok_or(Error::NotFound)?,
-        };
-        let ctx = ctx_of(s);
-        let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
-        Ok(ctx.run_view(dbref, &view))
-    })
+    query_view_person(&state, request)
 }
+
+fn query_view_person(state: &AppState, request: QueryRequest) -> Result<ViewResult> {
+    state.with(|s| query_view_core(s, &Actor::Person, request))
+}
+
+pub(crate) fn query_view_core(s: &Session, _actor: &Actor, request: QueryRequest) -> Result<ViewResult> {
+    let db = database(s, &request.database_id)?;
+    let view = match request.view {
+        Some(mut v) => {
+            // Same limits as a saved view.
+            let mut tmp = db.clone();
+            if let Some(i) = tmp.views.iter().position(|x| x.id == v.id) {
+                tmp.views[i] = v.clone();
+            } else {
+                v.id = new_id();
+                tmp.views.push(v.clone());
+            }
+            tmp.sanitize()?;
+            tmp.views.iter().find(|x| x.id == v.id).cloned().ok_or(Error::NotFound)?
+        }
+        None => db.view(&request.view_id).cloned().ok_or(Error::NotFound)?,
+    };
+    let ctx = ctx_of(s);
+    let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
+    Ok(ctx.run_view(dbref, &view))
+}
+
 
 pub(crate) fn new_row(s: &Session, db: &mut Database, title: String) -> Result<Row> {
     let count = s.items().filter(|i| matches!(i, Item::Row(r) if r.db == db.id)).count();
@@ -694,23 +621,57 @@ pub(crate) fn row_result(s: &Session, id: &str) -> Result<RowResult> {
 /// One row with its cell values, unchanged.
 #[tauri::command]
 pub fn get_row(state: State<'_, AppState>, row_id: String) -> Result<RowResult> {
-    state.with(|s| row_result(s, &row_id))
+    get_row_person(&state, row_id)
 }
+
+fn get_row_person(state: &AppState, row_id: String) -> Result<RowResult> {
+    state.with(|s| get_row_core(s, &Actor::Person, row_id))
+}
+
+pub(crate) fn get_row_core(s: &Session, _actor: &Actor, row_id: String) -> Result<RowResult> {
+    row_result(s, &row_id)
+}
+
 
 /// Adds a row. `cells` is a JSON object (property id -> value) checked like `set_cells`;
 /// `template_id` starts from a template (or "" for the database's default template, "-" for none).
 #[tauri::command]
 pub fn create_row(state: State<'_, AppState>, database_id: String, title: String, cells: String, template_id: String) -> Result<RowResult> {
+    create_row_person(&state, database_id, title, cells, template_id)
+}
+
+fn create_row_person(
+    state: &AppState,
+    database_id: String,
+    title: String,
+    cells: String,
+    template_id: String,
+) -> Result<RowResult> {
     limit("Title", &title, 300)?;
     let given = parse_given(&cells)?;
-    state.with_mut(|s| {
-        let id = add_row_inner(s, &database_id, title, &given, &template_id)?;
-        let mut run = automation::Run::default();
-        automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
-        automation::finish(run);
-        row_result(s, &id)
+    let _ = &given;
+    state.with_mut(|s| create_row_core(s, &Actor::Person, database_id, title, cells, template_id))
+}
+
+pub(crate) fn create_row_core(
+    s: &mut Session,
+    _actor: &Actor,
+    database_id: String,
+    title: String,
+    cells: String,
+    template_id: String,
+) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
+    limit("Title", &title, 300)?;
+    let given = parse_given(&cells)?;
+    let id = add_row_inner(s, &database_id, title, &given, &template_id)?;
+    let mut run = automation::Run::default();
+    automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
+    automation::finish(run);
+    row_result(s, &id)
     })
 }
+
 
 fn parse_given(cells: &str) -> Result<Map<String, Value>> {
     if cells.trim().is_empty() {
@@ -755,67 +716,45 @@ pub(crate) fn add_row_inner(s: &mut Session, database_id: &str, title: String, g
     Ok(id)
 }
 
-/// For every relation property that has another side, makes the other rows list this row (or not)
-/// to match `new` (compared with `old`). Returns the changed rows.
-fn relation_sync_diff(s: &Session, row_id: &str, old: Option<&Map<String, Value>>, new: &Map<String, Value>, db: &Database) -> Result<Vec<Item>> {
-    let mut out: HashMap<String, Row> = HashMap::new();
-    for p in db.props.iter().filter(|p| p.kind == PropKind::Relation && !p.relation_back.is_empty()) {
-        let ids = |m: &Map<String, Value>| -> Vec<String> { m.get(&p.id).and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default() };
-        let before = old.map(&ids).unwrap_or_default();
-        let after = ids(new);
-        for target in before.iter().filter(|x| !after.contains(x)).chain(after.iter().filter(|x| !before.contains(x))) {
-            let adding = after.contains(target);
-            let mut t = match out.remove(target) {
-                Some(t) => t,
-                None => match s.get(target) {
-                    Some(Item::Row(t)) => t.clone(),
-                    _ => continue,
-                },
-            };
-            let mut tm = parse_cells(&t);
-            let mut list: Vec<String> = tm.get(&p.relation_back).and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default();
-            if adding {
-                if !list.contains(&row_id.to_string()) {
-                    list.push(row_id.to_string());
-                }
-                // A "one row only" other side keeps just the newest link.
-                if let Some(tdb) = match s.get(&t.db) { Some(Item::Database(d)) => Some(d), _ => None } {
-                    if tdb.prop(&p.relation_back).map_or(false, |q| q.relation_limit_one) && list.len() > 1 {
-                        list = vec![row_id.to_string()];
-                    }
-                }
-            } else {
-                list.retain(|x| x != row_id);
-            }
-            if list.is_empty() {
-                tm.remove(&p.relation_back);
-            } else {
-                tm.insert(p.relation_back.clone(), json!(list));
-            }
-            write_cells(&mut t, &tm)?;
-            out.insert(target.clone(), t);
-        }
-    }
-    Ok(out.into_values().map(Item::Row).collect())
-}
+use crate::database::relations::relation_sync_diff;
 
 /// Changes cells (and the title) of one row. `patch` is a JSON object: property id -> new value (null clears).
 #[tauri::command]
 pub fn set_cells(state: State<'_, AppState>, row_id: String, title: Option<String>, patch: String) -> Result<RowResult> {
+    set_cells_person(&state, row_id, title, patch)
+}
+
+fn set_cells_person(state: &AppState, row_id: String, title: Option<String>, patch: String) -> Result<RowResult> {
     if let Some(t) = &title {
         limit("Title", t, 300)?;
     }
     let given = parse_given(&patch)?;
-    state.with_mut(|s| {
-        let changed = change_row(s, &row_id, title, &given)?;
-        if !changed.is_empty() {
-            let mut run = automation::Run::default();
-            automation::fire(s, &mut run, &row_id, &automation::Event::Changed(&changed), 0);
-            automation::finish(run);
-        }
-        row_result(s, &row_id)
+    let _ = &given;
+    state.with_mut(|s| set_cells_core(s, &Actor::Person, row_id, title, patch))
+}
+
+pub(crate) fn set_cells_core(
+    s: &mut Session,
+    _actor: &Actor,
+    row_id: String,
+    title: Option<String>,
+    patch: String,
+) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
+    if let Some(t) = &title {
+        limit("Title", t, 300)?;
+    }
+    let given = parse_given(&patch)?;
+    let changed = change_row(s, &row_id, title, &given)?;
+    if !changed.is_empty() {
+        let mut run = automation::Run::default();
+        automation::fire(s, &mut run, &row_id, &automation::Event::Changed(&changed), 0);
+        automation::finish(run);
+    }
+    row_result(s, &row_id)
     })
 }
+
 
 /// Changes cells (and the title) of a row and saves it (no automations run here).
 /// Returns the ids of the properties whose value changed ("title" for the title).
@@ -854,58 +793,85 @@ pub(crate) fn change_row(s: &mut Session, row_id: &str, title: Option<String>, g
 /// Presses a button property: runs its actions on the row.
 #[tauri::command]
 pub fn press_button(state: State<'_, AppState>, row_id: String, prop_id: String) -> Result<RowResult> {
-    state.with_mut(|s| {
-        let r = row(s, &row_id)?;
-        let db = database(s, &r.db)?;
-        if db.prop(&prop_id).map_or(true, |p| p.kind != PropKind::Button) {
-            return Err(Error::NotFound);
-        }
-        let mut run = automation::Run::default();
-        automation::fire(s, &mut run, &row_id, &automation::Event::Button(&prop_id), 0);
-        automation::finish(run);
-        row_result(s, &row_id)
+    press_button_person(&state, row_id, prop_id)
+}
+
+fn press_button_person(state: &AppState, row_id: String, prop_id: String) -> Result<RowResult> {
+    state.with_mut(|s| press_button_core(s, &Actor::Person, row_id, prop_id))
+}
+
+pub(crate) fn press_button_core(s: &mut Session, _actor: &Actor, row_id: String, prop_id: String) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
+    let r = row(s, &row_id)?;
+    let db = database(s, &r.db)?;
+    if db.prop(&prop_id).map_or(true, |p| p.kind != PropKind::Button) {
+        return Err(Error::NotFound);
+    }
+    let mut run = automation::Run::default();
+    automation::fire(s, &mut run, &row_id, &automation::Event::Button(&prop_id), 0);
+    automation::finish(run);
+    row_result(s, &row_id)
     })
 }
 
+
 #[tauri::command]
 pub fn duplicate_row(state: State<'_, AppState>, row_id: String) -> Result<RowResult> {
-    state.with_mut(|s| {
-        let src = row(s, &row_id)?;
-        let mut db = database(s, &src.db)?;
-        let mut r = new_row(s, &mut db, if src.title.is_empty() { String::new() } else { format!("{} (copy)", src.title) })?;
-        r.content = src.content.clone();
-        r.text = src.text.clone();
-        r.icon = src.icon.clone();
-        r.cover = src.cover.clone();
-        let mut m = parse_cells(&src);
-        // Computed and unique-looking things are not copied; relations are, with their other side updated.
-        m.retain(|k, _| db.prop(k).map_or(false, |p| !p.kind.is_computed() && p.kind != PropKind::Id));
-        write_cells(&mut r, &m)?;
-        let id = r.id.clone();
-        let mut items = relation_sync_diff(s, &id, None, &m, &db)?;
-        items.push(Item::Row(r));
-        items.push(Item::Database(db));
-        s.put_many(items)?;
-        let mut run = automation::Run::default();
-        automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
-        automation::finish(run);
-        row_result(s, &id)
+    duplicate_row_person(&state, row_id)
+}
+
+fn duplicate_row_person(state: &AppState, row_id: String) -> Result<RowResult> {
+    state.with_mut(|s| duplicate_row_core(s, &Actor::Person, row_id))
+}
+
+pub(crate) fn duplicate_row_core(s: &mut Session, _actor: &Actor, row_id: String) -> Result<RowResult> {
+    s.run_as(_actor, |s| {
+    let src = row(s, &row_id)?;
+    let mut db = database(s, &src.db)?;
+    let mut r = new_row(s, &mut db, if src.title.is_empty() { String::new() } else { format!("{} (copy)", src.title) })?;
+    r.content = src.content.clone();
+    r.text = src.text.clone();
+    r.icon = src.icon.clone();
+    r.cover = src.cover.clone();
+    let mut m = parse_cells(&src);
+    // Computed and unique-looking things are not copied; relations are, with their other side updated.
+    m.retain(|k, _| db.prop(k).map_or(false, |p| !p.kind.is_computed() && p.kind != PropKind::Id));
+    write_cells(&mut r, &m)?;
+    let id = r.id.clone();
+    let mut items = relation_sync_diff(s, &id, None, &m, &db)?;
+    items.push(Item::Row(r));
+    items.push(Item::Database(db));
+    s.put_many(items)?;
+    let mut run = automation::Run::default();
+    automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
+    automation::finish(run);
+    row_result(s, &id)
     })
 }
+
 
 /// Puts the rows in the given order (ids of rows of one database).
 #[tauri::command]
 pub fn reorder_rows(state: State<'_, AppState>, ids: Vec<String>) -> Result<()> {
-    state.with_mut(|s| {
-        let mut changed = Vec::new();
-        for (i, id) in ids.iter().enumerate() {
-            let mut r = row(s, id)?;
-            r.order = i as i64;
-            changed.push(Item::Row(r));
-        }
-        s.put_many(changed)
+    reorder_rows_person(&state, ids)
+}
+
+fn reorder_rows_person(state: &AppState, ids: Vec<String>) -> Result<()> {
+    state.with_mut(|s| reorder_rows_core(s, &Actor::Person, ids))
+}
+
+pub(crate) fn reorder_rows_core(s: &mut Session, _actor: &Actor, ids: Vec<String>) -> Result<()> {
+    s.run_as(_actor, |s| {
+    let mut changed = Vec::new();
+    for (i, id) in ids.iter().enumerate() {
+        let mut r = row(s, id)?;
+        r.order = i as i64;
+        changed.push(Item::Row(r));
+    }
+    s.put_many(changed)
     })
 }
+
 
 /// Rows of a database whose title contains `query` (for the relation picker).
 #[derive(Serialize)]
@@ -918,34 +884,56 @@ pub struct RowHit {
 
 #[tauri::command]
 pub fn search_rows(state: State<'_, AppState>, database_id: String, query: String, limit_n: usize) -> Result<Vec<RowHit>> {
-    let q = query.trim().to_lowercase();
-    state.with(|s| {
-        let mut v: Vec<RowHit> = s
-            .items()
-            .filter_map(|i| match i {
-                Item::Row(r) if r.db == database_id && r.trashed_at.is_none() && (q.is_empty() || r.title.to_lowercase().contains(&q)) => Some(RowHit { id: r.id.clone(), title: r.title.clone(), icon: r.icon.clone() }),
-                _ => None,
-            })
-            .collect();
-        v.sort_by(|a, b| value::natural_cmp(&a.title, &b.title));
-        v.truncate(limit_n.clamp(1, 200));
-        Ok(v)
-    })
+    search_rows_person(&state, database_id, query, limit_n)
 }
+
+fn search_rows_person(state: &AppState, database_id: String, query: String, limit_n: usize) -> Result<Vec<RowHit>> {
+    let q = query.trim().to_lowercase();
+    let _ = &q;
+    state.with(|s| search_rows_core(s, &Actor::Person, database_id, query, limit_n))
+}
+
+pub(crate) fn search_rows_core(
+    s: &Session,
+    _actor: &Actor,
+    database_id: String,
+    query: String,
+    limit_n: usize,
+) -> Result<Vec<RowHit>> {
+    let q = query.trim().to_lowercase();
+    let mut v: Vec<RowHit> = s
+        .items()
+        .filter_map(|i| match i {
+            Item::Row(r) if r.db == database_id && r.trashed_at.is_none() && (q.is_empty() || r.title.to_lowercase().contains(&q)) => Some(RowHit { id: r.id.clone(), title: r.title.clone(), icon: r.icon.clone() }),
+            _ => None,
+        })
+        .collect();
+    v.sort_by(|a, b| value::natural_cmp(&a.title, &b.title));
+    v.truncate(limit_n.clamp(1, 200));
+    Ok(v)
+}
+
 
 /// A lighter listing than `query_view`: every row's id and title (relation labels in the UI).
 #[tauri::command]
 pub fn row_titles(state: State<'_, AppState>, ids: Vec<String>) -> Result<Vec<RowHit>> {
-    state.with(|s| {
-        Ok(ids
-            .iter()
-            .filter_map(|id| match s.get(id) {
-                Some(Item::Row(r)) => Some(RowHit { id: r.id.clone(), title: r.title.clone(), icon: r.icon.clone() }),
-                _ => None,
-            })
-            .collect())
-    })
+    row_titles_person(&state, ids)
 }
+
+fn row_titles_person(state: &AppState, ids: Vec<String>) -> Result<Vec<RowHit>> {
+    state.with(|s| row_titles_core(s, &Actor::Person, ids))
+}
+
+pub(crate) fn row_titles_core(s: &Session, _actor: &Actor, ids: Vec<String>) -> Result<Vec<RowHit>> {
+    Ok(ids
+        .iter()
+        .filter_map(|id| match s.get(id) {
+            Some(Item::Row(r)) => Some(RowHit { id: r.id.clone(), title: r.title.clone(), icon: r.icon.clone() }),
+            _ => None,
+        })
+        .collect())
+}
+
 
 // ---------------------------------------------------------------- trash and delete (rows and databases)
 
@@ -1103,117 +1091,181 @@ pub fn delete_database(s: &mut Session, id: &str) -> Result<()> {
 
 #[tauri::command]
 pub fn set_database_look(state: State<'_, AppState>, id: String, title: String, icon: String, favorite: bool, locked: bool) -> Result<DatabaseMeta> {
+    set_database_look_person(&state, id, title, icon, favorite, locked)
+}
+
+fn set_database_look_person(
+    state: &AppState,
+    id: String,
+    title: String,
+    icon: String,
+    favorite: bool,
+    locked: bool,
+) -> Result<DatabaseMeta> {
     limit("Name", &title, MAX_NAME)?;
     limit("Icon", &icon, 40)?;
-    state.with_mut(|s| {
-        let mut d = database(s, &id)?;
-        d.title = title;
-        d.icon = icon;
-        d.favorite = favorite && d.trashed_at.is_none();
-        d.locked = locked;
-        d.updated = now_ms();
-        s.put(Item::Database(d))?;
-        meta_list(s).into_iter().find(|m| m.id == id).ok_or(Error::NotFound)
+    state.with_mut(|s| set_database_look_core(s, &Actor::Person, id, title, icon, favorite, locked))
+}
+
+pub(crate) fn set_database_look_core(
+    s: &mut Session,
+    _actor: &Actor,
+    id: String,
+    title: String,
+    icon: String,
+    favorite: bool,
+    locked: bool,
+) -> Result<DatabaseMeta> {
+    s.run_as(_actor, |s| {
+    limit("Name", &title, MAX_NAME)?;
+    limit("Icon", &icon, 40)?;
+    let mut d = database(s, &id)?;
+    d.title = title;
+    d.icon = icon;
+    d.favorite = favorite && d.trashed_at.is_none();
+    d.locked = locked;
+    d.updated = now_ms();
+    s.put(Item::Database(d))?;
+    meta_list(s).into_iter().find(|m| m.id == id).ok_or(Error::NotFound)
     })
 }
+
 
 /// Moves a database to another section (rows stay with it).
 #[tauri::command]
 pub fn move_database(state: State<'_, AppState>, id: String, section_id: String) -> Result<()> {
-    state.with_mut(|s| {
-        if !matches!(s.get(&section_id), Some(Item::Section(_))) {
-            return Err(Error::NotFound);
-        }
-        let mut d = database(s, &id)?;
-        d.section_id = section_id;
-        d.parent = String::new();
-        d.updated = now_ms();
-        s.put(Item::Database(d))
+    move_database_person(&state, id, section_id)
+}
+
+fn move_database_person(state: &AppState, id: String, section_id: String) -> Result<()> {
+    state.with_mut(|s| move_database_core(s, &Actor::Person, id, section_id))
+}
+
+pub(crate) fn move_database_core(s: &mut Session, _actor: &Actor, id: String, section_id: String) -> Result<()> {
+    s.run_as(_actor, |s| {
+    if !matches!(s.get(&section_id), Some(Item::Section(_))) {
+        return Err(Error::NotFound);
+    }
+    let mut d = database(s, &id)?;
+    d.section_id = section_id;
+    d.parent = String::new();
+    d.updated = now_ms();
+    s.put(Item::Database(d))
     })
 }
+
 
 /// Turns sub-items on: a "Parent item" and a "Sub-items" relation, both pointing at this database.
 #[tauri::command]
 pub fn enable_sub_items(state: State<'_, AppState>, id: String) -> Result<Database> {
-    state.with_mut(|s| {
-        let mut d = database(s, &id)?;
-        if !d.sub_parent_prop.is_empty() {
-            return Ok(d);
-        }
-        if d.props.len() + 2 > MAX_PROPERTIES {
-            return Err(Error::invalid("This database has too many properties."));
-        }
-        let parent = Property { id: new_id(), name: "Parent item".into(), kind: PropKind::Relation, relation_db: d.id.clone(), relation_limit_one: true, ..Property::default() };
-        let child = Property { id: new_id(), name: "Sub-items".into(), kind: PropKind::Relation, relation_db: d.id.clone(), relation_back: parent.id.clone(), ..Property::default() };
-        let mut parent = parent;
-        parent.relation_back = child.id.clone();
-        d.sub_parent_prop = parent.id.clone();
-        d.sub_child_prop = child.id.clone();
-        for v in &mut d.views {
-            v.columns.push(Column { prop: parent.id.clone(), visible: false, width: 0 });
-            v.columns.push(Column { prop: child.id.clone(), visible: false, width: 0 });
-        }
-        d.props.push(parent);
-        d.props.push(child);
-        d.updated = now_ms();
-        d.sanitize()?;
-        s.put(Item::Database(d.clone()))?;
-        Ok(d)
+    enable_sub_items_person(&state, id)
+}
+
+fn enable_sub_items_person(state: &AppState, id: String) -> Result<Database> {
+    state.with_mut(|s| enable_sub_items_core(s, &Actor::Person, id))
+}
+
+pub(crate) fn enable_sub_items_core(s: &mut Session, _actor: &Actor, id: String) -> Result<Database> {
+    s.run_as(_actor, |s| {
+    let mut d = database(s, &id)?;
+    if !d.sub_parent_prop.is_empty() {
+        return Ok(d);
+    }
+    if d.props.len() + 2 > MAX_PROPERTIES {
+        return Err(Error::invalid("This database has too many properties."));
+    }
+    let parent = Property { id: new_id(), name: "Parent item".into(), kind: PropKind::Relation, relation_db: d.id.clone(), relation_limit_one: true, ..Property::default() };
+    let child = Property { id: new_id(), name: "Sub-items".into(), kind: PropKind::Relation, relation_db: d.id.clone(), relation_back: parent.id.clone(), ..Property::default() };
+    let mut parent = parent;
+    parent.relation_back = child.id.clone();
+    d.sub_parent_prop = parent.id.clone();
+    d.sub_child_prop = child.id.clone();
+    for v in &mut d.views {
+        v.columns.push(Column { prop: parent.id.clone(), visible: false, width: 0 });
+        v.columns.push(Column { prop: child.id.clone(), visible: false, width: 0 });
+    }
+    d.props.push(parent);
+    d.props.push(child);
+    d.updated = now_ms();
+    d.sanitize()?;
+    s.put(Item::Database(d.clone()))?;
+    Ok(d)
     })
 }
+
 
 /// Turns dependencies on: "Blocked by" and "Blocking" relations, both pointing at this database.
 #[tauri::command]
 pub fn enable_dependencies(state: State<'_, AppState>, id: String) -> Result<Database> {
-    state.with_mut(|s| {
-        let mut d = database(s, &id)?;
-        if !d.blocked_by_prop.is_empty() {
-            return Ok(d);
-        }
-        if d.props.len() + 2 > MAX_PROPERTIES {
-            return Err(Error::invalid("This database has too many properties."));
-        }
-        let mut by = Property { id: new_id(), name: "Blocked by".into(), kind: PropKind::Relation, relation_db: d.id.clone(), ..Property::default() };
-        let mut blocking = Property { id: new_id(), name: "Blocking".into(), kind: PropKind::Relation, relation_db: d.id.clone(), ..Property::default() };
-        by.relation_back = blocking.id.clone();
-        blocking.relation_back = by.id.clone();
-        d.blocked_by_prop = by.id.clone();
-        d.blocking_prop = blocking.id.clone();
-        for v in &mut d.views {
-            v.columns.push(Column { prop: by.id.clone(), visible: false, width: 0 });
-            v.columns.push(Column { prop: blocking.id.clone(), visible: false, width: 0 });
-        }
-        d.props.push(by);
-        d.props.push(blocking);
-        d.updated = now_ms();
-        d.sanitize()?;
-        s.put(Item::Database(d.clone()))?;
-        Ok(d)
+    enable_dependencies_person(&state, id)
+}
+
+fn enable_dependencies_person(state: &AppState, id: String) -> Result<Database> {
+    state.with_mut(|s| enable_dependencies_core(s, &Actor::Person, id))
+}
+
+pub(crate) fn enable_dependencies_core(s: &mut Session, _actor: &Actor, id: String) -> Result<Database> {
+    s.run_as(_actor, |s| {
+    let mut d = database(s, &id)?;
+    if !d.blocked_by_prop.is_empty() {
+        return Ok(d);
+    }
+    if d.props.len() + 2 > MAX_PROPERTIES {
+        return Err(Error::invalid("This database has too many properties."));
+    }
+    let mut by = Property { id: new_id(), name: "Blocked by".into(), kind: PropKind::Relation, relation_db: d.id.clone(), ..Property::default() };
+    let mut blocking = Property { id: new_id(), name: "Blocking".into(), kind: PropKind::Relation, relation_db: d.id.clone(), ..Property::default() };
+    by.relation_back = blocking.id.clone();
+    blocking.relation_back = by.id.clone();
+    d.blocked_by_prop = by.id.clone();
+    d.blocking_prop = blocking.id.clone();
+    for v in &mut d.views {
+        v.columns.push(Column { prop: by.id.clone(), visible: false, width: 0 });
+        v.columns.push(Column { prop: blocking.id.clone(), visible: false, width: 0 });
+    }
+    d.props.push(by);
+    d.props.push(blocking);
+    d.updated = now_ms();
+    d.sanitize()?;
+    s.put(Item::Database(d.clone()))?;
+    Ok(d)
     })
 }
 
+
 #[tauri::command]
 pub fn chart_data(state: State<'_, AppState>, request: QueryRequest) -> Result<crate::database::chart::ChartData> {
-    state.with(|s| {
-        let db = database(s, &request.database_id)?;
-        let view = match request.view {
-            Some(v) => v,
-            None => db.view(&request.view_id).cloned().ok_or(Error::NotFound)?,
-        };
-        // Same limits as a saved view.
-        let mut tmp = db.clone();
-        if let Some(i) = tmp.views.iter().position(|x| x.id == view.id) {
-            tmp.views[i] = view.clone();
-        } else {
-            tmp.views.push(view.clone());
-        }
-        tmp.sanitize()?;
-        let view = tmp.views.iter().find(|x| x.id == view.id).cloned().ok_or(Error::NotFound)?;
-        let ctx = ctx_of(s);
-        let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
-        Ok(crate::database::chart::chart_data(&ctx, dbref, &view))
-    })
+    chart_data_person(&state, request)
 }
+
+fn chart_data_person(state: &AppState, request: QueryRequest) -> Result<crate::database::chart::ChartData> {
+    state.with(|s| chart_data_core(s, &Actor::Person, request))
+}
+
+pub(crate) fn chart_data_core(
+    s: &Session,
+    _actor: &Actor,
+    request: QueryRequest,
+) -> Result<crate::database::chart::ChartData> {
+    let db = database(s, &request.database_id)?;
+    let view = match request.view {
+        Some(v) => v,
+        None => db.view(&request.view_id).cloned().ok_or(Error::NotFound)?,
+    };
+    // Same limits as a saved view.
+    let mut tmp = db.clone();
+    if let Some(i) = tmp.views.iter().position(|x| x.id == view.id) {
+        tmp.views[i] = view.clone();
+    } else {
+        tmp.views.push(view.clone());
+    }
+    tmp.sanitize()?;
+    let view = tmp.views.iter().find(|x| x.id == view.id).cloned().ok_or(Error::NotFound)?;
+    let ctx = ctx_of(s);
+    let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
+    Ok(crate::database::chart::chart_data(&ctx, dbref, &view))
+}
+
 
 // ---------------------------------------------------------------- reminders
 
@@ -1276,22 +1328,31 @@ static SHOWN_REMINDERS: std::sync::Mutex<Option<HashSet<String>>> = std::sync::M
 /// of the UI. Date automations whose time has come run first.
 #[tauri::command]
 pub fn due_reminders_now(state: State<'_, AppState>) -> Result<Vec<Reminder>> {
-    state.with_mut(|s| {
-        automation::tick_dates(s);
-        let mut guard = SHOWN_REMINDERS.lock().unwrap_or_else(|e| e.into_inner());
-        let shown = guard.get_or_insert_with(HashSet::new);
-        let mut due = due_reminders(&ctx_of(s), shown);
-        for d in &due {
-            shown.insert(d.key.clone());
-        }
-        if shown.len() > 5000 {
-            shown.clear();
-        }
-        let mut out = automation::take_notices();
-        out.append(&mut due);
-        Ok(out)
+    due_reminders_now_person(&state)
+}
+
+fn due_reminders_now_person(state: &AppState) -> Result<Vec<Reminder>> {
+    state.with_mut(|s| due_reminders_now_core(s, &Actor::Person))
+}
+
+pub(crate) fn due_reminders_now_core(s: &mut Session, _actor: &Actor) -> Result<Vec<Reminder>> {
+    s.run_as(_actor, |s| {
+    automation::tick_dates(s);
+    let mut guard = SHOWN_REMINDERS.lock().unwrap_or_else(|e| e.into_inner());
+    let shown = guard.get_or_insert_with(HashSet::new);
+    let mut due = due_reminders(&ctx_of(s), shown);
+    for d in &due {
+        shown.insert(d.key.clone());
+    }
+    if shown.len() > 5000 {
+        shown.clear();
+    }
+    let mut out = automation::take_notices();
+    out.append(&mut due);
+    Ok(out)
     })
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -1479,5 +1540,246 @@ mod tests {
         assert_eq!(lines[0], vec!["Name", "Qty"]);
         assert_eq!(lines.len(), 2, "only the row with Qty above 0");
         assert_eq!(lines[1], vec!["plain", "7"]);
+    }
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+    #[test]
+    fn due_reminders_now_person_and_core_match() {
+        compare(
+            |state| due_reminders_now_person(state),
+            |s, _paths| due_reminders_now_core(s, &Actor::Person),
+        );
+    }
+    #[test]
+    fn chart_data_person_and_core_match() {
+        compare(
+            |state| {
+                chart_data_person(
+                    state,
+                    QueryRequest {
+                        database_id: "10000000000000000000000000000007".into(),
+                        view_id: "10000000000000000000000000000009".into(),
+                        view: None,
+                    },
+                )
+            },
+            |s, _paths| {
+                chart_data_core(
+                    s,
+                    &Actor::Person,
+                    QueryRequest {
+                        database_id: "10000000000000000000000000000007".into(),
+                        view_id: "10000000000000000000000000000009".into(),
+                        view: None,
+                    },
+                )
+            },
+        );
+    }
+    #[test]
+    fn enable_dependencies_person_and_core_match() {
+        compare(
+            |state| enable_dependencies_person(state, "10000000000000000000000000000007".into()),
+            |s, _paths| enable_dependencies_core(s, &Actor::Person, "10000000000000000000000000000007".into()),
+        );
+    }
+    #[test]
+    fn enable_sub_items_person_and_core_match() {
+        compare(
+            |state| enable_sub_items_person(state, "10000000000000000000000000000007".into()),
+            |s, _paths| enable_sub_items_core(s, &Actor::Person, "10000000000000000000000000000007".into()),
+        );
+    }
+    #[test]
+    fn move_database_person_and_core_match() {
+        compare(
+            |state| move_database_person(state, "10000000000000000000000000000007".into(), "10000000000000000000000000000003".into()),
+            |s, _paths| move_database_core(s, &Actor::Person, "10000000000000000000000000000007".into(), "10000000000000000000000000000003".into()),
+        );
+    }
+    #[test]
+    fn set_database_look_person_and_core_match() {
+        compare(
+            |state| {
+                set_database_look_person(
+                    state,
+                    "10000000000000000000000000000007".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    "x".into(),
+                    true,
+                    false,
+                )
+            },
+            |s, _paths| {
+                set_database_look_core(
+                    s,
+                    &Actor::Person,
+                    "10000000000000000000000000000007".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    "x".into(),
+                    true,
+                    false,
+                )
+            },
+        );
+    }
+    #[test]
+    fn row_titles_person_and_core_match() {
+        compare(
+            |state| row_titles_person(state, vec!["10000000000000000000000000000008".into()]),
+            |s, _paths| row_titles_core(s, &Actor::Person, vec!["10000000000000000000000000000008".into()]),
+        );
+    }
+    #[test]
+    fn search_rows_person_and_core_match() {
+        compare(
+            |state| search_rows_person(state, "10000000000000000000000000000007".into(), "Row".into(), 100),
+            |s, _paths| search_rows_core(s, &Actor::Person, "10000000000000000000000000000007".into(), "Row".into(), 100),
+        );
+    }
+    #[test]
+    fn reorder_rows_person_and_core_match() {
+        compare(
+            |state| reorder_rows_person(state, vec!["10000000000000000000000000000008".into()]),
+            |s, _paths| reorder_rows_core(s, &Actor::Person, vec!["10000000000000000000000000000008".into()]),
+        );
+    }
+    #[test]
+    fn duplicate_row_person_and_core_match() {
+        compare(
+            |state| duplicate_row_person(state, "10000000000000000000000000000008".into()),
+            |s, _paths| duplicate_row_core(s, &Actor::Person, "10000000000000000000000000000008".into()),
+        );
+    }
+    #[test]
+    fn press_button_person_and_core_match() {
+        compare(
+            |state| press_button_person(state, "10000000000000000000000000000008".into(), "button".into()),
+            |s, _paths| press_button_core(s, &Actor::Person, "10000000000000000000000000000008".into(), "button".into()),
+        );
+    }
+    #[test]
+    fn set_cells_person_and_core_match() {
+        compare(
+            |state| {
+                set_cells_person(
+                    state,
+                    "10000000000000000000000000000008".into(),
+                    Some("Changed row".into()),
+                    "{\"number\":9876.543210987}".into(),
+                )
+            },
+            |s, _paths| {
+                set_cells_core(
+                    s,
+                    &Actor::Person,
+                    "10000000000000000000000000000008".into(),
+                    Some("Changed row".into()),
+                    "{\"number\":9876.543210987}".into(),
+                )
+            },
+        );
+    }
+    #[test]
+    fn create_row_person_and_core_match() {
+        compare(
+            |state| {
+                create_row_person(
+                    state,
+                    "10000000000000000000000000000007".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    "{\"number\":1234.567890123}".into(),
+                    "-".into(),
+                )
+            },
+            |s, _paths| {
+                create_row_core(
+                    s,
+                    &Actor::Person,
+                    "10000000000000000000000000000007".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    "{\"number\":1234.567890123}".into(),
+                    "-".into(),
+                )
+            },
+        );
+    }
+    #[test]
+    fn get_row_person_and_core_match() {
+        compare(
+            |state| get_row_person(state, "10000000000000000000000000000008".into()),
+            |s, _paths| get_row_core(s, &Actor::Person, "10000000000000000000000000000008".into()),
+        );
+    }
+    #[test]
+    fn query_view_person_and_core_match() {
+        compare(
+            |state| {
+                query_view_person(
+                    state,
+                    QueryRequest {
+                        database_id: "10000000000000000000000000000007".into(),
+                        view_id: "10000000000000000000000000000009".into(),
+                        view: None,
+                    },
+                )
+            },
+            |s, _paths| {
+                query_view_core(
+                    s,
+                    &Actor::Person,
+                    QueryRequest {
+                        database_id: "10000000000000000000000000000007".into(),
+                        view_id: "10000000000000000000000000000009".into(),
+                        view: None,
+                    },
+                )
+            },
+        );
+    }
+    #[test]
+    fn save_database_person_and_core_match() {
+        compare(
+            |state| save_database_person(state, crate::actions::tests::database_json()),
+            |s, _paths| save_database_core(s, &Actor::Person, crate::actions::tests::database_json()),
+        );
+    }
+    #[test]
+    fn get_database_person_and_core_match() {
+        compare(
+            |state| get_database_person(state, "10000000000000000000000000000007".into()),
+            |s, _paths| get_database_core(s, &Actor::Person, "10000000000000000000000000000007".into()),
+        );
+    }
+    #[test]
+    fn create_database_person_and_core_match() {
+        compare(
+            |state| {
+                create_database_person(
+                    state,
+                    "10000000000000000000000000000003".into(),
+                    String::new(),
+                    true,
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    String::new(),
+                )
+            },
+            |s, paths| {
+                create_database_core(
+                    s,
+                    &Actor::Person,
+                    paths,
+                    "10000000000000000000000000000003".into(),
+                    String::new(),
+                    true,
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    String::new(),
+                )
+            },
+        );
     }
 }

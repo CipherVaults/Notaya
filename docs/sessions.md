@@ -10,7 +10,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 ---
 
-**Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 17:00 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
+**Dated note (2026-11-07, second records PR EX-2026-11-07-45):** three more backfilled entries were added for periods that had none (2026-10-22 23:14 to 23:55, 2026-10-28 11:19 to 14:32, 2026-10-28 16:07 to about 16:50 UTC). The twelve 2026-10-27 entries were put in order of their end time, newest on top (before: 16:51 above 13:31, 07:21 above 08:21, and the 06:45 group mixed), and a `---` line now separates every entry. Their text was not changed.
 
 
 ---
@@ -21,6 +21,12 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 51 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [README and About refresh for 1.5.1 (EX-2026-11-08-63)](#session-51) |
+| 50 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger refresh at 16:00 UTC (EX-2026-11-08-62)](#session-50) |
+| 49 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [The 1.6 build day: Codex first, the heartbeat, seven lanes merged (EX-2026-11-08-61)](#session-49) |
+| 48 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger redesign and the 1.6 to 2.5 forecast (EX-2026-11-08-60)](#session-48) |
+| 47 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger: first Codex cycle and pace forecast (EX-2026-11-08-57)](#session-47) |
+| 46 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Checkpoint: plan settled, Notion read, 1.6 build begins (PRs #61 to #68)](#session-46) |
 | 45 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Notaya Manual, first edition (PR #63)](#session-45) |
 | 44 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 2 version plan, V1.6 to V1.15 (PR #62)](#session-44) |
 | 43 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 1 closes: menus, AI safety, dashboards, banner, Whiteboard, Notebook mode (PR #61)](#session-43) |
@@ -66,6 +72,726 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-51"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · README and About refresh for 1.5.1
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**. No PC, no Remote Control.
+
+**What it covers:** the thread "Update Notaya's GitHub README and About": [EX-2026-11-08-63](execution/2026-11-08-readme-refresh-v1-5-1.md).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (reader, writer of the README and records) | `claude-sonnet-5-5` (configured) | not recorded | Its own usage was not read (a running session has no usage block) |
+| Coordinator (relays 16:59:14, 16:59:47, 17:00:24, 17:00:52) | not read | not read | Messages only |
+| Codex | not used | - | A docs-only task |
+
+**Record basis:** `origin/main` at `5efc5d4`; the release notes 1.3.0 to 1.5.1; the manual's source; the live repository settings read through the GitHub API.
+
+## 🕒 Time
+
+- Ahmed's messages: 16:59:07, 16:59:43, 17:00:18 and 17:00:48 UTC. Work began 16:59 UTC; this entry written about 17:10 UTC (container clock). Active working time: not measured.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Bring the README and the GitHub About text up to date with the app as released, using the Manual for descriptions and, if possible, images.
+
+## 🧭 Starting State
+
+The README still opened with "Version 1.0.1" and described a notes-only app. The repository description read "ribbon editor, sticky notes, pop-out calculators, optional password lock, and automatic backups" and had no topics. The repository is private; the latest release is v1.5.1.
+
+## 🛠️ Actions Taken
+
+1. Read the project records, the release notes, the manual and the repository settings.
+2. Rewrote the README for 1.5.1 (features by area, databases, import and export, Arabic and right-to-left text, themes, tray, security, backups, known limits, credits for both partners). Left 1.6 out.
+3. Prepared the About description and topics as text, because repository settings are Mohamed's click.
+4. Wrote EX-63, the claims row, a STATUS line, this entry and a ledger row.
+
+## 🧠 Key Insights
+
+- The coordinator's first note asked for 1.6 as "in development"; Ahmed's 16:59:43 message overrode it. A README describes a release; work in progress belongs in `docs/STATUS.md`.
+- No screenshot of 1.5.1 exists in the repository, and `main` already carries unreleased 1.6 screens, so a screenshot taken from `main` would show the wrong app.
+
+## 📌 Decisions Made
+
+None by Ahmed beyond the scope above (1.5.1 only; use the Manual). No amendment.
+
+## ⚠️ Difficulties / Friction
+
+Ahmed's first artifact link pointed to the usage ledger; the second link was the Manual (the same text is in the repository, read from there). Images could not be made without installing dependencies.
+
+## 🔧 Adjustments Made
+
+Dropped the planned "in development" paragraph; named only the released version.
+
+## ❌ Mistakes / Risks Noted
+
+None found. Risk: a README that names features from the manual inherits the manual's reading of the code at `9474511`; the app is the final authority.
+
+## 📍 Current Position
+
+Produced: the README, the About text, the records. Not verified in the app, not integrated, not accepted.
+
+## 🔜 Next Steps
+
+Paste the About text into the repository settings (Mohamed's click). Optionally, screenshots of 1.5.1 (needs Ahmed's word to install dependencies). Revise the README at each release.
+
+**Dated addendum (about 17:25 UTC):** Ahmed said yes to screenshots (17:04:11 UTC); a Remote Control session on his Gaming-PC took ten of the released 1.5.1 on a throwaway vault, with his own Notaya closed, and they were added to the README under `docs/manual/screenshots/` ([EX-63 addendum](execution/2026-11-08-readme-refresh-v1-5-1.md)). The screenshot step no longer waits on anyone; only the About paste does.
+
+## ❓ Open Questions
+
+Does Ahmed want real screenshots of 1.5.1 in the README (needs `npm install`, which needs his word)?
+
+## 🧾 Session Outcome
+
+README updated to 1.5.1; About text handed over; PBS records written.
+
+## 🔍 Confidence Level
+
+High for the feature list (taken from the release notes and manual); medium for how GitHub renders the page (not seen).
+
+## 📎 Where things live
+
+`README.md`; [EX-2026-11-08-63](execution/2026-11-08-readme-refresh-v1-5-1.md); [STATUS.md](STATUS.md); [claims.md](handoff/claims.md).
+
+---
+
+<a id="session-50"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger refresh at 16:00 UTC
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**. The readings are relayed by the coordinator from Ahmed's Codex page (14:20 UTC), the Build thread's note and a Claude weekly reading (about 16:00 UTC); this thread saw no screen.
+
+**What it covers:** the second work block of the thread "Redesign the usage ledger with forecasts" (the first is [session 48](#session-48)): [EX-2026-11-08-62](execution/2026-11-08-ledger-refresh-1600.md). (Numbering: session 49 is taken by the Build thread's branch, so this entry is 50; renumber on merge if the order changes.)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5` (configured) | not recorded | Its own usage was not read (a running session has no usage block) |
+| Coordinator (relays 16:02:44 and 16:03:17) | not read | not read | Messages only; the readings and the roadmap thread's usage row are its words |
+| "Build Notaya 1.6" thread | not read | not read | Its 5-hour window note (ran out 12:01, reset 15:48) is relayed |
+| "Build a version roadmap showcase artifact" thread | `claude-sonnet-5-5`, high (as relayed) | high | Usage relayed (reported 3.11 USD); not read by this thread |
+| Codex lanes | `gpt-6.1-sol`, `xhigh` | xhigh | Not read here; the weekly percentage comes from Ahmed's page |
+
+**Record basis:** `origin/main` at `8ee9019`; the ledger files; STATUS line 67 (12:03 UTC) and the later lane lines.
+
+## 🕒 Time
+
+- Ahmed's message: 16:02:35 UTC (relayed 16:02:44); coordinator note 16:03:17. System clock when work began: about 16:03 UTC.
+- Active working time: not measured. Session type: records, a page and a model; no product code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (16:02:35): make the explanation clear in the roadmap, and update the usage ledger if possible. The ledger part is this thread's; the roadmap part belongs to the roadmap artifact's thread.
+
+## 🧭 Starting State
+
+PR #83 (draft) carried the 08:30 ledger with Codex week 26% and Claude week 22%; `origin/main` had moved on (lanes C4, AF, C2, AG merged; records PR #90). Merged `origin/main` into the branch first (conflicts in `STATUS.md` and the Codex briefing, resolved by keeping both sides' lines).
+
+## 🛠️ Actions Taken
+
+1. Recorded the three relayed readings and the roadmap thread's usage row.
+2. Recalibrated `forecast-inputs.csv` and `forecast-versions.csv`; regenerated `pace-forecast.csv` with the model.
+3. Fixed the page so a blank 5-hour reading shows "not read"; replaced two hard-coded readings; rebuilt and checked it at two widths and both themes.
+4. Wrote the ledger block, EX-2026-11-08-62, this entry, the claims row and a STATUS line; republished the artifact to the same link.
+5. Ahmed (16:11:39 UTC, relayed): a white-ish theme like the roadmap, light by default, for the ledger and the roadmap. Gave the ledger the roadmap's palette and a Theme button (Light default, Dark, Auto) and republished. The roadmap page belongs to its own thread: its default needs `theme = 'light'` instead of `'auto'`; passed to the coordinator.
+
+## 🧠 Key Insights
+
+- **Codex week: 47% used; a week holds about 6.3 windows.** The Codex capacity assumption barely moved.
+- **Claude's cost is the new weak point.** Its week went from 22% to 37% in about 7.5 hours while about 1.3 Codex windows ran, so I raised the cost per window from 3% to 6% (range 3 to 11). That is an upper bound; if the truth is near the top, Claude's 70% cap binds before Codex does.
+- **The finish moved later:** 2.5 likely about 7 December (was 2 December), worst case 19 February (was 31 January); Ahmed's own quota (his weekly allowance plus the banked resets) now reaches 2.3, where the 08:30 numbers reached 2.0. The model spends a banked reset only when the weekly allowance is empty, and with Claude's share setting the pace Codex runs dry less often, so the banks last longer. Both are model results, not measurements.
+
+## 📌 Decisions Made
+
+None by Ahmed in this thread beyond the request above. No amendment.
+
+## ⚠️ Difficulties / Friction
+
+The usage of other threads could not be read from this thread (the session list shows only archived and idle sessions), so only the roadmap thread's row, relayed by the coordinator, was added. The 5-hour gauges had no current reading; the template would have shown 0%, so it was changed to say "not read". An accidental file named `--help` was created in the repository root by a mistaken command and removed at once (never committed).
+
+## 🔧 Adjustments Made
+
+Template: blank-input handling for the two 5-hour gauges. Inputs: calibration as in EX-62.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk: the 25-of-45 progress and the window count are estimates; Claude's cost per window is the weakest number.
+- Risk: the earlier commit trailer on this PR's first commit has a mistyped session id; not amended.
+
+## 📍 Current Position
+
+Dashboard republished at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>; PR #83 updated; nothing merged; nothing accepted.
+
+## 🔜 Next Steps
+
+1. The roadmap artifact's thread makes the explanation clear (not this thread).
+2. Feed the heartbeat's Codex meter log and Claude readings into the model when they reach `docs/ledger/`; read Claude's weekly percentage before and after each lane.
+3. Refresh at the next lane merge.
+
+## ❓ Open Questions
+
+None new. Still open from before: whether Mohamed builds with his Claude Pro.
+
+## 🧾 Session Outcome
+
+*Produced* and published as a private artifact; *verified* by build and browser check only; not integrated; not accepted.
+
+## 🔍 Confidence Level
+
+High for the relayed readings. Medium for 6.3 windows a week. Low for every date after 1.7 and lowest for Claude's cost per window.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `forecast-inputs.csv`, `forecast-versions.csv`, `pace-forecast.csv`, `quota-readings.csv`, `claude-sessions.csv`), `tools/usage-ledger/dashboard-template.html`, [EX-2026-11-08-62](execution/2026-11-08-ledger-refresh-1600.md).
+
+- Integration / review: on merge of PR #83 (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: the heartbeat logs and the next lane merge
+
+---
+
+<a id="session-49"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud + Gaming-PC · The 1.6 build day: Codex first, the heartbeat, seven lanes merged
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machines: **cloud** (the "Build Notaya 1.6" thread directs, inspects and merges; this refresh thread wrote the entry) and Ahmed's **Gaming-PC** (Codex lanes, the heartbeat and the checks). Time covered: **2026-11-08 about 01:10 UTC (where [entry 47](#session-47) stops) to about 11:45 UTC.**
+
+**What it covers:** the first day of building 1.6 as it happened after the checkpoint ([entry 46](#session-46)): the pause at Codex's limit, the lanes merged one by one, the change of method to "Codex first" (A46), the heartbeat that became a permanent task, the quota rules, and what went wrong on the way. Detail per lane lives in [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5 (the heartbeat log), the pull requests and the [usage ledger](ledger/usage-ledger.md); this entry joins them in one place and does not repeat them. The ledger redesign and forecast (08:28 UTC onward) are in [entry 48](#session-48) (PR #83, open when this was written).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Codex lanes A, B, C1, C2, C4/C4b/C4d, D, E, AF, AG | `gpt-6.1-sol` | reasoning `xhigh` | Process command lines and log headers quoted by the PC session ([EX-2026-11-08-57](execution/2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md)); the later runs (05:25 onward) are quoted from the heartbeat log. Not seen by this thread |
+| Independent review of lane A (a fresh Codex session that did not write it) | Codex, model not recorded in the sources read | not recorded | Its result (0 high, 2 medium, 2 low) is quoted from [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md); the review text was not read by this thread |
+| "Build Notaya 1.6" thread (briefs, inspection, merges, records) | `claude-sonnet-5-5` | high | `docs/ledger/claude-sessions.csv` (a reading from 00:51 UTC); its later usage is not in the ledger yet |
+| Heartbeat (PC, every 10 minutes) | a script; its Claude meter probe is one tiny `claude -p` call on a small model with no tools | not applicable | `docs/ledger/quota-readings.csv` rows and notes |
+| This thread (refresh of the AI-facing records) | `claude-sonnet-5-5` | high | `get_session` at 11:43 UTC: configured and last served model both `claude-sonnet-5-5`; a running session has no usage block, so its usage is "not recorded" |
+
+**Record basis (reconstructed).** This entry is written afterwards, from the repository on `origin/main` at `2ffaa2c` (11:38 UTC): `git log`, [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5, STATUS "Continuation", the authority record, the claims board, the ledger files, the pull request descriptions of #85, #86, #88, #70 and #83, and the coordinator's relay of 11:41:55 UTC. **Not read by this thread:** the project chat of 01:10 to 11:41 UTC, so Ahmed's words of 01:09:37, 08:57:27 (beyond what A46 quotes) and 09:03 are given by their effect as the records state it, not quoted. **Not seen:** any Codex or Claude usage screen, any lane log, any diff of the merged lanes, and the PC.
+
+## 🕒 Time
+
+- This thread: Ahmed's message 11:41:49 UTC ("make sure the AI PBS docs are up to date and aren't stale"), 11:42:04 ("especially our session summary"), the thread started 11:41:56. The times in the timeline below are UTC from the heartbeat log or the pull request merge times (git shows them in +02:00; converted).
+- Active working time of the building threads: not measured.
+- Session type: coordination of a build (Claude directs, Codex builds), plus the records refresh that wrote this entry.
+- Reason for summary: A37 item 5 (every session that changes the repository or ends a work block). The Build thread's own milestone entry was promised in EX-55 section 4 and had not been written; this entry stands in for it until it is.
+
+## 🎯 Session Goal
+
+Ahmed (00:15:27 and 00:18:27, [A44](plan/approval-and-amendments.md)): build 1.6 with Codex doing the building and Claude briefing, inspecting, merging and recording; (00:30:19) keep it going around both 5-hour windows without waiting to be asked; (08:27:53, [A46](plan/approval-and-amendments.md)) lean on Codex for everything it can do, onboard it as a partner, keep the app's feel and never weaken PBS.
+
+## 🧭 Starting State
+
+`main` = `acfdb0a` (PR #72, 00:58 UTC; `0c3374c`, PR #73, followed at 00:59 UTC). Notaya 1.5.1 accepted; 1.6 authorised. Lanes A, B, C1 and D were partly written and cut off by Codex's limit at 00:44 UTC; lane E was finished and pushed (draft PR #70, held until the AI server exists). Codex was paused until 05:25 UTC.
+
+## 🛠️ Actions Taken
+
+Timeline (UTC; Gaming-PC does the Codex work and the checks, the cloud thread reviews and merges):
+
+1. **05:25 to 06:24** Codex's window reset; the heartbeat started C1 and A (05:45); C1, A, D were pushed 06:17 to 06:23, B was already done. Reading at 06:24: 5-hour 36%, weekly 22%.
+2. **06:56** the heartbeat wrongly reported C4 finished and pushed an empty `AE0101/v1-6-c4`; ignored, C4 restarted as `v1-6-c4b`; C2 had stopped at the edge of its write area, so the areas were widened.
+3. **07:13 to 07:18** checks on the exact commits (C1 588 Rust tests passed, B 529, D bridge 16, A 521); merged **C1 (PR #74), B (PR #75), D (PR #76)**; A held for a conflict; records PRs #77 and #78 (the second corrected a time that had been estimated instead of read from the clock).
+4. **07:58 to 08:05** A fixed and **merged (PR #79)**; C4b pushed but `cargo test` failed (exit 101); records PR #80.
+5. **08:07 to 08:36** both restarted lanes (C4b fix, C2) stopped after 80 seconds and nothing relaunched them: about **30 minutes of idle Codex**, noticed by Ahmed from his usage screen.
+6. **08:27:53** Ahmed: lean on Codex for everything, onboard it as a partner (A46). **08:31 to 08:34** the Codex partner briefing and A46 merged (PR #81), then a draft forecast page (PR #82). **08:28 onward** the ledger-redesign thread took over the forecast ([entry 48](#session-48)).
+7. **08:35 to 08:53** four Codex lanes at once took the 5-hour window from 61% to 100% in 18 minutes; limit hit 08:53:35. Meanwhile lane E's check script was fixed and a **fresh Codex session reviewed merged lane A: 0 high, 2 medium, 2 low**, which became lane AF.
+8. **08:57:27** Ahmed: delete the draft forecast; banked Codex resets only after the whole weekly limit is spent; Mohamed has Claude (Pro) only, no Codex (PR #84 merged 08:58; recorded in A46). **08:59 to 09:09** Ahmed registered the permanent scheduled task "Notaya heartbeat" (first 30 minutes, at 09:01 every 10 minutes); it logs the Codex and Claude meters to the ledger.
+9. **10:45 to 10:49** the window reset; a stale "try again at 12:45 PM" line was misread as tomorrow and cost about 3 minutes; parsing fixed; three lanes started 10:48:46 (C4c fix, C2, AF).
+10. **11:05 to 11:07** C4b fix (`514c2e8`, 617 tests passed) and AF (`6240e49`) pushed; **merged C4 (PR #85) and AF (PR #86)**; records PR #87 (STATUS, lessons, heartbeat quota readings).
+11. **11:21 to 11:38** C2: its first push could not even start `cargo test --lib` (exit `0xc0000139`) because `AppState` held a Tauri `AppHandle`; it was changed to hold injected callbacks and a regression test was added. **C2 merged (PR #88, 11:38 UTC; 631 Rust tests passed, 0 failed, 1 ignored, `npm audit` 0, `tsc` and build passed on the head or its parent)**. Inspection note: the lease error text names "Ahmed" and must say "the person".
+12. **11:37** the heartbeat checkpointed C4d (fixes from the independent review of the block edits, including a high-severity back-relation issue) and AG (lane A screenshots script and a database-view restore check). Both still running at the end of this entry. **C3 is held until Codex's window resets, about 15:45 UTC.**
+
+## 🧠 Key Insights
+
+- **A "finished" lane is not a lane that stopped.** Twice a stop (exit 0, no changes, at the edge of a write area) looked like completion or like waiting; once it cost 30 minutes of the scarcest resource. The heartbeat now counts that as idle and relaunches; small mechanical edits outside an area are made and listed.
+- **Four lanes at once burn a window five times faster than they finish work** (cached rereading); three is the ceiling. Codex's week holds about six windows, so waste is felt at once.
+- **The independent review earned its place:** a fresh Codex session found two medium issues in merged lane A within minutes; a second review of the block edits found a high back-relation issue before C4 shipped anywhere. Both were fixed in follow-up lanes (AF, C4d), not by the author alone.
+- **Cloud threads cannot check Rust.** The container has no Wine and no Windows toolchain and installing them needs Ahmed's own word. Every Rust result in this entry was produced by the PC heartbeat on an exact commit; the cloud thread inspects and says "not run" for anything else.
+- **The records fell behind the day.** `docs/handoff/codex-partner-briefing.md` was written at 08:35 and was stale by 11:07 (it listed C4b "in progress" and "two lanes at a time"); STATUS stopped at 11:07; this entry did not exist. That is why this refresh was asked for.
+
+## 📌 Decisions Made
+
+By Ahmed, as the records quote them: the go and the roles (A44); Codex first and Codex as a partner (A46, 08:27:53); banked resets only after the whole week is spent, Mohamed Claude-only, delete the draft forecast (08:57:27, in A46); the permanent heartbeat (registered by Ahmed 08:59 to 09:09). By the building thread (within A44 and A37 item 3): merge each lane after inspection and checks; max three lanes; a boundary stop counts as idle; widen write areas for mechanical edits. **No decision by this thread.**
+
+## ⚠️ Difficulties / Friction
+
+Codex's sandbox cannot start the Rust tests or write git, so the heartbeat has to do both; the first C2 push could not start the tests at all; lane E's commit footer shows a mangled middle dot (`Â·`, not rewritten, no force-push); four-lane bursts hit the limit; PowerShell scripts and encodings caused small bugs (the stale-line parse).
+
+## 🔧 Adjustments Made
+
+The heartbeat interval went from 30 to 10 minutes and became a permanent scheduled task; the three-lane ceiling; the boundary stop rule; widened write areas (C4 may add `mod blocks;` to `lib.rs`; C2 may touch `lib.rs` registration lines, `src/lib/types.ts` and others); `AppState` no longer holds a Tauri handle.
+
+## ❌ Mistakes / Risks Noted
+
+- The heartbeat reported C4 finished when it was not (06:56); the 30-minute idle (08:07 to 08:36); four lanes at once (08:35); the stale-line misread (10:46). All four are in the heartbeat log; none changed product code on `main`. **A failure-intelligence entry has not been written** (the admission boundary in `failure-intelligence.md` decides; the idle and the false "finished" are candidates, the coordinator's call).
+- **Records gaps found by this refresh, not closed here:** the authority table has no rows for Ahmed's messages of about 01:09:37 (quota strategy: Codex builds with its weekly quota and banked resets, Claude develops only after Codex is used up and stops at 70%; he cannot pay for bigger plans; Mohamed continues when Ahmed's quotas end) and 09:03 (the heartbeat must be permanent and automatic, with exact meters); nor for the answers to questions 49 to 53. The words must come from the project chat, which this thread did not read; the coordinator should supply them for rows and an amendment (next free: A47). The handover guide's section 17 stops at 11:07 (C2 is missing; the Build thread owns that section); its published page is older still.
+- Risk: lane C2's real-window UI check (`dev-mock/c2-ui-check.cjs`) has not run; "verified" for C2 means the unit tests and audit only.
+
+## 📍 Current Position
+
+`origin/main` = `2ffaa2c`. Merged for 1.6: C1, B, D, A, C4, AF, C2; none accepted. Running: C4d, AG. Held: C3 (until about 15:45 UTC), E (PR #70, until C5). Not started: C5. Codex readings at 11:05: 5-hour 30%, weekly 36%. This PR refreshes the Codex briefing (sections 2, 5, 6), `AGENTS.md`, one dated note in `CLAUDE.md`, the claims board and the STATUS "As of" line.
+
+## 🔜 Next Steps
+
+1. (Done at 16:40 UTC: PR #83, entries 48 and 50, merged first; this PR was merged with `main` keeping 50, 49, 48 in order.)
+2. The coordinator supplies the verbatim words for the missing authority rows (about 01:09:37, 08:57:27, 09:03, questions 49 to 53) and decides on a failure-intelligence entry.
+3. The Build thread adds C2 to handover guide section 17 and republishes the published guide (A39).
+4. After C4d, AG and C3 land: refresh the briefing's section 5 again; a refresh like this one is needed at every lane merge, so consider making it part of the lane-merge routine.
+
+## ❓ Open Questions
+
+For Ahmed: nothing new from this thread. Open from before: the numbered list in the project chat (the next question number is 54 as the coordinator's notes have it).
+
+## 🧾 Session Outcome
+
+*Produced*: this entry, the refreshed briefing, `AGENTS.md`, the `CLAUDE.md` note, the claims rows and the STATUS line. *Verified* only in the sense that each fact was checked against `origin/main`, the pull request descriptions and the heartbeat log named above; the PC results are quoted, not re-run. *Not integrated* until merged; *not accepted*.
+
+## 🔍 Confidence Level
+
+High for the merge list and times (git and the PR records). High for the heartbeat log events (copied from EX-55). Medium for the reading of Ahmed's 01:09 and 09:03 messages (second-hand). Low for anything about lanes C4d, AG and C3 beyond "running" and "held" (relayed by the coordinator and the branch list only).
+
+## 📎 Where things live
+
+[EX-2026-11-08-61](execution/2026-11-08-ai-pbs-records-refresh.md), [`docs/handoff/codex-partner-briefing.md`](handoff/codex-partner-briefing.md), [`AGENTS.md`](../AGENTS.md), [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5, [`docs/ledger/`](ledger/usage-ledger.md), the lane briefs [`docs/plan/2026-11-08-v1-6-codex-briefs.md`](plan/2026-11-08-v1-6-codex-briefs.md).
+
+- Integration / review: on merge of this PR (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: PR #83 first; the missing authority rows; C4d, AG, C3
+
+**Dated addendum (2026-11-08 about 16:45 UTC, same refresh thread, before the merge of PR #89).** What happened after the 11:45 UTC cut-off, from `origin/main` (`b4c6577`), the PR descriptions of #90, #92 and #93, and the Build thread's lines in STATUS and EX-55 section 5; nothing here was read from a PC. **11:48:49** Ahmed's stop line for Codex: work until about 5% of the 5-hour window is left, stop cleanly, resume at the reset. **12:01** the window ran out after an overshoot of 4 points (94% at 11:58, 99% at 12:01). **12:04** the root cause of earlier lane deaths was found (the Codex install was visible only to the packaged Claude app; lanes now start from the real path through WMI). **12:03 to 14:03** the Build thread recorded C2 and these facts (PR #90). **About 15:48** the Codex window reset; at 15:52 the heartbeat read Codex 5-hour 0% and week 47%, Claude 5-hour 0% and week 37%. **16:07 AG merged (PR #93):** the screenshots script failure was a script defect (an async wait treated as done), the app saves the last database view correctly; 108 screenshots, all six themes. **16:32 C4d merged (PR #92):** all eight findings of the independent review of C4 fixed, including the high back-relation issue (relations are now validated as reciprocal before any row changes); 623 Rust tests passed on the PC. **No C3 branch existed on `origin` at 16:45.** With C4d and AG the merged lanes are nine (C1, B, D, A, C4, AF, C2, AG, C4d). **Gap closed in part:** three authority rows (11:48:49, about 09:03, 01:09:37) were added to the authority record as second-hand rows; their verbatim words are still to be added from the project chat, which this thread did not read. Ahmed (16:39:49 UTC, relayed by the coordinator): merge records PRs when Claude judges them ready, without asking.
+
+**Dated correction (2026-11-08 about 16:50 UTC, same refresh thread, follow-up records PR).** The "Records gaps" bullet and Next Step 2 above are closed: the thread read the project chat afterwards and the authority record now holds Ahmed's **verbatim** words for his messages at 01:09:11 (quota strategy: Codex first, three weeks of Codex with two banked resets, Claude only after, up to 70%), 01:09:37 (handover to Mohamed when his quota ends), 08:30:44 (idle Codex), 08:57:27 (answers to questions 49 to 52) and, as relayed by the coordinator, 09:03:55 (question 53) and 11:48:49 (the 5% stop line). The quota-strategy message is **01:09:11**, not 01:09:37 as this entry wrote; the two second-hand rows added in PR #89 were replaced. Questions 49 to 53 held no decision beyond those rows. Still open: the handover guide's section 17 (Build thread) and a failure-intelligence entry.
+
+**Dated correction (2026-11-08 about 16:55 UTC):** the coordinator asked for the failure-intelligence entries (16:46 UTC); they are written as **FI-08** (the false "finished" lane, about 06:56 UTC) and **FI-09** (the 30-minute Codex idle, 08:07 to 08:36 UTC) in [failure-intelligence.md](failure-intelligence.md). The "A failure-intelligence entry has not been written" line in Mistakes above no longer holds.
+
+---
+
+<a id="session-48"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger redesign and the 1.6 to 2.5 forecast
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**; the limit readings are Ahmed's screenshots of the Claude usage popup and the Codex usage menu on his PC, relayed by the coordinator. Time covered: **2026-11-08 08:28:33 UTC (thread start) to about 08:50 UTC** (system clock at the time of writing).
+
+**What it covers:** Ahmed's request to lean on Codex, to see on charts what uses what, and to forecast how many versions the quotas can finish ([EX-2026-11-08-60](execution/2026-11-08-ledger-redesign-and-forecast.md)); the new dashboard; the one shared forecast model; the 08:27 readings.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5` (configured) | not recorded | Its own record was not read (a running session's record has no usage block); identity quoted from the thread's configuration, not from a served-model reading |
+| Coordinator (relays 08:28:32, 08:29:20, 08:35:32) | not read | not read | Messages only |
+| "Build Notaya 1.6" thread (draft forecast, PR #82; relay 08:34:29) | not read | not read | Its draft was read in full from `main`; its numbers (22% at 06:24, 26% at 08:07) are relayed and not seen on a screen by this thread |
+| Codex lanes (the measured cycle) | `gpt-6.1-sol`, `xhigh` | xhigh | From `codex-runs.csv` (quoted by the PC session at 00:29 UTC); this thread ran nothing on Codex |
+
+**Record basis:** `main` at `d3d0f0b`; the ledger files; the version plan and 1.6 briefs; Ahmed's two screenshots (read as images); the FFmpeg Encoder forecast and ledger artifacts (read for purpose only, nothing copied).
+
+## 🕒 Time
+
+- Ahmed's messages: 08:27:53 (relayed 08:28:32), 08:29:17, 08:35:26. Thread start 08:28:33. Draft page published at about 08:37 (system clock).
+- Active working time: not measured.
+- Session type: records, a page and a model; no product code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (08:27:53): lean on Codex for everything it can do, and build a forecast of what the Codex and Claude quotas can finish across the long roadmap, with charts showing which part uses what; (08:29:17) inspired by FFmpeg Encoder's ledger for its purpose only; (08:35:26) the forecast is Notaya's own.
+
+## 🧭 Starting State
+
+`main` = `4ee829f`, then `d3d0f0b` (PR #81 Codex first and A46; PR #82 a draft roadmap forecast handed to this thread). The ledger had a table-heavy dashboard, a forecast from 00:58 UTC (6.5 windows a week, 10.5 points a window assumed) and no reading of Claude's week since 22:32 UTC on 11-07.
+
+## 🛠️ Actions Taken
+
+1. Read the repository's records, the ledger and its dashboard code, the two screenshots, the FFmpeg Encoder artifacts, the version plan and the 1.6 briefs; checked other branches for taken EX and session numbers.
+2. Wrote one forecast model and two input tables, the new dashboard template, the builder changes; rebuilt `pace-forecast.csv` from the model; looked at the page in a headless browser (desktop and phone, light and dark) and fixed the timeline scale, the table width and the phone layout.
+3. Folded in the Build thread's draft (readings, plan points, a cross-check of Claude's cost per point); marked it superseded and, after Ahmed's answer at 08:57:27 UTC, deleted it.
+4. Published to the same artifact link (version 5). Wrote the ledger block, README changes, EX-2026-11-08-60, this entry, the claims row and one STATUS line.
+
+## 🧠 Key Insights
+
+- **Codex's weekly limit sets the pace, and the two banked resets bring the finish forward a lot.** At the default settings 1.6 to 2.5 is built by about 2 December (best 22 November, worst about 31 January); without the banks about 16 December. Ahmed's own quota reaches version 2.0 (about 21 November); after that the work runs on weekly resets or on Mohamed's quota.
+- **A week holds about 6.1 windows** (was 6.5): 26% of the week after about 1.6 windows. Speed is about 11 plan points a window on an estimate that 18 of 1.6's 45 points are built.
+- **Claude's quota does not hold the pace back on the default guess** (about 3% of its week per window), but that is the weakest number; a rule now asks for Claude's weekly percentage before and after each lane to replace it.
+- **Cached rereading is 96 to 97% of tokens on both sides**, so shorter contexts are the lever that stretches a quota.
+- **Two forecasts were drafted at the same time** (this thread's and the Build thread's); they agreed within the guesses (the same plan points, the same windows per week, a Claude cost per point of the same size), and were folded into one.
+
+## 📌 Decisions Made
+
+None by Ahmed in this thread beyond the instruction above (recorded already as A46 and A45). No amendment.
+
+## ⚠️ Difficulties / Friction
+
+The first relay named an FFmpeg Encoder forecast; Ahmed corrected it twice (08:29:17 and 08:35:26), which was folded in before the page was published. The `project-usage-screen.csv` that the README had named was never committed, so it was created here. The artifact tool refused the first publish because the live version had not been read; the live page was found to equal the repository's old template, so nothing was lost.
+
+## 🔧 Adjustments Made
+
+The timeline was first drawn to the worst case (January), which made every likely bar a sliver; it is now drawn to the likely end with arrows for worst cases. The table's separate best, likely and worst columns were merged so "who pays" fits without scrolling.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk (closed at 08:57:27 UTC): the banked-reset mechanism was an assumption that moves the early dates by two weeks; Ahmed confirmed it.
+- Risk: the speed (11 points per window) comes from one and a half windows and from my estimate of what was built.
+- A first version of the speed paragraph in the ledger block said 6.5 windows a week; it was corrected to 6.1 before commit.
+
+## 📍 Current Position
+
+Dashboard published at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>; draft PR with the records open; nothing merged; nothing accepted.
+
+## 🔜 Next Steps
+
+1. Ahmed's question 49 (automatic quota control) and whether Mohamed builds with his Claude Pro.
+2. At each lane merge: read Claude's weekly percentage before and after; at each Codex reset, add the Codex readings and the run rows (lane A's second pass, C4b and C2 have none yet).
+3. Rebuild with `build_dashboard.py`, run `--forecast-csv`, republish to the same link.
+
+## ❓ Open Questions
+
+Answered by Ahmed at 08:57:27 UTC: a banked reset refills the whole Codex week and the 5-hour window and is used only after the week is fully spent; the old draft may be deleted (done); Mohamed has **no Codex**, only a Claude Pro subscription. **Still open:** Ahmed's question 49, that his quota be controlled automatically (not built here; handed to the coordinator), and whether Mohamed will build with his Claude Pro at all.
+
+## 🧾 Session Outcome
+
+*Produced* (page, model, inputs, readings, records) and published as a private artifact. *Verified* only by building it and looking at it in a headless browser; the forecast itself is not verified. Not integrated until merged; not accepted.
+
+## 🔍 Confidence Level
+
+High for the readings themselves and for the weekly capacity (two readings, 5.5 to 7 windows). Medium for the speed. Low for every date after 1.7, and lowest for Claude's cost per window and for the banked-reset mechanism.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `forecast-inputs.csv`, `forecast-versions.csv`, `pace-forecast.csv`, `quota-readings.csv`, `project-usage-screen.csv`), `tools/usage-ledger/` (`forecast-model.cjs`, `dashboard-template.html`, `build_dashboard.py`), the dashboard <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>, [EX-2026-11-08-60](execution/2026-11-08-ledger-redesign-and-forecast.md).
+
+- Integration / review: on merge of this PR (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: Ahmed's three answers above
+
+---
+
+<a id="session-47"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger: first Codex cycle and pace forecast
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud** (the Codex numbers were read on Ahmed's **Gaming-PC** by the "Build Notaya 1.6" thread's PC session and relayed). Time covered: **2026-11-08 00:51:23 UTC (Ahmed's request) to about 01:10 UTC**.
+
+**What it covers:** Ahmed's request to record the first Codex cycle in the usage ledger and predict the pace ([EX-2026-11-08-57](execution/2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md)); the two small records the coordinator added at 00:54:59 UTC (version-plan Notes cells, the Notion sync record, [EX-2026-11-08-58](execution/2026-11-08-notion-hub-sync-with-version-plan.md)).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5[1m]` | high | Its own `get_session` record; its usage is in the ledger as a row read at the end of the work |
+| Codex lanes A, B, C1, D, E (the measured cycle) | `gpt-6.1-sol`, reasoning `xhigh` | xhigh | Process command lines, Codex config and log headers, quoted by the PC session at 00:29 UTC; tokens and limits from the lane logs and Codex's `rate_limits` events (relayed 00:55:04 UTC). Not seen by this thread |
+| Coordinator (relay of 00:51 and 00:54:59) | `claude-opus-5-5[1m]`, low | low | `get_session`: USD 17.04, 5.50 million weighted tokens at 00:51 |
+| "Build Notaya 1.6" thread (source of the Codex numbers) | `claude-sonnet-5-5` | high | `get_session`: USD 2.77 at 00:51 |
+
+**Record basis:** the ledger files at `main` = `1c98983`, the 1.6 spec and briefs, the version plan size check, the project chat as relayed, the Build thread's messages, and the relay of 00:55:04 UTC. No Codex screen or `/status` was seen.
+
+## 🕒 Time
+
+- Ahmed's message: 2026-11-08 00:51:23 UTC. Coordinator notes: 00:51:34 and 00:54:59. Codex data relay: 00:55:04. Container clock for the work.
+- Active working time: not measured.
+- Session type: records and forecast, no code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (00:51:23): *"also update the usage ledger now since this is our first cycle with codex, and try to predict how we are pacing so we can see how much we can actually finish."*
+
+## 🧭 Starting State
+
+`main` = `1c98983`. The ledger had Claude rows to 00:26 UTC, an empty `codex-runs.csv`, no Codex quota reading. Codex had hit its limit at 00:44 UTC and was paused until about 05:25 UTC; lane E was done (draft PR #70) and lanes A, B, C1 and D were cut off with their work intact on the PC.
+
+## 🛠️ Actions Taken
+
+1. Read the ledger, the briefs, the version-plan size check and the Build thread; asked the PC session (through the Build thread) for per-lane times, tokens and limit readings; received them at 00:55:04.
+2. Added six Codex rows, three Codex limit readings, the Claude 5-hour status and three later Claude readings; added `pace-forecast.csv` and a dated ledger block; rebuilt the dashboard (Codex runs, limits and forecast sections) and republished it to the same link.
+3. Mirrored the Notes cells of 1.6-10 and 2.0-1 into the repo copy of the version plan; added the Notion hub sync record as EX-2026-11-08-58.
+4. Claims row, EX index rows, STATUS line, this entry.
+
+## 🧠 Key Insights
+
+- **The weekly Codex limit is the binding one.** One full 5-hour window used 15% of the weekly limit, so a week holds about 6.5 windows. The 5-hour resets decide how work is cut up; the week decides how much finishes.
+- **Almost all Codex volume is cached rereading** (about 97% of 38 million tokens), the same shape as Claude's. Thinking ("reasoning") tokens were 11,000 to 17,000 per lane, so lowering effort would save little; shorter contexts and fewer turns would.
+- **Fewer parallel lanes do not give more work per window** but avoid five-fold rereading, mid-work cut-offs and idle dependencies.
+- **Forecast:** the rest of 1.6 about 4 windows (2 to 8), fitting this week's remaining 5.5; 1.7 to 2.5 about 4.6 weeks of Codex (2.6 to 9.8), so around mid-December (late November to mid-January). Assumption-heavy; see the ledger block.
+
+## 📌 Decisions Made
+
+None by Ahmed. No amendment. The forecast levers (shorter contexts, commit per part, Claude building small lanes, a Codex plan upgrade or credits) are listed for him, not decided.
+
+## ⚠️ Difficulties / Friction
+
+The first relay gave approximate times (00:20 to 00:43, "23 minutes") that the logs corrected to 00:25:37 to 00:44:22 (19 minutes); the ledger uses the logs. `.gitignore` blocks `*.csv` except three named ledger tables, so the new table needed one exception line.
+
+## 🔧 Adjustments Made
+
+The forecast was written once from the approximate numbers and redone when the measured limit readings arrived, because they changed the main conclusion (the weekly limit, not the 5-hour one, sets the schedule).
+
+## ❌ Mistakes / Risks Noted
+
+- A first draft of the Claude-side sketch said a version would use "one third to a full week" of the 70% budget; the arithmetic is 7 to 20%. Corrected before commit.
+- Risk: the forecast's progress assumption (cut-off lanes 25 to 75% done) is unverified and drives every window count.
+
+## 📍 Current Position
+
+Ledger, forecast and dashboard updated; PR open. Codex paused until about 05:25:42 UTC; Claude's 5-hour window resets at 05:00 UTC.
+
+## 🔜 Next Steps
+
+1. Read Codex `/status` and Claude's weekly percentage at the next resets; add the rows.
+2. After the 05:25 UTC reset, inspect the cut-off lanes and replace the progress assumption with a measured one; rerun the forecast.
+3. Refresh the ledger at each lane merge and at every pause or resume.
+
+## ❓ Open Questions
+
+For Ahmed: is a Codex plan upgrade or extra credits worth considering, given a week holds only about 6.5 windows? Should lane A and B go to Claude directly to save Codex budget? (Both his call; numbers in the ledger block.)
+
+## 🧾 Session Outcome
+
+*Produced* (ledger, forecast, dashboard, two records). Verified by building the dashboard from the CSV files and reading the files back. Not integrated until merged; not accepted.
+
+## 🔍 Confidence Level
+
+High for the measured Codex numbers (Codex's own events, relayed). Medium for the capacity ratio (5.5 to 7 windows). Low for the point-based forecast (assumed progress and assumed cost per point for 1.7 onward). Unknown: Claude's weekly percentage.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `pace-forecast.csv`, `codex-runs.csv`, `quota-readings.csv`), the dashboard <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>, `tools/usage-ledger/`, [EX-2026-11-08-57](execution/2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md), [EX-2026-11-08-58](execution/2026-11-08-notion-hub-sync-with-version-plan.md).
+
+- Integration / review: on merge of this PR (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: the Codex reset at about 05:25 UTC and the readings above
+
+---
+
+<a id="session-46"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud + Gaming-PC · Checkpoint: plan settled, Notion read, 1.6 build begins
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and Claude project "Notaya". Machines: the coordinator and all study, planning and records threads in the **cloud**; the "Build Notaya 1.6" thread is bound to Ahmed's **Gaming-PC** (Remote Control approved at 00:21:39 UTC, Codex runs there). Time covered: **23:39:31 UTC on 2026-11-07 to about 00:26 UTC on 2026-11-08**. Records editor: the cloud thread "Write the session summary checkpoint" (`session_01PwVKYkE8dD5YGbCUnmpDXK`, started 00:24:55 UTC), asked by the coordinator after Ahmed's message of 00:24:41 UTC.
+
+**What it covers:** a checkpoint, written on Ahmed's request so that development can run on without losing the thread. It joins the three entries written during the same hour ([43](#session-43) Phase 1 decisions, [44](#session-44) the version plan, [45](#session-45) the manual) and adds what none of them holds: the Notion survey and its rules, the formulas, the library picks, the 1.6 spec and Ahmed's go to build, the new quota rules, the roles for the build, the numbered list of questions 1 to 38 with their answers, and what is running now. It does not repeat the reasoning of 43 to 45; it points to them.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Coordinator (mother thread; talked with Ahmed, started the threads, merged PRs #61 to #68) | Not re-read here; at its 20:33 UTC snapshot it was configured `claude-opus-5-5[1m]` at low effort (ledger row) | low (platform cap) | Its messages in the project chat. Its usage after 20:33 UTC is not measured |
+| "Map Notion workspace for full Notaya parity" (survey, then formulas) | Configured `claude-sonnet-5-5`, last served `claude-sonnet-5-5` | high | `get_session` at 00:26 UTC: USD 15.74 reported; finished 00:22:22 |
+| "Draft the full AI CLI action list" | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` | high | `get_session`: USD 2.76; finished 23:55:46 |
+| "Plan versions 1.6 to 1.8 and beyond" (plan, Notion board; four Sonnet helper sub-agents) | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` | high | `get_session`: USD 15.84; finished 00:06:51. Helpers' usage not shown separately |
+| "Write the 1.6 spec" | `claude-opus-5-5[1m]` | high | `get_session`: USD 5.05; finished 00:07:10 |
+| "Study libraries and licences" | `claude-sonnet-5-5[1m]` | high | `get_session`: USD 2.30; finished 00:02:19 |
+| "Write the Notaya manual" | `claude-sonnet-5-5[1m]` | high | `get_session`: USD 3.04; finished 23:57:53 |
+| "Build Notaya 1.6" (briefs, PR #68, then Codex on the PC) | `claude-sonnet-5-5`, bound to Gaming-PC | high | `get_session` at 00:26: USD 1.75, still running |
+| Codex (`gpt-6.1-sol`, reasoning `xhigh`) | Named in Ahmed's rules; **no Codex run is recorded yet** | xhigh (his rule) | The 1.6 thread's status at 00:26: "Codex running lanes A, B, C1, D, E". Not seen by this thread |
+| This thread (records editor) | Configured `claude-sonnet-5-5[1m]` | not read | This entry; its own usage is not measured (a running session has no usage block) |
+
+**Record basis:** written from the project chat read in full for 20:51 to 00:24 UTC (earlier chat was read through 20:51 and is covered by entries 41 to 43), the project memory, the repository at `main` = `c2ead6e` (PR #68), the shared notes listed under "Where things live", and the `get_session` records above. The studies themselves were not re-read in full here; their headline results are quoted from the threads' own reports and the plan, and carry that limit. Nothing was run or tested in the app.
+
+## 🕒 Time
+
+- Date: 2026-11-07 23:39 UTC to 2026-11-08 00:26 UTC. Times are the chat's message timestamps or `git log` (UTC); where a time is the container clock it says so.
+- Ahmed's messages in the span: 23:39:31, 23:42:35, 23:49:01, 23:53:46, 23:54:20, 23:58:44, 23:59:56, 00:03:25, 00:06:08, 00:12:00, 00:12:45, 00:14:46, 00:15:27, 00:17:34, 00:18:27, 00:19:12, 00:20:16, 00:21:39, 00:22:45, 00:24:06, 00:24:41.
+- Pull requests merged by the coordinator: #61 about 23:49, #62 about 23:50, #64 about 23:56, #63 about 23:57, #65 about 23:58, #66 about 00:01, #67 about 00:06, #68 about 00:21 (committer times of the merge commits, UTC).
+- Active working time: not measured. The wall-clock span is about 47 minutes and is not called work time; many threads ran side by side.
+- Session type: planning, study, a first build go, records.
+- Reason for summary: Ahmed's checkpoint request (00:24:41) and his rule A37 item 5.
+
+## 🎯 Session Goal
+
+Ahmed's words (00:24:41): *"follow-on session summary now. Since the last session summary that we have wrote with everything that we've discussed, applied, and established, since this is a critical step for us to take a checkpoint for and let the continuous development go through."* Produce one entry that lets a new session, or Mohamed, resume from it alone.
+
+## 🧭 Starting State
+
+At 23:39:31 UTC: Phase 1 (discussing every feature) was finished except the AI CLI's action list ([43](#session-43)); Ahmed had told the coordinator to push ahead with planning in parallel, to choose models by task and to use the cloud credit before it ran out (A43). `main` was `9e3e4e3` (PR #60). Notaya was at 1.5.1, accepted. Nothing was built for 1.6.
+
+## 🛠️ Actions Taken
+
+1. **23:35 to 23:42, the Notion study.** A thread read Ahmed's Notion (at his order, 23:35:36) and reported at 23:41 that it is about 3,000 pages and 66 databases and that five heavily used page features are missing from Notaya (columns, callout colour and icon, folding headings, page mentions with backlinks, links to a database view). The coordinator then put **ten questions** to Ahmed in the chat (23:42:42).
+2. **23:39 to 23:55, three threads in parallel.** The AI action list (about 300 named actions; four levels, confirmations only in the Notaya window, an exchange folder, a tamper-proof log; 10 questions, numbered 11 to 20), the records of Phase 1 ([PR #61](https://github.com/CipherVaults/Notaya/pull/61), entry 43) and the version plan ([PR #62](https://github.com/CipherVaults/Notaya/pull/62), entry 44; five more questions, 21 to 25).
+3. **23:49 to 23:54, Ahmed answered** the Notion questions (23:49:01) and the AI questions (23:53:46) in short messages, and the staging questions (23:54:20). Where he was unsure, the coordinator picked a default and said so (23:54:01).
+4. **23:49 to 00:07, three more threads:** the 1.6 spec, a library and licence study ([PR #64](https://github.com/CipherVaults/Notaya/pull/64)) and the manual ([PR #63](https://github.com/CipherVaults/Notaya/pull/63), entry 45). The plan was renumbered (2.0 to 2.5) and updated twice more with Ahmed's answers ([PR #65](https://github.com/CipherVaults/Notaya/pull/65) at about 23:58, [PR #67](https://github.com/CipherVaults/Notaya/pull/67) at about 00:06, which also carries the Notion survey gaps and a copy of the 1.6 spec). The library study got an addendum ([PR #66](https://github.com/CipherVaults/Notaya/pull/66)).
+5. **23:59, the survey finished and the credit ended.** The full read-only survey of the Notion (77 top-level items) was delivered with four new questions (30 to 33); in the same minute Ahmed said the USD 100 credit was finished and set the new quota rules (23:59:56).
+6. **00:02 to 00:12, the 1.6 gates.** The spec (15 work packages) asked Ahmed to approve four things (question 36). He approved the AI connection with its safety rules and deletes that go to a bin (00:06:08); the coordinator explained the helper program and the first-launch copy (00:06:22 and 00:12:10).
+7. **00:03 to 00:22, the formulas.** Ahmed allowed browser reading (00:03:25). The thread could not reach Chrome until the extension was signed in to the right Claude account (tried 00:04:58, 00:12:40, 00:15:14; fixed by Ahmed at 00:17:34). At 00:22:11 the thread reported **all formulas copied exactly** through the page's own database definition, read-only, with a checksum; nothing in Notion changed.
+8. **00:15 to 00:22, the go.** Ahmed authorised 1.6 and the helper program (00:15:27) and set the roles (00:18:27). The "Build Notaya 1.6" thread merged the briefs ([PR #68](https://github.com/CipherVaults/Notaya/pull/68), record [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md)), marked 1.6 "in development" on the Notion board, and asked for the Remote Control approval, which Ahmed gave at 00:21:39. The coordinator closed five finished threads at 00:19.
+9. **00:24 to now, this entry.** Records: A45, authority rows, STATUS, the ledger (eight threads measured), a claims row, [EX-2026-11-08-56](execution/2026-11-08-checkpoint-session-summary.md) and both copies of the handover guide.
+
+## 🧠 Key Insights
+
+- **Notion is a database workspace with a page layer Notaya does not yet have.** The survey found 77 top-level items; the Discord notebook alone is about 270 pages and 929 pictures; the German course exists in three copies (177 pages); the finance system has 9 data sources, 50 formulas, 16 rollups and 11 relations. The earlier note that the workspace was "small" (EX-41) is wrong. (Counts are the survey's and were not re-checked here.)
+- **An export loses the hub home pages** (columns, cards, links), so each home page is rebuilt from Claude's own read of the page. This is why Ahmed said the migration "is difficult" for hubs (23:49:01).
+- **The connector cannot read formula text or values**, so the formulas were read in the browser instead and the data checked against the export's values (zero differences is the pass mark). The formula copy is finance data: it lives only in the project's private notes (`notes/notion-formulas/2026-11-08-formulas-exact.md`, with a SHA-256 checksum) and is **never committed to the repository**; this entry does not quote any formula or value.
+- **More Notion gaps than the first study said:** links to a single block (about 57 in use), a contents block, file attachments, Status groups, page templates (including daily repeats), one synced block, buttons, text direction per block with invisible direction marks, and code that must copy byte for byte. They are placed in 1.8 and 1.9 (plan items 1.8-11 to 1.8-14 and 1.9-12 to 1.9-17).
+- **A Windows named pipe is readable by everyone on the PC by default.** The library study found this, so the AI door's pipe needs an explicit "only my Windows account" rule; it is a security task, not a detail.
+- **The AI CLI cannot ship without its safety net** (small saves, change signals, version history, activity log, a bin for everything). That is why 1.6 is the heavy version, on purpose. If it runs long, three small items (1.6 WP-12, 13, 14) may move to 1.7; the safety net may not.
+- **Money, not tokens, was the limit.** Eight threads cost about USD 47 at list prices in about an hour and a half ([ledger block of 00:26 UTC](ledger/usage-ledger.md)); reading dominated. That is why the new rules push the building onto Codex.
+
+## 📌 Decisions Made
+
+Status labels: **Confirmed** (Ahmed's own words), **Provisional** (a default the coordinator or a thread chose and Ahmed has not objected to), **Deferred**, **Rejected**. Authority rows and A45 hold the words.
+
+**Confirmed by Ahmed**
+
+- **Phase 1 is done; Phase 2 and the first build:** all features agreed (23:29, entry 43); planning in parallel (23:39:31); **go to build 1.6** and the helper program (00:15:27); **Codex leads all development, Claude briefs, inspects, merges and writes the records** (00:18:27).
+- **Version plan.** 1.6 the foundation (action list, change signals and small saves, activity log, version history, a recycle bin for everything, the AI door in two steps, About credits, quick fixes); 1.7 comfort (menus, shortcuts, app bar, tray, Ctrl+F, banner, the AI file door, emoji and Greek/Cyrillic in PDF); 1.8 Notion page features (columns, callouts, folding headings, mentions and backlinks, view links, block links, contents block, per-block direction, Notion ids) with code and Mermaid and history comparison; 1.9 tabs and the import/export upgrade (Excel export with charts, Excel import, saved views, templates, a sync ledger); **2.0** corkboard, calculator upgrades, manual and tour; 2.1 and 2.2 dashboards; 2.3 and 2.4 whiteboard; 2.5 Notebook mode. "After 1.9 it should be 2.0" (23:54:20). The order inside is the coordinator's call (Ahmed: "it's up to you"). The Notion migration runs beside it: a three-page trial after 1.8 (Home, the Projects registry, one finance database, into a fresh throwaway vault), the bulk after 1.9.
+- **AI CLI (23:53:46):** four levels Off, Look, Edit, Full (Full may delete whole hubs after a confirmation); hidden notebooks; the big-change confirm is an optional setting, default 20 items; snapshots; Claude and Codex at once if they never collide; the AI never draws freehand (23:54:20); locks not decided (the AI cannot lock or unlock anything); the AI sees everything, locked notes only when unlocked.
+- **Notion migration rules (23:49:01 and 00:03:25):** the full read-only survey; Notion is **never changed** (a scratch page excepted); the must-work hubs are Projects and Ideas registry, Discord notebook, Reading knowledge control center, Personal Financial System, AI Project Bootstrap System, FFmpeg Encoder, Learn German with Mariam (Arabic, "must be perfect") and Freelancing Arc with all its databases; formulas "dead accurate"; the backup is **manual and AI-driven**, never automatic; columns become a real feature; all three German copies come in, kept apart.
+- **Export and import:** emoji in PDF is a must; Excel export with charts "if possible"; Excel import into databases; 200 MB limit; several sheets become several databases with a pick list; tablet support broad, no model-specific code (23:58:44, 00:06:08).
+- **Quota (23:59:56):** the USD 100 credit is used up; **Claude up to 70% of the weekly quota** until Ahmed says otherwise; **Codex up to 100%**, including all its resets.
+- **Machines (00:20:16, 00:21:39):** the PC stays on all night; Remote Control approved; full authority to develop, test and use the computer within the throwaway-data rules.
+
+**Provisional (the coordinator's or a thread's default)**
+
+- **Seven notebooks as shelves for whole hubs** (Control Rooms, Money, Learning, Build and Systems, Archives, Everyday, Private locked). Ahmed asked what "shelves" meant (00:12:45); after the explanation he did not object. A proposal he has seen, not a decision he made.
+- **Columns as a real feature** (question 2, which he was "not sure about"): the coordinator decided yes because the migration needs them.
+- **The AI's exchange folder next to Notaya's data folder.** Ahmed wanted it "contained", working both installed and portable. The coordinator first said "inside the data folder" (23:54:01); the plan and spec say "next to" it (PR #67 fixed the wording). Both satisfy "contained"; the spec's version is the one to build.
+- **G3 as one local, one-time copy with a notice and no AI** (A44). Ahmed's words were "if that's helping, yes, but I don't want to have an automatic, in a sense". The reading is the coordinator's; Ahmed should confirm it (see Open Questions).
+- **Libraries (study, not yet approved for any build):** `rmcp` for the bridge program (Apache-2.0); `perfect-freehand` 1.2.3 for pen lines (MIT); Tauri's own global-shortcut plugin 2.4.1 (MIT or Apache-2.0); a Noto Sans subset for Greek and Cyrillic (SIL OFL); a bundled colour emoji picture pack, Microsoft's open Fluent Emoji first (MIT), Google's Noto emoji pictures as fallback (Apache-2.0); `rust_xlsxwriter` 0.102.0 and `calamine` 0.38.0 for Excel (sixteen new crates together, all permissive). **The 1.6 spec adds no new crates** except extra `windows` features; each other pick needs Ahmed's own words at its version (A37, `CLAUDE.md`).
+
+**Deferred**
+
+- Page locks and "lock now" for the AI (23:53:46: "I don't want to answer anything about locking pages right now").
+- The whiteboard's nine finer questions and the dashboards' ten questions: the coordinator answers them in planning with defaults unless Ahmed asks to see them.
+- Which German copy is the live one (Ahmed does not know).
+- Wintab-only tablets (not planned).
+
+**Rejected or set aside**
+
+- The read-only Notion key (Ahmed did not follow it; the browser route worked). Revisit only if the browser route fails.
+- The big whiteboard kit tldraw (needs a paid key, adds a watermark, may send usage data).
+- A spending cap per hour (Ahmed, 20:41:50): no cap, watch the 5-hour and weekly limits.
+
+### Questions 1 to 38 and the answers
+
+All questions were asked in the project chat as one continuing list (Ahmed's rule, 23:42:35). "—" means Ahmed gave no answer of his own.
+
+| # | Question (short) | Answer and who | Status |
+|---:|---|---|---|
+| 1 | Full read-only count of the Notion | Yes, "read exactly my entire notion" (Ahmed 23:49:01); done | Confirmed |
+| 2 | Columns as a real feature | Ahmed unsure; coordinator: yes (23:49:30) | Provisional |
+| 3 | Do the five heavy page features come first | Ahmed: not his to order; coordinator staged them in 1.8 | Provisional |
+| 4 | Which pages must work after import | The eight hubs named above, Arabic included | Confirmed |
+| 5 | Monthly refresh or an automatic helper | Manual, AI-driven, never automatic | Confirmed |
+| 6 | A read-only Notion key | Not understood; dropped. Formulas read in the browser instead | Rejected |
+| 7 | Rebuild finance formulas by hand | Formulas must be "dead accurate", compared with the export values | Confirmed |
+| 8 | A scratch Notion page | Allowed; Notion otherwise untouched | Confirmed |
+| 9 | One notebook per hub or sections | Ahmed did not organise Notion that way; see 33 and 37 | Provisional |
+| 10 | Anything the sample missed | Ahmed unsure; the full survey found more (see Key Insights) | Open, answered by the survey |
+| 11 | Four levels Off, Look, Edit, Full | Agreed (23:53:46) | Confirmed |
+| 12 | Hide notebooks from the AI | Agreed | Confirmed |
+| 13 | Confirm only in the Notaya window | Not objected | Provisional |
+| 14 | What is a big change | Optional setting, default 20 | Confirmed |
+| 15 | Where the AI's files go | "Contained in the app", installed and portable; coordinator: beside the data folder | Provisional |
+| 16 | Per-page edit lock for the AI | Not now | Deferred |
+| 17 | May the AI "lock now" | Not now | Deferred |
+| 18 | May the AI look at pictures of canvases | Agreed, after one confirmation | Confirmed |
+| 19 | Claude and Codex at the same time | Yes, if they never collide | Confirmed |
+| 20 | Companion program speaking MCP over a private local link | Ahmed unsure; coordinator chose it; approved as gate G2 at 00:15:27 | Confirmed (00:15:27) |
+| 21 | Is the version order right | Up to the coordinator | Provisional |
+| 22 | Dashboards earlier than the corkboard | Coordinator keeps the order | Provisional |
+| 23 | Call Notebook mode 2.0 | After 1.9 comes 2.0; Notebook mode ends at 2.5 | Confirmed |
+| 24 | About credits in 1.6 | Yes, "it's tiny" | Confirmed |
+| 25 | The AI never draws freehand | Agreed | Confirmed |
+| 26 | Which drawing tablet | None in particular: broad support | Confirmed |
+| 27 | Emoji in PDF | Yes, "critical" | Confirmed |
+| 28 | Charts in Excel export | Yes if possible, else plain tables | Confirmed |
+| 29 | Import Excel into databases | Yes | Confirmed |
+| 30 | Read the formulas in the browser | Yes; done at 00:22:11 | Confirmed |
+| 31 | All three German copies | All three, kept apart | Confirmed |
+| 32 | Right-to-left set by hand | Ahmed unsure: every block's direction kept as Notion has it | Confirmed (design) |
+| 33 | Notebook layout and a locked notebook | Hub = a page with nested pages; groups proposed | Provisional |
+| 34 | Largest Excel file | 200 MB is fine | Confirmed |
+| 35 | Several sheets become several databases | "What you see that's fit": yes, with a pick list | Confirmed |
+| 36 | Approve the four 1.6 gates | AI door and safety rules and the bin: 00:06:08; helper program: 00:15:27; first-launch copy: "if that's helping, yes" with the wording to confirm | Confirmed, G3 wording provisional |
+| 37 | Seven notebooks as shelves | See Provisional above | Provisional |
+| 38 | Can Codex start 1.6 tonight | Yes (00:15:27, 00:18:27, 00:21:39) | Confirmed |
+
+## ⚠️ Difficulties / Friction
+
+- **Ahmed's answers were often "I'm not sure."** He is a director, not a developer, and the questions grew technical (a read-only key, a helper program, shelves). Each time the coordinator explained in plain words and picked a default; two defaults (G3, the shelves) rest on a reading that Ahmed should confirm.
+- **The Chrome extension would not connect** for about 20 minutes (wrong Claude account in the extension). Fixed by Ahmed at 00:17:34; the formulas were then read in minutes.
+- **The cloud container cannot run the Rust tests.** The build thread found no Wine, no MinGW and no GTK there (EX-2026-11-08-55), and installing them needs Ahmed's own words. Code checks for 1.6 therefore depend on the PC (Codex and Remote Control) until he decides.
+- **Credit and quota changed mid-flow:** the credit ended at about 23:59, so the plan to "use it all" became "use Codex" within one minute.
+- **Numbers in the chat moved:** the question list ran 1 to 38 across several threads; the coordinator's 00:12 message numbered 38 before 37 was answered. The table above is the clean version.
+
+## 🔧 Adjustments Made
+
+- The plan was rewritten three times in 25 minutes as answers arrived (renumbering to 2.0 to 2.5; emoji moved to 1.7; Excel added; survey gaps placed); each time the repository copy and the Notion board were updated.
+- Ahmed's 00:12:45 worry ("I don't want anything to be changed on Notion") led to a plain statement that the shelves exist only inside Notaya.
+- The exchange-folder wording was corrected to "next to the data folder" (PR #67).
+
+## ❌ Mistakes / Risks Noted
+
+- **Risk: the "seven shelves" answer.** Ahmed wrote "Yeah, I agree" at 00:12:00 without naming what; he then asked what shelves were. Do not cite it as a decision.
+- **Risk: G3.** "I don't want to have an automatic" backup was read as "one local copy, once, with a notice". If Ahmed meant no copy at all, the 1.6 vault-format change needs another answer before it ships.
+- **Risk: sizes are judgement.** 1.6 has 15 work packages and nine Codex lanes; the schedule is not measured. Three packages may move to 1.7.
+- **Risk: the survey's counts and the formula copy were taken from the threads' reports.** This thread did not re-count Notion or re-read the formula file; Ahmed's "dead accurate" is a pass mark that is yet to be tested, after 1.8, against the export's values.
+- **Risk: Claude's 70% weekly line cannot yet be checked.** No weekly percentage has been read; only the 5-hour status ("allowed") is in the session records.
+- **Risk: a cloud credit figure.** The sum of reported costs here (USD 47) is not the credit balance; the balance was last read at USD 48 left at 22:32.
+- **Risk: unattended night.** Ahmed is asleep and asked for updates for the morning (00:22:45). Codex and the 1.6 thread run without him; every diff is still to be inspected before it merges, and nothing is accepted.
+
+## 📍 Current Position
+
+**As of:** `main` = `c2ead6e` (PR #68, merged about 00:21 UTC), plus this records PR. **Before** (23:39): Phase 1 done, nothing planned or built. **After:** the feature list is staged across 1.6 to 2.5; the AI CLI has levels, a safety net and a spec of 15 work packages; the Notion is surveyed and all its formulas are copied (privately); the library picks are studied; Ahmed has said go to 1.6 and set the quota and the roles; Codex has been started on the PC. **Current standing:** the plan and the spec are *produced and merged*; **nothing is built or accepted**; 1.6 is *in development*. **Live owners:** Codex (lanes), the "Build Notaya 1.6" thread (briefs, inspection, merges), Ahmed (every acceptance and the open answers).
+
+**In flight now (00:26 UTC):**
+
+- "Build Notaya 1.6": Codex is running lanes **A** (small interface fixes), **B** (export fix), **C1** (the action core), **D** (the bridge program) and **E** (the AI screens) in parallel; then C2 and C4, then C3, then C5; then integration, the security review, a PC test round on throwaway data, release notes and records.
+- This checkpoint (records only).
+- Nothing else is open: the Notion thread and the study threads are resolved.
+
+## 🔜 Next Steps
+
+1. The 1.6 thread: take each lane's diff, inspect it for Ahmed's vision and correctness (A37), run the checks that can run, merge, and report in the chat. Every lane gets its own claim and draft PR.
+2. Ahmed (morning): read this entry, the chat summary and the numbered list; confirm G3 and the shelves; decide on installing Wine and MinGW in the cloud environment (or accept PC-only Rust checks).
+3. After 1.6: the 13-section entry, ledger rows (Codex runs), the handover guide, the Notion ticks, and a PC round in the real exe (including Start-with-Windows, never tested).
+4. Before 1.7: Ahmed's approval of the libraries it needs (global shortcut plugin, the emoji pack, the Noto subset).
+5. Before the Notion trial (after 1.8): the formula comparison plan and the throwaway vault.
+
+**Do not reopen / repeat:** the Notion survey (read once, read-only); the four levels and the hidden-notebook idea; the order 1.6 to 2.5 unless Ahmed asks; any copy of the formula file into the repository.
+
+## ❓ Open Questions
+
+- **G3 wording:** does Ahmed want the one local, one-time copy at first launch of 1.6, or no copy? Needed from: Ahmed. Blocks: shipping 1.6 (the vault-format change).
+- **The seven notebooks:** are they right, now that he knows they live only in Notaya? Needed from: Ahmed. Blocks: the Notion trial after 1.8, not 1.6.
+- **Cloud checks:** may Wine and MinGW be installed in the cloud environment so threads can run the Rust tests? Needed from: Ahmed (A37 item 3). Blocks: nothing if the PC is used.
+- **German course:** which of the three copies is the live one? Needed from: Ahmed. Blocks: nothing (all three come in).
+- **The whiteboard's nine and the dashboards' ten questions:** defaults or his review? Needed from: Ahmed. Blocks: 2.1 and 2.3.
+- **Library approvals** (1.7 and 1.9). Needed from: Ahmed, per version.
+- **Mohamed:** has not seen the AI CLI design or any of this; the handover guide carries it. Needed from: Mohamed (STATUS question 27 and the guide's list).
+- Next question number to use in the chat: **39**.
+
+## 🧾 Session Outcome
+
+In 47 minutes the project went from "everything agreed, nothing planned" to "planned, studied, specified and started". The version plan, the 1.6 spec and the Codex briefs are in `main`; the Notion has been read (and its formulas copied) without a change; Ahmed's rules for quota, roles and the Notion are recorded as A45; the ledger shows what the hour cost. Nothing is built that can be called working, and nothing is accepted.
+
+## 🔍 Confidence Level
+
+- **High** that the decisions above are what Ahmed wrote (quotes and times are from the chat log, read in full for 23:39 to 00:24).
+- **Qualified** for the counts about Notion and for the library details: they come from the threads' reports and studies and were not re-checked here.
+- **Qualified** for the three provisional readings (G3, shelves, columns).
+- **Unknown** for Codex's progress and for the weekly quota.
+- Not higher because this thread did not run anything, did not open the Notion, and saw the build thread only through its status line.
+
+## 📎 Where things live
+
+- Repository: `docs/plan/2026-11-07-version-plan.md`, `docs/plan/2026-11-08-v1-6-spec.md`, `docs/plan/2026-11-08-v1-6-codex-briefs.md`, `docs/plan/2026-11-07-dependency-licence-study.md`, A44 and A45, `docs/ledger/`, `docs/handoff/2026-11-07-handover-guide-for-mohamed.md`.
+- Project files (not in the repository): `notes/2026-11-07-notion-parity-study.md` (section 0 first), `notes/notion-survey/` (A to H), `notes/2026-11-07-ai-cli-action-list.md`, `notes/2026-11-07-notaya-whiteboard-study.md`, `notes/2026-11-07-notaya-dashboards-study.md`, `notes/model-choice-guide.md`. **Private, never committed:** `notes/notion-formulas/2026-11-08-formulas-exact.md`.
+- Published pages (private to Ahmed): the manual <https://claude.ai/artifact/K6HUfVdCJbuSFNCkiiCu3K>, the handover guide <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>, the usage ledger <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY> (not rebuilt in this thread), and the Notion hub (Version Feature Board and Human Roadmap; updated when PR #67 merged, and 1.6 marked "in development" by the build thread).
+
+- Integration / review: on merge of this records PR (the coordinator's standing rule, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: Ahmed's answers above; the 1.6 lanes
+
 ---
 
 <a id="session-45"></a>
@@ -1716,7 +2442,7 @@ Notaya became a two-partner project with written rules for sharing work through 
 
 <a id="session-33"></a>
 
-# 📘 Session: 2026-10-28 16:07 to about 17:00 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
+# 📘 Session: 2026-10-28 16:07 to about 16:50 UTC (owner's messages 16:07:53 to 16:48:41 UTC), Notaya: V1.3.0 merged and published, test leftovers cleaned on the PC, GitHub repository renamed to Notaya, cloud threads with a PC session (backfilled 2026-11-07)
 
 ## 🤖 Models, Effort, Roles and Provenance
 
@@ -1732,7 +2458,7 @@ Notaya became a two-partner project with written rules for sharing work through 
 
 - Date: 2026-10-28 (UTC).
 - Start: the owner merged PR #34 at 16:07:47 UTC.
-- End: the rename was checked at about 16:49 UTC; the index gives the rename work to about 17:00 UTC. The next block (the folder move and V1.4.0) starts at 17:01:14 UTC (the V1.4.0 entry above).
+- End: the rename was checked at about 16:49 UTC; the index gives the rename work to about 16:50 UTC. The next block (the folder move and V1.4.0) starts at 17:01:14 UTC (the V1.4.0 entry above).
 - Work blocks: 16:07 to 16:12 (merge, stray folder, publish); 16:24 to 16:45 (cleanup, PC clock); 16:46 to about 17:00 (rename).
 - Session type: release and housekeeping.
 - Contributors: Mohamed; Claude cloud threads; a PC session.
@@ -1774,7 +2500,7 @@ No new mistake. The FI-05 stray folder, made by a test earlier the same afternoo
 
 ## 📍 Current Position
 
-**As of:** 2026-10-28 about 17:00 UTC.
+**As of:** 2026-10-28 about 16:50 UTC.
 
 **Before:** V1.3.0 built and tested, not merged; repository named CipherLeaf; test leftovers on the PC.
 

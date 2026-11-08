@@ -16,6 +16,37 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-08 (Ahmed's messages 16:59:07 to 17:00:48 UTC), EX-2026-11-08-63: README refresh for Notaya 1.5.1 and the GitHub About text
+
+- [2026-11-08-readme-refresh-v1-5-1.md](2026-11-08-readme-refresh-v1-5-1.md): the README rewritten for released 1.5.1 only (1.6 deliberately left out), a known-limits list, and the About description and topics handed over as text (repository settings are Mohamed's click). No screenshots (none exist for 1.5.1). **Produced**; not accepted.
+
+### 2026-11-08 (Ahmed's message 16:02:35 UTC), EX-2026-11-08-62: usage ledger refresh at 16:00 UTC
+
+- [2026-11-08-ledger-refresh-1600.md](2026-11-08-ledger-refresh-1600.md): new readings (Codex week 47%, Claude week 37%), forecast recalibrated (2.5 likely about 7 December, was 2 December), "not read" gauges, the roadmap thread's usage row. Produced and published; not accepted.
+
+### 2026-11-08 (Ahmed's messages 11:41:49 and 11:42:04 UTC), EX-2026-11-08-61: refresh of the AI-facing records and the 1.6 build-day session entry
+
+- [2026-11-08-ai-pbs-records-refresh.md](2026-11-08-ai-pbs-records-refresh.md): the Codex briefing, `AGENTS.md`, a `CLAUDE.md` note, the claims rows, STATUS and session entry 49 brought up to date as dated corrections. Records only. **Produced**; not accepted.
+### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-60: usage ledger redesign and the 1.6 to 2.5 forecast
+
+- [2026-11-08-ledger-redesign-and-forecast.md](2026-11-08-ledger-redesign-and-forecast.md): the new dashboard (charts and a forecast model with Codex's banked resets and Claude's 70% cap), the 08:27 readings, one forecast instead of two. **Produced**; not accepted.
+
+### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-59: Codex first, the Codex partner briefing and the roadmap forecast
+
+- [2026-11-08-codex-first-partner-briefing-and-forecast.md](2026-11-08-codex-first-partner-briefing-and-forecast.md): A46, the briefing file and the forecast page. Records and a forecast only. **Produced**; not accepted.
+
+### 2026-11-08 (Ahmed's message 00:51:23 UTC), EX-2026-11-08-58: Notion hub sync with the version plan (record copied into the repo)
+
+- [2026-11-08-notion-hub-sync-with-version-plan.md](2026-11-08-notion-hub-sync-with-version-plan.md): the record of the Notion board and roadmap sync. Records only. **Produced**; not accepted. A dated second sync (2026-11-08 about 15:25 to 15:35 UTC: Build state and Build note on the V1.6 cards, hub checkpoint, roadmap) is appended to the same file; no new EX number.
+
+### 2026-11-08 (Ahmed's message 00:51:23 UTC), EX-2026-11-08-57: usage ledger, first Codex cycle, pace forecast
+
+- [2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md](2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md): ledger rows for the first Codex cycle (measured limits: the week holds about 6.5 five-hour windows), pace forecast for 1.6 to 2.5, dashboard republished. Records and tools only; no app code. **Produced**; not accepted.
+
+### 2026-11-08 (Ahmed's message 00:24:41 UTC), EX-2026-11-08-56: checkpoint session summary (23:39 to 00:26 UTC)
+
+- [2026-11-08-checkpoint-session-summary.md](2026-11-08-checkpoint-session-summary.md): records only. Session entry 46, A45 (Notion migration rules, quota rules, Phase 2 answers) with eleven authority rows, ledger rows for eight threads, STATUS lines and the handover guide in both copies. No code. **Produced**; verified by reading the files back; not accepted.
+
 ### 2026-11-08 (Ahmed's messages 00:15:27 and 00:18:27 UTC), EX-2026-11-08-55: Build of Notaya 1.6 starts: go recorded, briefs for Codex
 
 - [2026-11-08-v1-6-build-start.md](2026-11-08-v1-6-build-start.md): records only. The go to build 1.6, gates G1 to G4 and the roles (Codex builds, Claude briefs, inspects, merges and records) as A44; one brief per lane in [the briefs](../plan/2026-11-08-v1-6-codex-briefs.md). No code; the Rust checks cannot run in this container (no Wine, MinGW or GTK). **Produced**; not verified, not accepted.

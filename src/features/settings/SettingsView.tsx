@@ -10,6 +10,7 @@ import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
 import RestoreDialog from "@/features/unlock/RestoreDialog";
+import ActivityPanel from "./ActivityPanel";
 import ErrorLogPanel from "./ErrorLogPanel";
 import AiAccessPanel from "./AiAccessPanel";
 import OpenSourceDialog from "./OpenSourceDialog";
@@ -259,6 +260,9 @@ export default function SettingsView() {
         )}
 
         <AiAccessPanel />
+        <Section icon={<Archive size={16} />} title="Activity">
+          <ActivityPanel />
+        </Section>
 
         <Section icon={<FileWarning size={16} />} title="Error log">
           <ErrorLogPanel />
@@ -349,6 +353,7 @@ export default function SettingsView() {
             <dd>Notaya's own code makes none. The Windows WebView2 component that draws the window may contact Microsoft at startup.</dd>
             <dt className="text-faint">Credits</dt>
             <dd>
+              <p className="mb-1">Made by Mohamed Sayed and Ahmed Emara, with Claude and ChatGPT</p>
               Built on open source software.{" "}
               <button type="button" onClick={() => setLicensesOpen(true)} className="font-medium text-accent underline-offset-4 hover:underline">
                 Open source licenses…

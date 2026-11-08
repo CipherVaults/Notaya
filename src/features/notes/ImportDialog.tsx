@@ -159,7 +159,7 @@ export default function ImportDialog() {
             <p>
               <span className="font-medium text-fg">PDF:</span> only the text is imported, not scanned pages, pictures or the layout.
             </p>
-            <p>Databases (tables), comments and page history are not imported.</p>
+            <p>Comments and page history are not imported.</p>
           </div>
 
           <div role="note" className="flex items-start gap-2.5 text-sm text-muted">

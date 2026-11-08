@@ -7,6 +7,8 @@
 //! a chain of automations that trigger each other stops after three steps, one run does at most 200
 //! actions and adds at most 50 rows, and an action that fails shows a message and the rest carries on.
 
+use crate::actions::Actor;
+
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -105,6 +107,10 @@ pub fn take_notices() -> Vec<Reminder> {
 
 /// Runs what an event on a row sets off: the automations of its database that match, or the button's actions.
 pub fn fire(s: &mut Session, run: &mut Run, row_id: &str, ev: &Event, depth: usize) {
+    fire_core(s, &Actor::Automation, run, row_id, ev, depth)
+}
+
+pub(crate) fn fire_core(s: &mut Session, _actor: &Actor, run: &mut Run, row_id: &str, ev: &Event, depth: usize) {
     if depth > MAX_DEPTH {
         return;
     }
@@ -138,7 +144,13 @@ pub fn fire(s: &mut Session, run: &mut Run, row_id: &str, ev: &Event, depth: usi
         }
     }
     for (name, actions) in jobs {
-        exec(s, run, &name, row_id, &actions, depth);
+        if let Err(e) = s.run_as(&Actor::Automation, |s| {
+            s.record_automation_run()?;
+            exec(s, run, &name, row_id, &actions, depth);
+            Ok(())
+        }) {
+            run.say(s, row_id, &name, format!("The automation did not run: {e}"));
+        }
     }
 }
 
@@ -315,14 +327,22 @@ pub fn date_hits(ctx: &Ctx, db: &Database, a: &Automation, since: i64, now: i64)
 
 /// Runs the date automations whose time has come since the last check. Called with every poll of the screen.
 pub fn tick_dates(s: &mut Session) {
+    tick_dates_core(s, &Actor::Automation)
+}
+
+pub(crate) fn tick_dates_core(s: &mut Session, actor: &Actor) {
     // Most vaults have no date automation: look before building anything.
     let any = s.items().any(|i| matches!(i, Item::Database(d) if d.trashed_at.is_none() && d.automations.iter().any(|a| a.enabled && a.trigger.kind == "dateReached")));
     if any {
-        tick_dates_at(s, clock::local_now().0);
+        tick_dates_at_core(s, actor, clock::local_now().0);
     }
 }
 
 pub fn tick_dates_at(s: &mut Session, now: i64) {
+    tick_dates_at_core(s, &Actor::Automation, now)
+}
+
+pub(crate) fn tick_dates_at_core(s: &mut Session, _actor: &Actor, now: i64) {
     struct Job {
         db: String,
         auto: Automation,
@@ -334,31 +354,48 @@ pub fn tick_dates_at(s: &mut Session, now: i64) {
         let mem = guard.get_or_insert_with(HashMap::new);
         let ctx = Ctx::new(s.items(), now, 0);
         for db in ctx.dbs.values().filter(|d| d.trashed_at.is_none()) {
-            for a in db.automations.iter().filter(|a| a.enabled && a.trigger.kind == "dateReached") {
-                let since = a.last_run.max(mem.get(&a.id).copied().unwrap_or(0)).max(now - CATCH_UP_MINUTES);
+            for a in db
+                .automations
+                .iter()
+                .filter(|a| a.enabled && a.trigger.kind == "dateReached")
+            {
+                let since = a
+                    .last_run
+                    .max(mem.get(&a.id).copied().unwrap_or(0))
+                    .max(now - CATCH_UP_MINUTES);
                 if since >= now {
                     continue;
                 }
                 mem.insert(a.id.clone(), now);
                 let rows = date_hits(&ctx, db, a, since, now);
                 if !rows.is_empty() {
-                    jobs.push(Job { db: db.id.clone(), auto: a.clone(), rows });
+                    jobs.push(Job {
+                        db: db.id.clone(),
+                        auto: a.clone(),
+                        rows,
+                    });
                 }
             }
         }
     }
     for job in jobs {
         let mut run = Run::at(now);
-        for id in &job.rows {
-            exec(s, &mut run, &job.auto.name, id, &job.auto.actions, 0);
+        if let Err(e) = s.run_as(&Actor::Automation, |s| {
+            s.record_automation_run()?;
+            for id in &job.rows {
+                exec(s, &mut run, &job.auto.name, id, &job.auto.actions, 0);
+            }
+            if let Ok(mut db) = database(s, &job.db) {
+                if let Some(a) = db.automations.iter_mut().find(|a| a.id == job.auto.id) {
+                    a.last_run = now;
+                    let _ = s.put(Item::Database(db));
+                }
+            }
+            Ok(())
+        }) {
+            if let Some(id) = job.rows.first() { run.say(s, id, &job.auto.name, format!("The automation did not run: {e}")); }
         }
         finish(run);
-        if let Ok(mut db) = database(s, &job.db) {
-            if let Some(a) = db.automations.iter_mut().find(|a| a.id == job.auto.id) {
-                a.last_run = now;
-                let _ = s.put(Item::Database(db));
-            }
-        }
     }
 }
 
@@ -590,5 +627,66 @@ mod tests {
         assert!(!d.automations[0].enabled, "no date property: switched off");
         assert_eq!(d.automations[0].actions.len(), 1, "the action on a missing property is dropped");
         let _ = &mut fx;
+    }
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+
+    #[test]
+    fn fire_wrapper_and_core_match() {
+        compare(
+            |state| {
+                state.with_mut(|s| {
+                    fire(s, &mut Run::at(0), "10000000000000000000000000000008", &Event::Button("button"), 0);
+                    Ok(())
+                })
+            },
+            |s, _| {
+                fire_core(
+                    s,
+                    &Actor::Automation,
+                    &mut Run::at(0),
+                    "10000000000000000000000000000008",
+                    &Event::Button("button"),
+                    0,
+                );
+                Ok(())
+            },
+        );
+    }
+
+    #[test]
+    fn tick_dates_wrapper_and_core_match() {
+        compare(
+            |state| {
+                state.with_mut(|s| {
+                    tick_dates(s);
+                    Ok(())
+                })
+            },
+            |s, _| {
+                tick_dates_core(s, &Actor::Automation);
+                Ok(())
+            },
+        );
+    }
+
+    #[test]
+    fn tick_dates_at_wrapper_and_core_match() {
+        compare(
+            |state| {
+                state.with_mut(|s| {
+                    tick_dates_at(s, 0);
+                    Ok(())
+                })
+            },
+            |s, _| {
+                tick_dates_at_core(s, &Actor::Automation, 0);
+                Ok(())
+            },
+        );
     }
 }

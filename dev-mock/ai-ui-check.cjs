@@ -120,7 +120,14 @@ const check = (name, actual, expected) => { assert.deepEqual(actual, expected, n
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
     check('Escape denies a confirmation', (await mock('calls')).filter((c) => c.command === 'ai_confirm_answer').at(-1).args.allow, false);
-    await mock('confirm', 'ask', { expiresAt: Date.now() - 1000 });
+    // C5 events have no expiresAt. Age the window's receipt clock instead of
+    // adding a fake-only event field that would hide a broken real adapter.
+    await page.evaluate(async () => {
+      const { aiMock } = await import('/dev-mock/ai.ts');
+      const now = Date.now;
+      try { Date.now = () => now() - 301_000; aiMock.confirm('ask'); }
+      finally { Date.now = now; }
+    });
     await dialog.waitFor();
     check('expired requests cannot be allowed', await allow.isDisabled(), true);
     await dialog.getByRole('button', { name: 'Deny', exact: true }).click();

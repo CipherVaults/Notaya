@@ -188,10 +188,23 @@ impl Renderer {
                 out
             }
             Block::Table(rows) => table(rows),
+            Block::Database { id, table, .. } => {
+                let mut out = self.blocks(&super::doc::database_blocks(table.as_ref()), shift);
+                if let Some(t) = table {
+                    out.push(String::new());
+                    out.push(database_reference(id, &t.title));
+                }
+                out
+            }
             Block::Rule => vec!["---".to_string()],
             Block::PageLink { title, target } => vec![page_link_row(title, target.as_ref())],
         }
     }
+}
+
+fn database_reference(id: &str, title: &str) -> String {
+    // One encoded path segment: even a malformed stored id cannot inject a second link.
+    format!("[database: {}](notaya://db/{})", escape_text(title), super::doc::url_segment(id))
 }
 
 fn quote(lines: Vec<String>) -> Vec<String> {
@@ -245,6 +258,14 @@ fn cell_text(cell: &Cell) -> String {
                 Block::Math(m) => parts.push(format!("${m}$")),
                 Block::Image(i) => parts.push(if i.caption.is_empty() { "(picture)".into() } else { format!("(picture: {})", escape_text(&i.caption)) }),
                 Block::PageLink { title, target } => parts.push(page_link_row(title, target.as_ref())),
+                Block::Database { id, table, .. } => {
+                    walk(&super::doc::database_blocks(table.as_ref()), parts);
+                    if let Some(t) = table {
+                        // A nested table is flattened to text inside a Markdown cell.
+                        parts.extend(t.rows.iter().flatten().map(cell_text));
+                        parts.push(database_reference(id, &t.title));
+                    }
+                }
                 Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout { blocks: x, .. } => walk(x, parts),
                 Block::Columns(c) => c.iter().for_each(|x| walk(x, parts)),
                 Block::Table(_) | Block::Rule => {}
@@ -473,6 +494,23 @@ mod tests {
     use super::super::doc::{parse, Rgb};
     use super::super::tests::sample_doc;
     use super::*;
+
+    #[test]
+    fn inline_database_exports_rows_in_logical_order_with_a_reference() {
+        let md = render(&super::super::tests::inline_database_doc(), "assets").text;
+        assert!(md.contains("[database: مهام](notaya://db/database1)"));
+        assert_eq!(md.lines().filter(|l| l.starts_with('|')).count(), 4, "header, delimiter, two live rows");
+        assert!(md.contains("| أول | مرحبا 123 عالم | 12.5 | 25 |"));
+        assert!(md.contains("| ثان | שלום | 25 | 50 |"));
+        assert!(!md.contains("HIDDEN_CELL") && !md.contains("TRASHED_CELL"));
+        assert!(md.find("Before").unwrap() < md.find("| الاسم").unwrap());
+        assert!(md.find("notaya://db/database1").unwrap() < md.find("After").unwrap());
+    }
+
+    #[test]
+    fn database_reference_escapes_the_title_and_encodes_only_one_id_segment() {
+        assert_eq!(database_reference("id/)[x](javascript:evil)", "a] <b>\nnext"), "[database: a\\] \\<b\\> next](notaya://db/id%2F%29%5Bx%5D%28javascript%3Aevil%29)");
+    }
 
     #[test]
     fn every_node_type_has_a_markdown_form() {

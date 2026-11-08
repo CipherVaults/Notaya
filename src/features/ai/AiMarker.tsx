@@ -1,51 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useEffect, useState } from "react";
 import { Pause, Square } from "lucide-react";
-import { api, type AiState } from "@/lib/ipc";
+import { api } from "@/lib/ipc";
+import { dismissAiRequest, useAiState } from "@/store/ai";
+import { useApp } from "@/store/app";
+export { useAiState } from "@/store/ai";
 import PairingDialog from "./PairingDialog";
 import ConfirmDialog from "./ConfirmDialog";
 
-// Subscribe before the first snapshot so a request arriving during mount is not lost.
-// Events are invalidations, never permission grants; the window re-reads core state.
-export function useAiState() {
-  const [state, setState] = useState<AiState | null>(null);
-  const [failed, setFailed] = useState(false);
-  const refreshRef = useRef<() => Promise<void>>(async () => {});
-  const refresh = useCallback(() => refreshRef.current(), []);
-  useEffect(() => {
-    let alive = true;
-    let sequence = 0;
-    const unlisteners: (() => void)[] = [];
-    refreshRef.current = async () => {
-      const request = ++sequence;
-      try {
-        const next = await api.aiGetState();
-        if (alive && request === sequence) { setState(next); setFailed(false); }
-      } catch {
-        if (alive && request === sequence) { setState(null); setFailed(true); }
-      }
-    };
-    void (async () => {
-      try {
-        for (const event of ["ai-state-changed", "ai-activity", "ai-pairing-request", "ai-confirm-request"]) {
-          const unlisten = await listen(event, () => void refresh());
-          if (!alive) { unlisten(); return; }
-          unlisteners.push(unlisten);
-        }
-        await refresh();
-      } catch {
-        if (alive) setFailed(true);
-      }
-    })();
-    return () => { alive = false; unlisteners.forEach((unlisten) => unlisten()); };
-  }, [refresh]);
-  return { state, failed, refresh };
-}
-
-// Mount once in the unlocked TitleBar after lane A is integrated. This owns the
+// Mount once in the unlocked TitleBar. This owns the
 // window-wide request dialogs as well as the marker, including outside Settings.
 export default function AiMarker() {
   const { state, refresh } = useAiState();
+  const tree = useApp((s) => s.tree);
+  const stickies = useApp((s) => s.stickies);
+  const itemName = (id: string) => tree.notebooks.find((n) => n.id === id)?.name
+    ?? tree.sections.find((n) => n.id === id)?.name
+    ?? tree.pages.find((p) => p.id === id)?.title
+    ?? tree.databases?.find((d) => d.id === id)?.title
+    ?? (stickies.some((s) => s.id === id) ? "Sticky note" : id);
   const [now, setNow] = useState(Date.now);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -69,7 +41,7 @@ export default function AiMarker() {
   const confirm = state.confirmRequests[0];
   return <>
     {(state.paused || active.length > 0) && <div className="flex min-w-0 items-center gap-2 text-xs" aria-label="AI activity">
-      <span tabIndex={0} title={active.map((a) => `${a.name}: ${a.claims.length ? a.claims.join(", ") : "No items claimed"}`).join("\n")}
+      <span tabIndex={0} title={active.map((a) => `${a.name}: ${a.claims.length ? a.claims.map(itemName).join(", ") : "No items listed"}`).join("\n")}
         className="max-w-56 truncate text-muted">{state.paused ? "AI stopped" : `with ${active.map((a) => a.name).join(", ")}`}</span>
       <button disabled={busy} onClick={() => void changePause()}
         className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-45">
@@ -77,7 +49,7 @@ export default function AiMarker() {
       </button>
       {failed && <span role="alert" className="text-danger">Could not change AI access. Try again.</span>}
     </div>}
-    {!state.paused && (confirm ? <ConfirmDialog key={confirm.id} request={confirm} onAnswered={() => void refresh()} />
-      : pairing ? <PairingDialog key={pairing.id} request={pairing} onAnswered={() => void refresh()} /> : null)}
+    {!state.paused && (confirm ? <ConfirmDialog key={confirm.id} request={confirm} onAnswered={() => dismissAiRequest(confirm.id)} />
+      : pairing ? <PairingDialog key={pairing.id} request={pairing} onAnswered={() => dismissAiRequest(pairing.id)} /> : null)}
   </>;
 }

@@ -1,9 +1,10 @@
 //! Shared app state, locking, and the background auto-lock monitor.
 
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime};
 
 use tauri::{AppHandle, Emitter, Manager};
@@ -85,8 +86,37 @@ impl Flush {
     }
 }
 
+/// The shell supplies runtime operations; core state and its tests never own an AppHandle.
+#[derive(Clone)]
+struct ChangeSink {
+    changed: Arc<dyn Fn(crate::changes::ItemsChanged) -> Result<()> + Send + Sync>,
+    close_sticky: Arc<dyn Fn(&str) + Send + Sync>,
+}
+
+struct ChangeDelivery {
+    generation: u64,
+    changes: Option<crate::changes::ItemsChanged>,
+    close: Vec<String>,
+}
+
+#[derive(Default)]
+struct ChangeQueue {
+    generation: u64,
+    pending: VecDeque<ChangeDelivery>,
+    dispatching: bool,
+}
+
+impl ChangeQueue {
+    fn new_session(&mut self) {
+        self.generation += 1;
+        self.pending.clear();
+    }
+}
+
 pub struct AppState {
     pub paths: Paths,
+    change_sink: Mutex<Option<ChangeSink>>,
+    changes: Mutex<ChangeQueue>,
     session: Mutex<Option<Session>>,
     attempts: Mutex<Attempts>,
     /// Labels of windows that have called `window_ready` (they listen for `vault-locking`).
@@ -129,6 +159,8 @@ impl AppState {
     pub fn new(paths: Paths) -> Self {
         AppState {
             paths,
+            change_sink: Mutex::new(None),
+            changes: Mutex::new(ChangeQueue::default()),
             session: Mutex::new(None),
             attempts: Mutex::new(Attempts { failures: 0, wait_until: None }),
             ready: Mutex::new(HashSet::new()),
@@ -204,6 +236,7 @@ impl AppState {
 
     /// Forgets a window that no longer exists, so a lock doesn't wait for it.
     pub fn unmark_ready(&self, label: &str) {
+        if let Some(s) = guard(&self.session).as_mut() { s.coordination.forget_window(label); }
         guard(&self.ready).remove(label);
         let mut f = guard(&self.flush);
         if f.pending.remove(label) {
@@ -224,8 +257,11 @@ impl AppState {
         guard(&self.session).is_some()
     }
 
-    pub fn set_session(&self, session: Session) {
-        *guard(&self.session) = Some(session);
+    pub fn set_session(&self, mut session: Session) {
+        session.drain_changes(); // creation/unlock is followed by a complete window load
+        let mut current = guard(&self.session);
+        guard(&self.changes).new_session();
+        *current = Some(session);
         crate::logging::unlocked_event();
     }
 
@@ -244,7 +280,9 @@ impl AppState {
     pub fn take_session(&self) -> Option<Session> {
         // Messages of automations hold row titles: they do not outlive the unlocked session.
         crate::commands::automation::clear_notices();
-        guard(&self.session).take()
+        let mut session = guard(&self.session);
+        guard(&self.changes).new_session();
+        session.take()
     }
 
     pub fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> {
@@ -255,10 +293,80 @@ impl AppState {
     }
 
     pub fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
-        match guard(&self.session).as_mut() {
-            Some(s) => f(s),
-            None => Err(Error::Locked),
+        let mut session = guard(&self.session);
+        let s = session.as_mut().ok_or(Error::Locked)?;
+        let result = s.run_as(&crate::actions::Actor::Person, f);
+        // Some old cores perform several transactions. Publish durable partial writes even
+        // if a later step failed; they must never leak into the next command's signal.
+        if let Some(changes) = s.drain_changes() {
+            let close = changes.ids.iter().filter(|id| {
+                matches!(s.get(id), Some(crate::model::Item::Sticky(st)) if st.trashed_at.is_some())
+            }).cloned().collect();
+            // Enqueue under the session lock to preserve commit order. Delivery
+            // holds neither lock, so callbacks may read, write or lock the vault.
+            let mut queue = guard(&self.changes);
+            let generation = queue.generation;
+            queue.pending.push_back(ChangeDelivery { generation, changes: Some(changes), close });
         }
+        drop(session);
+        self.dispatch_changes();
+        result
+    }
+
+    /// One ordered, reentrant pump. Failures cannot change a durable command's
+    /// result or skip sticky cleanup; the next command/bind retries the head.
+    fn dispatch_changes(&self) {
+        {
+            let mut queue = guard(&self.changes);
+            if queue.dispatching { return; }
+            queue.dispatching = true;
+        }
+        loop {
+            let sink = guard(&self.change_sink).clone();
+            let mut delivery = {
+                let mut queue = guard(&self.changes);
+                if sink.is_none() || queue.pending.is_empty() {
+                    queue.dispatching = false;
+                    return;
+                }
+                queue.pending.pop_front().unwrap()
+            };
+            let sink = sink.unwrap();
+            if let Some(changes) = delivery.changes.take() {
+                let sent = catch_unwind(AssertUnwindSafe(|| (sink.changed)(changes.clone())));
+                if !matches!(sent, Ok(Ok(()))) { delivery.changes = Some(changes); }
+            }
+            let mut failed_close = Vec::new();
+            for id in delivery.close {
+                // A callback may have locked or replaced the session. Old work
+                // must never close a new session's windows or be retried there.
+                if guard(&self.changes).generation != delivery.generation { break; }
+                if catch_unwind(AssertUnwindSafe(|| (sink.close_sticky)(&id))).is_err() {
+                    failed_close.push(id);
+                }
+            }
+            delivery.close = failed_close;
+            if delivery.changes.is_some() || !delivery.close.is_empty() {
+                let mut queue = guard(&self.changes);
+                if queue.generation == delivery.generation {
+                    queue.pending.push_front(delivery);
+                    queue.dispatching = false;
+                    return;
+                }
+            }
+        }
+    }
+
+    pub fn bind_events(
+        &self,
+        changed: impl Fn(crate::changes::ItemsChanged) -> Result<()> + Send + Sync + 'static,
+        close_sticky: impl Fn(&str) + Send + Sync + 'static,
+    ) {
+        *guard(&self.change_sink) = Some(ChangeSink {
+            changed: Arc::new(changed),
+            close_sticky: Arc::new(close_sticky),
+        });
+        self.dispatch_changes();
     }
 
     /// Slows down repeated guessing: after 3 failures, waits 2, 4, 8 … up to 60 seconds.
@@ -693,6 +801,227 @@ mod tests {
         state.set_notice("second".into());
         assert_eq!(state.take_notice().as_deref(), Some("second"));
         assert_eq!(state.take_notice(), None, "gone after the first read");
+    }
+
+    #[test]
+    fn change_sink_publishes_partial_writes_then_closes_sticky_outside_session_lock() {
+        let root = PathBuf::from(
+            std::env::var_os("NOTAYA_HOME").unwrap_or_else(|| "D:\\Notaya Tests\\v1-6-C2".into()),
+        )
+        .join(format!("event-sink-{}", crate::model::new_id()));
+        let paths = Paths::at(&root);
+        std::fs::create_dir_all(&paths.data).unwrap();
+        let mut session = Session::create_open(&paths.vault).unwrap();
+        let id = crate::model::new_id();
+        session
+            .put(serde_json::from_value(serde_json::json!({
+                "kind": "sticky", "id": id, "content": "", "text": "", "color": "yellow",
+                "x": 0, "y": 0, "w": 320, "h": 320, "onTop": true, "open": true,
+                "created": 1, "updated": 1
+            })).unwrap())
+            .unwrap();
+        session.drain_changes();
+        let state = Arc::new(AppState::new(paths));
+        state.set_session(session);
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let changed_calls = calls.clone();
+        let closed_calls = calls.clone();
+        let emitting_state = Arc::downgrade(&state);
+        let closing_state = Arc::downgrade(&state);
+        let changed_id = id.clone();
+        state.bind_events(
+            move |changes| {
+                assert_eq!(changes.ids, vec![changed_id.clone()]);
+                let state = emitting_state.upgrade().unwrap();
+                let session = state.session.try_lock().expect("delivery releases the session lock");
+                assert!(session.as_ref().unwrap().in_bin(&changed_id));
+                drop(session);
+                assert!(state.is_unlocked());
+                state.with(|s| { assert!(s.in_bin(&changed_id)); Ok(()) }).unwrap();
+                state.with_mut(|_| Ok(())).unwrap();
+                changed_calls.lock().unwrap().push("changed");
+                Ok(())
+            },
+            move |id| {
+                let state = closing_state.upgrade().unwrap();
+                let session = state.session.try_lock()
+                    .expect("window destruction can re-enter state");
+                assert!(session.as_ref().unwrap().in_bin(id));
+                closed_calls.lock().unwrap().push("closed");
+            },
+        );
+        let result: Result<()> = state.with_mut(|s| {
+            crate::commands::stickies::delete_sticky_core(s, &crate::actions::Actor::Person, id)?;
+            Err(Error::invalid("later step failed"))
+        });
+        assert!(result.is_err());
+        assert_eq!(*calls.lock().unwrap(), vec!["changed", "closed"]);
+        state.with_mut(|_| Ok(())).unwrap();
+        assert_eq!(
+            calls.lock().unwrap().len(), 2,
+            "no stale signal in the next command"
+        );
+    }
+
+    #[test]
+    fn with_mut_groups_nested_journals_and_publishes_partial_commits_once() {
+        use crate::{actions::Actor, model::Item};
+        let (session, paths) = crate::changes::tests::fixture();
+        let id = session.items().find(|i| matches!(i, Item::Page(_))).unwrap().id().to_string();
+        let base = session.rev(&id);
+        let state = AppState::new(paths);
+        state.set_session(session);
+        let received = Arc::new(Mutex::new(Vec::new()));
+        let events = received.clone();
+        state.bind_events(move |event| { events.lock().unwrap().push(event); Ok(()) }, |_| {});
+        let result: Result<()> = state.with_mut(|s| {
+            for title in ["first durable step", "second durable step"] {
+                s.run_as(&Actor::Person, |s| {
+                    let Item::Page(mut page) = s.get(&id).unwrap().clone() else { panic!() };
+                    page.title = title.into();
+                    page.favorite = !page.favorite; // structural writes are separate activity entries
+                    s.put(Item::Page(page))?;
+                    s.snapshot_page(&id)
+                })?;
+            }
+            Err(Error::invalid("later step failed"))
+        });
+        assert!(result.is_err());
+        let request_set = state.with(|s| {
+            let entries = s.activity_list(None, None, 2)?;
+            assert_eq!(entries.len(), 2);
+            assert_eq!(entries[0].change_set, entries[1].change_set);
+            assert!(entries.iter().all(|e| e.actor == "person"));
+            for title in ["first durable step", "second durable step"] {
+                assert!(s.history_list(&id)?.iter().any(|v| v.title == title && v.change_set == entries[0].change_set));
+            }
+            s.activity_verify()?;
+            Ok(entries[0].change_set.clone())
+        }).unwrap();
+        assert_eq!(received.lock().unwrap().len(), 1);
+        assert_eq!(received.lock().unwrap()[0].revs[&id], base + 2);
+        state.with_mut(|s| {
+            let Item::Page(mut page) = s.get(&id).unwrap().clone() else { panic!() };
+            page.title = "next request".into();
+            page.favorite = !page.favorite;
+            s.put(Item::Page(page))
+        }).unwrap();
+        state.with(|s| {
+            assert_ne!(s.activity_list(None, None, 1)?[0].change_set, request_set);
+            s.activity_verify()
+        }).unwrap();
+        assert_eq!(received.lock().unwrap().len(), 2);
+        assert_eq!(received.lock().unwrap()[1].revs[&id], base + 3);
+    }
+
+    #[test]
+    fn panicking_and_failing_change_sink_preserves_data_closes_sticky_and_retries() {
+        use crate::actions::Actor;
+        use crate::model::Item;
+        use std::sync::atomic::AtomicUsize;
+        let (session, paths) = crate::changes::tests::fixture();
+        let id = session.items().find(|i| matches!(i, Item::Sticky(_))).unwrap().id().to_string();
+        let state = AppState::new(paths);
+        state.set_session(session);
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let attempt = attempts.clone();
+        let closed = Arc::new(AtomicUsize::new(0));
+        let close = closed.clone();
+        let received = Arc::new(Mutex::new(Vec::new()));
+        let events = received.clone();
+        state.bind_events(move |change| {
+            events.lock().unwrap().push(serde_json::to_value(change).unwrap());
+            match attempt.fetch_add(1, Ordering::SeqCst) {
+                0 => panic!("injected notification panic"),
+                1 => Err(Error::invalid("injected notification error")),
+                _ => Ok(()),
+            }
+        }, move |_| { close.fetch_add(1, Ordering::SeqCst); });
+        state.with_mut(|s| crate::commands::stickies::delete_sticky_core(s, &Actor::Person, id.clone())).unwrap();
+        assert_eq!(attempts.load(Ordering::SeqCst), 1);
+        assert_eq!(closed.load(Ordering::SeqCst), 1, "panic cannot skip sticky cleanup");
+        assert!(!state.session.is_poisoned());
+        assert!(state.with(|s| Ok(s.in_bin(&id))).unwrap());
+        state.with_mut(|_| Ok(())).unwrap(); // returned sink error is retried too
+        state.with_mut(|_| Ok(())).unwrap();
+        let received = received.lock().unwrap();
+        assert_eq!(received.len(), 3);
+        assert_eq!(received[0], received[1]);
+        assert_eq!(received[1], received[2]);
+        assert_eq!(closed.load(Ordering::SeqCst), 1, "successful cleanup is not repeated");
+        drop(received);
+        drop(state.take_session().unwrap()); // locking remains usable
+        assert!(!state.is_unlocked());
+        let reopened = Session::unlock(&state.paths.vault, "throwaway", None).unwrap();
+        assert!(reopened.in_bin(&id), "bin move was durable despite sink failure");
+        state.set_session(reopened);
+        state.with_mut(|_| Ok(())).unwrap();
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    fn change_delivery_preserves_concurrent_and_reentrant_commit_order() {
+        use crate::model::Item;
+        use std::sync::mpsc;
+        let (session, paths) = crate::changes::tests::fixture();
+        let id = session.items().find(|i| matches!(i, Item::Page(_))).unwrap().id().to_string();
+        let base = session.rev(&id);
+        let state = Arc::new(AppState::new(paths));
+        state.set_session(session);
+        let (entered, started) = mpsc::channel();
+        let (resume, wait) = mpsc::channel();
+        let wait = Mutex::new(wait);
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let received = events.clone();
+        let weak = Arc::downgrade(&state);
+        let changed_id = id.clone();
+        state.bind_events(move |change| {
+            let rev = change.revs[&changed_id];
+            received.lock().unwrap().push(rev);
+            let state = weak.upgrade().unwrap();
+            assert!(state.with(|s| Ok(s.get(&changed_id).is_some())).unwrap());
+            if rev == base + 1 {
+                entered.send(()).unwrap();
+                wait.lock().unwrap().recv_timeout(Duration::from_secs(5)).unwrap();
+                // A synchronous native event listener writes during delivery.
+                state.with_mut(|s| s.put(s.get(&changed_id).unwrap().clone())).unwrap();
+            }
+            Ok(())
+        }, |_| {});
+        let writing = state.clone();
+        let first_id = id.clone();
+        let first = std::thread::spawn(move || writing.with_mut(|s| s.put(s.get(&first_id).unwrap().clone())));
+        started.recv_timeout(Duration::from_secs(5)).unwrap();
+        state.with_mut(|s| s.put(s.get(&id).unwrap().clone())).unwrap();
+        resume.send(()).unwrap();
+        first.join().unwrap().unwrap();
+        assert_eq!(*events.lock().unwrap(), vec![base + 1, base + 2, base + 3]);
+    }
+
+    #[test]
+    fn lock_and_session_replacement_discard_failed_generation_notifications() {
+        use crate::model::Item;
+        let (session, paths) = crate::changes::tests::fixture();
+        let id = session.items().find(|i| matches!(i, Item::Page(_))).unwrap().id().to_string();
+        let state = AppState::new(paths);
+        state.set_session(session);
+        state.bind_events(|_| Err(Error::invalid("injected failure")), |_| {});
+        state.with_mut(|s| s.put(s.get(&id).unwrap().clone())).unwrap();
+        assert_eq!(guard(&state.changes).pending.len(), 1);
+        drop(state.take_session().unwrap());
+        assert!(guard(&state.changes).pending.is_empty());
+        let session = Session::unlock(&state.paths.vault, "throwaway", None).unwrap();
+        state.set_session(session);
+        state.with_mut(|s| s.put(s.get(&id).unwrap().clone())).unwrap();
+        assert_eq!(guard(&state.changes).pending.len(), 1);
+        let session = state.take_session().unwrap();
+        state.set_session(session);
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let received = events.clone();
+        state.bind_events(move |change| { received.lock().unwrap().push(change); Ok(()) }, |_| {});
+        assert!(events.lock().unwrap().is_empty());
+        state.with_mut(|s| s.put(s.get(&id).unwrap().clone())).unwrap();
+        assert_eq!(events.lock().unwrap().len(), 1);
     }
 
     #[test]

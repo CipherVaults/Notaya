@@ -1,15 +1,16 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
 use crate::backup;
+use crate::actions::Actor;
 use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
-use crate::model::{Item, Settings, Sticky};
+use crate::model::{Item, LastPlace, Settings, Sticky};
 use crate::openvault;
 use crate::state::{self, AppState};
 use crate::ui;
@@ -85,6 +86,10 @@ fn create_open(app: &AppHandle, state: &AppState) -> Result<()> {
 /// Runs on a worker thread: opening a vault also opens sticky notes (windows).
 #[tauri::command(async)]
 pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultStatus> {
+    vault_status_person(app, state)
+}
+
+fn vault_status_person(app: AppHandle, state: State<'_, AppState>) -> Result<VaultStatus> {
     let open_error = auto_open(&app, &state);
     let exists = state.paths.vault.exists();
     let unlocked = state.is_unlocked();
@@ -140,12 +145,20 @@ fn check_new_password(password: &str) -> Result<()> {
 
 /// Things to do right after unlocking: restore sticky notes and window effects.
 pub(super) fn after_unlock(app: &AppHandle, state: &AppState) {
+    let events_app = app.clone();
+    let sticky_app = app.clone();
+    state.bind_events(
+        move |changes| {
+            events_app.emit("items-changed", changes).map_err(Error::from)
+        },
+        move |id| ui::close_sticky(&sticky_app, id),
+    );
     state.record_success();
     let Ok((protect, stickies)) = state.with(|s| {
         let stickies: Vec<Sticky> = s
             .items()
             .filter_map(|i| match i {
-                Item::Sticky(st) if st.open => Some(st.clone()),
+                Item::Sticky(st) if st.open && st.trashed_at.is_none() => Some(st.clone()),
                 _ => None,
             })
             .collect();
@@ -164,6 +177,10 @@ pub(super) fn after_unlock(app: &AppHandle, state: &AppState) {
 /// copies exist" screen. (On a plain first run `vault_status` does this by itself.)
 #[tauri::command(async)]
 pub fn start_notes(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
+    start_notes_person(app, state)
+}
+
+fn start_notes_person(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     let _gate = state.open_gate();
     if state.paths.vault.exists() {
         return Err(Error::VaultExists);
@@ -189,6 +206,16 @@ pub struct EnableSecurityResult {
 /// vaults are never deleted.
 #[tauri::command(async)]
 pub fn enable_security(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    password: String,
+    keyfile: Option<String>,
+    remove_unprotected_copies: bool,
+) -> Result<EnableSecurityResult> {
+    enable_security_person(app, state, password, keyfile, remove_unprotected_copies)
+}
+
+fn enable_security_person(
     app: AppHandle,
     state: State<'_, AppState>,
     password: String,
@@ -228,6 +255,15 @@ pub fn disable_security(
     current_password: String,
     current_keyfile: Option<String>,
 ) -> Result<()> {
+    disable_security_person(app, state, current_password, current_keyfile)
+}
+
+fn disable_security_person(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    current_password: String,
+    current_keyfile: Option<String>,
+) -> Result<()> {
     let current_password = Zeroizing::new(current_password);
     state.check_rate_limit()?;
     let current_kf = match read_keyfile(current_keyfile) {
@@ -251,6 +287,15 @@ pub fn disable_security(
 
 #[tauri::command(async)]
 pub fn unlock_vault(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    password: String,
+    keyfile: Option<String>,
+) -> Result<()> {
+    unlock_vault_person(app, state, password, keyfile)
+}
+
+fn unlock_vault_person(
     app: AppHandle,
     state: State<'_, AppState>,
     password: String,
@@ -306,6 +351,17 @@ pub fn change_master(
     new_password: String,
     new_keyfile: Option<String>,
 ) -> Result<()> {
+    change_master_person(app, state, current_password, current_keyfile, new_password, new_keyfile)
+}
+
+fn change_master_person(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    current_password: String,
+    current_keyfile: Option<String>,
+    new_password: String,
+    new_keyfile: Option<String>,
+) -> Result<()> {
     let current_password = Zeroizing::new(current_password);
     let new_password = Zeroizing::new(new_password);
     state.check_rate_limit()?;
@@ -334,6 +390,10 @@ pub fn change_master(
 
 #[tauri::command(async)]
 pub fn pick_keyfile(app: AppHandle) -> Option<String> {
+    pick_keyfile_person(app)
+}
+
+fn pick_keyfile_person(app: AppHandle) -> Option<String> {
     app.dialog()
         .file()
         .set_title("Choose your keyfile")
@@ -344,6 +404,10 @@ pub fn pick_keyfile(app: AppHandle) -> Option<String> {
 
 #[tauri::command(async)]
 pub fn create_keyfile(app: AppHandle) -> Result<Option<String>> {
+    create_keyfile_person(app)
+}
+
+fn create_keyfile_person(app: AppHandle) -> Result<Option<String>> {
     let Some(path) = app
         .dialog()
         .file()
@@ -361,6 +425,10 @@ pub fn create_keyfile(app: AppHandle) -> Result<Option<String>> {
 
 #[tauri::command(async)]
 pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
+    backup_now_person(app, state)
+}
+
+fn backup_now_person(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
     if !state.is_unlocked() {
         return Err(Error::Locked);
     }
@@ -383,25 +451,133 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
 
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
-    let mut settings = state.with(|s| Ok(s.settings()))?;
+    get_settings_person(&state)
+}
+
+fn get_settings_person(state: &AppState) -> Result<Settings> {
+    state.with(|s| get_settings_core(s, &Actor::Person))
+}
+
+pub(crate) fn get_settings_core(s: &Session, _actor: &Actor) -> Result<Settings> {
+    let mut settings = s.settings();
     // The calculator history has its own commands; the settings screen doesn't need it.
     settings.calc_history.clear();
     settings.search_history.clear();
+    settings.replaced_edits.clear();
     Ok(settings)
 }
 
 #[tauri::command]
 pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> Result<Settings> {
-    let mut settings = settings.sanitized();
-    let protect = state.with_mut(|s| {
-        // The calculator history changes only through the calculator commands.
-        settings.calc_history = s.settings().calc_history;
-        settings.search_history = s.settings().search_history;
-        s.put(Item::Settings(settings.clone()))?;
-        Ok(s.protects_capture())
-    })?;
+    let protect = save_settings_person(&state, settings)?;
     ui::set_capture_protection(&app, protect);
     get_settings(state)
+}
+
+fn save_settings_person(state: &AppState, settings: Settings) -> Result<bool> {
+    let settings = settings.sanitized();
+    // Keep sanitization before the session check, as in the original adapter.
+    state.with_mut(|s| save_settings_core(s, &Actor::Person, settings))
+}
+
+pub(crate) fn save_settings_core(s: &mut Session, _actor: &Actor, settings: Settings) -> Result<bool> {
+    s.run_as(_actor, |s| {
+    let mut settings = settings.sanitized();
+    // Histories and the last location change only through their dedicated commands.
+    let stored = s.settings();
+    settings.calc_history = stored.calc_history;
+    settings.search_history = stored.search_history;
+    settings.last_place = stored.last_place;
+    settings.replaced_edits = stored.replaced_edits;
+    s.put(Item::Settings(settings.clone()))?;
+    Ok(s.protects_capture())
+    })
+}
+
+/// Saves only the last location in the unlocked vault, without overwriting other settings.
+#[tauri::command]
+pub fn set_last_place(state: State<'_, AppState>, last_place: Option<LastPlace>) -> Result<()> {
+    set_last_place_person(&state, last_place)
+}
+
+fn set_last_place_person(state: &AppState, last_place: Option<LastPlace>) -> Result<()> {
+    state.with_mut(|s| set_last_place_core(s, &Actor::Person, last_place))
+}
+
+pub(crate) fn set_last_place_core(s: &mut Session, _actor: &Actor, last_place: Option<LastPlace>) -> Result<()> {
+    s.run_as(_actor, |s| {
+    if last_place.as_ref().is_some_and(|place| !place.valid()) {
+        return Err(Error::invalid("The last place is not valid."));
+    }
+    let mut settings = s.settings();
+    if settings.last_place == last_place {
+        return Ok(());
+    }
+    settings.last_place = last_place;
+    s.put(Item::Settings(settings))
+    })
+}
+
+#[cfg(test)]
+mod last_place_tests {
+    use super::*;
+    use crate::model::CalcEntry;
+
+    fn throwaway_path() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("notaya-last-place-{}", crate::model::new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join("throwaway.nota")
+    }
+
+    #[test]
+    fn the_location_reopens_from_the_vault_without_changing_other_settings() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let mut settings = session.settings();
+        settings.theme = "paper".into();
+        settings.calc_history.push(CalcEntry { expr: "2+2".into(), result: "4".into() });
+        settings.search_history.push("test search".into());
+        session.put(Item::Settings(settings)).unwrap();
+        let place = LastPlace { kind: "page".into(), id: crate::model::new_id(), view_id: None };
+        set_last_place_core(&mut session, &Actor::Person, Some(place.clone())).unwrap();
+        drop(session);
+        let mut reopened = Session::unlock_open(&path).unwrap();
+        let stored = reopened.settings();
+        assert_eq!(stored.last_place, Some(place));
+        assert_eq!(stored.theme, "paper");
+        assert_eq!(stored.calc_history[0].result, "4");
+        assert_eq!(stored.search_history, ["test search"]);
+        set_last_place_core(&mut reopened, &Actor::Person, None).unwrap();
+        drop(reopened);
+        assert!(Session::unlock_open(&path).unwrap().settings().last_place.is_none());
+    }
+
+    #[test]
+    fn invalid_locations_do_not_change_the_settings_record() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let before = serde_json::to_vec(&session.settings()).unwrap();
+        let bad = LastPlace { kind: "page".into(), id: "a title / not an id".into(), view_id: None };
+        assert!(set_last_place_core(&mut session, &Actor::Person, Some(bad)).is_err());
+        assert_eq!(serde_json::to_vec(&session.settings()).unwrap(), before);
+    }
+
+    #[test]
+    fn appearance_saves_preserve_the_last_place_and_histories() {
+        let path = throwaway_path();
+        let mut session = Session::create_open(&path).unwrap();
+        let mut stored = session.settings();
+        stored.last_place = Some(LastPlace { kind: "database".into(), id: crate::model::new_id(), view_id: Some(crate::model::new_id()) });
+        stored.calc_history.push(CalcEntry { expr: "2+2".into(), result: "4".into() });
+        stored.search_history.push("test search".into());
+        session.put(Item::Settings(stored.clone())).unwrap();
+        save_settings_core(&mut session, &Actor::Person, Settings { theme: "paper".into(), ..Settings::default() }).unwrap();
+        let saved = session.settings();
+        assert_eq!(saved.last_place, stored.last_place);
+        assert_eq!(saved.calc_history[0].result, "4");
+        assert_eq!(saved.search_history, stored.search_history);
+        assert_eq!(saved.theme, "paper");
+    }
 }
 
 /// Applies Mica/Acrylic to the calling window. Returns whether it took effect.
@@ -414,6 +590,10 @@ pub fn set_backdrop(window: WebviewWindow, kind: String, dark: bool) -> bool {
 /// window is asked to save its pending edits before the vault locks.
 #[tauri::command]
 pub fn window_ready(window: WebviewWindow, state: State<'_, AppState>) {
+    window_ready_person(window, state)
+}
+
+fn window_ready_person(window: WebviewWindow, state: State<'_, AppState>) {
     state.mark_ready(window.label());
     // Hidden in the tray (by the close button, or started hidden by Windows): a reload after a
     // lock must not bring the window back; opening it from the tray does.
@@ -450,8 +630,55 @@ pub fn take_notice(state: State<'_, AppState>) -> Option<String> {
 
 #[tauri::command]
 pub fn open_data_folder(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
+    open_data_folder_person(app, state)
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+
+    #[test]
+    fn get_settings_person_and_core_match() {
+        compare(
+            get_settings_person,
+            |s, _| get_settings_core(s, &Actor::Person),
+        );
+    }
+
+    #[test]
+    fn save_settings_person_and_core_match() {
+        let input = || Settings { theme: "unknown".into(), calc_history: vec![], search_history: vec![], ..Settings::default() };
+        compare(
+            |state| save_settings_person(state, input()),
+            |s, _| save_settings_core(s, &Actor::Person, input()),
+        );
+    }
+
+    #[test]
+    fn set_last_place_person_and_core_match() {
+        let input = || Some(LastPlace { kind: "database".into(), id: "10000000000000000000000000000007".into(), view_id: Some("10000000000000000000000000000009".into()) });
+        compare(
+            |state| set_last_place_person(state, input()),
+            |s, _| set_last_place_core(s, &Actor::Person, input()),
+        );
+    }
+}
+
+fn open_data_folder_person(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;
     app.opener()
         .open_path(state.paths.data.display().to_string(), None::<&str>)
         .map_err(|e| Error::Other(e.to_string()))
+}
+
+
+/// The window identity comes from Tauri, never from an action parameter.
+#[tauri::command]
+pub fn editing(window: WebviewWindow, state: State<'_, AppState>, id: String, active: bool) -> Result<()> {
+    state.with_mut(|s| {
+        if s.get(&id).is_none() { return Err(Error::NotFound); }
+        s.coordination.editing(&id, window.label(), active);
+        Ok(())
+    })
 }

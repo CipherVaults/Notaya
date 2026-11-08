@@ -1,3 +1,5 @@
+import { Button as BinButton } from "@/components/ui";
+import { timeAgo } from "@/lib/utils";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -26,6 +28,7 @@ import {
   StickyNote,
   Table2,
   Trash2,
+  RotateCcw,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,6 +40,7 @@ import { useApp } from "@/store/app";
 import { Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "./ui";
 import NotebookDialog, { type NotebookDraft } from "@/features/notes/NotebookDialog";
 import { openExport } from "@/features/notes/ExportDialog";
+import { restoreFromBin } from "@/features/notes/restore";
 import NewDatabaseDialog, { type NewDatabaseTarget } from "@/features/database/NewDatabaseDialog";
 import { PageIcon } from "@/lib/pageLook";
 
@@ -48,7 +52,7 @@ const listedDatabases = (tree: NotesTree) =>
   tree.databases.filter((d) => d.trashedAt === null && !d.inline).sort((a, b) => a.order - b.order);
 
 /** Runs a tree-changing command and reports whether it worked (a failure is shown as a toast). */
-type Run = (fn: () => Promise<NotesTree>) => Promise<boolean>;
+type Run = (fn: () => Promise<NotesTree | null>) => Promise<boolean>;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -62,8 +66,7 @@ function contents(tree: NotesTree, sectionIds: string[], withSections: boolean):
   return withSections ? `It has ${plural(ids.size, "section")} and ${pageText}${trashText}.` : `It has ${pageText}${trashText}.`;
 }
 
-const DELETE_NOTE =
-  "This can't be undone from inside the app. Notaya first saves a backup copy of all your notes. To get this back, use Restore from a backup in Settings: it replaces your notes with that copy, and your current notes are kept in a restore-undo file.";
+const DELETE_NOTE = "You can restore this and its contents from Trash. Notaya first saves a safety backup copy of your notes.";
 
 const rowByKey = (key: string) => document.querySelector<HTMLElement>(`[data-rowkey="${window.CSS.escape(key)}"]`);
 
@@ -182,7 +185,9 @@ export default function Sidebar() {
 
   const run: Run = async (fn) => {
     try {
-      setTree(await fn());
+      const tree = await fn();
+      if (!tree) return false;
+      setTree(tree);
       return true;
     } catch (e) {
       toast.error(errorText(e));
@@ -231,7 +236,7 @@ export default function Sidebar() {
 
   const favorites = useMemo(() => tree.pages.filter((p) => p.favorite && p.trashedAt === null), [tree.pages]);
   const favoriteDbs = useMemo(() => tree.databases.filter((d) => d.favorite && d.trashedAt === null), [tree.databases]);
-  const trashed = tree.pages.filter((p) => p.trashedAt !== null).length + tree.databases.filter((d) => d.trashedAt !== null).length;
+  const trashed = useApp((s) => s.bin.length);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const startResize = (e: React.PointerEvent) => {
@@ -297,14 +302,8 @@ export default function Sidebar() {
 
         <GroupHeader
           label="Notebooks"
-          action={{ label: "New notebook", onClick: () => setNewNotebook(true) }}
           secondAction={{ label: "Import pages…", onClick: () => useApp.getState().setImportOpen(true) }}
         />
-        {tree.notebooks.length === 0 && (
-          <button onClick={() => setNewNotebook(true)} className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg">
-            <Plus size={15} /> Create your first notebook
-          </button>
-        )}
         {tree.notebooks.length === 0 && (
           <button onClick={() => useApp.getState().setImportOpen(true)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg">
             <Upload size={15} /> Import pages from another app
@@ -361,16 +360,16 @@ export default function Sidebar() {
                           onSelect={async () => {
                             const ok = await deleteWithConfirm({
                               rowKey: `nb:${nb.id}`,
-                              title: `Delete notebook "${nb.name}"?`,
+                              title: `Move to bin "${nb.name}"?`,
                               body: `${contents(tree, sections.map((s) => s.id), true)} ${DELETE_NOTE}`,
-                              confirm: "Delete notebook",
+                              confirm: "Move to bin",
                               name: nb.name,
                               del: () => api.deleteNotebook(nb.id),
                             });
                             if (ok) useApp.getState().openNotebook(useApp.getState().tree.notebooks[0]?.id ?? null);
                           }}
                         >
-                          Delete notebook
+                          Move to bin
                         </MenuItem>
                       </>
                     }
@@ -416,6 +415,12 @@ export default function Sidebar() {
             })}
           </Tree>
         )}
+        <button
+          onClick={() => setNewNotebook(true)}
+          className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg"
+        >
+          <Plus size={15} /> New notebook
+        </button>
       </div>
 
       <div className="space-y-0.5 border-t border-line px-2 py-2">
@@ -803,7 +808,11 @@ function SortableRow({ id, children }: { id: string; children: React.ReactNode }
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : undefined, opacity: isDragging ? 0.7 : 1 }}
-      {...listeners}
+      onPointerDown={(e) => {
+        // A nested branch has its own siblings; it must never start dragging its parent.
+        const key = (e.target as Element).closest("[data-rowkey]")?.getAttribute("data-rowkey");
+        if (key === `p:${id}` || key === `db:${id}`) listeners?.onPointerDown?.(e);
+      }}
     >
       {children}
     </div>
@@ -842,7 +851,6 @@ function SectionBlock({
   const known = new Set(pages.map((p) => p.id));
   const roots = pages.filter((p) => !p.parent || !known.has(p.parent));
   const dbsHere = listedDatabases(tree).filter((d) => d.sectionId === section.id && (!d.parent || !known.has(d.parent)));
-  const rootIds = roots.map((p) => p.id);
   const rowKey = `sec:${section.id}`;
   // Only the section's own row starts a drag, so dragging its pages doesn't move the section.
   const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
@@ -928,9 +936,9 @@ function SectionBlock({
                 onSelect={async () => {
                   const ok = await deleteWithConfirm({
                     rowKey,
-                    title: `Delete section "${section.name}"?`,
+                    title: `Move to bin "${section.name}"?`,
                     body: `${contents(tree, [section.id], false)} ${DELETE_NOTE}`,
-                    confirm: "Delete section",
+                    confirm: "Move to bin",
                     name: section.name,
                     del: () => api.deleteSection(section.id),
                   });
@@ -938,7 +946,7 @@ function SectionBlock({
                   if (ok && st.activePageId && !st.tree.pages.some((p) => p.id === st.activePageId)) st.openPage(null);
                 }}
               >
-                Delete section
+                Move to bin
               </MenuItem>
             </>
           }
@@ -948,27 +956,7 @@ function SectionBlock({
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden">
-            <DndContext
-              sensors={sensors}
-              accessibility={dndA11y}
-              collisionDetection={closestCenter}
-              onDragEnd={(e: DragEndEvent) => {
-                if (!e.over || e.active.id === e.over.id) return;
-                if (!rootIds.includes(String(e.active.id))) return;
-                run(() => api.reorder(arrayMove(rootIds, rootIds.indexOf(String(e.active.id)), rootIds.indexOf(String(e.over!.id)))));
-              }}
-            >
-              <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
-                {roots.map((p, i) => (
-                  <SortableRow key={p.id} id={p.id}>
-                    <PageBranch page={p} depth={2} pos={{ i, n: roots.length }} siblings={rootIds} pages={pages} tree={tree} activePageId={activePageId} run={run} />
-                  </SortableRow>
-                ))}
-              </SortableContext>
-            </DndContext>
-            {dbsHere.map((d, i) => (
-              <DatabaseItem key={d.id} rowKey={`db:${d.id}`} db={d} depth={2} pos={{ i, n: dbsHere.length }} active={d.id === activePageId} run={run} tree={tree} />
-            ))}
+            <SiblingItems roots={roots} databases={dbsHere} depth={2} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
             {pages.length === 0 && dbsHere.length === 0 && (
               <Row rowKey={`add:${section.id}`} depth={2} pos={{ i: 0, n: 1 }} onClick={onNewPage} icon={<Plus size={14} className="text-faint" />} label="Add a page" active={false} muted />
             )}
@@ -976,6 +964,49 @@ function SectionBlock({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/** Pages and databases share one order, within their section or parent page only. */
+function SiblingItems({ roots, databases, depth, pages, tree, activePageId, run, sensors }: {
+  roots: PageMeta[];
+  databases: DatabaseMeta[];
+  depth: number;
+  pages: PageMeta[];
+  tree: NotesTree;
+  activePageId: string | null;
+  run: Run;
+  sensors: ReturnType<typeof useSensors>;
+}) {
+  const items = [
+    ...roots.map((page) => ({ id: page.id, order: page.order, page, db: null })),
+    ...databases.map((db) => ({ id: db.id, order: db.order, page: null, db })),
+  ].sort((a, b) => a.order - b.order);
+  const ids = items.map((item) => item.id);
+  return (
+    <DndContext
+      sensors={sensors}
+      accessibility={dndA11y}
+      collisionDetection={closestCenter}
+      onDragEnd={(e: DragEndEvent) => {
+        if (!e.over || e.active.id === e.over.id) return;
+        const from = ids.indexOf(String(e.active.id));
+        const to = ids.indexOf(String(e.over.id));
+        if (from >= 0 && to >= 0) run(() => api.reorder(arrayMove(ids, from, to)));
+      }}
+    >
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        {items.map((item, i) => (
+          <SortableRow key={item.id} id={item.id}>
+            {item.page ? (
+              <PageBranch page={item.page} depth={depth} pos={{ i, n: items.length }} siblings={ids} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
+            ) : item.db ? (
+              <DatabaseItem rowKey={`db:${item.id}`} db={item.db} depth={depth} pos={{ i, n: items.length }} siblings={ids} active={item.id === activePageId} run={run} tree={tree} />
+            ) : null}
+          </SortableRow>
+        ))}
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -989,6 +1020,7 @@ function PageBranch({
   tree,
   activePageId,
   run,
+  sensors,
 }: {
   page: PageMeta;
   depth: number;
@@ -998,9 +1030,9 @@ function PageBranch({
   tree: NotesTree;
   activePageId: string | null;
   run: Run;
+  sensors: ReturnType<typeof useSensors>;
 }) {
   const kids = pages.filter((p) => p.parent === page.id);
-  const kidIds = kids.map((k) => k.id);
   const newDatabase = useContext(NewDatabaseContext);
   const kidDbs = listedDatabases(tree).filter((d) => d.parent === page.id);
   const containsActive = (id: string): boolean =>
@@ -1041,14 +1073,7 @@ function PageBranch({
           }
         }}
       />
-      {open &&
-        kids.map((k, i) => (
-          <PageBranch key={k.id} page={k} depth={depth + 1} pos={{ i, n: kids.length }} siblings={kidIds} pages={pages} tree={tree} activePageId={activePageId} run={run} />
-        ))}
-      {open &&
-        kidDbs.map((d, i) => (
-          <DatabaseItem key={d.id} rowKey={`db:${d.id}`} db={d} depth={depth + 1} pos={{ i, n: kidDbs.length }} active={d.id === activePageId} run={run} tree={tree} />
-        ))}
+      {open && <SiblingItems roots={kids} databases={kidDbs} depth={depth + 1} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />}
     </>
   );
 }
@@ -1085,6 +1110,7 @@ function PageItem({
   onAddSub?: () => void;
   onAddDatabase?: () => void;
 }) {
+  const confirm = useConfirm();
   const setView = useApp((s) => s.setView);
   return (
     <Row
@@ -1115,7 +1141,7 @@ function PageItem({
               Add a database inside…
             </MenuItem>
           )}
-          <MenuItem icon={<Star size={14} />} onSelect={() => run(() => api.setPageFavorite(page.id, !page.favorite))}>
+          <MenuItem icon={<Star size={14} fill={page.favorite ? "currentColor" : "none"} />} onSelect={() => run(() => api.setPageFavorite(page.id, !page.favorite))}>
             {page.favorite ? "Remove from favorites" : "Add to favorites"}
           </MenuItem>
           {siblings && siblings.length > 1 && pos.i > 0 && (
@@ -1152,10 +1178,10 @@ function PageItem({
             onSelect={async () => {
               await run(() => api.trashPage(page.id));
               if (useApp.getState().activePageId === page.id) useApp.getState().openPage(null);
-              toast("Moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(page.id)) } });
+              toast("Moved to trash", { action: { label: "Undo", onClick: () => run(() => restoreFromBin(page.id, confirm)) } });
             }}
           >
-            Move to trash
+            Move to bin
           </MenuItem>
         </>
       }
@@ -1172,6 +1198,7 @@ function DatabaseItem({
   active,
   run,
   tree,
+  siblings,
 }: {
   rowKey: string;
   db: DatabaseMeta;
@@ -1180,7 +1207,9 @@ function DatabaseItem({
   active: boolean;
   run: Run;
   tree: NotesTree;
+  siblings?: string[];
 }) {
+  const confirm = useConfirm();
   const setView = useApp((s) => s.setView);
   const setFavorite = async () => {
     try {
@@ -1215,9 +1244,19 @@ function DatabaseItem({
       menuLabel="Database options"
       menu={
         <>
-          <MenuItem icon={<Star size={14} />} onSelect={setFavorite}>
+          <MenuItem icon={<Star size={14} fill={db.favorite ? "currentColor" : "none"} />} onSelect={setFavorite}>
             {db.favorite ? "Remove from favorites" : "Add to favorites"}
           </MenuItem>
+          {siblings && pos.i > 0 && (
+            <MenuItem icon={<ArrowUp size={14} />} onSelect={() => moveBy(run, siblings, db.id, -1)}>
+              Move up
+            </MenuItem>
+          )}
+          {siblings && pos.i < siblings.length - 1 && (
+            <MenuItem icon={<ArrowDown size={14} />} onSelect={() => moveBy(run, siblings, db.id, 1)}>
+              Move down
+            </MenuItem>
+          )}
           {tree.sections.length > 1 && <div className="px-2.5 pb-1 pt-2 text-xs text-faint">Move to</div>}
           {tree.sections
             .filter((s) => s.id !== db.sectionId)
@@ -1239,13 +1278,59 @@ function DatabaseItem({
             onSelect={async () => {
               await run(() => api.trashPage(db.id));
               if (useApp.getState().activePageId === db.id) useApp.getState().openPage(null);
-              toast("Database moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(db.id)) } });
+              toast("Database moved to trash", { action: { label: "Undo", onClick: () => run(() => restoreFromBin(db.id, confirm)) } });
             }}
           >
-            Move to trash
+            Move to bin
           </MenuItem>
         </>
       }
     />
   );
+}
+
+
+/** The same Trash screen, grouped by the six kinds that can be restored. */
+export function TrashView() {
+  const entries = useApp((s) => s.bin);
+  const confirm = useConfirm();
+  const run = async (fn: () => Promise<NotesTree | null>) => {
+    try {
+      const tree = await fn();
+      if (!tree) return;
+      useApp.getState().setTree(tree);
+      const [bin, stickies] = await Promise.all([api.listBin(), api.listStickies()]);
+      useApp.setState({ bin, stickies });
+    } catch (e) { toast.error(errorText(e)); }
+  };
+  const groups = [["notebook", "Notebooks"], ["section", "Sections"], ["page", "Pages"], ["database", "Databases"], ["row", "Rows"], ["sticky", "Sticky notes"]] as const;
+  return <div className="h-full overflow-y-auto">
+    <div className="mx-auto px-10 pb-16 pt-14" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
+      <div className="flex items-end justify-between">
+        <div><h1 className="text-[2rem] font-bold tracking-tight">Trash</h1><p className="mt-1 text-muted">Items you move to the bin wait here until you restore or delete them for good.</p></div>
+        {entries.length > 0 && <BinButton variant="outline" onClick={async () => {
+          if (await confirm({ title: "Empty the bin?", body: "All binned items and their contents will be deleted for good.", confirm: "Empty the bin", danger: true })) await run(() => api.emptyTrash());
+        }}><Trash2 size={15} /> Empty the bin</BinButton>}
+      </div>
+      {entries.length === 0 && <p className="py-16 text-center text-sm text-faint">Trash is empty.</p>}
+      {groups.map(([kind, title]) => {
+        const items = entries.filter((e) => e.kind === kind);
+        if (!items.length) return null;
+        return <section key={kind} className="mt-8"><h2 className="mb-2 text-sm font-semibold">{title}</h2>
+          <div className="divide-y divide-line rounded-xl border border-line">{items.map((item) => <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+            <span className="w-6 text-center text-lg"><PageIcon icon={item.icon} size={18} fallback={<FileText size={17} className="mx-auto text-faint" />} /></span>
+            {item.kind === "page" || item.kind === "database" ? <button className="min-w-0 flex-1 text-left" onClick={() => item.kind === "database" ? useApp.getState().openDatabase(item.id) : useApp.getState().openPage(item.id)}>
+              <div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div>
+            </button> : <div className="min-w-0 flex-1"><div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div></div>}
+            <BinButton variant="ghost" size="sm" onClick={async () => {
+              await run(() => restoreFromBin(item.id, confirm));
+            }}><RotateCcw size={14} /> Restore</BinButton>
+            <BinButton variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={async () => {
+              if (await confirm({ title: "Delete for good?", body: "This item and its contents will be deleted for good.", confirm: "Delete for good", danger: true })) await run(() => api.deletePage(item.id));
+            }}><Trash2 size={14} /> Delete for good</BinButton>
+          </div>)}</div>
+        </section>;
+      })}
+    </div>
+  </div>;
 }

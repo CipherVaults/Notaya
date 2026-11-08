@@ -45,6 +45,12 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::database::{
+    clock,
+    engine::Ctx,
+    types::PropKind,
+    value::{self, Val},
+};
 use crate::error::{Error, Result};
 use crate::model::{Item, Notebook, Page, Section};
 use doc::{Block, Cell};
@@ -456,10 +462,70 @@ fn title_lookup<'a>(items: &'a [&'a Item], opts: &'a Options) -> impl Fn(&str) -
     }
 }
 
+pub const MAX_DATABASE_ROWS: usize = 1_000;
+
+/// Resolves inline databases from the same snapshot and query engine as `query_view`.
+/// No commands, disk access or UI-provided database content are involved. This also serves
+/// readers of the document model (for example `page.get`) before choosing a writer.
+pub fn resolve_databases(blocks: &mut [Block], ctx: &Ctx<'_>) {
+    for b in blocks {
+        match b {
+            Block::Database { id, view, table } => *table = database_table(ctx, id, view),
+            Block::List { items, .. } => items.iter_mut().for_each(|i| resolve_databases(&mut i.blocks, ctx)),
+            Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout { blocks: x, .. } => resolve_databases(x, ctx),
+            Block::Columns(cols) => cols.iter_mut().for_each(|c| resolve_databases(c, ctx)),
+            Block::Table(rows) => rows.iter_mut().flatten().for_each(|c| resolve_databases(&mut c.blocks, ctx)),
+            _ => {}
+        }
+    }
+}
+
+fn database_table(ctx: &Ctx<'_>, id: &str, view_id: &str) -> Option<doc::DatabaseTable> {
+    let db = ctx.dbs.get(id)?; // Ctx excludes binned databases and rows, even for a trash export.
+    // DatabaseView falls back to the first saved view when its id is empty or was removed.
+    let view = db.view(view_id).or_else(|| db.views.first())?;
+    let result = ctx.run_view(db, view);
+    let mut props: Vec<_> = db.props.iter().filter(|p| p.kind == PropKind::Title).collect();
+    for c in view.columns.iter().filter(|c| c.visible) {
+        let Some(p) = db.prop(&c.prop) else { continue };
+        if !matches!(p.kind, PropKind::Title | PropKind::Button) && !props.iter().any(|q| q.id == p.id) {
+            props.push(p);
+        }
+    }
+    let cell = |text: String, header| Cell {
+        header, colspan: 1, rowspan: 1, widths: vec![],
+        blocks: vec![Block::Paragraph { align: doc::Align::Left, content: vec![doc::Inline::Text(text, doc::Marks::default())] }],
+    };
+    let mut rows = vec![props.iter().map(|p| cell(p.name.clone(), true)).collect()];
+    for row in result.rows.iter().take(MAX_DATABASE_ROWS) {
+        let r = ctx.by_id.get(row.id.as_str())?;
+        rows.push(props.iter().map(|p| {
+            let text = match ctx.value(db, r, p) {
+                Ok(Val::Num(n)) => value::format_number(n, &p.number_format),
+                Ok(Val::Date(d)) => value::format_date(&d, &p.date_format),
+                Ok(Val::Bool(b)) => if b { "Yes" } else { "No" }.into(),
+                Ok(v) => v.text(),
+                Err(_) => "(value not available)".into(),
+            };
+            cell(text, false)
+        }).collect());
+    }
+    // The screen engine caps its response at 50,000. Count matching rows again only when
+    // it hit that cap, so the export's omitted-row count remains exact for larger databases.
+    let count = if result.truncated {
+        ctx.rows_of(id).iter().filter(|r| view.filter.is_empty() || ctx.matches(db, r, &view.filter)).count()
+    } else {
+        result.filtered
+    };
+    Some(doc::DatabaseTable { title: if db.title.is_empty() { "Untitled database".into() } else { db.title.clone() }, more: count.saturating_sub(MAX_DATABASE_ROWS), rows })
+}
+
 /// Builds the document for an export. `attachment` reads one picture from the vault.
 pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn Fn(&str) -> Option<(String, Vec<u8>)>) -> Result<ExportDoc> {
     let sel = select(items, scope, opts)?;
     let title_of = title_lookup(items, opts);
+    let (now, tz) = clock::local_now();
+    let databases = Ctx::new(items.iter().copied(), now, tz);
     // The pages of the document, numbered in order: a link to one of them goes to its place in
     // the file (HTML and Word; Markdown and PDF keep the text).
     let mut number: HashMap<&str, usize> = HashMap::new();
@@ -488,7 +554,9 @@ pub fn collect(items: &[&Item], scope: &Scope, opts: &Options, attachment: &dyn 
         };
         for (p, depth) in &g.pages {
             let level = base.saturating_add(*depth).min(6);
-            parts.push(Part::Page { level, title: page_title(&p.title), blocks: doc::parse_with(&p.content, &title_of, &page_ref) });
+            let mut blocks = doc::parse_with(&p.content, &title_of, &page_ref);
+            resolve_databases(&mut blocks, &databases);
+            parts.push(Part::Page { level, title: page_title(&p.title), blocks });
         }
     }
     let mut out = ExportDoc { title: sel.title, parts, images: BTreeMap::new(), missing_images: 0 };
@@ -633,6 +701,8 @@ pub fn collect_zip(items: &[&Item], scope: &Scope, opts: &Options, format: Forma
         return Err(Error::invalid(format!("A ZIP can hold at most {MAX_ZIP_ENTRIES} files. Choose fewer pages.")));
     }
     let title_of = title_lookup(items, opts);
+    let (now, tz) = clock::local_now();
+    let databases = Ctx::new(items.iter().copied(), now, tz);
     let mut namer = Namer::default();
     // The marker's name is taken first, so no folder or page can have it.
     namer.claim(&[], MARKER_NAME, &|c| vec![c.to_string()]);
@@ -701,7 +771,9 @@ pub fn collect_zip(items: &[&Item], scope: &Scope, opts: &Options, format: Forma
     let mut files = Vec::with_capacity(placed.len());
     for (dir, stem, title, p) in &placed {
         let page_ref = |id: &str| file_of.get(id).map(|(to, name)| doc::PageRef::File(relative_href(dir, to, name)));
-        files.push(ZipFile { dir: dir.clone(), stem: stem.clone(), title: title.clone(), blocks: doc::parse_with(&p.content, &title_of, &page_ref) });
+        let mut blocks = doc::parse_with(&p.content, &title_of, &page_ref);
+        resolve_databases(&mut blocks, &databases);
+        files.push(ZipFile { dir: dir.clone(), stem: stem.clone(), title: title.clone(), blocks });
     }
     let layout = match sel.shape {
         Shape::Notebooks => Layout::Notebooks,
@@ -1063,7 +1135,201 @@ pub fn write(dest: &Path, format: Format, doc: &ExportDoc, data_dir: &Path) -> R
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::database::types::{Column, Cond, Database, Property, Row, Sort};
     use crate::model::{Notebook, Section};
+
+    /// A real databaseBlock and saved view, with Arabic and Hebrew text, computed values,
+    /// a hidden property and a trashed row. No vault or disk access.
+    pub fn inline_database_items() -> Vec<Item> {
+        let mut items = sample_items();
+        let Item::Page(p) = items.iter_mut().find(|i| matches!(i, Item::Page(p) if p.id == "a")).unwrap() else { unreachable!() };
+        p.content = serde_json::json!({"type":"doc", "content":[
+            {"type":"paragraph", "content":[{"type":"text", "text":"Before"}]},
+            {"type":"databaseBlock", "attrs":{"databaseId":"database1", "viewId":"saved"}},
+            {"type":"paragraph", "content":[{"type":"text", "text":"After"}]}
+        ]}).to_string();
+        let mut db = Database::new("database1".into(), "s1".into(), "مهام".into(), 0);
+        db.props[0].name = "الاسم".into();
+        for (id, name, kind) in [("text", "الوصف", PropKind::Text), ("amount", "Amount", PropKind::Number), ("double", "Double", PropKind::Formula), ("hidden", "Hidden", PropKind::Text)] {
+            db.props.push(Property { id: id.into(), name: name.into(), kind, ..Property::default() });
+        }
+        db.props.iter_mut().find(|p| p.id == "double").unwrap().formula = "prop(\"Amount\") * 2".into();
+        db.views[0].id = "saved".into();
+        db.views[0].columns = ["title", "text", "amount", "double", "hidden"].iter().map(|id| Column { prop: (*id).into(), visible: *id != "hidden", width: 0 }).collect();
+        for (n, title, text) in [(0, "أول", "مرحبا 123 عالم"), (1, "ثان", "שלום"), (2, "محذوف", "TRASHED_CELL")] {
+            let mut row = Row::new(format!("row{n}"), &db.id, title.into(), n);
+            row.order = n;
+            row.cells = serde_json::json!({"text":text, "amount":12.5 * (n + 1) as f64, "hidden":"HIDDEN_CELL"}).to_string();
+            row.trashed_at = (n == 2).then_some(5);
+            items.push(Item::Row(row));
+        }
+        items.push(Item::Database(db));
+        items
+    }
+
+    pub fn inline_database_doc() -> ExportDoc {
+        collect_inline(&inline_database_items())
+    }
+
+    fn collect_inline(items: &[Item]) -> ExportDoc {
+        collect(&items.iter().collect::<Vec<_>>(), &Scope::Pages(vec!["a".into()]), &Options::default(), &|_| None).unwrap()
+    }
+
+    fn inline_table(d: &ExportDoc) -> &doc::DatabaseTable {
+        let Part::Page { blocks, .. } = &d.parts[0] else { panic!("page") };
+        let Block::Database { table: Some(t), .. } = &blocks[1] else { panic!("resolved database") };
+        t
+    }
+
+    fn cell_string(c: &Cell) -> String {
+        let Block::Paragraph { content, .. } = &c.blocks[0] else { panic!("cell text") };
+        doc::inline_text(content)
+    }
+
+    #[test]
+    fn inline_database_saved_view_filters_sorts_and_hides_columns() {
+        let mut items = inline_database_items();
+        let Item::Database(db) = items.last_mut().unwrap() else { panic!() };
+        db.views[0].sorts = vec![Sort { prop: "amount".into(), descending: true }];
+        db.views.push(crate::database::types::View { id: "other".into(), ..Default::default() });
+        let d = collect_inline(&items);
+        let t = inline_table(&d);
+        assert_eq!(t.rows.len(), 3, "header and two live rows");
+        assert_eq!(t.rows[0].iter().map(cell_string).collect::<Vec<_>>(), ["الاسم", "الوصف", "Amount", "Double"]);
+        assert_eq!(t.rows[1].iter().map(cell_string).collect::<Vec<_>>(), ["ثان", "שלום", "25", "50"]);
+        assert_eq!(t.rows[2].iter().map(cell_string).collect::<Vec<_>>(), ["أول", "مرحبا 123 عالم", "12.5", "25"]);
+        let Item::Database(db) = items.last_mut().unwrap() else { panic!() };
+        db.views[0].filter.conds = vec![Cond { prop: "title".into(), op: "contains".into(), value: "أول".into(), ..Default::default() }];
+        let d = collect_inline(&items);
+        let t = inline_table(&d);
+        assert_eq!(t.rows.len(), 2);
+        assert_eq!(cell_string(&t.rows[1][0]), "أول");
+        assert_eq!(t.more, 0);
+        assert!(!markdown::render(&d, "assets").text.contains("ثان"));
+    }
+
+    #[test]
+    fn inline_database_caps_after_filtering_and_sorting_and_reports_exact_remainder() {
+        let mut items = inline_database_items();
+        items.retain(|i| !matches!(i, Item::Row(_)));
+        let Item::Database(db) = items.last_mut().unwrap() else { panic!() };
+        db.props.truncate(1);
+        db.views[0].columns.truncate(1);
+        db.views[0].sorts = vec![Sort { prop: "title".into(), descending: true }];
+        db.views[0].filter.conds = vec![Cond { prop: "title".into(), op: "contains".into(), value: "Keep".into(), ..Default::default() }];
+        // Cross the screen engine's 50,000-row limit as well as the export's 1,000-row limit.
+        for n in 0..50_003 {
+            items.push(Item::Row(Row::new(format!("cap{n}"), "database1", format!("Keep {n:05}"), n)));
+        }
+        items.push(Item::Row(Row::new("filtered".into(), "database1", "Excluded".into(), 0)));
+        let d = collect_inline(&items);
+        let t = inline_table(&d);
+        assert_eq!(t.rows.len(), MAX_DATABASE_ROWS + 1);
+        assert_eq!(cell_string(&t.rows[1][0]), "Keep 50002");
+        assert_eq!(cell_string(&t.rows[MAX_DATABASE_ROWS][0]), "Keep 49003");
+        assert_eq!(t.more, 49_003);
+        let md = markdown::render(&d, "assets").text;
+        assert!(md.contains("and 49003 more rows"));
+        assert!(!md.contains("Keep 49002"));
+        assert!(!md.contains("Excluded"));
+    }
+
+    #[test]
+    fn inline_database_missing_or_binned_is_unavailable_in_every_format() {
+        for missing in [true, false] {
+            let mut items = inline_database_items();
+            if missing {
+                items.pop();
+            } else {
+                let Item::Database(db) = items.last_mut().unwrap() else { panic!() };
+                db.trashed_at = Some(5);
+            }
+            // Even an explicitly requested trash export cannot expose a binned database.
+            let d = collect(&items.iter().collect::<Vec<_>>(), &Scope::Pages(vec!["a".into()]), &Options { include_trashed: true, ..Options::default() }, &|_| None).unwrap();
+            let md = markdown::render(&d, "assets").text;
+            let html = html::render(&d).unwrap();
+            let word = docx::render_at(&d, 0).unwrap();
+            let entries = zip::tests::read_zip(&word);
+            let xml = String::from_utf8(entries.iter().find(|e| e.0 == "word/document.xml").unwrap().1.clone()).unwrap();
+            let pdf = pdf::render_at(&d, 0);
+            // The fixed ASCII placeholder is in the PDF's standard-font content stream.
+            let pdf_text = pdf::tests::extract(&pdf.bytes);
+            for text in [&md, &html, &xml, &pdf_text] {
+                assert!(text.contains("(database not available)"));
+                assert!(!text.contains("مرحبا"));
+            }
+            assert!(!md.contains("notaya://db/"));
+        }
+    }
+
+    #[test]
+    fn inline_database_zip_keeps_separate_pages_and_page_links() {
+        let mut items = inline_database_items();
+        let Item::Page(p) = items.iter_mut().find(|i| matches!(i, Item::Page(p) if p.id == "a")).unwrap() else { panic!() };
+        let mut json: serde_json::Value = serde_json::from_str(&p.content).unwrap();
+        json["content"].as_array_mut().unwrap().push(serde_json::json!({"type":"pageLink", "attrs":{"pageId":"b"}}));
+        p.content = json.to_string();
+        let refs = items.iter().collect::<Vec<_>>();
+        for format in [Format::Html, Format::Markdown, Format::Pdf, Format::Docx] {
+            let z = collect_zip(&refs, &Scope::Pages(vec!["a".into(), "b".into()]), &Options::default(), format).unwrap();
+            assert_eq!(z.files.len(), 2);
+            let db_file = z.files.iter().find(|f| f.title == "First").unwrap();
+            assert!(matches!(&db_file.blocks[1], Block::Database { table: Some(t), .. } if t.rows.len() == 3));
+            assert!(matches!(&db_file.blocks[3], Block::PageLink { target: Some(doc::PageRef::File(href)), .. } if href == &format!("Second.{}", format.ext())));
+            let dest = temp_dir().join("inline.zip");
+            let result = write_zip(&dest, format, z, &|_| None, ZipLimits::default()).unwrap();
+            assert_eq!(result.pages, 2);
+            let entries = zip::tests::read_zip(&fs::read(&dest).unwrap());
+            assert_eq!(entries.len(), 3, "two page files and the fixed marker");
+            let bytes = &entries.iter().find(|e| e.0 == format!("First.{}", format.ext())).unwrap().1;
+            let text = match format {
+                Format::Html | Format::Markdown => String::from_utf8(bytes.clone()).unwrap(),
+                Format::Pdf => pdf::tests::extract(bytes),
+                Format::Docx => String::from_utf8(zip::tests::read_zip(bytes).into_iter().find(|e| e.0 == "word/document.xml").unwrap().1).unwrap(),
+            };
+            assert!(text.contains("مرحبا 123 عالم"));
+            if matches!(format, Format::Html | Format::Markdown) {
+                assert!(text.contains(&format!("Second.{}", format.ext())));
+            }
+        }
+    }
+
+    #[test]
+    fn inline_database_view_fallback_empty_rows_and_exact_cap() {
+        let mut items = inline_database_items();
+        items.retain(|i| !matches!(i, Item::Row(_)));
+        let Item::Page(p) = items.iter_mut().find(|i| matches!(i, Item::Page(p) if p.id == "a")).unwrap() else { panic!() };
+        p.content = p.content.replace("saved", "removed-view");
+        assert_eq!(inline_table(&collect_inline(&items)).rows.len(), 1, "an empty view still has its header");
+        for n in 0..MAX_DATABASE_ROWS {
+            items.push(Item::Row(Row::new(format!("exact{n}"), "database1", format!("Row {n}"), 0)));
+        }
+        let d = collect_inline(&items);
+        let t = inline_table(&d);
+        assert_eq!(t.rows.len(), MAX_DATABASE_ROWS + 1);
+        assert_eq!(t.more, 0);
+        assert!(!markdown::render(&d, "assets").text.contains("more rows"));
+    }
+
+    #[test]
+    fn inline_databases_resolve_inside_every_container() {
+        use doc::{ListItem, ListKind};
+        let db = || Block::Database { id: "database1".into(), view: "saved".into(), table: None };
+        let mut blocks = vec![
+            Block::Quote(vec![db()]), Block::Toggle(vec![db()]), Block::Shelf(vec![db()]),
+            Block::Callout { icon: String::new(), blocks: vec![db()] },
+            Block::Columns(vec![vec![db()]]),
+            Block::List { kind: ListKind::Bullet, items: vec![ListItem { checked: None, blocks: vec![db()] }] },
+            Block::Table(vec![vec![Cell { header: false, colspan: 1, rowspan: 1, widths: vec![], blocks: vec![db()] }]]),
+        ];
+        let items = inline_database_items();
+        let ctx = Ctx::new(items.iter(), 0, 0);
+        resolve_databases(&mut blocks, &ctx);
+        let md = markdown::render(&sample_doc(blocks), "assets").text;
+        assert_eq!(md.matches("notaya://db/database1").count(), 7);
+        assert_eq!(md.matches("مرحبا 123 عالم").count(), 7);
+        assert!(!md.contains("database not available"));
+    }
 
     /// A one-page document around the given blocks, with the test picture.
     pub fn sample_doc(blocks: Vec<Block>) -> ExportDoc {
@@ -1093,9 +1359,9 @@ pub mod tests {
     /// Notebook "nb" with sections "s1" (pages a, a/child, b, trashed t) and "s2" (page c),
     /// and a second notebook with page "z".
     fn sample_items() -> Vec<Item> {
-        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
+        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0, trashed_at: None, });
         let sec = |id: &str, nbid: &str, name: &str, order| {
-            Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 })
+            Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0, trashed_at: None, })
         };
         vec![
             nb("nb", "Personal", 0),
@@ -1458,8 +1724,8 @@ pub mod tests {
 
     #[test]
     fn names_are_safe_and_unique() {
-        let nb = Item::Notebook(Notebook { id: "n".into(), name: "A/B:C".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
-        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "..".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "A/B:C".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "..".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
         let body = || r#"{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"x"}]}]}"#.to_string();
         let titles = [
             "CON", "con", "NUL.txt", "..", "...", "../../etc/passwd", "a\\b", "x".repeat(200).as_str(), "", "   ", "Dup", "dup", "DUP", "Dup ", "Page", "Page.assets", "Trailing dot.", "Question? *", "ÄÖÜ", "äöü",
@@ -1503,8 +1769,8 @@ pub mod tests {
 
     #[test]
     fn a_deep_chain_of_sub_pages_stops_nesting() {
-        let nb = Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
-        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
         let mut items = vec![nb, sec];
         for i in 0..9 {
             let parent = if i == 0 { String::new() } else { format!("p{}", i - 1) };
@@ -1519,8 +1785,8 @@ pub mod tests {
 
     #[test]
     fn markdown_pictures_sit_next_to_each_page_and_the_links_match() {
-        let nb = Item::Notebook(Notebook { id: "n".into(), name: "Trip".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
-        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "Day 1".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "Trip".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "Day 1".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
         let items = vec![
             nb,
             sec,
@@ -1552,8 +1818,8 @@ pub mod tests {
     #[test]
     fn pictures_are_read_one_page_at_a_time_and_missing_ones_are_counted() {
         let items = vec![
-            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
             page_with("a", "s", "", "A", 0, with_picture()),
             page_with("b", "s", "", "B", 1, with_picture()),
         ];
@@ -1649,8 +1915,8 @@ pub mod tests {
 
     #[test]
     fn links_between_pages_of_a_zip_are_relative_paths_to_their_files() {
-        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
-        let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 });
+        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0, trashed_at: None, });
+        let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0, trashed_at: None, });
         let items = vec![
             nb("n1", "My notes", 0),
             nb("n2", "Other", 1),
@@ -1713,8 +1979,8 @@ pub mod tests {
     #[test]
     fn links_inside_one_html_or_word_file_go_to_the_page_s_place() {
         let items = vec![
-            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
             linking("a", "s", "", "First", 0, &["b", "elsewhere"]),
             linking("b", "s", "", "Second", 1, &[]),
         ];
@@ -1769,8 +2035,8 @@ pub mod tests {
     #[test]
     fn the_size_limit_counts_pictures_before_they_are_kept() {
         let items = vec![
-            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
             page_with("a", "s", "", "A", 0, with_picture()),
         ];
         let refs: Vec<&Item> = items.iter().collect();

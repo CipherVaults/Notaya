@@ -2,9 +2,13 @@
 // notebook, trash, and the Notes / Sticky notes / Settings views). Backspace, Alt+Left, the mouse's back
 // button and the title bar buttons all use it. Kept in memory only: nothing about where you have been is
 // written anywhere, and it is gone when the window reloads (for example after a lock).
+// Only the last open note location is saved separately, inside the vault's settings record.
 
 import { create } from "zustand";
-import { useApp } from "@/store/app";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
+import { registerFlush, trackSave } from "@/lib/flush";
+import { useApp, type LastPlace } from "@/store/app";
 
 type Loc = {
   view: ReturnType<typeof useApp.getState>["view"];
@@ -12,6 +16,7 @@ type Loc = {
   activeSectionId: string | null;
   activePageId: string | null;
   activeKind: ReturnType<typeof useApp.getState>["activeKind"];
+  activeDatabaseViewId: string | null;
   showTrash: boolean;
 };
 
@@ -23,6 +28,7 @@ const pick = (s: ReturnType<typeof useApp.getState>): Loc => ({
   activeSectionId: s.activeSectionId,
   activePageId: s.activePageId,
   activeKind: s.activeKind,
+  activeDatabaseViewId: s.activeDatabaseViewId,
   showTrash: s.showTrash,
 });
 const same = (a: Loc, b: Loc) =>
@@ -31,6 +37,7 @@ const same = (a: Loc, b: Loc) =>
   a.activeSectionId === b.activeSectionId &&
   a.activePageId === b.activePageId &&
   a.activeKind === b.activeKind &&
+  a.activeDatabaseViewId === b.activeDatabaseViewId &&
   a.showTrash === b.showTrash;
 
 /** What the title bar buttons show. */
@@ -49,7 +56,7 @@ function stillThere(l: Loc): boolean {
   if (l.activeNotebookId && !t.notebooks.some((n) => n.id === l.activeNotebookId)) return false;
   if (l.activeSectionId && !t.sections.some((n) => n.id === l.activeSectionId)) return false;
   if (l.activePageId && l.activeKind === "page" && !t.pages.some((p) => p.id === l.activePageId && p.trashedAt === null)) return false;
-  if (l.activePageId && l.activeKind === "database" && !t.databases.some((d) => d.id === l.activePageId)) return false;
+  if (l.activePageId && l.activeKind === "database" && !t.databases.some((d) => d.id === l.activePageId && d.trashedAt === null)) return false;
   return true;
 }
 
@@ -94,6 +101,67 @@ export function startNavHistory(): () => void {
     current = next;
     publish();
   });
+}
+
+/** Debounced, serialized saves, included in the existing pre-lock / pre-quit flush. */
+export function startLastPlacePersistence(): () => void {
+  let initialized = false;
+  let latest: LastPlace | null = null;
+  let key = "";
+  let dirty = false;
+  let warned = false;
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let chain = Promise.resolve();
+  const flush = () => {
+    clearTimeout(timer);
+    chain = trackSave(chain.then(async () => {
+      if (!dirty || stopped || !useApp.getState().status?.unlocked) return;
+      const sent = latest;
+      dirty = false;
+      try {
+        await invoke<void>("set_last_place", { lastPlace: sent });
+        warned = false;
+      } catch {
+        dirty = true; // A later navigation or the lock flush retries the current location.
+        if (!warned) toast.error("Couldn't remember the last open place.");
+        warned = true;
+      }
+    }));
+    return chain;
+  };
+  const observe = (s: ReturnType<typeof useApp.getState>) => {
+    // Loading the vault restores the location and settings together; don't save Home over it.
+    if (!s.settings || !s.status?.unlocked) return;
+    if (!initialized) {
+      initialized = true;
+      latest = s.settings.lastPlace ?? null;
+      key = JSON.stringify(latest);
+    }
+    // Settings and Sticky notes do not replace the last open note.
+    if (s.view !== "notes") return;
+    const next: LastPlace | null = s.activePageId && !s.showTrash ? {
+      kind: s.activeKind,
+      id: s.activePageId,
+      ...(s.activeKind === "database" && s.activeDatabaseViewId ? { viewId: s.activeDatabaseViewId } : {}),
+    } : null;
+    const nextKey = JSON.stringify(next);
+    if (key === nextKey) return;
+    key = nextKey;
+    latest = next;
+    dirty = true;
+    clearTimeout(timer);
+    timer = setTimeout(() => void flush(), 400);
+  };
+  const unsubscribe = useApp.subscribe(observe);
+  const unregister = registerFlush(flush);
+  observe(useApp.getState());
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+    unsubscribe();
+    unregister();
+  };
 }
 
 /** True when the key or click happened where Backspace and the mouse buttons must keep their own meaning. */

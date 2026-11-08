@@ -16,7 +16,12 @@
 | [`claude-sessions.csv`](claude-sessions.csv) | Claude session (a thread, the coordinator, a Remote Control session), or one task inside a session when it was split | the session record (`get_session` usage block) or the transcript scanner below |
 | [`codex-runs.csv`](codex-runs.csv) | Codex run (`codex exec` or one Codex app task) | Codex's own token report and its quota reading before and after |
 | [`quota-readings.csv`](quota-readings.csv) | reading of a usage limit at a known time | Claude's `/usage` screen or claude.ai usage page, Codex `/status`, the session record's rate-limit block, the credit balance |
+| [`forecast-inputs.csv`](forecast-inputs.csv) | one input of the forecast model | the latest limit readings (kind `measured`), Ahmed's rules (`rule`) and my estimates (`rough`, `unknown`), each with its source; read by the dashboard and by `forecast-model.cjs` |
+| [`forecast-versions.csv`](forecast-versions.csv) | version (1.6 rest to 2.5) | the version plan's points, the part of 1.6 already built (an estimate) and the basis |
+| [`pace-forecast.csv`](pace-forecast.csv) | version | **written by the model** (`python3 -I tools/usage-ledger/build_dashboard.py --forecast-csv`) at the default settings: windows, share of a Codex week, Claude's share, best, likely and worst finish and who pays; replaced at every refresh, older forecasts live in `usage-ledger.md` |
 | [`project-usage-screen.csv`](project-usage-screen.csv) | thread on the project's Usage screen (Project settings, Usage), per reading | a screenshot of that screen: tokens, cache hit and share as the platform shows them; a cross-check for the session rows, and the only place the PC threads' totals are counted by the platform |
+
+The forecast has one model, [`tools/usage-ledger/forecast-model.cjs`](../../tools/usage-ledger/forecast-model.cjs), used by the dashboard (inlined) and by the command above, so the page and the CSV cannot disagree. The older draft page `tools/usage-ledger/roadmap-forecast.html` was replaced by it and deleted on Ahmed's word (2026-11-08 08:57:27 UTC).
 
 A dashboard page (an Artifact) is built from the CSV files with `python3 -I tools/usage-ledger/build_dashboard.py OUT.html` and published to the same link each time; the page never owns a fact. CSV is used so the files open in Excel, Notion or any chart tool, and so a later dashboard can read them directly. Every row says where its numbers came from (`source`) and what they do not show (`notes`).
 
@@ -62,11 +67,12 @@ A dashboard page (an Artifact) is built from the CSV files with `python3 -I tool
    Add `--since` and `--until` (UTC, ISO 8601) to split one long session into tasks, for example at each commit. The scanner only reads the file and prints token counts, model names and the first and last reply time; it never prints message text.
 3. **Codex:** after each run, write one row with the token counts Codex reports and the quota percentages from Codex `/status` read just before and just after.
 4. **Quota:** add a reading whenever someone looks at the limits (Claude `/usage` or the claude.ai usage page; Codex `/status`), and at least once per session stop. Say who read it.
-5. **Summarize:** add a dated block at the top of `usage-ledger.md` with the totals, what moved, what it means for the pace, and what was not measured. Quote the headline line in the session summary (`docs/sessions.md`, Models and Provenance) and in the Execution Summary of a milestone.
+5. **Claude's weekly reading around every lane (new, 2026-11-08):** when Claude inspects and merges a Codex lane, read Claude's weekly percentage just before and just after and write the difference next to the lane in `claude-sessions.csv` notes. This is the only way to replace the forecast's guess for Claude's cost per Codex window (`claude_pct_per_window`).
+6. **Summarize:** add a dated block at the top of `usage-ledger.md` with the totals, what moved, what it means for the pace, and what was not measured. Quote the headline line in the session summary (`docs/sessions.md`, Models and Provenance) and in the Execution Summary of a milestone.
 
 ## Pacing limits
 
-**Not set for Notaya yet.** Ahmed has said the coordinator watches the hourly usage, keeps the work going and chooses models per task, and that Claude threads come first while the 2026-11-07 cloud credit lasts. He has not set a percentage at which work slows or stops. The FFmpeg Encoder project used 80% of a 5-hour window and 90% of a week; that is FFmpeg's decision and is not adopted here without Ahmed's word.
+**Set by Ahmed on 2026-11-07 23:59:56 UTC ([A45](../plan/approval-and-amendments.md)): Claude up to 70% of its week, Codex up to 100% including its resets.** The dashboard shows both. Older text, kept: **not set for Notaya yet.** Ahmed has said the coordinator watches the hourly usage, keeps the work going and chooses models per task, and that Claude threads come first while the 2026-11-07 cloud credit lasts. He has not set a percentage at which work slows or stops. The FFmpeg Encoder project used 80% of a 5-hour window and 90% of a week; that is FFmpeg's decision and is not adopted here without Ahmed's word.
 
 ## Limits of this ledger
 

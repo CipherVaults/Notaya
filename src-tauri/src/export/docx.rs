@@ -240,6 +240,7 @@ impl<'a> Writer<'a> {
             }
             Block::Image(img) => self.image(img, ctx, numbering),
             Block::Table(rows) => self.table(rows, ctx),
+            Block::Database { table, .. } => self.blocks(&super::doc::database_blocks(table.as_ref()), ctx),
             Block::Rule => {
                 let brk = self.take_break();
                 let _ = write!(
@@ -967,6 +968,25 @@ mod tests {
         // bidiVisual comes right after the table style (schema order).
         assert!(x.contains("<w:tblStyle w:val=\"NotayaTable\"/><w:bidiVisual/><w:tblW"), "{x}");
         assert_well_formed("rtl", &x);
+    }
+
+    #[test]
+    fn inline_database_exports_its_rows_and_rtl_cells() {
+        let bytes = render_at(&super::super::tests::inline_database_doc(), 0).unwrap();
+        let entries = read_zip(&bytes);
+        let x = String::from_utf8(entries.iter().find(|e| e.0 == "word/document.xml").unwrap().1.clone()).unwrap();
+        assert_well_formed("inline database", &x);
+        assert!(x.contains("مهام"));
+        assert_eq!(x.matches("<w:tr>").count(), 3);
+        assert_eq!(x.matches("<w:tc>").count(), 12);
+        assert_eq!(x.matches("<w:bidiVisual/>").count(), 1);
+        let cell = x.split("<w:tc>").find(|c| c.contains("مرحبا 123 عالم")).unwrap();
+        let cell = cell.split("</w:tc>").next().unwrap();
+        assert!(cell.contains("<w:bidi/>") && cell.contains("<w:rtl/>"), "{cell}");
+        let styles = String::from_utf8(entries.iter().find(|e| e.0 == "word/styles.xml").unwrap().1.clone()).unwrap();
+        assert!(styles.contains("w:cs=\"Arial\""), "Arabic uses the existing complex-script font default");
+        assert!(x.contains("שלום"));
+        assert!(!x.contains("HIDDEN_CELL") && !x.contains("TRASHED_CELL"));
     }
 
     #[test]

@@ -26,6 +26,7 @@ impl Store {
              CREATE TABLE records (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;
              CREATE TABLE attachments (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;",
         )?;
+        store.ensure_journal_tables()?;
         store.write_header(header)?;
         Ok(store)
     }
@@ -58,6 +59,28 @@ impl Store {
             .optional()
             .map_err(|_| Error::Corrupt)?;
         Header::from_bytes(&data.ok_or(Error::Corrupt)?)
+    }
+
+    /// Called only after authentication when opening an older vault.
+    pub fn ensure_journal_tables(&self) -> Result<()> {
+        self.conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS history (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;
+             CREATE TABLE IF NOT EXISTS activity (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;",
+        )?;
+        Ok(())
+    }
+
+    pub fn exists(&self, table: Table) -> Result<bool> {
+        Ok(self.conn.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name=?1)",
+            [table.name()], |r| r.get(0))?)
+    }
+
+    /// A history metadata row starts with 0; bodies start with 1. SQLite filters
+    /// before reading blobs, so unlock never reads a version body.
+    pub fn history_meta(&self) -> Result<Vec<(RowId, Vec<u8>)>> {
+        let mut stmt = self.conn.prepare("SELECT id, data FROM history WHERE substr(id,1,1)=x'00'")?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, Vec<u8>>(1)?)))?;
+        rows.map(|r| { let (id, data) = r?; Ok((id.try_into().map_err(|_| Error::Corrupt)?, data)) }).collect()
     }
 
     pub fn write_header(&self, header: &Header) -> Result<()> {
@@ -157,6 +180,8 @@ impl Store {
 pub enum Table {
     Records,
     Attachments,
+    History,
+    Activity,
 }
 
 impl Table {
@@ -164,6 +189,8 @@ impl Table {
         match self {
             Table::Records => "records",
             Table::Attachments => "attachments",
+            Table::History => "history",
+            Table::Activity => "activity",
         }
     }
 
@@ -172,6 +199,8 @@ impl Table {
         match self {
             Table::Records => b"rec",
             Table::Attachments => b"att",
+            Table::History => b"his",
+            Table::Activity => b"act",
         }
     }
 }

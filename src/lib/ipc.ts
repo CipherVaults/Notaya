@@ -2,6 +2,7 @@
 // the UI has no other way to touch files, the network or the clipboard.
 
 import { invoke } from "@tauri-apps/api/core";
+import type { BinEntry, Revisioned } from "./changes";
 import { flushAll } from "./flush";
 import type {
   BackupInfo,
@@ -53,18 +54,48 @@ export interface CsvImportResult {
   notice: string | null;
 }
 
-// Lane E/C5 window contract. These DTOs deliberately contain no pairing token or hash.
+// C5 window contract. These DTOs deliberately contain no pairing token or hash.
 // UI answers are window-only commands; none belongs in the bridge action registry.
 export type AiLevel = "look" | "edit" | "full";
 export interface AiPairing {
   id: string;
   name: string;
   level: AiLevel;
+  created: number;
+  lastUsed: number | null;
 }
+export interface AiStatus {
+  enabled: boolean;
+  paused: boolean;
+  pairings: AiPairing[];
+  hiddenNotebooks: string[];
+  bigChangeConfirm: boolean;
+  bigChangeItems: number;
+}
+export interface AiPairingEvent {
+  id: string;
+  kind: "pairing";
+  details: { client: string };
+  word: null;
+}
+export interface AiConfirmEvent {
+  id: string;
+  kind: "confirm";
+  details: { client: string; action: string; items: { id: string; title?: string }[] };
+  word: string | null;
+}
+export interface AiActivityEvent {
+  pairingId: string;
+  name: string;
+  at: number;
+  items: string[];
+}
+// Window-local presentation state, assembled from status plus C5 events.
+// C5 enforces its own five-minute timeout; the local deadline only disables Allow.
 export interface AiPairingRequest {
   id: string;
   name: string;
-  expiresAt: number; // Unix milliseconds, supplied by the core
+  expiresAt: number;
 }
 export interface AiConfirmRequest {
   id: string;
@@ -81,29 +112,32 @@ export interface AiActivity {
   lastActiveAt: number;
   claims: string[];
 }
-export interface AiState {
-  enabled: boolean;
-  paused: boolean;
-  pairings: AiPairing[];
-  hiddenNotebooks: string[];
-  bigChangeConfirm: boolean;
-  bigChangeItems: number;
+export interface AiState extends AiStatus {
   pairingRequests: AiPairingRequest[];
   confirmRequests: AiConfirmRequest[];
   activity: AiActivity[];
-  // Built by the core/bridge with its actual installed path and correct escaping.
-  connectionHelp: { terminal: string; config: string } | null;
+}
+
+export interface HistoryMeta {
+  pageId: string; versionId: string; at: number; actor: string; changeSet: string;
+  title: string; words: number; pictureIds: string[]; beforeAi: boolean;
+}
+export interface HistoryBody { title: string; content: string; text: string; icon: string; cover: string }
+export interface ActivityEntry {
+  seq: number; at: number; actor: string; changeSet: string; action: string;
+  items: { id: string; kind: string; titleAtTheTime: string }[];
+  counts: Record<string, number>; undoable: boolean;
 }
 
 export const api = {
-  aiGetState: () => invoke<AiState>("ai_get_state"),
+  aiGetStatus: () => invoke<AiStatus>("ai_get_status"),
   aiSetEnabled: (enabled: boolean, confirmation: string = "") =>
     invoke<void>("ai_set_enabled", { enabled, confirmation }),
-  aiSetLevel: (id: string, level: AiLevel) => invoke<void>("ai_set_level", { id, level }),
-  aiRemovePairing: (id: string) => invoke<void>("ai_remove_pairing", { id }),
+  aiSetLevel: (pairingId: string, level: AiLevel) => invoke<void>("ai_set_level", { pairingId, level }),
+  aiRemovePairing: (pairingId: string) => invoke<void>("ai_remove_pairing", { pairingId }),
   aiSetHidden: (notebookIds: string[]) => invoke<void>("ai_set_hidden", { notebookIds }),
   aiSetBigChange: (enabled: boolean) => invoke<void>("ai_set_big_change", { enabled }),
-  aiPairingAnswer: (id: string, allow: boolean) => invoke<void>("ai_pairing_answer", { id, allow }),
+  aiPairingAnswer: (id: string, allow: boolean) => invoke<void>("ai_pair_answer", { id, allow }),
   aiConfirmAnswer: (id: string, allow: boolean, word: string | null = null) =>
     invoke<void>("ai_confirm_answer", { id, allow, word }),
   aiPause: () => invoke<void>("ai_pause"),
@@ -163,8 +197,21 @@ export const api = {
   setShellPrefs: (prefs: Pick<ShellPrefs, "closeToTray" | "startWithWindows" | "startMinimized">) =>
     invoke<ShellPrefs>("set_shell_prefs", { prefs }),
 
+  // Encrypted history and activity; only display metadata crosses IPC for lists.
+  historyList: (pageId: string) => invoke<HistoryMeta[]>("history_list", { pageId }),
+  historyGet: (pageId: string, versionId: string) => invoke<HistoryBody>("history_get", { pageId, versionId }),
+  historySnapshot: (pageId: string) => invoke<void>("history_snapshot", { pageId }),
+  historyRestore: (pageId: string, versionId: string) => invoke<void>("history_restore", { pageId, versionId }),
+  activityList: (who?: string, before?: number) => invoke<ActivityEntry[]>("activity_list", { who, before, limit: 100 }),
+  activityVerify: () => invoke<void>("activity_verify"),
+  activityUndo: (changeSet: string) => invoke<{ restored: number; skipped: number }>("activity_undo", { changeSet }),
+  activityClear: (confirmation: string) => invoke<void>("activity_clear", { confirmation }),
+
   // Notes
   listNotes: () => invoke<NotesTree>("list_notes"),
+  listBin: () => invoke<BinEntry[]>("list_bin"),
+  restoreBinItem: (id: string, restoreContainers: boolean) => invoke<NotesTree>("restore_bin_item", { id, restoreContainers }),
+  editing: (id: string, active: boolean) => invoke<void>("editing", { id, active }),
   createNotebook: (name: string, color: string, icon: string) =>
     invoke<NotesTree>("create_notebook", { name, color, icon }),
   updateNotebook: (id: string, name: string, color: string, icon: string) =>
@@ -176,9 +223,9 @@ export const api = {
     invoke<NotesTree>("update_section", { id, name, color }),
   deleteSection: (id: string) => invoke<NotesTree>("delete_section", { id }),
   createPage: (sectionId: string, title: string) => invoke<Page>("create_page", { sectionId, title }),
-  getPage: (id: string) => invoke<Page>("get_page", { id }),
-  savePage: (id: string, title: string, content: string, text: string) =>
-    invoke<PageMeta>("save_page", { id, title, content, text }),
+  getPage: (id: string) => invoke<Revisioned<Page>>("get_page", { id }),
+  savePage: (id: string, title: string, content: string, text: string, baseRev?: number) =>
+    invoke<Revisioned<PageMeta>>("save_page", { id, title, content, text, baseRev }),
   createSubpage: (parentId: string, title: string) => invoke<Page>("create_subpage", { parentId, title }),
   setPageLook: (id: string, icon: string, cover: string) => invoke<PageMeta>("set_page_look", { id, icon, cover }),
   setPageFavorite: (id: string, favorite: boolean) =>
@@ -193,9 +240,9 @@ export const api = {
   // Databases (A35). Rows are pages: open one with getPage/savePage like any page.
   createDatabase: (sectionId: string, parent: string, inline: boolean, title: string, starterKind: "blank" | "tasks" | "reading" | "projects") =>
     invoke<DatabaseFull>("create_database", { sectionId, parent, inline, title, starterKind }),
-  getDatabase: (id: string) => invoke<Database>("get_database", { id }),
+  getDatabase: (id: string) => invoke<Revisioned<Database>>("get_database", { id }),
   /** The whole database definition as JSON text (properties, views, templates). */
-  saveDatabase: (database: Database) => invoke<Database>("save_database", { databaseJson: JSON.stringify(database) }),
+  saveDatabase: (database: Database, baseRev?: number) => invoke<Revisioned<Database>>("save_database", { databaseJson: JSON.stringify(database), baseRev }),
   queryView: (request: QueryRequest) => invoke<ViewResult>("query_view", { request }),
   createRow: (databaseId: string, title: string, cells: Record<string, unknown>, templateId = "") =>
     invoke<{ row: DbRow }>("create_row", { databaseId, title, cells: JSON.stringify(cells), templateId }),
@@ -245,9 +292,9 @@ export const api = {
   // Sticky notes
   listStickies: () => invoke<Sticky[]>("list_stickies"),
   createSticky: (open: boolean) => invoke<Sticky>("create_sticky", { open }),
-  getSticky: (id: string) => invoke<Sticky>("get_sticky", { id }),
-  saveSticky: (id: string, content: string, text: string) =>
-    invoke<void>("save_sticky", { id, content, text }),
+  getSticky: (id: string) => invoke<Revisioned<Sticky>>("get_sticky", { id }),
+  saveSticky: (id: string, content: string, text: string, baseRev?: number) =>
+    invoke<number>("save_sticky", { id, content, text, baseRev }),
   setStickyStyle: (id: string, color: string, onTop: boolean) =>
     invoke<Sticky>("set_sticky_style", { id, color, onTop }),
   setStickyGeometry: (id: string, x: number, y: number, w: number, h: number) =>

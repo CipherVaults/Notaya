@@ -5,6 +5,10 @@ description = "Notaya - portable notes app with optional encryption"
 authors = ["Mohamed Sayed"]
 edition = "2024"
 
+[workspace]
+members = ["../bridge"]
+resolver = "3"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]

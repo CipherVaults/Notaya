@@ -727,6 +727,15 @@ function meta(d: Database) {
 }
 export const databaseMetas = () => dbs.map(meta);
 
+/** The real reorder command shares one order across pages and databases. */
+export function reorderDatabases(ids: string[]) {
+  ids.forEach((id, order) => {
+    const db = dbs.find((d) => d.id === id);
+    if (db) db.order = order;
+  });
+  dbs.sort((a, b) => a.order - b.order);
+}
+
 function newRow(db: Database, title: string): MRow {
   const t = Date.now();
   const hasId = db.props.some((p) => p.kind === "id");
@@ -1072,6 +1081,7 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       const t = cmd === "trash_page" ? Date.now() : null;
       const d = dbById(id);
       if (d) {
+        if (cmd === "restore_page" && base.pages.some((page) => page.id === d.parent && page.trashedAt != null)) d.parent = "";
         if (cmd === "delete_page") { dbs.splice(dbs.indexOf(d), 1); for (let i = rows.length - 1; i >= 0; i--) if (rows[i].db === id) rows.splice(i, 1); } else d.trashedAt = t;
         return treeNow(base);
       }
@@ -1180,3 +1190,11 @@ function starter(d: Database, kind: string) {
 }
 
 if (params.get("db") === "1") { seed(); firstDb = false; }
+
+
+// C2's mock uses the same hierarchy for inherited bins and container cleanup.
+export function coordinationItems() { return [...dbs.map((d) => ({ ...d, kind: "database" })), ...rows.map((r) => ({ ...r, kind: "row" }))]; }
+export function removeCoordinatedItems(ids: Set<string>) {
+  for (let i = dbs.length - 1; i >= 0; i--) if (ids.has(dbs[i].id)) dbs.splice(i, 1);
+  for (let i = rows.length - 1; i >= 0; i--) if (ids.has(rows[i].id)) rows.splice(i, 1);
+}

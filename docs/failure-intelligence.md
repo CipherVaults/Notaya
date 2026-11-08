@@ -6,6 +6,8 @@
 
 **Dated correction (2026-11-07, records catch-up EX-2026-11-07-44):** the line above was not updated when FI-06 and FI-07 were entered on 2026-11-05 (V1.5.1 records); the last substantive update is therefore 2026-11-05. No new entry is added on 2026-11-07: nothing in the records catch-up met the admission boundary.
 
+**Dated correction (2026-11-08, refresh thread, [EX-2026-11-08-61](execution/2026-11-08-ai-pbs-records-refresh.md)):** two entries were added on 2026-11-08, FI-08 and FI-09, on the coordinator's instruction (16:46 UTC); the last substantive update is therefore 2026-11-08. Ahmed's side, cloud and Gaming-PC.
+
 **Maintainer:** Claude (Claude Code), for the owner
 
 **Scope:** consequential failures, near-misses and system gaps in the work on this project.
@@ -23,6 +25,84 @@ To record what materially went wrong or nearly went wrong, why, the actual impac
 An entry belongs here if the problem reached, or could plausibly have reached, one of: the owner's data or vault; the security posture of the app or the PC; the integrity of the project's records; or work the owner would have had to redo. Ordinary friction (a tool limit, a failed first attempt that was fixed in the same step) stays in the session or execution records. For example, the refusal of `SetParent` on KeePassXC and KeePassXC's resistance to being force-stopped are tool limits, noted in [sessions.md](sessions.md) and [`CLAUDE.md`](../CLAUDE.md), not incidents.
 
 ## Incidents
+
+### FI-09 — Codex sat idle for about 30 minutes because stopped lanes were never relaunched
+
+**Occurrence / observation date:** 2026-11-08, about 08:07 to 08:36 UTC (heartbeat log, [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5). Noticed by Ahmed, not by the system. Ahmed's side (`AE0101`); machine: Gaming-PC (Codex, heartbeat), cloud (the Build thread).
+
+**Last resolution update:** 2026-11-08 (permanent task registered 08:59 to 09:09 UTC; a related start-up cause found 12:04 UTC)
+
+**Classification:** Near-miss on the schedule (work the owner would have had to wait for; no data or security effect)
+
+**Status:** resolved; the prevention rule is applied in the heartbeat and written into the Codex briefing
+
+#### Context
+
+Two lanes had been restarted after lane A merged: the fix of C4b (block ids and block edits, whose tests had failed) and C2 (change signals and recycle bin). Codex runs on one shared account with a 5-hour window, and the owner watches its meter on his own usage screen.
+
+#### Mistake / Gap
+
+Both restarted lanes stopped after about 80 seconds with exit 0 and no work: each needed a tiny edit just outside the files it was allowed to touch, and stopped instead of making it. The heartbeat only relaunched lanes that had not started yet, so nothing restarted a lane that had started and stopped. The system did not notice that Codex was doing nothing; the owner did.
+
+#### Impact
+
+**Actual impact:** about 30 minutes of Codex time with no work (08:07 to 08:36 UTC), in a day paced by a weekly limit that holds about six 5-hour windows, so the loss shifts the schedule by that amount; the effect on the version dates was not measured. No code, vault or data effect.
+
+**Potential impact:** a longer silent stall (overnight, with the owner asleep) would have wasted whole windows without anyone knowing.
+
+**How it was noticed:** Ahmed, 2026-11-08 08:30:44 UTC (project chat): "Also make sure that Codex is not idle or anything is just idling at the development, wasting time, because I feel, and from what I look, and the past 40 minutes that I've been awake and looking at the usage and consumption of Codex, it's been like sitting idle. The hourly quota is just 38% left, and the weekly quota is just 74% left without getting decreased, and that means it's not doing anything."
+
+#### Resolution
+
+At 08:33 UTC the Build thread confirmed it and fixed it: a stop at the edge of a write area now counts as idle and the lane is relaunched; Codex makes small mechanical edits outside its area itself and lists them in the hand-back note; the heartbeat interval was cut from 30 to 10 minutes and at 08:35 four lanes were started again. Ahmed then asked for the heartbeat to be permanent and automatic (08:57:27 and 09:03:55 UTC, [authority record](plan/approval-and-amendments.md)); he registered the scheduled task "Notaya heartbeat" (every 10 minutes) himself at 08:59 to 09:09 UTC. **A second cause was found at 12:04 UTC:** lanes started by the scheduled task could not find the Codex install, which was visible only to the packaged Claude app, so some lanes died at once; they now start from the real install path through WMI and a lane that dies immediately is relaunched. Not confirmed here: how many of the earlier stalls this second cause explains.
+
+#### Prevention Rule
+
+**When:** a Codex lane process ends or goes quiet.
+**Do:** classify it by exit code and by its diff, never by the fact that it stopped; treat "exit 0 and no file changes" as idle and relaunch it; make small mechanical edits just outside a write area and list them; compare the Codex meter with the lanes the heartbeat believes are running.
+**Adoption:** applied in the heartbeat script and in [`docs/handoff/codex-partner-briefing.md`](handoff/codex-partner-briefing.md) section 6 and `AGENTS.md` (dated notes of 2026-11-08); no change to `CLAUDE.md` proposed (the owner decides on rule changes).
+
+---
+
+### FI-08 — The heartbeat reported lane C4 "finished" when it had done no work
+
+**Occurrence / observation date:** 2026-11-08, corrected at about 06:56 UTC (heartbeat log, [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5); the time of the false report itself is not recorded. Ahmed's side (`AE0101`); machine: Gaming-PC (Codex, heartbeat), cloud (the Build thread, which caught it).
+
+**Last resolution update:** 2026-11-08 17:09:25 UTC (branch deleted by Ahmed)
+
+**Classification:** Near-miss on the records and the branches (a false "done" that was caught before it was merged)
+
+**Status:** resolved; prevention rule applied in the heartbeat
+
+#### Context
+
+The heartbeat starts Codex lanes, makes checkpoint commits and pushes a finished lane. Lane C4 (block ids and block edits) had been started with a write area that did not include one file it needed.
+
+#### Mistake / Gap
+
+Codex stopped at a file outside its write area and ended with exit 0. The heartbeat read the ended process as a finished lane and pushed the branch `AE0101/v1-6-c4` (`4e3c457`) with no C4 work in it. Lane C2 had stopped the same way, for three files outside its area (that one was not reported as finished).
+
+#### Impact
+
+**Actual impact:** none on `main`. One stray branch with no work of its own exists on `origin` (deleting it needs Ahmed's word; see the dated follow-up below); some time was lost before the lane was restarted (not measured).
+
+**Potential impact:** an empty lane merged or recorded as verified; a later lane built on work that did not exist. (The sources do not say how the false report was first noticed.)
+
+#### Resolution
+
+The Build thread's log records the correction at about 06:56 UTC: the branch is to be ignored and C4 restarts as `AE0101/v1-6-c4b`; the write areas of C4 and C2 were widened (C4 may add `mod blocks;` to `lib.rs`; C2 may touch `lib.rs` registration lines, `src/lib/types.ts` and others). The same finding led to the idle rule of FI-09.
+
+**Dated follow-up (2026-11-08 about 16:55 UTC, refresh thread): the stray branch.** Checked on `origin`: `AE0101/v1-6-c4` is at `4e3c457`, one commit, a merge of lane B (`37886fd`) into lane C1's history (`85c8dcd`); both parents are already in `main` (PRs #74 and #75), so the branch holds no work of its own. The coordinator asked Ahmed (Q55) whether it could be deleted and he answered "yes" (2026-11-08 16:48:18 UTC, cited by the coordinator; [authority record](plan/approval-and-amendments.md)). **A deletion from the cloud container was refused** (`git push origin --delete` returned HTTP 403 from the environment's proxy; the GitHub tools offered here have no delete-branch call), and nothing was worked around. **The branch still exists.** It can be deleted from Ahmed's PC session (a Remote Control session, which has the repository credentials) or by Ahmed on GitHub; when done, add a line here.
+
+**Dated follow-up (2026-11-08 17:11 UTC, Build thread): the stray branch is deleted.** Ahmed approved the deletion at 16:48:18 UTC and deleted `AE0101/v1-6-c4` himself on GitHub (his message 17:09:25 UTC: the other lane branches were left as asked, C4b and C4d kept). The PC's permission system had refused the delete command ("[Git Destructive]") and was not worked around. Checked after `git fetch --prune`: no `AE0101/v1-6-c4` branch remains on `origin`. Side: Ahmed (AE0101) · Machine: cloud (review, merge) and Gaming-PC (Codex, checks).
+
+#### Prevention Rule
+
+**When:** a lane process ends and the heartbeat decides what that means.
+**Do:** call a lane finished only when its branch holds commits inside its write area and the checks have run on that exact commit; call "ended with no changes" idle, not finished; inspect the diff before recording a lane as done.
+**Adoption:** applied in the heartbeat; the inspection step is the Build thread's standing practice (A44 item 2, A46); no change to `CLAUDE.md` proposed.
+
+---
 
 ### FI-07 — A test cleanup command was written to close every "Notaya" process, including the owner's real one
 

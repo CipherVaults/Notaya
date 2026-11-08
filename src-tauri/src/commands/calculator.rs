@@ -2,6 +2,9 @@
 //! history, which is stored (encrypted like everything else) in the vault's settings
 //! record, so it is still there after the windows close or the app restarts.
 
+use crate::actions::Actor;
+use crate::vault::Session;
+
 use tauri::{AppHandle, Emitter, State};
 
 use super::limit;
@@ -16,7 +19,7 @@ const CHANGED: &str = "calc-history-changed";
 // Async: creating a window from a sync command can deadlock on Windows.
 #[tauri::command(async)]
 pub fn open_calculator(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
-    let protect = state.with(|s| Ok(s.protects_capture()))?;
+    let protect = open_calculator_person(&state)?;
     let window = ui::open_calculator(&app, &state.paths, protect)?;
     // If the vault locked while the window was being made, the lock has already closed the others.
     if !state.is_unlocked() {
@@ -25,41 +28,65 @@ pub fn open_calculator(app: AppHandle, state: State<'_, AppState>) -> Result<()>
     Ok(())
 }
 
+/// Vault-side precondition; window creation stays in the UI adapter.
+pub(crate) fn open_calculator_core(s: &Session, _actor: &Actor) -> Result<bool> {
+    Ok(s.protects_capture())
+}
+
 #[tauri::command]
 pub fn calc_history(state: State<'_, AppState>) -> Result<Vec<CalcEntry>> {
-    state.with(|s| Ok(s.settings().calc_history))
+    calc_history_person(&state)
 }
+
+pub(crate) fn calc_history_core(s: &Session, _actor: &Actor) -> Result<Vec<CalcEntry>> {
+    Ok(s.settings().calc_history)
+}
+
 
 #[tauri::command]
 pub fn add_calc_entry(app: AppHandle, state: State<'_, AppState>, expr: String, result: String) -> Result<Vec<CalcEntry>> {
     limit("The calculation", &expr, 1_000)?;
     limit("The result", &result, 1_000)?;
-    let history = state.with_mut(|s| {
-        let mut settings = s.settings();
-        if !push_entry(&mut settings.calc_history, expr, result) {
-            return Ok(settings.calc_history);
-        }
-        let history = settings.calc_history.clone();
-        s.put(Item::Settings(settings))?;
-        Ok(history)
-    })?;
+    let history = add_calc_entry_person(&state, expr, result)?;
     let _ = app.emit(CHANGED, ());
     Ok(history)
 }
 
+pub(crate) fn add_calc_entry_core(
+    s: &mut Session,
+    _actor: &Actor,
+    expr: String,
+    result: String,
+) -> Result<Vec<CalcEntry>> {
+    limit("The calculation", &expr, 1_000)?;
+    limit("The result", &result, 1_000)?;
+
+    let mut settings = s.settings();
+    if !push_entry(&mut settings.calc_history, expr, result) {
+        return Ok(settings.calc_history);
+    }
+    let history = settings.calc_history.clone();
+    s.put(Item::Settings(settings))?;
+    Ok(history)
+}
+
+
 #[tauri::command]
 pub fn clear_calc_history(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
-    state.with_mut(|s| {
-        let mut settings = s.settings();
-        if settings.calc_history.is_empty() {
-            return Ok(());
-        }
-        settings.calc_history.clear();
-        s.put(Item::Settings(settings))
-    })?;
+    clear_calc_history_person(&state)?;
     let _ = app.emit(CHANGED, ());
     Ok(())
 }
+
+pub(crate) fn clear_calc_history_core(s: &mut Session, _actor: &Actor) -> Result<()> {
+    let mut settings = s.settings();
+    if settings.calc_history.is_empty() {
+        return Ok(());
+    }
+    settings.calc_history.clear();
+    s.put(Item::Settings(settings))
+}
+
 
 /// Puts a calculation at the top of the history and drops the oldest past the limit.
 /// Returns false (and changes nothing) when it is empty or repeats the newest line,
@@ -104,5 +131,59 @@ mod tests {
         assert!(push_entry(&mut h, "4".into(), "4".into()));
         assert!(push_entry(&mut h, "2+2".into(), "4".into()), "an older repeat is still added");
         assert_eq!(h.len(), 3);
+    }
+}
+
+
+fn clear_calc_history_person(state: &AppState) -> Result<()> {
+    state.with_mut(|s| clear_calc_history_core(s, &Actor::Person))
+}
+
+
+fn add_calc_entry_person(state: &AppState, expr: String, result: String) -> Result<Vec<CalcEntry>> {
+    state.with_mut(|s| add_calc_entry_core(s, &Actor::Person, expr, result))
+}
+
+
+fn calc_history_person(state: &AppState) -> Result<Vec<CalcEntry>> {
+    state.with(|s| calc_history_core(s, &Actor::Person))
+}
+
+
+fn open_calculator_person(state: &AppState) -> Result<bool> {
+    state.with(|s| open_calculator_core(s, &Actor::Person))
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+    #[test]
+    fn clear_calc_history_person_and_core_match() {
+        compare(
+            |state| clear_calc_history_person(state),
+            |s, _paths| clear_calc_history_core(s, &Actor::Person),
+        );
+    }
+    #[test]
+    fn add_calc_entry_person_and_core_match() {
+        compare(
+            |state| add_calc_entry_person(state, "1+2".into(), "3".into()),
+            |s, _paths| add_calc_entry_core(s, &Actor::Person, "1+2".into(), "3".into()),
+        );
+    }
+    #[test]
+    fn calc_history_person_and_core_match() {
+        compare(
+            |state| calc_history_person(state),
+            |s, _paths| calc_history_core(s, &Actor::Person),
+        );
+    }
+    #[test]
+    fn open_calculator_person_and_core_match() {
+        compare(
+            |state| open_calculator_person(state),
+            |s, _paths| open_calculator_core(s, &Actor::Person),
+        );
     }
 }

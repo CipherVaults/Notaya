@@ -24,8 +24,10 @@ export default function ConfirmDialog({ request, onAnswered }: {
     try {
       await api.aiConfirmAnswer(request.id, allow, allow && strong ? word : null);
       onAnswered();
-    } catch {
-      setFailed(true);
+    } catch (error) {
+      // An expired/cancelled broker request cannot be answered again.
+      if (error === "not_confirmed" || error === "The vault is locked.") onAnswered();
+      else setFailed(true);
     } finally {
       setBusy(false);
     }

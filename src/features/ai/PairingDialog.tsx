@@ -21,8 +21,9 @@ export default function PairingDialog({ request, onAnswered }: {
     try {
       await api.aiPairingAnswer(request.id, allow);
       onAnswered();
-    } catch {
-      setFailed(true);
+    } catch (error) {
+      if (error === "pairing_refused" || error === "The vault is locked.") onAnswered();
+      else setFailed(true);
     } finally {
       setBusy(false);
     }

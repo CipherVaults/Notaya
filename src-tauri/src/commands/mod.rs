@@ -11,6 +11,8 @@ pub mod errorlog;
 pub mod export;
 pub mod import_notes;
 pub mod notes;
+pub mod history;
+pub mod activity;
 pub mod search_history;
 pub mod shell;
 pub mod stickies;

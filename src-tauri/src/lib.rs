@@ -1,4 +1,7 @@
+mod changes;
+mod actions;
 mod backup;
+mod blocks;
 mod commands;
 mod crypto;
 mod database;
@@ -26,7 +29,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, calculator, database as database_cmd, database_io, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, search_history, shell as shell_cmd, stickies, tools, vault as vault_cmd};
+use commands::{activity, history, backup as backup_cmd, calculator, database as database_cmd, database_io, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, search_history, shell as shell_cmd, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -185,6 +188,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            actions::list_actions,
             vault_cmd::vault_status,
             vault_cmd::start_notes,
             vault_cmd::enable_security,
@@ -197,6 +201,7 @@ pub fn run() {
             vault_cmd::backup_now,
             vault_cmd::get_settings,
             vault_cmd::save_settings,
+            vault_cmd::set_last_place,
             vault_cmd::set_backdrop,
             vault_cmd::window_ready,
             vault_cmd::flush_done,
@@ -213,7 +218,18 @@ pub fn run() {
             backup_cmd::restore_vault,
             backup_cmd::start_over,
             backup_cmd::import_portable_notes,
+            history::history_list,
+            history::history_get,
+            history::history_restore,
+            history::history_snapshot,
+            activity::activity_list,
+            activity::activity_verify,
+            activity::activity_undo,
+            activity::activity_clear,
             notes::list_notes,
+            notes::list_bin,
+            notes::restore_bin_item,
+            vault_cmd::editing,
             notes::create_notebook,
             notes::update_notebook,
             notes::delete_notebook,

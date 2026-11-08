@@ -85,12 +85,11 @@ export default function AiAccessPanel() {
         <summary className="cursor-pointer text-sm font-medium">How to connect an AI</summary>
         <div className="mt-3 space-y-3 text-xs text-muted">
           <p>Turn on AI access, set up a local client with the bridge next to the app, then approve its connection in the Notaya window.</p>
-          {state.connectionHelp ? <>
-            <p>Bridge command for your client's local server setup:</p>
-            <pre className="selectable overflow-x-auto rounded-lg bg-surface p-3 text-fg" tabIndex={0}>{state.connectionHelp.terminal}</pre>
-            <p>For a client that uses a configuration file, add:</p>
-            <pre className="selectable overflow-x-auto rounded-lg bg-surface p-3 text-fg" tabIndex={0}>{state.connectionHelp.config}</pre>
-          </> : <p>The bridge connection instructions are not available. Check that the companion program is installed next to the app.</p>}
+          <p>Replace the folder in these examples with the folder containing Notaya and its companion program.</p>
+          <p>Bridge command for your client's local server setup:</p>
+          <pre className="selectable overflow-x-auto rounded-lg bg-surface p-3 text-fg" tabIndex={0}>{'"C:\\Your Notaya folder\\notaya-bridge.exe"'}</pre>
+          <p>For a client that uses a local server configuration, adapt this entry:</p>
+          <pre className="selectable overflow-x-auto rounded-lg bg-surface p-3 text-fg" tabIndex={0}>{JSON.stringify({ mcpServers: { notaya: { command: "C:\\Your Notaya folder\\notaya-bridge.exe", args: [] } } }, null, 2)}</pre>
           <p>Keep Notaya open and unlocked. The connection works only on this computer.</p>
         </div>
       </details>

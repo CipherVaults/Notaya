@@ -1154,7 +1154,9 @@ x++;</code></pre>
         let c = v["content"].as_array().unwrap();
         assert_eq!(c.len(), 3);
         assert_eq!(c[0]["type"], "toggle");
-        assert_eq!(c[0]["attrs"], serde_json::json!({ "open": true, "shelf": true }), "the editor's own attribute");
+        let bid = c[0]["attrs"]["bid"].as_str().expect("the shelf has a block id");
+        assert!(bid.len() == 16 && bid.bytes().all(|b| b.is_ascii_hexdigit()));
+        assert_eq!(c[0]["attrs"], serde_json::json!({ "bid": bid, "open": true, "shelf": true }), "the editor's own attribute");
         assert_eq!(c[0]["content"][0]["content"][0]["text"], "Shelf title");
         assert_eq!(c[0]["content"][1]["content"][0]["text"], "Inside");
         assert!(c[1]["attrs"].get("shelf").is_none() && c[2]["attrs"].get("shelf").is_none(), "only Notaya's class makes a shelf");
