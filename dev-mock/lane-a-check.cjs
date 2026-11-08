@@ -271,6 +271,38 @@ async function check(name, test) { await test(); checks++; console.log('ok ', na
     useApp.getState().openPage('p3');
     await flushAll();
   });
+  await check('database view Back/Forward restores after the pre-lock flush, including a saved Back step', async () => {
+    useApp.getState().openDatabase(tasks.id);
+    const stopHistory = startNavHistory();
+    try {
+      const chosen = db.views[1].id;
+      useApp.getState().setDatabaseView(tasks.id, chosen);
+      await flushAll();
+      goBack();
+      await pause(500); // Back can persist while the person is looking at the first view.
+      assert.equal(useApp.getState().activeDatabaseViewId, null);
+      assert.deepEqual((await invoke('get_settings')).lastPlace, { kind: 'database', id: tasks.id });
+      goForward();
+      assert.equal(useApp.getState().activeDatabaseViewId, chosen);
+      // Reproduce the screenshot harness's race: a read before the debounce still sees Back.
+      const pending = (await invoke('get_settings')).lastPlace;
+      assert.equal((await restoreLastPlace(pending, tree)).activeDatabaseViewId, null);
+      // App's vault-locking handler flushes BEFORE discarding the UI and loading it again.
+      await flushAll();
+      assert.deepEqual((await invoke('get_settings')).lastPlace, { kind: 'database', id: tasks.id, viewId: chosen });
+      useApp.setState({ settings: null, activePageId: null, activeDatabaseViewId: null });
+      await useApp.getState().loadVault();
+      assert.equal(useApp.getState().activePageId, tasks.id);
+      assert.equal(useApp.getState().activeKind, 'database');
+      assert.equal(useApp.getState().activeDatabaseViewId, chosen);
+      await pause(500);
+      assert.equal((await invoke('get_settings')).lastPlace.viewId, chosen);
+    } finally {
+      stopHistory();
+    }
+    useApp.getState().openPage('p3');
+    await flushAll();
+  });
   stop();
   await check('reload/unlock loads the stored location again', async () => {
     useApp.setState({ settings: null, activePageId: null, activeNotebookId: null, activeSectionId: null });

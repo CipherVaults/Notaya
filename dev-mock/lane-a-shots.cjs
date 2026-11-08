@@ -27,7 +27,7 @@ const report = {
   beforeMeaning: 'Pre-lane faint tokens, inherited star color and menu-icon opacity reconstructed on current mock UI. Layout and star fill behavior are current code.',
   target: target.href, files: {}, checks: [], screenshots: [], pageErrors: [], status: 'running',
 };
-for (const file of ['src/styles/app.css', 'src/features/database/DatabasePage.tsx', 'src/features/database/DatabaseView.tsx', 'src/components/Sidebar.tsx', 'src/components/TitleBar.tsx', 'src/store/app.ts', 'src/lib/navHistory.ts', 'src-tauri/src/commands/vault.rs', 'dev-mock/lane-a-shots.cjs']) {
+for (const file of ['src/styles/app.css', 'src/features/database/DatabasePage.tsx', 'src/features/database/DatabaseView.tsx', 'src/components/Sidebar.tsx', 'src/components/TitleBar.tsx', 'src/store/app.ts', 'src/lib/navHistory.ts', 'src/lib/flush.ts', 'src-tauri/src/commands/vault.rs', 'dev-mock/core.ts', 'dev-mock/database.ts', 'dev-mock/lane-a-check.cjs', 'dev-mock/lane-a-shots.cjs']) {
   report.files[file] = createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex');
 }
 let browser;
@@ -77,7 +77,9 @@ async function functionalChecks(page, databaseId) {
   await page.keyboard.press('Enter');
   await page.getByRole('dialog').waitFor();
   await page.keyboard.press('Escape');
-  const tabs = page.getByRole('tablist', { name: 'Views' }).getByRole('tab');
+  const views = page.getByRole('tablist', { name: 'Views' });
+  const tabs = views.getByRole('tab');
+  const first = await tabs.nth(0).innerText();
   const chosen = await tabs.nth(1).innerText();
   await tabs.nth(1).click();
   await page.waitForFunction(async () => {
@@ -89,16 +91,29 @@ async function functionalChecks(page, databaseId) {
   const place = await page.evaluate(async () => (await (await import('/dev-mock/core.ts')).invoke('get_settings')).lastPlace);
   assert.equal(place.id, databaseId);
   await top.getByRole('button', { name: 'Back', exact: true }).click();
+  await views.getByRole('tab', { name: first, exact: true, selected: true }).waitFor();
   assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
   await top.getByRole('button', { name: 'Forward', exact: true }).click();
+  await views.getByRole('tab', { name: chosen, exact: true, selected: true }).waitFor();
   assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');
-  // Use the mock's in-memory settings and production hydration, as used after unlock.
-  await page.evaluate(async () => {
+  // Match App's vault-locking handler: flush the pending Forward save BEFORE discarding
+  // the UI. Otherwise a Back step saved during a slow render can be restored instead.
+  // The mock keeps settings in memory; production hydration is the same as after unlock.
+  const hydrated = await page.evaluate(async () => {
+    const { flushAll } = await import('/src/lib/flush.ts');
+    const { invoke } = await import('/dev-mock/core.ts');
     const { useApp } = await import('/src/store/app.ts');
+    await flushAll();
+    const saved = (await invoke('get_settings')).lastPlace;
     useApp.setState({ settings: null, activePageId: null, activeDatabaseViewId: null });
     await useApp.getState().loadVault();
+    const s = useApp.getState();
+    return { saved, restored: { kind: s.activeKind, id: s.activePageId, viewId: s.activeDatabaseViewId } };
   });
-  assert.equal(await page.getByRole('tab', { name: chosen, exact: true }).getAttribute('aria-selected'), 'true');
+  assert.deepEqual(hydrated.saved, place, 'Pre-lock flush saves the chosen database view');
+  assert.deepEqual(hydrated.restored, place, 'Hydration restores the saved database view in the store');
+  await views.getByRole('tab', { name: chosen, exact: true, selected: true }).waitFor();
+  assert.equal(await views.getByRole('tab', { name: chosen, exact: true }).getAttribute('aria-selected'), 'true');
   assert.equal(await page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith('dbview:'))), false);
   const rowContext = await page.evaluate(async (id) => {
     const { invoke } = await import('/dev-mock/core.ts');
@@ -181,9 +196,11 @@ async function functionalChecks(page, databaseId) {
     await checkStorage();
     // Exercise the mock lock state, then reload as the real lock event does (mock events are inert).
     await page.evaluate(async () => {
+      const { flushAll } = await import('/src/lib/flush.ts');
       const { invoke } = await import('/dev-mock/core.ts');
       const { useApp } = await import('/src/store/app.ts');
       await invoke('enable_security', { password: crypto.randomUUID(), removeUnprotectedCopies: false });
+      await flushAll();
       await invoke('lock_vault');
       await useApp.getState().refreshStatus();
     });
