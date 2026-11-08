@@ -78,22 +78,26 @@ const { chromium } = require(process.env.NOTAYA_PLAYWRIGHT_MODULE || 'playwright
 
     // Exercise the equation's real node-view editor and history transactions.
     const equationId = 'eeeeeeeeeeeeeeee';
-    await editor.evaluate((element, bid) => {
-      element.editor.commands.setContent({ type: 'doc', content: [
-        { type: 'mathBlock', attrs: { bid, latex: 'x^2' } }, { type: 'paragraph' },
-      ] });
+    await editor.evaluate(async (element, bid) => {
+      const { equationFixtureTransaction } = await import('/dev-mock/equation-fixture.ts');
+      // setContent followed by a quick edit shares one undo event and restores
+      // the old Reading list page. Keep fixture setup out of edit history.
+      element.editor.view.dispatch(equationFixtureTransaction(element.editor.state, bid));
       element.editor.commands.blur();
     }, equationId);
+    const equation = () => editor.evaluate((element) => element.editor.getJSON().content.find((node) => node.type === 'mathBlock'));
+    assert.deepEqual((await equation()).attrs, { bid: equationId, latex: 'x^2' }, 'The fixture equation must be installed before editing');
     await page.locator('.math-block').click();
     const area = page.locator('.math-editor textarea');
+    await area.waitFor();
+    assert.equal(await area.inputValue(), 'x^2', 'The node-view editor must open on the fixture equation');
     const exact = '\u200f\u0639\u05d0 e\u0301\u200e  ';
     await area.fill(exact);
-    const equation = () => editor.evaluate((element) => element.editor.getJSON().content.find((node) => node.type === 'mathBlock'));
     assert.deepEqual((await equation()).attrs, { bid: equationId, latex: exact });
     await area.press('Escape');
-    await editor.evaluate((element) => element.editor.commands.undo());
+    assert.equal(await editor.evaluate((element) => element.editor.commands.undo()), true, 'The equation edit must be undoable');
     assert.deepEqual((await equation()).attrs, { bid: equationId, latex: 'x^2' });
-    await editor.evaluate((element) => element.editor.commands.redo());
+    assert.equal(await editor.evaluate((element) => element.editor.commands.redo()), true, 'The equation edit must be redoable');
     assert.deepEqual((await equation()).attrs, { bid: equationId, latex: exact });
     assert.deepEqual(errors, [], 'No browser errors during equation edits or history');
     console.log('PASS equation_edit_undo_redo_keeps_id_and_exact_text');
