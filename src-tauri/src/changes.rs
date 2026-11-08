@@ -17,7 +17,6 @@ pub struct ItemsChanged {
 
 struct Claim {
     owner: String,
-    label: String,
     until: Instant,
     explicit: bool,
 }
@@ -56,23 +55,21 @@ impl Coordination {
             related(id) && windows.values().any(|until| until.is_none_or(|t| t > now))
         }) {
             return Err(Error::invalid(
-                "person_editing: Ahmed is editing this; read it again in a moment.",
+                "person_editing: This item is being edited; read it again in a moment.",
             ));
         }
-        if let Some(claim) = self.claims.iter().find_map(|(id, c)| {
-            (c.owner != *pairing_id && c.until > now && related(id)).then_some(c)
+        if self.claims.iter().any(|(id, c)| {
+            c.owner != *pairing_id && c.until > now && related(id)
         }) {
-            // Labels are trusted pairing metadata, never note content.
-            return Err(Error::invalid(format!(
-                "claimed_by_other_ai: {} is working on this item.",
-                claim.label
-            )));
+            return Err(Error::invalid(
+                "claimed_by_other_ai: Another AI is working on this item.",
+            ));
         }
         Ok(())
     }
 
     pub fn claim(&mut self, actor: &Actor, ids: &[String], automatic: bool) -> Result<()> {
-        let Actor::Ai { pairing_id, label } = actor else {
+        let Actor::Ai { pairing_id, .. } = actor else {
             return Err(Error::invalid("Only an AI connection can claim items."));
         };
         let now = Instant::now();
@@ -94,7 +91,6 @@ impl Coordination {
                 })
                 .or_insert(Claim {
                     owner: pairing_id.clone(),
-                    label: label.clone(),
                     until,
                     explicit: !automatic,
                 });
@@ -127,7 +123,7 @@ pub fn by(actor: &Actor) -> String {
     match actor {
         Actor::Person => "person".into(),
         Actor::Automation => "automation".into(),
-        Actor::Ai { label, .. } => format!("ai:{label}"),
+        Actor::Ai { .. } => "ai".into(),
     }
 }
 
@@ -159,7 +155,7 @@ pub struct Revisioned<T: Serialize> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::commands::{notes, stickies, tools};
     use crate::model::{Item, Page, Sticky, new_id};
@@ -181,7 +177,7 @@ mod tests {
             label: n.into(),
         }
     }
-    fn fixture() -> (Session, Paths) {
+    pub(crate) fn fixture() -> (Session, Paths) {
         let root = std::path::PathBuf::from(
             std::env::var_os("NOTAYA_HOME").unwrap_or_else(|| "D:\\Notaya Tests\\v1-6-C2".into()),
         )
@@ -233,6 +229,86 @@ mod tests {
             text.into(),
             text.into(),
         )
+    }
+
+    #[test]
+    fn permanent_delete_requires_supported_bin_item_and_refuses_stale_restore_action() {
+        let (mut s, paths) = fixture();
+        s.put(Item::Settings(s.settings())).unwrap();
+        s.drain_changes();
+        for id in [NB, SEC, PAGE, STICKY, DB, ROW, crate::model::SETTINGS_ID] {
+            let before = serde_json::to_value(s.get(id).unwrap()).unwrap();
+            let rev = s.rev(id);
+            let error = notes::delete_page_core(&mut s, &Actor::Person, id.into()).err().unwrap();
+            assert_eq!(error.to_string(), "Only items in the bin can be permanently deleted.");
+            assert_eq!(serde_json::to_value(s.get(id).unwrap()).unwrap(), before);
+            assert_eq!(s.rev(id), rev);
+            assert!(s.drain_changes().is_none());
+        }
+        // The restore wins the session lock before a stale Trash click arrives.
+        notes::delete_notebook_core(&mut s, &Actor::Person, &paths, NB.into()).unwrap();
+        notes::restore_page_core(&mut s, &Actor::Person, NB.into()).unwrap();
+        assert!(notes::delete_page_core(&mut s, &Actor::Person, NB.into()).is_err());
+        for id in [NB, SEC, PAGE, DB, ROW] { assert!(s.get(id).is_some() && !s.in_bin(id)); }
+        // Effective bin membership is sufficient for children of binned containers.
+        notes::delete_section_core(&mut s, &Actor::Person, &paths, SEC.into()).unwrap();
+        notes::delete_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
+        assert!(s.get(PAGE).is_none());
+        assert!(s.get(SEC).is_some() && s.in_bin(SEC));
+    }
+
+    #[test]
+    fn coordination_errors_and_signals_never_include_names_or_item_text() {
+        let (mut s, _) = fixture();
+        let a = ai("Ahmed exact page exact text");
+        let b = ai("Mohamed");
+        s.coordination.editing(PAGE, "main", true);
+        let error = save(&mut s, &a, "ignored").err().unwrap();
+        assert_eq!(serde_json::to_value(error).unwrap(),
+            "person_editing: This item is being edited; read it again in a moment.");
+        s.coordination.forget_window("main");
+        s.claim(&a, &[PAGE.into()]).unwrap();
+        let error = save(&mut s, &b, "ignored").err().unwrap();
+        assert_eq!(serde_json::to_value(error).unwrap(),
+            "claimed_by_other_ai: Another AI is working on this item.");
+        save(&mut s, &a, "exact text").unwrap();
+        let event = serde_json::to_value(s.drain_changes().unwrap()).unwrap();
+        assert_eq!(event["by"], "ai");
+        let serialized = event.to_string();
+        for private in ["Ahmed", "Mohamed", "exact page", "exact text", "exact notebook"] {
+            assert!(!serialized.contains(private));
+        }
+        save(&mut s, &Actor::Person, "person still wins").unwrap();
+    }
+
+    #[test]
+    fn child_page_and_database_restore_reparent_without_reviving_binned_page() {
+        let (mut s, paths) = fixture();
+        let Item::Page(mut child) = s.get(PAGE).unwrap().clone() else { unreachable!() };
+        child.id = new_id();
+        child.parent = PAGE.into();
+        let child_id = child.id.clone();
+        s.put(Item::Page(child)).unwrap();
+        let Item::Database(mut db) = s.get(DB).unwrap().clone() else { unreachable!() };
+        db.parent = PAGE.into();
+        db.locked = true;
+        s.put(Item::Database(db)).unwrap();
+        // Existing Undo: the child was trashed, then its parent was trashed.
+        notes::trash_page_core(&mut s, &Actor::Person, child_id.clone()).unwrap();
+        notes::trash_page_core(&mut s, &Actor::Person, DB.into()).unwrap();
+        notes::trash_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
+        notes::restore_page_core(&mut s, &Actor::Person, child_id.clone()).unwrap();
+        notes::restore_bin_item_core(&mut s, &Actor::Person, DB.into(), false).unwrap();
+        assert!(s.in_bin(PAGE));
+        assert!(!s.in_bin(&child_id) && !s.in_bin(DB));
+        assert!(matches!(s.get(&child_id), Some(Item::Page(p)) if p.parent.is_empty()));
+        assert!(matches!(s.get(DB), Some(Item::Database(d)) if d.parent.is_empty() && d.locked));
+        // Container confirmation still applies to every restore entry point.
+        notes::delete_section_core(&mut s, &Actor::Person, &paths, SEC.into()).unwrap();
+        assert!(notes::restore_page_core(&mut s, &Actor::Person, child_id.clone()).is_err());
+        assert!(notes::restore_bin_item_core(&mut s, &Actor::Person, DB.into(), false).is_err());
+        notes::restore_bin_item_core(&mut s, &Actor::Person, DB.into(), true).unwrap();
+        assert!(!s.in_bin(DB) && s.in_bin(PAGE));
     }
 
     #[test]
@@ -481,6 +557,7 @@ mod tests {
         drop(s);
         let mut s = Session::unlock(&paths.vault, "throwaway", None).unwrap();
         assert_eq!(s.settings().replaced_edits.len(), 1);
+        notes::trash_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
         notes::delete_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
         assert!(s.settings().replaced_edits.is_empty());
     }
@@ -567,7 +644,7 @@ mod tests {
         let state = crate::state::AppState::new(paths);
         let events = Arc::new(Mutex::new(Vec::new()));
         let emitted = events.clone();
-        state.bind_events(move |changes| emitted.lock().unwrap().push(changes), |_| {});
+        state.bind_events(move |changes| { emitted.lock().unwrap().push(changes); Ok(()) }, |_| {});
         state.set_session(s);
         state
             .with_mut(|s| {

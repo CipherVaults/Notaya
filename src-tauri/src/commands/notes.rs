@@ -1131,8 +1131,14 @@ mod action_parity_tests {
     #[test]
     fn delete_page_person_and_core_match() {
         compare(
-            |state| delete_page_person(state, "10000000000000000000000000000004".into()),
-            |s, _paths| delete_page_core(s, &Actor::Person, "10000000000000000000000000000004".into()),
+            |state| {
+                trash_page_person(state, "10000000000000000000000000000004".into())?;
+                delete_page_person(state, "10000000000000000000000000000004".into())
+            },
+            |s, _paths| {
+                trash_page_core(s, &Actor::Person, "10000000000000000000000000000004".into())?;
+                delete_page_core(s, &Actor::Person, "10000000000000000000000000000004".into())
+            },
         );
     }
     #[test]
@@ -1396,7 +1402,9 @@ fn restore_parents(s: &mut Session, id: &str, allowed: bool) -> Result<()> {
     while let Some(id) = current {
         if !seen.insert(id.clone()) { return Err(Error::Corrupt); }
         let item = s.get(&id).ok_or(Error::NotFound)?;
-        if Session::own_trash(item).is_some() {
+        // Pages/databases keep their existing restore-to-section behavior. Only
+        // the new section/notebook bins require grouped ancestor restoration.
+        if matches!(item, Item::Notebook(_) | Item::Section(_)) && Session::own_trash(item).is_some() {
             if !allowed { return Err(Error::invalid("parent_in_bin: Restore the containing items too?")); }
             let mut item = item.clone();
             match &mut item { Item::Notebook(x) => x.trashed_at = None, Item::Section(x) => x.trashed_at = None,
@@ -1425,7 +1433,11 @@ pub(crate) fn restore_bin_item_core(s: &mut Session, actor: &Actor, id: String, 
 }
 
 fn delete_bin_tree(s: &mut Session, id: &str) -> Result<()> {
-    s.get(id).ok_or(Error::NotFound)?;
+    let item = s.get(id).ok_or(Error::NotFound)?;
+    if !matches!(item, Item::Notebook(_) | Item::Section(_) | Item::Page(_) |
+        Item::Database(_) | Item::Row(_) | Item::Sticky(_)) || !s.in_bin(id) {
+        return Err(Error::invalid("Only items in the bin can be permanently deleted."));
+    }
     let doomed: Vec<String> = s.items().filter(|i| s.is_within(i.id(), id)).map(|i| i.id().into()).collect();
     let dbs: Vec<String> = doomed.iter().filter(|id| matches!(s.get(id), Some(Item::Database(_)))).cloned().collect();
     for db in dbs { if s.get(&db).is_some() { dbc::delete_database(s, &db)?; } }

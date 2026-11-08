@@ -16,6 +16,7 @@ import InternalLinkHost from "./editor/InternalLinkHost";
 import SlashMenu, { type SlashController } from "./editor/SlashMenu";
 import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
+import { setPageEditable } from "./editor/editability";
 import { PageCover, PageIconAndActions } from "./PageHeader";
 import { PageIcon } from "@/lib/pageLook";
 import { openExport } from "./ExportDialog";
@@ -90,7 +91,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
         const meta = await api.savePage(page.id, title, content, text, revRef.current);
         revRef.current = meta.rev;
         setTrashedAt(meta.trashedAt);
-        if (editorRef.current && !editorRef.current.isDestroyed) editorRef.current.setEditable(meta.trashedAt == null);
+        if (editorRef.current && !editorRef.current.isDestroyed) setPageEditable(editorRef.current, meta.trashedAt == null);
         if (!dirtyRef.current && savingRef.current === 1) void api.editing(page.id, false).catch(() => {});
         const t = useApp.getState().tree;
         setTree({ ...t, pages: t.pages.map((p) => (p.id === meta.id ? meta : p)) });
@@ -160,7 +161,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
       const e = editorRef.current;
       if (!e || e.isDestroyed) return;
       setTrashedAt(fresh.trashedAt);
-      e.setEditable(fresh.trashedAt == null);
+      setPageEditable(e, fresh.trashedAt == null);
       const scroller = wrapRef.current?.closest<HTMLElement>(".overflow-y-auto");
       const scroll = scroller?.scrollTop ?? 0;
       const selection = e.state.selection;

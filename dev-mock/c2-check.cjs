@@ -47,12 +47,49 @@ const store = load(path.join(root, 'src/features/database/dbStore.ts'));
 const { useApp } = load(path.join(root, 'src/store/app.ts'));
 const { api } = load(path.join(root, 'src/lib/ipc.ts'));
 const { flushAll } = load(path.join(root, 'src/lib/flush.ts'));
+const { setPageEditable } = load(path.join(root, 'src/features/notes/editor/editability.ts'));
 let checks = 0;
 async function check(name, test) { await test(); checks++; console.log('ok', name); }
 const signal = (id, rev, kind = 'page') => emit('items-changed', { ids: [id], kinds: [kind], tree: true, by: 'ai:fixture', revs: { [id]: rev } });
 const eventually = async (fn) => { for (let n = 0; n < 100; n++) { if (fn()) return; await pause(10); } assert.ok(fn(), 'condition did not settle'); };
 
 (async () => {
+  await check('page save acknowledgements and remote reloads never mark the editor dirty', async () => {
+    // Run the installed TipTap implementation without a DOM. Its update event
+    // is the seam that PageEditor connects to markDirty/autosave.
+    const { Editor } = require('@tiptap/core');
+    let dirty = false, updates = 0, saves = 0, rev = 1, saving = false;
+    const editor = {
+      state: { tr: {} },
+      setOptions(options) { this.options = options; },
+      emit() { dirty = true; updates++; },
+      setEditable: Editor.prototype.setEditable,
+    };
+    editor.setEditable(true);
+    assert.equal(updates, 1, 'the old call reproduces the feedback trigger');
+    dirty = false; updates = 0;
+    const watch = watchItemChanges('page-save', () => rev, () => dirty || saving, async () => {
+      rev = 3;
+      setPageEditable(editor, true);
+    });
+    dirty = true;
+    async function save() {
+      if (!dirty) return;
+      dirty = false; saving = true; saves++;
+      await signal('page-save', 2);
+      rev = 2;
+      setPageEditable(editor, true); // same helper as the real save response
+      saving = false; watch.recheck();
+    }
+    await save(); await save();
+    assert.equal(saves, 1, 'one real edit saves once after its own echoed signal');
+    await signal('page-save', 3); await eventually(() => rev === 3);
+    setPageEditable(editor, false); // a bin/restore editability change is also silent
+    assert.equal(updates, 0);
+    assert.equal(dirty, false);
+    watch.dispose();
+  });
+
   await check('clean reload, dirty typing, own revision and queued save signals', async () => {
     let rev = 1, busy = false, reads = 0, remote = 1;
     const watch = watchItemChanges('fixture', () => rev, () => busy, async (alive) => { await pause(); if (alive()) { rev = remote; reads++; } });
