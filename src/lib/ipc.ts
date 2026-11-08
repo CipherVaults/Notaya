@@ -2,6 +2,7 @@
 // the UI has no other way to touch files, the network or the clipboard.
 
 import { invoke } from "@tauri-apps/api/core";
+import type { BinEntry, Revisioned } from "./changes";
 import { flushAll } from "./flush";
 import type {
   BackupInfo,
@@ -111,6 +112,9 @@ export const api = {
 
   // Notes
   listNotes: () => invoke<NotesTree>("list_notes"),
+  listBin: () => invoke<BinEntry[]>("list_bin"),
+  restoreBinItem: (id: string, restoreContainers: boolean) => invoke<NotesTree>("restore_bin_item", { id, restoreContainers }),
+  editing: (id: string, active: boolean) => invoke<void>("editing", { id, active }),
   createNotebook: (name: string, color: string, icon: string) =>
     invoke<NotesTree>("create_notebook", { name, color, icon }),
   updateNotebook: (id: string, name: string, color: string, icon: string) =>
@@ -122,9 +126,9 @@ export const api = {
     invoke<NotesTree>("update_section", { id, name, color }),
   deleteSection: (id: string) => invoke<NotesTree>("delete_section", { id }),
   createPage: (sectionId: string, title: string) => invoke<Page>("create_page", { sectionId, title }),
-  getPage: (id: string) => invoke<Page>("get_page", { id }),
-  savePage: (id: string, title: string, content: string, text: string) =>
-    invoke<PageMeta>("save_page", { id, title, content, text }),
+  getPage: (id: string) => invoke<Revisioned<Page>>("get_page", { id }),
+  savePage: (id: string, title: string, content: string, text: string, baseRev?: number) =>
+    invoke<Revisioned<PageMeta>>("save_page", { id, title, content, text, baseRev }),
   createSubpage: (parentId: string, title: string) => invoke<Page>("create_subpage", { parentId, title }),
   setPageLook: (id: string, icon: string, cover: string) => invoke<PageMeta>("set_page_look", { id, icon, cover }),
   setPageFavorite: (id: string, favorite: boolean) =>
@@ -139,9 +143,9 @@ export const api = {
   // Databases (A35). Rows are pages: open one with getPage/savePage like any page.
   createDatabase: (sectionId: string, parent: string, inline: boolean, title: string, starterKind: "blank" | "tasks" | "reading" | "projects") =>
     invoke<DatabaseFull>("create_database", { sectionId, parent, inline, title, starterKind }),
-  getDatabase: (id: string) => invoke<Database>("get_database", { id }),
+  getDatabase: (id: string) => invoke<Revisioned<Database>>("get_database", { id }),
   /** The whole database definition as JSON text (properties, views, templates). */
-  saveDatabase: (database: Database) => invoke<Database>("save_database", { databaseJson: JSON.stringify(database) }),
+  saveDatabase: (database: Database, baseRev?: number) => invoke<Revisioned<Database>>("save_database", { databaseJson: JSON.stringify(database), baseRev }),
   queryView: (request: QueryRequest) => invoke<ViewResult>("query_view", { request }),
   createRow: (databaseId: string, title: string, cells: Record<string, unknown>, templateId = "") =>
     invoke<{ row: DbRow }>("create_row", { databaseId, title, cells: JSON.stringify(cells), templateId }),
@@ -191,9 +195,9 @@ export const api = {
   // Sticky notes
   listStickies: () => invoke<Sticky[]>("list_stickies"),
   createSticky: (open: boolean) => invoke<Sticky>("create_sticky", { open }),
-  getSticky: (id: string) => invoke<Sticky>("get_sticky", { id }),
-  saveSticky: (id: string, content: string, text: string) =>
-    invoke<void>("save_sticky", { id, content, text }),
+  getSticky: (id: string) => invoke<Revisioned<Sticky>>("get_sticky", { id }),
+  saveSticky: (id: string, content: string, text: string, baseRev?: number) =>
+    invoke<number>("save_sticky", { id, content, text, baseRev }),
   setStickyStyle: (id: string, color: string, onTop: boolean) =>
     invoke<Sticky>("set_sticky_style", { id, color, onTop }),
   setStickyGeometry: (id: string, x: number, y: number, w: number, h: number) =>

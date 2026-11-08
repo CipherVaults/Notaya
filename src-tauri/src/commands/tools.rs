@@ -87,8 +87,9 @@ pub(crate) fn search_core(s: &Session, _actor: &Actor, query: String) -> Result<
     let matches_all = |hay: &str| terms.iter().all(|t| hay.contains(t));
     let mut hits = Vec::new();
     let db_titles: std::collections::HashMap<&str, &str> =
-        s.items().filter_map(|i| if let Item::Database(d) = i { if d.trashed_at.is_none() { Some((d.id.as_str(), d.title.as_str())) } else { None } } else { None }).collect();
+        s.items().filter_map(|i| if let Item::Database(d) = i { if !s.in_bin(&d.id) { Some((d.id.as_str(), d.title.as_str())) } else { None } } else { None }).collect();
     for item in s.items() {
+        if s.in_bin(item.id()) { continue; }
         match item {
             Item::Database(d) if d.trashed_at.is_none() && !d.inline && matches_all(&d.title.to_lowercase()) => hits.push(SearchHit {
                 kind: "database",

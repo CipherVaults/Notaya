@@ -87,6 +87,9 @@ impl Flush {
 
 pub struct AppState {
     pub paths: Paths,
+    event_app: Mutex<Option<AppHandle>>,
+    #[cfg(test)]
+    pub(crate) change_events: Mutex<Vec<crate::changes::ItemsChanged>>,
     session: Mutex<Option<Session>>,
     attempts: Mutex<Attempts>,
     /// Labels of windows that have called `window_ready` (they listen for `vault-locking`).
@@ -129,6 +132,9 @@ impl AppState {
     pub fn new(paths: Paths) -> Self {
         AppState {
             paths,
+            event_app: Mutex::new(None),
+            #[cfg(test)]
+            change_events: Mutex::new(Vec::new()),
             session: Mutex::new(None),
             attempts: Mutex::new(Attempts { failures: 0, wait_until: None }),
             ready: Mutex::new(HashSet::new()),
@@ -204,6 +210,7 @@ impl AppState {
 
     /// Forgets a window that no longer exists, so a lock doesn't wait for it.
     pub fn unmark_ready(&self, label: &str) {
+        if let Some(s) = guard(&self.session).as_mut() { s.coordination.forget_window(label); }
         guard(&self.ready).remove(label);
         let mut f = guard(&self.flush);
         if f.pending.remove(label) {
@@ -224,7 +231,8 @@ impl AppState {
         guard(&self.session).is_some()
     }
 
-    pub fn set_session(&self, session: Session) {
+    pub fn set_session(&self, mut session: Session) {
+        session.drain_changes(); // creation/unlock is followed by a complete window load
         *guard(&self.session) = Some(session);
         crate::logging::unlocked_event();
     }
@@ -255,11 +263,32 @@ impl AppState {
     }
 
     pub fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
-        match guard(&self.session).as_mut() {
-            Some(s) => f(s),
-            None => Err(Error::Locked),
+        let mut session = guard(&self.session);
+        let s = session.as_mut().ok_or(Error::Locked)?;
+        let result = f(s);
+        let mut close = Vec::new();
+        let app = guard(&self.event_app).clone();
+        // Some old cores perform several transactions. Publish durable partial writes even
+        // if a later step failed; they must never leak into the next command's signal.
+        if let Some(changes) = s.drain_changes() {
+            #[cfg(test)]
+            guard(&self.change_events).push(changes.clone());
+            if let Some(app) = app.as_ref() {
+                for id in &changes.ids {
+                    if matches!(s.get(id), Some(crate::model::Item::Sticky(st)) if st.trashed_at.is_some()) {
+                        close.push(id.clone());
+                    }
+                }
+                let _ = app.emit("items-changed", changes);
+            }
         }
+        drop(session);
+        // Destroyed windows call unmark_ready, which also takes the session lock.
+        if let Some(app) = app { for id in close { ui::close_sticky(&app, &id); } }
+        result
     }
+
+    pub fn bind_events(&self, app: &AppHandle) { *guard(&self.event_app) = Some(app.clone()); }
 
     /// Slows down repeated guessing: after 3 failures, waits 2, 4, 8 … up to 60 seconds.
     pub fn check_rate_limit(&self) -> Result<()> {

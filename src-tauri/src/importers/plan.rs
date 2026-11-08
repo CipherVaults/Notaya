@@ -910,7 +910,7 @@ impl Plan {
                     order: notebook_order + i as i64,
                     created: now,
                     updated: now,
-                })
+                trashed_at: None, })
             })
             .collect();
         let section_ids: Vec<String> = self.sections.iter().map(|_| new_id()).collect();
@@ -925,7 +925,7 @@ impl Plan {
                 order: in_notebook[nb],
                 created: now,
                 updated: now,
-            }));
+            trashed_at: None, }));
             in_notebook[nb] += 1;
         }
         let kept = rendered.iter().filter(|r| r.is_some()).count();
