@@ -54,6 +54,50 @@ def main():
     assert by_id[None]["error"]["code"] == -32700
     assert b"ERROR MUST NOT ECHO THIS" not in result.stdout + result.stderr
 
+    def modern(identifier, method, params=None, version="2026-07-28"):
+        params = dict(params or {})
+        params["_meta"] = {
+            "io.modelcontextprotocol/protocolVersion": version,
+            "io.modelcontextprotocol/clientCapabilities": {},
+            "io.modelcontextprotocol/clientInfo": {"name": "stdio fixture", "version": "1"},
+        }
+        return request(identifier, method, params)
+
+    modern_messages = [
+        modern(1, "server/discover"),
+        modern(2, "tools/list"),
+        request(3, "tools/list"),  # No implicit legacy handshake or inherited metadata.
+        modern(4, "tools/list", version="2099-01-01"),
+        modern(5, "tools/call", {"name": "notaya_page", "arguments": {"action": "page.get", "params": {}}}),
+        modern(6, "subscriptions/listen"),
+        modern(7, "ping"),
+    ]
+    result = run(b"".join((json.dumps(m) + "\n").encode() for m in modern_messages))
+    assert result.returncode == 0, result.stderr
+    replies = [json.loads(line) for line in result.stdout.splitlines()]
+    assert len(replies) == 7, replies
+    by_id = {reply["id"]: reply for reply in replies}
+    assert by_id[1]["result"]["protocolVersions"] == ["2026-07-28"]
+    assert by_id[2]["result"]["tools"] == []
+    assert by_id[3]["error"]["code"] == -32602
+    assert by_id[4]["error"]["code"] == -32022
+    assert by_id[4]["error"]["data"] == {"supported": ["2026-07-28"], "requested": "2099-01-01"}
+    assert by_id[5]["result"]["isError"] is True
+    assert by_id[6]["error"]["code"] == -32601  # Subscriptions deliberately unadvertised.
+    for identifier in (1, 2, 5, 7):
+        value = by_id[identifier]["result"]
+        assert value["resultType"] == "complete"
+        assert value["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "notaya-bridge"
+
+    # A modern request in an initialized process retains the modern envelope.
+    mixed = [messages[0], messages[1], modern(1, "ping"), request(2, "ping")]
+    result = run(b"".join((json.dumps(m) + "\n").encode() for m in mixed))
+    assert result.returncode == 0, result.stderr
+    replies = [json.loads(line) for line in result.stdout.splitlines()]
+    assert len(replies) == 3
+    assert replies[1]["result"]["resultType"] == "complete"
+    assert replies[2]["result"] == {}
+
     help_result = run(args=("--help",))
     assert help_result.returncode == 0 and help_result.stdout == b""
     invalid = run(args=("--unknown",))
@@ -61,7 +105,7 @@ def main():
     oversized = run(b"x" * (8 * 1024 * 1024 + 1) + b"\n")
     assert oversized.returncode == 1 and oversized.stdout == b""
     assert list(isolated.iterdir()) == [], "The bridge wrote outside a pairing operation."
-    print("PASS: real bridge stdio, lifecycle, tools, fixed errors, malformed/oversized input, stdout isolation, EOF and zero disk writes (no pipe or vault).")
+    print("PASS: real bridge stdio, legacy initialize, modern discover/metadata/version errors, mixed eras, tools, fixed errors, malformed/oversized input, stdout isolation, EOF and zero disk writes (no pipe or vault).")
 
 
 if __name__ == "__main__":

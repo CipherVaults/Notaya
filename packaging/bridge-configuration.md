@@ -10,19 +10,46 @@ Claude Code (replace the folder):
 claude mcp add --transport stdio notaya -- "C:\Your Notaya folder\notaya-bridge.exe"
 ```
 
-Codex, in `config.toml` (TOML single quotes preserve Windows backslashes):
+Claude Code project configuration (`.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "notaya": {
+      "type": "stdio",
+      "command": "C:\\Your Notaya folder\\notaya-bridge.exe",
+      "args": [],
+      "env": {}
+    }
+  }
+}
+```
+
+Codex CLI:
+
+```powershell
+codex mcp add notaya -- "C:\Your Notaya folder\notaya-bridge.exe"
+```
+
+Or Codex `~/.codex/config.toml` (TOML single quotes preserve Windows backslashes):
 
 ```toml
 [mcp_servers.notaya]
 command = 'C:\Your Notaya folder\notaya-bridge.exe'
+args = []
+[mcp_servers.notaya.env]
+# Optional environment overrides, for example NOTAYA_HOME for a test copy.
 ```
 
 For a throwaway test copy, append `--home "D:\Notaya Tests\v1-6-D"` after the
-Claude command, or add this to the Codex entry:
+CLI command, or replace `args = []` in the Codex entry (before its `.env` table):
 
 ```toml
 args = ['--home', 'D:\Notaya Tests\v1-6-D']
 ```
+
+Check registration with `claude mcp list`, `claude mcp get notaya` or
+`codex mcp list`. Registration is a manual setup step; packaging does not run it.
 
 `--home` is the folder **containing** `data`, matching `NOTAYA_HOME` in Notaya.
 It takes precedence over `NOTAYA_HOME`; the older `CIPHERLEAF_HOME` is a fallback.
@@ -41,18 +68,37 @@ Confirmations are answered in Notaya's window. The bridge cannot answer them.
 
 ## Protocol references and verification limit
 
-The bridge pins **MCP 2025-11-25**. MCP stdio uses one UTF-8 JSON-RPC message per
-line, with diagnostics on stderr. The installed Claude Code and Codex CLI help was
-checked for the stdio command form. **Current official documentation was not fetched**:
-network access was prohibited for this lane. Recheck these official references before
-integration; this file does not claim that the pinned version is the latest:
+The bridge implements the supplied **MCP 2026-07-28** stateless subset and the
+legacy **2025-11-25** handshake (also negotiating 2025-06-18, 2025-03-26 and
+2024-11-05). MCP stdio uses one UTF-8 JSON-RPC message per line; diagnostics use
+stderr only. An `initialize` request selects legacy semantics for requests without
+modern metadata; modern requests still validate their own metadata independently.
 
-- [MCP specification](https://modelcontextprotocol.io/specification/2025-11-25)
-- [MCP stdio transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
-- [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)
-- [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+Modern requests require `params._meta["io.modelcontextprotocol/protocolVersion"]`
+and object `params._meta["io.modelcontextprotocol/clientCapabilities"]`. Optional
+`io.modelcontextprotocol/clientInfo` supplies the pairing name; otherwise it is
+`MCP client`. Missing/invalid metadata returns -32602; an unsupported modern
+version returns -32022 with `data.supported` and `data.requested`. Modern results
+have `resultType: "complete"` and serverInfo in result `_meta`. `server/discover`
+returns `protocolVersions`, tools capabilities and the notes-as-data instruction.
+
+**Verification limit:** the coordinator fetched the following official sources on
+2026-11-08 and supplied a local summary, which was read in full. This lane made no
+network requests. The summary omits the exact `server/discover` result schema and
+the `subscriptions/listen` schema/stream lifecycle. The minimal discovery payload
+therefore needs checking against the full revision. Modern subscriptions are not
+implemented or advertised (`subscriptions/listen` returns -32601); modern clients
+must request `tools/list` again to see changed permissions. Modern progress events
+are likewise withheld until their subscription contract can be verified. Legacy
+clients receive `notifications/tools/list_changed` after initialization, and progress
+when they supply a progress token. This is partial modern support, not a claim of
+complete 2026-07-28 conformance.
+
+- [MCP specification](https://modelcontextprotocol.io/specification/latest), supplied
+  revision [2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/basic/index)
+  (subscription reference: `basic/patterns/subscriptions`)
 - [Claude Code MCP configuration](https://code.claude.com/docs/en/mcp)
-- [Codex MCP configuration](https://developers.openai.com/codex/mcp/)
+- [Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
 
 ## Wire handoff to the Notaya server lane
 

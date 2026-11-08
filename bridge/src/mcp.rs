@@ -1,6 +1,6 @@
-//! Newline-delimited JSON-RPC 2.0 (stdio), pinned MCP 2025-11-25.
-//! Official text to recheck before integration: https://modelcontextprotocol.io/specification/2025-11-25
-//! Live documentation verification was not possible in the offline lane.
+//! Dual-era newline-delimited MCP, based on the coordinator's official-doc extracts:
+//! modern 2026-07-28 request metadata and legacy <= 2025-11-25 initialization.
+//! Modern subscriptions are NOT advertised: the offline extract omits their schema.
 use crate::{
     pipe::{ClientMessage, EventKind, Pairing, ServerMessage},
     tools::{self, Level},
@@ -11,8 +11,18 @@ use std::{
     io::{self, BufRead},
 };
 
-pub const PROTOCOL_VERSION: &str = "2025-11-25";
+pub const PROTOCOL_VERSION: &str = "2026-07-28";
+pub const LEGACY_VERSION: &str = "2025-11-25";
+const VERSION_META: &str = "io.modelcontextprotocol/protocolVersion";
+const CAPABILITIES_META: &str = "io.modelcontextprotocol/clientCapabilities";
+const CLIENT_META: &str = "io.modelcontextprotocol/clientInfo";
 const MAX_PENDING: usize = 200;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Era {
+    Legacy,
+    Modern,
+}
 
 pub enum Effect {
     Output(Value),
@@ -25,6 +35,7 @@ pub enum Effect {
 struct Pending {
     rpc_id: Value,
     progress: Option<Value>,
+    era: Era,
 }
 
 #[derive(Default)]
@@ -37,14 +48,23 @@ pub struct Mcp {
     welcome: Option<(Level, bool)>,
     level: Level,
     client: String,
+    legacy_client: String,
     problem: &'static str,
     next_id: u64,
     pending: BTreeMap<u64, Pending>,
+    lists: Vec<Pending>,
     refresh_id: Option<u64>,
 }
 
-fn rpc_result(id: Value, result: Value) -> Effect {
+fn rpc_result(id: Value, mut result: Value, era: Era) -> Effect {
+    if era == Era::Modern {
+        result["resultType"] = json!("complete");
+        result["_meta"] = json!({"io.modelcontextprotocol/serverInfo": server_info()});
+    }
     Effect::Output(json!({"jsonrpc":"2.0","id":id,"result":result}))
+}
+fn server_info() -> Value {
+    json!({"name":"notaya-bridge","version":env!("CARGO_PKG_VERSION")})
 }
 fn rpc_error(id: Value, code: i32, message: &'static str) -> Effect {
     Effect::Output(json!({"jsonrpc":"2.0","id":id,"error":{"code":code,"message":message}}))
@@ -82,10 +102,11 @@ pub fn read_line<R: BufRead>(reader: &mut R) -> io::Result<Option<Vec<u8>>> {
     }
 }
 
-pub fn tool_error(id: Value, code: &str) -> Effect {
+fn tool_error(id: Value, code: &str, era: Era) -> Effect {
     rpc_result(
         id,
         json!({"isError":true,"content":[{"type":"text","text":safe_error(code)}]}),
+        era,
     )
 }
 
@@ -153,8 +174,33 @@ impl Mcp {
         self.refresh_id = None;
         let mut effects = self.set_level(Level::Off);
         for (_, pending) in std::mem::take(&mut self.pending) {
-            effects.push(tool_error(pending.rpc_id, code));
+            effects.push(tool_error(pending.rpc_id, code, pending.era));
         }
+        effects.extend(self.finish_lists());
+        effects
+    }
+
+    fn finish_lists(&mut self) -> Vec<Effect> {
+        std::mem::take(&mut self.lists)
+            .into_iter()
+            .map(|pending| rpc_result(pending.rpc_id, tools::list(self.level), pending.era))
+            .collect()
+    }
+
+    fn select_client(&mut self, client: &str) -> Vec<Effect> {
+        if self.client == client {
+            return vec![];
+        }
+        // A different per-request client identity must never inherit another pairing.
+        let effects = if self.client.is_empty() {
+            vec![]
+        } else {
+            let mut effects = self.disconnected("not_paired");
+            effects.push(Effect::Close);
+            effects
+        };
+        self.client = client.into();
+        self.problem = "not_running";
         effects
     }
 
@@ -177,7 +223,9 @@ impl Mcp {
         } else {
             ""
         };
-        self.set_level(if locked { Level::Off } else { level })
+        let mut effects = self.set_level(if locked { Level::Off } else { level });
+        effects.extend(self.finish_lists());
+        effects
     }
 
     fn new_id(&mut self) -> u64 {
@@ -225,10 +273,11 @@ impl Mcp {
         if id.is_none() {
             if method == "notifications/initialized" && self.initialized && !self.ready {
                 self.ready = true;
-                return self.connect();
+                let mut effects = self.select_client(&self.legacy_client.clone());
+                effects.extend(self.connect());
+                return effects;
             }
             if method == "notifications/cancelled"
-                && self.ready
                 && let Some((&pipe_id, _)) = self
                     .pending
                     .iter()
@@ -236,6 +285,10 @@ impl Mcp {
             {
                 self.pending.remove(&pipe_id);
                 return vec![Effect::Send(ClientMessage::Cancel { id: pipe_id })];
+            }
+            if method == "notifications/cancelled" {
+                self.lists
+                    .retain(|pending| pending.rpc_id != params["requestId"]);
             }
             return vec![];
         }
@@ -253,35 +306,117 @@ impl Mcp {
             if !params["protocolVersion"].is_string() || !params["capabilities"].is_object() {
                 return vec![rpc_error(id, -32602, "Invalid params")];
             }
-            self.client = client.into();
+            self.legacy_client = client.into();
             self.initialized = true;
-            self.problem = "not_running";
+            let requested = params["protocolVersion"].as_str().unwrap();
+            let version = match requested {
+                "2024-11-05" | "2025-03-26" | "2025-06-18" | LEGACY_VERSION => requested,
+                _ => LEGACY_VERSION,
+            };
             return vec![rpc_result(
                 id,
                 json!({
-                    "protocolVersion": PROTOCOL_VERSION,
+                    "protocolVersion": version,
                     "capabilities": {"tools":{"listChanged":true}},
-                    "serverInfo":{"name":"notaya-bridge","version":env!("CARGO_PKG_VERSION")},
+                    "serverInfo":server_info(),
                     "instructions": tools::DATA_NOTICE
                 }),
+                Era::Legacy,
+            )];
+        }
+        let meta = &params["_meta"];
+        let modern = !self.initialized
+            || [VERSION_META, CAPABILITIES_META, CLIENT_META]
+                .iter()
+                .any(|key| meta.get(*key).is_some());
+        let (era, client) = if modern {
+            let Some(version) = meta[VERSION_META].as_str() else {
+                return vec![rpc_error(id, -32602, "Invalid params")];
+            };
+            if !meta[CAPABILITIES_META].is_object() {
+                return vec![rpc_error(id, -32602, "Invalid params")];
+            }
+            if version != PROTOCOL_VERSION {
+                return vec![Effect::Output(json!({
+                    "jsonrpc":"2.0", "id":id,
+                    "error":{"code":-32022,"message":"UnsupportedProtocolVersion",
+                        "data":{"supported":[PROTOCOL_VERSION],"requested":version}}
+                }))];
+            }
+            let client = if let Some(info) = meta.get(CLIENT_META) {
+                let Some(name) = info["name"].as_str().filter(|s| {
+                    !s.is_empty() && s.len() <= 256 && !s.chars().any(char::is_control)
+                }) else {
+                    return vec![rpc_error(id, -32602, "Invalid params")];
+                };
+                name.to_owned()
+            } else {
+                "MCP client".into()
+            };
+            (Era::Modern, client)
+        } else {
+            (Era::Legacy, self.legacy_client.clone())
+        };
+        if params.get("_meta").is_some_and(|meta| !meta.is_object()) {
+            return vec![rpc_error(id, -32602, "Invalid params")];
+        }
+        if method == "server/discover" && era == Era::Modern {
+            // The offline notes specify discovery, but omit its exact result schema.
+            // This minimal payload needs verification against the full revision.
+            return vec![rpc_result(
+                id,
+                json!({
+                    "protocolVersions":[PROTOCOL_VERSION],
+                    "capabilities":{"tools":{}},
+                    "instructions":tools::DATA_NOTICE
+                }),
+                era,
             )];
         }
         if method == "ping" {
-            return vec![rpc_result(id, json!({}))];
+            return vec![rpc_result(id, json!({}), era)];
         }
-        if !self.ready {
+        if era == Era::Legacy && !self.ready {
             return vec![rpc_error(id, -32600, "Initialize the session first")];
+        }
+        if !["tools/list", "tools/call"].contains(&method) {
+            // No invented subscriptions/listen schema and no unsolicited modern
+            // list-changed notifications. Clients can request a fresh tools/list.
+            return vec![rpc_error(id, -32601, "Method not found")];
+        }
+        let mut effects = self.select_client(&client);
+        effects.extend(self.request(id, method, params, era));
+        effects
+    }
+
+    fn request(&mut self, id: Value, method: &str, params: &Value, era: Era) -> Vec<Effect> {
+        if self
+            .pending
+            .values()
+            .chain(&self.lists)
+            .any(|pending| pending.rpc_id == id)
+        {
+            return vec![rpc_error(id, -32600, "Duplicate request id")];
+        }
+        if self.pending.len() + self.lists.len() >= MAX_PENDING {
+            if method == "tools/list" {
+                return vec![rpc_error(id, -32603, "Too many pending requests")];
+            }
+            return vec![tool_error(id, "rate_limited", era)];
         }
         if method == "tools/list" {
             if params.get("cursor").is_some() {
                 return vec![rpc_error(id, -32602, "Invalid params")];
             }
-            let mut effects = self.connect();
-            effects.push(rpc_result(id, tools::list(self.level)));
-            return effects;
-        }
-        if method != "tools/call" {
-            return vec![rpc_error(id, -32601, "Method not found")];
+            if !self.connected || !self.paired || self.welcome.is_none() {
+                self.lists.push(Pending {
+                    rpc_id: id,
+                    progress: None,
+                    era,
+                });
+                return self.connect();
+            }
+            return vec![rpc_result(id, tools::list(self.level), era)];
         }
         let arguments = &params["arguments"];
         let (Some(tool), Some(action)) = (params["name"].as_str(), arguments["action"].as_str())
@@ -298,12 +433,6 @@ impl Mcp {
         {
             return vec![rpc_error(id, -32602, "Invalid params")];
         }
-        if self.pending.values().any(|pending| pending.rpc_id == id) {
-            return vec![rpc_error(id, -32600, "Duplicate request id")];
-        }
-        if self.pending.len() >= MAX_PENDING {
-            return vec![tool_error(id, "rate_limited")];
-        }
         if !self.connected || !self.paired || !self.problem.is_empty() {
             let mut effects = self.connect();
             effects.push(tool_error(
@@ -313,6 +442,7 @@ impl Mcp {
                 } else {
                     self.problem
                 },
+                era,
             ));
             return effects;
         }
@@ -325,6 +455,7 @@ impl Mcp {
             pipe_id,
             Pending {
                 rpc_id: id,
+                era,
                 progress: if progress.is_null() {
                     None
                 } else {
@@ -373,12 +504,13 @@ impl Mcp {
                     return vec![];
                 };
                 if !ok {
-                    return vec![tool_error(pending.rpc_id, "invalid")];
+                    return vec![tool_error(pending.rpc_id, "invalid", pending.era)];
                 }
                 let payload = json!({"value":value,"rev":rev});
                 vec![rpc_result(
                     pending.rpc_id,
                     json!({"content":[{"type":"text","text":payload.to_string()}],"structuredContent":payload,"isError":false}),
+                    pending.era,
                 )]
             }
             ServerMessage::Error {
@@ -388,9 +520,9 @@ impl Mcp {
                     self.refresh_id = None;
                     return self.set_level(Level::Off);
                 }
-                self.pending
-                    .remove(&id)
-                    .map_or_else(Vec::new, |pending| vec![tool_error(pending.rpc_id, &code)])
+                self.pending.remove(&id).map_or_else(Vec::new, |pending| {
+                    vec![tool_error(pending.rpc_id, &code, pending.era)]
+                })
             }
             ServerMessage::Error { code, .. } => {
                 let code = match code.as_str() {
@@ -445,7 +577,9 @@ impl Mcp {
                 let pending: Vec<_> = self
                     .pending
                     .iter()
-                    .filter(|(key, _)| id.is_none_or(|id| id == **key))
+                    .filter(|(key, pending)| {
+                        pending.era == Era::Legacy && id.is_none_or(|id| id == **key)
+                    })
                     .collect();
                 pending.into_iter().filter_map(|(_, pending)| pending.progress.as_ref().map(|token| Effect::Output(json!({
                     "jsonrpc":"2.0","method":"notifications/progress","params":{"progressToken":token,"progress":0,"message":"Waiting for the person to confirm in the Notaya window."}
@@ -475,8 +609,8 @@ mod tests {
     }
     fn initialized() -> Mcp {
         let mut mcp = Mcp::default();
-        let result = output(&mcp.input(json!({"jsonrpc":"2.0","id":"init","method":"initialize","params":{"protocolVersion":PROTOCOL_VERSION,"capabilities":{},"clientInfo":{"name":"Codex","version":"1"}}})));
-        assert_eq!(result[0]["result"]["protocolVersion"], PROTOCOL_VERSION);
+        let result = output(&mcp.input(json!({"jsonrpc":"2.0","id":"init","method":"initialize","params":{"protocolVersion":LEGACY_VERSION,"capabilities":{},"clientInfo":{"name":"Codex","version":"1"}}})));
+        assert_eq!(result[0]["result"]["protocolVersion"], LEGACY_VERSION);
         assert_eq!(
             result[0]["result"]["capabilities"]["tools"]["listChanged"],
             true
@@ -492,6 +626,285 @@ mod tests {
     }
     fn call(id: Value) -> Value {
         json!({"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":"notaya_page","arguments":{"action":"page.get","params":{"format":"blocks"}},"_meta":{"progressToken":"p"}}})
+    }
+
+    fn modern(mut request: Value) -> Value {
+        request["params"]["_meta"][VERSION_META] = json!(PROTOCOL_VERSION);
+        request["params"]["_meta"][CAPABILITIES_META] = json!({});
+        request["params"]["_meta"][CLIENT_META] = json!({"name":"Codex","version":"1"});
+        request
+    }
+
+    fn fake_reply(mcp: &mut Mcp, message: ServerMessage) -> Vec<Effect> {
+        let mut bytes = Vec::new();
+        write_frame(&mut bytes, &message, MAX_RESPONSE).unwrap();
+        mcp.server(read_frame(&mut Cursor::new(bytes), MAX_RESPONSE).unwrap())
+    }
+
+    fn fake_call(effects: &[Effect]) -> u64 {
+        let message = effects
+            .iter()
+            .find_map(|effect| match effect {
+                Effect::Send(message) => Some(message),
+                _ => None,
+            })
+            .unwrap();
+        let mut bytes = Vec::new();
+        write_frame(&mut bytes, message, MAX_REQUEST).unwrap();
+        let ClientMessage::Call { id, action, .. } =
+            read_frame(&mut Cursor::new(bytes), MAX_REQUEST).unwrap()
+        else {
+            panic!("expected tool call");
+        };
+        assert_eq!(action, "page.get");
+        id
+    }
+
+    fn assert_modern(result: &Value) {
+        assert_eq!(result["resultType"], "complete");
+        assert_eq!(
+            result["_meta"]["io.modelcontextprotocol/serverInfo"],
+            server_info()
+        );
+    }
+
+    #[test]
+    fn modern_discover_and_fake_pipe_work_without_initialization() {
+        let mut mcp = Mcp::default();
+        let discover =
+            modern(json!({"jsonrpc":"2.0","id":1,"method":"server/discover","params":{}}));
+        let result = output(&mcp.input(discover));
+        assert_modern(&result[0]["result"]);
+        assert_eq!(
+            result[0]["result"]["protocolVersions"],
+            json!([PROTOCOL_VERSION])
+        );
+        assert!(
+            result[0]["result"]["capabilities"]["tools"]
+                .get("listChanged")
+                .is_none()
+        );
+        assert!(!mcp.initialized && !mcp.ready && !mcp.connected);
+
+        let effects = mcp.input(modern(
+            json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}),
+        ));
+        assert!(matches!(&effects[0], Effect::Connect(name) if name == "Codex"));
+        assert!(
+            output(&effects).is_empty(),
+            "wait for the authenticated tool list"
+        );
+        mcp.connected(true);
+        let result = output(&fake_reply(
+            &mut mcp,
+            ServerMessage::Welcome {
+                notaya_version: "fake".into(),
+                level: Level::Look,
+                locked: false,
+            },
+        ));
+        assert_eq!(result.len(), 1, "no unsolicited legacy list-changed");
+        assert_eq!(result[0]["id"], 2);
+        assert_modern(&result[0]["result"]);
+        assert_eq!(result[0]["result"]["tools"].as_array().unwrap().len(), 9);
+
+        let id = fake_call(&mcp.input(modern(call(json!(3)))));
+        assert!(
+            fake_reply(
+                &mut mcp,
+                ServerMessage::Event {
+                    kind: EventKind::ConfirmPending,
+                    id: Some(id),
+                    level: None,
+                }
+            )
+            .is_empty(),
+            "no undocumented modern progress notification"
+        );
+        let exact = "\u{200f}\u{645}\u{644}\u{627}\u{62d}\u{638}\u{627}\u{62a}  \n\tcode  ";
+        let result = output(&fake_reply(
+            &mut mcp,
+            ServerMessage::Result {
+                id,
+                ok: true,
+                value: json!({"text":exact}),
+                rev: Some(7),
+            },
+        ));
+        assert_eq!(
+            result[0]["result"]["structuredContent"]["value"]["text"],
+            exact
+        );
+        assert_modern(&result[0]["result"]);
+
+        let id = fake_call(&mcp.input(modern(call(json!(4)))));
+        let cancelled = mcp.input(
+            json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":4}}),
+        );
+        assert!(
+            matches!(cancelled[0], Effect::Send(ClientMessage::Cancel { id: actual }) if actual == id)
+        );
+        assert!(
+            fake_reply(
+                &mut mcp,
+                ServerMessage::Result {
+                    id,
+                    ok: true,
+                    value: json!({}),
+                    rev: None
+                }
+            )
+            .is_empty()
+        );
+        assert!(
+            fake_reply(
+                &mut mcp,
+                ServerMessage::Event {
+                    kind: EventKind::LevelChanged,
+                    id: None,
+                    level: Some(Level::Edit)
+                }
+            )
+            .is_empty()
+        );
+        let result = output(&mcp.input(modern(
+            json!({"jsonrpc":"2.0","id":5,"method":"tools/list","params":{}}),
+        )));
+        assert_eq!(result[0]["result"]["tools"].as_array().unwrap().len(), 10);
+        let result = output(&mcp.input(modern(
+            json!({"jsonrpc":"2.0","id":6,"method":"subscriptions/listen","params":{}}),
+        )));
+        assert_eq!(result[0]["error"]["code"], -32601);
+    }
+
+    #[test]
+    fn modern_metadata_errors_never_connect_to_the_fake_pipe() {
+        let mut mcp = Mcp::default();
+        for params in [
+            json!({}),
+            json!({"_meta":{}}),
+            json!({"_meta":{VERSION_META:PROTOCOL_VERSION}}),
+            json!({"_meta":{CAPABILITIES_META:{}}}),
+            json!({"_meta":{VERSION_META:PROTOCOL_VERSION,CAPABILITIES_META:[]}}),
+        ] {
+            let effects = mcp
+                .input(json!({"jsonrpc":"2.0","id":1,"method":"server/discover","params":params}));
+            assert_eq!(effects.len(), 1);
+            assert_eq!(output(&effects)[0]["error"]["code"], -32602);
+        }
+        let mut request = modern(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}));
+        request["params"]["_meta"][VERSION_META] = json!("2099-01-01");
+        let effects = mcp.input(request.clone());
+        assert_eq!(effects.len(), 1);
+        let result = output(&effects);
+        assert_eq!(result[0]["error"]["code"], -32022);
+        assert_eq!(
+            result[0]["error"]["data"],
+            json!({"supported":[PROTOCOL_VERSION],"requested":"2099-01-01"})
+        );
+        assert!(!mcp.connecting && !mcp.initialized);
+        // Selecting legacy semantics must not bypass modern validation.
+        let mut legacy = initialized();
+        assert_eq!(output(&legacy.input(request))[0]["error"]["code"], -32022);
+        let missing = json!({"jsonrpc":"2.0","id":3,"method":"tools/list","params":{"_meta":{VERSION_META:PROTOCOL_VERSION}}});
+        assert_eq!(output(&legacy.input(missing))[0]["error"]["code"], -32602);
+    }
+
+    #[test]
+    fn mixed_era_pipe_replies_retain_each_requests_envelope() {
+        let mut mcp = initialized();
+        let modern_id = fake_call(&mcp.input(modern(call(json!(1)))));
+        let legacy_id = fake_call(&mcp.input(call(json!(2))));
+        let result = output(&fake_reply(
+            &mut mcp,
+            ServerMessage::Result {
+                id: legacy_id,
+                ok: true,
+                value: json!({}),
+                rev: None,
+            },
+        ));
+        assert!(result[0]["result"].get("resultType").is_none());
+        let result = output(&fake_reply(
+            &mut mcp,
+            ServerMessage::Error {
+                id: Some(modern_id),
+                code: "private".into(),
+                message: "private note".into(),
+            },
+        ));
+        assert_modern(&result[0]["result"]);
+        assert!(!result[0].to_string().contains("private"));
+        let modern_id = fake_call(&mcp.input(modern(call(json!(3)))));
+        let result = output(&fake_reply(
+            &mut mcp,
+            ServerMessage::Result {
+                id: modern_id,
+                ok: true,
+                value: json!({}),
+                rev: None,
+            },
+        ));
+        assert_modern(&result[0]["result"]);
+        let result = output(&mcp.input(json!({"jsonrpc":"2.0","id":4,"method":"ping"})));
+        assert_eq!(result[0]["result"], json!({}));
+    }
+
+    #[test]
+    fn changing_modern_client_drops_the_old_pairing_and_pending_requests() {
+        let mut mcp = initialized();
+        mcp.input(modern(call(json!(1))));
+        let mut request = modern(json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}));
+        request["params"]["_meta"][CLIENT_META]["name"] = json!("Claude Code");
+        let effects = mcp.input(request);
+        assert!(effects.iter().any(|effect| matches!(effect, Effect::Close)));
+        assert!(
+            effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::Connect(name) if name == "Claude Code"))
+        );
+        let result = output(&effects);
+        let failed = result.iter().find(|value| value["id"] == 1).unwrap();
+        assert_modern(&failed["result"]);
+        assert_eq!(mcp.level, Level::Off);
+        assert!(!mcp.paired && mcp.pending.is_empty());
+        let result = output(&mcp.disconnected("not_running"));
+        assert_eq!(result[0]["id"], 2);
+        assert_modern(&result[0]["result"]);
+        assert_eq!(result[0]["result"]["tools"], json!([]));
+    }
+
+    #[test]
+    fn legacy_negotiates_earlier_versions_and_waits_for_initialized() {
+        for (requested, expected) in [
+            ("2024-11-05", "2024-11-05"),
+            ("2025-03-26", "2025-03-26"),
+            ("2025-06-18", "2025-06-18"),
+            (LEGACY_VERSION, LEGACY_VERSION),
+            ("unknown", LEGACY_VERSION),
+        ] {
+            let mut mcp = Mcp::default();
+            let result = output(&mcp.input(json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":requested,"capabilities":{},"clientInfo":{"name":"Codex"}}})));
+            assert_eq!(result[0]["result"]["protocolVersion"], expected);
+            assert!(result[0]["result"].get("resultType").is_none());
+            assert_eq!(
+                output(&mcp.input(json!({"jsonrpc":"2.0","id":2,"method":"tools/list"})))[0]["error"]
+                    ["code"],
+                -32600
+            );
+            let effects = mcp.input(json!({"jsonrpc":"2.0","method":"notifications/initialized"}));
+            assert!(matches!(&effects[0], Effect::Connect(name) if name == "Codex"));
+            mcp.connected(true);
+            let changed = output(&fake_reply(
+                &mut mcp,
+                ServerMessage::Welcome {
+                    notaya_version: "fake".into(),
+                    level: Level::Look,
+                    locked: false,
+                },
+            ));
+            assert_eq!(changed[0]["method"], "notifications/tools/list_changed");
+        }
     }
 
     #[test]
