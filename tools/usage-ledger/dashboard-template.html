@@ -2,451 +2,505 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: a ledger page. Credit first, then totals, the sessions chart, quota windows, the full table, then where the records live. */
+/* Layout: the limits right now, the forecast (the main part), where the usage went, how the forecast is built, then the detail tables. */
 :root {
-  --bg: #f1f5f3;
-  --surface: #ffffff;
-  --surface-2: #e9efec;
-  --ink: #12201c;
-  --muted: #55665f;
-  --line: #cfdad5;
-  --accent: #0d5f54;
-  --accent-ink: #ffffff;
-  --sonnet: #12968a;
-  --opus: #6a5acd;
-  --both: #8a8f8d;
-  --warn: #9a4d00;
-  --warn-bg: #fbeedd;
-  --good: #14693b;
+  /* The same palette as the Notaya Roadmap page: leaf green on a white-ish, green-tinted neutral. Light is the default. */
+  --bg: #fbfcfa; --surface: #ffffff; --surface-2: #eef2ec; --ink: #16201b; --muted: #68746d; --line: #d9dfd5;
+  --accent: #1d7556; --accent-ink: #ffffff;
+  --claude: #1d7556; --codex: #b8591a; --opus: #6a5acd; --sonnet: #12968a; --both: #8a8f8d;
+  --warn: #8f5300; --warn-bg: #fbebcc; --good: #14693b; --bad: #a3282f;
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0e1513; --surface: #16201e; --surface-2: #1d2a27; --ink: #e3eeea; --muted: #92a69f;
-    --line: #2b3b37; --accent: #5fd3c2; --accent-ink: #0c1412; --sonnet: #14a090; --opus: #7a76e6;
-    --both: #7d8885; --warn: #f0b36b; --warn-bg: #2e2415; --good: #6fd29b; color-scheme: dark;
+  :root[data-theme="auto"] {
+    --bg: #0f1512; --surface: #17201b; --surface-2: #1e2923; --ink: #e7eee9; --muted: #85928a; --line: #2a3830;
+    --accent: #4fc79a; --accent-ink: #0b1712; --claude: #4fc79a; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
+    --warn: #f0b658; --warn-bg: #3a2c12; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0e1513; --surface: #16201e; --surface-2: #1d2a27; --ink: #e3eeea; --muted: #92a69f;
-  --line: #2b3b37; --accent: #5fd3c2; --accent-ink: #0c1412; --sonnet: #14a090; --opus: #7a76e6;
-  --both: #7d8885; --warn: #f0b36b; --warn-bg: #2e2415; --good: #6fd29b; color-scheme: dark;
+  --bg: #0f1512; --surface: #17201b; --surface-2: #1e2923; --ink: #e7eee9; --muted: #85928a; --line: #2a3830;
+  --accent: #4fc79a; --accent-ink: #0b1712; --claude: #4fc79a; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
+  --warn: #f0b658; --warn-bg: #3a2c12; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body {
-  background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.5;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 24px 56px;
-}
-main { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
-h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 56px; }
+main { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; font-family: var(--font-display); letter-spacing: -0.01em; }
 h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 700; letter-spacing: -0.01em; }
-h2 { font-size: 20px; font-weight: 650; display: flex; gap: 10px; align-items: baseline; }
-h2 .em { font-size: 18px; }
+h2 { font-size: 21px; font-weight: 650; display: flex; gap: 10px; align-items: baseline; }
 h3 { font-size: 15px; font-weight: 600; }
-p { margin: 0; max-width: 68ch; }
+p { margin: 0; max-width: 70ch; }
 .mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.muted { color: var(--muted); }
-.small { font-size: 13px; }
+.muted { color: var(--muted); } .small { font-size: 13px; }
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
 header { display: flex; flex-direction: column; gap: 12px; }
 .kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--ink); }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .pill { font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); }
 .pill b { color: var(--ink); font-weight: 600; }
-
 section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; min-width: 0; }
-.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-.stat { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+.stat { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); min-width: 0; }
 .stat .label { font-size: 12.5px; color: var(--muted); }
-.stat .value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.stat .value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
 .stat .sub { font-size: 12.5px; color: var(--muted); }
-
-/* credit bar */
-.credit-bar { position: relative; height: 26px; background: var(--surface-2); border-radius: 4px; overflow: hidden; display: flex; margin-top: 6px; }
-.seg { height: 100%; }
-.seg.rep { background: var(--accent); }
-.seg.est1 { background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 7px); opacity: .75; }
-.meter { height: 10px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
-.meter > div { height: 100%; background: var(--accent); }
-.meter > div.warn { background: var(--warn); }
-.ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 4px; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+.meter { position: relative; height: 12px; background: var(--surface-2); border-radius: 3px; overflow: visible; }
+.meter > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--claude); }
+.meter.codex > i { background: var(--codex); }
+.meter > u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.note { background: var(--warn-bg); color: var(--ink); border-left: 3px solid var(--warn); padding: 10px 14px; font-size: 13.5px; border-radius: 0 4px 4px 0; max-width: 80ch; }
+.note.big { font-size: 15px; }
+.badge { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; display: inline-block; }
+.badge.m { border-color: var(--good); color: var(--good); } .badge.r { border-color: var(--warn); color: var(--warn); } .badge.u { border-color: var(--bad); color: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
 .legend span { display: inline-flex; gap: 7px; align-items: center; }
 .sw { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
-.sw.rep { background: var(--accent); }
-.sw.est1 { background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 7px); border: 1px solid var(--accent); }
-.sw.est2 { background: repeating-linear-gradient(135deg, var(--accent) 0 1.5px, transparent 1.5px 7px); border: 1px solid var(--line); }
-.sw.sonnet { background: var(--sonnet); } .sw.opus { background: var(--opus); } .sw.both { background: var(--both); }
-
-.note { background: var(--warn-bg); color: var(--ink); border-left: 3px solid var(--warn); padding: 10px 14px; font-size: 13.5px; border-radius: 0 4px 4px 0; max-width: 78ch; }
-
-/* tables */
 .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
 th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 tbody tr:last-child td { border-bottom: 0; }
-th { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-2); letter-spacing: .02em; white-space: nowrap; position: sticky; top: 0; }
-th button { all: unset; cursor: pointer; font: inherit; color: inherit; display: inline-flex; gap: 4px; align-items: center; }
-th button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-td.r, th.r { text-align: right; }
-td.nw { white-space: nowrap; }
-td.task { min-width: 230px; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
+td.r, th.r { text-align: right; } td.nw { white-space: nowrap; }
 td .sub { display: block; font-size: 12px; color: var(--muted); }
-.tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; }
-.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.dot.sonnet { background: var(--sonnet); } .dot.opus { background: var(--opus); } .dot.both { background: var(--both); }
-.badge { font-size: 11.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-.badge.live { border-color: var(--good); color: var(--good); }
-.badge.est { border-color: var(--warn); color: var(--warn); }
-
 .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.chips .grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.chips .glabel { font-size: 12.5px; color: var(--muted); margin-right: 2px; }
-.chip { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip { font: inherit; font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-
-/* bar chart of weighted tokens */
-.rows { display: flex; flex-direction: column; gap: 6px; }
-.row { display: grid; grid-template-columns: minmax(120px, 270px) 1fr; gap: 12px; align-items: center; }
+.sliders { display: grid; gap: 14px 22px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.sliders label { display: grid; gap: 3px; font-size: 13px; min-width: 0; }
+.sliders output { font: 600 14px var(--font-mono); }
+.sliders input { width: 100%; accent-color: var(--accent); }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--font-sans); fill: var(--ink); }
+svg .ax { fill: var(--muted); font-size: 11px; font-family: var(--font-mono); }
+svg .grid { stroke: var(--line); stroke-width: 1; }
+.rows { display: flex; flex-direction: column; gap: 7px; }
+.row { display: grid; grid-template-columns: minmax(120px, 250px) 1fr; gap: 12px; align-items: center; }
 .row .name { font-size: 13px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
 .row .name small { display: block; color: var(--muted); font-size: 11.5px; }
-.track { position: relative; height: 22px; display: flex; align-items: center; min-width: 0; }
-.bar { height: 14px; border-radius: 0 4px 4px 0; min-width: 2px; }
-.bar.sonnet { background: var(--sonnet); } .bar.opus { background: var(--opus); } .bar.both { background: var(--both); }
-.bar.none { background: transparent; border: 1px dashed var(--muted); width: 28px; }
-.val { font-family: var(--font-mono); font-size: 12px; color: var(--ink); margin-left: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.axis { margin-left: calc(min(270px, 100%) + 12px); }
-
-/* window timeline */
-.gantt { display: flex; flex-direction: column; gap: 4px; }
-.grow { display: grid; grid-template-columns: minmax(110px, 230px) 1fr; gap: 12px; align-items: center; }
-.glane { position: relative; height: 16px; background: var(--surface-2); border-radius: 3px; background-image: linear-gradient(to right, var(--line) 1px, transparent 1px); background-size: 20% 100%; }
-.gbar { position: absolute; top: 3px; height: 10px; border-radius: 3px; min-width: 3px; }
-.gbar.sonnet { background: var(--sonnet); } .gbar.opus { background: var(--opus); } .gbar.both { background: var(--both); }
-.now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); }
-.gaxis { display: grid; grid-template-columns: minmax(110px, 230px) 1fr; gap: 12px; }
-.gaxis .labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
-
-.cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
-.qcard { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.qcard .t { font-size: 12.5px; color: var(--muted); }
-.qcard .s { font-weight: 600; font-size: 16px; }
-.qcard .s.ok { color: var(--good); }
-.qcard .s.none { color: var(--warn); }
+.track { display: flex; align-items: center; min-width: 0; height: 20px; }
+.bar { height: 14px; border-radius: 0 4px 4px 0; min-width: 2px; background: var(--claude); }
+.bar.codex { background: var(--codex); }
+.val { font-family: var(--font-mono); font-size: 12px; margin-left: 8px; white-space: nowrap; }
+.stack { display: flex; height: 30px; border-radius: 4px; overflow: hidden; background: var(--surface-2); }
+.stack > div { min-width: 2px; display: flex; align-items: center; justify-content: center; font: 500 11.5px var(--font-mono); color: #fff; overflow: hidden; }
 .files { display: grid; gap: 10px; }
-.file { display: grid; grid-template-columns: minmax(150px, 230px) 1fr; gap: 6px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.file:last-child { border-bottom: 0; }
-.file code { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
-ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 78ch; }
-ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 78ch; }
-@media (max-width: 640px) {
-  .row, .grow, .gaxis { grid-template-columns: 1fr; gap: 3px; }
-  .axis { margin-left: 0; }
-  .file { grid-template-columns: 1fr; }
-  .stat .value { font-size: 21px; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .bar, .seg { transition: width .4s ease; }
-}
+.file { display: grid; grid-template-columns: minmax(170px, 250px) 1fr; gap: 6px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.file:last-child { border-bottom: 0; } .file code { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+ul.plain, ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+@media (max-width: 640px) { .row { grid-template-columns: 1fr; gap: 3px; } .file { grid-template-columns: 1fr; } .stat .value { font-size: 22px; } }
 </style>
 
 <main>
   <header>
-    <div class="kicker">Notaya · Ahmed's side (AE0101)</div>
+    <div class="topline"><div class="kicker">Notaya · Ahmed's side (AE0101)</div><button type="button" class="btn" id="themebtn" title="Switch theme">Theme: Light</button></div>
     <h1>Notaya usage ledger</h1>
-    <p>Where Claude and Codex work went on this project, what it cost against the $100 cloud credit, and how the 5-hour and weekly limits stand. Numbers come from <span class="mono">docs/ledger/</span> in the repository.</p>
+    <p>What Claude and Codex are using, where it goes, and how far the quotas reach through the plan from 1.6 to 2.5. The numbers come from <span class="mono">docs/ledger/</span> in the repository. <span class="badge m">measured</span> means read from a screen or a record. <span class="badge r">rough guess</span> means my estimate, and it is marked wherever it is used.</p>
     <div class="pills" id="pills"></div>
   </header>
 
-  <section id="credit" aria-labelledby="h-credit">
-    <h2 id="h-credit"><span class="em">💳</span> The $100 credit</h2>
-    <div class="grid" id="creditStats"></div>
-    <div class="panel">
-      <h3>Credit used, as read from the credit screen</h3>
-      <div class="credit-bar" role="img" id="creditBar"></div>
-      <div class="ticks"><span>$0</span><span>$25</span><span>$50</span><span>$75</span><span>$100</span></div>
-      <div class="legend" id="creditLegend"></div>
-    </div>
-    <p class="note" id="creditNote"></p>
-  </section>
-
-  <section id="totals" aria-labelledby="h-totals">
-    <h2 id="h-totals"><span class="em">📊</span> Totals so far</h2>
-    <div class="grid" id="totalStats"></div>
-    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-      <div class="tablewrap"><table id="modelTable"></table></div>
-      <div class="tablewrap"><table id="machineTable"></table></div>
-    </div>
-    <p class="small muted" id="weightNote"></p>
-  </section>
-
-  <section id="chart" aria-labelledby="h-chart">
-    <h2 id="h-chart"><span class="em">🔎</span> Where the tokens went</h2>
-    <div class="panel">
-      <div class="legend" style="margin: 0 0 12px"><span><i class="sw opus"></i>Opus 5.5</span><span><i class="sw sonnet"></i>Sonnet 5.5</span><span><i class="sw both"></i>Both models</span><span><i class="dot" style="border:1px dashed var(--muted);width:14px;border-radius:2px;height:10px"></i>No numbers yet</span></div>
-      <div class="rows" id="barRows"></div>
-      <p class="small muted" style="margin-top:12px">Bars show weighted tokens (fresh input ×1, cache write ×1.25, cache read ×0.1, output ×5). Most of the volume is cache reads: threads re-reading large records.</p>
-    </div>
-  </section>
-
-  <section id="screen" aria-labelledby="h-screen">
-    <h2 id="h-screen"><span class="em">🧮</span> The platform's own count</h2>
-    <p class="small muted" id="screenNote"></p>
-    <div class="grid" id="screenStats"></div>
-    <div class="tablewrap"><table id="screenTable"></table></div>
-  </section>
-
-  <section id="quota" aria-labelledby="h-quota">
-    <h2 id="h-quota"><span class="em">⏱️</span> Usage limits: 5-hour and weekly</h2>
-    <div class="cards" id="quotaCards"></div>
-    <div class="panel">
-      <h3>The current Claude 5-hour window, session by session</h3>
-      <p class="small muted" style="margin:4px 0 12px" id="ganttNote"></p>
-      <div class="gantt" id="gantt"></div>
-      <div class="gaxis" style="margin-top:6px"><span></span><div class="labels" id="gaxis"></div></div>
-    </div>
-    <p class="small muted">Pacing limits are not set for Notaya. Ahmed's rule (2026-11-07 20:41 UTC): no spending cap per hour; the coordinator watches both limits so work is not cut off by surprise. FFmpeg's 80% and 90% ceilings are not adopted here.</p>
-  </section>
-
-  <section id="table" aria-labelledby="h-table">
-    <h2 id="h-table"><span class="em">📒</span> Every session</h2>
-    <p class="small muted">Each row says whose side the work is on (partner), which Claude account, and which machine ran it (rule A38). The newest reading of a session replaces its older one.</p>
-    <div class="chips" id="filters"></div>
-    <div class="tablewrap"><table id="sessionTable"></table></div>
-    <h3 style="margin-top:6px">Codex runs</h3>
-    <div class="panel" id="codexBox"></div>
+  <section id="now" aria-labelledby="h-now">
+    <h2 id="h-now">⏱️ The limits right now</h2>
+    <div class="grid" id="gauges"></div>
+    <p class="small muted" id="gaugeNote"></p>
   </section>
 
   <section id="forecast" aria-labelledby="h-forecast">
-    <h2 id="h-forecast"><span class="em">🔮</span> Pace forecast</h2>
-    <p class="small muted">A forecast, not a measurement. Measured: one Codex 5-hour window used 15% of the Codex week, so a week holds about 6.5 windows. Assumed: how far the cut-off lanes had got, and the cost per plan point for 1.7 onward.</p>
+    <h2 id="h-forecast">🔮 What can be finished, version by version</h2>
+    <div class="note big" id="headline"></div>
+    <div class="panel">
+      <div class="chips" id="presets" role="group" aria-label="Forecast presets"></div>
+      <div class="sliders" id="sliders"></div>
+      <p class="small muted">Move a slider to see how the dates change. The best and worst dates always move the shaky numbers together (speed, extra work, Claude's share, the pause), so the range is wide on purpose.</p>
+    </div>
+    <div class="panel">
+      <h3>When each version is built</h3>
+      <p class="small muted">Each bar runs from the moment its work starts to the moment Claude has reviewed it (the <b>code is done</b>). The line behind it is the best-to-worst range. The pause for the PC round and your review comes after the bar and is already counted before the next one.</p>
+      <div style="overflow-x:auto"><svg id="gantt" style="min-width:600px" role="img" aria-label="Timeline of the ten versions"></svg></div>
+      <div class="legend" id="ganttLegend"></div>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <h3>Codex allowance left (windows)</h3>
+        <p class="small muted">Drops as work is done, jumps up at the weekly reset and at each banked reset.</p>
+        <svg id="saw1" role="img" aria-label="Codex allowance over time"></svg>
+      </div>
+      <div class="panel">
+        <h3>Claude allowance left (% of the week, up to the 70% cap)</h3>
+        <p class="small muted">Chat, records and reviewing every lane draw it down; it refills each Friday at 02:00 UTC.</p>
+        <svg id="saw2" role="img" aria-label="Claude allowance over time"></svg>
+      </div>
+    </div>
     <div class="tablewrap"><table id="forecastTable"></table></div>
-    <p class="small muted" id="forecastBasis" style="margin-top:8px"></p>
+    <p class="small muted" id="forecastNote"></p>
   </section>
 
   <section id="where" aria-labelledby="h-where">
-    <h2 id="h-where"><span class="em">📁</span> Where this is tracked</h2>
-    <div class="panel">
-      <div class="files">
-        <div class="file"><code>docs/ledger/claude-sessions.csv</code><span>One row per Claude session or task: partner, machine, model, effort, four token counts, weighted tokens, reported cost, and where each number came from.</span></div>
-        <div class="file"><code>docs/ledger/codex-runs.csv</code><span>One row per Codex run: tokens from Codex's own report and the 5-hour and weekly percentages before and after.</span></div>
-        <div class="file"><code>docs/ledger/pace-forecast.csv</code><span>The pace forecast: plan points per version turned into Codex windows and weeks, with the assumptions written in each row.</span></div>
-        <div class="file"><code>docs/ledger/quota-readings.csv</code><span>Each time someone read a limit (Claude usage screen, Codex status, credit balance), with who read it and when it resets.</span></div>
-        <div class="file"><code>docs/ledger/usage-ledger.md</code><span>The plain-language reading, newest on top: totals, what they mean for pace, and what was not measured.</span></div>
-        <div class="file"><code>docs/ledger/README.md</code><span>The rules: units, columns, and how to refresh at every session stop.</span></div>
-        <div class="file"><code>tools/usage-ledger/</code><span>The transcript scanner for PC sessions, and the script that builds this page from the CSV files.</span></div>
+    <h2 id="h-where">📊 Where the usage went</h2>
+    <div class="two">
+      <div class="panel">
+        <h3>Claude: threads using the most <span class="badge m">measured</span></h3>
+        <p class="small muted" id="screenNote"></p>
+        <div class="rows" id="screenBars"></div>
+      </div>
+      <div class="panel">
+        <h3>Claude: what the work was <span class="badge r">my grouping</span></h3>
+        <p class="small muted" id="catNote"></p>
+        <div class="stack" id="catStack"></div>
+        <div class="legend" id="catLegend"></div>
+        <div class="tablewrap"><table id="catTable"></table></div>
       </div>
     </div>
-    <div class="panel">
-      <h3>How a new reading gets in</h3>
-      <ol class="steps" style="margin-top:8px">
-        <li>Cloud threads and the coordinator: copy the usage block of each session record into <span class="mono">claude-sessions.csv</span>.</li>
-        <li>Sessions on the PC: run the scanner on the session's transcript and copy its line.</li>
-        <li>Codex: after each run, write its tokens and the quota before and after.</li>
-        <li>Limits: add a reading whenever someone looks at them, and once at each session stop.</li>
-        <li>Rebuild this page from the CSV files and publish it to the same link.</li>
-      </ol>
+    <div class="two">
+      <div class="panel">
+        <h3>Codex: the first cycle, lane by lane <span class="badge m">measured</span></h3>
+        <p class="small muted" id="codexNote"></p>
+        <div class="rows" id="codexBars"></div>
+      </div>
+      <div class="panel">
+        <h3>The weekly limits so far <span class="badge m">measured</span></h3>
+        <p class="small muted">Each dot is a reading of the limit. The line at 70% is the cap Ahmed set for Claude.</p>
+        <svg id="weekChart" role="img" aria-label="Weekly limits used over time"></svg>
+        <div class="legend"><span><i class="sw" style="background:var(--claude)"></i>Claude week</span><span><i class="sw" style="background:var(--codex)"></i>Codex week</span></div>
+      </div>
     </div>
+    <div class="two" id="modelPanels"></div>
+  </section>
+
+  <section id="how" aria-labelledby="h-how">
+    <h2 id="h-how">🧮 How the forecast is built</h2>
+    <ol class="steps">
+      <li><b>Supply.</b> Codex's week holds about <span id="hWpw"></span> full 5-hour windows <span class="badge m">measured</span>. Ahmed has used <span id="hUsed"></span>% of this week. His week resets on 2026-11-14 at 15:44 UTC and every 7 days after. Ahmed has two banked resets; each refills the whole week and the 5-hour window, and is used only after the week is fully spent (Ahmed, 08:57 UTC).</li>
+      <li><b>Work.</b> Each version has a size in plan points (small = 1, medium = 3, large = 6, extra large = 12) from the version plan. Points × extra work ÷ points per window = windows needed.</li>
+      <li><b>Claude's share.</b> Directing, inspecting every diff, merging and records draw from Claude's own weekly limit, which Ahmed capped at 70%. If Claude's allowance is empty, Codex waits, even if Codex has plenty left.</li>
+      <li><b>The calendar.</b> Day by day the model spends what both allowances and the daily window cap allow, adds a pause after each version, and records when each version finishes. Banked resets are used when the weekly allowance is empty and the next weekly reset is over a day away.</li>
+      <li><b>Who pays.</b> Versions finished while Ahmed's own allowance lasts (this week, the Nov 14 reset and the two banked resets) are marked <b>Ahmed's quota</b>. After that point the work runs on Ahmed's weekly Codex allowance only (about one version every 4 to 5 days). Mohamed has no Codex, only a Claude Pro subscription; if he builds with it, the slider adds what his Claude week can build (a guess).</li>
+    </ol>
+    <div class="tablewrap"><table id="inputsTable"></table></div>
+    <h3>What is not known</h3>
+    <ul class="plain" id="unknowns"></ul>
+  </section>
+
+  <section id="detail" aria-labelledby="h-detail">
+    <h2 id="h-detail">📒 The detail</h2>
+    <h3>Codex runs</h3>
+    <div class="tablewrap"><table id="codexTable"></table></div>
+    <h3>Every Claude session</h3>
+    <div class="chips" id="filters"></div>
+    <div class="tablewrap"><table id="sessionTable"></table></div>
+    <h3>Limit readings</h3>
+    <div class="tablewrap"><table id="quotaTable"></table></div>
+  </section>
+
+  <section id="track" aria-labelledby="h-track">
+    <h2 id="h-track">📁 Where this is tracked</h2>
+    <div class="panel"><div class="files">
+      <div class="file"><code>docs/ledger/</code><span>The numbers live here as CSV files: <code>claude-sessions.csv</code>, <code>codex-runs.csv</code>, <code>quota-readings.csv</code>, <code>project-usage-screen.csv</code>, <code>forecast-inputs.csv</code>, <code>forecast-versions.csv</code> and <code>pace-forecast.csv</code>. <code>usage-ledger.md</code> explains each reading in words. This page never owns a fact.</span></div>
+      <div class="file"><code>tools/usage-ledger/</code><span><code>build_dashboard.py</code> builds this page from the CSV files; <code>forecast-model.cjs</code> is the one forecast model, used by this page and to write <code>pace-forecast.csv</code>.</span></div>
+      <div class="file"><code>Refresh</code><span>At every session stop, and after every lane: add the rows, rebuild, publish to the same link.</span></div>
+    </div></div>
   </section>
 
   <section id="gaps" aria-labelledby="h-gaps">
-    <h2 id="h-gaps"><span class="em">⚠️</span> What is not measured</h2>
-    <ul class="plain">
-      <li><b>Mohamed's usage.</b> His sessions run on his own account and are not visible from this side. Only Ahmed's account appears here.</li>
-      <li><b>Limit history.</b> The Claude limits were read once, at 22:32 UTC, from Ahmed's screenshots. They are account-wide and include everything else on the account. The Codex limits were read for the first time at 00:26 to 00:44 UTC on 2026-11-08, from Codex's own rate-limit events (not from <span class="mono">/status</span>). Claude's weekly percentage has not been read since 22:32 UTC.</li>
-      <li><b>Dollars per thread.</b> The credit screen gives one total. Only the cloud sessions carry a dollar figure of their own, so part of the spend is not itemised. Whether the Gaming-PC threads draw from the credit is not shown by any record.</li>
-      <li><b>Work after each reading.</b> Three long threads (records catch-up, session summary, set-up) kept working after the rows the ledger holds. The project's Usage screen shows their later totals.</li>
-      <li><b>Before 2026-11-07 19:08 UTC.</b> Never recorded and not reconstructed.</li>
-    </ul>
+    <h2 id="h-gaps">⚠️ What is not measured</h2>
+    <ul class="plain" id="gapList"></ul>
   </section>
 </main>
 
 <script>
+/*FORECAST_MODEL*/
+</script>
+<script>
 const D = /*LEDGER_DATA*/null;
+const F = D.forecast;
 const $ = (id) => document.getElementById(id);
-const nf = new Intl.NumberFormat("en-US");
-const usd = (v) => "$" + v.toFixed(2);
-const mil = (v) => (v / 1e6).toFixed(2) + "M";
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const mcls = (m) => m === "Opus 5.5" ? "opus" : m === "Sonnet 5.5" ? "sonnet" : "both";
-const hhmm = (iso) => iso ? iso.slice(11, 16) : "n/a";
-const dayhhmm = (iso) => iso ? iso.slice(5, 10) + " " + iso.slice(11, 16) : "not recorded";
-const S = D.sessions;
-const snapMs = Date.parse(D.snapshot);
-const expMs = Date.parse(D.credit.expires);
-const hoursLeftAtSnap = (expMs - snapMs) / 36e5;
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (n, d = 0) => n == null || isNaN(n) ? "n/a" : Number(n).toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: d });
+const M = (n) => (n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "M";
+const day = (ms) => ms == null ? "after Jan 2028" : new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+const dayY = (ms) => ms == null ? "after Jan 2028" : new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const hhmm = (iso) => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false }) + " UTC" : "not recorded";
+const inputOf = (k) => (F.inputsTable.find((r) => r.key === k) || {}).value;
+const num5h = (k) => { const v = inputOf(k); return v === "" || v == null ? null : Number(v); };
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in (attrs || {})) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+function cellsOf(row) { return row.map((c) => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.html != null ? c.html : esc(c.t)}</td>`).join(""); }
+function table(id, head, rows) {
+  $(id).innerHTML = `<thead><tr>${head.map((h) => `<th${h.cls ? ` class="${h.cls}"` : ""}>${esc(h.t || h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${cellsOf(r)}</tr>`).join("")}</tbody>`;
+}
 
-/* header pills */
+
+/* ---------- theme: Light (default, white-ish like the roadmap), Dark, Auto ---------- */
+const THEMES = ["light", "dark", "auto"], TLAB = { light: "Light", dark: "Dark", auto: "Auto" };
+let theme = "light";
+try { const t = localStorage.getItem("notaya-ledger-theme"); if (THEMES.includes(t)) theme = t; } catch (e) {}
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", theme);
+  const b = document.getElementById("themebtn");
+  b.textContent = "Theme: " + TLAB[theme];
+  b.setAttribute("aria-label", "Theme: " + TLAB[theme] + ". Click to change.");
+}
+document.getElementById("themebtn").addEventListener("click", () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  applyTheme();
+  try { localStorage.setItem("notaya-ledger-theme", theme); } catch (e) {}
+});
+applyTheme();
+
+/* ---------- header ---------- */
 $("pills").innerHTML = [
-  ["Snapshot", dayhhmm(D.snapshot) + " UTC"],
-  ["Sessions", S.length],
-  ["Partner", "Ahmed (AE0101)"],
-  ["Machines", Object.keys(D.byMachine).join(" · ")],
+  ["As of", hhmm(F.inp.asOf)], ["Claude plan", "Pro"], ["Codex plan", "Plus, 0 credits"],
+  ["Sessions", fmt(D.sessions.length)], ["Codex runs", fmt(D.codex.length)], ["Built", hhmm(D.built.replace("Z", ":00Z"))],
 ].map(([a, b]) => `<span class="pill">${esc(a)} <b>${esc(b)}</b></span>`).join("");
 
-/* credit */
-const M = D.measured || {};
-const cr = M.credit;
-const tot = cr ? cr.total : D.credit.total;
-const left = cr ? cr.left : tot - D.reported;
-const used = tot - left;
-const itemised = D.reported;
-const notItem = Math.max(0, used - itemised);
-const expIso = cr ? cr.expires : D.credit.expires;
-const expMs2 = Date.parse(expIso);
-const hLeft = (expMs2 - snapMs) / 36e5;
-const hrsSince = (snapMs - Date.parse("2026-11-07T19:08:00Z")) / 36e5;
-$("creditStats").innerHTML = `
-  <div class="stat"><span class="label">Used (measured)</span><span class="value">${usd(used)}</span><span class="sub">${cr ? "credit screen, " + hhmm(cr.time) + " UTC" : "estimated from session records"}</span></div>
-  <div class="stat"><span class="label">Left (measured)</span><span class="value">${usd(left)}</span><span class="sub">${usd(left / hLeft)} an hour spread over ${hLeft.toFixed(1)} h</span></div>
-  <div class="stat"><span class="label">Itemised by session</span><span class="value">${usd(itemised)}</span><span class="sub">${S.filter(s => s.cost != null).length} sessions report a cost</span></div>
-  <div class="stat"><span class="label">Not itemised</span><span class="value">${usd(notItem)}</span><span class="sub">no per-session dollar figure</span></div>
-  <div class="stat"><span class="label">Credit ends</span><span class="value" id="cdown">about ${Math.round(hLeft)} h</span><span class="sub">${dayhhmm(expIso)} UTC${cr ? " (read from the screen)" : " (assumed)"}</span></div>`;
-const pct = (v) => Math.max(0, Math.min(100, v / tot * 100));
-$("creditBar").setAttribute("aria-label", `Used ${usd(used)} of ${usd(tot)}: itemised ${usd(itemised)}, not itemised ${usd(notItem)}, left ${usd(left)}`);
-$("creditBar").innerHTML = `<div class="seg rep" style="width:${pct(itemised)}%"></div><div class="seg est1" style="width:${pct(notItem)}%"></div>`;
-$("creditLegend").innerHTML = `<span><i class="sw rep"></i>Itemised by session records (${usd(itemised)})</span><span><i class="sw est1"></i>Used but not itemised by thread (${usd(notItem)})</span><span><i class="sw" style="background:var(--surface-2);border:1px solid var(--line)"></i>Left (${usd(left)})</span>`;
-const est = D.estimate;
-$("creditNote").innerHTML = `<b>Why ${usd(used)} and not ${usd(itemised)}?</b> The credit screen counts everything charged to the credit. The session records give a dollar figure for only ${S.filter(s => s.cost != null).length} cloud sessions. The Gaming-PC threads and two cloud threads carry tokens but no figure, and three long threads kept working after the readings the ledger holds. The screen gives no per-thread dollars, so the ${usd(notItem)} is not assigned to any thread. A token-based guess for the threads without a figure was ${usd(est[0])} to ${usd(est[1])}; the gap fits that range, which suggests the PC threads draw from the credit but does not prove it. Pace so far: about ${usd(used / hrsSince)} an hour since 19:08 UTC.`;
-(function () {
-  const h = (expMs2 - Date.now()) / 36e5;
-  if (h > 0) $("cdown").textContent = "about " + (h >= 10 ? Math.round(h) : h.toFixed(1)) + " h";
-  else $("cdown").textContent = "past";
+/* ---------- gauges ---------- */
+function gauge(label, pct, sub, kind, cap) {
+  if (pct === null || !isFinite(pct)) {
+    return `<div class="stat"><span class="label">${esc(label)}</span><span class="value">not read</span>
+    <div class="meter ${kind}" role="img" aria-label="${esc(label)}: not read"><i style="width:0%"></i></div>
+    <span class="sub">${sub}</span></div>`;
+  }
+  return `<div class="stat"><span class="label">${esc(label)}</span><span class="value">${fmt(pct)}% used</span>
+    <div class="meter ${kind}" role="img" aria-label="${esc(label)}: ${pct}% used"><i style="width:${Math.min(100, pct)}%"></i>${cap ? `<u style="left:${cap}%" title="the ${cap}% cap"></u>` : ""}</div>
+    <span class="sub">${sub}</span></div>`;
+}
+$("gauges").innerHTML =
+  gauge("Claude, this week", F.inp.claudeUsed, `The black line is Ahmed's ${F.inp.claudeCap}% cap. Resets Fri 13 Nov 02:00 UTC. <span class="badge m">measured</span>`, "claude", F.inp.claudeCap) +
+  gauge("Claude, this 5-hour window", num5h("claude_5h_used_pct"), num5h("claude_5h_used_pct") === null ? `Not read at the as-of time (the last reading belongs to a window that has since reset). The next heartbeat reading fills it.` : `Resets ${hhmm(inputOf("claude_5h_reset_utc"))}. <span class="badge m">measured</span>`, "claude") +
+  gauge("Codex, this week", F.inp.codexUsed, `Resets Sat 14 Nov 15:44 UTC (earlier reading). About ${fmt((1 - F.inp.codexUsed / 100) * F.params.wpw, 1)} windows left. <span class="badge m">measured</span>`, "codex") +
+  gauge("Codex, this 5-hour window", num5h("codex_5h_used_pct"), num5h("codex_5h_used_pct") === null ? `Not read: the window reset at 15:48 UTC today (it had run out at about 12:01). Codex credits: 0.` : `${fmt(100 - num5h("codex_5h_used_pct"))}% left. Codex credits: 0. <span class="badge m">measured</span>`, "codex");
+$("gaugeNote").textContent = "Both screens are account-wide: everything on the account moves them, not just Notaya. The $100 cloud credit ran out on 2026-11-07 at about 23:59 UTC (Ahmed), so cloud work now counts against the Claude limits.";
+
+/* ---------- forecast ---------- */
+const BASE = JSON.parse(JSON.stringify(F.params));
+const INP = Object.assign({}, F.inp, { asOf: Date.parse(F.inp.asOf), codexReset: Date.parse(F.inp.codexReset), claudeReset: Date.parse(F.inp.claudeReset) });
+let P = JSON.parse(JSON.stringify(BASE));
+const SL = [
+  { k: "ppw", label: "Building speed (plan points per Codex window)", min: 6, max: 16, step: 0.5, kind: "r", d: 1 },
+  { k: "wpw", label: "Windows in a Codex week", min: 5, max: 7.5, step: 0.1, kind: "m", d: 1 },
+  { k: "ov", label: "Extra work for fixes and checks (×)", min: 1, max: 1.8, step: 0.05, kind: "r", d: 2 },
+  { k: "banks", label: "Banked Codex resets left", min: 0, max: 3, step: 1, kind: "g", d: 0 },
+  { k: "cap", label: "Most windows used in a day", min: 1, max: 4.8, step: 0.2, kind: "r", d: 1 },
+  { k: "cw", label: "Claude's weekly % per Codex window", min: 1, max: 8, step: 0.5, kind: "r", d: 1 },
+  { k: "base", label: "Claude's weekly % per day on chat and records", min: 1, max: 10, step: 0.5, kind: "r", d: 1 },
+  { k: "gap", label: "Pause after each version (days)", min: 0, max: 5, step: 0.5, kind: "r", d: 1 },
+  { k: "mohamed", label: "Mohamed builds with his Claude Pro (share of his week, 0 = he does not)", min: 0, max: 0.7, step: 0.1, kind: "u", d: 1 },
+  { k: "mcp", label: "Claude building a point itself (% of a Claude week per point)", min: 1, max: 5, step: 0.5, kind: "r", d: 1 },
+];
+const PRESETS = [
+  ["Likely (default)", {}],
+  ["Careful", { ppw: 8, wpw: 5.5, ov: 1.5, cw: 5, cap: 2, gap: 2 }],
+  ["Fast", { ppw: 14, wpw: 7, ov: 1.0, cw: 1.5, cap: 4.8, gap: 0.5 }],
+  ["No banked resets", { banks: 0 }],
+  ["Mohamed builds too (Claude Pro)", { mohamed: 0.5 }],
+];
+$("sliders").innerHTML = SL.map((s) => `<label for="s-${s.k}"><span>${esc(s.label)} <span class="badge ${s.kind === "g" ? "m" : s.kind}">${s.kind === "m" ? "measured" : s.kind === "g" ? "Ahmed's word" : s.kind === "u" ? "not known" : "rough"}</span> <output id="o-${s.k}"></output></span><input id="s-${s.k}" type="range" min="${s.min}" max="${s.max}" step="${s.step}"></label>`).join("");
+$("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip" type="button" data-i="${i}" aria-pressed="false">${esc(p[0])}</button>`).join("");
+let activePreset = 0;
+function applyPreset(i) { activePreset = i; P = Object.assign(JSON.parse(JSON.stringify(BASE)), PRESETS[i][1]); SL.forEach((s) => ($("s-" + s.k).value = P[s.k])); render(); }
+$("presets").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) applyPreset(Number(b.dataset.i)); });
+SL.forEach((s) => $("s-" + s.k).addEventListener("input", (e) => { P[s.k] = Number(e.target.value); activePreset = -1; render(); }));
+
+function colorOf(burst) { return burst === "ahmed" ? "var(--claude)" : "var(--codex)"; }
+function drawGantt(C) {
+  const svg = $("gantt"); svg.innerHTML = "";
+  const W = 760, L = 78, R = 14, rowH = 30, top = 24, H = top + C.likely.versions.length * rowH + 24;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const t0 = INP.asOf;
+  const likelyEnd = C.likely.versions[C.likely.versions.length - 1].end || t0 + 60 * NotayaForecast.DAY;
+  const tEnd = Math.min(t0 + 120 * NotayaForecast.DAY, Math.max(likelyEnd + 10 * NotayaForecast.DAY, t0 + 21 * NotayaForecast.DAY));
+  const x = (t) => L + Math.max(0, Math.min(1, (t - t0) / (tEnd - t0))) * (W - L - R);
+  // weekly ticks
+  for (let t = t0, k = 0; t <= tEnd; t += 7 * NotayaForecast.DAY, k++) {
+    const xx = x(t); svg.appendChild(el("line", { x1: xx, x2: xx, y1: top - 4, y2: H - 22, class: "grid" }));
+    svg.appendChild(el("text", { x: xx, y: H - 8, "text-anchor": "middle", class: "ax" }, day(t)));
+  }
+  C.likely.resets.filter((r) => r.kind === "codex" && r.t <= tEnd).forEach((r) => {
+    svg.appendChild(el("line", { x1: x(r.t), x2: x(r.t), y1: top - 4, y2: H - 22, stroke: "var(--codex)", "stroke-dasharray": "3 3" }));
+  });
+  C.likely.bankAt.filter((t) => t <= tEnd).forEach((t) => {
+    const d = el("path", { d: `M${x(t)} ${top - 12} l5 5 l-5 5 l-5 -5 z`, fill: "var(--codex)" }); d.appendChild(el("title", {}, "A banked Codex reset is used here, " + day(t))); svg.appendChild(d);
+  });
+  svg.appendChild(el("text", { x: x(t0), y: 11, class: "ax", "text-anchor": "start" }, "today"));
+  C.likely.versions.forEach((v, i) => {
+    const y = top + i * rowH, b = C.best.versions[i], w = C.worst.versions[i];
+    svg.appendChild(el("text", { x: 0, y: y + 17, "font-size": 12.5, "font-weight": 600 }, v.id));
+    const lo = x(b.end == null ? tEnd : b.end), hi = x(w.end == null ? tEnd : w.end);
+    svg.appendChild(el("line", { x1: lo, x2: hi, y1: y + 14, y2: y + 14, stroke: "var(--muted)", "stroke-width": 1.5, opacity: 0.55 }));
+    const beyond = w.end == null || w.end > tEnd;
+    svg.appendChild(el(beyond ? "path" : "line", beyond ? { d: `M${W - R - 6} ${y + 9} l6 5 l-6 5`, fill: "none", stroke: "var(--muted)", opacity: 0.8 } : { x1: hi, x2: hi, y1: y + 9, y2: y + 19, stroke: "var(--muted)", opacity: 0.55 }));
+    if (beyond) svg.appendChild(el("text", { x: W - R - 10, y: y + 27, "text-anchor": "end", class: "ax" }, "worst " + day(w.end)));
+    const sx = x(v.start == null ? t0 : v.start), ex = x(v.end == null ? tEnd : v.end);
+    const bar = el("rect", { x: sx, y: y + 5, width: Math.max(4, ex - sx), height: 18, rx: 3, fill: colorOf(v.burst) });
+    bar.appendChild(el("title", {}, `${v.id}: starts ${day(v.start)}, code done about ${day(v.end)} (best ${day(b.end)}, worst ${day(w.end)}); ${fmt(v.windows, 1)} windows`));
+    svg.appendChild(bar);
+    svg.appendChild(el("text", { x: ex + 7, y: y + 18, "font-size": 11.5, "font-weight": 600, stroke: "var(--surface)", "stroke-width": 3, "paint-order": "stroke" }, day(v.end)));
+  });
+  $("ganttLegend").innerHTML = `<span><i class="sw" style="background:var(--claude)"></i>On Ahmed's quota</span><span><i class="sw" style="background:var(--codex)"></i>After his banked resets are gone: his weekly allowance only (plus Mohamed's Claude if he builds)</span><span>◆ a banked reset used</span><span>┆ Codex weekly reset</span><span>— best to worst range</span>`;
+}
+function drawSaw(id, series, key, max, color, marks, label) {
+  const svg = $(id); svg.innerHTML = "";
+  const W = 380, H = 190, L = 34, R = 8, T = 10, B = 26;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const t0 = series[0].t, t1 = series[series.length - 1].t;
+  const x = (t) => L + (t - t0) / (t1 - t0 || 1) * (W - L - R), y = (v) => T + (1 - Math.max(0, v) / max) * (H - T - B);
+  [0, 0.5, 1].forEach((f) => { svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(max * f), y2: y(max * f), class: "grid" })); svg.appendChild(el("text", { x: L - 4, y: y(max * f) + 4, "text-anchor": "end", class: "ax" }, fmt(max * f, max < 10 ? 1 : 0))); });
+  const step = Math.max(1, Math.floor((t1 - t0) / NotayaForecast.DAY / 5));
+  for (let d = 0; d * NotayaForecast.DAY <= t1 - t0; d += step) svg.appendChild(el("text", { x: x(t0 + d * NotayaForecast.DAY), y: H - 8, "text-anchor": "middle", class: "ax" }, day(t0 + d * NotayaForecast.DAY)));
+  let path = `M${x(series[0].t)} ${y(series[0][key])}`;
+  series.forEach((p, i) => { if (i) path += ` L${x(p.t)} ${y(p[key])}`; });
+  svg.appendChild(el("path", { d: path + ` L${x(t1)} ${y(0)} L${x(t0)} ${y(0)} Z`, fill: color, opacity: 0.16 }));
+  svg.appendChild(el("path", { d: path, fill: "none", stroke: color, "stroke-width": 1.8 }));
+  (marks || []).forEach((t) => { if (t >= t0 && t <= t1) { const d = el("path", { d: `M${x(t)} ${T} l4 4 l-4 4 l-4 -4 z`, fill: color }); d.appendChild(el("title", {}, label + " " + day(t))); svg.appendChild(d); } });
+}
+function held(v) {
+  const c = v.waitClaude, x = v.waitCodex;
+  if (c + x < 0.25) return '<span class="badge m">nothing</span>';
+  return (c >= x ? `<span class="badge r">Claude's quota</span>` : `<span class="badge r">Codex's quota</span>`) + `<span class="sub">about ${fmt(Math.max(c, x), 1)} days waiting</span>`;
+}
+function render() {
+  const C = NotayaForecast.cases(INP, P, F.versions);
+  const L = C.likely.versions, last = L[L.length - 1];
+  let lastAhmed = -1; L.forEach((v, i) => { if (v.burst === "ahmed") lastAhmed = i; });
+  const lim = C.likely.claudeLimitedDays;
+  $("headline").innerHTML = `<b>At these settings:</b> the rest of 1.6 has its code done about <b>${day(L[0].end)}</b>, 1.7 about <b>${day(L[1].end)}</b>, and version 2.5 about <b>${day(last.end)}</b> (best case ${day(C.best.end)}, worst case ${day(C.worst.end)}).
+    ${lastAhmed < 0 ? "Nothing fits Ahmed's own quota at these settings." : lastAhmed === L.length - 1 ? "All of it fits Ahmed's own quota (this week, the Nov 14 reset and the banked resets)." : `Ahmed's own quota (this week, the Nov 14 reset and ${fmt(P.banks)} banked resets) carries the work up to <b>${L[lastAhmed].id}</b>; from <b>${L[lastAhmed + 1].id}</b> on, it runs on Ahmed's weekly allowance only.`}
+    ${lim > 0.5 ? ` Claude's own weekly allowance holds the pace back for about ${fmt(lim, 1)} days in total.` : " Claude's allowance does not hold the pace back at these settings."}
+    These are <b>rough guesses</b>: only the size of the Codex week and the limits themselves are measured.`;
+  $("presets").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === activePreset)));
+  SL.forEach((s) => ($("o-" + s.k).textContent = fmt(P[s.k], s.d)));
+  drawGantt(C);
+  drawSaw("saw1", C.likely.series, "x", Math.max(P.wpw, 1), "var(--codex)", C.likely.bankAt, "Banked reset used");
+  drawSaw("saw2", C.likely.series, "c", INP.claudeCap, "var(--claude)", [], "");
+  table("forecastTable",
+    [{ t: "Version" }, { t: "What it is" }, { t: "Points", cls: "r" }, { t: "Codex windows", cls: "r" }, { t: "% of a Codex week", cls: "r" }, { t: "Claude, % of a week", cls: "r" }, { t: "Code done (likely, best to worst)" }, { t: "Held back by" }, { t: "Paid by" }],
+    L.map((v, i) => {
+      const ver = F.versions[i], b = C.best.versions[i], w = C.worst.versions[i];
+      return [{ t: v.id, cls: "nw" }, { html: '<div style="min-width:190px">' + esc(ver.theme) + (i === 0 ? `<span class="sub">about ${fmt(ver.done)} of 45 points already built or merged (my estimate)</span>` : "") + '</div>' }, { t: fmt(v.pts), cls: "r num" }, { t: fmt(v.windows, 1), cls: "r num" }, { t: fmt(v.windows / P.wpw * 100) + "%", cls: "r num" }, { t: "about " + fmt(v.claude), cls: "r num" },
+        { html: `<b>${esc(day(v.end))}</b><span class="sub">${esc(day(b.end))} to ${esc(day(w.end))}</span>`, cls: "nw" },
+        { html: held(v) },
+        { html: v.burst === "ahmed" ? `<span class="badge m">Ahmed's quota</span>` : `<span class="badge r">weekly allowance only</span>` }];
+    }));
+  const totW = L.reduce((a, v) => a + v.windows, 0), totC = L.reduce((a, v) => a + v.claude, 0);
+  $("forecastNote").textContent = `Together: about ${fmt(totW, 1)} Codex windows (${fmt(totW / P.wpw, 1)} Codex weeks) and about ${fmt(totC)}% of one Claude week spent on directing, in addition to chat and records. "Code done" means built and reviewed by Claude; the PC round on throwaway data and Ahmed's acceptance come after it. Gates that need Ahmed's own words (new libraries, vault format, security behaviour) are not modelled and can only add delay.`;
+}
+
+/* ---------- where it went ---------- */
+function tokNum(s) { const m = /([\d.]+)\s*M/i.exec(s || ""); return m ? parseFloat(m[1]) : null; }
+(function usageScreen() {
+  const rows = D.screen; if (!rows.length) { $("screenBars").textContent = "No reading."; return; }
+  const total = 374.8, shown = rows.map((r) => ({ n: r.thread, v: tokNum(r.tokens), sh: r.share })).filter((r) => r.v != null);
+  const sum = shown.reduce((a, r) => a + r.v, 0), rest = total - sum;
+  const max = Math.max(...shown.map((r) => r.v), rest);
+  $("screenNote").textContent = `The platform's own count at ${hhmm(rows[0].time)}: ${fmt(total, 1)}M tokens in all, mostly cached rereading. The six biggest threads are shown; the rest is the difference.`;
+  $("screenBars").innerHTML = shown.concat([{ n: "All other threads (the coordinator chat and about 20 more)", v: rest, sh: fmt(rest / total * 100) + "%" }]).map((r) =>
+    `<div class="row"><div class="name">${esc(r.n)}</div><div class="track"><div class="bar" style="width:${r.v / max * 78}%"></div><span class="val">${fmt(r.v, 1)}M · ${esc(r.sh)}</span></div></div>`).join("");
+})();
+const CATC = { "Coordinator chat": "#6a5acd", "Directing the build": "#b8591a", "Reading and studies": "#12968a", "Planning and writing": "#2f6fb0", "Records and ledger": "#8a8f8d", "Other": "#bcbfbd" };
+(function categories() {
+  const agg = {}; let tw = 0, tc = 0;
+  D.sessions.forEach((s) => { const k = s.category; const a = agg[k] = agg[k] || { w: 0, c: 0, n: 0, noMeasure: 0 }; a.n++; if (s.weighted) { a.w += s.weighted; tw += s.weighted; } else a.noMeasure++; if (s.cost != null) { a.c += s.cost; tc += s.cost; } });
+  const keys = Object.keys(agg).sort((a, b) => agg[b].w - agg[a].w);
+  $("catNote").textContent = `${fmt(tw / 1e6, 1)} million weighted tokens in the ledger's rows (input ×1, cache write ×1.25, cache read ×0.1, output ×5); groups are my reading of the thread names.`;
+  $("catStack").innerHTML = keys.map((k) => `<div style="width:${agg[k].w / tw * 100}%;background:${CATC[k] || "#999"}" title="${esc(k)}: ${fmt(agg[k].w / 1e6, 1)}M">${agg[k].w / tw > 0.07 ? fmt(agg[k].w / tw * 100) + "%" : ""}</div>`).join("");
+  $("catLegend").innerHTML = keys.map((k) => `<span><i class="sw" style="background:${CATC[k] || "#999"}"></i>${esc(k)}</span>`).join("");
+  table("catTable", [{ t: "Group" }, { t: "Threads", cls: "r" }, { t: "Weighted tokens", cls: "r" }, { t: "Reported USD", cls: "r" }],
+    keys.map((k) => [{ t: k }, { t: fmt(agg[k].n) + (agg[k].noMeasure ? ` (${agg[k].noMeasure} not measured)` : ""), cls: "r num" }, { t: M(agg[k].w), cls: "r num" }, { t: agg[k].c ? "$" + fmt(agg[k].c, 2) : "n/a", cls: "r num" }]));
+})();
+(function codexBars() {
+  const lanes = D.codex.map((r) => ({ n: r.run_label, task: r.task, used: Number((/tokens used' printed: ([\d,]+)/.exec(r.notes) || [])[1] && /tokens used' printed: ([\d,]+)/.exec(r.notes)[1].replace(/,/g, "")), all: Number(r.input) + Number(r.output), result: r.result }));
+  const max = Math.max(...lanes.map((l) => l.used));
+  const cyc = lanes.reduce((a, l) => a + l.used, 0), allIn = lanes.reduce((a, l) => a + l.all, 0);
+  $("codexNote").textContent = `Tokens Codex printed as used (new input plus output). In total ${fmt(allIn / 1e6, 1)}M tokens were read or written, but only ${fmt(cyc / 1e6, 2)}M (${fmt(cyc / allIn * 100)}%) were new: the rest is cached rereading. Five lanes in parallel used one 5-hour window in 19 minutes.`;
+  $("codexBars").innerHTML = lanes.map((l) => `<div class="row"><div class="name">${esc(l.n)}<small>${esc(l.task)}</small></div><div class="track"><div class="bar codex" style="width:${l.used / max * 75}%"></div><span class="val">${fmt(l.used / 1000)}k</span></div></div>`).join("");
+})();
+(function weekChart() {
+  const pts = { claude: [], codex: [] };
+  D.quota.forEach((q) => {
+    const t = Date.parse(q.time.length === 17 ? q.time.replace("Z", ":00Z") : q.time); if (isNaN(t)) return;
+    if (q.tool === "Claude" && /weekly/.test(q.limit)) { const m = /(\d+(\.\d+)?)% used/.exec(q.reading); if (m) pts.claude.push([t, parseFloat(m[1])]); }
+    if (q.tool === "Codex" && /weekly/.test(q.limit)) { const m = /weekly (\d+(\.\d+)?)% used/.exec(q.reading) || /(\d+(\.\d+)?)% used/.exec(q.reading); if (m) pts.codex.push([t, parseFloat(m[1])]); }
+  });
+  const all = pts.claude.concat(pts.codex).map((p) => p[0]); const t0 = Math.min(...all), t1 = Math.max(...all);
+  const svg = $("weekChart"), W = 380, H = 220, L = 34, R = 10, T = 10, B = 28;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const x = (t) => L + (t - t0) / (t1 - t0 || 1) * (W - L - R), y = (v) => T + (1 - v / 100) * (H - T - B);
+  [0, 25, 50, 75, 100].forEach((v) => { svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "grid" })); svg.appendChild(el("text", { x: L - 4, y: y(v) + 4, "text-anchor": "end", class: "ax" }, v + "%")); });
+  svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(70), y2: y(70), stroke: "var(--ink)", "stroke-dasharray": "4 3" }));
+  svg.appendChild(el("text", { x: W - R, y: y(70) - 4, "text-anchor": "end", class: "ax" }, "Claude cap 70%"));
+  [t0, t1].forEach((t, i) => svg.appendChild(el("text", { x: x(t), y: H - 8, "text-anchor": i ? "end" : "start", class: "ax" }, new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false }))));
+  [["claude", "var(--claude)"], ["codex", "var(--codex)"]].forEach(([k, c]) => {
+    const a = pts[k].sort((p, q) => p[0] - q[0]); if (!a.length) return;
+    svg.appendChild(el("path", { d: a.map((p, i) => (i ? "L" : "M") + x(p[0]) + " " + y(p[1])).join(" "), fill: "none", stroke: c, "stroke-width": 1.8 }));
+    a.forEach((p) => { const d = el("circle", { cx: x(p[0]), cy: y(p[1]), r: 3.5, fill: c }); d.appendChild(el("title", {}, `${k} week: ${p[1]}% at ${hhmm(new Date(p[0]).toISOString())}`)); svg.appendChild(d); });
+  });
+})();
+(function models() {
+  const bm = D.byModel, keys = Object.keys(bm);
+  const tw = keys.reduce((a, k) => a + bm[k].weighted, 0);
+  const MC = { "Opus 5.5": "var(--opus)", "Sonnet 5.5": "var(--sonnet)", "Opus + Sonnet 5.5": "var(--both)", "not recorded": "#bbb" };
+  const rates = D.rates;
+  const T = D.totals;
+  const cx = D.codex.reduce((a, r) => ({ input: a.input + Number(r.input), cached: a.cached + Number(r.cached_input), out: a.out + Number(r.output) }), { input: 0, cached: 0, out: 0 });
+  const stackRow = (name, parts) => { const tot = parts.reduce((a, p) => a + p[1], 0); return `<div><div class="small" style="margin-bottom:4px">${esc(name)}: ${M(tot)} tokens</div><div class="stack">${parts.map((p) => `<div style="width:${Math.max(p[1] / tot * 100, 0.4)}%;background:${p[2]}" title="${esc(p[0])}: ${M(p[1])}">${p[1] / tot > 0.08 ? fmt(p[1] / tot * 100) + "%" : ""}</div>`).join("")}</div><div class="legend">${parts.map((p) => `<span><i class="sw" style="background:${p[2]}"></i>${esc(p[0])} ${fmt(p[1] / tot * 100, 1)}%</span>`).join("")}</div></div>`; };
+  $("modelPanels").innerHTML = `<div class="panel"><h3>Claude: by model <span class="badge m">measured</span></h3>
+    <div class="stack">${keys.map((k) => `<div style="width:${bm[k].weighted / tw * 100}%;background:${MC[k] || "#999"}" title="${esc(k)}">${bm[k].weighted / tw > 0.08 ? fmt(bm[k].weighted / tw * 100) + "%" : ""}</div>`).join("")}</div>
+    <div class="legend">${keys.map((k) => `<span><i class="sw" style="background:${MC[k] || "#999"}"></i>${esc(k)}: ${M(bm[k].weighted)}</span>`).join("")}</div>
+    <p class="small muted">Opus cost ${rates["Opus 5.5"] ? "$" + rates["Opus 5.5"][0] + " to $" + rates["Opus 5.5"][1] : "n/a"} per million weighted tokens, Sonnet ${rates["Sonnet 5.5"] ? "$" + rates["Sonnet 5.5"][0] + " to $" + rates["Sonnet 5.5"][1] : "n/a"}, at list prices from the thread records while the cloud credit lasted.</p></div>
+    <div class="panel"><h3>What the tokens are: new work or rereading <span class="badge m">measured</span></h3>
+    ${stackRow("Claude, all ledger rows", [["fresh input", T.input, "#2f6fb0"], ["cache write", T.cw, "#8a8f8d"], ["cache read", T.cr, "#bcbfbd"], ["output", T.out, "#b8591a"]])}
+    ${stackRow("Codex, first cycle", [["new input", cx.input - cx.cached, "#2f6fb0"], ["cached input", cx.cached, "#bcbfbd"], ["output", cx.out, "#b8591a"]])}
+    <p class="small muted">Almost everything on both sides is cached rereading: the tool reads its growing context again at every turn. Only the thin slices are new text going in or out. This is why shorter contexts, not lower effort, are the lever that saves quota. The two bars are not the same unit and must not be compared as a price.</p></div>`;
 })();
 
-/* totals */
-const T = D.totals;
-$("totalStats").innerHTML = `
-  <div class="stat"><span class="label">Weighted tokens</span><span class="value">${mil(T.weighted)}</span><span class="sub">one comparison number</span></div>
-  <div class="stat"><span class="label">Output tokens</span><span class="value">${nf.format(T.out)}</span><span class="sub">what Claude wrote</span></div>
-  <div class="stat"><span class="label">Cache reads</span><span class="value">${mil(T.cr)}</span><span class="sub">${(T.cr / (T.input + T.cw + T.cr + T.out) * 100).toFixed(0)}% of all raw tokens</span></div>
-  <div class="stat"><span class="label">Codex runs</span><span class="value">${D.codex.length}</span><span class="sub">${D.codex.length ? "first cycle, 2026-11-08" : "none ordered yet"}</span></div>`;
-function groupTable(el, title, obj, withDot) {
-  const rows = Object.entries(obj).sort((a, b) => b[1].weighted - a[1].weighted);
-  el.innerHTML = `<thead><tr><th>${title}</th><th class="r">Sessions</th><th class="r">Weighted</th><th class="r">Reported cost</th></tr></thead><tbody>` +
-    rows.map(([k, v]) => `<tr><td>${withDot ? `<span class="tag"><i class="dot ${mcls(k)}"></i>${esc(k)}</span>` : esc(k)}</td><td class="r num">${v.n}</td><td class="r num">${mil(v.weighted)}</td><td class="r num">${v.costed ? usd(v.cost) : "none"}${v.costed && v.costed < v.n ? `<span class="sub">${v.costed} of ${v.n} report one</span>` : ""}</td></tr>`).join("") + "</tbody>";
-}
-groupTable($("modelTable"), "By model", D.byModel, true);
-groupTable($("machineTable"), "By machine", D.byMachine, false);
-$("weightNote").textContent = "Weighted tokens are a yardstick for comparing sessions, not a bill. Subscription limits are not published per token.";
+/* ---------- how and details ---------- */
+$("hWpw").textContent = fmt(F.params.wpw, 1);
+$("hUsed").textContent = fmt(F.inp.codexUsed);
+table("inputsTable", [{ t: "Input" }, { t: "Value" }, { t: "Range" }, { t: "Kind" }, { t: "Where it comes from" }],
+  F.inputsTable.map((r) => [{ t: r.key, cls: "nw" }, { t: r.value, cls: "num" }, { t: r.low || r.high ? `${r.low || "-"} to ${r.high || "-"}` : "", cls: "num nw" },
+    { html: `<span class="badge ${r.kind === "measured" ? "m" : r.kind === "rough" ? "r" : r.kind === "rule" ? "m" : "u"}">${esc(r.kind)}</span>` }, { html: esc(r.source) + (r.notes ? `<span class="sub">${esc(r.notes)}</span>` : "") }]));
+$("unknowns").innerHTML = [
+  "<b>Mohamed.</b> He has no Codex, only a Claude Pro subscription (Ahmed, 08:57 UTC). Whether he builds, and how much of his week he gives, is his choice: the default is that he does not. The slider shows what it would add, on a guess that Claude building a plan point itself costs about 2% of a Claude week.",
+    "<b>How much of the plan is already built.</b> About 25 of 45 points of 1.6 is my estimate from which lanes merged, not a measurement.",
+  "<b>Claude's cost per lane.</b> The weakest number: nobody has yet read Claude's weekly percentage before and after a lane. The new rule in the ledger README asks for that reading each time.",
+  "<b>Gates.</b> New libraries, vault format changes and security behaviour need Ahmed's own words; time spent waiting for them is not modelled.",
+  "<b>Quality risks.</b> A failed test run (like C4b) or a lane Claude sends back costs windows. The 'extra work' number is a guess for that.",
+].map((x) => `<li>${x}</li>`).join("");
 
-/* bar chart */
-const sorted = [...S].sort((a, b) => (b.weighted || 0) - (a.weighted || 0));
-const maxW = Math.max(...S.map(s => s.weighted || 0));
-$("barRows").innerHTML = sorted.map((s) => {
-  const w = s.weighted;
-  const bar = w ? `<div class="bar ${mcls(s.model)}" style="width:${(w / maxW * 78).toFixed(1)}%"></div><span class="val">${mil(w)}${s.cost != null ? " · " + usd(s.cost) : ""}</span>` : `<div class="bar none"></div><span class="val">not measured</span>`;
-  return `<div class="row" title="${esc(s.task)}"><div class="name">${esc(s.task)}<small>${esc(s.machine)} · ${esc(s.model)}</small></div><div class="track">${bar}</div></div>`;
-}).join("");
+table("codexTable", [{ t: "Run" }, { t: "Task" }, { t: "Ended" }, { t: "New tokens printed", cls: "r" }, { t: "All input + output", cls: "r" }, { t: "Result" }],
+  D.codex.map((r) => [{ t: r.run_label }, { t: r.task }, { t: r.end_utc ? hhmm(r.end_utc) : "", cls: "nw" }, { t: fmt((/tokens used' printed: ([\d,]+)/.exec(r.notes) || [])[1] ? Number(/tokens used' printed: ([\d,]+)/.exec(r.notes)[1].replace(/,/g, "")) : null), cls: "r num" }, { t: M(Number(r.input) + Number(r.output)), cls: "r num" }, { t: r.result }]));
 
-/* quota cards */
-const win0 = Date.parse(D.window.start), win1 = Date.parse(D.window.end);
-const q5 = M.five, qw = M.week;
-const meter = (p) => `<div class="meter" role="img" aria-label="${p}% used"><div class="${p >= 80 ? "warn" : ""}" style="width:${p}%"></div></div>`;
-const pc = (q, label, none) => q ? `<div class="qcard"><span class="t">${label}</span><span class="s">${q.pct}% used</span>${meter(q.pct)}<span class="small">Resets ${esc(dayhhmm(q.resets))} UTC.</span><span class="small muted">Read ${esc(hhmm(q.time))} UTC from the claude.ai plan screen (plan: Pro). Account-wide.</span></div>` : `<div class="qcard"><span class="t">${label}</span><span class="s none">Not read</span><span class="small muted">${none}</span></div>`;
-$("quotaCards").innerHTML =
-  pc(q5, "Claude · 5-hour window", "Needs a reading from the Claude usage screen.") +
-  pc(qw, "Claude · weekly limit (all models)", "Needs a reading from the Claude usage screen.") +
-  "";
-  codexCards();
-function codexCards() {
-  const cq = D.quota.find(q => q.tool === "Codex" && /5-hour ([\d.]+)% used, weekly ([\d.]+)% used/.test(q.reading));
-  const nm = (re) => { const m = cq && cq.reading.match(re); return m ? parseFloat(m[1]) : null; };
-  const p5 = nm(/5-hour ([\d.]+)% used/), pw = nm(/weekly ([\d.]+)% used/);
-  const rs = cq ? cq.resets.match(/5-hour (\S+?); weekly (\S+)/) : null;
-  const card = (label, p, reset) => p == null ? `<div class="qcard"><span class="t">${label}</span><span class="s none">Not read</span><span class="small muted">Read Codex status before and after each run.</span></div>` :
-    `<div class="qcard"><span class="t">${label}</span><span class="s">${p}% used</span>${meter(p)}<span class="small">Resets ${esc(dayhhmm(reset))} UTC.</span><span class="small muted">Read ${esc(hhmm(cq.time))} UTC from Codex's rate-limit events (Gaming-PC). Account-wide.</span></div>`;
-  $("quotaCards").insertAdjacentHTML("beforeend", card("Codex · 5-hour window", p5, rs && rs[1]) + card("Codex · weekly limit", pw, rs && rs[2]));
+const cats = ["All"].concat(Array.from(new Set(D.sessions.map((s) => s.category))));
+let curCat = "All";
+function sessionTable() {
+  $("filters").innerHTML = cats.map((c) => `<button class="chip" type="button" data-c="${esc(c)}" aria-pressed="${c === curCat}">${esc(c)}</button>`).join("");
+  const rows = D.sessions.filter((s) => curCat === "All" || s.category === curCat).slice().sort((a, b) => (b.weighted || 0) - (a.weighted || 0));
+  table("sessionTable", [{ t: "Thread" }, { t: "Group" }, { t: "Model" }, { t: "Where" }, { t: "Weighted tokens", cls: "r" }, { t: "Output tokens", cls: "r" }, { t: "Reported USD", cls: "r" }],
+    rows.map((s) => [{ html: esc(s.task) + (s.running ? ' <span class="badge">running</span>' : "") + `<span class="sub">${esc(s.effort)} · ${hhmm(s.start)}</span>` }, { t: s.category }, { t: s.model }, { t: s.machine }, { t: s.weighted ? M(s.weighted) : "not measured", cls: "r num" }, { t: s.out ? fmt(s.out) : "", cls: "r num" }, { t: s.cost != null ? "$" + fmt(s.cost, 2) : s.est ? `≈ $${s.est[0]} to $${s.est[1]} (est.)` : "", cls: "r num" }]));
 }
+$("filters").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { curCat = b.dataset.c; sessionTable(); } });
+sessionTable();
+table("quotaTable", [{ t: "Time (UTC)" }, { t: "Tool" }, { t: "Limit" }, { t: "Reading" }, { t: "Resets" }, { t: "Read by" }],
+  D.quota.map((q) => [{ t: hhmm(q.time.length === 17 ? q.time.replace("Z", ":00Z") : q.time), cls: "nw" }, { t: q.tool }, { t: q.limit }, { t: q.reading }, { t: q.resets, cls: "nw" }, { t: q.by }]));
+$("gapList").innerHTML = [
+  "Mohamed's usage (his own account), and any Claude or Codex use outside Notaya on Ahmed's accounts: the limit screens count everything, the ledger rows only Notaya threads.",
+  "Codex runs after 00:44 UTC on 2026-11-08 (lane A's second pass, C4b and the others) are in the weekly reading (47% at 14:20 UTC) but not in <span class=\"mono\">codex-runs.csv</span>; the PC session has to read them.",
+  "Sessions on the PC (Remote Control) are not readable from the cloud; their rows stay empty until the scanner is run there.",
+  "Running sessions' own usage (including this thread's) is read at the next refresh.",
+  "Money: Codex has no dollar figure here; Claude's dollar figures stop when the credit ran out (2026-11-07 about 23:59 UTC).",
+].map((x) => `<li>${x}</li>`).join("");
 
-/* project usage screen */
-const SC = D.screen || [];
-if (!SC.length) { $("screen").hidden = true; } else {
-  const pj = M.project ? M.project.reading : "";
-  $("screenNote").textContent = `Read from the project's Usage screen at ${hhmm(SC[0].time)} UTC (Ahmed's screenshot). It counts every thread of the project, including the Gaming-PC ones, as input + output + cache write + cache read. For the cloud sessions it matches the ledger rows; the threads that kept working after the ledger's last reading show more here.`;
-  const mm = pj.match(/([\d.]+M) tokens, (\d+) threads \(([^)]*)\), cache hit (\d+%)/);
-  $("screenStats").innerHTML = mm ? `<div class="stat"><span class="label">Project tokens</span><span class="value">${mm[1]}</span><span class="sub">${mm[2]} threads (${esc(mm[3])})</span></div><div class="stat"><span class="label">Cache hit</span><span class="value">${mm[4]}</span><span class="sub">most reads come from cache</span></div><div class="stat"><span class="label">Ledger rows total</span><span class="value">${mil(D.totals.input + D.totals.cw + D.totals.cr + D.totals.out)}</span><span class="sub">raw tokens in the CSV rows; the gap is work after those readings</span></div>` : "";
-  $("screenTable").innerHTML = `<thead><tr><th>Thread</th><th>Model</th><th>Last active (at the reading)</th><th class="r">Tokens</th><th class="r">Cache hit</th><th class="r">Share</th></tr></thead><tbody>` + SC.map(r => `<tr><td>${esc(r.thread)}</td><td><span class="tag"><i class="dot ${/Opus/.test(r.model) ? "opus" : "sonnet"}"></i>${esc(r.model)}</span></td><td class="nw">${esc(r.last)}</td><td class="r num">${esc(r.tokens)}</td><td class="r num">${esc(r.cache)}</td><td class="r num">${esc(r.share)}</td></tr>`).join("") + "</tbody>";
-}
-
-/* gantt */
-$("ganttNote").textContent = `Window ${hhmm(D.window.start)} to ${hhmm(D.window.end)} UTC (it resets at ${hhmm(D.window.end)} UTC). Each bar runs from a session's start to its last update. The black line is the snapshot. Account-wide: every session below shares this one window.`;
-const pos = (ms) => Math.max(0, Math.min(100, (ms - win0) / (win1 - win0) * 100));
-$("gantt").innerHTML = S.filter(s => s.start).map((s) => {
-  const a = Date.parse(s.start), b = Date.parse(s.end || s.start);
-  const l = pos(a), w = Math.max(0.5, pos(b) - l);
-  return `<div class="grow" title="${esc(s.task)}: ${hhmm(s.start)} to ${hhmm(s.end)}"><div class="name small">${esc(s.task.length > 46 ? s.task.slice(0, 44) + "…" : s.task)}</div><div class="glane"><div class="gbar ${mcls(s.model)}" style="left:${l}%;width:${w}%"></div><div class="now" style="left:${pos(snapMs)}%"></div></div></div>`;
-}).join("");
-$("gaxis").innerHTML = ["00:00", "01:00", "02:00", "03:00", "04:00", "05:00"].map(t => `<span>${t}</span>`).join("");
-
-/* session table with filters and sorting */
-const state = { machine: "All", model: "All", sort: "start", dir: 1 };
-const machines = ["All", ...Object.keys(D.byMachine)];
-const models = ["All", ...Object.keys(D.byModel)];
-function chipGroup(label, key, items) {
-  return `<div class="grp"><span class="glabel">${label}</span>` + items.map(i => `<button class="chip" type="button" data-k="${key}" data-v="${esc(i)}" aria-pressed="${state[key] === i}">${esc(i)}</button>`).join("") + "</div>";
-}
-function renderFilters() {
-  $("filters").innerHTML = chipGroup("Machine", "machine", machines) + chipGroup("Model", "model", models);
-}
-const cols = [
-  ["start", "Started (UTC)"], ["partner", "Partner"], ["account", "Account"], ["machine", "Machine"],
-  ["task", "Session or task"], ["model", "Model"], ["effort", "Effort"], ["weighted", "Weighted", "r"],
-  ["out", "Output", "r"], ["cost", "Cost", "r"], ["snapshot", "Read at"],
-];
-function renderTable() {
-  let rows = S.filter(s => (state.machine === "All" || s.machine === state.machine) && (state.model === "All" || s.model === state.model));
-  const k = state.sort;
-  rows.sort((a, b) => {
-    const x = a[k] ?? -1, y = b[k] ?? -1;
-    return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y))) * state.dir;
-  });
-  const head = cols.map(([key, label, c]) => `<th class="${c || ""}" aria-sort="${state.sort === key ? (state.dir > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-sort="${key}">${label}${state.sort === key ? (state.dir > 0 ? " ▲" : " ▼") : ""}</button></th>`).join("");
-  const body = rows.map((s) => `<tr>
-    <td class="nw mono">${esc(dayhhmm(s.start))}</td>
-    <td class="nw">${esc(s.partner)}</td>
-    <td class="nw">${esc(s.account)}</td>
-    <td>${esc(s.machine)}${s.where !== s.machine ? `<span class="sub">${esc(s.where)}</span>` : ""}</td>
-    <td class="task">${esc(s.task)}<span class="sub">${esc(s.role)}${s.running ? ' <span class="badge live">running at snapshot</span>' : ""}</span></td>
-    <td><span class="tag"><i class="dot ${mcls(s.model)}"></i>${esc(s.model)}</span></td>
-    <td class="nw">${esc(s.effort)}</td>
-    <td class="r num">${s.weighted != null ? nf.format(s.weighted) : "n/a"}</td>
-    <td class="r num">${s.out != null ? nf.format(s.out) : "n/a"}</td>
-    <td class="r num">${s.cost != null ? usd(s.cost) : s.est ? `<span class="badge est" title="Estimate from observed dollars per million tokens">est. ${usd(s.est[0])} to ${usd(s.est[1])}</span>` : "n/a"}</td>
-    <td class="nw mono">${esc(s.snapshot.slice(5, 16).replace("T", " "))}</td></tr>`).join("");
-  $("sessionTable").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body || '<tr><td colspan="11">No sessions match this filter.</td></tr>'}</tbody>`;
-}
-document.addEventListener("click", (e) => {
-  const c = e.target.closest("[data-k]");
-  if (c) { state[c.dataset.k] = c.dataset.v; renderFilters(); renderTable(); return; }
-  const s = e.target.closest("[data-sort]");
-  if (s) { const key = s.dataset.sort; state.dir = state.sort === key ? -state.dir : (["weighted", "out", "cost"].includes(key) ? -1 : 1); state.sort = key; renderTable(); }
-});
-renderFilters(); renderTable();
-
-/* codex */
-if (!D.codex.length) {
-  $("codexBox").innerHTML = `<p>No Codex run has been ordered yet.</p>`;
-} else {
-  const t = (r) => (r || "").replace("2026-11-08T", "").replace("Z", "");
-  const toks = D.codex.reduce((a, r) => a + (parseFloat(r.input) || 0), 0), outt = D.codex.reduce((a, r) => a + (parseFloat(r.output) || 0), 0);
-  $("codexBox").innerHTML = `<p class="small muted">${D.codex.length} runs of the first cycle, all <span class="mono">${esc(D.codex[0].model)}</span> at <span class="mono">${esc(D.codex[0].reasoning)}</span> reasoning on ${esc(D.codex[0].machine)}. Together about ${mil(toks)} input tokens (97% cached) and ${nf.format(outt)} output tokens. The quota columns are the account's, shared by the five lanes.</p><div class="tablewrap"><table><thead><tr><th>Lane</th><th>Ran (UTC)</th><th>Ended</th><th class="r">Input (all)</th><th class="r">Output</th><th class="r">5-hour after</th><th class="r">Week after</th></tr></thead><tbody>` +
-    D.codex.map(r => `<tr><td>${esc(r.run_label)}<span class="sub">${esc(r.task)}</span></td><td class="nw mono">${esc(t(r.start_utc))} to ${esc(t(r.end_utc))}</td><td>${esc(r.result)}</td><td class="r num">${nf.format(parseFloat(r.input) || 0)}</td><td class="r num">${nf.format(parseFloat(r.output) || 0)}</td><td class="r num">${esc((r.quota_5h_after || "").split(" ")[0])}</td><td class="r num">${esc((r.quota_week_after || "").split(" ")[0])}</td></tr>`).join("") + `</tbody></table></div>`;
-}
-
-/* forecast */
-const F = D.forecast || [];
-if (!F.length) { $("forecast").hidden = true; } else {
-  const f1 = (v) => parseFloat(v).toFixed(1);
-  $("forecastTable").innerHTML = `<thead><tr><th>Scope</th><th class="r">Points</th><th class="r">Windows: low</th><th class="r">likely</th><th class="r">high</th><th class="r">Weeks: likely</th><th class="r">range</th></tr></thead><tbody>` +
-    F.map(r => `<tr><td>${esc(r.version)}</td><td class="r num">${esc(r.plan_points)}</td><td class="r num">${f1(r.codex_windows_low)}</td><td class="r num"><b>${f1(r.codex_windows_likely)}</b></td><td class="r num">${f1(r.codex_windows_high)}</td><td class="r num"><b>${f1(r.codex_weeks_likely)}</b></td><td class="r num">${f1(r.codex_weeks_low)} to ${f1(r.codex_weeks_high)}</td></tr>`).join("") + "</tbody>";
-  $("forecastBasis").textContent = F[0].basis;
-}
+applyPreset(0);
 </script>

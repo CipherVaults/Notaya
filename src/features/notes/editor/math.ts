@@ -111,7 +111,7 @@ function equationView(display: boolean, justInserted: { current: boolean }) {
         (latex) => {
           const pos = getPos();
           if (pos === undefined) return;
-          editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { latex }));
+          editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, latex }));
         },
         () => {
           closeEditor = null;
