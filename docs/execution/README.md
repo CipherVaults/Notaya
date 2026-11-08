@@ -20,6 +20,9 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 - [2026-11-08-ledger-refresh-1600.md](2026-11-08-ledger-refresh-1600.md): new readings (Codex week 47%, Claude week 37%), forecast recalibrated (2.5 likely about 7 December, was 2 December), "not read" gauges, the roadmap thread's usage row. Produced and published; not accepted.
 
+### 2026-11-08 (Ahmed's messages 11:41:49 and 11:42:04 UTC), EX-2026-11-08-61: refresh of the AI-facing records and the 1.6 build-day session entry
+
+- [2026-11-08-ai-pbs-records-refresh.md](2026-11-08-ai-pbs-records-refresh.md): the Codex briefing, `AGENTS.md`, a `CLAUDE.md` note, the claims rows, STATUS and session entry 49 brought up to date as dated corrections. Records only. **Produced**; not accepted.
 ### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-60: usage ledger redesign and the 1.6 to 2.5 forecast
 
 - [2026-11-08-ledger-redesign-and-forecast.md](2026-11-08-ledger-redesign-and-forecast.md): the new dashboard (charts and a forecast model with Codex's banked resets and Claude's 70% cap), the 08:27 readings, one forecast instead of two. **Produced**; not accepted.
