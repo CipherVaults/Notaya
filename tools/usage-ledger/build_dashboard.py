@@ -135,12 +135,12 @@ def main(out):
         return next((q for q in quota if pred(q)), None)
 
     measured = {"five": None, "week": None, "credit": None, "project": None}
-    q = first(lambda q: q["tool"] == "Claude" and "five" in q["limit"] and "%" in q["reading"])
+    q = first(lambda q: q["tool"] == "Claude" and "five" in q["limit"] and re.search(r"\d+% used", q["reading"]))
     if q:
-        measured["five"] = {"pct": float(re.search(r"(\d+)%", q["reading"]).group(1)), "resets": q["resets_utc"], "time": q["time_utc"], "by": q["read_by"]}
-    q = first(lambda q: q["tool"] == "Claude" and "weekly" in q["limit"] and "%" in q["reading"])
+        measured["five"] = {"pct": float(re.search(r"(\d+)% used", q["reading"]).group(1)), "resets": q["resets_utc"], "time": q["time_utc"], "by": q["read_by"]}
+    q = first(lambda q: q["tool"] == "Claude" and "weekly" in q["limit"] and re.search(r"\d+% used", q["reading"]))
     if q:
-        measured["week"] = {"pct": float(re.search(r"(\d+)%", q["reading"]).group(1)), "resets": q["resets_utc"], "time": q["time_utc"], "by": q["read_by"]}
+        measured["week"] = {"pct": float(re.search(r"(\d+)% used", q["reading"]).group(1)), "resets": q["resets_utc"], "time": q["time_utc"], "by": q["read_by"]}
     q = first(lambda q: "credit" in q["limit"] and re.search(r"USD (\d+) of USD (\d+) left", q["reading"]))
     if q:
         m = re.search(r"USD (\d+) of USD (\d+) left", q["reading"])
@@ -191,6 +191,7 @@ def main(out):
             for q in quota
         ],
         "codex": read("codex-runs.csv"),
+        "forecast": read("pace-forecast.csv") if (LEDGER / "pace-forecast.csv").exists() else [],
         "window": {"start": "2026-11-07T19:00:00Z", "end": "2026-11-08T00:00:00Z"},
         "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
     }
