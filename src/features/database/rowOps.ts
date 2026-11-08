@@ -27,7 +27,7 @@ export async function loadRow(dbId: string, rowId: string): Promise<DbRow | null
 export async function saveRowAsTemplate(dbId: string, row: DbRow, name: string, content: string, text: string): Promise<void> {
   const db = peekDatabase(dbId);
   if (!db) return;
-  const cells: Record<string, unknown> = {};
+  const cells: Record<string, unknown> = Object.create(null);
   for (const p of db.props) {
     if (p.kind === "title" || p.kind === "files" || isComputedKind(p.kind) || p.kind === "id") continue;
     const v = row.values[p.id];
