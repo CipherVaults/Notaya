@@ -13,7 +13,7 @@
 
 - Wrote the Codex partner briefing (vision, feel, architecture map, PBS duties, who does what, current state, pacing) and linked it from `AGENTS.md` (start of every session) and `CLAUDE.md` (roles).
 - Recorded A46 and the authority row.
-- Built the roadmap forecast page for versions 1.6 to 2.5 (Codex and Claude quota, presets, sliders, best, likely and worst case), calibrated on the first Codex windows in `docs/ledger/`.
+- Drafted a roadmap forecast page for versions 1.6 to 2.5 (Codex and Claude quota, presets, sliders, best, likely and worst case), calibrated on the first Codex windows in `docs/ledger/`. **Not published:** the coordinator assigned the ledger and forecast redesign to the thread "Redesign the usage ledger with forecasts", so the draft was committed and handed to that thread to fold in.
 
 ## 3. Checks (observation)
 

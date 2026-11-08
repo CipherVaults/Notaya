@@ -67,4 +67,4 @@ When a task would change how Notaya looks or behaves in a way people can see, st
 
 ## 6. Pacing
 
-Codex runs on one shared ChatGPT account with a 5-hour window and a weekly limit. Two lanes at a time. When a limit hits, record the reset time and resume then. Report the quota readings before and after each run for the ledger. The forecast for the whole roadmap is in `tools/usage-ledger/roadmap-forecast.html` (also published as an artifact).
+Codex runs on one shared ChatGPT account with a 5-hour window and a weekly limit. Two lanes at a time. When a limit hits, record the reset time and resume then. Report the quota readings before and after each run for the ledger. A first draft of the roadmap forecast (versions 1.6 to 2.5 against Codex and Claude quota) is in `tools/usage-ledger/roadmap-forecast.html`; the ledger-redesign thread folds it into the published usage ledger.
