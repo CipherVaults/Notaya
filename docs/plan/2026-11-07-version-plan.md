@@ -122,7 +122,7 @@ The hard rules behind it:
 | 1.6-7 | **Fix: inline databases vanish from exports** | S | A database inside a page now appears in its PDF, Word, Markdown and HTML export | Bug confirmed in code (inventory 3.9) |
 | 1.6-8 | **Fix: the Import window's out-of-date sentence** | XS | It no longer says databases are not imported (they are) | `ImportDialog.tsx` |
 | 1.6-9 | **"+ New notebook" always visible** | XS | A modest "+ New notebook" line at the bottom of the notebook list (agreed 21:41 UTC) | Today it shows only on mouse-over |
-| 1.6-10 | **Import and Export buttons in the top bar** | S | Two clear buttons with icon and label | Fixed buttons now; they become the first two app-bar defaults in 1.7 |
+| 1.6-10 | **Import and Export buttons in the top bar** | S | Two clear buttons with icon and label | Fixed buttons now; they become the first two app-bar defaults in 1.7. **Includes the agreed "Export as" button next to Favorites** (Ahmed, 20:56 UTC; Notion board card 1.6-10b): the Export button ships together with the Import button |
 | 1.6-11 | **Icons pass** | S | Every icon checked in every theme; faded ones strengthened; Favorite star: clear outline when off, gold when on | Agreed 21:49 UTC |
 | 1.6-12 | **Reopen where you left off** | S | Notaya opens on the page you were on, also after unlocking | Open tabs are restored once tabs exist (1.9) |
 | 1.6-13 | **Drag databases in the sidebar** | S | Drag a database to reorder it among the pages (agreed 21:52 UTC) | Moving between notebooks stays a menu action |
@@ -206,7 +206,7 @@ The hard rules behind it:
 
 | # | Item | Size | What it means for you | Notes |
 |---|---|---|---|---|
-| 2.0-1 | **Sticky corkboard** | L | In-app corkboard with Grid and Free modes; drag; box-select; coloured pins; coloured strings between notes; right-click menu; create from the tray | Agreed 20:31–20:33 UTC; desktop floating notes and Keep on top already exist |
+| 2.0-1 | **Sticky corkboard** | L | In-app corkboard with Grid and Free modes; drag; box-select; coloured pins; coloured strings between notes; right-click menu; create from the tray | Agreed 20:31–20:33 UTC; desktop floating notes and Keep on top already exist. **Box-select is Ahmed's agreed "swipe to select several sticky notes"** (Notion board card 2.0-1b): draw a box over notes to pick them |
 | 2.0-2 | **Calculator: history panel** | S | History on the right side of the calculator | Agreed 21:37 UTC |
 | 2.0-3 | **Calculator: unit converters** | M | Windows-style offline converters (length, weight, temperature, area, volume, time, data…) | No internet features (agreed) |
 | 2.0-4 | **In-app Manual** | L | A browsable feature guide inside Notaya with pictures, clear icons and longer explanations; the same content kept as an outside guide we update with every release | Agreed 23:04 UTC. The outside guide starts in 1.6 and grows each release |

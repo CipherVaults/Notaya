@@ -298,6 +298,10 @@ fn drop_row_pages(items: &mut Vec<Item>, gone: &std::collections::HashSet<String
 /// Runs on a worker thread: the dialog waits for the person, and a big import takes a while.
 #[tauri::command(async)]
 pub fn import_notes(app: AppHandle, state: State<'_, AppState>, request: ImportRequest) -> Result<Option<ImportSummary>> {
+    import_notes_person(app, state, request)
+}
+
+fn import_notes_person(app: AppHandle, state: State<'_, AppState>, request: ImportRequest) -> Result<Option<ImportSummary>> {
     // Registered before the dialog opens, so a Cancel (or a lock) during the pick is seen too.
     let running = Running::start()?;
     let (paths, folder): (Vec<PathBuf>, bool) = match request.source.as_str() {

@@ -16,6 +16,18 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-08 (Ahmed's message 00:51:23 UTC), EX-2026-11-08-58: Notion hub sync with the version plan (record copied into the repo)
+
+- [2026-11-08-notion-hub-sync-with-version-plan.md](2026-11-08-notion-hub-sync-with-version-plan.md): the record of the Notion board and roadmap sync. Records only. **Produced**; not accepted.
+
+### 2026-11-08 (Ahmed's message 00:51:23 UTC), EX-2026-11-08-57: usage ledger, first Codex cycle, pace forecast
+
+- [2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md](2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md): ledger rows for the first Codex cycle (measured limits: the week holds about 6.5 five-hour windows), pace forecast for 1.6 to 2.5, dashboard republished. Records and tools only; no app code. **Produced**; not accepted.
+
+### 2026-11-08 (Ahmed's message 00:24:41 UTC), EX-2026-11-08-56: checkpoint session summary (23:39 to 00:26 UTC)
+
+- [2026-11-08-checkpoint-session-summary.md](2026-11-08-checkpoint-session-summary.md): records only. Session entry 46, A45 (Notion migration rules, quota rules, Phase 2 answers) with eleven authority rows, ledger rows for eight threads, STATUS lines and the handover guide in both copies. No code. **Produced**; verified by reading the files back; not accepted.
+
 ### 2026-11-08 (Ahmed's messages 00:15:27 and 00:18:27 UTC), EX-2026-11-08-55: Build of Notaya 1.6 starts: go recorded, briefs for Codex
 
 - [2026-11-08-v1-6-build-start.md](2026-11-08-v1-6-build-start.md): records only. The go to build 1.6, gates G1 to G4 and the roles (Codex builds, Claude briefs, inspects, merges and records) as A44; one brief per lane in [the briefs](../plan/2026-11-08-v1-6-codex-briefs.md). No code; the Rust checks cannot run in this container (no Wine, MinGW or GTK). **Produced**; not verified, not accepted.

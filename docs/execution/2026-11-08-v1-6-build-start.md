@@ -28,3 +28,15 @@
 - How the briefs reach Codex (Codex runs on Ahmed's PC, `D:\Notaya`): the coordinator decides; the briefs are in the repository, so a Codex checkout of this branch has them.
 - Whether to install Wine and MinGW in the cloud environment so cloud threads can run the Rust checks: needs Ahmed's own word.
 - Still pending for the build's milestones: the 13-section Session Summary entry, usage ledger rows, handover guide update (both copies, A39) and the Notion board; they are written when the first lane merges.
+
+
+## 5. Heartbeat log (one line per event; times UTC)
+
+- **00:43** Codex's usage limit was hit by lanes A, B, C1 and D (one shared ChatGPT account): "You've hit your usage limit ... try again at 7:25 AM" (PC local time, UTC+2, so **05:25 UTC**). Work in `D:\Notaya-lanes\<lane>` is partly written, uncommitted and intact. Lane E finished first and was pushed: `AE0101/v1-6-e` `c36397b`, [PR #70](https://github.com/CipherVaults/Notaya/pull/70), held as a draft until the AI server (C5) exists. Machine: Gaming-PC (Codex), cloud (review).
+- **00:45** Heartbeat loop running on the PC (30 minutes; resumes C1, A, B, D after 05:25, then C2 and C4; two Codex lanes at a time). Task Scheduler registration denied by the PC's permission system and not worked around. Lane E's commit message footer shows a mangled middle dot (`Â·`) from a script encoding bug; not rewritten (no force-push).
+- **00:46** Ahmed confirmed G3 and the 7 notebooks ("yes, yes for both"), recorded in the authority table.
+- **05:25** Codex's 5-hour window reset. **05:45** the heartbeat started C1 and A (two lanes at a time).
+- **06:17 to 06:23** lanes C1 (`85c8dcd`), A (`9543b87`) and D (`2e01aef`) pushed; B (`37886fd`) was already finished at its checkpoint.
+- **06:24** latest Codex reading: 5-hour window 36%, weekly 22% (resets 5-hour 10:45 UTC, weekly 2026-11-14 15:44 UTC).
+- **06:56** correction: the heartbeat wrongly reported C4 as finished and pushed `AE0101/v1-6-c4` (`4e3c457`) with no C4 work (Codex had stopped at a file outside its write area); the branch is to be ignored and C4 restarts on `AE0101/v1-6-c4b`. C2 also stopped for three files outside its area; the areas were widened.
+- **07:25 to 07:45** PC checks on the exact commits: C1 588 passed, B 529, D bridge 16 (+517 core), A 521. Merged: C1 (PR #74), B (PR #75), D (PR #76). A held for a conflict with C1 in `commands/vault.rs`; E held (PR #70). Machine: Gaming-PC (Codex, checks), cloud (review, merge).

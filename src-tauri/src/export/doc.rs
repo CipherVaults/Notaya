@@ -1,5 +1,5 @@
-//! A page's TipTap (ProseMirror) JSON turned into a small document model that the three
-//! writers (Markdown, Word, PDF) share. Every node type the editor can make has a place here
+//! A page's TipTap (ProseMirror) JSON turned into a small document model that the four
+//! writers (HTML, Markdown, Word, PDF) share. Every node type the editor can make has a place here
 //! (see `src/features/notes/editor/`); a node type this code does not know keeps its text, so
 //! nothing a person wrote is dropped silently.
 
@@ -114,6 +114,7 @@ pub fn blocks_dir(blocks: &[Block]) -> Option<Dir> {
             Block::Quote(x) | Block::Toggle(x) | Block::Shelf(x) | Block::Callout { blocks: x, .. } => blocks_dir(x),
             Block::Columns(cols) => cols.iter().find_map(|c| blocks_dir(c)),
             Block::Table(rows) => rows.iter().flatten().find_map(|c| blocks_dir(&c.blocks)),
+            Block::Database { table: Some(t), .. } => first_strong(&t.title).or_else(|| t.rows.iter().flatten().find_map(|c| blocks_dir(&c.blocks))),
             _ => None,
         };
         if found.is_some() {
@@ -250,6 +251,30 @@ pub struct Cell {
     pub blocks: Vec<Block>,
 }
 
+/// A database's saved view, resolved in the Rust core before a writer sees it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DatabaseTable {
+    pub title: String,
+    /// Header followed by at most 1,000 data rows, in the saved view's order.
+    pub rows: Vec<Vec<Cell>>,
+    pub more: usize,
+}
+
+/// Reuses the ordinary text and table renderers, including their right-to-left handling.
+pub fn database_blocks(table: Option<&DatabaseTable>) -> Vec<Block> {
+    let para = |text, bold| Block::Paragraph { align: Align::Left, content: vec![Inline::Text(text, Marks { bold, ..Marks::default() })] };
+    match table {
+        Some(t) => {
+            let mut blocks = vec![para(t.title.clone(), true), Block::Table(t.rows.clone())];
+            if t.more > 0 {
+                blocks.push(para(format!("and {} more rows", t.more), false));
+            }
+            blocks
+        }
+        None => vec![para("(database not available)".into(), false)],
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Image {
     /// The attachment id inside the vault, when the picture is one of its own.
@@ -290,6 +315,9 @@ pub enum Block {
     Math(String),
     Image(Image),
     Table(Vec<Vec<Cell>>),
+    /// The page stores only the database and view ids. `table` is filled by the exporter;
+    /// absent, binned or unresolved databases keep the unavailable placeholder.
+    Database { id: String, view: String, table: Option<DatabaseTable> },
     Rule,
     /// A link to another page (the title is looked up when the page is exported). `target` is
     /// set when that page is part of the same export.
@@ -394,6 +422,7 @@ fn block(n: &Value, p: &Pages, out: &mut Vec<Block>) {
             float: attr(n, "float").and_then(Value::as_bool) == Some(true),
         })),
         "table" => out.push(Block::Table(kids.iter().map(|row| children(row).iter().map(|c| cell(c, p)).collect()).collect())),
+        "databaseBlock" => out.push(Block::Database { id: attr_str(n, "databaseId"), view: attr_str(n, "viewId"), table: None }),
         "horizontalRule" => out.push(Block::Rule),
         "pageLink" => {
             let id = attr_str(n, "pageId");
@@ -733,6 +762,7 @@ pub mod tests {
                 Block::Math(_) => "math",
                 Block::Image(_) => "image",
                 Block::Table(_) => "table",
+                Block::Database { .. } => "database",
                 Block::Rule => "rule",
                 Block::PageLink { .. } => "pagelink",
             })
@@ -846,6 +876,20 @@ pub mod tests {
         assert_eq!(first_strong("\u{200F}abc"), Some(Dir::Rtl), "an explicit right-to-left mark");
         assert_eq!(first_strong("12 + 3"), None);
         assert_eq!(first_strong(""), None);
+    }
+
+    #[test]
+    fn database_block_parses_ids_without_trusting_embedded_data() {
+        let blocks = parse(r#"{"type":"doc","content":[
+            {"type":"databaseBlock","attrs":{"databaseId":"db","viewId":"view","title":"untrusted","rows":["untrusted"]}},
+            {"type":"databaseBlock"}
+        ]}"#, &titles);
+        assert_eq!(blocks, vec![
+            Block::Database { id: "db".into(), view: "view".into(), table: None },
+            Block::Database { id: String::new(), view: String::new(), table: None },
+        ]);
+        let fallback = database_blocks(None);
+        assert!(matches!(&fallback[0], Block::Paragraph { content, .. } if inline_text(content) == "(database not available)"));
     }
 
     #[test]

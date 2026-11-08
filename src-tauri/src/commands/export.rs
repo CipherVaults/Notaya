@@ -61,6 +61,10 @@ fn parse_output(output: Option<&str>) -> Result<bool> {
 /// Runs on a worker thread: the dialog waits for the person, and a big notebook takes a moment.
 #[tauri::command(async)]
 pub fn export_notes(app: AppHandle, state: State<'_, AppState>, request: ExportRequest) -> Result<Option<ExportSummary>> {
+    export_notes_person(app, state, request)
+}
+
+fn export_notes_person(app: AppHandle, state: State<'_, AppState>, request: ExportRequest) -> Result<Option<ExportSummary>> {
     let format = Format::parse(&request.format)?;
     let zip = parse_output(request.output.as_deref())?;
     let scope = parse_scope(&request.scope, request.ids)?;

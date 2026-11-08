@@ -224,12 +224,20 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <div class="panel" id="codexBox"></div>
   </section>
 
+  <section id="forecast" aria-labelledby="h-forecast">
+    <h2 id="h-forecast"><span class="em">🔮</span> Pace forecast</h2>
+    <p class="small muted">A forecast, not a measurement. Measured: one Codex 5-hour window used 15% of the Codex week, so a week holds about 6.5 windows. Assumed: how far the cut-off lanes had got, and the cost per plan point for 1.7 onward.</p>
+    <div class="tablewrap"><table id="forecastTable"></table></div>
+    <p class="small muted" id="forecastBasis" style="margin-top:8px"></p>
+  </section>
+
   <section id="where" aria-labelledby="h-where">
     <h2 id="h-where"><span class="em">📁</span> Where this is tracked</h2>
     <div class="panel">
       <div class="files">
         <div class="file"><code>docs/ledger/claude-sessions.csv</code><span>One row per Claude session or task: partner, machine, model, effort, four token counts, weighted tokens, reported cost, and where each number came from.</span></div>
-        <div class="file"><code>docs/ledger/codex-runs.csv</code><span>One row per Codex run: tokens from Codex's own report and the 5-hour and weekly percentages before and after. Empty so far.</span></div>
+        <div class="file"><code>docs/ledger/codex-runs.csv</code><span>One row per Codex run: tokens from Codex's own report and the 5-hour and weekly percentages before and after.</span></div>
+        <div class="file"><code>docs/ledger/pace-forecast.csv</code><span>The pace forecast: plan points per version turned into Codex windows and weeks, with the assumptions written in each row.</span></div>
         <div class="file"><code>docs/ledger/quota-readings.csv</code><span>Each time someone read a limit (Claude usage screen, Codex status, credit balance), with who read it and when it resets.</span></div>
         <div class="file"><code>docs/ledger/usage-ledger.md</code><span>The plain-language reading, newest on top: totals, what they mean for pace, and what was not measured.</span></div>
         <div class="file"><code>docs/ledger/README.md</code><span>The rules: units, columns, and how to refresh at every session stop.</span></div>
@@ -252,7 +260,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <h2 id="h-gaps"><span class="em">⚠️</span> What is not measured</h2>
     <ul class="plain">
       <li><b>Mohamed's usage.</b> His sessions run on his own account and are not visible from this side. Only Ahmed's account appears here.</li>
-      <li><b>Limit history.</b> The Claude limits were read once, at 22:32 UTC, from Ahmed's screenshots. They are account-wide and include everything else on the account. The Codex limits have never been read.</li>
+      <li><b>Limit history.</b> The Claude limits were read once, at 22:32 UTC, from Ahmed's screenshots. They are account-wide and include everything else on the account. The Codex limits were read for the first time at 00:26 to 00:44 UTC on 2026-11-08, from Codex's own rate-limit events (not from <span class="mono">/status</span>). Claude's weekly percentage has not been read since 22:32 UTC.</li>
       <li><b>Dollars per thread.</b> The credit screen gives one total. Only the cloud sessions carry a dollar figure of their own, so part of the spend is not itemised. Whether the Gaming-PC threads draw from the credit is not shown by any record.</li>
       <li><b>Work after each reading.</b> Three long threads (records catch-up, session summary, set-up) kept working after the rows the ledger holds. The project's Usage screen shows their later totals.</li>
       <li><b>Before 2026-11-07 19:08 UTC.</b> Never recorded and not reconstructed.</li>
@@ -319,7 +327,7 @@ $("totalStats").innerHTML = `
   <div class="stat"><span class="label">Weighted tokens</span><span class="value">${mil(T.weighted)}</span><span class="sub">one comparison number</span></div>
   <div class="stat"><span class="label">Output tokens</span><span class="value">${nf.format(T.out)}</span><span class="sub">what Claude wrote</span></div>
   <div class="stat"><span class="label">Cache reads</span><span class="value">${mil(T.cr)}</span><span class="sub">${(T.cr / (T.input + T.cw + T.cr + T.out) * 100).toFixed(0)}% of all raw tokens</span></div>
-  <div class="stat"><span class="label">Codex runs</span><span class="value">${D.codex.length}</span><span class="sub">none ordered yet</span></div>`;
+  <div class="stat"><span class="label">Codex runs</span><span class="value">${D.codex.length}</span><span class="sub">${D.codex.length ? "first cycle, 2026-11-08" : "none ordered yet"}</span></div>`;
 function groupTable(el, title, obj, withDot) {
   const rows = Object.entries(obj).sort((a, b) => b[1].weighted - a[1].weighted);
   el.innerHTML = `<thead><tr><th>${title}</th><th class="r">Sessions</th><th class="r">Weighted</th><th class="r">Reported cost</th></tr></thead><tbody>` +
@@ -346,8 +354,17 @@ const pc = (q, label, none) => q ? `<div class="qcard"><span class="t">${label}<
 $("quotaCards").innerHTML =
   pc(q5, "Claude · 5-hour window", "Needs a reading from the Claude usage screen.") +
   pc(qw, "Claude · weekly limit (all models)", "Needs a reading from the Claude usage screen.") +
-  `<div class="qcard"><span class="t">Codex · 5-hour window</span><span class="s none">Not read</span><span class="small muted">No Codex run yet. Read Codex status before and after the first run.</span></div>
-   <div class="qcard"><span class="t">Codex · weekly limit</span><span class="s none">Not read</span><span class="small muted">Same: read it before and after each run.</span></div>`;
+  "";
+  codexCards();
+function codexCards() {
+  const cq = D.quota.find(q => q.tool === "Codex" && /5-hour ([\d.]+)% used, weekly ([\d.]+)% used/.test(q.reading));
+  const nm = (re) => { const m = cq && cq.reading.match(re); return m ? parseFloat(m[1]) : null; };
+  const p5 = nm(/5-hour ([\d.]+)% used/), pw = nm(/weekly ([\d.]+)% used/);
+  const rs = cq ? cq.resets.match(/5-hour (\S+?); weekly (\S+)/) : null;
+  const card = (label, p, reset) => p == null ? `<div class="qcard"><span class="t">${label}</span><span class="s none">Not read</span><span class="small muted">Read Codex status before and after each run.</span></div>` :
+    `<div class="qcard"><span class="t">${label}</span><span class="s">${p}% used</span>${meter(p)}<span class="small">Resets ${esc(dayhhmm(reset))} UTC.</span><span class="small muted">Read ${esc(hhmm(cq.time))} UTC from Codex's rate-limit events (Gaming-PC). Account-wide.</span></div>`;
+  $("quotaCards").insertAdjacentHTML("beforeend", card("Codex · 5-hour window", p5, rs && rs[1]) + card("Codex · weekly limit", pw, rs && rs[2]));
+}
 
 /* project usage screen */
 const SC = D.screen || [];
@@ -360,14 +377,14 @@ if (!SC.length) { $("screen").hidden = true; } else {
 }
 
 /* gantt */
-$("ganttNote").textContent = `Window ${hhmm(D.window.start)} to ${hhmm(D.window.end)} UTC (it resets at 00:00 UTC). Each bar runs from a session's start to its last update. The black line is the snapshot. Account-wide: every session below shares this one window.`;
+$("ganttNote").textContent = `Window ${hhmm(D.window.start)} to ${hhmm(D.window.end)} UTC (it resets at ${hhmm(D.window.end)} UTC). Each bar runs from a session's start to its last update. The black line is the snapshot. Account-wide: every session below shares this one window.`;
 const pos = (ms) => Math.max(0, Math.min(100, (ms - win0) / (win1 - win0) * 100));
 $("gantt").innerHTML = S.filter(s => s.start).map((s) => {
   const a = Date.parse(s.start), b = Date.parse(s.end || s.start);
   const l = pos(a), w = Math.max(0.5, pos(b) - l);
   return `<div class="grow" title="${esc(s.task)}: ${hhmm(s.start)} to ${hhmm(s.end)}"><div class="name small">${esc(s.task.length > 46 ? s.task.slice(0, 44) + "…" : s.task)}</div><div class="glane"><div class="gbar ${mcls(s.model)}" style="left:${l}%;width:${w}%"></div><div class="now" style="left:${pos(snapMs)}%"></div></div></div>`;
 }).join("");
-$("gaxis").innerHTML = ["19:00", "20:00", "21:00", "22:00", "23:00", "00:00"].map(t => `<span>${t}</span>`).join("");
+$("gaxis").innerHTML = ["00:00", "01:00", "02:00", "03:00", "04:00", "05:00"].map(t => `<span>${t}</span>`).join("");
 
 /* session table with filters and sorting */
 const state = { machine: "All", model: "All", sort: "start", dir: 1 };
@@ -415,5 +432,21 @@ document.addEventListener("click", (e) => {
 renderFilters(); renderTable();
 
 /* codex */
-$("codexBox").innerHTML = D.codex.length ? "" : `<p>No Codex run has been ordered yet. When one is, its row lands in <span class="mono">codex-runs.csv</span> with Codex's own token report and the 5-hour and weekly percentages before and after.</p><p class="small muted" style="margin-top:8px">Account: Ahmed's Codex (nothing recorded). Model planned for the developer hand: gpt-6.1-sol at xhigh reasoning.</p>`;
+if (!D.codex.length) {
+  $("codexBox").innerHTML = `<p>No Codex run has been ordered yet.</p>`;
+} else {
+  const t = (r) => (r || "").replace("2026-11-08T", "").replace("Z", "");
+  const toks = D.codex.reduce((a, r) => a + (parseFloat(r.input) || 0), 0), outt = D.codex.reduce((a, r) => a + (parseFloat(r.output) || 0), 0);
+  $("codexBox").innerHTML = `<p class="small muted">${D.codex.length} runs of the first cycle, all <span class="mono">${esc(D.codex[0].model)}</span> at <span class="mono">${esc(D.codex[0].reasoning)}</span> reasoning on ${esc(D.codex[0].machine)}. Together about ${mil(toks)} input tokens (97% cached) and ${nf.format(outt)} output tokens. The quota columns are the account's, shared by the five lanes.</p><div class="tablewrap"><table><thead><tr><th>Lane</th><th>Ran (UTC)</th><th>Ended</th><th class="r">Input (all)</th><th class="r">Output</th><th class="r">5-hour after</th><th class="r">Week after</th></tr></thead><tbody>` +
+    D.codex.map(r => `<tr><td>${esc(r.run_label)}<span class="sub">${esc(r.task)}</span></td><td class="nw mono">${esc(t(r.start_utc))} to ${esc(t(r.end_utc))}</td><td>${esc(r.result)}</td><td class="r num">${nf.format(parseFloat(r.input) || 0)}</td><td class="r num">${nf.format(parseFloat(r.output) || 0)}</td><td class="r num">${esc((r.quota_5h_after || "").split(" ")[0])}</td><td class="r num">${esc((r.quota_week_after || "").split(" ")[0])}</td></tr>`).join("") + `</tbody></table></div>`;
+}
+
+/* forecast */
+const F = D.forecast || [];
+if (!F.length) { $("forecast").hidden = true; } else {
+  const f1 = (v) => parseFloat(v).toFixed(1);
+  $("forecastTable").innerHTML = `<thead><tr><th>Scope</th><th class="r">Points</th><th class="r">Windows: low</th><th class="r">likely</th><th class="r">high</th><th class="r">Weeks: likely</th><th class="r">range</th></tr></thead><tbody>` +
+    F.map(r => `<tr><td>${esc(r.version)}</td><td class="r num">${esc(r.plan_points)}</td><td class="r num">${f1(r.codex_windows_low)}</td><td class="r num"><b>${f1(r.codex_windows_likely)}</b></td><td class="r num">${f1(r.codex_windows_high)}</td><td class="r num"><b>${f1(r.codex_weeks_likely)}</b></td><td class="r num">${f1(r.codex_weeks_low)} to ${f1(r.codex_weeks_high)}</td></tr>`).join("") + "</tbody>";
+  $("forecastBasis").textContent = F[0].basis;
+}
 </script>
