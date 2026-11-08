@@ -16,6 +16,14 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-08 (Ahmed's message 16:02:35 UTC), EX-2026-11-08-62: usage ledger refresh at 16:00 UTC
+
+- [2026-11-08-ledger-refresh-1600.md](2026-11-08-ledger-refresh-1600.md): new readings (Codex week 47%, Claude week 37%), forecast recalibrated (2.5 likely about 7 December, was 2 December), "not read" gauges, the roadmap thread's usage row. Produced and published; not accepted.
+
+### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-60: usage ledger redesign and the 1.6 to 2.5 forecast
+
+- [2026-11-08-ledger-redesign-and-forecast.md](2026-11-08-ledger-redesign-and-forecast.md): the new dashboard (charts and a forecast model with Codex's banked resets and Claude's 70% cap), the 08:27 readings, one forecast instead of two. **Produced**; not accepted.
+
 ### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-59: Codex first, the Codex partner briefing and the roadmap forecast
 
 - [2026-11-08-codex-first-partner-briefing-and-forecast.md](2026-11-08-codex-first-partner-briefing-and-forecast.md): A46, the briefing file and the forecast page. Records and a forecast only. **Produced**; not accepted.
