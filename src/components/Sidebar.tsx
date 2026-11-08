@@ -1,3 +1,5 @@
+import { Button as BinButton } from "@/components/ui";
+import { timeAgo } from "@/lib/utils";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -26,6 +28,7 @@ import {
   StickyNote,
   Table2,
   Trash2,
+  RotateCcw,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -62,8 +65,7 @@ function contents(tree: NotesTree, sectionIds: string[], withSections: boolean):
   return withSections ? `It has ${plural(ids.size, "section")} and ${pageText}${trashText}.` : `It has ${pageText}${trashText}.`;
 }
 
-const DELETE_NOTE =
-  "This can't be undone from inside the app. Notaya first saves a backup copy of all your notes. To get this back, use Restore from a backup in Settings: it replaces your notes with that copy, and your current notes are kept in a restore-undo file.";
+const DELETE_NOTE = "You can restore this and its contents from Trash. Notaya first saves a safety backup copy of your notes.";
 
 const rowByKey = (key: string) => document.querySelector<HTMLElement>(`[data-rowkey="${window.CSS.escape(key)}"]`);
 
@@ -231,7 +233,7 @@ export default function Sidebar() {
 
   const favorites = useMemo(() => tree.pages.filter((p) => p.favorite && p.trashedAt === null), [tree.pages]);
   const favoriteDbs = useMemo(() => tree.databases.filter((d) => d.favorite && d.trashedAt === null), [tree.databases]);
-  const trashed = tree.pages.filter((p) => p.trashedAt !== null).length + tree.databases.filter((d) => d.trashedAt !== null).length;
+  const trashed = useApp((s) => s.bin.length);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const startResize = (e: React.PointerEvent) => {
@@ -355,16 +357,16 @@ export default function Sidebar() {
                           onSelect={async () => {
                             const ok = await deleteWithConfirm({
                               rowKey: `nb:${nb.id}`,
-                              title: `Delete notebook "${nb.name}"?`,
+                              title: `Move to bin "${nb.name}"?`,
                               body: `${contents(tree, sections.map((s) => s.id), true)} ${DELETE_NOTE}`,
-                              confirm: "Delete notebook",
+                              confirm: "Move to bin",
                               name: nb.name,
                               del: () => api.deleteNotebook(nb.id),
                             });
                             if (ok) useApp.getState().openNotebook(useApp.getState().tree.notebooks[0]?.id ?? null);
                           }}
                         >
-                          Delete notebook
+                          Move to bin
                         </MenuItem>
                       </>
                     }
@@ -931,9 +933,9 @@ function SectionBlock({
                 onSelect={async () => {
                   const ok = await deleteWithConfirm({
                     rowKey,
-                    title: `Delete section "${section.name}"?`,
+                    title: `Move to bin "${section.name}"?`,
                     body: `${contents(tree, [section.id], false)} ${DELETE_NOTE}`,
-                    confirm: "Delete section",
+                    confirm: "Move to bin",
                     name: section.name,
                     del: () => api.deleteSection(section.id),
                   });
@@ -941,7 +943,7 @@ function SectionBlock({
                   if (ok && st.activePageId && !st.tree.pages.some((p) => p.id === st.activePageId)) st.openPage(null);
                 }}
               >
-                Delete section
+                Move to bin
               </MenuItem>
             </>
           }
@@ -1175,7 +1177,7 @@ function PageItem({
               toast("Moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(page.id)) } });
             }}
           >
-            Move to trash
+            Move to bin
           </MenuItem>
         </>
       }
@@ -1274,10 +1276,55 @@ function DatabaseItem({
               toast("Database moved to trash", { action: { label: "Undo", onClick: () => run(() => api.restorePage(db.id)) } });
             }}
           >
-            Move to trash
+            Move to bin
           </MenuItem>
         </>
       }
     />
   );
+}
+
+
+/** The same Trash screen, grouped by the six kinds that can be restored. */
+export function TrashView() {
+  const entries = useApp((s) => s.bin);
+  const confirm = useConfirm();
+  const run = async (fn: () => Promise<NotesTree>) => {
+    try {
+      useApp.getState().setTree(await fn());
+      const [bin, stickies] = await Promise.all([api.listBin(), api.listStickies()]);
+      useApp.setState({ bin, stickies });
+    } catch (e) { toast.error(errorText(e)); }
+  };
+  const groups = [["notebook", "Notebooks"], ["section", "Sections"], ["page", "Pages"], ["database", "Databases"], ["row", "Rows"], ["sticky", "Sticky notes"]] as const;
+  return <div className="h-full overflow-y-auto">
+    <div className="mx-auto px-10 pb-16 pt-14" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
+      <div className="flex items-end justify-between">
+        <div><h1 className="text-[2rem] font-bold tracking-tight">Trash</h1><p className="mt-1 text-muted">Items you move to the bin wait here until you restore or delete them for good.</p></div>
+        {entries.length > 0 && <BinButton variant="outline" onClick={async () => {
+          if (await confirm({ title: "Empty the bin?", body: "All binned items and their contents will be deleted for good.", confirm: "Empty the bin", danger: true })) await run(() => api.emptyTrash());
+        }}><Trash2 size={15} /> Empty the bin</BinButton>}
+      </div>
+      {entries.length === 0 && <p className="py-16 text-center text-sm text-faint">Trash is empty.</p>}
+      {groups.map(([kind, title]) => {
+        const items = entries.filter((e) => e.kind === kind);
+        if (!items.length) return null;
+        return <section key={kind} className="mt-8"><h2 className="mb-2 text-sm font-semibold">{title}</h2>
+          <div className="divide-y divide-line rounded-xl border border-line">{items.map((item) => <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+            <span className="w-6 text-center text-lg"><PageIcon icon={item.icon} size={18} fallback={<FileText size={17} className="mx-auto text-faint" />} /></span>
+            {item.kind === "page" || item.kind === "database" ? <button className="min-w-0 flex-1 text-left" onClick={() => item.kind === "database" ? useApp.getState().openDatabase(item.id) : useApp.getState().openPage(item.id)}>
+              <div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div>
+            </button> : <div className="min-w-0 flex-1"><div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div></div>}
+            <BinButton variant="ghost" size="sm" onClick={async () => {
+              if (item.parentInBin && !await confirm({ title: "Restore containing items too?", body: "This item's notebook, section or parent is also in the bin. Restore them together?", confirm: "Restore together" })) return;
+              await run(() => api.restoreBinItem(item.id, item.parentInBin));
+            }}><RotateCcw size={14} /> Restore</BinButton>
+            <BinButton variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={async () => {
+              if (await confirm({ title: "Delete for good?", body: "This item and its contents will be deleted for good.", confirm: "Delete for good", danger: true })) await run(() => api.deletePage(item.id));
+            }}><Trash2 size={14} /> Delete for good</BinButton>
+          </div>)}</div>
+        </section>;
+      })}
+    </div>
+  </div>;
 }

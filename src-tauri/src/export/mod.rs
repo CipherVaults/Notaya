@@ -1359,9 +1359,9 @@ pub mod tests {
     /// Notebook "nb" with sections "s1" (pages a, a/child, b, trashed t) and "s2" (page c),
     /// and a second notebook with page "z".
     fn sample_items() -> Vec<Item> {
-        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
+        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0, trashed_at: None, });
         let sec = |id: &str, nbid: &str, name: &str, order| {
-            Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 })
+            Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0, trashed_at: None, })
         };
         vec![
             nb("nb", "Personal", 0),
@@ -1724,8 +1724,8 @@ pub mod tests {
 
     #[test]
     fn names_are_safe_and_unique() {
-        let nb = Item::Notebook(Notebook { id: "n".into(), name: "A/B:C".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
-        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "..".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "A/B:C".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "..".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
         let body = || r#"{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"x"}]}]}"#.to_string();
         let titles = [
             "CON", "con", "NUL.txt", "..", "...", "../../etc/passwd", "a\\b", "x".repeat(200).as_str(), "", "   ", "Dup", "dup", "DUP", "Dup ", "Page", "Page.assets", "Trailing dot.", "Question? *", "ÄÖÜ", "äöü",
@@ -1769,8 +1769,8 @@ pub mod tests {
 
     #[test]
     fn a_deep_chain_of_sub_pages_stops_nesting() {
-        let nb = Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
-        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
         let mut items = vec![nb, sec];
         for i in 0..9 {
             let parent = if i == 0 { String::new() } else { format!("p{}", i - 1) };
@@ -1785,8 +1785,8 @@ pub mod tests {
 
     #[test]
     fn markdown_pictures_sit_next_to_each_page_and_the_links_match() {
-        let nb = Item::Notebook(Notebook { id: "n".into(), name: "Trip".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 });
-        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "Day 1".into(), color: String::new(), order: 0, created: 0, updated: 0 });
+        let nb = Item::Notebook(Notebook { id: "n".into(), name: "Trip".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
+        let sec = Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "Day 1".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, });
         let items = vec![
             nb,
             sec,
@@ -1818,8 +1818,8 @@ pub mod tests {
     #[test]
     fn pictures_are_read_one_page_at_a_time_and_missing_ones_are_counted() {
         let items = vec![
-            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
             page_with("a", "s", "", "A", 0, with_picture()),
             page_with("b", "s", "", "B", 1, with_picture()),
         ];
@@ -1915,8 +1915,8 @@ pub mod tests {
 
     #[test]
     fn links_between_pages_of_a_zip_are_relative_paths_to_their_files() {
-        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0 });
-        let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0 });
+        let nb = |id: &str, name: &str, order| Item::Notebook(Notebook { id: id.into(), name: name.into(), color: String::new(), icon: String::new(), order, created: 0, updated: 0, trashed_at: None, });
+        let sec = |id: &str, nbid: &str, name: &str, order| Item::Section(Section { id: id.into(), notebook_id: nbid.into(), name: name.into(), color: String::new(), order, created: 0, updated: 0, trashed_at: None, });
         let items = vec![
             nb("n1", "My notes", 0),
             nb("n2", "Other", 1),
@@ -1979,8 +1979,8 @@ pub mod tests {
     #[test]
     fn links_inside_one_html_or_word_file_go_to_the_page_s_place() {
         let items = vec![
-            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
             linking("a", "s", "", "First", 0, &["b", "elsewhere"]),
             linking("b", "s", "", "Second", 1, &[]),
         ];
@@ -2035,8 +2035,8 @@ pub mod tests {
     #[test]
     fn the_size_limit_counts_pictures_before_they_are_kept() {
         let items = vec![
-            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0 }),
-            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0 }),
+            Item::Notebook(Notebook { id: "n".into(), name: "N".into(), color: String::new(), icon: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
+            Item::Section(Section { id: "s".into(), notebook_id: "n".into(), name: "S".into(), color: String::new(), order: 0, created: 0, updated: 0, trashed_at: None, }),
             page_with("a", "s", "", "A", 0, with_picture()),
         ];
         let refs: Vec<&Item> = items.iter().collect();

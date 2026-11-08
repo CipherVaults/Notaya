@@ -5,6 +5,7 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import { Popover } from "radix-ui";
 import { Bold, Calculator, Italic, ListChecks, Pin, PinOff, Trash2, X } from "lucide-react";
 import { flushAll, registerFlush, trackSave } from "@/lib/flush";
+import { watchItemChanges, type Revisioned } from "@/lib/changes";
 import { api } from "@/lib/ipc";
 import { STICKY_COLORS, stickyColor } from "@/lib/palette";
 import { applyAppearance, cachedAppearance } from "@/lib/theme";
@@ -48,6 +49,9 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
   const [saveFailed, setSaveFailed] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const dirtyRef = useRef(false);
+  const savingRef = useRef(0);
+  const recheckRef = useRef<(() => void) | null>(null);
+  const revRef = useRef((sticky as Revisioned<Sticky>).rev ?? 0);
   const inflightRef = useRef<Promise<void> | null>(null);
 
   // Saves run one after another. The returned promise rejects if the save fails.
@@ -57,15 +61,17 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
     const content = JSON.stringify(e.getJSON());
     const text = e.getText();
     dirtyRef.current = false;
+    savingRef.current++;
     const run = async () => {
       try {
-        await api.saveSticky(sticky.id, content, text);
+        revRef.current = await api.saveSticky(sticky.id, content, text, revRef.current);
+        if (!dirtyRef.current && savingRef.current === 1) void api.editing(sticky.id, false).catch(() => {});
         if (!dirtyRef.current) setSaveFailed(false);
       } catch (err) {
         dirtyRef.current = true; // keep the edit so the next save retries it
         setSaveFailed(true);
         throw err;
-      }
+      } finally { savingRef.current--; recheckRef.current?.(); }
     };
     const p = (inflightRef.current ?? Promise.resolve()).then(run);
     inflightRef.current = p.catch(() => {});
@@ -103,12 +109,35 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
     editorProps: { ...editorProps(() => editorRef.current), attributes: { class: "selectable" } },
     onUpdate: () => {
       dirtyRef.current = true;
+      void api.editing(sticky.id, true).catch(() => {});
       save();
     },
     onFocus: () => setFocused(true),
     onBlur: () => setFocused(false),
   });
   editorRef.current = editor;
+
+  useEffect(() => {
+    const watcher = watchItemChanges(sticky.id, () => revRef.current,
+      () => dirtyRef.current || savingRef.current > 0, async (alive) => {
+      const fresh = await api.getSticky(sticky.id);
+      if (!alive()) return;
+      if (fresh.trashedAt != null) { void win.close(); return; }
+      if (dirtyRef.current || savingRef.current > 0 || fresh.rev < revRef.current) return;
+      const e = editorRef.current;
+      if (e && !e.isDestroyed) {
+        const scroll = e.view.dom.parentElement?.scrollTop ?? 0;
+        const selection = e.state.selection;
+        e.chain().setContent(parseContent(fresh.content), { emitUpdate: false }).setMeta("addToHistory", false).run();
+        const max = e.state.doc.content.size;
+        e.commands.setTextSelection({ from: Math.min(selection.from, max), to: Math.min(selection.to, max) });
+        if (e.view.dom.parentElement) e.view.dom.parentElement.scrollTop = scroll;
+      }
+      revRef.current = fresh.rev; onChange(fresh);
+    });
+    recheckRef.current = watcher.recheck;
+    return () => { recheckRef.current = null; watcher.dispose(); };
+  }, [sticky.id, onChange]);
 
   // Persist position and size (in logical pixels) whenever the note is moved or resized.
   useEffect(() => {
@@ -180,12 +209,12 @@ function StickyCard({ sticky, onChange }: { sticky: Sticky; onChange: (s: Sticky
             {sticky.onTop ? <Pin size={13} /> : <PinOff size={13} />}
           </BarButton>
           <BarButton
-            label={confirmDelete ? "Click again to delete this note" : "Delete note"}
-            onClick={() => (confirmDelete ? api.deleteSticky(sticky.id) : setConfirmDelete(true))}
+            label={confirmDelete ? "Click again to move this note to the bin" : "Move to bin"}
+            onClick={async () => { if (!confirmDelete) { setConfirmDelete(true); return; } try { await flushNow(); await api.deleteSticky(sticky.id); } catch { setSaveFailed(true); } }}
             onLeave={() => setConfirmDelete(false)}
             className={confirmDelete ? "w-auto bg-red-600/85 px-2 text-[0.7rem] font-semibold text-white opacity-100 hover:bg-red-600" : undefined}
           >
-            {confirmDelete ? "Delete?" : <Trash2 size={13} />}
+            {confirmDelete ? "Move to bin?" : <Trash2 size={13} />}
           </BarButton>
           <BarButton
             label="Close (stays in your vault)"

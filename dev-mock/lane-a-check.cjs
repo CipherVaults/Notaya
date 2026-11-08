@@ -37,6 +37,7 @@ function load(file) {
   const requireLocal = (name) => {
     if (name === 'sonner') return { toast: { error: (message) => notices.push(message) } };
     if (name === '@/lib/storage') return { getKey: () => null, setKey: () => { throw new Error('Navigation must not write browser storage'); } };
+    if (name === '@tauri-apps/api/event') return load(path.join(__dirname, 'event.ts'));
     if (name === '@tauri-apps/api/core') return { invoke };
     if (name === '@/lib/ipc') return { api: {
       getSettings: () => invoke('get_settings'),

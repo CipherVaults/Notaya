@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
@@ -145,12 +145,20 @@ fn check_new_password(password: &str) -> Result<()> {
 
 /// Things to do right after unlocking: restore sticky notes and window effects.
 pub(super) fn after_unlock(app: &AppHandle, state: &AppState) {
+    let events_app = app.clone();
+    let sticky_app = app.clone();
+    state.bind_events(
+        move |changes| {
+            let _ = events_app.emit("items-changed", changes);
+        },
+        move |id| ui::close_sticky(&sticky_app, id),
+    );
     state.record_success();
     let Ok((protect, stickies)) = state.with(|s| {
         let stickies: Vec<Sticky> = s
             .items()
             .filter_map(|i| match i {
-                Item::Sticky(st) if st.open => Some(st.clone()),
+                Item::Sticky(st) if st.open && st.trashed_at.is_none() => Some(st.clone()),
                 _ => None,
             })
             .collect();
@@ -455,6 +463,7 @@ pub(crate) fn get_settings_core(s: &Session, _actor: &Actor) -> Result<Settings>
     // The calculator history has its own commands; the settings screen doesn't need it.
     settings.calc_history.clear();
     settings.search_history.clear();
+    settings.replaced_edits.clear();
     Ok(settings)
 }
 
@@ -472,14 +481,17 @@ fn save_settings_person(state: &AppState, settings: Settings) -> Result<bool> {
 }
 
 pub(crate) fn save_settings_core(s: &mut Session, _actor: &Actor, settings: Settings) -> Result<bool> {
+    s.run_as(_actor, |s| {
     let mut settings = settings.sanitized();
     // Histories and the last location change only through their dedicated commands.
     let stored = s.settings();
     settings.calc_history = stored.calc_history;
     settings.search_history = stored.search_history;
     settings.last_place = stored.last_place;
+    settings.replaced_edits = stored.replaced_edits;
     s.put(Item::Settings(settings.clone()))?;
     Ok(s.protects_capture())
+    })
 }
 
 /// Saves only the last location in the unlocked vault, without overwriting other settings.
@@ -493,6 +505,7 @@ fn set_last_place_person(state: &AppState, last_place: Option<LastPlace>) -> Res
 }
 
 pub(crate) fn set_last_place_core(s: &mut Session, _actor: &Actor, last_place: Option<LastPlace>) -> Result<()> {
+    s.run_as(_actor, |s| {
     if last_place.as_ref().is_some_and(|place| !place.valid()) {
         return Err(Error::invalid("The last place is not valid."));
     }
@@ -502,6 +515,7 @@ pub(crate) fn set_last_place_core(s: &mut Session, _actor: &Actor, last_place: O
     }
     settings.last_place = last_place;
     s.put(Item::Settings(settings))
+    })
 }
 
 #[cfg(test)]
@@ -656,4 +670,15 @@ fn open_data_folder_person(app: AppHandle, state: State<'_, AppState>) -> Result
     app.opener()
         .open_path(state.paths.data.display().to_string(), None::<&str>)
         .map_err(|e| Error::Other(e.to_string()))
+}
+
+
+/// The window identity comes from Tauri, never from an action parameter.
+#[tauri::command]
+pub fn editing(window: WebviewWindow, state: State<'_, AppState>, id: String, active: bool) -> Result<()> {
+    state.with_mut(|s| {
+        if s.get(&id).is_none() { return Err(Error::NotFound); }
+        s.coordination.editing(&id, window.label(), active);
+        Ok(())
+    })
 }

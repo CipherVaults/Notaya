@@ -96,6 +96,7 @@ export interface Notebook {
   order: number;
   created: number;
   updated: number;
+  trashedAt?: number | null;
 }
 
 export interface Section {
@@ -106,6 +107,7 @@ export interface Section {
   order: number;
   created: number;
   updated: number;
+  trashedAt?: number | null;
 }
 
 export interface PageMeta {
@@ -164,6 +166,7 @@ export interface Sticky {
   open: boolean;
   created: number;
   updated: number;
+  trashedAt?: number | null;
 }
 
 export interface Strength {
