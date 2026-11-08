@@ -419,19 +419,32 @@ mod tests {
             let view = db.views[0].id.clone();
             let before = snapshot(s);
             for name in ["", "  ", "\t\r\n", "\u{2003}\u{00a0}"] {
-                let property = Property { name: name.into(), ..prop("q") };
-                let error = add_property(s, &actor, id, property).unwrap_err();
-                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                let property = Property {
+                    name: name.into(),
+                    ..prop("q")
+                };
+                let error = add_property(s, &actor, id, property).err().unwrap();
+                assert!(
+                    matches!(&error, Error::Invalid(message) if message == "Invalid database small save.")
+                );
                 assert_eq!(error.fault_code(), None);
                 assert_eq!(snapshot(s), before);
 
-                let error = update_property(s, &actor, id, "p", &json!({"name":name})).unwrap_err();
-                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                let error = update_property(s, &actor, id, "p", &json!({"name":name}))
+                    .err()
+                    .unwrap();
+                assert!(
+                    matches!(&error, Error::Invalid(message) if message == "Invalid database small save.")
+                );
                 assert_eq!(error.fault_code(), None);
                 assert_eq!(snapshot(s), before);
 
-                let error = rename_view(s, &actor, id, &view, name.into()).unwrap_err();
-                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                let error = rename_view(s, &actor, id, &view, name.into())
+                    .err()
+                    .unwrap();
+                assert!(
+                    matches!(&error, Error::Invalid(message) if message == "Invalid database small save.")
+                );
                 assert_eq!(error.fault_code(), None);
                 assert_eq!(snapshot(s), before);
             }
