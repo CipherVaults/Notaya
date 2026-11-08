@@ -283,6 +283,8 @@ High for the merge list and times (git and the PR records). High for the heartbe
 
 **Dated correction (2026-11-08 about 16:50 UTC, same refresh thread, follow-up records PR).** The "Records gaps" bullet and Next Step 2 above are closed: the thread read the project chat afterwards and the authority record now holds Ahmed's **verbatim** words for his messages at 01:09:11 (quota strategy: Codex first, three weeks of Codex with two banked resets, Claude only after, up to 70%), 01:09:37 (handover to Mohamed when his quota ends), 08:30:44 (idle Codex), 08:57:27 (answers to questions 49 to 52) and, as relayed by the coordinator, 09:03:55 (question 53) and 11:48:49 (the 5% stop line). The quota-strategy message is **01:09:11**, not 01:09:37 as this entry wrote; the two second-hand rows added in PR #89 were replaced. Questions 49 to 53 held no decision beyond those rows. Still open: the handover guide's section 17 (Build thread) and a failure-intelligence entry.
 
+**Dated correction (2026-11-08 about 16:55 UTC):** the coordinator asked for the failure-intelligence entries (16:46 UTC); they are written as **FI-08** (the false "finished" lane, about 06:56 UTC) and **FI-09** (the 30-minute Codex idle, 08:07 to 08:36 UTC) in [failure-intelligence.md](failure-intelligence.md). The "A failure-intelligence entry has not been written" line in Mistakes above no longer holds.
+
 ---
 
 <a id="session-48"></a>
