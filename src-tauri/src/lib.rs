@@ -200,6 +200,7 @@ pub fn run() {
             vault_cmd::backup_now,
             vault_cmd::get_settings,
             vault_cmd::save_settings,
+            vault_cmd::set_last_place,
             vault_cmd::set_backdrop,
             vault_cmd::window_ready,
             vault_cmd::flush_done,

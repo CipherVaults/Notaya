@@ -297,14 +297,8 @@ export default function Sidebar() {
 
         <GroupHeader
           label="Notebooks"
-          action={{ label: "New notebook", onClick: () => setNewNotebook(true) }}
           secondAction={{ label: "Import pages…", onClick: () => useApp.getState().setImportOpen(true) }}
         />
-        {tree.notebooks.length === 0 && (
-          <button onClick={() => setNewNotebook(true)} className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg">
-            <Plus size={15} /> Create your first notebook
-          </button>
-        )}
         {tree.notebooks.length === 0 && (
           <button onClick={() => useApp.getState().setImportOpen(true)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg">
             <Upload size={15} /> Import pages from another app
@@ -416,6 +410,12 @@ export default function Sidebar() {
             })}
           </Tree>
         )}
+        <button
+          onClick={() => setNewNotebook(true)}
+          className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg"
+        >
+          <Plus size={15} /> New notebook
+        </button>
       </div>
 
       <div className="space-y-0.5 border-t border-line px-2 py-2">
@@ -803,7 +803,11 @@ function SortableRow({ id, children }: { id: string; children: React.ReactNode }
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : undefined, opacity: isDragging ? 0.7 : 1 }}
-      {...listeners}
+      onPointerDown={(e) => {
+        // A nested branch has its own siblings; it must never start dragging its parent.
+        const key = (e.target as Element).closest("[data-rowkey]")?.getAttribute("data-rowkey");
+        if (key === `p:${id}` || key === `db:${id}`) listeners?.onPointerDown?.(e);
+      }}
     >
       {children}
     </div>
@@ -842,7 +846,6 @@ function SectionBlock({
   const known = new Set(pages.map((p) => p.id));
   const roots = pages.filter((p) => !p.parent || !known.has(p.parent));
   const dbsHere = listedDatabases(tree).filter((d) => d.sectionId === section.id && (!d.parent || !known.has(d.parent)));
-  const rootIds = roots.map((p) => p.id);
   const rowKey = `sec:${section.id}`;
   // Only the section's own row starts a drag, so dragging its pages doesn't move the section.
   const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
@@ -948,27 +951,7 @@ function SectionBlock({
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden">
-            <DndContext
-              sensors={sensors}
-              accessibility={dndA11y}
-              collisionDetection={closestCenter}
-              onDragEnd={(e: DragEndEvent) => {
-                if (!e.over || e.active.id === e.over.id) return;
-                if (!rootIds.includes(String(e.active.id))) return;
-                run(() => api.reorder(arrayMove(rootIds, rootIds.indexOf(String(e.active.id)), rootIds.indexOf(String(e.over!.id)))));
-              }}
-            >
-              <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
-                {roots.map((p, i) => (
-                  <SortableRow key={p.id} id={p.id}>
-                    <PageBranch page={p} depth={2} pos={{ i, n: roots.length }} siblings={rootIds} pages={pages} tree={tree} activePageId={activePageId} run={run} />
-                  </SortableRow>
-                ))}
-              </SortableContext>
-            </DndContext>
-            {dbsHere.map((d, i) => (
-              <DatabaseItem key={d.id} rowKey={`db:${d.id}`} db={d} depth={2} pos={{ i, n: dbsHere.length }} active={d.id === activePageId} run={run} tree={tree} />
-            ))}
+            <SiblingItems roots={roots} databases={dbsHere} depth={2} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
             {pages.length === 0 && dbsHere.length === 0 && (
               <Row rowKey={`add:${section.id}`} depth={2} pos={{ i: 0, n: 1 }} onClick={onNewPage} icon={<Plus size={14} className="text-faint" />} label="Add a page" active={false} muted />
             )}
@@ -976,6 +959,49 @@ function SectionBlock({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/** Pages and databases share one order, within their section or parent page only. */
+function SiblingItems({ roots, databases, depth, pages, tree, activePageId, run, sensors }: {
+  roots: PageMeta[];
+  databases: DatabaseMeta[];
+  depth: number;
+  pages: PageMeta[];
+  tree: NotesTree;
+  activePageId: string | null;
+  run: Run;
+  sensors: ReturnType<typeof useSensors>;
+}) {
+  const items = [
+    ...roots.map((page) => ({ id: page.id, order: page.order, page, db: null })),
+    ...databases.map((db) => ({ id: db.id, order: db.order, page: null, db })),
+  ].sort((a, b) => a.order - b.order);
+  const ids = items.map((item) => item.id);
+  return (
+    <DndContext
+      sensors={sensors}
+      accessibility={dndA11y}
+      collisionDetection={closestCenter}
+      onDragEnd={(e: DragEndEvent) => {
+        if (!e.over || e.active.id === e.over.id) return;
+        const from = ids.indexOf(String(e.active.id));
+        const to = ids.indexOf(String(e.over.id));
+        if (from >= 0 && to >= 0) run(() => api.reorder(arrayMove(ids, from, to)));
+      }}
+    >
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        {items.map((item, i) => (
+          <SortableRow key={item.id} id={item.id}>
+            {item.page ? (
+              <PageBranch page={item.page} depth={depth} pos={{ i, n: items.length }} siblings={ids} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
+            ) : item.db ? (
+              <DatabaseItem rowKey={`db:${item.id}`} db={item.db} depth={depth} pos={{ i, n: items.length }} siblings={ids} active={item.id === activePageId} run={run} tree={tree} />
+            ) : null}
+          </SortableRow>
+        ))}
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -989,6 +1015,7 @@ function PageBranch({
   tree,
   activePageId,
   run,
+  sensors,
 }: {
   page: PageMeta;
   depth: number;
@@ -998,9 +1025,9 @@ function PageBranch({
   tree: NotesTree;
   activePageId: string | null;
   run: Run;
+  sensors: ReturnType<typeof useSensors>;
 }) {
   const kids = pages.filter((p) => p.parent === page.id);
-  const kidIds = kids.map((k) => k.id);
   const newDatabase = useContext(NewDatabaseContext);
   const kidDbs = listedDatabases(tree).filter((d) => d.parent === page.id);
   const containsActive = (id: string): boolean =>
@@ -1041,14 +1068,7 @@ function PageBranch({
           }
         }}
       />
-      {open &&
-        kids.map((k, i) => (
-          <PageBranch key={k.id} page={k} depth={depth + 1} pos={{ i, n: kids.length }} siblings={kidIds} pages={pages} tree={tree} activePageId={activePageId} run={run} />
-        ))}
-      {open &&
-        kidDbs.map((d, i) => (
-          <DatabaseItem key={d.id} rowKey={`db:${d.id}`} db={d} depth={depth + 1} pos={{ i, n: kidDbs.length }} active={d.id === activePageId} run={run} tree={tree} />
-        ))}
+      {open && <SiblingItems roots={kids} databases={kidDbs} depth={depth + 1} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />}
     </>
   );
 }
@@ -1115,7 +1135,7 @@ function PageItem({
               Add a database inside…
             </MenuItem>
           )}
-          <MenuItem icon={<Star size={14} />} onSelect={() => run(() => api.setPageFavorite(page.id, !page.favorite))}>
+          <MenuItem icon={<Star size={14} fill={page.favorite ? "currentColor" : "none"} />} onSelect={() => run(() => api.setPageFavorite(page.id, !page.favorite))}>
             {page.favorite ? "Remove from favorites" : "Add to favorites"}
           </MenuItem>
           {siblings && siblings.length > 1 && pos.i > 0 && (
@@ -1172,6 +1192,7 @@ function DatabaseItem({
   active,
   run,
   tree,
+  siblings,
 }: {
   rowKey: string;
   db: DatabaseMeta;
@@ -1180,6 +1201,7 @@ function DatabaseItem({
   active: boolean;
   run: Run;
   tree: NotesTree;
+  siblings?: string[];
 }) {
   const setView = useApp((s) => s.setView);
   const setFavorite = async () => {
@@ -1215,9 +1237,19 @@ function DatabaseItem({
       menuLabel="Database options"
       menu={
         <>
-          <MenuItem icon={<Star size={14} />} onSelect={setFavorite}>
+          <MenuItem icon={<Star size={14} fill={db.favorite ? "currentColor" : "none"} />} onSelect={setFavorite}>
             {db.favorite ? "Remove from favorites" : "Add to favorites"}
           </MenuItem>
+          {siblings && pos.i > 0 && (
+            <MenuItem icon={<ArrowUp size={14} />} onSelect={() => moveBy(run, siblings, db.id, -1)}>
+              Move up
+            </MenuItem>
+          )}
+          {siblings && pos.i < siblings.length - 1 && (
+            <MenuItem icon={<ArrowDown size={14} />} onSelect={() => moveBy(run, siblings, db.id, 1)}>
+              Move down
+            </MenuItem>
+          )}
           {tree.sections.length > 1 && <div className="px-2.5 pb-1 pt-2 text-xs text-faint">Move to</div>}
           {tree.sections
             .filter((s) => s.id !== db.sectionId)

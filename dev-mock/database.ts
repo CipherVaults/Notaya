@@ -727,6 +727,15 @@ function meta(d: Database) {
 }
 export const databaseMetas = () => dbs.map(meta);
 
+/** The real reorder command shares one order across pages and databases. */
+export function reorderDatabases(ids: string[]) {
+  ids.forEach((id, order) => {
+    const db = dbs.find((d) => d.id === id);
+    if (db) db.order = order;
+  });
+  dbs.sort((a, b) => a.order - b.order);
+}
+
 function newRow(db: Database, title: string): MRow {
   const t = Date.now();
   const hasId = db.props.some((p) => p.kind === "id");

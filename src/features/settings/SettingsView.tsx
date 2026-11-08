@@ -346,6 +346,7 @@ export default function SettingsView() {
             <dd>Notaya's own code makes none. The Windows WebView2 component that draws the window may contact Microsoft at startup.</dd>
             <dt className="text-faint">Credits</dt>
             <dd>
+              <p className="mb-1">Made by Mohamed Sayed and Ahmed Emara, with Claude and ChatGPT</p>
               Built on open source software.{" "}
               <button type="button" onClick={() => setLicensesOpen(true)} className="font-medium text-accent underline-offset-4 hover:underline">
                 Open source licenses…
