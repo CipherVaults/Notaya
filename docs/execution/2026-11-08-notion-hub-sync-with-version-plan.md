@@ -43,3 +43,8 @@
 - **Conflict between sources, not resolved here:** the coordinator's relay said the history and activity-log lane was running. The repository shows no `v1-6-c3` branch, the latest records (PR #90, 12:03 UTC) say C3 is held until Codex's window resets (15:48 UTC), and the heartbeat's last Codex reading is stale. The board says "queued · next lane". Update when a C3 branch appears.
 - **Left stale on purpose or not reachable:** the repo `docs/STATUS.md` "As of" lines still stop at the 00:30 UTC checkpoint (not this thread's task); PR #89 (entry 49, not yet merged) and the missing authority rows for Ahmed's 01:09 and 09:03 messages are open in the repo, so the Roadmap marks the "Mohamed continues" line as reported in the chat with the repository record still being written.
 - **Not checked:** how the new fields and views render in the Notion app (read back through the connector only).
+
+### Touch-up, 2026-11-08 about 16:45 UTC (Ahmed's message 16:39:49 UTC: merge when Claude judges it ready)
+
+- Between the sync and the merge, lanes C4d (PR #92) and AG (PR #93) were merged into `main`. The Notion board, hub checkpoint and roadmap were updated to match: 1.6-2 is now "merged · checked on PC · not accepted" (623 tests and three browser checks passed on the PC per PR #92), the 1.6-12 note mentions PR #93, and the counts are **12 merged, 1 partly built (1.6-6), 2 queued (1.6-3, 1.6-4), 1 not started (1.6-15)**.
+- Still true: no `v1-6-c3` or C5 branch exists; the history and log lane stays "queued". Same author and machine as above.
