@@ -8,7 +8,7 @@ import { watchItemChanges, type Revisioned } from "@/lib/changes";
 import type { Page } from "@/lib/types";
 import { cn, debounce, formatDate } from "@/lib/utils";
 import { useApp } from "@/store/app";
-import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "@/components/ui";
 import BlockHandle from "./editor/BlockHandle";
 import BubbleToolbar from "./editor/BubbleToolbar";
 import Ribbon from "./editor/Ribbon";
@@ -17,6 +17,7 @@ import SlashMenu, { type SlashController } from "./editor/SlashMenu";
 import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
 import { setPageEditable } from "./editor/editability";
+import { restoreFromBin } from "./restore";
 import { PageCover, PageIconAndActions } from "./PageHeader";
 import { PageIcon } from "@/lib/pageLook";
 import { openExport } from "./ExportDialog";
@@ -53,6 +54,7 @@ export default function PageEditor({ pageId, embedded = false }: { pageId: strin
 }
 
 function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
+  const confirm = useConfirm();
   const [title, setTitle] = useState(page.title);
   const [icon, setIcon] = useState(page.icon ?? "");
   const [cover, setCover] = useState(page.cover ?? "");
@@ -237,6 +239,12 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
     const r = await loadRow(rowDb.id, page.id);
     if (r) await saveRowAsTemplate(rowDb.id, r, titleRef.current, JSON.stringify(editor.getJSON()), editor.getText());
   };
+  const restore = async () => {
+    try {
+      const restored = await restoreFromBin(page.id, confirm);
+      if (restored) setTree(restored);
+    } catch (error) { toast.error(errorText(error)); }
+  };
   const trash = async () => {
     save.cancel();
     await flushNow();
@@ -245,7 +253,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
     if (isRow && !embedded) useApp.getState().openDatabase(page.parent);
     else if (!embedded) useApp.getState().openPage(null);
     toast("Moved to trash", {
-      action: { label: "Undo", onClick: async () => setTree(await api.restorePage(page.id)) },
+      action: { label: "Undo", onClick: restore },
     });
   };
   const moveTo = async (sectionId: string) => {
@@ -371,7 +379,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
           {readOnly && (
             <div className="mb-6 flex items-center justify-between rounded-lg border border-warn/30 bg-warn/10 px-4 py-3 text-sm">
               <span>This page is in the trash.</span>
-              <button className="font-medium underline-offset-2 hover:underline" onClick={async () => setTree(await api.restorePage(page.id))}>
+              <button className="font-medium underline-offset-2 hover:underline" onClick={restore}>
                 Restore
               </button>
             </div>

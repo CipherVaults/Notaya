@@ -48,9 +48,10 @@ const { useApp } = load(path.join(root, 'src/store/app.ts'));
 const { api } = load(path.join(root, 'src/lib/ipc.ts'));
 const { flushAll } = load(path.join(root, 'src/lib/flush.ts'));
 const { setPageEditable } = load(path.join(root, 'src/features/notes/editor/editability.ts'));
+const { restoreFromBin } = load(path.join(root, 'src/features/notes/restore.ts'));
 let checks = 0;
 async function check(name, test) { await test(); checks++; console.log('ok', name); }
-const signal = (id, rev, kind = 'page') => emit('items-changed', { ids: [id], kinds: [kind], tree: true, by: 'ai:fixture', revs: { [id]: rev } });
+const signal = (id, rev, kind = 'page') => emit('items-changed', { ids: [id], kinds: [kind], tree: true, by: 'ai', revs: { [id]: rev } });
 const eventually = async (fn) => { for (let n = 0; n < 100; n++) { if (fn()) return; await pause(10); } assert.ok(fn(), 'condition did not settle'); };
 
 (async () => {
@@ -105,6 +106,17 @@ const eventually = async (fn) => { for (let n = 0; n < 100; n++) { if (fn()) ret
 
   const tree = await api.listNotes();
   const dbId = tree.databases.find((db) => db.title === 'Tasks').id;
+  await check('live delete is refused and old child Undo reparents without grouped confirmation', async () => {
+    for (const id of ['n1', 's1', 'p1', 'k1', dbId]) await assert.rejects(api.deletePage(id), /Only items in the bin/);
+    await api.trashPage('p4'); await api.trashPage('p1');
+    await restoreFromBin('p4', async () => { assert.fail('a binned parent page needs no grouped confirmation'); });
+    assert.equal((await api.getPage('p4')).parent, '');
+    assert.notEqual((await api.getPage('p1')).trashedAt, null);
+    await api.restorePage('p1');
+    beforeInvoke = async (cmd) => { if (cmd === 'restore_bin_item') throw new Error('injected restore failure'); };
+    await assert.rejects(restoreFromBin('p4', async () => assert.fail('unrelated errors must not ask')), /injected restore failure/);
+    beforeInvoke = async () => {};
+  });
   await store.loadDatabase(dbId);
   await check('database clean signals reload, dirty local edits survive and sends base_rev', async () => {
     let db = await api.getDatabase(dbId);
@@ -171,7 +183,11 @@ const eventually = async (fn) => { for (let n = 0; n < 100; n++) { if (fn()) ret
 
   await check('section restore requires containing-notebook confirmation; empty removes children', async () => {
     await assert.rejects(api.restoreBinItem('s1', false), /parent_in_bin/);
-    await api.restoreBinItem('s1', true);
+    let confirmations = 0;
+    assert.equal(await restoreFromBin('s1', async () => { confirmations++; return false; }), null);
+    assert.ok((await api.listBin()).some((item) => item.id === 'n1'));
+    await restoreFromBin('s1', async () => { confirmations++; return true; });
+    assert.equal(confirmations, 2);
     assert.ok((await api.listNotes()).notebooks.some((item) => item.id === 'n1'));
     await api.restoreBinItem('k1', false);
     assert.equal((await api.getSticky('k1')).open, false);
