@@ -21,6 +21,8 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 50 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger refresh at 16:00 UTC (EX-2026-11-08-62)](#session-50) |
+| 48 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger redesign and the 1.6 to 2.5 forecast (EX-2026-11-08-60)](#session-48) |
 | 47 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger: first Codex cycle and pace forecast (EX-2026-11-08-57)](#session-47) |
 | 46 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Checkpoint: plan settled, Notion read, 1.6 build begins (PRs #61 to #68)](#session-46) |
 | 45 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Notaya Manual, first edition (PR #63)](#session-45) |
@@ -68,6 +70,202 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-50"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger refresh at 16:00 UTC
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**. The readings are relayed by the coordinator from Ahmed's Codex page (14:20 UTC), the Build thread's note and a Claude weekly reading (about 16:00 UTC); this thread saw no screen.
+
+**What it covers:** the second work block of the thread "Redesign the usage ledger with forecasts" (the first is [session 48](#session-48)): [EX-2026-11-08-62](execution/2026-11-08-ledger-refresh-1600.md). (Numbering: session 49 is taken by the Build thread's branch, so this entry is 50; renumber on merge if the order changes.)
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5` (configured) | not recorded | Its own usage was not read (a running session has no usage block) |
+| Coordinator (relays 16:02:44 and 16:03:17) | not read | not read | Messages only; the readings and the roadmap thread's usage row are its words |
+| "Build Notaya 1.6" thread | not read | not read | Its 5-hour window note (ran out 12:01, reset 15:48) is relayed |
+| "Build a version roadmap showcase artifact" thread | `claude-sonnet-5-5`, high (as relayed) | high | Usage relayed (reported 3.11 USD); not read by this thread |
+| Codex lanes | `gpt-6.1-sol`, `xhigh` | xhigh | Not read here; the weekly percentage comes from Ahmed's page |
+
+**Record basis:** `origin/main` at `8ee9019`; the ledger files; STATUS line 67 (12:03 UTC) and the later lane lines.
+
+## 🕒 Time
+
+- Ahmed's message: 16:02:35 UTC (relayed 16:02:44); coordinator note 16:03:17. System clock when work began: about 16:03 UTC.
+- Active working time: not measured. Session type: records, a page and a model; no product code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (16:02:35): make the explanation clear in the roadmap, and update the usage ledger if possible. The ledger part is this thread's; the roadmap part belongs to the roadmap artifact's thread.
+
+## 🧭 Starting State
+
+PR #83 (draft) carried the 08:30 ledger with Codex week 26% and Claude week 22%; `origin/main` had moved on (lanes C4, AF, C2, AG merged; records PR #90). Merged `origin/main` into the branch first (conflicts in `STATUS.md` and the Codex briefing, resolved by keeping both sides' lines).
+
+## 🛠️ Actions Taken
+
+1. Recorded the three relayed readings and the roadmap thread's usage row.
+2. Recalibrated `forecast-inputs.csv` and `forecast-versions.csv`; regenerated `pace-forecast.csv` with the model.
+3. Fixed the page so a blank 5-hour reading shows "not read"; replaced two hard-coded readings; rebuilt and checked it at two widths and both themes.
+4. Wrote the ledger block, EX-2026-11-08-62, this entry, the claims row and a STATUS line; republished the artifact to the same link.
+5. Ahmed (16:11:39 UTC, relayed): a white-ish theme like the roadmap, light by default, for the ledger and the roadmap. Gave the ledger the roadmap's palette and a Theme button (Light default, Dark, Auto) and republished. The roadmap page belongs to its own thread: its default needs `theme = 'light'` instead of `'auto'`; passed to the coordinator.
+
+## 🧠 Key Insights
+
+- **Codex week: 47% used; a week holds about 6.3 windows.** The Codex capacity assumption barely moved.
+- **Claude's cost is the new weak point.** Its week went from 22% to 37% in about 7.5 hours while about 1.3 Codex windows ran, so I raised the cost per window from 3% to 6% (range 3 to 11). That is an upper bound; if the truth is near the top, Claude's 70% cap binds before Codex does.
+- **The finish moved later:** 2.5 likely about 7 December (was 2 December), worst case 19 February (was 31 January); Ahmed's own quota (his weekly allowance plus the banked resets) now reaches 2.3, where the 08:30 numbers reached 2.0. The model spends a banked reset only when the weekly allowance is empty, and with Claude's share setting the pace Codex runs dry less often, so the banks last longer. Both are model results, not measurements.
+
+## 📌 Decisions Made
+
+None by Ahmed in this thread beyond the request above. No amendment.
+
+## ⚠️ Difficulties / Friction
+
+The usage of other threads could not be read from this thread (the session list shows only archived and idle sessions), so only the roadmap thread's row, relayed by the coordinator, was added. The 5-hour gauges had no current reading; the template would have shown 0%, so it was changed to say "not read". An accidental file named `--help` was created in the repository root by a mistaken command and removed at once (never committed).
+
+## 🔧 Adjustments Made
+
+Template: blank-input handling for the two 5-hour gauges. Inputs: calibration as in EX-62.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk: the 25-of-45 progress and the window count are estimates; Claude's cost per window is the weakest number.
+- Risk: the earlier commit trailer on this PR's first commit has a mistyped session id; not amended.
+
+## 📍 Current Position
+
+Dashboard republished at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>; PR #83 updated; nothing merged; nothing accepted.
+
+## 🔜 Next Steps
+
+1. The roadmap artifact's thread makes the explanation clear (not this thread).
+2. Feed the heartbeat's Codex meter log and Claude readings into the model when they reach `docs/ledger/`; read Claude's weekly percentage before and after each lane.
+3. Refresh at the next lane merge.
+
+## ❓ Open Questions
+
+None new. Still open from before: whether Mohamed builds with his Claude Pro.
+
+## 🧾 Session Outcome
+
+*Produced* and published as a private artifact; *verified* by build and browser check only; not integrated; not accepted.
+
+## 🔍 Confidence Level
+
+High for the relayed readings. Medium for 6.3 windows a week. Low for every date after 1.7 and lowest for Claude's cost per window.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `forecast-inputs.csv`, `forecast-versions.csv`, `pace-forecast.csv`, `quota-readings.csv`, `claude-sessions.csv`), `tools/usage-ledger/dashboard-template.html`, [EX-2026-11-08-62](execution/2026-11-08-ledger-refresh-1600.md).
+
+- Integration / review: on merge of PR #83 (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: the heartbeat logs and the next lane merge
+
+---
+
+<a id="session-48"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger redesign and the 1.6 to 2.5 forecast
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**; the limit readings are Ahmed's screenshots of the Claude usage popup and the Codex usage menu on his PC, relayed by the coordinator. Time covered: **2026-11-08 08:28:33 UTC (thread start) to about 08:50 UTC** (system clock at the time of writing).
+
+**What it covers:** Ahmed's request to lean on Codex, to see on charts what uses what, and to forecast how many versions the quotas can finish ([EX-2026-11-08-60](execution/2026-11-08-ledger-redesign-and-forecast.md)); the new dashboard; the one shared forecast model; the 08:27 readings.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5` (configured) | not recorded | Its own record was not read (a running session's record has no usage block); identity quoted from the thread's configuration, not from a served-model reading |
+| Coordinator (relays 08:28:32, 08:29:20, 08:35:32) | not read | not read | Messages only |
+| "Build Notaya 1.6" thread (draft forecast, PR #82; relay 08:34:29) | not read | not read | Its draft was read in full from `main`; its numbers (22% at 06:24, 26% at 08:07) are relayed and not seen on a screen by this thread |
+| Codex lanes (the measured cycle) | `gpt-6.1-sol`, `xhigh` | xhigh | From `codex-runs.csv` (quoted by the PC session at 00:29 UTC); this thread ran nothing on Codex |
+
+**Record basis:** `main` at `d3d0f0b`; the ledger files; the version plan and 1.6 briefs; Ahmed's two screenshots (read as images); the FFmpeg Encoder forecast and ledger artifacts (read for purpose only, nothing copied).
+
+## 🕒 Time
+
+- Ahmed's messages: 08:27:53 (relayed 08:28:32), 08:29:17, 08:35:26. Thread start 08:28:33. Draft page published at about 08:37 (system clock).
+- Active working time: not measured.
+- Session type: records, a page and a model; no product code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (08:27:53): lean on Codex for everything it can do, and build a forecast of what the Codex and Claude quotas can finish across the long roadmap, with charts showing which part uses what; (08:29:17) inspired by FFmpeg Encoder's ledger for its purpose only; (08:35:26) the forecast is Notaya's own.
+
+## 🧭 Starting State
+
+`main` = `4ee829f`, then `d3d0f0b` (PR #81 Codex first and A46; PR #82 a draft roadmap forecast handed to this thread). The ledger had a table-heavy dashboard, a forecast from 00:58 UTC (6.5 windows a week, 10.5 points a window assumed) and no reading of Claude's week since 22:32 UTC on 11-07.
+
+## 🛠️ Actions Taken
+
+1. Read the repository's records, the ledger and its dashboard code, the two screenshots, the FFmpeg Encoder artifacts, the version plan and the 1.6 briefs; checked other branches for taken EX and session numbers.
+2. Wrote one forecast model and two input tables, the new dashboard template, the builder changes; rebuilt `pace-forecast.csv` from the model; looked at the page in a headless browser (desktop and phone, light and dark) and fixed the timeline scale, the table width and the phone layout.
+3. Folded in the Build thread's draft (readings, plan points, a cross-check of Claude's cost per point); marked it superseded and, after Ahmed's answer at 08:57:27 UTC, deleted it.
+4. Published to the same artifact link (version 5). Wrote the ledger block, README changes, EX-2026-11-08-60, this entry, the claims row and one STATUS line.
+
+## 🧠 Key Insights
+
+- **Codex's weekly limit sets the pace, and the two banked resets bring the finish forward a lot.** At the default settings 1.6 to 2.5 is built by about 2 December (best 22 November, worst about 31 January); without the banks about 16 December. Ahmed's own quota reaches version 2.0 (about 21 November); after that the work runs on weekly resets or on Mohamed's quota.
+- **A week holds about 6.1 windows** (was 6.5): 26% of the week after about 1.6 windows. Speed is about 11 plan points a window on an estimate that 18 of 1.6's 45 points are built.
+- **Claude's quota does not hold the pace back on the default guess** (about 3% of its week per window), but that is the weakest number; a rule now asks for Claude's weekly percentage before and after each lane to replace it.
+- **Cached rereading is 96 to 97% of tokens on both sides**, so shorter contexts are the lever that stretches a quota.
+- **Two forecasts were drafted at the same time** (this thread's and the Build thread's); they agreed within the guesses (the same plan points, the same windows per week, a Claude cost per point of the same size), and were folded into one.
+
+## 📌 Decisions Made
+
+None by Ahmed in this thread beyond the instruction above (recorded already as A46 and A45). No amendment.
+
+## ⚠️ Difficulties / Friction
+
+The first relay named an FFmpeg Encoder forecast; Ahmed corrected it twice (08:29:17 and 08:35:26), which was folded in before the page was published. The `project-usage-screen.csv` that the README had named was never committed, so it was created here. The artifact tool refused the first publish because the live version had not been read; the live page was found to equal the repository's old template, so nothing was lost.
+
+## 🔧 Adjustments Made
+
+The timeline was first drawn to the worst case (January), which made every likely bar a sliver; it is now drawn to the likely end with arrows for worst cases. The table's separate best, likely and worst columns were merged so "who pays" fits without scrolling.
+
+## ❌ Mistakes / Risks Noted
+
+- Risk (closed at 08:57:27 UTC): the banked-reset mechanism was an assumption that moves the early dates by two weeks; Ahmed confirmed it.
+- Risk: the speed (11 points per window) comes from one and a half windows and from my estimate of what was built.
+- A first version of the speed paragraph in the ledger block said 6.5 windows a week; it was corrected to 6.1 before commit.
+
+## 📍 Current Position
+
+Dashboard published at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>; draft PR with the records open; nothing merged; nothing accepted.
+
+## 🔜 Next Steps
+
+1. Ahmed's question 49 (automatic quota control) and whether Mohamed builds with his Claude Pro.
+2. At each lane merge: read Claude's weekly percentage before and after; at each Codex reset, add the Codex readings and the run rows (lane A's second pass, C4b and C2 have none yet).
+3. Rebuild with `build_dashboard.py`, run `--forecast-csv`, republish to the same link.
+
+## ❓ Open Questions
+
+Answered by Ahmed at 08:57:27 UTC: a banked reset refills the whole Codex week and the 5-hour window and is used only after the week is fully spent; the old draft may be deleted (done); Mohamed has **no Codex**, only a Claude Pro subscription. **Still open:** Ahmed's question 49, that his quota be controlled automatically (not built here; handed to the coordinator), and whether Mohamed will build with his Claude Pro at all.
+
+## 🧾 Session Outcome
+
+*Produced* (page, model, inputs, readings, records) and published as a private artifact. *Verified* only by building it and looking at it in a headless browser; the forecast itself is not verified. Not integrated until merged; not accepted.
+
+## 🔍 Confidence Level
+
+High for the readings themselves and for the weekly capacity (two readings, 5.5 to 7 windows). Medium for the speed. Low for every date after 1.7, and lowest for Claude's cost per window and for the banked-reset mechanism.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `forecast-inputs.csv`, `forecast-versions.csv`, `pace-forecast.csv`, `quota-readings.csv`, `project-usage-screen.csv`), `tools/usage-ledger/` (`forecast-model.cjs`, `dashboard-template.html`, `build_dashboard.py`), the dashboard <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>, [EX-2026-11-08-60](execution/2026-11-08-ledger-redesign-and-forecast.md).
+
+- Integration / review: on merge of this PR (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: Ahmed's three answers above
+
 ---
 
 <a id="session-47"></a>
