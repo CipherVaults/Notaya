@@ -8,6 +8,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
+const { waitForSavedPlace } = require('./lane-a-wait.cjs');
 
 const root = path.resolve(__dirname, '..');
 const target = new URL(process.argv[2] || 'http://127.0.0.1:1421');
@@ -27,7 +28,7 @@ const report = {
   beforeMeaning: 'Pre-lane faint tokens, inherited star color and menu-icon opacity reconstructed on current mock UI. Layout and star fill behavior are current code.',
   target: target.href, files: {}, checks: [], screenshots: [], pageErrors: [], status: 'running',
 };
-for (const file of ['src/styles/app.css', 'src/features/database/DatabasePage.tsx', 'src/features/database/DatabaseView.tsx', 'src/components/Sidebar.tsx', 'src/components/TitleBar.tsx', 'src/store/app.ts', 'src/lib/navHistory.ts', 'src/lib/flush.ts', 'src-tauri/src/commands/vault.rs', 'dev-mock/core.ts', 'dev-mock/database.ts', 'dev-mock/lane-a-check.cjs', 'dev-mock/lane-a-shots.cjs']) {
+for (const file of ['src/styles/app.css', 'src/features/database/DatabasePage.tsx', 'src/features/database/DatabaseView.tsx', 'src/components/Sidebar.tsx', 'src/components/TitleBar.tsx', 'src/store/app.ts', 'src/lib/navHistory.ts', 'src/lib/flush.ts', 'src-tauri/src/commands/vault.rs', 'dev-mock/core.ts', 'dev-mock/database.ts', 'dev-mock/lane-a-check.cjs', 'dev-mock/lane-a-shots.cjs', 'dev-mock/lane-a-wait.cjs']) {
   report.files[file] = createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex');
 }
 let browser;
@@ -81,18 +82,20 @@ async function functionalChecks(page, databaseId) {
   const tabs = views.getByRole('tab');
   const first = await tabs.nth(0).innerText();
   const chosen = await tabs.nth(1).innerText();
-  await tabs.nth(1).click();
-  await page.waitForFunction(async () => {
+  // Derive the expectation from the chosen tab's definition, not a debounced save.
+  const place = await page.evaluate(async (id) => {
     const { invoke } = await import('/dev-mock/core.ts');
-    const { useApp } = await import('/src/store/app.ts');
-    const saved = (await invoke('get_settings')).lastPlace;
-    return saved?.viewId && saved.viewId === useApp.getState().activeDatabaseViewId;
-  });
-  const place = await page.evaluate(async () => (await (await import('/dev-mock/core.ts')).invoke('get_settings')).lastPlace);
-  assert.equal(place.id, databaseId);
+    const db = await invoke('get_database', { id });
+    return { kind: 'database', id, viewId: db.views[1].id };
+  }, databaseId);
+  const readPlace = () => page.evaluate(async () => (await (await import('/dev-mock/core.ts')).invoke('get_settings')).lastPlace);
+  await tabs.nth(1).click();
+  await waitForSavedPlace(readPlace, place);
   await top.getByRole('button', { name: 'Back', exact: true }).click();
   await views.getByRole('tab', { name: first, exact: true, selected: true }).waitFor();
   assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
+  // Persist Back so the pre-lock flush below must save Forward's chosen view.
+  await waitForSavedPlace(readPlace, { kind: 'database', id: databaseId });
   await top.getByRole('button', { name: 'Forward', exact: true }).click();
   await views.getByRole('tab', { name: chosen, exact: true, selected: true }).waitFor();
   assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');

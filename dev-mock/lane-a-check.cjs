@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
+const { waitForSavedPlace } = require('./lane-a-wait.cjs');
 const root = path.resolve(__dirname, '..');
 const cache = new Map();
 const saves = [];
@@ -261,6 +262,23 @@ async function check(name, test) { await test(); checks++; console.log('ok ', na
     await flushAll();
     assert.equal((await invoke('get_settings')).lastPlace.id, 'p3');
     assert.deepEqual(notices, ["Couldn't remember the last open place."]);
+  });
+  await check('screenshot wait retries resolved stale settings until the chosen view is saved', async () => {
+    useApp.getState().openDatabase(tasks.id);
+    await flushAll();
+    useApp.getState().setDatabaseView(tasks.id, db.views[1].id);
+    const expected = { kind: 'database', id: tasks.id, viewId: db.views[1].id };
+    const early = (await invoke('get_settings')).lastPlace;
+    assert.deepEqual(early, { kind: 'database', id: tasks.id }, 'The early read reproduces the missing viewId');
+    let reads = 0;
+    const saved = await waitForSavedPlace(async () => {
+      reads++;
+      return (await invoke('get_settings')).lastPlace;
+    }, expected);
+    assert(reads > 1, 'The wait must retry after an async read resolves to the old location');
+    assert.deepEqual(saved, expected);
+    useApp.getState().openPage('p3');
+    await flushAll();
   });
   await check('database view changes persist and old database callbacks are ignored', async () => {
     useApp.getState().openDatabase(tasks.id);
