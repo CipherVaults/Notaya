@@ -112,6 +112,7 @@ PR #83 (draft) carried the 08:30 ledger with Codex week 26% and Claude week 22%;
 2. Recalibrated `forecast-inputs.csv` and `forecast-versions.csv`; regenerated `pace-forecast.csv` with the model.
 3. Fixed the page so a blank 5-hour reading shows "not read"; replaced two hard-coded readings; rebuilt and checked it at two widths and both themes.
 4. Wrote the ledger block, EX-2026-11-08-62, this entry, the claims row and a STATUS line; republished the artifact to the same link.
+5. Ahmed (16:11:39 UTC, relayed): a white-ish theme like the roadmap, light by default, for the ledger and the roadmap. Gave the ledger the roadmap's palette and a Theme button (Light default, Dark, Auto) and republished. The roadmap page belongs to its own thread: its default needs `theme = 'light'` instead of `'auto'`; passed to the coordinator.
 
 ## 🧠 Key Insights
 

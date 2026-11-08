@@ -2,34 +2,37 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: the limits right now, the forecast (the main part), where the usage went, how the forecast is built, then the detail tables. */
 :root {
-  --bg: #f1f5f3; --surface: #ffffff; --surface-2: #e9efec; --ink: #12201c; --muted: #55665f; --line: #cfdad5;
-  --accent: #0d5f54; --accent-ink: #ffffff;
-  --claude: #0d7a6e; --codex: #b8591a; --opus: #6a5acd; --sonnet: #12968a; --both: #8a8f8d;
-  --warn: #9a4d00; --warn-bg: #fbeedd; --good: #14693b; --bad: #a3282f;
+  /* The same palette as the Notaya Roadmap page: leaf green on a white-ish, green-tinted neutral. Light is the default. */
+  --bg: #fbfcfa; --surface: #ffffff; --surface-2: #eef2ec; --ink: #16201b; --muted: #68746d; --line: #d9dfd5;
+  --accent: #1d7556; --accent-ink: #ffffff;
+  --claude: #1d7556; --codex: #b8591a; --opus: #6a5acd; --sonnet: #12968a; --both: #8a8f8d;
+  --warn: #8f5300; --warn-bg: #fbebcc; --good: #14693b; --bad: #a3282f;
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0e1513; --surface: #16201e; --surface-2: #1d2a27; --ink: #e3eeea; --muted: #92a69f; --line: #2b3b37;
-    --accent: #5fd3c2; --accent-ink: #0c1412; --claude: #3fc2b2; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
-    --warn: #f0b36b; --warn-bg: #2e2415; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
+  :root[data-theme="auto"] {
+    --bg: #0f1512; --surface: #17201b; --surface-2: #1e2923; --ink: #e7eee9; --muted: #85928a; --line: #2a3830;
+    --accent: #4fc79a; --accent-ink: #0b1712; --claude: #4fc79a; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
+    --warn: #f0b658; --warn-bg: #3a2c12; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0e1513; --surface: #16201e; --surface-2: #1d2a27; --ink: #e3eeea; --muted: #92a69f; --line: #2b3b37;
-  --accent: #5fd3c2; --accent-ink: #0c1412; --claude: #3fc2b2; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
-  --warn: #f0b36b; --warn-bg: #2e2415; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
+  --bg: #0f1512; --surface: #17201b; --surface-2: #1e2923; --ink: #e7eee9; --muted: #85928a; --line: #2a3830;
+  --accent: #4fc79a; --accent-ink: #0b1712; --claude: #4fc79a; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
+  --warn: #f0b658; --warn-bg: #3a2c12; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.5;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 56px; }
 main { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
-h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; font-family: var(--font-display); letter-spacing: -0.01em; }
 h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 700; letter-spacing: -0.01em; }
 h2 { font-size: 21px; font-weight: 650; display: flex; gap: 10px; align-items: baseline; }
 h3 { font-size: 15px; font-weight: 600; }
@@ -40,6 +43,9 @@ a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 header { display: flex; flex-direction: column; gap: 12px; }
 .kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--ink); }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .pill { font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); }
 .pill b { color: var(--ink); font-weight: 600; }
@@ -99,7 +105,7 @@ ul.plain, ol.steps { margin: 0; padding-left: 20px; display: flex; flex-directio
 
 <main>
   <header>
-    <div class="kicker">Notaya · Ahmed's side (AE0101)</div>
+    <div class="topline"><div class="kicker">Notaya · Ahmed's side (AE0101)</div><button type="button" class="btn" id="themebtn" title="Switch theme">Theme: Light</button></div>
     <h1>Notaya usage ledger</h1>
     <p>What Claude and Codex are using, where it goes, and how far the quotas reach through the plan from 1.6 to 2.5. The numbers come from <span class="mono">docs/ledger/</span> in the repository. <span class="badge m">measured</span> means read from a screen or a record. <span class="badge r">rough guess</span> means my estimate, and it is marked wherever it is used.</p>
     <div class="pills" id="pills"></div>
@@ -234,6 +240,24 @@ function cellsOf(row) { return row.map((c) => `<td${c.cls ? ` class="${c.cls}"` 
 function table(id, head, rows) {
   $(id).innerHTML = `<thead><tr>${head.map((h) => `<th${h.cls ? ` class="${h.cls}"` : ""}>${esc(h.t || h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${cellsOf(r)}</tr>`).join("")}</tbody>`;
 }
+
+
+/* ---------- theme: Light (default, white-ish like the roadmap), Dark, Auto ---------- */
+const THEMES = ["light", "dark", "auto"], TLAB = { light: "Light", dark: "Dark", auto: "Auto" };
+let theme = "light";
+try { const t = localStorage.getItem("notaya-ledger-theme"); if (THEMES.includes(t)) theme = t; } catch (e) {}
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", theme);
+  const b = document.getElementById("themebtn");
+  b.textContent = "Theme: " + TLAB[theme];
+  b.setAttribute("aria-label", "Theme: " + TLAB[theme] + ". Click to change.");
+}
+document.getElementById("themebtn").addEventListener("click", () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  applyTheme();
+  try { localStorage.setItem("notaya-ledger-theme", theme); } catch (e) {}
+});
+applyTheme();
 
 /* ---------- header ---------- */
 $("pills").innerHTML = [
