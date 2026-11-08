@@ -28,3 +28,10 @@
 - How the briefs reach Codex (Codex runs on Ahmed's PC, `D:\Notaya`): the coordinator decides; the briefs are in the repository, so a Codex checkout of this branch has them.
 - Whether to install Wine and MinGW in the cloud environment so cloud threads can run the Rust checks: needs Ahmed's own word.
 - Still pending for the build's milestones: the 13-section Session Summary entry, usage ledger rows, handover guide update (both copies, A39) and the Notion board; they are written when the first lane merges.
+
+
+## 5. Heartbeat log (one line per event; times UTC)
+
+- **00:43** Codex's usage limit was hit by lanes A, B, C1 and D (one shared ChatGPT account): "You've hit your usage limit ... try again at 7:25 AM" (PC local time, UTC+2, so **05:25 UTC**). Work in `D:\Notaya-lanes\<lane>` is partly written, uncommitted and intact. Lane E finished first and was pushed: `AE0101/v1-6-e` `c36397b`, [PR #70](https://github.com/CipherVaults/Notaya/pull/70), held as a draft until the AI server (C5) exists. Machine: Gaming-PC (Codex), cloud (review).
+- **00:45** Heartbeat loop running on the PC (30 minutes; resumes C1, A, B, D after 05:25, then C2 and C4; two Codex lanes at a time). Task Scheduler registration denied by the PC's permission system and not worked around. Lane E's commit message footer shows a mangled middle dot (`Â·`) from a script encoding bug; not rewritten (no force-push).
+- **00:46** Ahmed confirmed G3 and the 7 notebooks ("yes, yes for both"), recorded in the authority table.
