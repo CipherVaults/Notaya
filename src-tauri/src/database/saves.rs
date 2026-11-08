@@ -2,18 +2,19 @@
 //! for validation, row cleanup, back relations and ID numbering. Permission,
 //! confirmation, claims and revision checks belong to the dispatcher.
 use super::types::{
-    Column, Database, PropKind, Property, View, MAX_PROPERTIES, MAX_VIEWS, TITLE_PROP,
+    Column, Database, PropKind, Property, Row, View, MAX_PROPERTIES, MAX_VIEWS, TITLE_PROP,
 };
 use crate::{
     actions::Actor,
-    commands::database::{database, save_database_core},
+    commands::database::{database, row, parse_cells, write_cells},
     error::{Error, Result},
-    model::new_id,
+    model::{new_id, now_ms, Item},
     vault::Session,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::collections::HashSet;
+use super::{clock, relations};
 
 fn invalid() -> Error {
     Error::invalid("Invalid database small save.")
@@ -192,7 +193,7 @@ pub fn add_view(
     if view.id.is_empty() {
         view.id = new_id();
     }
-    if db.views.len() >= MAX_VIEWS || db.view(&view.id).is_some() {
+    if db.views.len() >= MAX_VIEWS || db.view(&view.id).is_some() || view.name.trim().is_empty() {
         return Err(invalid());
     }
     db.views.push(view);
@@ -213,6 +214,9 @@ pub fn update_view(
         .find(|v| v.id == id)
         .ok_or(Error::NotFound)?;
     *view = patch(view, changes, &["id"])?;
+    if changes.get("name").is_some() && view.name.trim().is_empty() {
+        return Err(invalid());
+    }
     save(s, actor, db)
 }
 
@@ -259,11 +263,163 @@ pub fn remove_view(
     save(s, actor, db)
 }
 
+pub(crate) fn save_database_core(s: &mut Session, _actor: &Actor, database_json: String) -> Result<Database> {
+    if database_json.len() > 30_000_000 {
+        return Err(Error::invalid("This database definition is too large."));
+    }
+    let mut incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
+    let old = database(s, &incoming.id)?;
+    if old.locked && incoming.locked {
+        return Err(Error::invalid("This database is locked. Unlock it to change its properties."));
+    }
+    // Fields the UI may not change.
+    incoming.created = old.created;
+    incoming.section_id = old.section_id.clone();
+    incoming.parent = old.parent.clone();
+    incoming.inline = old.inline;
+    incoming.order = old.order;
+    incoming.favorite = old.favorite;
+    incoming.trashed_at = old.trashed_at;
+    incoming.next_id = old.next_id;
+    // Date automations: Notaya keeps the time up to which dates were handled; a new one starts now.
+    let now_min = clock::local_now().0;
+    for a in &mut incoming.automations {
+        a.last_run = old.automations.iter().find(|o| o.id == a.id).map_or(now_min, |o| o.last_run);
+    }
+    incoming.updated = now_ms();
+    incoming.sanitize()?;
+    // Property kinds cannot change in place (a value of the old kind would be wrong); the UI makes a new property.
+    for p in &incoming.props {
+        if let Some(op) = old.prop(&p.id) {
+            if op.kind != p.kind {
+                return Err(Error::invalid("A property's type cannot be changed here."));
+            }
+        }
+    }
+    // Check relations, rollups and formulas refer to things that exist.
+    let mut changed_items: Vec<Item> = Vec::new();
+    let mut incoming_extra: Vec<(String, Property)> = Vec::new(); // (target db id, new back property)
+    for p in &mut incoming.props {
+        match p.kind {
+            PropKind::Relation => {
+                let target_exists = p.relation_db == incoming.id || matches!(s.get(&p.relation_db), Some(Item::Database(_)));
+                if !target_exists {
+                    return Err(Error::invalid(format!("The relation \"{}\" needs a database to link to.", p.name)));
+                }
+                if p.relation_back == "+" {
+                    let back = Property {
+                        id: new_id(),
+                        name: format!("Related to {} ({})", if incoming.title.is_empty() { "Untitled" } else { &incoming.title }, p.name),
+                        kind: PropKind::Relation,
+                        relation_db: incoming.id.clone(),
+                        relation_back: p.id.clone(),
+                        ..Property::default()
+                    };
+                    p.relation_back = back.id.clone();
+                    incoming_extra.push((p.relation_db.clone(), back));
+                }
+            }
+            PropKind::Formula => {
+                if let Err(e) = crate::database::formula::parse(&p.formula) {
+                    // A formula with a typo is kept (shown as an error in its cells) so work is not lost.
+                    let _ = e;
+                }
+            }
+            _ => {}
+        }
+    }
+    // Back properties made in another database (or this one, for a self-relation).
+    let mut self_extra: Vec<Property> = Vec::new();
+    for (target, back) in incoming_extra {
+        if target == incoming.id {
+            self_extra.push(back);
+        } else {
+            let mut tdb = database(s, &target)?;
+            if tdb.props.len() >= MAX_PROPERTIES {
+                return Err(Error::invalid("The other database has too many properties."));
+            }
+            let col = Column { prop: back.id.clone(), visible: true, width: 0 };
+            for v in &mut tdb.views {
+                v.columns.push(col.clone());
+            }
+            tdb.props.push(back);
+            tdb.updated = now_ms();
+            changed_items.push(Item::Database(tdb));
+        }
+    }
+    for b in self_extra {
+        let col = Column { prop: b.id.clone(), visible: true, width: 0 };
+        for v in &mut incoming.views {
+            v.columns.push(col.clone());
+        }
+        incoming.props.push(b);
+    }
+    // Removed properties: cut them out of rows and out of properties that point at them.
+    let removed: Vec<Property> = old.props.iter().filter(|p| incoming.prop(&p.id).is_none()).cloned().collect();
+    let rows_here: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.db == incoming.id { Some(r.id.clone()) } else { None } } else { None }).collect();
+    if !removed.is_empty() {
+        let removed_ids: HashSet<&str> = removed.iter().map(|p| p.id.as_str()).collect();
+        for rid in &rows_here {
+            let mut r = row(s, rid)?;
+            let mut m = parse_cells(&r);
+            let before = m.len();
+            m.retain(|k, _| !removed_ids.contains(k.as_str()));
+            if m.len() != before {
+                write_cells(&mut r, &m)?;
+                changed_items.push(Item::Row(r));
+            }
+        }
+        // A removed relation also removes its other side; rollups on removed relations go too.
+        for p in removed.iter().filter(|p| p.kind == PropKind::Relation && !p.relation_back.is_empty()) {
+            if p.relation_db == incoming.id {
+                if let Some(i) = incoming.props.iter().position(|q| q.id == p.relation_back) {
+                    incoming.props.remove(i);
+                }
+            } else if let Ok(mut tdb) = database(s, &p.relation_db) {
+                if tdb.props.iter().any(|q| q.id == p.relation_back) {
+                    tdb.props.retain(|q| q.id != p.relation_back);
+                    tdb.props.retain(|q| !(q.kind == PropKind::Rollup && q.rollup_relation == p.relation_back));
+                    for v in &mut tdb.views {
+                        v.columns.retain(|c| tdb.props.iter().any(|q| q.id == c.prop));
+                    }
+                    changed_items.push(Item::Database(tdb));
+                }
+            }
+        }
+        let gone: HashSet<String> = removed.iter().map(|p| p.id.clone()).collect();
+        incoming.props.retain(|q| !(q.kind == PropKind::Rollup && gone.contains(&q.rollup_relation)));
+        let keep: HashSet<String> = incoming.props.iter().map(|q| q.id.clone()).collect();
+        for v in &mut incoming.views {
+            v.columns.retain(|c| keep.contains(&c.prop));
+        }
+    }
+    // A new ID property numbers the rows that exist, oldest first.
+    let new_id_prop = incoming.props.iter().any(|p| p.kind == PropKind::Id) && !old.props.iter().any(|p| p.kind == PropKind::Id);
+    if new_id_prop {
+        let mut rows: Vec<Row> = rows_here.iter().filter_map(|id| row(s, id).ok()).collect();
+        rows.sort_by_key(|r| (r.created, r.order));
+        let mut n = incoming.next_id.max(1);
+        for mut r in rows {
+            if r.number == 0 {
+                r.number = n;
+                n += 1;
+                changed_items.push(Item::Row(r));
+            }
+        }
+        incoming.next_id = n;
+    } else {
+        incoming.next_id = old.next_id;
+    }
+    incoming.sanitize()?;
+    changed_items.push(Item::Database(incoming.clone()));
+    s.put_many(changed_items)?;
+    Ok(incoming)
+}
+
+
 #[cfg(test)]
 mod tests {
-    use super::super::types::Row;
     use super::*;
-    use crate::model::Item;
     use serde_json::json;
 
     fn with_session(test: impl FnOnce(&mut Session)) {
@@ -437,6 +593,15 @@ mod tests {
                     matches!(&error, Error::Invalid(message) if message == "Invalid database small save.")
                 );
                 assert_eq!(error.fault_code(), None);
+                assert_eq!(snapshot(s), before);
+
+                let error = add_view(s, &actor, id, View {
+                    id: "blank".into(), name: name.into(), ..View::default()
+                }).err().unwrap();
+                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
+                assert_eq!(snapshot(s), before);
+                let error = update_view(s, &actor, id, &view, &json!({"name":name, "wrap":true})).err().unwrap();
+                assert!(matches!(&error, Error::Invalid(message) if message == "Invalid database small save."));
                 assert_eq!(snapshot(s), before);
 
                 let error = rename_view(s, &actor, id, &view, name.into())
