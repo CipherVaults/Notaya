@@ -1,3 +1,4 @@
+mod actions;
 mod backup;
 mod commands;
 mod crypto;
@@ -185,6 +186,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            actions::list_actions,
             vault_cmd::vault_status,
             vault_cmd::start_notes,
             vault_cmd::enable_security,

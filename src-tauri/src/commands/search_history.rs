@@ -2,6 +2,9 @@
 //! record, so they are encrypted with everything else, wiped from memory when the vault locks, and
 //! cleared by the Clear button. Search terms can reveal what a note says, which is why only five are kept.
 
+use crate::actions::Actor;
+use crate::vault::Session;
+
 use super::limit;
 use crate::error::Result;
 use crate::model::{Item, SEARCH_HISTORY_MAX, SEARCH_TERM_MAX};
@@ -10,18 +13,31 @@ use tauri::State;
 
 #[tauri::command]
 pub fn search_history(state: State<'_, AppState>) -> Result<Vec<String>> {
-    state.with(|s| Ok(s.settings().search_history))
+    search_history_person(&state)
 }
+
+pub(crate) fn search_history_core(s: &Session, _actor: &Actor) -> Result<Vec<String>> {
+    Ok(s.settings().search_history)
+}
+
 
 #[tauri::command]
 pub fn add_search_term(state: State<'_, AppState>, term: String) -> Result<Vec<String>> {
+    add_search_term_person(&state, term)
+}
+
+pub(crate) fn add_search_term_core(s: &mut Session, _actor: &Actor, term: String) -> Result<Vec<String>> {
     limit("The search", &term, SEARCH_TERM_MAX)?;
-    change(&state, |h| push_term(h, &term))
+    change_core(s, |h| push_term(h, &term))
 }
 
 #[tauri::command]
 pub fn remove_search_term(state: State<'_, AppState>, term: String) -> Result<Vec<String>> {
-    change(&state, |h| {
+    remove_search_term_person(&state, term)
+}
+
+pub(crate) fn remove_search_term_core(s: &mut Session, _actor: &Actor, term: String) -> Result<Vec<String>> {
+    change_core(s, |h| {
         let before = h.len();
         h.retain(|t| *t != term);
         h.len() != before
@@ -30,7 +46,11 @@ pub fn remove_search_term(state: State<'_, AppState>, term: String) -> Result<Ve
 
 #[tauri::command]
 pub fn clear_search_history(state: State<'_, AppState>) -> Result<()> {
-    change(&state, |h| {
+    clear_search_history_person(&state)
+}
+
+pub(crate) fn clear_search_history_core(s: &mut Session, _actor: &Actor) -> Result<()> {
+    change_core(s, |h| {
         let had = !h.is_empty();
         h.clear();
         had
@@ -38,17 +58,15 @@ pub fn clear_search_history(state: State<'_, AppState>) -> Result<()> {
     .map(|_| ())
 }
 
-/// Applies `edit` to the saved list and writes the settings record only when it changed something.
-fn change(state: &State<'_, AppState>, edit: impl FnOnce(&mut Vec<String>) -> bool) -> Result<Vec<String>> {
-    state.with_mut(|s| {
-        let mut settings = s.settings();
-        if !edit(&mut settings.search_history) {
-            return Ok(settings.search_history);
-        }
-        let history = settings.search_history.clone();
-        s.put(Item::Settings(settings))?;
-        Ok(history)
-    })
+/// Applies `edit` and writes the settings record only when it changed something.
+fn change_core(s: &mut Session, edit: impl FnOnce(&mut Vec<String>) -> bool) -> Result<Vec<String>> {
+    let mut settings = s.settings();
+    if !edit(&mut settings.search_history) {
+        return Ok(settings.search_history);
+    }
+    let history = settings.search_history.clone();
+    s.put(Item::Settings(settings))?;
+    Ok(history)
 }
 
 /// Puts a search at the top (case-insensitive repeats move up instead of doubling) and keeps five.
@@ -90,5 +108,60 @@ mod tests {
         assert!(!push_term(&mut h, "   "));
         assert!(push_term(&mut h, "  two   words "));
         assert_eq!(h, ["two words"]);
+    }
+}
+
+
+fn search_history_person(state: &AppState) -> Result<Vec<String>> {
+    state.with(|s| search_history_core(s, &Actor::Person))
+}
+
+
+fn add_search_term_person(state: &AppState, term: String) -> Result<Vec<String>> {
+    limit("The search", &term, SEARCH_TERM_MAX)?;
+    state.with_mut(|s| add_search_term_core(s, &Actor::Person, term))
+}
+
+
+fn remove_search_term_person(state: &AppState, term: String) -> Result<Vec<String>> {
+    state.with_mut(|s| remove_search_term_core(s, &Actor::Person, term))
+}
+
+
+fn clear_search_history_person(state: &AppState) -> Result<()> {
+    state.with_mut(|s| clear_search_history_core(s, &Actor::Person))
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+    #[test]
+    fn search_history_person_and_core_match() {
+        compare(
+            |state| search_history_person(state),
+            |s, _paths| search_history_core(s, &Actor::Person),
+        );
+    }
+    #[test]
+    fn add_search_term_person_and_core_match() {
+        compare(
+            |state| add_search_term_person(state, "a search".into()),
+            |s, _paths| add_search_term_core(s, &Actor::Person, "a search".into()),
+        );
+    }
+    #[test]
+    fn remove_search_term_person_and_core_match() {
+        compare(
+            |state| remove_search_term_person(state, "a search".into()),
+            |s, _paths| remove_search_term_core(s, &Actor::Person, "a search".into()),
+        );
+    }
+    #[test]
+    fn clear_search_history_person_and_core_match() {
+        compare(
+            |state| clear_search_history_person(state),
+            |s, _paths| clear_search_history_core(s, &Actor::Person),
+        );
     }
 }

@@ -1,4 +1,5 @@
-﻿use serde::Serialize;
+use crate::actions::Actor;
+use serde::Serialize;
 use tauri::ipc::{InvokeBody, Request};
 use tauri::State;
 
@@ -70,203 +71,339 @@ fn next_order(orders: impl Iterator<Item = i64>) -> i64 {
 
 #[tauri::command]
 pub fn list_notes(state: State<'_, AppState>) -> Result<NotesTree> {
-    state.with(|s| Ok(tree(s)))
+    list_notes_person(&state)
 }
+
+fn list_notes_person(state: &AppState) -> Result<NotesTree> {
+    state.with(|s| list_notes_core(s, &Actor::Person))
+}
+
+pub(crate) fn list_notes_core(s: &Session, _actor: &Actor) -> Result<NotesTree> {
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn create_notebook(state: State<'_, AppState>, name: String, color: String, icon: String) -> Result<NotesTree> {
+    create_notebook_person(&state, name, color, icon)
+}
+
+fn create_notebook_person(state: &AppState, name: String, color: String, icon: String) -> Result<NotesTree> {
     limit("Name", &name, 120)?;
     limit("Icon", &icon, 40)?;
     let color = check_color(&color)?;
-    state.with_mut(|s| {
-        let now = now_ms();
-        let order = next_order(s.items().filter_map(|i| match i {
-            Item::Notebook(n) => Some(n.order),
-            _ => None,
-        }));
-        let nb = Notebook { id: new_id(), name, color, icon, order, created: now, updated: now };
-        let first_section = Section {
-            id: new_id(),
-            notebook_id: nb.id.clone(),
-            name: "General".into(),
-            color: String::new(),
-            order: 0,
-            created: now,
-            updated: now,
-        };
-        s.put_many(vec![Item::Notebook(nb), Item::Section(first_section)])?;
-        Ok(tree(s))
-    })
+    state.with_mut(|s| create_notebook_core(s, &Actor::Person, name, color, icon))
 }
+
+pub(crate) fn create_notebook_core(
+    s: &mut Session,
+    _actor: &Actor,
+    name: String,
+    color: String,
+    icon: String,
+) -> Result<NotesTree> {
+    limit("Name", &name, 120)?;
+    limit("Icon", &icon, 40)?;
+    let color = check_color(&color)?;
+    let now = now_ms();
+    let order = next_order(s.items().filter_map(|i| match i {
+        Item::Notebook(n) => Some(n.order),
+        _ => None,
+    }));
+    let nb = Notebook { id: new_id(), name, color, icon, order, created: now, updated: now };
+    let first_section = Section {
+        id: new_id(),
+        notebook_id: nb.id.clone(),
+        name: "General".into(),
+        color: String::new(),
+        order: 0,
+        created: now,
+        updated: now,
+    };
+    s.put_many(vec![Item::Notebook(nb), Item::Section(first_section)])?;
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn update_notebook(state: State<'_, AppState>, id: String, name: String, color: String, icon: String) -> Result<NotesTree> {
+    update_notebook_person(&state, id, name, color, icon)
+}
+
+fn update_notebook_person(
+    state: &AppState,
+    id: String,
+    name: String,
+    color: String,
+    icon: String,
+) -> Result<NotesTree> {
     limit("Name", &name, 120)?;
     limit("Icon", &icon, 40)?;
     let color = check_color(&color)?;
-    state.with_mut(|s| {
-        let mut nb = notebook(s, &id)?;
-        nb.name = name;
-        nb.color = color;
-        nb.icon = icon;
-        nb.updated = now_ms();
-        s.put(Item::Notebook(nb))?;
-        Ok(tree(s))
-    })
+    state.with_mut(|s| update_notebook_core(s, &Actor::Person, id, name, color, icon))
 }
+
+pub(crate) fn update_notebook_core(
+    s: &mut Session,
+    _actor: &Actor,
+    id: String,
+    name: String,
+    color: String,
+    icon: String,
+) -> Result<NotesTree> {
+    limit("Name", &name, 120)?;
+    limit("Icon", &icon, 40)?;
+    let color = check_color(&color)?;
+    let mut nb = notebook(s, &id)?;
+    nb.name = name;
+    nb.color = color;
+    nb.icon = icon;
+    nb.updated = now_ms();
+    s.put(Item::Notebook(nb))?;
+    Ok(tree(s))
+}
+
 
 /// Deletes a notebook with all of its sections and pages. A checked backup is made first
 /// (there is no trash for a whole notebook); if it fails, nothing is deleted. Runs on a worker
 /// thread because the backup can take a moment.
 #[tauri::command(async)]
 pub fn delete_notebook(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        notebook(s, &id)?;
-        let section_ids: Vec<String> = s
-            .items()
-            .filter_map(|i| match i {
-                Item::Section(x) if x.notebook_id == id => Some(x.id.clone()),
-                _ => None,
-            })
-            .collect();
-        let mut doomed: Vec<String> = s
-            .items()
-            .filter_map(|i| match i {
-                Item::Page(p) if section_ids.contains(&p.section_id) => Some(p.id.clone()),
-                _ => None,
-            })
-            .collect();
-        doomed.extend(section_ids);
-        doomed.push(id.clone());
-        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
-        s.remove_many(&doomed)?;
-        s.collect_garbage()?;
-        Ok(tree(s))
-    })
+    delete_notebook_person(&state, id)
 }
+
+fn delete_notebook_person(state: &AppState, id: String) -> Result<NotesTree> {
+    state.with_mut(|s| delete_notebook_core(s, &Actor::Person, &state.paths, id))
+}
+
+pub(crate) fn delete_notebook_core(
+    s: &mut Session,
+    _actor: &Actor,
+    paths: &crate::portable::Paths,
+    id: String,
+) -> Result<NotesTree> {
+    notebook(s, &id)?;
+    let section_ids: Vec<String> = s
+        .items()
+        .filter_map(|i| match i {
+            Item::Section(x) if x.notebook_id == id => Some(x.id.clone()),
+            _ => None,
+        })
+        .collect();
+    let mut doomed: Vec<String> = s
+        .items()
+        .filter_map(|i| match i {
+            Item::Page(p) if section_ids.contains(&p.section_id) => Some(p.id.clone()),
+            _ => None,
+        })
+        .collect();
+    doomed.extend(section_ids);
+    doomed.push(id.clone());
+    backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+    s.remove_many(&doomed)?;
+    s.collect_garbage()?;
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn create_section(state: State<'_, AppState>, notebook_id: String, name: String, color: String) -> Result<NotesTree> {
+    create_section_person(&state, notebook_id, name, color)
+}
+
+fn create_section_person(state: &AppState, notebook_id: String, name: String, color: String) -> Result<NotesTree> {
     limit("Name", &name, 120)?;
     let color = check_color(&color)?;
-    state.with_mut(|s| {
-        notebook(s, &notebook_id)?;
-        let now = now_ms();
-        let order = next_order(s.items().filter_map(|i| match i {
-            Item::Section(x) if x.notebook_id == notebook_id => Some(x.order),
-            _ => None,
-        }));
-        s.put(Item::Section(Section {
-            id: new_id(),
-            notebook_id,
-            name,
-            color,
-            order,
-            created: now,
-            updated: now,
-        }))?;
-        Ok(tree(s))
-    })
+    state.with_mut(|s| create_section_core(s, &Actor::Person, notebook_id, name, color))
 }
+
+pub(crate) fn create_section_core(
+    s: &mut Session,
+    _actor: &Actor,
+    notebook_id: String,
+    name: String,
+    color: String,
+) -> Result<NotesTree> {
+    limit("Name", &name, 120)?;
+    let color = check_color(&color)?;
+    notebook(s, &notebook_id)?;
+    let now = now_ms();
+    let order = next_order(s.items().filter_map(|i| match i {
+        Item::Section(x) if x.notebook_id == notebook_id => Some(x.order),
+        _ => None,
+    }));
+    s.put(Item::Section(Section {
+        id: new_id(),
+        notebook_id,
+        name,
+        color,
+        order,
+        created: now,
+        updated: now,
+    }))?;
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn update_section(state: State<'_, AppState>, id: String, name: String, color: String) -> Result<NotesTree> {
+    update_section_person(&state, id, name, color)
+}
+
+fn update_section_person(state: &AppState, id: String, name: String, color: String) -> Result<NotesTree> {
     limit("Name", &name, 120)?;
     let color = check_color(&color)?;
-    state.with_mut(|s| {
-        let mut x = section(s, &id)?;
-        x.name = name;
-        x.color = color;
-        x.updated = now_ms();
-        s.put(Item::Section(x))?;
-        Ok(tree(s))
-    })
+    state.with_mut(|s| update_section_core(s, &Actor::Person, id, name, color))
 }
+
+pub(crate) fn update_section_core(
+    s: &mut Session,
+    _actor: &Actor,
+    id: String,
+    name: String,
+    color: String,
+) -> Result<NotesTree> {
+    limit("Name", &name, 120)?;
+    let color = check_color(&color)?;
+    let mut x = section(s, &id)?;
+    x.name = name;
+    x.color = color;
+    x.updated = now_ms();
+    s.put(Item::Section(x))?;
+    Ok(tree(s))
+}
+
 
 /// Deletes a section with all of its pages, after a checked backup (see `delete_notebook`).
 #[tauri::command(async)]
 pub fn delete_section(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        section(s, &id)?;
-        let mut doomed: Vec<String> = s
-            .items()
-            .filter_map(|i| match i {
-                Item::Page(p) if p.section_id == id => Some(p.id.clone()),
-                _ => None,
-            })
-            .collect();
-        doomed.push(id.clone());
-        backup::make_safety_backup(&state.paths, s).map_err(|e| backup::safety_failure(&e))?;
-        s.remove_many(&doomed)?;
-        s.collect_garbage()?;
-        Ok(tree(s))
-    })
+    delete_section_person(&state, id)
 }
+
+fn delete_section_person(state: &AppState, id: String) -> Result<NotesTree> {
+    state.with_mut(|s| delete_section_core(s, &Actor::Person, &state.paths, id))
+}
+
+pub(crate) fn delete_section_core(
+    s: &mut Session,
+    _actor: &Actor,
+    paths: &crate::portable::Paths,
+    id: String,
+) -> Result<NotesTree> {
+    section(s, &id)?;
+    let mut doomed: Vec<String> = s
+        .items()
+        .filter_map(|i| match i {
+            Item::Page(p) if p.section_id == id => Some(p.id.clone()),
+            _ => None,
+        })
+        .collect();
+    doomed.push(id.clone());
+    backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+    s.remove_many(&doomed)?;
+    s.collect_garbage()?;
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn create_page(state: State<'_, AppState>, section_id: String, title: String) -> Result<Page> {
-    limit("Title", &title, 300)?;
-    state.with_mut(|s| {
-        section(s, &section_id)?;
-        let now = now_ms();
-        let order = next_order(s.items().filter_map(|i| match i {
-            Item::Page(p) if p.section_id == section_id => Some(p.order),
-            _ => None,
-        }));
-        let p = Page {
-            id: new_id(),
-            section_id,
-            title,
-            content: String::new(),
-            text: String::new(),
-            order,
-            favorite: false,
-            icon: String::new(),
-            cover: String::new(),
-            parent: String::new(),
-            trashed_at: None,
-            created: now,
-            updated: now,
-        };
-        s.put(Item::Page(p.clone()))?;
-        Ok(p)
-    })
+    create_page_person(&state, section_id, title)
 }
+
+fn create_page_person(state: &AppState, section_id: String, title: String) -> Result<Page> {
+    limit("Title", &title, 300)?;
+    state.with_mut(|s| create_page_core(s, &Actor::Person, section_id, title))
+}
+
+pub(crate) fn create_page_core(s: &mut Session, _actor: &Actor, section_id: String, title: String) -> Result<Page> {
+    limit("Title", &title, 300)?;
+    section(s, &section_id)?;
+    let now = now_ms();
+    let order = next_order(s.items().filter_map(|i| match i {
+        Item::Page(p) if p.section_id == section_id => Some(p.order),
+        _ => None,
+    }));
+    let p = Page {
+        id: new_id(),
+        section_id,
+        title,
+        content: String::new(),
+        text: String::new(),
+        order,
+        favorite: false,
+        icon: String::new(),
+        cover: String::new(),
+        parent: String::new(),
+        trashed_at: None,
+        created: now,
+        updated: now,
+    };
+    s.put(Item::Page(p.clone()))?;
+    Ok(p)
+}
+
 
 #[tauri::command]
 pub fn get_page(state: State<'_, AppState>, id: String) -> Result<Page> {
-    state.with(|s| match s.get(&id) {
+    get_page_person(&state, id)
+}
+
+fn get_page_person(state: &AppState, id: String) -> Result<Page> {
+    state.with(|s| get_page_core(s, &Actor::Person, id))
+}
+
+pub(crate) fn get_page_core(s: &Session, _actor: &Actor, id: String) -> Result<Page> {
+    match s.get(&id) {
         Some(Item::Row(r)) => Ok(row_as_page(s, r)),
         _ => page(s, &id),
-    })
+    }
 }
+
 
 #[tauri::command]
 pub fn save_page(state: State<'_, AppState>, id: String, title: String, content: String, text: String) -> Result<PageMeta> {
+    save_page_person(&state, id, title, content, text)
+}
+
+fn save_page_person(state: &AppState, id: String, title: String, content: String, text: String) -> Result<PageMeta> {
     limit("Title", &title, 300)?;
     limit("Page", &content, MAX_PAGE_CHARS)?;
     limit("Page", &text, MAX_PAGE_CHARS)?;
-    state.with_mut(|s| {
-        if let Some(Item::Row(r)) = s.get(&id) {
-            let mut r = r.clone();
-            r.title = title;
-            r.content = content;
-            r.text = text;
-            r.updated = now_ms();
-            let meta = PageMeta::from(&row_as_page(s, &r));
-            s.put(Item::Row(r))?;
-            return Ok(meta);
-        }
-        let mut p = page(s, &id)?;
-        p.title = title;
-        p.content = content;
-        p.text = text;
-        p.updated = now_ms();
-        let meta = PageMeta::from(&p);
-        s.put(Item::Page(p))?;
-        Ok(meta)
-    })
+    state.with_mut(|s| save_page_core(s, &Actor::Person, id, title, content, text))
 }
+
+pub(crate) fn save_page_core(
+    s: &mut Session,
+    _actor: &Actor,
+    id: String,
+    title: String,
+    content: String,
+    text: String,
+) -> Result<PageMeta> {
+    limit("Title", &title, 300)?;
+    limit("Page", &content, MAX_PAGE_CHARS)?;
+    limit("Page", &text, MAX_PAGE_CHARS)?;
+    if let Some(Item::Row(r)) = s.get(&id) {
+        let mut r = r.clone();
+        r.title = title;
+        r.content = content;
+        r.text = text;
+        r.updated = now_ms();
+        let meta = PageMeta::from(&row_as_page(s, &r));
+        s.put(Item::Row(r))?;
+        return Ok(meta);
+    }
+    let mut p = page(s, &id)?;
+    p.title = title;
+    p.content = content;
+    p.text = text;
+    p.updated = now_ms();
+    let meta = PageMeta::from(&p);
+    s.put(Item::Page(p))?;
+    Ok(meta)
+}
+
 
 /// The page itself plus every page nested inside it, at any depth.
 fn with_descendants(s: &crate::vault::Session, id: &str) -> Vec<String> {
@@ -318,33 +455,50 @@ fn add_subpage(s: &mut Session, parent_id: &str, title: String) -> Result<Page> 
 
 #[tauri::command]
 pub fn create_subpage(state: State<'_, AppState>, parent_id: String, title: String) -> Result<Page> {
-    limit("Title", &title, 300)?;
-    state.with_mut(|s| add_subpage(s, &parent_id, title))
+    create_subpage_person(&state, parent_id, title)
 }
+
+fn create_subpage_person(state: &AppState, parent_id: String, title: String) -> Result<Page> {
+    limit("Title", &title, 300)?;
+    state.with_mut(|s| create_subpage_core(s, &Actor::Person, parent_id, title))
+}
+
+pub(crate) fn create_subpage_core(s: &mut Session, _actor: &Actor, parent_id: String, title: String) -> Result<Page> {
+    limit("Title", &title, 300)?;
+    add_subpage(s, &parent_id, title)
+}
+
 
 #[tauri::command]
 pub fn set_page_favorite(state: State<'_, AppState>, id: String, favorite: bool) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        match s.get(&id) {
-            Some(Item::Row(r)) => {
-                let mut r = r.clone();
-                r.favorite = favorite;
-                s.put(Item::Row(r))?;
-            }
-            Some(Item::Database(d)) => {
-                let mut d = d.clone();
-                d.favorite = favorite && d.trashed_at.is_none();
-                s.put(Item::Database(d))?;
-            }
-            _ => {
-                let mut p = page(s, &id)?;
-                p.favorite = favorite;
-                s.put(Item::Page(p))?;
-            }
-        }
-        Ok(tree(s))
-    })
+    set_page_favorite_person(&state, id, favorite)
 }
+
+fn set_page_favorite_person(state: &AppState, id: String, favorite: bool) -> Result<NotesTree> {
+    state.with_mut(|s| set_page_favorite_core(s, &Actor::Person, id, favorite))
+}
+
+pub(crate) fn set_page_favorite_core(s: &mut Session, _actor: &Actor, id: String, favorite: bool) -> Result<NotesTree> {
+    match s.get(&id) {
+        Some(Item::Row(r)) => {
+            let mut r = r.clone();
+            r.favorite = favorite;
+            s.put(Item::Row(r))?;
+        }
+        Some(Item::Database(d)) => {
+            let mut d = d.clone();
+            d.favorite = favorite && d.trashed_at.is_none();
+            s.put(Item::Database(d))?;
+        }
+        _ => {
+            let mut p = page(s, &id)?;
+            p.favorite = favorite;
+            s.put(Item::Page(p))?;
+        }
+    }
+    Ok(tree(s))
+}
+
 
 /// Moves a page, and the pages inside it, to another section. The page leaves its old parent.
 fn move_subtree(s: &mut Session, id: &str, section_id: &str) -> Result<()> {
@@ -368,56 +522,70 @@ fn move_subtree(s: &mut Session, id: &str, section_id: &str) -> Result<()> {
 
 #[tauri::command]
 pub fn move_page(state: State<'_, AppState>, id: String, section_id: String) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        if matches!(s.get(&id), Some(Item::Database(_))) {
-            section(s, &section_id)?;
-            let mut d = dbc::database(s, &id)?;
-            d.section_id = section_id;
-            d.parent = String::new();
-            d.updated = now_ms();
-            s.put(Item::Database(d))?;
-        } else {
-            move_subtree(s, &id, &section_id)?;
-        }
-        Ok(tree(s))
-    })
+    move_page_person(&state, id, section_id)
 }
+
+fn move_page_person(state: &AppState, id: String, section_id: String) -> Result<NotesTree> {
+    state.with_mut(|s| move_page_core(s, &Actor::Person, id, section_id))
+}
+
+pub(crate) fn move_page_core(s: &mut Session, _actor: &Actor, id: String, section_id: String) -> Result<NotesTree> {
+    if matches!(s.get(&id), Some(Item::Database(_))) {
+        section(s, &section_id)?;
+        let mut d = dbc::database(s, &id)?;
+        d.section_id = section_id;
+        d.parent = String::new();
+        d.updated = now_ms();
+        s.put(Item::Database(d))?;
+    } else {
+        move_subtree(s, &id, &section_id)?;
+    }
+    Ok(tree(s))
+}
+
 
 /// Sets the display order of notebooks, sections or pages to the order given.
 #[tauri::command]
 pub fn reorder(state: State<'_, AppState>, ids: Vec<String>) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        let mut changed = Vec::new();
-        for (i, id) in ids.iter().enumerate() {
-            let order = i as i64;
-            match s.get(id).cloned() {
-                Some(Item::Notebook(mut n)) => {
-                    n.order = order;
-                    changed.push(Item::Notebook(n));
-                }
-                Some(Item::Section(mut x)) => {
-                    x.order = order;
-                    changed.push(Item::Section(x));
-                }
-                Some(Item::Page(mut p)) => {
-                    p.order = order;
-                    changed.push(Item::Page(p));
-                }
-                Some(Item::Database(mut d)) => {
-                    d.order = order;
-                    changed.push(Item::Database(d));
-                }
-                Some(Item::Row(mut r)) => {
-                    r.order = order;
-                    changed.push(Item::Row(r));
-                }
-                _ => return Err(Error::NotFound),
-            }
-        }
-        s.put_many(changed)?;
-        Ok(tree(s))
-    })
+    reorder_person(&state, ids)
 }
+
+fn reorder_person(state: &AppState, ids: Vec<String>) -> Result<NotesTree> {
+    state.with_mut(|s| reorder_core(s, &Actor::Person, ids))
+}
+
+pub(crate) fn reorder_core(s: &mut Session, _actor: &Actor, ids: Vec<String>) -> Result<NotesTree> {
+    let mut changed = Vec::new();
+    for (i, id) in ids.iter().enumerate() {
+        let order = i as i64;
+        match s.get(id).cloned() {
+            Some(Item::Notebook(mut n)) => {
+                n.order = order;
+                changed.push(Item::Notebook(n));
+            }
+            Some(Item::Section(mut x)) => {
+                x.order = order;
+                changed.push(Item::Section(x));
+            }
+            Some(Item::Page(mut p)) => {
+                p.order = order;
+                changed.push(Item::Page(p));
+            }
+            Some(Item::Database(mut d)) => {
+                d.order = order;
+                changed.push(Item::Database(d));
+            }
+            Some(Item::Row(mut r)) => {
+                r.order = order;
+                changed.push(Item::Row(r));
+            }
+            _ => return Err(Error::NotFound),
+        }
+    }
+    s.put_many(changed)?;
+    Ok(tree(s))
+}
+
 
 /// Puts a page, and every page inside it, in the trash.
 fn trash_subtree(s: &mut Session, id: &str) -> Result<()> {
@@ -453,69 +621,97 @@ fn restore_subtree(s: &mut Session, id: &str) -> Result<()> {
 
 #[tauri::command]
 pub fn trash_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        match s.get(&id) {
-            Some(Item::Row(_)) => dbc::trash_rows(s, &[id.clone()])?,
-            Some(Item::Database(_)) => dbc::trash_database(s, &id)?,
-            _ => trash_subtree(s, &id)?,
-        }
-        Ok(tree(s))
-    })
+    trash_page_person(&state, id)
 }
+
+fn trash_page_person(state: &AppState, id: String) -> Result<NotesTree> {
+    state.with_mut(|s| trash_page_core(s, &Actor::Person, id))
+}
+
+pub(crate) fn trash_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
+    match s.get(&id) {
+        Some(Item::Row(_)) => dbc::trash_rows(s, &[id.clone()])?,
+        Some(Item::Database(_)) => dbc::trash_database(s, &id)?,
+        _ => trash_subtree(s, &id)?,
+    }
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn restore_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        match s.get(&id) {
-            Some(Item::Row(_)) => dbc::restore_rows(s, &[id.clone()])?,
-            Some(Item::Database(_)) => dbc::restore_database(s, &id)?,
-            _ => restore_subtree(s, &id)?,
-        }
-        Ok(tree(s))
-    })
+    restore_page_person(&state, id)
 }
+
+fn restore_page_person(state: &AppState, id: String) -> Result<NotesTree> {
+    state.with_mut(|s| restore_page_core(s, &Actor::Person, id))
+}
+
+pub(crate) fn restore_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
+    match s.get(&id) {
+        Some(Item::Row(_)) => dbc::restore_rows(s, &[id.clone()])?,
+        Some(Item::Database(_)) => dbc::restore_database(s, &id)?,
+        _ => restore_subtree(s, &id)?,
+    }
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn delete_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        match s.get(&id) {
-            Some(Item::Row(_)) => dbc::delete_rows(s, &[id.clone()])?,
-            Some(Item::Database(_)) => dbc::delete_database(s, &id)?,
-            _ => {
-                page(s, &id)?;
-                let doomed = with_descendants(s, &id);
-                s.remove_many(&doomed)?;
-                s.collect_garbage()?;
-            }
-        }
-        Ok(tree(s))
-    })
+    delete_page_person(&state, id)
 }
+
+fn delete_page_person(state: &AppState, id: String) -> Result<NotesTree> {
+    state.with_mut(|s| delete_page_core(s, &Actor::Person, id))
+}
+
+pub(crate) fn delete_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
+    match s.get(&id) {
+        Some(Item::Row(_)) => dbc::delete_rows(s, &[id.clone()])?,
+        Some(Item::Database(_)) => dbc::delete_database(s, &id)?,
+        _ => {
+            page(s, &id)?;
+            let doomed = with_descendants(s, &id);
+            s.remove_many(&doomed)?;
+            s.collect_garbage()?;
+        }
+    }
+    Ok(tree(s))
+}
+
 
 #[tauri::command]
 pub fn empty_trash(state: State<'_, AppState>) -> Result<NotesTree> {
-    state.with_mut(|s| {
-        // Databases and rows in the trash go first (with their rows, links and files).
-        let trashed_dbs: Vec<String> = s.items().filter_map(|i| if let Item::Database(d) = i { if d.trashed_at.is_some() { Some(d.id.clone()) } else { None } } else { None }).collect();
-        for id in trashed_dbs {
-            dbc::delete_database(s, &id)?;
-        }
-        let trashed_rows: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.trashed_at.is_some() { Some(r.id.clone()) } else { None } } else { None }).collect();
-        if !trashed_rows.is_empty() {
-            dbc::delete_rows(s, &trashed_rows)?;
-        }
-        let doomed: Vec<String> = s
-            .items()
-            .filter_map(|i| match i {
-                Item::Page(p) if p.trashed_at.is_some() => Some(p.id.clone()),
-                _ => None,
-            })
-            .collect();
-        s.remove_many(&doomed)?;
-        s.collect_garbage()?;
-        Ok(tree(s))
-    })
+    empty_trash_person(&state)
 }
+
+fn empty_trash_person(state: &AppState) -> Result<NotesTree> {
+    state.with_mut(|s| empty_trash_core(s, &Actor::Person))
+}
+
+pub(crate) fn empty_trash_core(s: &mut Session, _actor: &Actor) -> Result<NotesTree> {
+    // Databases and rows in the trash go first (with their rows, links and files).
+    let trashed_dbs: Vec<String> = s.items().filter_map(|i| if let Item::Database(d) = i { if d.trashed_at.is_some() { Some(d.id.clone()) } else { None } } else { None }).collect();
+    for id in trashed_dbs {
+        dbc::delete_database(s, &id)?;
+    }
+    let trashed_rows: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.trashed_at.is_some() { Some(r.id.clone()) } else { None } } else { None }).collect();
+    if !trashed_rows.is_empty() {
+        dbc::delete_rows(s, &trashed_rows)?;
+    }
+    let doomed: Vec<String> = s
+        .items()
+        .filter_map(|i| match i {
+            Item::Page(p) if p.trashed_at.is_some() => Some(p.id.clone()),
+            _ => None,
+        })
+        .collect();
+    s.remove_many(&doomed)?;
+    s.collect_garbage()?;
+    Ok(tree(s))
+}
+
 
 /// Identifies an image from its first bytes; the name the UI sends is ignored.
 /// SVG is refused on purpose because it can contain scripts.
@@ -539,9 +735,15 @@ pub fn add_attachment(state: State<'_, AppState>, request: Request<'_>) -> Resul
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err(Error::invalid("Expected image data."));
     };
-    let mime = sniff_image(bytes)
+    let _mime = sniff_image(bytes)
         .ok_or_else(|| Error::invalid("Only PNG, JPEG, GIF and WebP images are supported."))?;
-    state.with_mut(|s| s.put_attachment(mime, bytes))
+    add_attachment_person(&state, bytes)
+}
+
+pub(crate) fn add_attachment_core(s: &mut Session, _actor: &Actor, bytes: &[u8]) -> Result<String> {
+    let mime =
+        sniff_image(bytes).ok_or_else(|| Error::invalid("Only PNG, JPEG, GIF and WebP images are supported."))?;
+    s.put_attachment(mime, bytes)
 }
 
 #[cfg(test)]
@@ -661,10 +863,27 @@ fn apply_page_look(s: &mut Session, id: &str, icon: String, cover: String) -> Re
 
 #[tauri::command]
 pub fn set_page_look(state: State<'_, AppState>, id: String, icon: String, cover: String) -> Result<PageMeta> {
+    set_page_look_person(&state, id, icon, cover)
+}
+
+fn set_page_look_person(state: &AppState, id: String, icon: String, cover: String) -> Result<PageMeta> {
     limit("Icon", &icon, 40)?;
     limit("Cover", &cover, 200)?;
-    state.with_mut(|s| apply_page_look(s, &id, icon, cover))
+    state.with_mut(|s| set_page_look_core(s, &Actor::Person, id, icon, cover))
 }
+
+pub(crate) fn set_page_look_core(
+    s: &mut Session,
+    _actor: &Actor,
+    id: String,
+    icon: String,
+    cover: String,
+) -> Result<PageMeta> {
+    limit("Icon", &icon, 40)?;
+    limit("Cover", &cover, 200)?;
+    apply_page_look(s, &id, icon, cover)
+}
+
 
 #[cfg(test)]
 mod subpage_tests {
@@ -882,5 +1101,256 @@ mod look_tests {
         assert_eq!(m.cover, "solid:#445566");
         let json = serde_json::to_value(&m).unwrap();
         assert_eq!(json["cover"], "solid:#445566");
+    }
+}
+
+fn add_attachment_person(state: &AppState, bytes: &[u8]) -> Result<String> {
+    state.with_mut(|s| add_attachment_core(s, &Actor::Person, bytes))
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+    #[test]
+    fn set_page_look_person_and_core_match() {
+        compare(
+            |state| set_page_look_person(state, "page".into(), "x".into(), "gradient:sunrise".into()),
+            |s, _paths| set_page_look_core(s, &Actor::Person, "page".into(), "x".into(), "gradient:sunrise".into()),
+        );
+    }
+    #[test]
+    fn empty_trash_person_and_core_match() {
+        compare(
+            |state| empty_trash_person(state),
+            |s, _paths| empty_trash_core(s, &Actor::Person),
+        );
+    }
+    #[test]
+    fn delete_page_person_and_core_match() {
+        compare(
+            |state| delete_page_person(state, "page".into()),
+            |s, _paths| delete_page_core(s, &Actor::Person, "page".into()),
+        );
+    }
+    #[test]
+    fn restore_page_person_and_core_match() {
+        compare(
+            |state| restore_page_person(state, "trash".into()),
+            |s, _paths| restore_page_core(s, &Actor::Person, "trash".into()),
+        );
+    }
+    #[test]
+    fn trash_page_person_and_core_match() {
+        compare(
+            |state| trash_page_person(state, "page".into()),
+            |s, _paths| trash_page_core(s, &Actor::Person, "page".into()),
+        );
+    }
+    #[test]
+    fn reorder_person_and_core_match() {
+        compare(
+            |state| reorder_person(state, vec!["page".into()]),
+            |s, _paths| reorder_core(s, &Actor::Person, vec!["page".into()]),
+        );
+    }
+    #[test]
+    fn move_page_person_and_core_match() {
+        compare(
+            |state| move_page_person(state, "page".into(), "sec2".into()),
+            |s, _paths| move_page_core(s, &Actor::Person, "page".into(), "sec2".into()),
+        );
+    }
+    #[test]
+    fn set_page_favorite_person_and_core_match() {
+        compare(
+            |state| set_page_favorite_person(state, "page".into(), true),
+            |s, _paths| set_page_favorite_core(s, &Actor::Person, "page".into(), true),
+        );
+    }
+    #[test]
+    fn create_subpage_person_and_core_match() {
+        compare(
+            |state| {
+                create_subpage_person(
+                    state,
+                    "page".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                )
+            },
+            |s, _paths| {
+                create_subpage_core(
+                    s,
+                    &Actor::Person,
+                    "page".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                )
+            },
+        );
+    }
+    #[test]
+    fn save_page_person_and_core_match() {
+        compare(
+            |state| {
+                save_page_person(
+                    state,
+                    "page".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    "{\"type\":\"doc\",\"content\":[]}".into(),
+                    "\u{200f}exact\ttext  ".into(),
+                )
+            },
+            |s, _paths| {
+                save_page_core(
+                    s,
+                    &Actor::Person,
+                    "page".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                    "{\"type\":\"doc\",\"content\":[]}".into(),
+                    "\u{200f}exact\ttext  ".into(),
+                )
+            },
+        );
+    }
+    #[test]
+    fn get_page_person_and_core_match() {
+        compare(
+            |state| get_page_person(state, "page".into()),
+            |s, _paths| get_page_core(s, &Actor::Person, "page".into()),
+        );
+    }
+    #[test]
+    fn create_page_person_and_core_match() {
+        compare(
+            |state| {
+                create_page_person(
+                    state,
+                    "sec2".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                )
+            },
+            |s, _paths| {
+                create_page_core(
+                    s,
+                    &Actor::Person,
+                    "sec2".into(),
+                    "\u{627}\u{644}\u{639}\u{631}\u{628}\u{64a}\u{629} ? Deutsch  ".into(),
+                )
+            },
+        );
+    }
+    #[test]
+    fn delete_section_person_and_core_match() {
+        compare(
+            |state| delete_section_person(state, "sec".into()),
+            |s, paths| delete_section_core(s, &Actor::Person, paths, "sec".into()),
+        );
+    }
+    #[test]
+    fn update_section_person_and_core_match() {
+        compare(
+            |state| update_section_person(state, "sec".into(), "Changed".into(), " #ffeeaa ".into()),
+            |s, _paths| update_section_core(s, &Actor::Person, "sec".into(), "Changed".into(), " #ffeeaa ".into()),
+        );
+    }
+    #[test]
+    fn create_section_person_and_core_match() {
+        compare(
+            |state| create_section_person(state, "nb".into(), "Changed".into(), " #ffeeaa ".into()),
+            |s, _paths| create_section_core(s, &Actor::Person, "nb".into(), "Changed".into(), " #ffeeaa ".into()),
+        );
+    }
+    #[test]
+    fn delete_notebook_person_and_core_match() {
+        compare(
+            |state| delete_notebook_person(state, "nb".into()),
+            |s, paths| delete_notebook_core(s, &Actor::Person, paths, "nb".into()),
+        );
+    }
+    #[test]
+    fn update_notebook_person_and_core_match() {
+        compare(
+            |state| update_notebook_person(state, "nb".into(), "Changed".into(), " #ffeeaa ".into(), "x".into()),
+            |s, _paths| {
+                update_notebook_core(
+                    s,
+                    &Actor::Person,
+                    "nb".into(),
+                    "Changed".into(),
+                    " #ffeeaa ".into(),
+                    "x".into(),
+                )
+            },
+        );
+    }
+    #[test]
+    fn create_notebook_person_and_core_match() {
+        compare(
+            |state| create_notebook_person(state, "Changed".into(), " #ffeeaa ".into(), "x".into()),
+            |s, _paths| create_notebook_core(s, &Actor::Person, "Changed".into(), " #ffeeaa ".into(), "x".into()),
+        );
+    }
+    #[test]
+    fn list_notes_person_and_core_match() {
+        compare(
+            |state| list_notes_person(state),
+            |s, _paths| list_notes_core(s, &Actor::Person),
+        );
+    }
+    #[test]
+    fn add_attachment_person_and_core_match() {
+        compare(
+            |state| add_attachment_person(state, b"\x89PNG\r\n\x1a\nthrowaway"),
+            |s, _paths| add_attachment_core(s, &Actor::Person, b"\x89PNG\r\n\x1a\nthrowaway"),
+        );
+    }
+}
+
+#[cfg(test)]
+mod action_boundary_tests {
+    use super::*;
+
+    #[test]
+    fn ai_actor_reuses_the_same_page_checks_and_exact_text() {
+        crate::actions::tests::compare(
+            |state| {
+                save_page_person(
+                    state,
+                    "page".into(),
+                    "title  ".into(),
+                    "content\t  ".into(),
+                    "\u{200f}text  ".into(),
+                )
+            },
+            |s, _| {
+                save_page_core(
+                    s,
+                    &Actor::Ai {
+                        pairing_id: "test".into(),
+                        label: "Codex".into(),
+                    },
+                    "page".into(),
+                    "title  ".into(),
+                    "content\t  ".into(),
+                    "\u{200f}text  ".into(),
+                )
+            },
+        );
+    }
+
+    #[test]
+    fn invalid_inputs_still_fail_before_locked_state() {
+        let root = std::env::var_os("NOTAYA_HOME")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::env::temp_dir().join("notaya-action-parity"));
+        let state = AppState::new(crate::portable::Paths::at(&root));
+        assert!(matches!(
+            create_page_person(&state, "missing".into(), "x".repeat(301)),
+            Err(Error::Invalid(_))
+        ));
+        assert!(matches!(
+            create_page_person(&state, "missing".into(), "valid".into()),
+            Err(Error::Locked)
+        ));
     }
 }
