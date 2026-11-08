@@ -179,6 +179,19 @@ function locationParents(tree: NotesTree, id: string) {
   return sectionParents(tree, (tree.pages.find((p) => p.id === id) ?? tree.databases.find((d) => d.id === id))?.sectionId);
 }
 
+/** Rows are absent from the sidebar tree. Their parent is their containing database. */
+export async function rowExportNotebook(tree: NotesTree, rowId: string) {
+  try {
+    const row = await api.getPage(rowId);
+    if (row.trashedAt !== null) return null;
+    const database = tree.databases.find((d) => d.id === row.parent && d.trashedAt === null && d.sectionId === row.sectionId);
+    const section = tree.sections.find((s) => s.id === database?.sectionId);
+    return tree.notebooks.find((n) => n.id === section?.notebookId) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Resolve against the unlocked tree and core reads for pages hidden beneath rows. */
 export async function restoreLastPlace(place: LastPlace | null | undefined, tree: NotesTree) {
   const activeNotebookId = tree.notebooks[0]?.id ?? null;
