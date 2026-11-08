@@ -817,6 +817,21 @@ mod tests {
     }
 
     #[test]
+    fn sanitize_restores_blank_property_names_and_keeps_nonblank_text_exact() {
+        for name in ["", "  ", "\t\r\n", "\u{2003}\u{00a0}"] {
+            let mut d = db();
+            d.props[0].name = name.into();
+            d.sanitize().unwrap();
+            assert_eq!(d.props[0].name, "Untitled");
+        }
+        let name = "  \u{200f}\u{639}\u{631}\u{628}\u{64a} ?Deutsch e\u{301}  ";
+        let mut d = db();
+        d.props[0].name = name.into();
+        d.sanitize().unwrap();
+        assert_eq!(d.props[0].name.as_bytes(), name.as_bytes());
+    }
+
+    #[test]
     fn filters_are_limited_to_three_levels() {
         let mut d = db();
         let deep = Filter { op: "and".into(), conds: vec![], groups: vec![Filter { op: "and".into(), conds: vec![], groups: vec![Filter { op: "and".into(), conds: vec![], groups: vec![Filter::default()] }] }] };

@@ -17,12 +17,82 @@ import { Placeholder } from "@tiptap/extensions";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import TextAlign from "@tiptap/extension-text-align";
 import { common, createLowlight } from "lowlight";
-import type { Editor } from "@tiptap/react";
+import { Extension, type Editor } from "@tiptap/react";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 
 const lowlight = createLowlight(common);
+
+const BLOCK_TYPES = [
+  "paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList",
+  "listItem", "taskItem", "codeBlock", "horizontalRule", "image", "table",
+  "tableRow", "tableCell", "tableHeader", "callout", "toggle", "columns", "column",
+  "mathBlock", "mermaidBlock", "pageLink", "databaseBlock",
+];
+const blockIdsKey = new PluginKey("notayaBlockIds");
+const validBid = (id: unknown): id is string => typeof id === "string" && /^[0-9a-fA-F]{16}$/.test(id);
+
+/** Native block identities survive JSON, HTML, splits and pasted duplicates. */
+export const BlockIds = Extension.create({
+  name: "notayaBlockIds",
+  addGlobalAttributes() {
+    return [{
+      types: BLOCK_TYPES,
+      attributes: {
+        bid: {
+          default: null,
+          parseHTML: (el: HTMLElement) => {
+            const id = el.getAttribute("data-bid");
+            return validBid(id) ? id : null;
+          },
+          renderHTML: (attrs: Record<string, unknown>) => validBid(attrs.bid) ? { "data-bid": attrs.bid } : {},
+        },
+      },
+    }];
+  },
+  onCreate() {
+    // Appended id assignments must not mark a legacy page dirty merely on open.
+    this.editor.view.dispatch(this.editor.state.tr.setMeta(blockIdsKey, true).setMeta("preventUpdate", true));
+  },
+  addProseMirrorPlugins() {
+    return [new Plugin({
+      key: blockIdsKey,
+      appendTransaction(transactions, old, state) {
+        if (!transactions.some((tr) => tr.docChanged || tr.getMeta(blockIdsKey))) return null;
+        // A pasted copy can precede its source. Keep the identity at the mapped
+        // original position, rather than letting the first duplicate steal it.
+        const originals = new Map<string, number>();
+        old.doc.descendants((node, pos) => {
+          if (!BLOCK_TYPES.includes(node.type.name) || !validBid(node.attrs.bid)) return;
+          let mapped = pos;
+          for (const tr of transactions) mapped = tr.mapping.map(mapped, 1);
+          if (state.doc.nodeAt(mapped)?.attrs.bid === node.attrs.bid) originals.set(node.attrs.bid, mapped);
+        });
+        const reserved = new Set<string>();
+        state.doc.descendants((node) => {
+          if (BLOCK_TYPES.includes(node.type.name) && validBid(node.attrs.bid)) reserved.add(node.attrs.bid);
+        });
+        const seen = new Set<string>();
+        const tr = state.tr;
+        state.doc.descendants((node, pos) => {
+          if (!BLOCK_TYPES.includes(node.type.name)) return;
+          let id: unknown = node.attrs.bid;
+          if (!validBid(id) || seen.has(id) || (originals.has(id) && originals.get(id) !== pos)) {
+            do {
+              id = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
+            } while (reserved.has(id as string));
+            reserved.add(id as string);
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, bid: id });
+          }
+          seen.add(id as string);
+        });
+        return tr.docChanged ? tr.setMeta("addToHistory", false) : null;
+      },
+    })];
+  },
+});
 
 const link = {
   openOnClick: false,
@@ -40,6 +110,7 @@ const pageLinkConfig = {
 /** Full editor for notebook pages: block types, the "/" menu and pictures. */
 export function pageExtensions(slash: SlashOptions) {
   return [
+    BlockIds,
     StarterKit.configure({ codeBlock: false, heading: { levels: [1, 2, 3, 4] }, link: pageLinkConfig }),
     InternalLinks,
     TextStyle,
