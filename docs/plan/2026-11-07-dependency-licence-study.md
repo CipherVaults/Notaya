@@ -4,6 +4,8 @@
 
 > **Dated note (2026-11-07 23:56 UTC, from the coordinator):** the versions after 1.9 were renumbered. Where this study says 1.10 to 1.15, read 2.0 to 2.5 (so "1.13/1.14 whiteboard" is now in the 2.x line, "1.12 dashboards" too, and the 1.10-6 About page is in 2.0). The old numbers are kept below as written; check the current plan for the exact new version of each item.
 
+> **Addendum (2026-11-08 00:05 UTC):** Ahmed answered the questions (broad tablet support, emoji in PDF, Excel charts, Excel import). The recommendations for emoji, Excel and tablets changed; see the addendum at the end of this file, which replaces rows 3 and 4 below.
+
 ## 1. The short answer
 
 | # | Need | Recommendation | New code in the program | Licence | When |
@@ -140,3 +142,70 @@ Every addition: exact version (`save-exact`), stable release only, `npm audit` o
 5. Do you want Excel files **imported** too? That would add the reader library `calamine`.
 
 *Sources, all read on 2026-11-07:* npm registry and crates.io entries for each package named above; tldraw `LICENSE.md` (GitHub); Microsoft Learn: [Named Pipe Security and Access Rights](https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipe-security-and-access-rights) and [CoreWebView2PointerInfo](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/winrt/microsoft_web_webview2_core/corewebview2pointerinfo); the `global-hotkey` Windows source (GitHub); the Liberation Fonts `LICENSE` header (GitHub); the repository files `pdf.rs`, `pdf_unicode.rs`, `tools/make-pdf-fonts.py`, `THIRD-PARTY-NOTICES.md`, `Cargo.toml`, `Cargo.lock`, `capabilities/default.json`.
+
+---
+
+# Addendum, 2026-11-08 00:05 UTC: Ahmed's answers and what changes
+
+**Source:** Ahmed's message of 2026-11-07 23:58:44 UTC (relayed by the coordinator). His words, in short: do not tie anything to one tablet, support tablets broadly; emoji in PDF "should be there" and PDF export is critical; Excel exports should include charts "if possible", otherwise plain tables; Excel import into databases is wanted. His reply to question 3 (Greek and Cyrillic look) was not recorded; the study's recommendation stands until he says otherwise. **This addendum replaces the study's recommendations 3 (emoji), 4 (Excel) and the tablet advice. The text above stays as written.** Added by Claude (Sonnet 5.5, high), cloud thread; same checking method and the same list of things not checked as in section 2 (plus: the picture sets below were not downloaded or measured).
+
+## A. Result table (replaces rows 3 and 4 of the short answer)
+
+| Need | Now recommended | Licence | Added to the program |
+|---|---|---|---|
+| Whiteboard on any tablet | Same: `perfect-freehand` plus pointer events, now with a broad-support design (section B) | MIT | 1 npm package |
+| Emoji in PDF | A bundled **emoji picture pack** (colour), looked up by code-point sequence. First choice: Microsoft's open Fluent Emoji (MIT); fallback: Google's Noto emoji pictures (Apache-2.0) | MIT / Apache-2.0 | one data pack, size not measured (see C) |
+| Excel export with charts | **`rust_xlsxwriter` 0.102.0** (this reverses the study's "write our own") | MIT or Apache-2.0 | 6 crates |
+| Excel import into databases | **`calamine` 0.38.0** feeding the CSV import path that already exists | MIT | about 10 crates |
+| Both Excel pieces together | | | **16 new crates in total, measured**, all permissive |
+
+## B. Tablets: broad support, no model-specific code
+
+Ahmed does not want this tied to his tablet, so the design is "any pen that Windows itself understands":
+
+1. **One path for all pens:** the standard pointer events. Windows Ink pens and tablets reach the web engine through them with pressure, tilt and the eraser end; so do Surface-type pens and touch screens. Mouse is the fallback. No code names a brand. (I believe the common tablet makers' drivers, such as Wacom, Huion, XP-Pen and Gaomon, all offer a "Windows Ink" switch. I did not verify this here.)
+2. **Honest pressure detection:** if a pen reports a changing pressure, use it. If it reports a flat value (a mouse, or a driver that does not pass pressure on), switch automatically to `perfect-freehand`'s speed-based "simulated pressure" so lines still look natural.
+3. **Addition, a "Tablet check" in Settings:** a small panel that shows live what the app receives (pen or touch or mouse, pressure bar, tilt, eraser end, side button). If the pressure bar does not move, it says to turn on Windows Ink in the tablet's own driver. This turns an invisible driver problem into something a non-developer can see, and it lets Ahmed test any tablet, including a friend's.
+4. **Settings that help every device:** a pressure curve (soft to firm), smoothing strength, eraser-end and side-button choices, and palm rejection (ignore finger touches while a pen is near).
+5. **The one gap:** a tablet that works only in the old "Wintab" mode and has no Windows Ink option is invisible to the web engine. Supporting it would mean reading the tablet in the Rust part and feeding the canvas, a separate and sizeable job. It is **not planned**; revisit only if the Tablet check shows real people hitting it.
+6. **Testing:** only on real hardware. Ahmed's tablet is one data point; a touch laptop or a second tablet would be a better one. A cloud thread cannot test any of it.
+
+## C. Emoji in PDF: the options, with a pick
+
+The PDF writer cannot draw colour emoji today (emoji are left out). Emoji are tricky because many are *sequences* (a family is several emoji joined by an invisible joiner; a skin tone, a flag and a keycap are sequences too). A **picture pack named by code-point sequence** handles all of these with a plain table lookup (longest match first). A font would need glyph-shaping code we do not have.
+
+| Option | Licence | Look | Weight and effort | Verdict |
+|---|---|---|---|---|
+| **Fluent Emoji** (Microsoft; colour or flat set) | MIT, "Copyright (c) Microsoft Corporation" (checked in the repository's `LICENSE`) | Windows 11's own emoji style, as I believe; so the PDF would match what Ahmed sees on screen (not verified) | Source is SVG; a build-time script would turn it into small PNGs. The npm package `fluentui-emoji` is 120 MB because it holds every style, so we would take only one | **First choice** |
+| **Noto emoji pictures** (Google) | Pictures: Apache-2.0; the font: OFL 1.1 (read in the repository's README and LICENSE) | Android-style | Ready-made PNGs named by code points; no conversion tool needed | Good fallback, and the quickest to try |
+| Twemoji | Code MIT, **pictures CC-BY 4.0** (checked): a visible credit is required | Twitter style | SVG, the npm package only goes up to Unicode 15 | Works, but the credit rule and old coverage make it third |
+| Windows' own Segoe UI Emoji, read at export time | Microsoft's font; the app already refuses fonts whose embedding bits forbid use | Exactly the screen look | Zero size, but colour glyphs are drawn in layers and sequences need shaping code; differs between Windows 10 and 11; embedding permission unchecked | Test later on Ahmed's PC; not the main path |
+| Noto Emoji, black and white font (OFL) | OFL 1.1 | Monochrome | The font is large and sequences again need shaping | Only as a last-resort fallback for an emoji missing from the pack |
+
+**Size:** a full colour pack is roughly 3,700 pictures. At a few KB each that is **an estimate of 10 to 20 MB, not measured**. Ways to keep it light: small pictures (about 64 to 96 px, enough for a PDF line), a reduced colour palette, and shipping the pack as a data file that is only read when a PDF contains emoji, not inside the program's main code. Measuring it is the first job of the 1.9 PDF work.
+
+**Records:** add a MIT credit (Microsoft) to `THIRD-PARTY-NOTICES.md` and to the About page. The product name "Fluent" belongs to Microsoft; per Ahmed's no-trademarked-names rule it appears only in the credits, never as a name in Notaya's screens.
+
+## D. Excel: charts and import
+
+**Export with charts.** `rust_xlsxwriter` can write native Excel charts. I read its source: it offers column, bar, line, pie, doughnut, area, scatter, radar and stock charts (plus stacked variants), and it can set a worksheet right-to-left. Notaya's database charts today are bar, line, donut and a "number" tile (`database/chart.rs`), so: bar becomes a column or bar chart, line a line chart, donut a doughnut chart, and the number tile stays a cell. Dashboards (2.x line) can reuse the same path. Plan: one sheet per exported view with the table, the chart beside it, and the right-to-left setting for Arabic content. The earlier "own writer" plan could not reasonably produce charts, so this reverses it.
+
+**Safety and accuracy on export:** always write text as text (never as a formula), so a cell that starts with `=` cannot run; numbers are written exactly as the database holds them (the database keeps them as ordinary decimal numbers, the same as Excel does, which keeps about 15 significant digits); dates as real Excel dates; long ids and account numbers as text. Verification by reading the file back with `calamine` in a test and comparing every cell.
+
+**Import into databases.** `calamine` 0.38.0 (MIT) reads .xlsx, .xlsm, .xls, .xlsb and .ods. It tells dates apart from numbers and can also read the formula text. The existing CSV import already has everything after "read the cells": a `Table` of rows of text, column-type guessing, and `build_from_table` for a new database or into an existing one. So Excel import is a thin front end: read a sheet, turn dates into the same text form, hand the `Table` over. Proposal: when a workbook has several sheets, show the list and let each chosen sheet become one database.
+
+Rules for the import (security and accuracy):
+- **Same caps as CSV:** at most 100,000 rows and 100 columns per sheet. calamine itself only logs a warning above Excel's own limits, and I found no guard against a "zip bomb" (a tiny file that expands hugely). So the app must check the file size and the declared unpacked size *before* reading, and refuse above a limit (I suggest 200 MB; Ahmed's call).
+- **Macros are never run.** calamine only reads. A macro-enabled file is imported as plain data and the report says macros were ignored.
+- **Formulas:** import the last calculated value into the cell; the formula text can be kept in a report or a note column. Notaya's formula language differs from Excel's, so converting is a separate, later feature. Where a formula's value is missing, the report says so; no guessing. For the finance databases this matters: the import report must list what was not carried over and the counts must match.
+- **Links, pictures, charts inside the workbook** are not imported in the first version; the report says so.
+
+**Cost and licence:** together with the writer the measured addition is 16 crates: `rust_xlsxwriter`, `calamine`, `zip` 9.4.2 (MIT, shared by both), `zopfli` (Apache-2.0), `bumpalo`, `typed-path`, `constant_time_eq` (CC0 or MIT-0 or Apache-2.0), `atoi_simd`, `codepage`, `core_detect`, `debug_unsafe`, `encoding_rs` (Apache-2.0 or MIT, with BSD-3-Clause for part of its data), `fast-float2`, `multiversion_no_op`, `rustversion`, `simdutf8`. All permissive; `encoding_rs` is the only one with a second licence layer, and its text goes in `THIRD-PARTY-NOTICES.md`.
+
+**Placement (for the coordinator):** both Excel pieces belong with the tabs-and-files version (previously 1.9) next to "import into place" and "re-import"; the dependency approval for both is one request to Ahmed at that spec.
+
+## E. What is still open, and what Ahmed needs to approve
+
+- Open and small: how large a workbook may be (suggested 200 MB); whether several sheets become several databases (suggested yes, with a pick list); Greek and Cyrillic look (no answer recorded).
+- Approvals remain per version, as in section 8, now with these changes: the Noto Sans subset stays for Greek and Cyrillic; the emoji pack replaces "optional emoji font"; `rust_xlsxwriter` and `calamine` replace "own xlsx writer".
+- **Not run in this addendum:** any build or test (no code changed); a download or size measurement of any emoji set; `cargo audit`; a check of calamine's or rust_xlsxwriter's behaviour on real Excel files; Segoe UI Emoji's embedding bits or colour format; any tablet.
