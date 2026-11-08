@@ -739,6 +739,63 @@ mod tests {
     }
 
     #[test]
+    fn change_sink_publishes_partial_writes_then_closes_sticky_outside_session_lock() {
+        let root = PathBuf::from(
+            std::env::var_os("NOTAYA_HOME").unwrap_or_else(|| "D:\\Notaya Tests\\v1-6-C2".into()),
+        )
+        .join(format!("event-sink-{}", crate::model::new_id()));
+        let paths = Paths::at(&root);
+        std::fs::create_dir_all(&paths.data).unwrap();
+        let mut session = Session::create_open(&paths.vault).unwrap();
+        let id = crate::model::new_id();
+        session
+            .put(serde_json::from_value(serde_json::json!({
+                "kind": "sticky", "id": id, "content": "", "text": "", "color": "yellow",
+                "x": 0, "y": 0, "w": 320, "h": 320, "onTop": true, "open": true,
+                "created": 1, "updated": 1
+            })).unwrap())
+            .unwrap();
+        session.drain_changes();
+        let state = Arc::new(AppState::new(paths));
+        state.set_session(session);
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let changed_calls = calls.clone();
+        let closed_calls = calls.clone();
+        let emitting_state = Arc::downgrade(&state);
+        let closing_state = Arc::downgrade(&state);
+        let changed_id = id.clone();
+        state.bind_events(
+            move |changes| {
+                assert_eq!(changes.ids, vec![changed_id.clone()]);
+                assert!(
+                    matches!(emitting_state.upgrade().unwrap().session.try_lock(),
+                        Err(std::sync::TryLockError::WouldBlock)),
+                    "signals preserve write order"
+                );
+                changed_calls.lock().unwrap().push("changed");
+            },
+            move |id| {
+                let state = closing_state.upgrade().unwrap();
+                let session = state.session.try_lock()
+                    .expect("window destruction can re-enter state");
+                assert!(session.as_ref().unwrap().in_bin(id));
+                closed_calls.lock().unwrap().push("closed");
+            },
+        );
+        let result: Result<()> = state.with_mut(|s| {
+            crate::commands::stickies::delete_sticky_core(s, &crate::actions::Actor::Person, id)?;
+            Err(Error::invalid("later step failed"))
+        });
+        assert!(result.is_err());
+        assert_eq!(*calls.lock().unwrap(), vec!["changed", "closed"]);
+        state.with_mut(|_| Ok(())).unwrap();
+        assert_eq!(
+            calls.lock().unwrap().len(), 2,
+            "no stale signal in the next command"
+        );
+    }
+
+    #[test]
     fn empty_round_is_done_at_once() {
         let mut f = Flush::default();
         f.begin(HashSet::new());

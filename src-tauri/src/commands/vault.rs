@@ -148,7 +148,9 @@ pub(super) fn after_unlock(app: &AppHandle, state: &AppState) {
     let events_app = app.clone();
     let sticky_app = app.clone();
     state.bind_events(
-        move |changes| { let _ = events_app.emit("items-changed", changes); },
+        move |changes| {
+            let _ = events_app.emit("items-changed", changes);
+        },
         move |id| ui::close_sticky(&sticky_app, id),
     );
     state.record_success();
