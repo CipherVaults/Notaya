@@ -3,6 +3,8 @@
 
 pub mod header;
 pub mod store;
+pub mod history;
+pub mod activity;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -47,6 +49,13 @@ pub struct Session {
     actor: Option<Actor>,
     ai_writers: HashMap<String, (u64, Actor)>,
     replacement: Option<crate::model::ReplacedEdit>,
+    history_index: history::Index,
+    change_set: Option<String>,
+    request_ai: Option<Actor>,
+    action_name: Option<&'static str>,
+    activity_head: activity::Head,
+    person_bursts: HashMap<String, i64>,
+    journal_maintenance_at: i64,
 }
 
 /// AAD binds each ciphertext to this vault, its table and its row id, so rows
@@ -86,6 +95,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -105,6 +115,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -138,6 +149,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -172,7 +184,12 @@ impl Session {
             }
             items.insert(item.id().to_string(), item);
         }
-        Ok(Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None })
+        store.ensure_journal_tables()?;
+        let mut session = Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0 };
+        session.load_history()?;
+        session.load_activity_head()?;
+        Ok(session)
     }
 
     /// Opens a vault file whichever way it is protected: a vault with security off needs
@@ -211,6 +228,20 @@ impl Session {
         Ok((id, crypto::seal(&self.dek, &aad(self.format, &self.vault_id, Table::Records, &id), &padded)))
     }
 
+    fn seal_json<T: serde::Serialize>(&self, table: Table, id: &RowId, value: &T) -> Result<Vec<u8>> {
+        let bytes = Zeroizing::new(serde_json::to_vec(value).map_err(|_| Error::Corrupt)?);
+        Ok(crypto::seal(&self.dek, &aad(self.format, &self.vault_id, table, id), &crypto::pad(&bytes)))
+    }
+
+    fn open_json<T: serde::de::DeserializeOwned>(&self, table: Table, id: &RowId, sealed: &[u8]) -> Result<T> {
+        let plain = crypto::open(&self.dek, &aad(self.format, &self.vault_id, table, id), sealed)?;
+        serde_json::from_slice(crypto::unpad(&plain)?).map_err(|_| Error::Corrupt)
+    }
+
+    fn read_json<T: serde::de::DeserializeOwned>(&self, table: Table, id: &RowId) -> Result<Option<T>> {
+        self.store.get(table, id)?.map(|bytes| self.open_json(table, id, &bytes)).transpose()
+    }
+
     /// Encrypts and stores an item (insert or update).
     pub fn put(&mut self, item: Item) -> Result<()> {
         self.put_many(vec![item])
@@ -218,6 +249,8 @@ impl Session {
 
     /// Stores several items atomically: either all are saved or none.
     pub fn put_many(&mut self, mut items: Vec<Item>) -> Result<()> {
+        let mut seen = std::collections::HashSet::new();
+        items.reverse(); items.retain(|item| seen.insert(item.id().to_string())); items.reverse();
         let actor = self.actor.clone().unwrap_or(Actor::Person);
         for item in &items {
             self.check_write(&actor, item.id(), None)?;
@@ -232,12 +265,16 @@ impl Session {
             items.push(Item::Settings(settings));
         }
         let sealed = items.iter().map(|i| self.seal_item(i)).collect::<Result<Vec<_>>>()?;
+        self.maintain_journals()?;
+        let journal = self.prepare_journal(&actor, &items, &[])?;
         self.store.transaction(|s| {
             for (id, data) in &sealed {
                 s.put(Table::Records, id, data)?;
             }
+            journal.write(s)?;
             Ok(())
         })?;
+        self.accept_journal(journal);
         for item in items {
             self.record_change(&item, &actor);
             self.items.insert(item.id().to_string(), item);
@@ -256,14 +293,23 @@ impl Session {
         let settings = (before != settings.replaced_edits.len()).then_some(Item::Settings(settings));
         let sealed_settings = settings.as_ref().map(|i| self.seal_item(i)).transpose()?;
         let rows = ids.iter().map(|id| parse_id(id)).collect::<Result<Vec<_>>>()?;
+        let journal = self.prepare_journal(&actor, &[], ids)?;
+        let versions: Vec<_> = ids.iter().filter_map(|id| self.history_index.get(id)).flatten().map(|m| m.version_id.clone()).collect();
         self.store.transaction(|s| {
             if let Some((id, bytes)) = &sealed_settings { s.put(Table::Records, id, bytes)?; }
             for row in &rows {
                 s.delete(Table::Records, row)?;
             }
+            for id in &versions {
+                s.delete(Table::History, &parse_id(id)?)?;
+                s.delete(Table::History, &history::body_id(id)?)?;
+            }
+            journal.write(s)?;
             Ok(())
         })?;
+        self.accept_journal(journal);
         for id in ids {
+            self.history_index.remove(id);
             if let Some(item) = self.items.get(id).cloned() { self.record_change(&item, &actor); }
             self.items.remove(id);
             self.ai_writers.remove(id);
@@ -345,10 +391,25 @@ impl Session {
     }
 
     pub fn run_as<T>(&mut self, actor: &Actor, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        let outer = self.change_set.is_none();
+        if outer { self.change_set = Some(crate::model::new_id()); }
+        let previous_ai = self.request_ai.clone();
+        if matches!(actor, Actor::Ai { .. }) { self.request_ai = Some(actor.clone()); }
         let previous = self.actor.replace(actor.clone());
-        let result = f(self);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
         self.actor = previous;
-        result
+        self.request_ai = previous_ai;
+        if outer { self.change_set = None; }
+        match result { Ok(result) => result, Err(panic) => std::panic::resume_unwind(panic) }
+    }
+
+    /// C5 supplies the compiled action name here, outside action parameters.
+    /// Nested cores and automations share this request's change set.
+    pub fn run_action<T>(&mut self, actor: &Actor, name: &'static str, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        let previous = self.action_name.replace(name);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.run_as(actor, f)));
+        self.action_name = previous;
+        match result { Ok(result) => result, Err(panic) => std::panic::resume_unwind(panic) }
     }
 
     pub fn claim(&mut self, actor: &Actor, ids: &[String]) -> Result<()> {
@@ -464,6 +525,7 @@ impl Session {
         for id in self.store.ids(Table::Attachments)? {
             self.get_attachment(&hex::encode(id))?;
         }
+        self.verify_journals()?;
         Ok(())
     }
 
@@ -504,6 +566,10 @@ impl Session {
     /// Deletes attachments no page or sticky note refers to any more.
     pub fn collect_garbage(&mut self) -> Result<usize> {
         let mut referenced = String::new();
+        let undo_attachments = self.undo_attachment_ids()?;
+        for meta in self.history_index.values().flatten() {
+            for id in &meta.picture_ids { referenced.push_str(id); }
+        }
         for item in self.items.values() {
             match item {
                 Item::Page(p) => {
@@ -534,7 +600,7 @@ impl Session {
         let mut removed = 0;
         for id in self.store.ids(Table::Attachments)? {
             let hex_id = hex::encode(id);
-            if !referenced.contains(&hex_id) && !self.held.contains(&hex_id) {
+            if !referenced.contains(&hex_id) && !self.held.contains(&hex_id) && !undo_attachments.contains(&hex_id) {
                 self.store.delete(Table::Attachments, &id)?;
                 removed += 1;
             }
@@ -609,7 +675,7 @@ impl Session {
         let header = header_for(&new_dek, new_id)?;
         let (old_dek, old_id, old_format) = (&self.dek, self.vault_id, self.format);
         self.store.transaction(|s| {
-            for table in [Table::Records, Table::Attachments] {
+            for table in [Table::Records, Table::Attachments, Table::History, Table::Activity] {
                 for id in s.ids(table)? {
                     let sealed = s.get(table, &id)?.ok_or(Error::Corrupt)?;
                     let plain = crypto::open(old_dek, &aad(old_format, &old_id, table, &id), &sealed)?;
@@ -682,13 +748,15 @@ impl Session {
         if copy.read_header()?.to_bytes() != self.store.read_header()?.to_bytes() {
             return Err(Error::Corrupt);
         }
-        for table in [Table::Records, Table::Attachments] {
+        for table in [Table::Records, Table::Attachments, Table::History, Table::Activity] {
+            if !copy.exists(table)? { return Err(Error::Corrupt); }
             let ids = copy.ids(table)?;
             if ids.len() != self.store.ids(table)?.len() {
                 return Err(Error::Corrupt);
             }
             for id in ids {
                 let sealed = copy.get(table, &id)?.ok_or(Error::Corrupt)?;
+                if self.store.get(table, &id)?.as_ref() != Some(&sealed) { return Err(Error::Corrupt); }
                 let plain = crypto::open(&self.dek, &aad(self.format, &self.vault_id, table, &id), &sealed)?;
                 crypto::unpad(&plain)?;
             }

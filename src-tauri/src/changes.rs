@@ -233,22 +233,40 @@ pub(crate) mod tests {
 
     #[test]
     fn permanent_delete_requires_supported_bin_item_and_refuses_stale_restore_action() {
+        fn history_snapshot(s: &Session) -> Value {
+            let mut versions = Vec::new();
+            for id in [PAGE, ROW] {
+                for meta in s.history_list(id).unwrap() {
+                    let body = s.history_get(id, &meta.version_id).unwrap();
+                    versions.push((meta, body));
+                }
+            }
+            serde_json::to_value(versions).unwrap()
+        }
         let (mut s, paths) = fixture();
         s.put(Item::Settings(s.settings())).unwrap();
         s.drain_changes();
         for id in [NB, SEC, PAGE, STICKY, DB, ROW, crate::model::SETTINGS_ID] {
             let before = serde_json::to_value(s.get(id).unwrap()).unwrap();
+            let history = history_snapshot(&s);
+            let activity = serde_json::to_value(s.activity_list(None, None, 100).unwrap()).unwrap();
             let rev = s.rev(id);
             let error = notes::delete_page_core(&mut s, &Actor::Person, id.into()).err().unwrap();
             assert_eq!(error.to_string(), "Only items in the bin can be permanently deleted.");
             assert_eq!(serde_json::to_value(s.get(id).unwrap()).unwrap(), before);
             assert_eq!(s.rev(id), rev);
             assert!(s.drain_changes().is_none());
+            assert_eq!(history_snapshot(&s), history);
+            assert_eq!(serde_json::to_value(s.activity_list(None, None, 100).unwrap()).unwrap(), activity);
         }
         // The restore wins the session lock before a stale Trash click arrives.
         notes::delete_notebook_core(&mut s, &Actor::Person, &paths, NB.into()).unwrap();
         notes::restore_page_core(&mut s, &Actor::Person, NB.into()).unwrap();
+        let history = history_snapshot(&s);
+        let activity = serde_json::to_value(s.activity_list(None, None, 100).unwrap()).unwrap();
         assert!(notes::delete_page_core(&mut s, &Actor::Person, NB.into()).is_err());
+        assert_eq!(history_snapshot(&s), history);
+        assert_eq!(serde_json::to_value(s.activity_list(None, None, 100).unwrap()).unwrap(), activity);
         for id in [NB, SEC, PAGE, DB, ROW] { assert!(s.get(id).is_some() && !s.in_bin(id)); }
         // Effective bin membership is sufficient for children of binned containers.
         notes::delete_section_core(&mut s, &Actor::Person, &paths, SEC.into()).unwrap();
@@ -272,6 +290,8 @@ pub(crate) mod tests {
         assert_eq!(serde_json::to_value(error).unwrap(),
             "claimed_by_other_ai: Another AI is working on this item.");
         save(&mut s, &a, "exact text").unwrap();
+        assert_eq!(s.activity_list(Some("ai:Ahmed exact page exact text"), None, 1).unwrap().len(), 1);
+        assert!(s.history_list(PAGE).unwrap().iter().any(|v| v.actor == "ai:Ahmed exact page exact text"));
         let event = serde_json::to_value(s.drain_changes().unwrap()).unwrap();
         assert_eq!(event["by"], "ai");
         let serialized = event.to_string();
@@ -342,7 +362,7 @@ pub(crate) mod tests {
                 .err()
                 .unwrap()
                 .to_string()
-                .starts_with("person_editing:")
+                .starts_with("person_editing: This item is being edited;")
         );
         assert!(s.check_write(&ai("Codex"), NB, None).is_err());
         save(&mut s, &Actor::Person, "person").unwrap();

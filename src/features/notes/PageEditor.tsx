@@ -18,9 +18,10 @@ import type { SlashState } from "./editor/slash";
 import { editorProps, pageExtensions, parseContent } from "./editor/extensions";
 import { setPageEditable } from "./editor/editability";
 import { restoreFromBin } from "./restore";
-import { PageCover, PageIconAndActions } from "./PageHeader";
+import { PageCover, PageIconAndActions, HistoryMenuItem } from "./PageHeader";
 import { PageIcon } from "@/lib/pageLook";
 import { openExport } from "./ExportDialog";
+import HistoryDialog from "./HistoryDialog";
 import RowProperties from "@/features/database/RowProperties";
 import { loadRow, saveRowAsTemplate } from "@/features/database/rowOps";
 
@@ -55,6 +56,7 @@ export default function PageEditor({ pageId, embedded = false }: { pageId: strin
 
 function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   const confirm = useConfirm();
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [title, setTitle] = useState(page.title);
   const [icon, setIcon] = useState(page.icon ?? "");
   const [cover, setCover] = useState(page.cover ?? "");
@@ -185,7 +187,12 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
     () => () => {
       save.cancel();
       if (editorRef.current && dirtyRef.current) void doSave();
-      void inflightRef.current?.then(() => { if (!dirtyRef.current) void api.editing(page.id, false).catch(() => {}); });
+      void trackSave(Promise.resolve(inflightRef.current).then(async () => {
+        if (!dirtyRef.current) {
+          await api.historySnapshot(page.id);
+          await api.editing(page.id, false);
+        }
+      }).catch(() => {}));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -338,6 +345,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
                   {words} {words === 1 ? "word" : "words"} · edited {formatDate(updated)}
                 </div>
                 <MenuSeparator />
+                <HistoryMenuItem onSelect={() => setHistoryOpen(true)} />
                 {isRow && (
                   <MenuItem icon={<LayoutTemplate size={15} />} onSelect={asTemplate}>
                     Save as template
@@ -431,6 +439,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
       <BubbleToolbar editor={editor} />
       <SlashMenu editor={editor} slash={slash} controller={slashController} page={{ id: page.id, sectionId: page.sectionId }} />
       <InternalLinkHost editor={editor} pageId={page.id} />
+      <HistoryDialog pageId={page.id} open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }

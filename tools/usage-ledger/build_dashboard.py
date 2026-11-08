@@ -3,10 +3,12 @@
 
 Usage (from the repository root):
     python3 -I tools/usage-ledger/build_dashboard.py OUTPUT.html
+    python3 -I tools/usage-ledger/build_dashboard.py --forecast-csv   # rewrite docs/ledger/pace-forecast.csv
 
-It reads claude-sessions.csv, codex-runs.csv and quota-readings.csv, keeps the
-newest reading of each session, and writes one self-contained HTML page from
-tools/usage-ledger/dashboard-template.html. The page is published as an
+It reads claude-sessions.csv, codex-runs.csv, quota-readings.csv, project-usage-screen.csv,
+forecast-inputs.csv and forecast-versions.csv, keeps the newest reading of each session,
+and writes one self-contained HTML page from tools/usage-ledger/dashboard-template.html
+(the forecast model, tools/usage-ledger/forecast-model.cjs, is inlined into the page). The page is published as an
 Artifact; republish the same file path to the same link when the ledger changes.
 The CSV files own the facts; this script only arranges them. Nothing is guessed:
 cost estimates for rows with no reported cost are marked as estimates and are
@@ -15,6 +17,7 @@ derived only from the ratios of rows that do report a cost.
 import csv
 import json
 import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER = ROOT / "docs" / "ledger"
 TEMPLATE = Path(__file__).with_name("dashboard-template.html")
+MODEL = Path(__file__).with_name("forecast-model.cjs")
 
 CREDIT_TOTAL_USD = 100
 # Fallbacks used only when quota-readings.csv has no measured credit row. Ahmed (project
@@ -64,6 +68,67 @@ def model_label(served, configured):
     if has_s:
         return "Sonnet 5.5"
     return "not recorded"
+
+
+CATEGORIES = [
+    ("Directing the build", re.compile(r"build notaya 1\.6", re.I)),
+    ("Reading and studies", re.compile(r"\bmap |study|read |learn|explore|whiteboard \(study|design the freeform", re.I)),
+    ("Planning and writing", re.compile(r"plan |spec|action list|manual", re.I)),
+    ("Records and ledger", re.compile(r"summary|ledger|records|merge|sync|catch up|handover|publish|checkpoint|phase 1", re.I)),
+]
+
+
+def category(s):
+    """My grouping of a session for the 'where it went' chart; shown on the page as a grouping, not a record."""
+    if s["role"] == "coordinator":
+        return "Coordinator chat"
+    if "remote control" in s["role"].lower() and "review and coordination" in s["task"].lower():
+        return "Directing the build"
+    for name, rx in CATEGORIES:
+        if rx.search(s["task"]):
+            return name
+    return "Other"
+
+
+def forecast_payload():
+    """The forecast model's inputs (forecast-inputs.csv) and versions (forecast-versions.csv)."""
+    inputs = {r["key"]: r for r in read("forecast-inputs.csv")}
+    versions = read("forecast-versions.csv")
+
+    def v(key):
+        return float(inputs[key]["value"])
+
+    def rng(key):
+        r = inputs[key]
+        return [float(r["low"]) if r["low"] else v(key), float(r["high"]) if r["high"] else v(key)]
+
+    inp = {"asOf": inputs["asof_utc"]["value"], "codexUsed": v("codex_week_used_pct"),
+           "codexReset": inputs["codex_week_reset_utc"]["value"], "claudeUsed": v("claude_week_used_pct"),
+           "claudeReset": inputs["claude_week_reset_utc"]["value"], "claudeCap": v("claude_cap_pct")}
+    params = {"ppw": v("points_per_window"), "wpw": v("codex_windows_per_week"), "ov": v("overhead"),
+              "banks": v("banked_resets"), "cap": v("max_windows_per_day"), "cw": v("claude_pct_per_window"),
+              "base": v("claude_baseline_pct_per_day"), "mohamed": v("mohamed_build_share"), "mcp": v("mohamed_claude_pct_per_point"),
+              "gap": v("pause_days_between_versions")}
+    ranges = {k: rng(k) for k in ("points_per_window", "codex_windows_per_week", "overhead", "banked_resets",
+                                  "max_windows_per_day", "claude_pct_per_window", "claude_baseline_pct_per_day",
+                                  "mohamed_build_share", "mohamed_claude_pct_per_point", "pause_days_between_versions")}
+    vers = [{"id": r["version"], "theme": r["theme"], "pts": float(r["plan_points"]),
+             "low": float(r["points_low"]) if r["points_low"] else None,
+             "high": float(r["points_high"]) if r["points_high"] else None,
+             "done": float(r["done_points"]) if r["done_points"] else None, "basis": r["basis"]}
+            for r in versions]
+    return {"inp": inp, "params": params, "ranges": ranges, "versions": vers,
+            "inputsTable": [{k: r[k] for k in ("key", "value", "low", "high", "kind", "source", "notes")}
+                            for r in inputs.values()]}
+
+
+def write_forecast_csv():
+    """Run the shared model with the likely settings and rewrite pace-forecast.csv."""
+    fp = forecast_payload()
+    payload = {"inp": fp["inp"], "params": fp["params"], "versions": [{"id": v["id"], "pts": v["pts"], "low": v["low"], "high": v["high"]} for v in fp["versions"]]}
+    res = subprocess.run(["node", str(MODEL)], input=json.dumps(payload), capture_output=True, text=True, check=True)
+    (LEDGER / "pace-forecast.csv").write_text(res.stdout, encoding="utf-8")
+    print(res.stdout)
 
 
 def main(out):
@@ -191,18 +256,25 @@ def main(out):
             for q in quota
         ],
         "codex": read("codex-runs.csv"),
-        "forecast": read("pace-forecast.csv") if (LEDGER / "pace-forecast.csv").exists() else [],
+        "forecast": forecast_payload(),
+        "forecastCsv": read("pace-forecast.csv") if (LEDGER / "pace-forecast.csv").exists() else [],
         "window": {"start": "2026-11-08T00:00:00Z", "end": "2026-11-08T05:00:00Z"},
         "built": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
     }
+    for s_ in sessions:
+        s_["category"] = category(s_)
     html = TEMPLATE.read_text(encoding="utf-8").replace(
-        "/*LEDGER_DATA*/null", json.dumps(data, ensure_ascii=False))
+        "/*LEDGER_DATA*/null", json.dumps(data, ensure_ascii=False)).replace(
+        "/*FORECAST_MODEL*/", MODEL.read_text(encoding="utf-8"))
     Path(out).write_text(html, encoding="utf-8")
     print(f"{len(sessions)} sessions, reported USD {reported:.2f}, estimate {est_low:.2f} to {est_high:.2f}, "
           f"weighted {tot('weighted'):,.0f}, written to {out}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 2 and sys.argv[1] == "--forecast-csv":
+        write_forecast_csv()
+    elif len(sys.argv) == 2:
+        main(sys.argv[1])
+    else:
         sys.exit(__doc__)
-    main(sys.argv[1])

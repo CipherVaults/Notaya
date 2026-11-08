@@ -295,7 +295,7 @@ impl AppState {
     pub fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
         let mut session = guard(&self.session);
         let s = session.as_mut().ok_or(Error::Locked)?;
-        let result = f(s);
+        let result = s.run_as(&crate::actions::Actor::Person, f);
         // Some old cores perform several transactions. Publish durable partial writes even
         // if a later step failed; they must never leak into the next command's signal.
         if let Some(changes) = s.drain_changes() {
@@ -861,6 +861,57 @@ mod tests {
             calls.lock().unwrap().len(), 2,
             "no stale signal in the next command"
         );
+    }
+
+    #[test]
+    fn with_mut_groups_nested_journals_and_publishes_partial_commits_once() {
+        use crate::{actions::Actor, model::Item};
+        let (session, paths) = crate::changes::tests::fixture();
+        let id = session.items().find(|i| matches!(i, Item::Page(_))).unwrap().id().to_string();
+        let base = session.rev(&id);
+        let state = AppState::new(paths);
+        state.set_session(session);
+        let received = Arc::new(Mutex::new(Vec::new()));
+        let events = received.clone();
+        state.bind_events(move |event| { events.lock().unwrap().push(event); Ok(()) }, |_| {});
+        let result: Result<()> = state.with_mut(|s| {
+            for title in ["first durable step", "second durable step"] {
+                s.run_as(&Actor::Person, |s| {
+                    let Item::Page(mut page) = s.get(&id).unwrap().clone() else { panic!() };
+                    page.title = title.into();
+                    page.favorite = !page.favorite; // structural writes are separate activity entries
+                    s.put(Item::Page(page))?;
+                    s.snapshot_page(&id)
+                })?;
+            }
+            Err(Error::invalid("later step failed"))
+        });
+        assert!(result.is_err());
+        let request_set = state.with(|s| {
+            let entries = s.activity_list(None, None, 2)?;
+            assert_eq!(entries.len(), 2);
+            assert_eq!(entries[0].change_set, entries[1].change_set);
+            assert!(entries.iter().all(|e| e.actor == "person"));
+            for title in ["first durable step", "second durable step"] {
+                assert!(s.history_list(&id)?.iter().any(|v| v.title == title && v.change_set == entries[0].change_set));
+            }
+            s.activity_verify()?;
+            Ok(entries[0].change_set.clone())
+        }).unwrap();
+        assert_eq!(received.lock().unwrap().len(), 1);
+        assert_eq!(received.lock().unwrap()[0].revs[&id], base + 2);
+        state.with_mut(|s| {
+            let Item::Page(mut page) = s.get(&id).unwrap().clone() else { panic!() };
+            page.title = "next request".into();
+            page.favorite = !page.favorite;
+            s.put(Item::Page(page))
+        }).unwrap();
+        state.with(|s| {
+            assert_ne!(s.activity_list(None, None, 1)?[0].change_set, request_set);
+            s.activity_verify()
+        }).unwrap();
+        assert_eq!(received.lock().unwrap().len(), 2);
+        assert_eq!(received.lock().unwrap()[1].revs[&id], base + 3);
     }
 
     #[test]
