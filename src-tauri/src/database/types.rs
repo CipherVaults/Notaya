@@ -16,6 +16,16 @@ pub const MAX_VIEWS: usize = 50;
 pub const MAX_TEMPLATES: usize = 100;
 pub const MAX_OPTIONS: usize = 500;
 pub const MAX_NAME: usize = 120;
+/// Accept short legacy identifiers as well as generated ids, without allowing
+/// object-prototype keys or unbounded identifiers across the JSON boundary.
+pub const MAX_ID_BYTES: usize = 128;
+
+fn check_id(id: &str) -> Result<()> {
+    if id.len() > MAX_ID_BYTES || matches!(id, "__proto__" | "prototype" | "constructor") {
+        return Err(Error::invalid("Invalid database identifier."));
+    }
+    Ok(())
+}
 pub const MAX_FORMULA: usize = 20_000;
 pub const MAX_AUTOMATIONS: usize = 50;
 pub const MAX_ACTIONS: usize = 20;
@@ -556,6 +566,25 @@ impl Database {
     /// Validates what the UI sent and fixes small things (ids, the title property, view columns).
     /// Properties and views are matched by id; ids are made by the UI or the backend (`new_id`).
     pub fn sanitize(&mut self) -> Result<()> {
+        check_id(&self.id)?;
+        // Check supplied ids before any legacy defaults replace them.
+        for p in &self.props {
+            for id in [&p.id, &p.relation_db, &p.relation_back, &p.rollup_relation, &p.rollup_prop] {
+                check_id(id)?;
+            }
+            for option in &p.options {
+                check_id(&option.id)?;
+            }
+        }
+        for view in &self.views {
+            check_id(&view.id)?;
+        }
+        for template in &self.templates {
+            check_id(&template.id)?;
+        }
+        for automation in &self.automations {
+            check_id(&automation.id)?;
+        }
         check_len("The database name", &self.title, MAX_NAME)?;
         check_len("The icon", &self.icon, 40)?;
         check_len("The description", &self.description, 2000)?;
