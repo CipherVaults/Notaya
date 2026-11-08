@@ -53,7 +53,61 @@ export interface CsvImportResult {
   notice: string | null;
 }
 
+// Lane E/C5 window contract. These DTOs deliberately contain no pairing token or hash.
+// UI answers are window-only commands; none belongs in the bridge action registry.
+export type AiLevel = "look" | "edit" | "full";
+export interface AiPairing {
+  id: string;
+  name: string;
+  level: AiLevel;
+}
+export interface AiPairingRequest {
+  id: string;
+  name: string;
+  expiresAt: number; // Unix milliseconds, supplied by the core
+}
+export interface AiConfirmRequest {
+  id: string;
+  pairingName: string;
+  summary: string;
+  items: string[];
+  kind: "ask" | "strong";
+  word: string | null; // random challenge supplied and checked by the core
+  expiresAt: number;
+}
+export interface AiActivity {
+  pairingId: string;
+  name: string;
+  lastActiveAt: number;
+  claims: string[];
+}
+export interface AiState {
+  enabled: boolean;
+  paused: boolean;
+  pairings: AiPairing[];
+  hiddenNotebooks: string[];
+  bigChangeConfirm: boolean;
+  bigChangeItems: number;
+  pairingRequests: AiPairingRequest[];
+  confirmRequests: AiConfirmRequest[];
+  activity: AiActivity[];
+  // Built by the core/bridge with its actual installed path and correct escaping.
+  connectionHelp: { terminal: string; config: string } | null;
+}
+
 export const api = {
+  aiGetState: () => invoke<AiState>("ai_get_state"),
+  aiSetEnabled: (enabled: boolean, confirmation: string = "") =>
+    invoke<void>("ai_set_enabled", { enabled, confirmation }),
+  aiSetLevel: (id: string, level: AiLevel) => invoke<void>("ai_set_level", { id, level }),
+  aiRemovePairing: (id: string) => invoke<void>("ai_remove_pairing", { id }),
+  aiSetHidden: (notebookIds: string[]) => invoke<void>("ai_set_hidden", { notebookIds }),
+  aiSetBigChange: (enabled: boolean) => invoke<void>("ai_set_big_change", { enabled }),
+  aiPairingAnswer: (id: string, allow: boolean) => invoke<void>("ai_pairing_answer", { id, allow }),
+  aiConfirmAnswer: (id: string, allow: boolean, word: string | null = null) =>
+    invoke<void>("ai_confirm_answer", { id, allow, word }),
+  aiPause: () => invoke<void>("ai_pause"),
+  aiResume: () => invoke<void>("ai_resume"),
   // Vault
   vaultStatus: () => invoke<VaultStatus>("vault_status"),
   // Start new notes (no master password) when there is no vault but earlier copies exist

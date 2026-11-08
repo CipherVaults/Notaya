@@ -11,6 +11,7 @@ import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
 import RestoreDialog from "@/features/unlock/RestoreDialog";
 import ErrorLogPanel from "./ErrorLogPanel";
+import AiAccessPanel from "./AiAccessPanel";
 import OpenSourceDialog from "./OpenSourceDialog";
 import { DisableSecurityDialog, EnableSecurityDialog } from "./SecurityDialogs";
 
@@ -256,6 +257,8 @@ export default function SettingsView() {
             </Row>
           </Section>
         )}
+
+        <AiAccessPanel />
 
         <Section icon={<FileWarning size={16} />} title="Error log">
           <ErrorLogPanel />

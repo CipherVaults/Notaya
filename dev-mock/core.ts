@@ -2,6 +2,7 @@
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
 import { databaseCommand, databaseMetas, NOT_HANDLED } from "./database";
+import { aiCommand, aiLock } from "./ai";
 
 const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
@@ -147,6 +148,7 @@ type Args = Record<string, unknown>;
 export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
+  if (cmd.startsWith("ai_")) return ok(aiCommand(cmd, args));
   if (cmd !== "list_notes" && cmd !== "search") {
     const dbr = databaseCommand(cmd, args, tree, options);
     if (dbr !== NOT_HANDLED) return ok(dbr);
@@ -186,6 +188,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     case "unlock_vault":
       if (args.password === "wrong") throw "Wrong master password or keyfile for this Notaya vault.";
       unlocked = true;
+      aiLock(false);
       return ok(null);
     case "start_over":
       exists = false;
@@ -193,6 +196,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     case "lock_vault":
       if (!securityOn) return ok(null);
       unlocked = false;
+      aiLock(true);
       return ok(null);
     case "list_backups":
       return ok([
@@ -222,7 +226,7 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     case "get_settings":
       return ok({ ...settings });
     case "save_settings":
-      Object.assign(settings, args.settings as Args);
+      Object.assign(settings, Object.fromEntries(Object.entries(args.settings as Args).filter(([key]) => key !== "ai")));
       return ok({ ...settings });
     case "set_backdrop":
       return ok(false);
