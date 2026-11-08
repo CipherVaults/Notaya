@@ -8,7 +8,7 @@
   `Notaya.exe` and the NSIS setup (the first run downloads the NSIS tool, which needs the owner's OK),
   then writes into -OutDir:
 
-    Notaya\                      the portable folder: Notaya.exe, portable.txt, README.txt, Licenses\
+    Notaya\                      Notaya.exe, notaya-bridge.exe, portable.txt, README.txt, Licenses\
     Notaya-V<version>-portable.zip
     Notaya-V<version>-setup.exe
     hashes.txt                   size and SHA-256 of the exe, the ZIP and the setup
@@ -40,16 +40,36 @@ if ($dirty) { Write-Warning "Tracked files have changes; the build does not matc
 if (Test-Path $OutDir) { throw "OutDir already exists: $OutDir (choose a new folder; nothing is overwritten)" }
 
 Write-Host "Building Notaya $ver from $commit ..."
-npm run tauri build
+# One workspace and lockfile. Build the companion first, without fetching any crates.
+cargo build --manifest-path (Join-Path $root 'bridge\Cargo.toml') --package notaya-bridge --release --offline --locked
+if ($LASTEXITCODE -ne 0) { throw "Bridge build failed ($LASTEXITCODE)" }
+$metadata = cargo metadata --manifest-path (Join-Path $root 'src-tauri\Cargo.toml') --format-version 1 --no-deps --offline --locked
+if ($LASTEXITCODE -ne 0) { throw "cargo metadata failed ($LASTEXITCODE)" }
+$targetDir = ($metadata | ConvertFrom-Json).target_directory
+$bridge = Join-Path $targetDir 'release\notaya-bridge.exe'
+if (-not (Test-Path -LiteralPath $bridge -PathType Leaf)) { throw "Missing bridge build output" }
+
+# Tauri's resource map puts the companion directly beside Notaya.exe in the setup, and
+# the existing installer template removes that resource on uninstall (never the data folder).
+# Keep this build's concrete config with the other output evidence, not in source control.
+New-Item -ItemType Directory -Path $OutDir | Out-Null
+$bridgeConfig = Join-Path $OutDir 'tauri-bridge.conf.json'
+$resources = @{}
+$resources[$bridge] = 'notaya-bridge.exe'
+$configJson = @{ bundle = @{ resources = $resources } } | ConvertTo-Json -Depth 5
+[IO.File]::WriteAllText($bridgeConfig, $configJson, [Text.UTF8Encoding]::new($false))
+npm run tauri build -- --config $bridgeConfig -- --offline --locked
 if ($LASTEXITCODE -ne 0) { throw "npm run tauri build failed ($LASTEXITCODE)" }
 
-$exe = Join-Path $root 'src-tauri\target\release\Notaya.exe'
-$setup = Join-Path $root "src-tauri\target\release\bundle\nsis\Notaya_${ver}_x64-setup.exe"
+$exe = Join-Path $targetDir 'release\Notaya.exe'
+$setup = Join-Path $targetDir "release\bundle\nsis\Notaya_${ver}_x64-setup.exe"
 foreach ($f in @($exe, $setup)) { if (-not (Test-Path $f)) { throw "Missing build output: $f" } }
 
 $portable = Join-Path $OutDir 'Notaya'
 New-Item -ItemType Directory -Path $portable, (Join-Path $portable 'Licenses') | Out-Null
 Copy-Item $exe $portable
+Copy-Item $bridge $portable
+Copy-Item (Join-Path $root 'packaging\bridge-configuration.md') (Join-Path $portable 'AI-connection.md')
 Copy-Item (Join-Path $root 'packaging\Licenses\*') (Join-Path $portable 'Licenses')
 Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.md') (Join-Path $portable 'Licenses')
 
@@ -63,6 +83,7 @@ $exeHash = (Get-FileHash (Join-Path $portable 'Notaya.exe') -Algorithm SHA256).H
 "Build commit: $commit`r`n" +
 "Notaya.exe SHA-256: $exeHash`r`n`r`n" +
 "Run Notaya.exe. Your notes are kept in the 'data' folder next to it, created on first start.`r`n" +
+"AI connections use the companion notaya-bridge.exe; see AI-connection.md. AI access starts off.`r`n" +
 "To move to another PC or a USB stick, close Notaya and copy the whole folder, data included.`r`n" +
 "To move to the installed version, install Notaya and choose 'Import notes from a portable copy'`r`n" +
 "on its first screen (close this portable copy first; it is copied, never changed).`r`n" +
@@ -82,7 +103,7 @@ try {
 $setupOut = Join-Path $OutDir "Notaya-V$ver-setup.exe"
 Copy-Item $setup $setupOut
 
-$lines = foreach ($f in @((Join-Path $portable 'Notaya.exe'), $zipPath, $setupOut)) {
+$lines = foreach ($f in @((Join-Path $portable 'Notaya.exe'), (Join-Path $portable 'notaya-bridge.exe'), $zipPath, $setupOut)) {
   $i = Get-Item $f
   '{0}  {1,12:N0} bytes  SHA-256 {2}' -f $i.Name, $i.Length, (Get-FileHash $f -Algorithm SHA256).Hash
 }
