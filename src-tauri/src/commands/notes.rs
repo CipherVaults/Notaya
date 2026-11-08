@@ -53,9 +53,11 @@ fn tree(s: &Session) -> NotesTree {
     let mut pages = Vec::new();
     for item in s.items() {
         match item {
-            Item::Notebook(n) => notebooks.push(n.clone()),
-            Item::Section(x) => sections.push(x.clone()),
-            Item::Page(p) if !hidden.contains(&p.id) => pages.push(PageMeta::from(p)),
+            Item::Notebook(n) if !s.in_bin(&n.id) => notebooks.push(n.clone()),
+            Item::Section(x) if !s.in_bin(&x.id) => sections.push(x.clone()),
+            // Keep directly binned page metadata for the existing read-only preview.
+            // The rendered tree/Home filter trashedAt; live children of binned containers stay hidden.
+            Item::Page(p) if !hidden.contains(&p.id) && (!s.in_bin(&p.id) || p.trashed_at.is_some()) => pages.push(PageMeta::from(p)),
             _ => {}
         }
     }
@@ -102,6 +104,7 @@ pub(crate) fn create_notebook_core(
     color: String,
     icon: String,
 ) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     limit("Name", &name, 120)?;
     limit("Icon", &icon, 40)?;
     let color = check_color(&color)?;
@@ -110,7 +113,7 @@ pub(crate) fn create_notebook_core(
         Item::Notebook(n) => Some(n.order),
         _ => None,
     }));
-    let nb = Notebook { id: new_id(), name, color, icon, order, created: now, updated: now };
+    let nb = Notebook { id: new_id(), name, color, icon, order, created: now, updated: now, trashed_at: None, };
     let first_section = Section {
         id: new_id(),
         notebook_id: nb.id.clone(),
@@ -119,9 +122,10 @@ pub(crate) fn create_notebook_core(
         order: 0,
         created: now,
         updated: now,
-    };
+    trashed_at: None, };
     s.put_many(vec![Item::Notebook(nb), Item::Section(first_section)])?;
     Ok(tree(s))
+    })
 }
 
 
@@ -151,6 +155,7 @@ pub(crate) fn update_notebook_core(
     color: String,
     icon: String,
 ) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     limit("Name", &name, 120)?;
     limit("Icon", &icon, 40)?;
     let color = check_color(&color)?;
@@ -161,11 +166,12 @@ pub(crate) fn update_notebook_core(
     nb.updated = now_ms();
     s.put(Item::Notebook(nb))?;
     Ok(tree(s))
+    })
 }
 
 
-/// Deletes a notebook with all of its sections and pages. A checked backup is made first
-/// (there is no trash for a whole notebook); if it fails, nothing is deleted. Runs on a worker
+/// Moves a notebook and its contents to the bin. A checked backup is made first;
+/// if it fails, nothing is binned. Runs on a worker
 /// thread because the backup can take a moment.
 #[tauri::command(async)]
 pub fn delete_notebook(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
@@ -182,27 +188,15 @@ pub(crate) fn delete_notebook_core(
     paths: &crate::portable::Paths,
     id: String,
 ) -> Result<NotesTree> {
-    notebook(s, &id)?;
-    let section_ids: Vec<String> = s
-        .items()
-        .filter_map(|i| match i {
-            Item::Section(x) if x.notebook_id == id => Some(x.id.clone()),
-            _ => None,
-        })
-        .collect();
-    let mut doomed: Vec<String> = s
-        .items()
-        .filter_map(|i| match i {
-            Item::Page(p) if section_ids.contains(&p.section_id) => Some(p.id.clone()),
-            _ => None,
-        })
-        .collect();
-    doomed.extend(section_ids);
-    doomed.push(id.clone());
-    backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
-    s.remove_many(&doomed)?;
-    s.collect_garbage()?;
+    s.run_as(_actor, |s| {
+    let mut item = notebook(s, &id)?;
+    if item.trashed_at.is_none() {
+        backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        item.trashed_at = Some(now_ms());
+        s.put(Item::Notebook(item))?;
+    }
     Ok(tree(s))
+    })
 }
 
 
@@ -224,6 +218,7 @@ pub(crate) fn create_section_core(
     name: String,
     color: String,
 ) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     limit("Name", &name, 120)?;
     let color = check_color(&color)?;
     notebook(s, &notebook_id)?;
@@ -240,8 +235,9 @@ pub(crate) fn create_section_core(
         order,
         created: now,
         updated: now,
-    }))?;
+    trashed_at: None, }))?;
     Ok(tree(s))
+    })
 }
 
 
@@ -263,6 +259,7 @@ pub(crate) fn update_section_core(
     name: String,
     color: String,
 ) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     limit("Name", &name, 120)?;
     let color = check_color(&color)?;
     let mut x = section(s, &id)?;
@@ -271,6 +268,7 @@ pub(crate) fn update_section_core(
     x.updated = now_ms();
     s.put(Item::Section(x))?;
     Ok(tree(s))
+    })
 }
 
 
@@ -290,19 +288,15 @@ pub(crate) fn delete_section_core(
     paths: &crate::portable::Paths,
     id: String,
 ) -> Result<NotesTree> {
-    section(s, &id)?;
-    let mut doomed: Vec<String> = s
-        .items()
-        .filter_map(|i| match i {
-            Item::Page(p) if p.section_id == id => Some(p.id.clone()),
-            _ => None,
-        })
-        .collect();
-    doomed.push(id.clone());
-    backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
-    s.remove_many(&doomed)?;
-    s.collect_garbage()?;
+    s.run_as(_actor, |s| {
+    let mut item = section(s, &id)?;
+    if item.trashed_at.is_none() {
+        backup::make_safety_backup(paths, s).map_err(|e| backup::safety_failure(&e))?;
+        item.trashed_at = Some(now_ms());
+        s.put(Item::Section(item))?;
+    }
     Ok(tree(s))
+    })
 }
 
 
@@ -317,6 +311,7 @@ fn create_page_person(state: &AppState, section_id: String, title: String) -> Re
 }
 
 pub(crate) fn create_page_core(s: &mut Session, _actor: &Actor, section_id: String, title: String) -> Result<Page> {
+    s.run_as(_actor, |s| {
     limit("Title", &title, 300)?;
     section(s, &section_id)?;
     let now = now_ms();
@@ -341,12 +336,13 @@ pub(crate) fn create_page_core(s: &mut Session, _actor: &Actor, section_id: Stri
     };
     s.put(Item::Page(p.clone()))?;
     Ok(p)
+    })
 }
 
 
 #[tauri::command]
-pub fn get_page(state: State<'_, AppState>, id: String) -> Result<Page> {
-    get_page_person(&state, id)
+pub fn get_page(state: State<'_, AppState>, id: String) -> Result<crate::changes::Revisioned<Page>> {
+    state.with(|s| { let p = get_page_core(s, &Actor::Person, id.clone())?; Ok(s.revisioned(&id, p)) })
 }
 
 fn get_page_person(state: &AppState, id: String) -> Result<Page> {
@@ -362,8 +358,11 @@ pub(crate) fn get_page_core(s: &Session, _actor: &Actor, id: String) -> Result<P
 
 
 #[tauri::command]
-pub fn save_page(state: State<'_, AppState>, id: String, title: String, content: String, text: String) -> Result<PageMeta> {
-    save_page_person(&state, id, title, content, text)
+pub fn save_page(state: State<'_, AppState>, id: String, title: String, content: String, text: String, base_rev: Option<u64>) -> Result<crate::changes::Revisioned<PageMeta>> {
+    state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
+        let meta = save_page_core(s, &Actor::Person, id.clone(), title, content, text)?;
+        Ok(s.revisioned(&id, meta))
+    }))
 }
 
 fn save_page_person(state: &AppState, id: String, title: String, content: String, text: String) -> Result<PageMeta> {
@@ -381,9 +380,12 @@ pub(crate) fn save_page_core(
     content: String,
     text: String,
 ) -> Result<PageMeta> {
+    s.run_as(_actor, |s| {
     limit("Title", &title, 300)?;
     limit("Page", &content, MAX_PAGE_CHARS)?;
     limit("Page", &text, MAX_PAGE_CHARS)?;
+    // A delayed person save still lands after a bin move, preserving pending typing.
+    if matches!(_actor, Actor::Ai { .. }) && s.in_bin(&id) { return Err(Error::invalid("This item is in the bin. Restore it before editing.")); }
     if let Some(Item::Row(r)) = s.get(&id) {
         let mut r = r.clone();
         r.title = title;
@@ -402,6 +404,7 @@ pub(crate) fn save_page_core(
     let meta = PageMeta::from(&p);
     s.put(Item::Page(p))?;
     Ok(meta)
+    })
 }
 
 
@@ -464,8 +467,10 @@ fn create_subpage_person(state: &AppState, parent_id: String, title: String) -> 
 }
 
 pub(crate) fn create_subpage_core(s: &mut Session, _actor: &Actor, parent_id: String, title: String) -> Result<Page> {
+    s.run_as(_actor, |s| {
     limit("Title", &title, 300)?;
     add_subpage(s, &parent_id, title)
+    })
 }
 
 
@@ -479,6 +484,7 @@ fn set_page_favorite_person(state: &AppState, id: String, favorite: bool) -> Res
 }
 
 pub(crate) fn set_page_favorite_core(s: &mut Session, _actor: &Actor, id: String, favorite: bool) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     match s.get(&id) {
         Some(Item::Row(r)) => {
             let mut r = r.clone();
@@ -497,6 +503,7 @@ pub(crate) fn set_page_favorite_core(s: &mut Session, _actor: &Actor, id: String
         }
     }
     Ok(tree(s))
+    })
 }
 
 
@@ -530,6 +537,7 @@ fn move_page_person(state: &AppState, id: String, section_id: String) -> Result<
 }
 
 pub(crate) fn move_page_core(s: &mut Session, _actor: &Actor, id: String, section_id: String) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     if matches!(s.get(&id), Some(Item::Database(_))) {
         section(s, &section_id)?;
         let mut d = dbc::database(s, &id)?;
@@ -541,6 +549,7 @@ pub(crate) fn move_page_core(s: &mut Session, _actor: &Actor, id: String, sectio
         move_subtree(s, &id, &section_id)?;
     }
     Ok(tree(s))
+    })
 }
 
 
@@ -555,6 +564,7 @@ fn reorder_person(state: &AppState, ids: Vec<String>) -> Result<NotesTree> {
 }
 
 pub(crate) fn reorder_core(s: &mut Session, _actor: &Actor, ids: Vec<String>) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     let mut changed = Vec::new();
     for (i, id) in ids.iter().enumerate() {
         let order = i as i64;
@@ -584,6 +594,7 @@ pub(crate) fn reorder_core(s: &mut Session, _actor: &Actor, ids: Vec<String>) ->
     }
     s.put_many(changed)?;
     Ok(tree(s))
+    })
 }
 
 
@@ -629,12 +640,14 @@ fn trash_page_person(state: &AppState, id: String) -> Result<NotesTree> {
 }
 
 pub(crate) fn trash_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
     match s.get(&id) {
         Some(Item::Row(_)) => dbc::trash_rows(s, &[id.clone()])?,
         Some(Item::Database(_)) => dbc::trash_database(s, &id)?,
         _ => trash_subtree(s, &id)?,
     }
     Ok(tree(s))
+    })
 }
 
 
@@ -648,12 +661,18 @@ fn restore_page_person(state: &AppState, id: String) -> Result<NotesTree> {
 }
 
 pub(crate) fn restore_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
+    s.run_as(_actor, |s| {
+    restore_parents(s, &id, false)?;
     match s.get(&id) {
+        Some(Item::Notebook(n)) => { let mut n = n.clone(); n.trashed_at = None; s.put(Item::Notebook(n))?; },
+        Some(Item::Section(x)) => { let mut x = x.clone(); x.trashed_at = None; s.put(Item::Section(x))?; },
+        Some(Item::Sticky(x)) => { let mut x = x.clone(); x.trashed_at = None; x.open = false; s.put(Item::Sticky(x))?; },
         Some(Item::Row(_)) => dbc::restore_rows(s, &[id.clone()])?,
         Some(Item::Database(_)) => dbc::restore_database(s, &id)?,
         _ => restore_subtree(s, &id)?,
     }
     Ok(tree(s))
+    })
 }
 
 
@@ -667,17 +686,10 @@ fn delete_page_person(state: &AppState, id: String) -> Result<NotesTree> {
 }
 
 pub(crate) fn delete_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
-    match s.get(&id) {
-        Some(Item::Row(_)) => dbc::delete_rows(s, &[id.clone()])?,
-        Some(Item::Database(_)) => dbc::delete_database(s, &id)?,
-        _ => {
-            page(s, &id)?;
-            let doomed = with_descendants(s, &id);
-            s.remove_many(&doomed)?;
-            s.collect_garbage()?;
-        }
-    }
+    s.run_as(_actor, |s| {
+    delete_bin_tree(s, &id)?;
     Ok(tree(s))
+    })
 }
 
 
@@ -691,25 +703,11 @@ fn empty_trash_person(state: &AppState) -> Result<NotesTree> {
 }
 
 pub(crate) fn empty_trash_core(s: &mut Session, _actor: &Actor) -> Result<NotesTree> {
-    // Databases and rows in the trash go first (with their rows, links and files).
-    let trashed_dbs: Vec<String> = s.items().filter_map(|i| if let Item::Database(d) = i { if d.trashed_at.is_some() { Some(d.id.clone()) } else { None } } else { None }).collect();
-    for id in trashed_dbs {
-        dbc::delete_database(s, &id)?;
-    }
-    let trashed_rows: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.trashed_at.is_some() { Some(r.id.clone()) } else { None } } else { None }).collect();
-    if !trashed_rows.is_empty() {
-        dbc::delete_rows(s, &trashed_rows)?;
-    }
-    let doomed: Vec<String> = s
-        .items()
-        .filter_map(|i| match i {
-            Item::Page(p) if p.trashed_at.is_some() => Some(p.id.clone()),
-            _ => None,
-        })
-        .collect();
-    s.remove_many(&doomed)?;
-    s.collect_garbage()?;
+    s.run_as(_actor, |s| {
+    let roots: Vec<String> = s.items().filter(|i| Session::own_trash(i).is_some()).map(|i| i.id().into()).collect();
+    for id in roots { if s.get(&id).is_some() { delete_bin_tree(s, &id)?; } }
     Ok(tree(s))
+    })
 }
 
 
@@ -741,9 +739,11 @@ pub fn add_attachment(state: State<'_, AppState>, request: Request<'_>) -> Resul
 }
 
 pub(crate) fn add_attachment_core(s: &mut Session, _actor: &Actor, bytes: &[u8]) -> Result<String> {
+    s.run_as(_actor, |s| {
     let mime =
         sniff_image(bytes).ok_or_else(|| Error::invalid("Only PNG, JPEG, GIF and WebP images are supported."))?;
     s.put_attachment(mime, bytes)
+    })
 }
 
 #[cfg(test)]
@@ -879,9 +879,11 @@ pub(crate) fn set_page_look_core(
     icon: String,
     cover: String,
 ) -> Result<PageMeta> {
+    s.run_as(_actor, |s| {
     limit("Icon", &icon, 40)?;
     limit("Cover", &cover, 200)?;
     apply_page_look(s, &id, icon, cover)
+    })
 }
 
 
@@ -925,8 +927,8 @@ mod subpage_tests {
         let mut s = vault();
         let sec_a = new_id();
         let sec_b = new_id();
-        s.put(Item::Section(Section { id: sec_a.clone(), notebook_id: new_id(), name: "A".into(), color: String::new(), order: 0, created: 1, updated: 1 })).unwrap();
-        s.put(Item::Section(Section { id: sec_b.clone(), notebook_id: new_id(), name: "B".into(), color: String::new(), order: 0, created: 1, updated: 1 })).unwrap();
+        s.put(Item::Section(Section { id: sec_a.clone(), notebook_id: new_id(), name: "A".into(), color: String::new(), order: 0, created: 1, updated: 1, trashed_at: None, })).unwrap();
+        s.put(Item::Section(Section { id: sec_b.clone(), notebook_id: new_id(), name: "B".into(), color: String::new(), order: 0, created: 1, updated: 1, trashed_at: None, })).unwrap();
         let top = page_in(&mut s, &sec_a, "top");
         let child = add_subpage(&mut s, &top.id, "child".into()).unwrap();
         let grandchild = add_subpage(&mut s, &child.id, "grandchild".into()).unwrap();
@@ -1353,4 +1355,84 @@ mod action_boundary_tests {
             Err(Error::Locked)
         ));
     }
+}
+
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BinEntry {
+    id: String, kind: String, title: String, icon: String, trashed_at: i64, parent_in_bin: bool,
+}
+
+#[tauri::command]
+pub fn list_bin(state: State<'_, AppState>) -> Result<Vec<BinEntry>> {
+    state.with(|s| list_bin_core(s, &Actor::Person))
+}
+
+pub(crate) fn list_bin_core(s: &Session, _actor: &Actor) -> Result<Vec<BinEntry>> {
+    let mut out = Vec::new();
+    for item in s.items() {
+        let Some(trashed_at) = Session::own_trash(item) else { continue };
+        let (kind, title, icon) = match item {
+            Item::Notebook(n) => ("notebook", n.name.clone(), n.icon.clone()),
+            Item::Section(x) => ("section", x.name.clone(), String::new()),
+            Item::Page(x) => ("page", x.title.clone(), x.icon.clone()),
+            Item::Database(x) => ("database", x.title.clone(), x.icon.clone()),
+            Item::Row(x) => ("row", x.title.clone(), x.icon.clone()),
+            Item::Sticky(x) => ("sticky", x.text.lines().next().unwrap_or("Sticky note").chars().take(60).collect(), String::new()),
+            _ => continue,
+        };
+        out.push(BinEntry { id: item.id().into(), kind: kind.into(), title, icon, trashed_at,
+            parent_in_bin: Session::parent_of(item).is_some_and(|p| s.in_bin(p)) });
+    }
+    out.sort_by_key(|i| std::cmp::Reverse(i.trashed_at));
+    Ok(out)
+}
+
+fn restore_parents(s: &mut Session, id: &str, allowed: bool) -> Result<()> {
+    let mut parents = Vec::new();
+    let mut current = s.get(id).and_then(Session::parent_of).map(String::from);
+    let mut seen = std::collections::HashSet::new();
+    while let Some(id) = current {
+        if !seen.insert(id.clone()) { return Err(Error::Corrupt); }
+        let item = s.get(&id).ok_or(Error::NotFound)?;
+        if Session::own_trash(item).is_some() {
+            if !allowed { return Err(Error::invalid("parent_in_bin: Restore the containing items too?")); }
+            let mut item = item.clone();
+            match &mut item { Item::Notebook(x) => x.trashed_at = None, Item::Section(x) => x.trashed_at = None,
+                Item::Page(x) => x.trashed_at = None, Item::Database(x) => x.trashed_at = None,
+                Item::Row(x) => x.trashed_at = None, _ => {} }
+            parents.push(item);
+        }
+        current = Session::parent_of(item).map(String::from);
+    }
+    if !parents.is_empty() { s.put_many(parents)?; }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn restore_bin_item(state: State<'_, AppState>, id: String, restore_containers: bool) -> Result<NotesTree> {
+    state.with_mut(|s| restore_bin_item_core(s, &Actor::Person, id, restore_containers))
+}
+
+pub(crate) fn restore_bin_item_core(s: &mut Session, actor: &Actor, id: String, restore_containers: bool) -> Result<NotesTree> {
+    s.run_as(actor, |s| {
+        s.get(&id).ok_or(Error::NotFound)?;
+        s.check_write(actor, &id, None)?;
+        restore_parents(s, &id, restore_containers)?;
+        restore_page_core(s, actor, id)
+    })
+}
+
+fn delete_bin_tree(s: &mut Session, id: &str) -> Result<()> {
+    s.get(id).ok_or(Error::NotFound)?;
+    let doomed: Vec<String> = s.items().filter(|i| s.is_within(i.id(), id)).map(|i| i.id().into()).collect();
+    let dbs: Vec<String> = doomed.iter().filter(|id| matches!(s.get(id), Some(Item::Database(_)))).cloned().collect();
+    for db in dbs { if s.get(&db).is_some() { dbc::delete_database(s, &db)?; } }
+    let rows: Vec<String> = doomed.iter().filter(|id| matches!(s.get(id), Some(Item::Row(_)))).cloned().collect();
+    if !rows.is_empty() { dbc::delete_rows(s, &rows)?; }
+    let remaining: Vec<_> = doomed.into_iter().filter(|id| s.get(id).is_some()).collect();
+    s.remove_many(&remaining)?;
+    s.collect_garbage()?;
+    Ok(())
 }

@@ -10,6 +10,8 @@ use std::path::Path;
 use zeroize::Zeroizing;
 
 use crate::crypto::{self, KdfParams, Key};
+use crate::actions::Actor;
+use crate::changes::{self, Coordination, ItemsChanged, Revisioned};
 use crate::error::{Error, Result};
 use crate::model::{Item, Settings, SETTINGS_ID};
 use header::{Format, Header};
@@ -39,6 +41,12 @@ pub struct Session {
     /// alone, so a cleanup that runs while an import is working cannot take them away. Held in
     /// memory only: after a lock or a crash they are ordinary unused pictures.
     held: std::collections::HashSet<String>,
+    pub revs: HashMap<String, u64>,
+    pending: std::collections::BTreeMap<String, (String, String)>,
+    pub coordination: Coordination,
+    actor: Option<Actor>,
+    ai_writers: HashMap<String, (u64, Actor)>,
+    replacement: Option<crate::model::ReplacedEdit>,
 }
 
 /// AAD binds each ciphertext to this vault, its table and its row id, so rows
@@ -77,7 +85,7 @@ impl Session {
             open: false,
             dirty: true,
             hourly_due: true,
-            held: Default::default(),
+            held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -96,7 +104,7 @@ impl Session {
             open: true,
             dirty: true,
             hourly_due: true,
-            held: Default::default(),
+            held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -129,7 +137,7 @@ impl Session {
             open,
             dirty: true,
             hourly_due: true,
-            held: Default::default(),
+            held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -164,7 +172,7 @@ impl Session {
             }
             items.insert(item.id().to_string(), item);
         }
-        Ok(Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default() })
+        Ok(Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None })
     }
 
     /// Opens a vault file whichever way it is protected: a vault with security off needs
@@ -205,15 +213,24 @@ impl Session {
 
     /// Encrypts and stores an item (insert or update).
     pub fn put(&mut self, item: Item) -> Result<()> {
-        let (id, sealed) = self.seal_item(&item)?;
-        self.store.put(Table::Records, &id, &sealed)?;
-        self.items.insert(item.id().to_string(), item);
-        self.changed();
-        Ok(())
+        self.put_many(vec![item])
     }
 
     /// Stores several items atomically: either all are saved or none.
-    pub fn put_many(&mut self, items: Vec<Item>) -> Result<()> {
+    pub fn put_many(&mut self, mut items: Vec<Item>) -> Result<()> {
+        let actor = self.actor.clone().unwrap_or(Actor::Person);
+        for item in &items {
+            self.check_write(&actor, item.id(), None)?;
+            if let Some(parent) = Self::parent_of(item) {
+                self.coordination.check(&actor, |other| self.is_within(parent, other))?;
+            }
+        }
+        let replacing = self.replacement.as_ref().is_some_and(|r| items.iter().any(|i| i.id() == r.id));
+        if replacing {
+            let mut settings = self.settings();
+            settings.replaced_edits.push(self.replacement.as_ref().unwrap().clone());
+            items.push(Item::Settings(settings));
+        }
         let sealed = items.iter().map(|i| self.seal_item(i)).collect::<Result<Vec<_>>>()?;
         self.store.transaction(|s| {
             for (id, data) in &sealed {
@@ -222,22 +239,38 @@ impl Session {
             Ok(())
         })?;
         for item in items {
+            self.record_change(&item, &actor);
             self.items.insert(item.id().to_string(), item);
         }
+        if replacing { self.replacement = None; }
         self.changed();
         Ok(())
     }
 
     pub fn remove_many(&mut self, ids: &[String]) -> Result<()> {
+        let actor = self.actor.clone().unwrap_or(Actor::Person);
+        for id in ids { self.check_write(&actor, id, None)?; }
+        let mut settings = self.settings();
+        let before = settings.replaced_edits.len();
+        settings.replaced_edits.retain(|e| !ids.contains(&e.id));
+        let settings = (before != settings.replaced_edits.len()).then_some(Item::Settings(settings));
+        let sealed_settings = settings.as_ref().map(|i| self.seal_item(i)).transpose()?;
         let rows = ids.iter().map(|id| parse_id(id)).collect::<Result<Vec<_>>>()?;
         self.store.transaction(|s| {
+            if let Some((id, bytes)) = &sealed_settings { s.put(Table::Records, id, bytes)?; }
             for row in &rows {
                 s.delete(Table::Records, row)?;
             }
             Ok(())
         })?;
         for id in ids {
+            if let Some(item) = self.items.get(id).cloned() { self.record_change(&item, &actor); }
             self.items.remove(id);
+            self.ai_writers.remove(id);
+        }
+        if let Some(settings) = settings {
+            self.record_change(&settings, &actor);
+            self.items.insert(settings.id().into(), settings);
         }
         self.changed();
         Ok(())
@@ -249,6 +282,131 @@ impl Session {
 
     pub fn items(&self) -> impl Iterator<Item = &Item> {
         self.items.values()
+    }
+
+    pub fn rev(&self, id: &str) -> u64 { self.revs.get(id).copied().unwrap_or(0) }
+
+    pub fn revisioned<T: serde::Serialize>(&self, id: &str, item: T) -> Revisioned<T> {
+        Revisioned { item, rev: self.rev(id) }
+    }
+
+    pub fn parent_of(item: &Item) -> Option<&str> {
+        match item {
+            Item::Section(x) => Some(&x.notebook_id),
+            Item::Page(x) => Some(if x.parent.is_empty() { &x.section_id } else { &x.parent }),
+            Item::Database(x) => Some(if x.parent.is_empty() { &x.section_id } else { &x.parent }),
+            Item::Row(x) => Some(&x.db), _ => None,
+        }
+    }
+
+    pub fn is_within(&self, id: &str, root: &str) -> bool {
+        let mut current = Some(id);
+        let mut seen = std::collections::HashSet::new();
+        while let Some(id) = current {
+            if id == root { return true; }
+            if !seen.insert(id) { break; }
+            current = self.get(id).and_then(Self::parent_of);
+        }
+        false
+    }
+
+    pub fn own_trash(item: &Item) -> Option<i64> {
+        match item { Item::Notebook(x) => x.trashed_at, Item::Section(x) => x.trashed_at,
+            Item::Page(x) => x.trashed_at, Item::Sticky(x) => x.trashed_at,
+            Item::Database(x) => x.trashed_at, Item::Row(x) => x.trashed_at, _ => None }
+    }
+
+    pub fn in_bin(&self, id: &str) -> bool {
+        let mut current = Some(id);
+        let mut seen = std::collections::HashSet::new();
+        while let Some(id) = current {
+            if !seen.insert(id) { return true; }
+            let Some(item) = self.get(id) else { return false };
+            if Self::own_trash(item).is_some() { return true; }
+            current = Self::parent_of(item);
+        }
+        false
+    }
+
+    pub fn check_write(&self, actor: &Actor, id: &str, expect_rev: Option<u64>) -> Result<()> {
+        if matches!(actor, Actor::Ai { .. }) {
+            self.coordination.check(actor, |other| self.is_within(id, other) || self.is_within(other, id))?;
+            if expect_rev.is_some_and(|r| r != self.rev(id)) {
+                return Err(Error::invalid("revision_conflict: This item changed; read it again."));
+            }
+        }
+        Ok(())
+    }
+
+    /// Trusted action dispatcher entry: check all targets before invoking a write core.
+    pub fn write_as<T>(&mut self, actor: &Actor, ids: &[String], expect_rev: Option<u64>, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        for id in ids { self.check_write(actor, id, expect_rev)?; }
+        self.run_as(actor, f)
+    }
+
+    pub fn run_as<T>(&mut self, actor: &Actor, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        let previous = self.actor.replace(actor.clone());
+        let result = f(self);
+        self.actor = previous;
+        result
+    }
+
+    pub fn claim(&mut self, actor: &Actor, ids: &[String]) -> Result<()> {
+        for id in ids {
+            if self.get(id).is_none() { return Err(Error::NotFound); }
+            self.check_write(actor, id, None)?;
+        }
+        self.coordination.claim(actor, ids, false)
+    }
+
+    pub fn person_save<T>(&mut self, id: &str, base_rev: Option<u64>, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        if base_rev.is_some_and(|r| r < self.rev(id)) {
+            if let (Some((ai_rev, Actor::Ai { label, .. })), Some(item)) = (self.ai_writers.get(id), self.get(id)) {
+                if base_rev.is_some_and(|base| base < *ai_rev) {
+                self.replacement = Some(crate::model::ReplacedEdit { id: id.into(), rev: self.rev(id),
+                    by: format!("ai:{label}"), status: "replaced by your edit".into(),
+                    previous: serde_json::to_string(item).map_err(|_| Error::Corrupt)? });
+                }
+            }
+        }
+        let result = self.run_as(&Actor::Person, f);
+        self.replacement = None;
+        if result.is_ok() {
+            self.ai_writers.remove(id);
+            self.coordination.editing(id, "save", false);
+        }
+        result
+    }
+
+    fn record_change(&mut self, item: &Item, actor: &Actor) {
+        let id = item.id().to_string();
+        *self.revs.entry(id.clone()).or_default() += 1;
+        let kind = match item { Item::Notebook(_) => "notebook", Item::Section(_) => "section",
+            Item::Page(_) => "page", Item::Sticky(_) => "sticky", Item::Database(_) => "database",
+            Item::Row(_) => "row", Item::Settings(_) => "settings" };
+        self.pending.insert(id.clone(), (kind.into(), changes::by(actor)));
+        if matches!(actor, Actor::Ai { .. }) {
+            self.ai_writers.insert(id.clone(), (self.rev(&id), actor.clone()));
+            let mut ancestors = std::collections::HashSet::from([id.clone()]);
+            // New items are not in the cache until after record_change.
+            let mut current = Self::parent_of(item);
+            while let Some(parent) = current {
+                if !ancestors.insert(parent.to_string()) { break; }
+                current = self.get(parent).and_then(Self::parent_of);
+            }
+            self.coordination.touch(actor, |root| ancestors.contains(root));
+            let _ = self.coordination.claim(actor, &[id], true);
+        }
+    }
+
+    pub fn drain_changes(&mut self) -> Option<ItemsChanged> {
+        if self.pending.is_empty() { return None; }
+        let pending = std::mem::take(&mut self.pending);
+        let ids: Vec<_> = pending.keys().cloned().collect();
+        let kinds: Vec<_> = pending.values().map(|(kind, _)| kind.clone()).collect();
+        let by = pending.values().last().unwrap().1.clone();
+        let revs = ids.iter().map(|id| (id.clone(), self.rev(id))).collect();
+        Some(ItemsChanged { ids, kinds, tree: pending.values().any(|(k, _)| k != "settings"), by, revs })
     }
 
     pub fn settings(&self) -> Settings {
@@ -366,6 +524,9 @@ impl Session {
                         referenced.push_str(&t.content);
                         referenced.push_str(&t.cells);
                     }
+                }
+                Item::Settings(settings) => {
+                    for edit in &settings.replaced_edits { referenced.push_str(&edit.previous); }
                 }
                 _ => {}
             }
@@ -629,7 +790,7 @@ mod tests {
     }
 
     fn sticky(text: &str) -> Item {
-        Item::Sticky(Sticky {
+        Item::Sticky(Sticky { trashed_at: None,
             id: new_id(),
             content: format!("{{\"type\":\"doc\",\"text\":\"{text}\"}}"),
             text: text.into(),

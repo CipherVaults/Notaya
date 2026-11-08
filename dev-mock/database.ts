@@ -1189,3 +1189,11 @@ function starter(d: Database, kind: string) {
 }
 
 if (params.get("db") === "1") { seed(); firstDb = false; }
+
+
+// C2's mock uses the same hierarchy for inherited bins and container cleanup.
+export function coordinationItems() { return [...dbs.map((d) => ({ ...d, kind: "database" })), ...rows.map((r) => ({ ...r, kind: "row" }))]; }
+export function removeCoordinatedItems(ids: Set<string>) {
+  for (let i = dbs.length - 1; i >= 0; i--) if (ids.has(dbs[i].id)) dbs.splice(i, 1);
+  for (let i = rows.length - 1; i >= 0; i--) if (ids.has(rows[i].id)) rows.splice(i, 1);
+}

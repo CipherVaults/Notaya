@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
+const { waitForSavedPlace } = require('./lane-a-wait.cjs');
 const root = path.resolve(__dirname, '..');
 const cache = new Map();
 const saves = [];
@@ -37,6 +38,7 @@ function load(file) {
   const requireLocal = (name) => {
     if (name === 'sonner') return { toast: { error: (message) => notices.push(message) } };
     if (name === '@/lib/storage') return { getKey: () => null, setKey: () => { throw new Error('Navigation must not write browser storage'); } };
+    if (name === '@tauri-apps/api/event') return load(path.join(__dirname, 'event.ts'));
     if (name === '@tauri-apps/api/core') return { invoke };
     if (name === '@/lib/ipc') return { api: {
       getSettings: () => invoke('get_settings'),
@@ -262,12 +264,61 @@ async function check(name, test) { await test(); checks++; console.log('ok ', na
     assert.equal((await invoke('get_settings')).lastPlace.id, 'p3');
     assert.deepEqual(notices, ["Couldn't remember the last open place."]);
   });
+  await check('screenshot wait retries resolved stale settings until the chosen view is saved', async () => {
+    useApp.getState().openDatabase(tasks.id);
+    await flushAll();
+    useApp.getState().setDatabaseView(tasks.id, db.views[1].id);
+    const expected = { kind: 'database', id: tasks.id, viewId: db.views[1].id };
+    const early = (await invoke('get_settings')).lastPlace;
+    assert.deepEqual(early, { kind: 'database', id: tasks.id }, 'The early read reproduces the missing viewId');
+    let reads = 0;
+    const saved = await waitForSavedPlace(async () => {
+      reads++;
+      return (await invoke('get_settings')).lastPlace;
+    }, expected);
+    assert(reads > 1, 'The wait must retry after an async read resolves to the old location');
+    assert.deepEqual(saved, expected);
+    useApp.getState().openPage('p3');
+    await flushAll();
+  });
   await check('database view changes persist and old database callbacks are ignored', async () => {
     useApp.getState().openDatabase(tasks.id);
     useApp.getState().setDatabaseView(tasks.id, db.views[1].id);
     useApp.getState().setDatabaseView('another-database', 'another-view');
     await flushAll();
     assert.deepEqual((await invoke('get_settings')).lastPlace, { kind: 'database', id: tasks.id, viewId: db.views[1].id });
+    useApp.getState().openPage('p3');
+    await flushAll();
+  });
+  await check('database view Back/Forward restores after the pre-lock flush, including a saved Back step', async () => {
+    useApp.getState().openDatabase(tasks.id);
+    const stopHistory = startNavHistory();
+    try {
+      const chosen = db.views[1].id;
+      useApp.getState().setDatabaseView(tasks.id, chosen);
+      await flushAll();
+      goBack();
+      await pause(500); // Back can persist while the person is looking at the first view.
+      assert.equal(useApp.getState().activeDatabaseViewId, null);
+      assert.deepEqual((await invoke('get_settings')).lastPlace, { kind: 'database', id: tasks.id });
+      goForward();
+      assert.equal(useApp.getState().activeDatabaseViewId, chosen);
+      // Reproduce the screenshot harness's race: a read before the debounce still sees Back.
+      const pending = (await invoke('get_settings')).lastPlace;
+      assert.equal((await restoreLastPlace(pending, tree)).activeDatabaseViewId, null);
+      // App's vault-locking handler flushes BEFORE discarding the UI and loading it again.
+      await flushAll();
+      assert.deepEqual((await invoke('get_settings')).lastPlace, { kind: 'database', id: tasks.id, viewId: chosen });
+      useApp.setState({ settings: null, activePageId: null, activeDatabaseViewId: null });
+      await useApp.getState().loadVault();
+      assert.equal(useApp.getState().activePageId, tasks.id);
+      assert.equal(useApp.getState().activeKind, 'database');
+      assert.equal(useApp.getState().activeDatabaseViewId, chosen);
+      await pause(500);
+      assert.equal((await invoke('get_settings')).lastPlace.viewId, chosen);
+    } finally {
+      stopHistory();
+    }
     useApp.getState().openPage('p3');
     await flushAll();
   });

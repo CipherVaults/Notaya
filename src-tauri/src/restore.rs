@@ -465,7 +465,7 @@ mod tests {
             open: false,
             created: now_ms(),
             updated: now_ms(),
-        })
+        trashed_at: None, })
     }
 
     fn write(path: &Path, bytes: &[u8]) {
