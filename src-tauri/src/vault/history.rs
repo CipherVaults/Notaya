@@ -562,7 +562,11 @@ mod tests {
             let kept_history = s.store.all(Table::History).unwrap();
             let id = new_id();
             let mut item = if row {
-                Item::Row(crate::database::types::Row::new(id.clone(), "db", "Row".into(), 1))
+                // AI writes now require a live destination, just like the app.
+                let db = crate::database::types::Database::new(new_id(), String::new(), "DB".into(), 1);
+                let db_id = db.id.clone();
+                s.put(Item::Database(db)).unwrap();
+                Item::Row(crate::database::types::Row::new(id.clone(), &db_id, "Row".into(), 1))
             } else {
                 let Item::Page(mut page) = s.get(&kept).unwrap().clone() else { panic!() };
                 page.id = id.clone();

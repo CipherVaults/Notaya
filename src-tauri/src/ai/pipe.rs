@@ -195,6 +195,22 @@ mod native {
             }
         }
     }
+
+    fn poll_connected(pipe: &Handle) -> bool {
+        unsafe {
+            match ConnectNamedPipe(pipe.0, None) {
+                Ok(()) => true,
+                Err(_) => match GetLastError() {
+                    ERROR_PIPE_CONNECTED => true,
+                    ERROR_PIPE_LISTENING => false,
+                    // A client may close its end before ConnectNamedPipe accepts
+                    // it. Reset this instance, retaining first-instance ownership.
+                    ERROR_NO_DATA => { let _ = DisconnectNamedPipe(pipe.0); false },
+                    _ => { let _ = DisconnectNamedPipe(pipe.0); false },
+                },
+            }
+        }
+    }
     pub fn serve(app: AppHandle) {
         let Ok(sid) = sid() else {
             return;
@@ -238,17 +254,7 @@ mod native {
             // cannot strand it. Existing authenticated workers keep their budget.
             if slots.handshake.load(Ordering::SeqCst) < HANDSHAKE_LIMIT {
                 if let Some(p) = pipe.as_ref() {
-                    let connected = unsafe {
-                        match ConnectNamedPipe(p.0, None) {
-                            Ok(()) => true,
-                            Err(_) => match GetLastError() {
-                                ERROR_PIPE_CONNECTED => true,
-                                ERROR_PIPE_LISTENING => false,
-                                ERROR_NO_DATA => { let _ = DisconnectNamedPipe(p.0); false },
-                                _ => { let _ = DisconnectNamedPipe(p.0); false },
-                            },
-                        }
-                    };
+                    let connected = poll_connected(p);
                     if connected {
                         // Keep the old instance alive until its replacement exists: no squatting gap.
                         let Ok(next) = listener(&name, &sid, false) else {
@@ -728,6 +734,26 @@ mod native {
                 s.coordination.release(&dispatch::actor(p), None);
                 Ok(())
             });
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        #[test]
+        #[ignore = "PC check: sandbox denies named-pipe client opens (Windows error 5)"]
+        fn listener_recovers_after_client_disconnects_before_accept() {
+            let name=format!(r"\\.\pipe\notaya-c5d-{}",crate::model::new_id());
+            let sid=sid().unwrap();let pipe=listener(&name,&sid,true).unwrap();
+            let open=||std::fs::OpenOptions::new().read(true).write(true).open(&name).unwrap();
+            assert!(!poll_connected(&pipe));
+            drop(open());
+            assert!(!poll_connected(&pipe));
+            let client=open();assert!(poll_connected(&pipe));
+            assert!(listener(&name,&sid,true).is_err(),"first-instance ownership retained");
+            drop(client);
+            unsafe { let _=DisconnectNamedPipe(pipe.0); }
+            let _next=open();assert!(poll_connected(&pipe));
         }
     }
 }

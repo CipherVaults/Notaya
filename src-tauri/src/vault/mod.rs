@@ -419,6 +419,7 @@ impl Session {
                     self.check_write(actor, &id, None)?;
                     let current = self.get(&id);
                     let next = if prospective { proposed.get(id.as_str()).copied().or(current) } else { current };
+                    if path.len() > 1 && next.is_none() { return Err(Error::NotFound); }
                     if [current, next].into_iter().flatten().any(|i| matches!(i, Item::Database(d) if d.locked)) {
                         return Err(Error::invalid("invalid"));
                     }

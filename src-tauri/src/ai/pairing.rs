@@ -37,6 +37,9 @@ impl Default for Settings {
     }
 }
 
+/// The approved protocol uses a persistent random 256-bit bearer credential,
+/// revoked in the window. This is not a short pairing code or a rotating session
+/// secret. Only approval waits expire; the saved credential survives restart.
 pub fn create(name: String) -> (Pairing, Zeroizing<String>) {
     let token = Zeroizing::new(hex::encode(crate::crypto::random_bytes::<32>()));
     let pairing = Pairing {

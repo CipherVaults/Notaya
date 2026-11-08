@@ -229,6 +229,27 @@ impl Table {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn nested_saves_stay_inside_the_outer_action_and_failed_commit_recovers() {
+        let store = temp_store();
+        store.conn.execute_batch("PRAGMA foreign_keys=ON; CREATE TABLE parent(id INTEGER PRIMARY KEY); CREATE TABLE child(pid INTEGER REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED);").unwrap();
+        store.begin_action().unwrap();
+        store.transaction(|s|s.put(Table::Records,&[1;16],b"first")).unwrap();
+        let denied: Result<()> = store.transaction(|s| {
+            s.put(Table::Records,&[2;16],b"second")?;
+            Err(Error::NotFound)
+        });
+        assert!(denied.is_err());
+        assert!(store.get(Table::Records,&[2;16]).unwrap().is_none());
+        store.conn.execute_batch("INSERT INTO child(pid) VALUES(99)").unwrap();
+        assert!(store.commit_action().is_err());
+        store.rollback_action();
+        assert!(store.get(Table::Records,&[1;16]).unwrap().is_none());
+        store.begin_action().unwrap();
+        store.transaction(|s|s.put(Table::Records,&[3;16],b"kept")).unwrap();
+        store.commit_action().unwrap();
+        assert_eq!(store.get(Table::Records,&[3;16]).unwrap().unwrap(),b"kept");
+    }
 
     /// A bare store (no header) in a fresh temp folder, with the two data tables.
     fn temp_store() -> Store {

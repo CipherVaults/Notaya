@@ -912,9 +912,11 @@ mod tests {
         let bin_id = binned.id().to_string();
         s.put(binned).unwrap();
         let row_id = new_id();
+        let db_id = new_id();
+        s.put(Item::Database(crate::database::types::Database::new(db_id.clone(), String::new(), "Test DB".into(), 1))).unwrap();
         s.put(Item::Row(crate::database::types::Row::new(
             row_id.clone(),
-            "db",
+            &db_id,
             "Row".into(),
             1,
         )))

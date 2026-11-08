@@ -1232,6 +1232,40 @@ mod tests {
     }
 
     #[test]
+    fn atomic_action_panic_restores_cache_leases_and_journals_and_can_retry() {
+        let (state,p,_,page)=fixture();
+        state.with_actor(&actor(&p),|s| {
+            s.drain_changes();let before=snapshot(s);
+            let panicked=std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let _:Result<()> = s.atomic_action(false,|s| {
+                    s.run_action(&actor(&p),"page.rename",|s|{
+                        let mut item=commands::page(s,&page)?;item.title="lost".into();s.put(Item::Page(item))
+                    })?;
+                    panic!("injected action panic")
+                });
+            }));
+            assert!(panicked.is_err());assert_eq!(snapshot(s),before);assert!(s.drain_changes().is_none());
+            let other=Actor::Ai{pairing_id:"other".into(),label:"Other".into()};
+            s.check_write(&other,&page,None)?; // No implicit claim from the aborted write.
+            let r=prepare(s,&p,"page.rename",json!({"id":page,"title":"retry"}))?;
+            execute(s,&p,&r,&state.paths)?;assert_eq!(commands::page(s,&page)?.title,"retry");
+            Ok(())
+        }).unwrap();
+    }
+
+    #[test]
+    fn transaction_keeps_required_safety_copies_for_database_and_container_actions() {
+        let (state,p,section,_) = fixture();
+        call(&state,&p,"db.create",json!({"sectionId":section,"title":"First"}),false,||false,||{}).unwrap();
+        let backups=std::fs::read_dir(&state.paths.backups).unwrap().count();assert!(backups>0);
+        state.with_actor(&actor(&p),|s|{
+            let r=prepare(s,&p,"section.trash",json!({"id":section}))?;
+            execute(s,&p,&r,&state.paths)?;
+            assert!(s.in_bin(&section));Ok(())
+        }).unwrap();
+    }
+
+    #[test]
     fn undo_rechecks_hidden_locked_and_leased_restored_destinations() {
         for protected in ["hidden", "locked", "lease"] {
             let (state,p,section,page)=fixture();
