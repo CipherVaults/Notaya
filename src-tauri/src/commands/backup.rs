@@ -9,6 +9,7 @@ use zeroize::Zeroizing;
 
 use super::vault::{after_unlock, read_keyfile};
 use crate::error::{Error, Result};
+use crate::actions::Actor;
 use crate::import::{self, ImportSummary};
 use crate::restore::{self, BackupInfo};
 use crate::state::{self, AppState};
@@ -32,11 +33,38 @@ pub struct RestoreResult {
 /// while locked: it reads only file names, times and sizes.
 #[tauri::command]
 pub fn list_backups(state: State<'_, AppState>) -> Result<Vec<BackupInfo>> {
-    restore::list_backups(&state.paths)
+    list_backups_person(&state)
+}
+
+fn list_backups_person(state: &AppState) -> Result<Vec<BackupInfo>> {
+    list_backups_core(&state.paths, &Actor::Person)
+}
+
+pub(crate) fn list_backups_core(paths: &crate::portable::Paths, _actor: &Actor) -> Result<Vec<BackupInfo>> {
+    restore::list_backups(paths)
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+
+    #[test]
+    fn list_backups_person_and_core_match_while_locked() {
+        let root = std::path::PathBuf::from(std::env::var_os("NOTAYA_HOME").unwrap_or_else(|| "D:\\Notaya Tests\\v1-6-C1".into()));
+        let state = AppState::new(crate::portable::Paths::at(&root.join(format!("backup-action-{}", crate::model::new_id()))));
+        let person = list_backups_person(&state).unwrap();
+        let core = list_backups_core(&state.paths, &Actor::Person).unwrap();
+        assert_eq!(serde_json::to_vec(&person).unwrap(), serde_json::to_vec(&core).unwrap());
+        assert!(person.is_empty());
+    }
 }
 
 #[tauri::command(async)]
 pub fn pick_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
+    pick_backup_file_person(app, state)
+}
+
+fn pick_backup_file_person(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
     let mut dialog = app.dialog().file().set_title("Choose a Notaya backup").add_filter("Notaya vault", &[crate::filenames::EXT, crate::filenames::OLD_EXT]);
     if state.paths.backups.is_dir() {
         dialog = dialog.set_directory(&state.paths.backups);
@@ -55,6 +83,10 @@ pub fn pick_backup_file(app: AppHandle, state: State<'_, AppState>) -> Result<Op
 /// while there are no notes yet. `None` if the dialog was cancelled.
 #[tauri::command(async)]
 pub fn import_portable_notes(app: AppHandle, state: State<'_, AppState>) -> Result<Option<ImportSummary>> {
+    import_portable_notes_person(app, state)
+}
+
+fn import_portable_notes_person(app: AppHandle, state: State<'_, AppState>) -> Result<Option<ImportSummary>> {
     if !state.paths.installed {
         return Err(Error::invalid("Importing is offered only by the installed Notaya."));
     }
@@ -83,6 +115,10 @@ pub fn import_portable_notes(app: AppHandle, state: State<'_, AppState>) -> Resu
 /// not touched. Returns the set-aside file's name.
 #[tauri::command(async)]
 pub fn start_over(state: State<'_, AppState>) -> Result<String> {
+    start_over_person(state)
+}
+
+fn start_over_person(state: State<'_, AppState>) -> Result<String> {
     if state.is_unlocked() {
         return Err(Error::invalid("Lock the vault first."));
     }
@@ -103,6 +139,17 @@ pub fn start_over(state: State<'_, AppState>) -> Result<String> {
 /// Runs on a worker thread because a lock waits for the windows to save.
 #[tauri::command(async)]
 pub fn restore_vault(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    source: String,
+    password: String,
+    keyfile: Option<String>,
+    allow_security_off: Option<bool>,
+) -> Result<RestoreResult> {
+    restore_vault_person(app, state, source, password, keyfile, allow_security_off)
+}
+
+fn restore_vault_person(
     app: AppHandle,
     state: State<'_, AppState>,
     source: String,

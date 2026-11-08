@@ -6,6 +6,7 @@ use tauri_plugin_dialog::DialogExt;
 use zeroize::Zeroizing;
 
 use crate::backup;
+use crate::actions::Actor;
 use crate::crypto::{self, KdfParams};
 use crate::error::{Error, Result};
 use crate::generator;
@@ -85,6 +86,10 @@ fn create_open(app: &AppHandle, state: &AppState) -> Result<()> {
 /// Runs on a worker thread: opening a vault also opens sticky notes (windows).
 #[tauri::command(async)]
 pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultStatus> {
+    vault_status_person(app, state)
+}
+
+fn vault_status_person(app: AppHandle, state: State<'_, AppState>) -> Result<VaultStatus> {
     let open_error = auto_open(&app, &state);
     let exists = state.paths.vault.exists();
     let unlocked = state.is_unlocked();
@@ -164,6 +169,10 @@ pub(super) fn after_unlock(app: &AppHandle, state: &AppState) {
 /// copies exist" screen. (On a plain first run `vault_status` does this by itself.)
 #[tauri::command(async)]
 pub fn start_notes(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
+    start_notes_person(app, state)
+}
+
+fn start_notes_person(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     let _gate = state.open_gate();
     if state.paths.vault.exists() {
         return Err(Error::VaultExists);
@@ -189,6 +198,16 @@ pub struct EnableSecurityResult {
 /// vaults are never deleted.
 #[tauri::command(async)]
 pub fn enable_security(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    password: String,
+    keyfile: Option<String>,
+    remove_unprotected_copies: bool,
+) -> Result<EnableSecurityResult> {
+    enable_security_person(app, state, password, keyfile, remove_unprotected_copies)
+}
+
+fn enable_security_person(
     app: AppHandle,
     state: State<'_, AppState>,
     password: String,
@@ -228,6 +247,15 @@ pub fn disable_security(
     current_password: String,
     current_keyfile: Option<String>,
 ) -> Result<()> {
+    disable_security_person(app, state, current_password, current_keyfile)
+}
+
+fn disable_security_person(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    current_password: String,
+    current_keyfile: Option<String>,
+) -> Result<()> {
     let current_password = Zeroizing::new(current_password);
     state.check_rate_limit()?;
     let current_kf = match read_keyfile(current_keyfile) {
@@ -251,6 +279,15 @@ pub fn disable_security(
 
 #[tauri::command(async)]
 pub fn unlock_vault(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    password: String,
+    keyfile: Option<String>,
+) -> Result<()> {
+    unlock_vault_person(app, state, password, keyfile)
+}
+
+fn unlock_vault_person(
     app: AppHandle,
     state: State<'_, AppState>,
     password: String,
@@ -306,6 +343,17 @@ pub fn change_master(
     new_password: String,
     new_keyfile: Option<String>,
 ) -> Result<()> {
+    change_master_person(app, state, current_password, current_keyfile, new_password, new_keyfile)
+}
+
+fn change_master_person(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    current_password: String,
+    current_keyfile: Option<String>,
+    new_password: String,
+    new_keyfile: Option<String>,
+) -> Result<()> {
     let current_password = Zeroizing::new(current_password);
     let new_password = Zeroizing::new(new_password);
     state.check_rate_limit()?;
@@ -334,6 +382,10 @@ pub fn change_master(
 
 #[tauri::command(async)]
 pub fn pick_keyfile(app: AppHandle) -> Option<String> {
+    pick_keyfile_person(app)
+}
+
+fn pick_keyfile_person(app: AppHandle) -> Option<String> {
     app.dialog()
         .file()
         .set_title("Choose your keyfile")
@@ -344,6 +396,10 @@ pub fn pick_keyfile(app: AppHandle) -> Option<String> {
 
 #[tauri::command(async)]
 pub fn create_keyfile(app: AppHandle) -> Result<Option<String>> {
+    create_keyfile_person(app)
+}
+
+fn create_keyfile_person(app: AppHandle) -> Result<Option<String>> {
     let Some(path) = app
         .dialog()
         .file()
@@ -361,6 +417,10 @@ pub fn create_keyfile(app: AppHandle) -> Result<Option<String>> {
 
 #[tauri::command(async)]
 pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
+    backup_now_person(app, state)
+}
+
+fn backup_now_person(app: AppHandle, state: State<'_, AppState>) -> Result<Option<String>> {
     if !state.is_unlocked() {
         return Err(Error::Locked);
     }
@@ -383,7 +443,15 @@ pub fn backup_now(app: AppHandle, state: State<'_, AppState>) -> Result<Option<S
 
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
-    let mut settings = state.with(|s| Ok(s.settings()))?;
+    get_settings_person(&state)
+}
+
+fn get_settings_person(state: &AppState) -> Result<Settings> {
+    state.with(|s| get_settings_core(s, &Actor::Person))
+}
+
+pub(crate) fn get_settings_core(s: &Session, _actor: &Actor) -> Result<Settings> {
+    let mut settings = s.settings();
     // The calculator history has its own commands; the settings screen doesn't need it.
     settings.calc_history.clear();
     settings.search_history.clear();
@@ -392,16 +460,24 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
 
 #[tauri::command]
 pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> Result<Settings> {
-    let mut settings = settings.sanitized();
-    let protect = state.with_mut(|s| {
-        // The calculator history changes only through the calculator commands.
-        settings.calc_history = s.settings().calc_history;
-        settings.search_history = s.settings().search_history;
-        s.put(Item::Settings(settings.clone()))?;
-        Ok(s.protects_capture())
-    })?;
+    let protect = save_settings_person(&state, settings)?;
     ui::set_capture_protection(&app, protect);
     get_settings(state)
+}
+
+fn save_settings_person(state: &AppState, settings: Settings) -> Result<bool> {
+    let settings = settings.sanitized();
+    // Keep sanitization before the session check, as in the original adapter.
+    state.with_mut(|s| save_settings_core(s, &Actor::Person, settings))
+}
+
+pub(crate) fn save_settings_core(s: &mut Session, _actor: &Actor, settings: Settings) -> Result<bool> {
+    let mut settings = settings.sanitized();
+    // The calculator history changes only through the calculator commands.
+    settings.calc_history = s.settings().calc_history;
+    settings.search_history = s.settings().search_history;
+    s.put(Item::Settings(settings.clone()))?;
+    Ok(s.protects_capture())
 }
 
 /// Applies Mica/Acrylic to the calling window. Returns whether it took effect.
@@ -414,6 +490,10 @@ pub fn set_backdrop(window: WebviewWindow, kind: String, dark: bool) -> bool {
 /// window is asked to save its pending edits before the vault locks.
 #[tauri::command]
 pub fn window_ready(window: WebviewWindow, state: State<'_, AppState>) {
+    window_ready_person(window, state)
+}
+
+fn window_ready_person(window: WebviewWindow, state: State<'_, AppState>) {
     state.mark_ready(window.label());
     // Hidden in the tray (by the close button, or started hidden by Windows): a reload after a
     // lock must not bring the window back; opening it from the tray does.
@@ -450,6 +530,33 @@ pub fn take_notice(state: State<'_, AppState>) -> Option<String> {
 
 #[tauri::command]
 pub fn open_data_folder(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
+    open_data_folder_person(app, state)
+}
+
+#[cfg(test)]
+mod action_parity_tests {
+    use super::*;
+    use crate::actions::tests::compare;
+
+    #[test]
+    fn get_settings_person_and_core_match() {
+        compare(
+            get_settings_person,
+            |s, _| get_settings_core(s, &Actor::Person),
+        );
+    }
+
+    #[test]
+    fn save_settings_person_and_core_match() {
+        let input = || Settings { theme: "unknown".into(), calc_history: vec![], search_history: vec![], ..Settings::default() };
+        compare(
+            |state| save_settings_person(state, input()),
+            |s, _| save_settings_core(s, &Actor::Person, input()),
+        );
+    }
+}
+
+fn open_data_folder_person(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;
     app.opener()
         .open_path(state.paths.data.display().to_string(), None::<&str>)
