@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 47 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger: first Codex cycle and pace forecast (EX-2026-11-08-57)](#session-47) |
 | 46 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Checkpoint: plan settled, Notion read, 1.6 build begins (PRs #61 to #68)](#session-46) |
 | 45 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Notaya Manual, first edition (PR #63)](#session-45) |
 | 44 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 2 version plan, V1.6 to V1.15 (PR #62)](#session-44) |
@@ -67,6 +68,103 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-47"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · Usage ledger: first Codex cycle and pace forecast
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud** (the Codex numbers were read on Ahmed's **Gaming-PC** by the "Build Notaya 1.6" thread's PC session and relayed). Time covered: **2026-11-08 00:51:23 UTC (Ahmed's request) to about 01:10 UTC**.
+
+**What it covers:** Ahmed's request to record the first Codex cycle in the usage ledger and predict the pace ([EX-2026-11-08-57](execution/2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md)); the two small records the coordinator added at 00:54:59 UTC (version-plan Notes cells, the Notion sync record, [EX-2026-11-08-58](execution/2026-11-08-notion-hub-sync-with-version-plan.md)).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (ledger editor and forecaster) | `claude-sonnet-5-5[1m]` | high | Its own `get_session` record; its usage is in the ledger as a row read at the end of the work |
+| Codex lanes A, B, C1, D, E (the measured cycle) | `gpt-6.1-sol`, reasoning `xhigh` | xhigh | Process command lines, Codex config and log headers, quoted by the PC session at 00:29 UTC; tokens and limits from the lane logs and Codex's `rate_limits` events (relayed 00:55:04 UTC). Not seen by this thread |
+| Coordinator (relay of 00:51 and 00:54:59) | `claude-opus-5-5[1m]`, low | low | `get_session`: USD 17.04, 5.50 million weighted tokens at 00:51 |
+| "Build Notaya 1.6" thread (source of the Codex numbers) | `claude-sonnet-5-5` | high | `get_session`: USD 2.77 at 00:51 |
+
+**Record basis:** the ledger files at `main` = `1c98983`, the 1.6 spec and briefs, the version plan size check, the project chat as relayed, the Build thread's messages, and the relay of 00:55:04 UTC. No Codex screen or `/status` was seen.
+
+## 🕒 Time
+
+- Ahmed's message: 2026-11-08 00:51:23 UTC. Coordinator notes: 00:51:34 and 00:54:59. Codex data relay: 00:55:04. Container clock for the work.
+- Active working time: not measured.
+- Session type: records and forecast, no code.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Ahmed (00:51:23): *"also update the usage ledger now since this is our first cycle with codex, and try to predict how we are pacing so we can see how much we can actually finish."*
+
+## 🧭 Starting State
+
+`main` = `1c98983`. The ledger had Claude rows to 00:26 UTC, an empty `codex-runs.csv`, no Codex quota reading. Codex had hit its limit at 00:44 UTC and was paused until about 05:25 UTC; lane E was done (draft PR #70) and lanes A, B, C1 and D were cut off with their work intact on the PC.
+
+## 🛠️ Actions Taken
+
+1. Read the ledger, the briefs, the version-plan size check and the Build thread; asked the PC session (through the Build thread) for per-lane times, tokens and limit readings; received them at 00:55:04.
+2. Added six Codex rows, three Codex limit readings, the Claude 5-hour status and three later Claude readings; added `pace-forecast.csv` and a dated ledger block; rebuilt the dashboard (Codex runs, limits and forecast sections) and republished it to the same link.
+3. Mirrored the Notes cells of 1.6-10 and 2.0-1 into the repo copy of the version plan; added the Notion hub sync record as EX-2026-11-08-58.
+4. Claims row, EX index rows, STATUS line, this entry.
+
+## 🧠 Key Insights
+
+- **The weekly Codex limit is the binding one.** One full 5-hour window used 15% of the weekly limit, so a week holds about 6.5 windows. The 5-hour resets decide how work is cut up; the week decides how much finishes.
+- **Almost all Codex volume is cached rereading** (about 97% of 38 million tokens), the same shape as Claude's. Thinking ("reasoning") tokens were 11,000 to 17,000 per lane, so lowering effort would save little; shorter contexts and fewer turns would.
+- **Fewer parallel lanes do not give more work per window** but avoid five-fold rereading, mid-work cut-offs and idle dependencies.
+- **Forecast:** the rest of 1.6 about 4 windows (2 to 8), fitting this week's remaining 5.5; 1.7 to 2.5 about 4.6 weeks of Codex (2.6 to 9.8), so around mid-December (late November to mid-January). Assumption-heavy; see the ledger block.
+
+## 📌 Decisions Made
+
+None by Ahmed. No amendment. The forecast levers (shorter contexts, commit per part, Claude building small lanes, a Codex plan upgrade or credits) are listed for him, not decided.
+
+## ⚠️ Difficulties / Friction
+
+The first relay gave approximate times (00:20 to 00:43, "23 minutes") that the logs corrected to 00:25:37 to 00:44:22 (19 minutes); the ledger uses the logs. `.gitignore` blocks `*.csv` except three named ledger tables, so the new table needed one exception line.
+
+## 🔧 Adjustments Made
+
+The forecast was written once from the approximate numbers and redone when the measured limit readings arrived, because they changed the main conclusion (the weekly limit, not the 5-hour one, sets the schedule).
+
+## ❌ Mistakes / Risks Noted
+
+- A first draft of the Claude-side sketch said a version would use "one third to a full week" of the 70% budget; the arithmetic is 7 to 20%. Corrected before commit.
+- Risk: the forecast's progress assumption (cut-off lanes 25 to 75% done) is unverified and drives every window count.
+
+## 📍 Current Position
+
+Ledger, forecast and dashboard updated; PR open. Codex paused until about 05:25:42 UTC; Claude's 5-hour window resets at 05:00 UTC.
+
+## 🔜 Next Steps
+
+1. Read Codex `/status` and Claude's weekly percentage at the next resets; add the rows.
+2. After the 05:25 UTC reset, inspect the cut-off lanes and replace the progress assumption with a measured one; rerun the forecast.
+3. Refresh the ledger at each lane merge and at every pause or resume.
+
+## ❓ Open Questions
+
+For Ahmed: is a Codex plan upgrade or extra credits worth considering, given a week holds only about 6.5 windows? Should lane A and B go to Claude directly to save Codex budget? (Both his call; numbers in the ledger block.)
+
+## 🧾 Session Outcome
+
+*Produced* (ledger, forecast, dashboard, two records). Verified by building the dashboard from the CSV files and reading the files back. Not integrated until merged; not accepted.
+
+## 🔍 Confidence Level
+
+High for the measured Codex numbers (Codex's own events, relayed). Medium for the capacity ratio (5.5 to 7 windows). Low for the point-based forecast (assumed progress and assumed cost per point for 1.7 onward). Unknown: Claude's weekly percentage.
+
+## 📎 Where things live
+
+`docs/ledger/` (`usage-ledger.md` top block, `pace-forecast.csv`, `codex-runs.csv`, `quota-readings.csv`), the dashboard <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>, `tools/usage-ledger/`, [EX-2026-11-08-57](execution/2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md), [EX-2026-11-08-58](execution/2026-11-08-notion-hub-sync-with-version-plan.md).
+
+- Integration / review: on merge of this PR (the coordinator, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: the Codex reset at about 05:25 UTC and the readings above
+
 ---
 
 <a id="session-46"></a>

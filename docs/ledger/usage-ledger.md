@@ -4,6 +4,91 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-08, 00:58 UTC: the first Codex cycle, measured, and a forecast of the pace
+
+**Who and where:** Ahmed's side (`AE0101`); written by the cloud thread "Update the usage ledger and forecast pace" (session 47 in [sessions.md](../sessions.md), [EX-2026-11-08-57](../execution/2026-11-08-ledger-first-codex-cycle-and-pace-forecast.md)) at Ahmed's request (project chat 00:51:23 UTC: *"also update the usage ledger now since this is our first cycle with codex, and try to predict how we are pacing so we can see how much we can actually finish"*). Machine: cloud. The Codex numbers were read on Ahmed's Gaming-PC by the Build thread's PC session (lane logs, `~/.codex/sessions`, Codex's own `rate_limits` events) and relayed at 00:55:04 UTC; `/status` was not run. The Claude numbers are `get_session` usage blocks read at 00:51 UTC.
+
+### The first Codex cycle, measured
+
+| Lane | Ran (UTC) | Ended how | Tokens printed ("tokens used": new input + output) | Session-file total (all input incl. cached / output) |
+|---|---|---|---:|---:|
+| A, first try | 00:25:36 to 00:27:24 | stopped early, no edits | 85,414 | 587,259 / 2,603 |
+| A, second pass | 00:27:55 to 00:44:17 | cut off by the limit | 236,453 | 8,169,451 / 33,594 |
+| B (export fix) | 00:25:37 to 00:44:02 | cut off | 268,752 | 11,160,807 / 36,073 |
+| C1 (action core) | 00:25:37 to 00:43:46 | cut off | 207,645 | 8,590,969 / 41,380 |
+| D (bridge program) | 00:25:38 to 00:44:22 | cut off | 202,071 | 4,787,279 / 43,912 |
+| E (AI screens) | 00:25:37 to 00:40:59 | **finished** (draft PR #70, no security finding) | 159,263 | 4,598,265 / 32,806 |
+| **Cycle** | 00:25:36 to 00:44:22 | | **1,159,598** | **about 38.1 million / 190,000** |
+
+- **Correction to the relay of 00:51:** the lanes started at about 00:25:37 and the limit hit at 00:44:22, so five lanes ran about **19 minutes**, not 23, which is about **90 lane-minutes** of running.
+- **Model and effort:** `gpt-6.1-sol`, `xhigh`, all runs (quoted from the process command lines, the Codex config and each log header at 00:29 UTC). Reasoning output was small: 11,000 to 17,000 tokens per lane.
+- **Almost everything is cached reading:** about 97% of the 38 million tokens were cached input, that is, the lanes re-reading their growing context at every turn. Only about 1.16 million tokens were new input plus output. This is the same pattern as Claude's (cache reads were most of the volume all evening).
+
+### The two Codex limits, read from Codex itself
+
+| Time (UTC) | 5-hour window used | Weekly used | Note |
+|---|---:|---:|---|
+| 00:26:05 | 0.0% | 0.0% | before any lane; the first Codex reading ever taken for Notaya |
+| 00:40:59 | 86.0% | 13.0% | lane E finished |
+| 00:44:22 | **97.0%** | **15.0%** | last reading before the stop; the limit was then reached |
+
+The 5-hour window (300 minutes) resets at **05:25:42 UTC**. The weekly window (10,080 minutes) resets at **2026-11-14 15:44:18 UTC**. The plan type is `plus` and the credits balance is 0. Codex's message offered an upgrade to Pro or buying more credits; neither is done, and whether either is worth it is Ahmed's decision (no price is in these records).
+
+**The finding that matters most: the weekly limit is about 6.5 times a 5-hour window.** Using 97% of the 5-hour window used 15% of the weekly one, so one full window is about 15.5% of a week and the week holds about **6.5 windows** (5.5 if the last 11 points are the better guide, 7 if the first 86). Everything below rests on this.
+
+### Claude side, measured at 00:51 UTC
+
+| Thread | Reported cost (USD) | Weighted tokens | Note |
+|---|---:|---:|---|
+| Coordinator (Opus, low) | 17.04 (was 3.27 at 20:33) | 5.50 million (was 1.08) | about USD 3.2 an hour while chatting |
+| Write the session summary checkpoint (Sonnet, high) | 3.41 | 2.27 million | finished 00:34 |
+| Build Notaya 1.6 (Sonnet, high) | 2.77 (was 1.75 at 00:26) | 1.86 million | idle, waiting for Codex |
+
+Claude's 5-hour status is "allowed", no overage, reset 05:00 UTC. **Claude's weekly percentage is still not read**, so the 70% line cannot be checked.
+
+### The pace forecast
+
+A forecast with stated assumptions, not a measurement; the figures are in [`pace-forecast.csv`](pace-forecast.csv).
+
+1. **Capacity (measured):** one 5-hour window is about 90 lane-minutes and about 15.5% of the Codex week; a week is about 6.5 windows.
+2. **Output of window 1 (assumed):** the spec sizes 1.6 at about 45 points (small = 1, medium = 3, large = 6, extra large = 12). Lane E is done; the four cut-off lanes are assumed 25 to 75% done. That puts window 1 at **7 to 14 points (15 to 30% of 1.6)**, likely 10.5. This is the weakest number; it will be replaced once the cut-off lanes are inspected.
+3. **Overhead (assumed):** fixes after Claude's review, integration and the PC round add 0 to 50% (likely 25%).
+4. **Windows needed** = points × overhead ÷ points per window. **Weeks** = windows ÷ windows per week.
+
+| Scope | Points | Windows: low | likely | high | Weeks of Codex budget: low | likely | high |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1.6, what is left | 31 to 38 | 2.2 | **4.1** | 8.1 | 0.3 | 0.6 | 1.5 |
+| 1.7 | 36 | 2.6 | 4.3 | 7.7 | 0.4 | 0.7 | 1.4 |
+| 1.8 | 37 | 2.6 | 4.4 | 7.9 | 0.4 | 0.7 | 1.4 |
+| 1.9 (with the survey's 13 extra points) | 59 | 4.2 | 7.0 | 12.6 | 0.6 | 1.1 | 2.3 |
+| 2.0 | 25 | 1.8 | 3.0 | 5.4 | 0.3 | 0.5 | 1.0 |
+| 2.1 | 20 | 1.4 | 2.4 | 4.3 | 0.2 | 0.4 | 0.8 |
+| 2.2 | 21 | 1.5 | 2.5 | 4.5 | 0.2 | 0.4 | 0.8 |
+| 2.3 | 18 | 1.3 | 2.1 | 3.9 | 0.2 | 0.3 | 0.7 |
+| 2.4 | 17 | 1.2 | 2.0 | 3.6 | 0.2 | 0.3 | 0.7 |
+| 2.5 | 18 | 1.3 | 2.1 | 3.9 | 0.2 | 0.3 | 0.7 |
+| **1.7 to 2.5 together** | 251 | **18** | **30** | **54** | **2.6** | **4.6** | **9.8** |
+
+**What can actually be finished, in plain words**
+
+- **This week (until the weekly reset on 2026-11-14 15:44 UTC):** about **5.5 windows of Codex are left** (85% of the week). The likely 4.1 windows for the rest of 1.6 fit, with about 1.4 windows (a third of 1.7) to spare. In the bad case (8 windows) 1.6 spills past the reset. Running flat out, the likely finish for the 1.6 code is **the early hours of 2026-11-09 to 2026-11-10 UTC** (windows open every 5 hours: 05:25, 10:25, 15:25, 20:25, 01:25 ...), then the review, the security review and the PC round.
+- **1.7 to 2.5:** about **4.6 weeks of Codex weekly budget (range 2.6 to 9.8)**, so about **mid-December 2026 (range late November to mid-January)** if Codex stays the main builder at the full 100% Ahmed allowed. Roughly **one version every 4 to 5 days**; the big ones (1.9 at about a week, 2.0 to 2.5 at 2 to 4 days each) differ.
+- **The weekly limit, not the 5-hour one, now sets the schedule.** The 5-hour resets only decide how work is cut up. Spending one window a day would use the week evenly (6.5 windows over 6.6 days); spending them back to back finishes sooner but then waits for the weekly reset.
+- **The Codex budget is not the only one.** Claude's side (planning, reviewing every Codex diff, records, some direct building) has its own weekly limit, capped by Ahmed at 70%, and it has not been read. A rough sketch from the 22:32 reading (6% weekly after about USD 52 of credit spending, if that counted against the plan): 100% of a week is about USD 870 at list prices, the 70% rule about USD 610, and a version costs Claude roughly USD 40 to 120 (a spec, briefs, about eight diff reviews, records), that is 7 to 20% of a week's 70% budget per version, or 0.6 to 1.8 weeks of it for all nine versions from 1.7 to 2.5, against about 4.6 weeks of Codex. On this sketch Claude is not the limit; Codex is. If the credit spending did not count against the plan, the Claude capacity is larger and unknown. A reading now and one at the 05:00 UTC reset would turn this into a rate.
+
+### Should fewer lanes run in parallel?
+
+- **Fewer lanes will not make a window buy more work.** Both limits count usage, not time: five lanes for 19 minutes and two lanes for about 47 minutes should use about the same. It only spreads the same budget over more hours.
+- **It still helps, for four reasons.** (1) Cached rereading is 97% of the volume, and every lane starts by reading `CLAUDE.md`, the records and its spec sections; five lanes read them five times. (2) A cut-off lane loses its place and re-reads on resume; with two lanes the limit is less likely to land in the middle of one. (3) The lanes are not all independent (C2 and C4 wait for C1, C3 for C2, C5 for C2 and C3), so after the first three only one or two can run anyway. (4) A lane that finishes early can be inspected and corrected while the window is still open. The heartbeat's **two lanes at a time** is a good setting.
+- **Order (already given to the PC session at 00:46 UTC):** C1, then A and B, then D, then C2 and C4.
+- **Levers to buy more per week, for Ahmed's decision:** (a) shorter contexts: point each lane at its spec sections and tell it not to re-read the whole records, since cached rereading is the cost, not thinking (so lowering `xhigh` to `high` would likely save little: reasoning output was only 11,000 to 17,000 tokens per lane); (b) have each lane commit after every finished part so a cut-off loses nothing; (c) let Claude build the small lanes directly (A, B), which moves load to the Claude week, subject to the 70% cap; (d) a Codex plan upgrade or extra credits, which Codex itself offered (price not known here).
+
+### Not established
+
+The Codex forecast above rests on the assumed 25 to 75% progress of the four cut-off lanes and on 1.7 onward costing about as much per point as 1.6 (which is the heaviest version on purpose); per-run cost in money (not available); whether Codex counts cached input in its limits (the numbers do not say); Claude's weekly percentage; the Notion-board thread's usage and this thread's own (still running); the PC-side Remote Control session's Claude usage; whether the 22:32 weekly reading included the credit-funded work.
+
+---
+
 ## 2026-11-08, 00:26 UTC: the last hour of the credit, eight threads measured, and the new quota rules
 
 **Who and where:** Ahmed's side (AE0101); written by the cloud thread "Write the session summary checkpoint" (session 46 in [sessions.md](../sessions.md)) from the `get_session` usage blocks of eight threads, read at 00:26 UTC. Nothing here came from a screen. Seven of the eight threads had finished; "Build Notaya 1.6" was still running, so its row will grow. The coordinator's own usage after 20:33 UTC and this thread's usage are not read.
