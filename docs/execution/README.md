@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-59: Codex first, the Codex partner briefing and the roadmap forecast
+
+- [2026-11-08-codex-first-partner-briefing-and-forecast.md](2026-11-08-codex-first-partner-briefing-and-forecast.md): A46, the briefing file and the forecast page. Records and a forecast only. **Produced**; not accepted.
+
 ### 2026-11-08 (Ahmed's message 00:51:23 UTC), EX-2026-11-08-58: Notion hub sync with the version plan (record copied into the repo)
 
 - [2026-11-08-notion-hub-sync-with-version-plan.md](2026-11-08-notion-hub-sync-with-version-plan.md): the record of the Notion board and roadmap sync. Records only. **Produced**; not accepted.
