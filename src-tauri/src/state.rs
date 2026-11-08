@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime};
 
 use tauri::{AppHandle, Emitter, Manager};
@@ -85,11 +85,16 @@ impl Flush {
     }
 }
 
+/// The shell supplies runtime operations; core state and its tests never own an AppHandle.
+#[derive(Clone)]
+struct ChangeSink {
+    changed: Arc<dyn Fn(crate::changes::ItemsChanged) + Send + Sync>,
+    close_sticky: Arc<dyn Fn(&str) + Send + Sync>,
+}
+
 pub struct AppState {
     pub paths: Paths,
-    event_app: Mutex<Option<AppHandle>>,
-    #[cfg(test)]
-    pub(crate) change_events: Mutex<Vec<crate::changes::ItemsChanged>>,
+    change_sink: Mutex<Option<ChangeSink>>,
     session: Mutex<Option<Session>>,
     attempts: Mutex<Attempts>,
     /// Labels of windows that have called `window_ready` (they listen for `vault-locking`).
@@ -132,9 +137,7 @@ impl AppState {
     pub fn new(paths: Paths) -> Self {
         AppState {
             paths,
-            event_app: Mutex::new(None),
-            #[cfg(test)]
-            change_events: Mutex::new(Vec::new()),
+            change_sink: Mutex::new(None),
             session: Mutex::new(None),
             attempts: Mutex::new(Attempts { failures: 0, wait_until: None }),
             ready: Mutex::new(HashSet::new()),
@@ -267,28 +270,39 @@ impl AppState {
         let s = session.as_mut().ok_or(Error::Locked)?;
         let result = f(s);
         let mut close = Vec::new();
-        let app = guard(&self.event_app).clone();
+        let sink = guard(&self.change_sink).clone();
         // Some old cores perform several transactions. Publish durable partial writes even
         // if a later step failed; they must never leak into the next command's signal.
         if let Some(changes) = s.drain_changes() {
-            #[cfg(test)]
-            guard(&self.change_events).push(changes.clone());
-            if let Some(app) = app.as_ref() {
+            if let Some(sink) = sink.as_ref() {
                 for id in &changes.ids {
                     if matches!(s.get(id), Some(crate::model::Item::Sticky(st)) if st.trashed_at.is_some()) {
                         close.push(id.clone());
                     }
                 }
-                let _ = app.emit("items-changed", changes);
+                (sink.changed)(changes);
             }
         }
         drop(session);
         // Destroyed windows call unmark_ready, which also takes the session lock.
-        if let Some(app) = app { for id in close { ui::close_sticky(&app, &id); } }
+        if let Some(sink) = sink {
+            for id in close {
+                (sink.close_sticky)(&id);
+            }
+        }
         result
     }
 
-    pub fn bind_events(&self, app: &AppHandle) { *guard(&self.event_app) = Some(app.clone()); }
+    pub fn bind_events(
+        &self,
+        changed: impl Fn(crate::changes::ItemsChanged) + Send + Sync + 'static,
+        close_sticky: impl Fn(&str) + Send + Sync + 'static,
+    ) {
+        *guard(&self.change_sink) = Some(ChangeSink {
+            changed: Arc::new(changed),
+            close_sticky: Arc::new(close_sticky),
+        });
+    }
 
     /// Slows down repeated guessing: after 3 failures, waits 2, 4, 8 … up to 60 seconds.
     pub fn check_rate_limit(&self) -> Result<()> {
@@ -722,6 +736,63 @@ mod tests {
         state.set_notice("second".into());
         assert_eq!(state.take_notice().as_deref(), Some("second"));
         assert_eq!(state.take_notice(), None, "gone after the first read");
+    }
+
+    #[test]
+    fn change_sink_publishes_partial_writes_then_closes_sticky_outside_session_lock() {
+        let root = PathBuf::from(
+            std::env::var_os("NOTAYA_HOME").unwrap_or_else(|| "D:\\Notaya Tests\\v1-6-C2".into()),
+        )
+        .join(format!("event-sink-{}", crate::model::new_id()));
+        let paths = Paths::at(&root);
+        std::fs::create_dir_all(&paths.data).unwrap();
+        let mut session = Session::create_open(&paths.vault).unwrap();
+        let id = crate::model::new_id();
+        session
+            .put(serde_json::from_value(serde_json::json!({
+                "kind": "sticky", "id": id, "content": "", "text": "", "color": "yellow",
+                "x": 0, "y": 0, "w": 320, "h": 320, "onTop": true, "open": true,
+                "created": 1, "updated": 1
+            })).unwrap())
+            .unwrap();
+        session.drain_changes();
+        let state = Arc::new(AppState::new(paths));
+        state.set_session(session);
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let changed_calls = calls.clone();
+        let closed_calls = calls.clone();
+        let emitting_state = Arc::downgrade(&state);
+        let closing_state = Arc::downgrade(&state);
+        let changed_id = id.clone();
+        state.bind_events(
+            move |changes| {
+                assert_eq!(changes.ids, vec![changed_id.clone()]);
+                assert!(
+                    matches!(emitting_state.upgrade().unwrap().session.try_lock(),
+                        Err(std::sync::TryLockError::WouldBlock)),
+                    "signals preserve write order"
+                );
+                changed_calls.lock().unwrap().push("changed");
+            },
+            move |id| {
+                let state = closing_state.upgrade().unwrap();
+                let session = state.session.try_lock()
+                    .expect("window destruction can re-enter state");
+                assert!(session.as_ref().unwrap().in_bin(id));
+                closed_calls.lock().unwrap().push("closed");
+            },
+        );
+        let result: Result<()> = state.with_mut(|s| {
+            crate::commands::stickies::delete_sticky_core(s, &crate::actions::Actor::Person, id)?;
+            Err(Error::invalid("later step failed"))
+        });
+        assert!(result.is_err());
+        assert_eq!(*calls.lock().unwrap(), vec!["changed", "closed"]);
+        state.with_mut(|_| Ok(())).unwrap();
+        assert_eq!(
+            calls.lock().unwrap().len(), 2,
+            "no stale signal in the next command"
+        );
     }
 
     #[test]

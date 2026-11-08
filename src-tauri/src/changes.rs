@@ -166,6 +166,7 @@ mod tests {
     use crate::portable::Paths;
     use crate::vault::Session;
     use serde_json::{Value, json};
+    use std::sync::{Arc, Mutex};
 
     const NB: &str = "20000000000000000000000000000001";
     const SEC: &str = "20000000000000000000000000000002";
@@ -564,6 +565,9 @@ mod tests {
         let (mut s, paths) = fixture();
         s.claim(&ai("Codex"), &[PAGE.into()]).unwrap();
         let state = crate::state::AppState::new(paths);
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let emitted = events.clone();
+        state.bind_events(move |changes| emitted.lock().unwrap().push(changes), |_| {});
         state.set_session(s);
         state
             .with_mut(|s| {
@@ -572,14 +576,14 @@ mod tests {
                 Ok(())
             })
             .unwrap();
-        let events = state.change_events.lock().unwrap();
-        assert_eq!(events.len(), 1);
-        assert_eq!(events[0].ids, vec![PAGE]);
-        assert_eq!(events[0].by, "person");
-        assert!(events[0].tree);
-        drop(events);
+        let batch = events.lock().unwrap();
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch[0].ids, vec![PAGE]);
+        assert_eq!(batch[0].by, "person");
+        assert!(batch[0].tree);
+        drop(batch);
         state.with_mut(|_| Ok(())).unwrap();
-        assert_eq!(state.change_events.lock().unwrap().len(), 1);
+        assert_eq!(events.lock().unwrap().len(), 1);
         let old = state.take_session().unwrap();
         let paths = &state.paths;
         drop(old);
