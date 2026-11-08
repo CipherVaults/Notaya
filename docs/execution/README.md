@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-08 (Ahmed's messages 16:59:07 to 17:00:48 UTC), EX-2026-11-08-63: README refresh for Notaya 1.5.1 and the GitHub About text
+
+- [2026-11-08-readme-refresh-v1-5-1.md](2026-11-08-readme-refresh-v1-5-1.md): the README rewritten for released 1.5.1 only (1.6 deliberately left out), a known-limits list, and the About description and topics handed over as text (repository settings are Mohamed's click). No screenshots (none exist for 1.5.1). **Produced**; not accepted.
+
 ### 2026-11-08 (Ahmed's message 16:02:35 UTC), EX-2026-11-08-62: usage ledger refresh at 16:00 UTC
 
 - [2026-11-08-ledger-refresh-1600.md](2026-11-08-ledger-refresh-1600.md): new readings (Codex week 47%, Claude week 37%), forecast recalibrated (2.5 likely about 7 December, was 2 December), "not read" gauges, the roadmap thread's usage row. Produced and published; not accepted.

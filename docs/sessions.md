@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 51 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [README and About refresh for 1.5.1 (EX-2026-11-08-63)](#session-51) |
 | 50 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger refresh at 16:00 UTC (EX-2026-11-08-62)](#session-50) |
 | 49 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [The 1.6 build day: Codex first, the heartbeat, seven lanes merged (EX-2026-11-08-61)](#session-49) |
 | 48 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger redesign and the 1.6 to 2.5 forecast (EX-2026-11-08-60)](#session-48) |
@@ -71,6 +72,93 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-51"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud · README and About refresh for 1.5.1
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud**. No PC, no Remote Control.
+
+**What it covers:** the thread "Update Notaya's GitHub README and About": [EX-2026-11-08-63](execution/2026-11-08-readme-refresh-v1-5-1.md).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (reader, writer of the README and records) | `claude-sonnet-5-5` (configured) | not recorded | Its own usage was not read (a running session has no usage block) |
+| Coordinator (relays 16:59:14, 16:59:47, 17:00:24, 17:00:52) | not read | not read | Messages only |
+| Codex | not used | - | A docs-only task |
+
+**Record basis:** `origin/main` at `5efc5d4`; the release notes 1.3.0 to 1.5.1; the manual's source; the live repository settings read through the GitHub API.
+
+## 🕒 Time
+
+- Ahmed's messages: 16:59:07, 16:59:43, 17:00:18 and 17:00:48 UTC. Work began 16:59 UTC; this entry written about 17:10 UTC (container clock). Active working time: not measured.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Bring the README and the GitHub About text up to date with the app as released, using the Manual for descriptions and, if possible, images.
+
+## 🧭 Starting State
+
+The README still opened with "Version 1.0.1" and described a notes-only app. The repository description read "ribbon editor, sticky notes, pop-out calculators, optional password lock, and automatic backups" and had no topics. The repository is private; the latest release is v1.5.1.
+
+## 🛠️ Actions Taken
+
+1. Read the project records, the release notes, the manual and the repository settings.
+2. Rewrote the README for 1.5.1 (features by area, databases, import and export, Arabic and right-to-left text, themes, tray, security, backups, known limits, credits for both partners). Left 1.6 out.
+3. Prepared the About description and topics as text, because repository settings are Mohamed's click.
+4. Wrote EX-63, the claims row, a STATUS line, this entry and a ledger row.
+
+## 🧠 Key Insights
+
+- The coordinator's first note asked for 1.6 as "in development"; Ahmed's 16:59:43 message overrode it. A README describes a release; work in progress belongs in `docs/STATUS.md`.
+- No screenshot of 1.5.1 exists in the repository, and `main` already carries unreleased 1.6 screens, so a screenshot taken from `main` would show the wrong app.
+
+## 📌 Decisions Made
+
+None by Ahmed beyond the scope above (1.5.1 only; use the Manual). No amendment.
+
+## ⚠️ Difficulties / Friction
+
+Ahmed's first artifact link pointed to the usage ledger; the second link was the Manual (the same text is in the repository, read from there). Images could not be made without installing dependencies.
+
+## 🔧 Adjustments Made
+
+Dropped the planned "in development" paragraph; named only the released version.
+
+## ❌ Mistakes / Risks Noted
+
+None found. Risk: a README that names features from the manual inherits the manual's reading of the code at `9474511`; the app is the final authority.
+
+## 📍 Current Position
+
+Produced: the README, the About text, the records. Not verified in the app, not integrated, not accepted.
+
+## 🔜 Next Steps
+
+Paste the About text into the repository settings (Mohamed's click). Optionally, screenshots of 1.5.1 (needs Ahmed's word to install dependencies). Revise the README at each release.
+
+**Dated addendum (about 17:25 UTC):** Ahmed said yes to screenshots (17:04:11 UTC); a Remote Control session on his Gaming-PC took ten of the released 1.5.1 on a throwaway vault, with his own Notaya closed, and they were added to the README under `docs/manual/screenshots/` ([EX-63 addendum](execution/2026-11-08-readme-refresh-v1-5-1.md)). The screenshot step no longer waits on anyone; only the About paste does.
+
+## ❓ Open Questions
+
+Does Ahmed want real screenshots of 1.5.1 in the README (needs `npm install`, which needs his word)?
+
+## 🧾 Session Outcome
+
+README updated to 1.5.1; About text handed over; PBS records written.
+
+## 🔍 Confidence Level
+
+High for the feature list (taken from the release notes and manual); medium for how GitHub renders the page (not seen).
+
+## 📎 Where things live
+
+`README.md`; [EX-2026-11-08-63](execution/2026-11-08-readme-refresh-v1-5-1.md); [STATUS.md](STATUS.md); [claims.md](handoff/claims.md).
+
 ---
 
 <a id="session-50"></a>
