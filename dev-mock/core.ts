@@ -280,10 +280,11 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
     }
     case "get_page": {
       const saved = savedPages.get(String(args.id));
-      const meta = tree.pages.find((x) => x.id === args.id) as { icon?: string; cover?: string } | undefined;
+      const meta = tree.pages.find((x) => x.id === args.id);
+      if (!meta) throw "Page not found.";
       // A page the mock has no cover for gets the dusk gradient (the editor checks lean on it); ?cover=none turns it off.
       const cover = params.get("cover") === "none" ? "" : meta?.cover ?? "gradient:dusk";
-      return ok({ ...tree.pages[0], id: args.id, sectionId: "s1", content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", trashedAt: null, ...(meta ? { icon: meta.icon ?? "" } : {}), cover, ...(saved ?? {}) });
+      return ok({ ...meta, content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", icon: meta.icon ?? "", cover, ...(saved ?? {}) });
     }
     case "create_subpage":
       return ok({ ...tree.pages[0], id: "p" + Math.floor(Math.random() * 1e6), parent: args.parentId, title: args.title, content: "", text: "", cover: "" });

@@ -179,7 +179,7 @@ function locationParents(tree: NotesTree, id: string) {
   return sectionParents(tree, (tree.pages.find((p) => p.id === id) ?? tree.databases.find((d) => d.id === id))?.sectionId);
 }
 
-/** Resolve against the freshly unlocked tree; a deleted item or parent always goes to Home. */
+/** Resolve against the unlocked tree and core reads for pages hidden beneath rows. */
 export async function restoreLastPlace(place: LastPlace | null | undefined, tree: NotesTree) {
   const activeNotebookId = tree.notebooks[0]?.id ?? null;
   const home = {
@@ -195,7 +195,7 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
   try {
     const item = place.kind === "row"
       ? await api.getPage(place.id)
-      : place.kind === "database" ? tree.databases.find((d) => d.id === place.id) : tree.pages.find((p) => p.id === place.id);
+      : place.kind === "database" ? tree.databases.find((d) => d.id === place.id) : tree.pages.find((p) => p.id === place.id) ?? await api.getPage(place.id);
     if (!item || item.trashedAt !== null) return home;
     const parents = sectionParents(tree, item.sectionId);
     if (!parents.activeSectionId || !tree.notebooks.some((n) => n.id === parents.activeNotebookId)) return home;
@@ -203,15 +203,18 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
     const seen = new Set([item.id]);
     if (place.kind === "row") {
       const db = tree.databases.find((d) => d.id === parent && d.trashedAt === null && d.sectionId === item.sectionId);
-      if (!db) return home;
+      if (!db || seen.has(db.id)) return home;
+      seen.add(db.id);
       parent = db.parent;
     }
     while (parent) {
       if (seen.has(parent)) return home;
       seen.add(parent);
-      const page = tree.pages.find((p) => p.id === parent && p.trashedAt === null && p.sectionId === item.sectionId);
-      if (!page) return home;
-      parent = page.parent;
+      const ancestor = tree.pages.find((p) => p.id === parent)
+        ?? tree.databases.find((d) => d.id === parent)
+        ?? await api.getPage(parent);
+      if (ancestor.trashedAt !== null || ancestor.sectionId !== item.sectionId) return home;
+      parent = ancestor.parent;
     }
     if (place.kind === "database" && place.viewId) {
       const database = await api.getDatabase(place.id);
@@ -219,7 +222,7 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
     }
     return { ...home, ...parents, activePageId: item.id, activeKind: place.kind, activeDatabaseViewId: place.kind === "database" ? place.viewId ?? null : null };
   } catch {
-    // A row that no longer exists (or cannot be read) must not prevent opening the vault.
+    // A location or ancestor that cannot be read must not prevent opening the vault.
     return home;
   }
 }

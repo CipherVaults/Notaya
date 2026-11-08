@@ -10,6 +10,8 @@ const root = path.resolve(__dirname, '..');
 const cache = new Map();
 const saves = [];
 const notices = [];
+// The sidebar deliberately omits these pages; existing get_page still reads them (and rows).
+const hiddenPages = new Map();
 let failSave = false;
 global.location = { search: '?db=1' };
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -42,6 +44,7 @@ function load(file) {
   return module.exports;
 }
 async function invoke(command, args = {}) {
+  if (command === 'get_page' && hiddenPages.has(args.id)) return structuredClone(hiddenPages.get(args.id));
   if (command === 'set_last_place') {
     saves.push(structuredClone(args.lastPlace));
     if (failSave) { failSave = false; throw new Error('Test-only failed save'); }
@@ -83,6 +86,46 @@ async function check(name, test) { await test(); checks++; console.log('ok ', na
     assert.equal(state.activeKind, 'row');
     assert.equal(state.activePageId, rowId);
     assert.equal(state.activeSectionId, tasks.sectionId);
+  });
+  await check('live subpages beneath a row restore, including a nested descendant', async () => {
+    const row = await invoke('get_page', { id: rowId });
+    hiddenPages.set('row-child', { ...row, id: 'row-child', parent: rowId });
+    hiddenPages.set('row-grandchild', { ...row, id: 'row-grandchild', parent: 'row-child' });
+    for (const id of ['row-child', 'row-grandchild']) {
+      assert(!tree.pages.some((p) => p.id === id));
+      const state = await restoreLastPlace({ kind: 'page', id }, tree);
+      assert.equal(state.activePageId, id);
+      assert.equal(state.activeKind, 'page');
+      assert.equal(state.activeNotebookId, tree.sections.find((s) => s.id === tasks.sectionId).notebookId);
+      assert.equal(state.activeSectionId, tasks.sectionId);
+    }
+  });
+  await check('row descendants reject missing, binned, cross-section and cyclic ancestors', async () => {
+    const child = structuredClone(hiddenPages.get('row-child'));
+    const row = await invoke('get_page', { id: rowId });
+    try {
+      for (const patch of [{ parent: 'gone' }, { trashedAt: 1 }, { sectionId: 's3' }, { parent: 'row-grandchild' }]) {
+        hiddenPages.set('row-child', { ...child, ...patch });
+        assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, tree)).activePageId, null);
+      }
+      hiddenPages.set('row-child', child);
+      for (const patch of [{ trashedAt: 1 }, { parent: 'gone' }, { parent: 'row-grandchild' }]) {
+        hiddenPages.set(rowId, { ...row, ...patch });
+        assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, tree)).activePageId, null);
+      }
+      hiddenPages.delete(rowId);
+      for (const patch of [{ trashedAt: 1 }, { parent: 'gone' }, { parent: 'row-grandchild' }]) {
+        const changed = structuredClone(tree);
+        Object.assign(changed.databases.find((d) => d.id === tasks.id), patch);
+        assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, changed)).activePageId, null);
+      }
+      const changed = structuredClone(tree);
+      changed.databases = changed.databases.filter((d) => d.id !== tasks.id);
+      assert.equal((await restoreLastPlace({ kind: 'page', id: 'row-grandchild' }, changed)).activePageId, null);
+    } finally {
+      hiddenPages.set('row-child', child);
+      hiddenPages.delete(rowId);
+    }
   });
   await check('saved database view resolves; a deleted view falls back to Home', async () => {
     const selected = db.views[1];
