@@ -28,7 +28,7 @@ The Build thread also relayed two earlier Codex weekly readings: 22% at 06:24 an
 
 ### The forecast (rough: only the week capacity and the readings are measured)
 
-The model is `tools/usage-ledger/forecast-model.cjs`, fed by `forecast-inputs.csv` and `forecast-versions.csv`; the dashboard lets the reader move every input. Default settings: 11 points per window, 6.1 windows per week, extra work 1.25, **2 banked Codex resets** (as Ahmed said; how a bank works is assumed: it refills the weekly allowance when it is empty), at most 3 windows used in a day, Claude about 3% of its week per Codex window and 4% a day for chat and records, a one-day pause after each version.
+The model is `tools/usage-ledger/forecast-model.cjs`, fed by `forecast-inputs.csv` and `forecast-versions.csv`; the dashboard lets the reader move every input. Default settings: 11 points per window, 6.1 windows per week, extra work 1.25, **2 banked Codex resets** (Ahmed, 08:57:27 UTC: a banked reset refills the whole Codex week and the 5-hour window, and is used only after the week is fully spent), at most 3 windows used in a day, Claude about 3% of its week per Codex window and 4% a day for chat and records, a one-day pause after each version.
 
 | Version | Plan points | Code done (likely) | Best to worst | Paid by |
 |---|---:|---|---|---|
@@ -37,7 +37,7 @@ The model is `tools/usage-ledger/forecast-model.cjs`, fed by `forecast-inputs.cs
 | 1.8 | 37 | 15 Nov | 11 Nov to 30 Nov | Ahmed's quota |
 | 1.9 | 59 | 18 Nov | 13 Nov to 20 Dec | Ahmed's quota |
 | 2.0 | 25 | 20 Nov | 14 Nov to 28 Dec | Ahmed's quota |
-| 2.1 | 20 | 22 Nov | 15 Nov to 4 Jan | after his banked resets: weekly resets or Mohamed |
+| 2.1 | 20 | 22 Nov | 15 Nov to 4 Jan | after his banked resets: his weekly allowance only |
 | 2.2 | 21 | 24 Nov | 16 Nov to 11 Jan | same |
 | 2.3 | 18 | 29 Nov | 16 Nov to 17 Jan | same |
 | 2.4 | 17 | 30 Nov | 17 Nov to 24 Jan | same |
@@ -45,8 +45,8 @@ The model is `tools/usage-ledger/forecast-model.cjs`, fed by `forecast-inputs.cs
 
 In plain words:
 
-- **At these settings everything from 1.6 to 2.5 is built by about 2 December** (best about 22 November, worst about the end of January). That is much sooner than the 00:58 forecast (mid-December) because the two banked resets are two extra Codex weeks. Without them (preset "No banked resets"): 2.5 about 16 December. With Mohamed adding a week of Codex per week: about 26 November. A careful setting (slow, 1.5 times extra work, two windows a day): about 4 January. A fast setting: about 21 November.
-- **Ahmed's own quota (this week, the 14 November reset and two banked resets) carries the work to about 21 November, which is up to version 2.0.** From 2.1 on the work runs on weekly resets only (about one version every 4 to 5 days) or on Mohamed's quota, if he continues. Whether Mohamed's quota exists, and how large, is not visible from here.
+- **At these settings everything from 1.6 to 2.5 is built by about 2 December** (best about 22 November, worst about the end of January). That is much sooner than the 00:58 forecast (mid-December) because the two banked resets are two extra Codex weeks. Without them (preset "No banked resets"): 2.5 about 16 December. If Mohamed builds with his Claude Pro, giving half his week (a guess: about 25 plan points a week): about 27 November. **Mohamed has no Codex, only a Claude Pro subscription like Ahmed's** (Ahmed, 08:57:27 UTC), so he can only add Claude-built work, never Codex windows. A careful setting (slow, 1.5 times extra work, two windows a day): about 4 January. A fast setting: about 21 November.
+- **Ahmed's own quota (this week, the 14 November reset and two banked resets) carries the work to about 21 November, which is up to version 2.0.** From 2.1 on the work runs on Ahmed's weekly Codex allowance only (about one version every 4 to 5 days), plus whatever Mohamed builds with Claude if he chooses to.
 - **Codex's weekly limit is what sets the pace; Claude's does not, if the guess of about 3% of its week per window holds.** At the likely settings Claude's allowance never holds the work back; at the "careful" setting it does for about a day and a half. The total Claude directing cost for all ten versions is about 95% of one Claude week, spread over three weeks. That guess is the weakest number: nobody has yet read Claude's weekly percentage before and after a lane.
 - **What the forecast does not include:** time waiting for Ahmed's words on gates (new libraries, vault format, security behaviour), the PC round beyond the one-day pause, a failed lane sent back, Notion migration, and anything Mohamed does.
 
@@ -56,11 +56,11 @@ About 48.7 million weighted tokens in the 29 session rows: reading and studies 4
 
 ### Rows added, rule added
 
-`quota-readings.csv`: five rows at 08:27 UTC and two relayed Codex weekly readings (06:24, 08:07). New files: `project-usage-screen.csv`, `forecast-inputs.csv`, `forecast-versions.csv`; `pace-forecast.csv` rewritten by the model (the 00:58 forecast is replaced; its text is kept above). `.gitignore` lets the three new tables through. **New reading rule (README):** at every lane merge, read Claude's weekly percentage before and after, so the 3% guess can be replaced by a measurement.
+`quota-readings.csv`: five rows at 08:27 UTC and two relayed Codex weekly readings (06:24, 08:07). New files: `project-usage-screen.csv`, `forecast-inputs.csv`, `forecast-versions.csv`; `pace-forecast.csv` rewritten by the model (the 00:58 forecast is replaced; its text is kept above). `.gitignore` lets the three new tables through. **Update 08:57:27 UTC (Ahmed's answers to questions 50 to 52):** the banked-reset mechanism is no longer an assumption (see above); Mohamed has no Codex, so the model's Mohamed input is now "share of his Claude week spent building" (default 0) with a guessed cost of 2% of a Claude week per plan point; the superseded draft page was deleted on Ahmed's word; the default dates did not change. **New reading rule (README):** at every lane merge, read Claude's weekly percentage before and after, so the 3% guess can be replaced by a measurement.
 
 ### Not established
 
-Mohamed's quota; how a banked reset works; the share of 1.6 already built (about 18 of 45 points is my estimate); Claude's cost per Codex window (a guess); the Codex runs after 00:44 UTC (lanes A second pass, C4b and others are inside the 26% but have no rows yet); this thread's own usage and the Build thread's later usage (read at the next refresh).
+Whether and how much Mohamed builds with his Claude Pro (his Claude cost per plan point is a guess); the share of 1.6 already built (about 18 of 45 points is my estimate); Claude's cost per Codex window (a guess); the Codex runs after 00:44 UTC (lanes A second pass, C4b and others are inside the 26% but have no rows yet); this thread's own usage and the Build thread's later usage (read at the next refresh).
 
 ---
 

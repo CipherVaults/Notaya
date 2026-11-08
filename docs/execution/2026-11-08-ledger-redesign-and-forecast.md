@@ -16,7 +16,7 @@
 1. **A new dashboard page** (same link as before, <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>), in Notaya's own colours: the four limits as gauges (Claude's with the 70% line); a forecast with sliders and presets, a to-scale timeline of the ten versions, two allowance charts (Codex windows left, Claude percent left) and a per-version table; "where the usage went" charts (the platform's thread count, a grouping of Claude's work, the Codex lanes, the weekly limits over time, model split, new tokens versus cached rereading); "how the forecast is built" with every input marked measured or rough; then the detail tables.
 2. **One forecast model** (`forecast-model.cjs`), inlined into the page and run by `build_dashboard.py --forecast-csv` to write `pace-forecast.csv`, so the page and the file cannot disagree. It adds to the Build thread's draft: a daily window cap, a pause after each version, per-version "held back by", best and worst cases, and who pays (Ahmed's quota or after his banked resets). From the draft it took the two extra Codex weekly readings (22% at 06:24, 26% at 08:07), the plan's points, and a cross-check: the draft's Claude cost per plan point (0.35% of a week) is the same size as this model's 3% per window at 11 points per window (0.27%).
 3. **Readings recorded:** Ahmed's two screenshots (five rows), the two relayed Codex readings, the platform's thread usage (`project-usage-screen.csv`, which the README had named since 2026-11-07 but which was never committed).
-4. **The old draft** `roadmap-forecast.html` was **not deleted** (deleting files needs Ahmed's words); it carries a "superseded" banner and is not published.
+4. **The old draft** `roadmap-forecast.html` was first marked superseded, then **deleted on Ahmed's word** (08:57:27 UTC, question 51).
 5. Ledger block at the top of `usage-ledger.md`, README (new files, the model, the pacing rule, a new rule to read Claude's weekly percentage before and after each lane), this record, the session entry 48, the claims row and one STATUS line.
 
 ## 3. Checks (observation)
@@ -27,7 +27,8 @@
 
 ## 4. Open points
 
-- **Questions for Ahmed:** (a) how a banked reset works (the model assumes it refills the whole week when used); (b) may the old draft `roadmap-forecast.html` be deleted; (c) does Mohamed's Codex quota exist and how large is it (the page treats "after Ahmed's banked resets" as waiting for weekly resets or Mohamed).
+- **Questions for Ahmed, answered 2026-11-08 08:57:27 UTC (his numbers 50 to 52):** (a) a banked reset refills the whole Codex week and the 5-hour window and is used only after the week is fully spent (now an input of `rule` kind, not an assumption); (b) the old draft may be deleted (done); (c) **Mohamed has no Codex, only a Claude Pro subscription like Ahmed's**, so the model's Mohamed input became "share of his Claude week spent building" (default 0; a guessed 2% of a Claude week per plan point). The default dates did not change.
+- **Also from that message (question 49):** Ahmed wants his quota controlled automatically and asked to be guided. This thread was not given that question's text; the automatic control is **not built here** and is handed back to the coordinator (see the thread's reply).
 - The weakest numbers are Claude's cost per Codex window, the share of 1.6 already built (about 18 of 45 points, my estimate) and the speed (11 points per window, from one and a half windows). Replace each with a measurement when it exists.
 - Not done: the handover guide for Mohamed and the Notion hub were not updated (nothing in them changed except this dashboard's description); the usage figures of this thread and the Build thread are read at the next refresh.
 - Acceptance: pending (Ahmed). Result state: **produced**.

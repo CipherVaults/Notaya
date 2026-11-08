@@ -107,11 +107,11 @@ def forecast_payload():
            "claudeReset": inputs["claude_week_reset_utc"]["value"], "claudeCap": v("claude_cap_pct")}
     params = {"ppw": v("points_per_window"), "wpw": v("codex_windows_per_week"), "ov": v("overhead"),
               "banks": v("banked_resets"), "cap": v("max_windows_per_day"), "cw": v("claude_pct_per_window"),
-              "base": v("claude_baseline_pct_per_day"), "mohamed": v("mohamed_weeks_per_week"),
+              "base": v("claude_baseline_pct_per_day"), "mohamed": v("mohamed_build_share"), "mcp": v("mohamed_claude_pct_per_point"),
               "gap": v("pause_days_between_versions")}
     ranges = {k: rng(k) for k in ("points_per_window", "codex_windows_per_week", "overhead", "banked_resets",
                                   "max_windows_per_day", "claude_pct_per_window", "claude_baseline_pct_per_day",
-                                  "mohamed_weeks_per_week", "pause_days_between_versions")}
+                                  "mohamed_build_share", "mohamed_claude_pct_per_point", "pause_days_between_versions")}
     vers = [{"id": r["version"], "theme": r["theme"], "pts": float(r["plan_points"]),
              "low": float(r["points_low"]) if r["points_low"] else None,
              "high": float(r["points_high"]) if r["points_high"] else None,

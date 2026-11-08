@@ -21,7 +21,7 @@
 | [`pace-forecast.csv`](pace-forecast.csv) | version | **written by the model** (`python3 -I tools/usage-ledger/build_dashboard.py --forecast-csv`) at the default settings: windows, share of a Codex week, Claude's share, best, likely and worst finish and who pays; replaced at every refresh, older forecasts live in `usage-ledger.md` |
 | [`project-usage-screen.csv`](project-usage-screen.csv) | thread on the project's Usage screen (Project settings, Usage), per reading | a screenshot of that screen: tokens, cache hit and share as the platform shows them; a cross-check for the session rows, and the only place the PC threads' totals are counted by the platform |
 
-The forecast has one model, [`tools/usage-ledger/forecast-model.cjs`](../../tools/usage-ledger/forecast-model.cjs), used by the dashboard (inlined) and by the command above, so the page and the CSV cannot disagree. The older draft page `tools/usage-ledger/roadmap-forecast.html` is superseded by it (kept until Ahmed says whether to delete it).
+The forecast has one model, [`tools/usage-ledger/forecast-model.cjs`](../../tools/usage-ledger/forecast-model.cjs), used by the dashboard (inlined) and by the command above, so the page and the CSV cannot disagree. The older draft page `tools/usage-ledger/roadmap-forecast.html` was replaced by it and deleted on Ahmed's word (2026-11-08 08:57:27 UTC).
 
 A dashboard page (an Artifact) is built from the CSV files with `python3 -I tools/usage-ledger/build_dashboard.py OUT.html` and published to the same link each time; the page never owns a fact. CSV is used so the files open in Excel, Notion or any chart tool, and so a later dashboard can read them directly. Every row says where its numbers came from (`source`) and what they do not show (`notes`).
 

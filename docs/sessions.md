@@ -109,7 +109,7 @@ Ahmed (08:27:53): lean on Codex for everything it can do, and build a forecast o
 
 1. Read the repository's records, the ledger and its dashboard code, the two screenshots, the FFmpeg Encoder artifacts, the version plan and the 1.6 briefs; checked other branches for taken EX and session numbers.
 2. Wrote one forecast model and two input tables, the new dashboard template, the builder changes; rebuilt `pace-forecast.csv` from the model; looked at the page in a headless browser (desktop and phone, light and dark) and fixed the timeline scale, the table width and the phone layout.
-3. Folded in the Build thread's draft (readings, plan points, a cross-check of Claude's cost per point); left the draft in place with a "superseded" banner.
+3. Folded in the Build thread's draft (readings, plan points, a cross-check of Claude's cost per point); marked it superseded and, after Ahmed's answer at 08:57:27 UTC, deleted it.
 4. Published to the same artifact link (version 5). Wrote the ledger block, README changes, EX-2026-11-08-60, this entry, the claims row and one STATUS line.
 
 ## 🧠 Key Insights
@@ -134,7 +134,7 @@ The timeline was first drawn to the worst case (January), which made every likel
 
 ## ❌ Mistakes / Risks Noted
 
-- Risk: the banked-reset mechanism is an assumption, and it moves the early dates by two weeks.
+- Risk (closed at 08:57:27 UTC): the banked-reset mechanism was an assumption that moves the early dates by two weeks; Ahmed confirmed it.
 - Risk: the speed (11 points per window) comes from one and a half windows and from my estimate of what was built.
 - A first version of the speed paragraph in the ledger block said 6.5 windows a week; it was corrected to 6.1 before commit.
 
@@ -144,13 +144,13 @@ Dashboard published at <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY>; draf
 
 ## 🔜 Next Steps
 
-1. Ahmed answers: how a banked reset works, whether to delete the old draft page, whether Mohamed's quota exists.
+1. Ahmed's question 49 (automatic quota control) and whether Mohamed builds with his Claude Pro.
 2. At each lane merge: read Claude's weekly percentage before and after; at each Codex reset, add the Codex readings and the run rows (lane A's second pass, C4b and C2 have none yet).
 3. Rebuild with `build_dashboard.py`, run `--forecast-csv`, republish to the same link.
 
 ## ❓ Open Questions
 
-For Ahmed: (1) does a banked reset refill the whole Codex week, and can it be used in the same week as the normal reset? (2) May `tools/usage-ledger/roadmap-forecast.html` (the superseded draft) be deleted? (3) Is Mohamed's quota available, and how large?
+Answered by Ahmed at 08:57:27 UTC: a banked reset refills the whole Codex week and the 5-hour window and is used only after the week is fully spent; the old draft may be deleted (done); Mohamed has **no Codex**, only a Claude Pro subscription. **Still open:** Ahmed's question 49, that his quota be controlled automatically (not built here; handed to the coordinator), and whether Mohamed will build with his Claude Pro at all.
 
 ## 🧾 Session Outcome
 

@@ -176,11 +176,11 @@ ul.plain, ol.steps { margin: 0; padding-left: 20px; display: flex; flex-directio
   <section id="how" aria-labelledby="h-how">
     <h2 id="h-how">🧮 How the forecast is built</h2>
     <ol class="steps">
-      <li><b>Supply.</b> Codex's week holds about <span id="hWpw"></span> full 5-hour windows <span class="badge m">measured</span>. Ahmed has used 26% of this week. His week resets on 2026-11-14 at 15:44 UTC and every 7 days after. Two banked resets can each refill a week when it runs dry <span class="badge r">assumed</span>.</li>
+      <li><b>Supply.</b> Codex's week holds about <span id="hWpw"></span> full 5-hour windows <span class="badge m">measured</span>. Ahmed has used 26% of this week. His week resets on 2026-11-14 at 15:44 UTC and every 7 days after. Ahmed has two banked resets; each refills the whole week and the 5-hour window, and is used only after the week is fully spent (Ahmed, 08:57 UTC).</li>
       <li><b>Work.</b> Each version has a size in plan points (small = 1, medium = 3, large = 6, extra large = 12) from the version plan. Points × extra work ÷ points per window = windows needed.</li>
       <li><b>Claude's share.</b> Directing, inspecting every diff, merging and records draw from Claude's own weekly limit, which Ahmed capped at 70%. If Claude's allowance is empty, Codex waits, even if Codex has plenty left.</li>
       <li><b>The calendar.</b> Day by day the model spends what both allowances and the daily window cap allow, adds a pause after each version, and records when each version finishes. Banked resets are used when the weekly allowance is empty and the next weekly reset is over a day away.</li>
-      <li><b>Who pays.</b> Versions finished while Ahmed's own allowance lasts (this week, the Nov 14 reset and the two banked resets) are marked <b>Ahmed's quota</b>. After that point the work runs on weekly resets only, or on Mohamed's quota if he continues, which is not known from here.</li>
+      <li><b>Who pays.</b> Versions finished while Ahmed's own allowance lasts (this week, the Nov 14 reset and the two banked resets) are marked <b>Ahmed's quota</b>. After that point the work runs on Ahmed's weekly Codex allowance only (about one version every 4 to 5 days). Mohamed has no Codex, only a Claude Pro subscription; if he builds with it, the slider adds what his Claude week can build (a guess).</li>
     </ol>
     <div class="tablewrap"><table id="inputsTable"></table></div>
     <h3>What is not known</h3>
@@ -261,21 +261,22 @@ const SL = [
   { k: "ppw", label: "Building speed (plan points per Codex window)", min: 6, max: 16, step: 0.5, kind: "r", d: 1 },
   { k: "wpw", label: "Windows in a Codex week", min: 5, max: 7.5, step: 0.1, kind: "m", d: 1 },
   { k: "ov", label: "Extra work for fixes and checks (×)", min: 1, max: 1.8, step: 0.05, kind: "r", d: 2 },
-  { k: "banks", label: "Banked Codex resets left", min: 0, max: 3, step: 1, kind: "r", d: 0 },
+  { k: "banks", label: "Banked Codex resets left", min: 0, max: 3, step: 1, kind: "g", d: 0 },
   { k: "cap", label: "Most windows used in a day", min: 1, max: 4.8, step: 0.2, kind: "r", d: 1 },
   { k: "cw", label: "Claude's weekly % per Codex window", min: 1, max: 8, step: 0.5, kind: "r", d: 1 },
   { k: "base", label: "Claude's weekly % per day on chat and records", min: 1, max: 10, step: 0.5, kind: "r", d: 1 },
   { k: "gap", label: "Pause after each version (days)", min: 0, max: 5, step: 0.5, kind: "r", d: 1 },
-  { k: "mohamed", label: "Mohamed's Codex (weeks per week, 0 = none)", min: 0, max: 1.5, step: 0.25, kind: "u", d: 2 },
+  { k: "mohamed", label: "Mohamed builds with his Claude Pro (share of his week, 0 = he does not)", min: 0, max: 0.7, step: 0.1, kind: "u", d: 1 },
+  { k: "mcp", label: "Claude building a point itself (% of a Claude week per point)", min: 1, max: 5, step: 0.5, kind: "r", d: 1 },
 ];
 const PRESETS = [
   ["Likely (default)", {}],
   ["Careful", { ppw: 8, wpw: 5.5, ov: 1.5, cw: 5, cap: 2, gap: 2 }],
   ["Fast", { ppw: 14, wpw: 7, ov: 1.0, cw: 1.5, cap: 4.8, gap: 0.5 }],
   ["No banked resets", { banks: 0 }],
-  ["Mohamed builds too", { mohamed: 1 }],
+  ["Mohamed builds too (Claude Pro)", { mohamed: 0.5 }],
 ];
-$("sliders").innerHTML = SL.map((s) => `<label for="s-${s.k}"><span>${esc(s.label)} <span class="badge ${s.kind}">${s.kind === "m" ? "measured" : s.kind === "u" ? "not known" : "rough"}</span> <output id="o-${s.k}"></output></span><input id="s-${s.k}" type="range" min="${s.min}" max="${s.max}" step="${s.step}"></label>`).join("");
+$("sliders").innerHTML = SL.map((s) => `<label for="s-${s.k}"><span>${esc(s.label)} <span class="badge ${s.kind === "g" ? "m" : s.kind}">${s.kind === "m" ? "measured" : s.kind === "g" ? "Ahmed's word" : s.kind === "u" ? "not known" : "rough"}</span> <output id="o-${s.k}"></output></span><input id="s-${s.k}" type="range" min="${s.min}" max="${s.max}" step="${s.step}"></label>`).join("");
 $("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip" type="button" data-i="${i}" aria-pressed="false">${esc(p[0])}</button>`).join("");
 let activePreset = 0;
 function applyPreset(i) { activePreset = i; P = Object.assign(JSON.parse(JSON.stringify(BASE)), PRESETS[i][1]); SL.forEach((s) => ($("s-" + s.k).value = P[s.k])); render(); }
@@ -317,7 +318,7 @@ function drawGantt(C) {
     svg.appendChild(bar);
     svg.appendChild(el("text", { x: ex + 7, y: y + 18, "font-size": 11.5, "font-weight": 600, stroke: "var(--surface)", "stroke-width": 3, "paint-order": "stroke" }, day(v.end)));
   });
-  $("ganttLegend").innerHTML = `<span><i class="sw" style="background:var(--claude)"></i>On Ahmed's quota</span><span><i class="sw" style="background:var(--codex)"></i>After his banked resets are gone: weekly resets, or Mohamed</span><span>◆ a banked reset used</span><span>┆ Codex weekly reset</span><span>— best to worst range</span>`;
+  $("ganttLegend").innerHTML = `<span><i class="sw" style="background:var(--claude)"></i>On Ahmed's quota</span><span><i class="sw" style="background:var(--codex)"></i>After his banked resets are gone: his weekly allowance only (plus Mohamed's Claude if he builds)</span><span>◆ a banked reset used</span><span>┆ Codex weekly reset</span><span>— best to worst range</span>`;
 }
 function drawSaw(id, series, key, max, color, marks, label) {
   const svg = $(id); svg.innerHTML = "";
@@ -345,7 +346,7 @@ function render() {
   let lastAhmed = -1; L.forEach((v, i) => { if (v.burst === "ahmed") lastAhmed = i; });
   const lim = C.likely.claudeLimitedDays;
   $("headline").innerHTML = `<b>At these settings:</b> the rest of 1.6 has its code done about <b>${day(L[0].end)}</b>, 1.7 about <b>${day(L[1].end)}</b>, and version 2.5 about <b>${day(last.end)}</b> (best case ${day(C.best.end)}, worst case ${day(C.worst.end)}).
-    ${lastAhmed < 0 ? "Nothing fits Ahmed's own quota at these settings." : lastAhmed === L.length - 1 ? "All of it fits Ahmed's own quota (this week, the Nov 14 reset and the banked resets)." : `Ahmed's own quota (this week, the Nov 14 reset and ${fmt(P.banks)} banked resets) carries the work up to <b>${L[lastAhmed].id}</b>; from <b>${L[lastAhmed + 1].id}</b> on, it waits for the weekly resets or for Mohamed's quota.`}
+    ${lastAhmed < 0 ? "Nothing fits Ahmed's own quota at these settings." : lastAhmed === L.length - 1 ? "All of it fits Ahmed's own quota (this week, the Nov 14 reset and the banked resets)." : `Ahmed's own quota (this week, the Nov 14 reset and ${fmt(P.banks)} banked resets) carries the work up to <b>${L[lastAhmed].id}</b>; from <b>${L[lastAhmed + 1].id}</b> on, it runs on Ahmed's weekly allowance only.`}
     ${lim > 0.5 ? ` Claude's own weekly allowance holds the pace back for about ${fmt(lim, 1)} days in total.` : " Claude's allowance does not hold the pace back at these settings."}
     These are <b>rough guesses</b>: only the size of the Codex week and the limits themselves are measured.`;
   $("presets").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === activePreset)));
@@ -360,7 +361,7 @@ function render() {
       return [{ t: v.id, cls: "nw" }, { html: '<div style="min-width:190px">' + esc(ver.theme) + (i === 0 ? `<span class="sub">about ${fmt(ver.done)} of 45 points already built or merged (my estimate)</span>` : "") + '</div>' }, { t: fmt(v.pts), cls: "r num" }, { t: fmt(v.windows, 1), cls: "r num" }, { t: fmt(v.windows / P.wpw * 100) + "%", cls: "r num" }, { t: "about " + fmt(v.claude), cls: "r num" },
         { html: `<b>${esc(day(v.end))}</b><span class="sub">${esc(day(b.end))} to ${esc(day(w.end))}</span>`, cls: "nw" },
         { html: held(v) },
-        { html: v.burst === "ahmed" ? `<span class="badge m">Ahmed's quota</span>` : `<span class="badge r">weekly resets or Mohamed</span>` }];
+        { html: v.burst === "ahmed" ? `<span class="badge m">Ahmed's quota</span>` : `<span class="badge r">weekly allowance only</span>` }];
     }));
   const totW = L.reduce((a, v) => a + v.windows, 0), totC = L.reduce((a, v) => a + v.claude, 0);
   $("forecastNote").textContent = `Together: about ${fmt(totW, 1)} Codex windows (${fmt(totW / P.wpw, 1)} Codex weeks) and about ${fmt(totC)}% of one Claude week spent on directing, in addition to chat and records. "Code done" means built and reviewed by Claude; the PC round on throwaway data and Ahmed's acceptance come after it. Gates that need Ahmed's own words (new libraries, vault format, security behaviour) are not modelled and can only add delay.`;
@@ -440,9 +441,8 @@ table("inputsTable", [{ t: "Input" }, { t: "Value" }, { t: "Range" }, { t: "Kind
   F.inputsTable.map((r) => [{ t: r.key, cls: "nw" }, { t: r.value, cls: "num" }, { t: r.low || r.high ? `${r.low || "-"} to ${r.high || "-"}` : "", cls: "num nw" },
     { html: `<span class="badge ${r.kind === "measured" ? "m" : r.kind === "rough" ? "r" : r.kind === "rule" ? "m" : "u"}">${esc(r.kind)}</span>` }, { html: esc(r.source) + (r.notes ? `<span class="sub">${esc(r.notes)}</span>` : "") }]));
 $("unknowns").innerHTML = [
-  "<b>Mohamed's quota.</b> His Codex and Claude plans are not visible from Ahmed's side, so the \"after Ahmed's banked resets\" versions have no date from his side.",
-  "<b>How a banked reset works.</b> The model assumes it refills the whole weekly allowance when used. If it only restores part, or cannot be used the same week, the early dates move later.",
-  "<b>How much of the plan is already built.</b> About 18 of 45 points of 1.6 is my estimate from which lanes merged, not a measurement.",
+  "<b>Mohamed.</b> He has no Codex, only a Claude Pro subscription (Ahmed, 08:57 UTC). Whether he builds, and how much of his week he gives, is his choice: the default is that he does not. The slider shows what it would add, on a guess that Claude building a plan point itself costs about 2% of a Claude week.",
+    "<b>How much of the plan is already built.</b> About 18 of 45 points of 1.6 is my estimate from which lanes merged, not a measurement.",
   "<b>Claude's cost per lane.</b> The weakest number: nobody has yet read Claude's weekly percentage before and after a lane. The new rule in the ledger README asks for that reading each time.",
   "<b>Gates.</b> New libraries, vault format changes and security behaviour need Ahmed's own words; time spent waiting for them is not modelled.",
   "<b>Quality risks.</b> A failed test run (like C4b) or a lane Claude sends back costs windows. The 'extra work' number is a guess for that.",
