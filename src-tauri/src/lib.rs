@@ -29,7 +29,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{http, Manager};
 
-use commands::{backup as backup_cmd, calculator, database as database_cmd, database_io, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, search_history, shell as shell_cmd, stickies, tools, vault as vault_cmd};
+use commands::{activity, history, backup as backup_cmd, calculator, database as database_cmd, database_io, errorlog, export as export_cmd, import_notes as import_notes_cmd, notes, search_history, shell as shell_cmd, stickies, tools, vault as vault_cmd};
 
 /// Set once the main window's close has started, so a second request is ignored.
 static CLOSING: AtomicBool = AtomicBool::new(false);
@@ -218,6 +218,14 @@ pub fn run() {
             backup_cmd::restore_vault,
             backup_cmd::start_over,
             backup_cmd::import_portable_notes,
+            history::history_list,
+            history::history_get,
+            history::history_restore,
+            history::history_snapshot,
+            activity::activity_list,
+            activity::activity_verify,
+            activity::activity_undo,
+            activity::activity_clear,
             notes::list_notes,
             notes::list_bin,
             notes::restore_bin_item,

@@ -10,6 +10,7 @@ import { cn, debounce } from "@/lib/utils";
 import { useApp } from "@/store/app";
 import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/components/ui";
 import RestoreDialog from "@/features/unlock/RestoreDialog";
+import ActivityPanel from "./ActivityPanel";
 import ErrorLogPanel from "./ErrorLogPanel";
 import OpenSourceDialog from "./OpenSourceDialog";
 import { DisableSecurityDialog, EnableSecurityDialog } from "./SecurityDialogs";
@@ -256,6 +257,10 @@ export default function SettingsView() {
             </Row>
           </Section>
         )}
+
+        <Section icon={<Archive size={16} />} title="Activity">
+          <ActivityPanel />
+        </Section>
 
         <Section icon={<FileWarning size={16} />} title="Error log">
           <ErrorLogPanel />

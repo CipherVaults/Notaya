@@ -268,7 +268,7 @@ impl AppState {
     pub fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
         let mut session = guard(&self.session);
         let s = session.as_mut().ok_or(Error::Locked)?;
-        let result = f(s);
+        let result = s.run_as(&crate::actions::Actor::Person, f);
         let mut close = Vec::new();
         let sink = guard(&self.change_sink).clone();
         // Some old cores perform several transactions. Publish durable partial writes even
