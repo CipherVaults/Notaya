@@ -4,6 +4,39 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-08, 00:26 UTC: the last hour of the credit, eight threads measured, and the new quota rules
+
+**Who and where:** Ahmed's side (AE0101); written by the cloud thread "Write the session summary checkpoint" (session 46 in [sessions.md](../sessions.md)) from the `get_session` usage blocks of eight threads, read at 00:26 UTC. Nothing here came from a screen. Seven of the eight threads had finished; "Build Notaya 1.6" was still running, so its row will grow. The coordinator's own usage after 20:33 UTC and this thread's usage are not read.
+
+| Thread (model, effort) | Reported cost (USD) | Output tokens | Weighted tokens |
+|---|---:|---:|---:|
+| Map Notion workspace (Sonnet 5.5, high) | 15.74 | 317,180 | 9.42 million |
+| Plan versions 1.6 and on (Opus 5.5, high) | 15.84 | 173,194 | 6.06 million |
+| Write the 1.6 spec (Opus 5.5, high) | 5.05 | 73,489 | 1.55 million |
+| Write the manual (Sonnet 5.5, high) | 3.04 | 61,898 | 1.92 million |
+| Draft the AI action list (Opus 5.5, high) | 2.76 | 36,422 | 0.80 million |
+| Libraries and licences (Sonnet 5.5, high) | 2.30 | 66,006 | 1.47 million |
+| Build Notaya 1.6 (Sonnet 5.5, high; running) | 1.75 | 27,225 | 1.06 million |
+| Design the whiteboard (Sonnet 5.5, high; started 23:16) | 0.71 | 22,855 | 0.41 million |
+| **Total** | **47.19** | **778,269** | **22.69 million** |
+
+**What this says, in plain words**
+
+- **These eight threads cost about USD 47 at list prices in roughly the last hour and a half.** The two biggest are the Notion survey (it read a workspace of about 3,000 pages and 66 databases, then all the formulas through a browser) and the version plan (Opus, many rounds of changes and Notion board updates). Together they are two thirds of the total.
+- **Reading is still the main cost:** about 126 million of the tokens were cache reads (threads re-reading big contexts). Output is only 0.78 million tokens.
+- **Opus costs about twice Sonnet per weighted token again:** the 1.6 spec (Opus) was USD 3.25 per million weighted tokens; the library study (Sonnet) USD 1.57. That matches the 22:32 reading and the model-choice guide.
+- **The USD 100 credit ran out around 23:59 UTC** (Ahmed's statement, 23:59:56). The sum of the reported costs of all threads is not the same as the credit, because the coordinator's chat and the PC threads are not all in this table; no balance was read.
+
+**The new rules (Ahmed, 2026-11-07 23:59:56 UTC, [A45](../plan/approval-and-amendments.md)):** the cloud credit is used up, so work runs on his Claude plan with its 5-hour and weekly limits. **Claude may use up to 70% of the weekly quota** until he changes it. **Codex may use up to 100%, including all its resets.** So Codex carries the heavy building; Claude plans, briefs, inspects every Codex diff, keeps the records and builds directly only when that fits better. Pacing around the 5-hour resets means fewer Claude threads at once, Sonnet instead of Opus where it does the job, and short reading lists. The session records show the 5-hour window allowed with no overage; the next reset is 05:00 UTC.
+
+**Rows added:** eight rows in `claude-sessions.csv` (the plan and manual rows replace the earlier "not measured" ones) and three rows in `quota-readings.csv` (the 5-hour reading and the two rules).
+
+### Not established
+
+The weekly percentage used so far (no reading yet, so the 70% line cannot be checked); Codex usage (no run recorded yet, the 1.6 lanes have just started); the coordinator's and this thread's usage; whether the credit also paid for the PC threads; the four Sonnet helper sub-agents of the planning thread.
+
+---
+
 ## 2026-11-07, 23:40 UTC: statements from the chat after the 22:32 screenshots (no new measurement)
 
 **Who and where:** Ahmed's side (AE0101); written by the cloud thread "Record Phase 1 decisions and update handover" (PR #61) from the project chat. Nothing here was read from a screen; the measured figures are the 22:32 UTC block below.

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 46 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [Checkpoint: plan settled, Notion read, 1.6 build begins (PRs #61 to #68)](#session-46) |
 | 45 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Notaya Manual, first edition (PR #63)](#session-45) |
 | 44 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 2 version plan, V1.6 to V1.15 (PR #62)](#session-44) |
 | 43 | 2026-11-07 | Ahmed (`AE0101`) | cloud | [Phase 1 closes: menus, AI safety, dashboards, banner, Whiteboard, Notebook mode (PR #61)](#session-43) |
@@ -66,6 +67,229 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-46"></a>
+
+# 📘 Session: 2026-11-08 · Ahmed · cloud + Gaming-PC · Checkpoint: plan settled, Notion read, 1.6 build begins
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and Claude project "Notaya". Machines: the coordinator and all study, planning and records threads in the **cloud**; the "Build Notaya 1.6" thread is bound to Ahmed's **Gaming-PC** (Remote Control approved at 00:21:39 UTC, Codex runs there). Time covered: **23:39:31 UTC on 2026-11-07 to about 00:26 UTC on 2026-11-08**. Records editor: the cloud thread "Write the session summary checkpoint" (`session_01PwVKYkE8dD5YGbCUnmpDXK`, started 00:24:55 UTC), asked by the coordinator after Ahmed's message of 00:24:41 UTC.
+
+**What it covers:** a checkpoint, written on Ahmed's request so that development can run on without losing the thread. It joins the three entries written during the same hour ([43](#session-43) Phase 1 decisions, [44](#session-44) the version plan, [45](#session-45) the manual) and adds what none of them holds: the Notion survey and its rules, the formulas, the library picks, the 1.6 spec and Ahmed's go to build, the new quota rules, the roles for the build, the numbered list of questions 1 to 38 with their answers, and what is running now. It does not repeat the reasoning of 43 to 45; it points to them.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| Coordinator (mother thread; talked with Ahmed, started the threads, merged PRs #61 to #68) | Not re-read here; at its 20:33 UTC snapshot it was configured `claude-opus-5-5[1m]` at low effort (ledger row) | low (platform cap) | Its messages in the project chat. Its usage after 20:33 UTC is not measured |
+| "Map Notion workspace for full Notaya parity" (survey, then formulas) | Configured `claude-sonnet-5-5`, last served `claude-sonnet-5-5` | high | `get_session` at 00:26 UTC: USD 15.74 reported; finished 00:22:22 |
+| "Draft the full AI CLI action list" | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` | high | `get_session`: USD 2.76; finished 23:55:46 |
+| "Plan versions 1.6 to 1.8 and beyond" (plan, Notion board; four Sonnet helper sub-agents) | Configured `claude-opus-5-5[1m]`, last served `claude-opus-5-5` | high | `get_session`: USD 15.84; finished 00:06:51. Helpers' usage not shown separately |
+| "Write the 1.6 spec" | `claude-opus-5-5[1m]` | high | `get_session`: USD 5.05; finished 00:07:10 |
+| "Study libraries and licences" | `claude-sonnet-5-5[1m]` | high | `get_session`: USD 2.30; finished 00:02:19 |
+| "Write the Notaya manual" | `claude-sonnet-5-5[1m]` | high | `get_session`: USD 3.04; finished 23:57:53 |
+| "Build Notaya 1.6" (briefs, PR #68, then Codex on the PC) | `claude-sonnet-5-5`, bound to Gaming-PC | high | `get_session` at 00:26: USD 1.75, still running |
+| Codex (`gpt-6.1-sol`, reasoning `xhigh`) | Named in Ahmed's rules; **no Codex run is recorded yet** | xhigh (his rule) | The 1.6 thread's status at 00:26: "Codex running lanes A, B, C1, D, E". Not seen by this thread |
+| This thread (records editor) | Configured `claude-sonnet-5-5[1m]` | not read | This entry; its own usage is not measured (a running session has no usage block) |
+
+**Record basis:** written from the project chat read in full for 20:51 to 00:24 UTC (earlier chat was read through 20:51 and is covered by entries 41 to 43), the project memory, the repository at `main` = `c2ead6e` (PR #68), the shared notes listed under "Where things live", and the `get_session` records above. The studies themselves were not re-read in full here; their headline results are quoted from the threads' own reports and the plan, and carry that limit. Nothing was run or tested in the app.
+
+## 🕒 Time
+
+- Date: 2026-11-07 23:39 UTC to 2026-11-08 00:26 UTC. Times are the chat's message timestamps or `git log` (UTC); where a time is the container clock it says so.
+- Ahmed's messages in the span: 23:39:31, 23:42:35, 23:49:01, 23:53:46, 23:54:20, 23:58:44, 23:59:56, 00:03:25, 00:06:08, 00:12:00, 00:12:45, 00:14:46, 00:15:27, 00:17:34, 00:18:27, 00:19:12, 00:20:16, 00:21:39, 00:22:45, 00:24:06, 00:24:41.
+- Pull requests merged by the coordinator: #61 about 23:49, #62 about 23:50, #64 about 23:56, #63 about 23:57, #65 about 23:58, #66 about 00:01, #67 about 00:06, #68 about 00:21 (committer times of the merge commits, UTC).
+- Active working time: not measured. The wall-clock span is about 47 minutes and is not called work time; many threads ran side by side.
+- Session type: planning, study, a first build go, records.
+- Reason for summary: Ahmed's checkpoint request (00:24:41) and his rule A37 item 5.
+
+## 🎯 Session Goal
+
+Ahmed's words (00:24:41): *"follow-on session summary now. Since the last session summary that we have wrote with everything that we've discussed, applied, and established, since this is a critical step for us to take a checkpoint for and let the continuous development go through."* Produce one entry that lets a new session, or Mohamed, resume from it alone.
+
+## 🧭 Starting State
+
+At 23:39:31 UTC: Phase 1 (discussing every feature) was finished except the AI CLI's action list ([43](#session-43)); Ahmed had told the coordinator to push ahead with planning in parallel, to choose models by task and to use the cloud credit before it ran out (A43). `main` was `9e3e4e3` (PR #60). Notaya was at 1.5.1, accepted. Nothing was built for 1.6.
+
+## 🛠️ Actions Taken
+
+1. **23:35 to 23:42, the Notion study.** A thread read Ahmed's Notion (at his order, 23:35:36) and reported at 23:41 that it is about 3,000 pages and 66 databases and that five heavily used page features are missing from Notaya (columns, callout colour and icon, folding headings, page mentions with backlinks, links to a database view). The coordinator then put **ten questions** to Ahmed in the chat (23:42:42).
+2. **23:39 to 23:55, three threads in parallel.** The AI action list (about 300 named actions; four levels, confirmations only in the Notaya window, an exchange folder, a tamper-proof log; 10 questions, numbered 11 to 20), the records of Phase 1 ([PR #61](https://github.com/CipherVaults/Notaya/pull/61), entry 43) and the version plan ([PR #62](https://github.com/CipherVaults/Notaya/pull/62), entry 44; five more questions, 21 to 25).
+3. **23:49 to 23:54, Ahmed answered** the Notion questions (23:49:01) and the AI questions (23:53:46) in short messages, and the staging questions (23:54:20). Where he was unsure, the coordinator picked a default and said so (23:54:01).
+4. **23:49 to 00:07, three more threads:** the 1.6 spec, a library and licence study ([PR #64](https://github.com/CipherVaults/Notaya/pull/64)) and the manual ([PR #63](https://github.com/CipherVaults/Notaya/pull/63), entry 45). The plan was renumbered (2.0 to 2.5) and updated twice more with Ahmed's answers ([PR #65](https://github.com/CipherVaults/Notaya/pull/65) at about 23:58, [PR #67](https://github.com/CipherVaults/Notaya/pull/67) at about 00:06, which also carries the Notion survey gaps and a copy of the 1.6 spec). The library study got an addendum ([PR #66](https://github.com/CipherVaults/Notaya/pull/66)).
+5. **23:59, the survey finished and the credit ended.** The full read-only survey of the Notion (77 top-level items) was delivered with four new questions (30 to 33); in the same minute Ahmed said the USD 100 credit was finished and set the new quota rules (23:59:56).
+6. **00:02 to 00:12, the 1.6 gates.** The spec (15 work packages) asked Ahmed to approve four things (question 36). He approved the AI connection with its safety rules and deletes that go to a bin (00:06:08); the coordinator explained the helper program and the first-launch copy (00:06:22 and 00:12:10).
+7. **00:03 to 00:22, the formulas.** Ahmed allowed browser reading (00:03:25). The thread could not reach Chrome until the extension was signed in to the right Claude account (tried 00:04:58, 00:12:40, 00:15:14; fixed by Ahmed at 00:17:34). At 00:22:11 the thread reported **all formulas copied exactly** through the page's own database definition, read-only, with a checksum; nothing in Notion changed.
+8. **00:15 to 00:22, the go.** Ahmed authorised 1.6 and the helper program (00:15:27) and set the roles (00:18:27). The "Build Notaya 1.6" thread merged the briefs ([PR #68](https://github.com/CipherVaults/Notaya/pull/68), record [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md)), marked 1.6 "in development" on the Notion board, and asked for the Remote Control approval, which Ahmed gave at 00:21:39. The coordinator closed five finished threads at 00:19.
+9. **00:24 to now, this entry.** Records: A45, authority rows, STATUS, the ledger (eight threads measured), a claims row, [EX-2026-11-08-56](execution/2026-11-08-checkpoint-session-summary.md) and both copies of the handover guide.
+
+## 🧠 Key Insights
+
+- **Notion is a database workspace with a page layer Notaya does not yet have.** The survey found 77 top-level items; the Discord notebook alone is about 270 pages and 929 pictures; the German course exists in three copies (177 pages); the finance system has 9 data sources, 50 formulas, 16 rollups and 11 relations. The earlier note that the workspace was "small" (EX-41) is wrong. (Counts are the survey's and were not re-checked here.)
+- **An export loses the hub home pages** (columns, cards, links), so each home page is rebuilt from Claude's own read of the page. This is why Ahmed said the migration "is difficult" for hubs (23:49:01).
+- **The connector cannot read formula text or values**, so the formulas were read in the browser instead and the data checked against the export's values (zero differences is the pass mark). The formula copy is finance data: it lives only in the project's private notes (`notes/notion-formulas/2026-11-08-formulas-exact.md`, with a SHA-256 checksum) and is **never committed to the repository**; this entry does not quote any formula or value.
+- **More Notion gaps than the first study said:** links to a single block (about 57 in use), a contents block, file attachments, Status groups, page templates (including daily repeats), one synced block, buttons, text direction per block with invisible direction marks, and code that must copy byte for byte. They are placed in 1.8 and 1.9 (plan items 1.8-11 to 1.8-14 and 1.9-12 to 1.9-17).
+- **A Windows named pipe is readable by everyone on the PC by default.** The library study found this, so the AI door's pipe needs an explicit "only my Windows account" rule; it is a security task, not a detail.
+- **The AI CLI cannot ship without its safety net** (small saves, change signals, version history, activity log, a bin for everything). That is why 1.6 is the heavy version, on purpose. If it runs long, three small items (1.6 WP-12, 13, 14) may move to 1.7; the safety net may not.
+- **Money, not tokens, was the limit.** Eight threads cost about USD 47 at list prices in about an hour and a half ([ledger block of 00:26 UTC](ledger/usage-ledger.md)); reading dominated. That is why the new rules push the building onto Codex.
+
+## 📌 Decisions Made
+
+Status labels: **Confirmed** (Ahmed's own words), **Provisional** (a default the coordinator or a thread chose and Ahmed has not objected to), **Deferred**, **Rejected**. Authority rows and A45 hold the words.
+
+**Confirmed by Ahmed**
+
+- **Phase 1 is done; Phase 2 and the first build:** all features agreed (23:29, entry 43); planning in parallel (23:39:31); **go to build 1.6** and the helper program (00:15:27); **Codex leads all development, Claude briefs, inspects, merges and writes the records** (00:18:27).
+- **Version plan.** 1.6 the foundation (action list, change signals and small saves, activity log, version history, a recycle bin for everything, the AI door in two steps, About credits, quick fixes); 1.7 comfort (menus, shortcuts, app bar, tray, Ctrl+F, banner, the AI file door, emoji and Greek/Cyrillic in PDF); 1.8 Notion page features (columns, callouts, folding headings, mentions and backlinks, view links, block links, contents block, per-block direction, Notion ids) with code and Mermaid and history comparison; 1.9 tabs and the import/export upgrade (Excel export with charts, Excel import, saved views, templates, a sync ledger); **2.0** corkboard, calculator upgrades, manual and tour; 2.1 and 2.2 dashboards; 2.3 and 2.4 whiteboard; 2.5 Notebook mode. "After 1.9 it should be 2.0" (23:54:20). The order inside is the coordinator's call (Ahmed: "it's up to you"). The Notion migration runs beside it: a three-page trial after 1.8 (Home, the Projects registry, one finance database, into a fresh throwaway vault), the bulk after 1.9.
+- **AI CLI (23:53:46):** four levels Off, Look, Edit, Full (Full may delete whole hubs after a confirmation); hidden notebooks; the big-change confirm is an optional setting, default 20 items; snapshots; Claude and Codex at once if they never collide; the AI never draws freehand (23:54:20); locks not decided (the AI cannot lock or unlock anything); the AI sees everything, locked notes only when unlocked.
+- **Notion migration rules (23:49:01 and 00:03:25):** the full read-only survey; Notion is **never changed** (a scratch page excepted); the must-work hubs are Projects and Ideas registry, Discord notebook, Reading knowledge control center, Personal Financial System, AI Project Bootstrap System, FFmpeg Encoder, Learn German with Mariam (Arabic, "must be perfect") and Freelancing Arc with all its databases; formulas "dead accurate"; the backup is **manual and AI-driven**, never automatic; columns become a real feature; all three German copies come in, kept apart.
+- **Export and import:** emoji in PDF is a must; Excel export with charts "if possible"; Excel import into databases; 200 MB limit; several sheets become several databases with a pick list; tablet support broad, no model-specific code (23:58:44, 00:06:08).
+- **Quota (23:59:56):** the USD 100 credit is used up; **Claude up to 70% of the weekly quota** until Ahmed says otherwise; **Codex up to 100%**, including all its resets.
+- **Machines (00:20:16, 00:21:39):** the PC stays on all night; Remote Control approved; full authority to develop, test and use the computer within the throwaway-data rules.
+
+**Provisional (the coordinator's or a thread's default)**
+
+- **Seven notebooks as shelves for whole hubs** (Control Rooms, Money, Learning, Build and Systems, Archives, Everyday, Private locked). Ahmed asked what "shelves" meant (00:12:45); after the explanation he did not object. A proposal he has seen, not a decision he made.
+- **Columns as a real feature** (question 2, which he was "not sure about"): the coordinator decided yes because the migration needs them.
+- **The AI's exchange folder next to Notaya's data folder.** Ahmed wanted it "contained", working both installed and portable. The coordinator first said "inside the data folder" (23:54:01); the plan and spec say "next to" it (PR #67 fixed the wording). Both satisfy "contained"; the spec's version is the one to build.
+- **G3 as one local, one-time copy with a notice and no AI** (A44). Ahmed's words were "if that's helping, yes, but I don't want to have an automatic, in a sense". The reading is the coordinator's; Ahmed should confirm it (see Open Questions).
+- **Libraries (study, not yet approved for any build):** `rmcp` for the bridge program (Apache-2.0); `perfect-freehand` 1.2.3 for pen lines (MIT); Tauri's own global-shortcut plugin 2.4.1 (MIT or Apache-2.0); a Noto Sans subset for Greek and Cyrillic (SIL OFL); a bundled colour emoji picture pack, Microsoft's open Fluent Emoji first (MIT), Google's Noto emoji pictures as fallback (Apache-2.0); `rust_xlsxwriter` 0.102.0 and `calamine` 0.38.0 for Excel (sixteen new crates together, all permissive). **The 1.6 spec adds no new crates** except extra `windows` features; each other pick needs Ahmed's own words at its version (A37, `CLAUDE.md`).
+
+**Deferred**
+
+- Page locks and "lock now" for the AI (23:53:46: "I don't want to answer anything about locking pages right now").
+- The whiteboard's nine finer questions and the dashboards' ten questions: the coordinator answers them in planning with defaults unless Ahmed asks to see them.
+- Which German copy is the live one (Ahmed does not know).
+- Wintab-only tablets (not planned).
+
+**Rejected or set aside**
+
+- The read-only Notion key (Ahmed did not follow it; the browser route worked). Revisit only if the browser route fails.
+- The big whiteboard kit tldraw (needs a paid key, adds a watermark, may send usage data).
+- A spending cap per hour (Ahmed, 20:41:50): no cap, watch the 5-hour and weekly limits.
+
+### Questions 1 to 38 and the answers
+
+All questions were asked in the project chat as one continuing list (Ahmed's rule, 23:42:35). "—" means Ahmed gave no answer of his own.
+
+| # | Question (short) | Answer and who | Status |
+|---:|---|---|---|
+| 1 | Full read-only count of the Notion | Yes, "read exactly my entire notion" (Ahmed 23:49:01); done | Confirmed |
+| 2 | Columns as a real feature | Ahmed unsure; coordinator: yes (23:49:30) | Provisional |
+| 3 | Do the five heavy page features come first | Ahmed: not his to order; coordinator staged them in 1.8 | Provisional |
+| 4 | Which pages must work after import | The eight hubs named above, Arabic included | Confirmed |
+| 5 | Monthly refresh or an automatic helper | Manual, AI-driven, never automatic | Confirmed |
+| 6 | A read-only Notion key | Not understood; dropped. Formulas read in the browser instead | Rejected |
+| 7 | Rebuild finance formulas by hand | Formulas must be "dead accurate", compared with the export values | Confirmed |
+| 8 | A scratch Notion page | Allowed; Notion otherwise untouched | Confirmed |
+| 9 | One notebook per hub or sections | Ahmed did not organise Notion that way; see 33 and 37 | Provisional |
+| 10 | Anything the sample missed | Ahmed unsure; the full survey found more (see Key Insights) | Open, answered by the survey |
+| 11 | Four levels Off, Look, Edit, Full | Agreed (23:53:46) | Confirmed |
+| 12 | Hide notebooks from the AI | Agreed | Confirmed |
+| 13 | Confirm only in the Notaya window | Not objected | Provisional |
+| 14 | What is a big change | Optional setting, default 20 | Confirmed |
+| 15 | Where the AI's files go | "Contained in the app", installed and portable; coordinator: beside the data folder | Provisional |
+| 16 | Per-page edit lock for the AI | Not now | Deferred |
+| 17 | May the AI "lock now" | Not now | Deferred |
+| 18 | May the AI look at pictures of canvases | Agreed, after one confirmation | Confirmed |
+| 19 | Claude and Codex at the same time | Yes, if they never collide | Confirmed |
+| 20 | Companion program speaking MCP over a private local link | Ahmed unsure; coordinator chose it; approved as gate G2 at 00:15:27 | Confirmed (00:15:27) |
+| 21 | Is the version order right | Up to the coordinator | Provisional |
+| 22 | Dashboards earlier than the corkboard | Coordinator keeps the order | Provisional |
+| 23 | Call Notebook mode 2.0 | After 1.9 comes 2.0; Notebook mode ends at 2.5 | Confirmed |
+| 24 | About credits in 1.6 | Yes, "it's tiny" | Confirmed |
+| 25 | The AI never draws freehand | Agreed | Confirmed |
+| 26 | Which drawing tablet | None in particular: broad support | Confirmed |
+| 27 | Emoji in PDF | Yes, "critical" | Confirmed |
+| 28 | Charts in Excel export | Yes if possible, else plain tables | Confirmed |
+| 29 | Import Excel into databases | Yes | Confirmed |
+| 30 | Read the formulas in the browser | Yes; done at 00:22:11 | Confirmed |
+| 31 | All three German copies | All three, kept apart | Confirmed |
+| 32 | Right-to-left set by hand | Ahmed unsure: every block's direction kept as Notion has it | Confirmed (design) |
+| 33 | Notebook layout and a locked notebook | Hub = a page with nested pages; groups proposed | Provisional |
+| 34 | Largest Excel file | 200 MB is fine | Confirmed |
+| 35 | Several sheets become several databases | "What you see that's fit": yes, with a pick list | Confirmed |
+| 36 | Approve the four 1.6 gates | AI door and safety rules and the bin: 00:06:08; helper program: 00:15:27; first-launch copy: "if that's helping, yes" with the wording to confirm | Confirmed, G3 wording provisional |
+| 37 | Seven notebooks as shelves | See Provisional above | Provisional |
+| 38 | Can Codex start 1.6 tonight | Yes (00:15:27, 00:18:27, 00:21:39) | Confirmed |
+
+## ⚠️ Difficulties / Friction
+
+- **Ahmed's answers were often "I'm not sure."** He is a director, not a developer, and the questions grew technical (a read-only key, a helper program, shelves). Each time the coordinator explained in plain words and picked a default; two defaults (G3, the shelves) rest on a reading that Ahmed should confirm.
+- **The Chrome extension would not connect** for about 20 minutes (wrong Claude account in the extension). Fixed by Ahmed at 00:17:34; the formulas were then read in minutes.
+- **The cloud container cannot run the Rust tests.** The build thread found no Wine, no MinGW and no GTK there (EX-2026-11-08-55), and installing them needs Ahmed's own words. Code checks for 1.6 therefore depend on the PC (Codex and Remote Control) until he decides.
+- **Credit and quota changed mid-flow:** the credit ended at about 23:59, so the plan to "use it all" became "use Codex" within one minute.
+- **Numbers in the chat moved:** the question list ran 1 to 38 across several threads; the coordinator's 00:12 message numbered 38 before 37 was answered. The table above is the clean version.
+
+## 🔧 Adjustments Made
+
+- The plan was rewritten three times in 25 minutes as answers arrived (renumbering to 2.0 to 2.5; emoji moved to 1.7; Excel added; survey gaps placed); each time the repository copy and the Notion board were updated.
+- Ahmed's 00:12:45 worry ("I don't want anything to be changed on Notion") led to a plain statement that the shelves exist only inside Notaya.
+- The exchange-folder wording was corrected to "next to the data folder" (PR #67).
+
+## ❌ Mistakes / Risks Noted
+
+- **Risk: the "seven shelves" answer.** Ahmed wrote "Yeah, I agree" at 00:12:00 without naming what; he then asked what shelves were. Do not cite it as a decision.
+- **Risk: G3.** "I don't want to have an automatic" backup was read as "one local copy, once, with a notice". If Ahmed meant no copy at all, the 1.6 vault-format change needs another answer before it ships.
+- **Risk: sizes are judgement.** 1.6 has 15 work packages and nine Codex lanes; the schedule is not measured. Three packages may move to 1.7.
+- **Risk: the survey's counts and the formula copy were taken from the threads' reports.** This thread did not re-count Notion or re-read the formula file; Ahmed's "dead accurate" is a pass mark that is yet to be tested, after 1.8, against the export's values.
+- **Risk: Claude's 70% weekly line cannot yet be checked.** No weekly percentage has been read; only the 5-hour status ("allowed") is in the session records.
+- **Risk: a cloud credit figure.** The sum of reported costs here (USD 47) is not the credit balance; the balance was last read at USD 48 left at 22:32.
+- **Risk: unattended night.** Ahmed is asleep and asked for updates for the morning (00:22:45). Codex and the 1.6 thread run without him; every diff is still to be inspected before it merges, and nothing is accepted.
+
+## 📍 Current Position
+
+**As of:** `main` = `c2ead6e` (PR #68, merged about 00:21 UTC), plus this records PR. **Before** (23:39): Phase 1 done, nothing planned or built. **After:** the feature list is staged across 1.6 to 2.5; the AI CLI has levels, a safety net and a spec of 15 work packages; the Notion is surveyed and all its formulas are copied (privately); the library picks are studied; Ahmed has said go to 1.6 and set the quota and the roles; Codex has been started on the PC. **Current standing:** the plan and the spec are *produced and merged*; **nothing is built or accepted**; 1.6 is *in development*. **Live owners:** Codex (lanes), the "Build Notaya 1.6" thread (briefs, inspection, merges), Ahmed (every acceptance and the open answers).
+
+**In flight now (00:26 UTC):**
+
+- "Build Notaya 1.6": Codex is running lanes **A** (small interface fixes), **B** (export fix), **C1** (the action core), **D** (the bridge program) and **E** (the AI screens) in parallel; then C2 and C4, then C3, then C5; then integration, the security review, a PC test round on throwaway data, release notes and records.
+- This checkpoint (records only).
+- Nothing else is open: the Notion thread and the study threads are resolved.
+
+## 🔜 Next Steps
+
+1. The 1.6 thread: take each lane's diff, inspect it for Ahmed's vision and correctness (A37), run the checks that can run, merge, and report in the chat. Every lane gets its own claim and draft PR.
+2. Ahmed (morning): read this entry, the chat summary and the numbered list; confirm G3 and the shelves; decide on installing Wine and MinGW in the cloud environment (or accept PC-only Rust checks).
+3. After 1.6: the 13-section entry, ledger rows (Codex runs), the handover guide, the Notion ticks, and a PC round in the real exe (including Start-with-Windows, never tested).
+4. Before 1.7: Ahmed's approval of the libraries it needs (global shortcut plugin, the emoji pack, the Noto subset).
+5. Before the Notion trial (after 1.8): the formula comparison plan and the throwaway vault.
+
+**Do not reopen / repeat:** the Notion survey (read once, read-only); the four levels and the hidden-notebook idea; the order 1.6 to 2.5 unless Ahmed asks; any copy of the formula file into the repository.
+
+## ❓ Open Questions
+
+- **G3 wording:** does Ahmed want the one local, one-time copy at first launch of 1.6, or no copy? Needed from: Ahmed. Blocks: shipping 1.6 (the vault-format change).
+- **The seven notebooks:** are they right, now that he knows they live only in Notaya? Needed from: Ahmed. Blocks: the Notion trial after 1.8, not 1.6.
+- **Cloud checks:** may Wine and MinGW be installed in the cloud environment so threads can run the Rust tests? Needed from: Ahmed (A37 item 3). Blocks: nothing if the PC is used.
+- **German course:** which of the three copies is the live one? Needed from: Ahmed. Blocks: nothing (all three come in).
+- **The whiteboard's nine and the dashboards' ten questions:** defaults or his review? Needed from: Ahmed. Blocks: 2.1 and 2.3.
+- **Library approvals** (1.7 and 1.9). Needed from: Ahmed, per version.
+- **Mohamed:** has not seen the AI CLI design or any of this; the handover guide carries it. Needed from: Mohamed (STATUS question 27 and the guide's list).
+- Next question number to use in the chat: **39**.
+
+## 🧾 Session Outcome
+
+In 47 minutes the project went from "everything agreed, nothing planned" to "planned, studied, specified and started". The version plan, the 1.6 spec and the Codex briefs are in `main`; the Notion has been read (and its formulas copied) without a change; Ahmed's rules for quota, roles and the Notion are recorded as A45; the ledger shows what the hour cost. Nothing is built that can be called working, and nothing is accepted.
+
+## 🔍 Confidence Level
+
+- **High** that the decisions above are what Ahmed wrote (quotes and times are from the chat log, read in full for 23:39 to 00:24).
+- **Qualified** for the counts about Notion and for the library details: they come from the threads' reports and studies and were not re-checked here.
+- **Qualified** for the three provisional readings (G3, shelves, columns).
+- **Unknown** for Codex's progress and for the weekly quota.
+- Not higher because this thread did not run anything, did not open the Notion, and saw the build thread only through its status line.
+
+## 📎 Where things live
+
+- Repository: `docs/plan/2026-11-07-version-plan.md`, `docs/plan/2026-11-08-v1-6-spec.md`, `docs/plan/2026-11-08-v1-6-codex-briefs.md`, `docs/plan/2026-11-07-dependency-licence-study.md`, A44 and A45, `docs/ledger/`, `docs/handoff/2026-11-07-handover-guide-for-mohamed.md`.
+- Project files (not in the repository): `notes/2026-11-07-notion-parity-study.md` (section 0 first), `notes/notion-survey/` (A to H), `notes/2026-11-07-ai-cli-action-list.md`, `notes/2026-11-07-notaya-whiteboard-study.md`, `notes/2026-11-07-notaya-dashboards-study.md`, `notes/model-choice-guide.md`. **Private, never committed:** `notes/notion-formulas/2026-11-08-formulas-exact.md`.
+- Published pages (private to Ahmed): the manual <https://claude.ai/artifact/K6HUfVdCJbuSFNCkiiCu3K>, the handover guide <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>, the usage ledger <https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY> (not rebuilt in this thread), and the Notion hub (Version Feature Board and Human Roadmap; updated when PR #67 merged, and 1.6 marked "in development" by the build thread).
+
+- Integration / review: on merge of this records PR (the coordinator's standing rule, A37 item 3)
+- Acceptance: pending (Ahmed)
+- Open dependency / next action: Ahmed's answers above; the 1.6 lanes
+
 ---
 
 <a id="session-45"></a>
