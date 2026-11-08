@@ -144,7 +144,13 @@ pub(crate) fn fire_core(s: &mut Session, _actor: &Actor, run: &mut Run, row_id: 
         }
     }
     for (name, actions) in jobs {
-        exec(s, run, &name, row_id, &actions, depth);
+        if let Err(e) = s.run_as(&Actor::Automation, |s| {
+            s.record_automation_run()?;
+            exec(s, run, &name, row_id, &actions, depth);
+            Ok(())
+        }) {
+            run.say(s, row_id, &name, format!("The automation did not run: {e}"));
+        }
     }
 }
 
@@ -374,16 +380,22 @@ pub(crate) fn tick_dates_at_core(s: &mut Session, _actor: &Actor, now: i64) {
     }
     for job in jobs {
         let mut run = Run::at(now);
-        for id in &job.rows {
-            exec(s, &mut run, &job.auto.name, id, &job.auto.actions, 0);
+        if let Err(e) = s.run_as(&Actor::Automation, |s| {
+            s.record_automation_run()?;
+            for id in &job.rows {
+                exec(s, &mut run, &job.auto.name, id, &job.auto.actions, 0);
+            }
+            if let Ok(mut db) = database(s, &job.db) {
+                if let Some(a) = db.automations.iter_mut().find(|a| a.id == job.auto.id) {
+                    a.last_run = now;
+                    let _ = s.put(Item::Database(db));
+                }
+            }
+            Ok(())
+        }) {
+            if let Some(id) = job.rows.first() { run.say(s, id, &job.auto.name, format!("The automation did not run: {e}")); }
         }
         finish(run);
-        if let Ok(mut db) = database(s, &job.db) {
-            if let Some(a) = db.automations.iter_mut().find(|a| a.id == job.auto.id) {
-                a.last_run = now;
-                let _ = s.put(Item::Database(db));
-            }
-        }
     }
 }
 

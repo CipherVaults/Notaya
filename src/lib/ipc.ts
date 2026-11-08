@@ -54,6 +54,17 @@ export interface CsvImportResult {
   notice: string | null;
 }
 
+export interface HistoryMeta {
+  pageId: string; versionId: string; at: number; actor: string; changeSet: string;
+  title: string; words: number; pictureIds: string[]; beforeAi: boolean;
+}
+export interface HistoryBody { title: string; content: string; text: string; icon: string; cover: string }
+export interface ActivityEntry {
+  seq: number; at: number; actor: string; changeSet: string; action: string;
+  items: { id: string; kind: string; titleAtTheTime: string }[];
+  counts: Record<string, number>; undoable: boolean;
+}
+
 export const api = {
   // Vault
   vaultStatus: () => invoke<VaultStatus>("vault_status"),
@@ -109,6 +120,16 @@ export const api = {
   getShellPrefs: () => invoke<ShellPrefs>("get_shell_prefs"),
   setShellPrefs: (prefs: Pick<ShellPrefs, "closeToTray" | "startWithWindows" | "startMinimized">) =>
     invoke<ShellPrefs>("set_shell_prefs", { prefs }),
+
+  // Encrypted history and activity; only display metadata crosses IPC for lists.
+  historyList: (pageId: string) => invoke<HistoryMeta[]>("history_list", { pageId }),
+  historyGet: (pageId: string, versionId: string) => invoke<HistoryBody>("history_get", { pageId, versionId }),
+  historySnapshot: (pageId: string) => invoke<void>("history_snapshot", { pageId }),
+  historyRestore: (pageId: string, versionId: string) => invoke<void>("history_restore", { pageId, versionId }),
+  activityList: (who?: string, before?: number) => invoke<ActivityEntry[]>("activity_list", { who, before, limit: 100 }),
+  activityVerify: () => invoke<void>("activity_verify"),
+  activityUndo: (changeSet: string) => invoke<{ restored: number; skipped: number }>("activity_undo", { changeSet }),
+  activityClear: (confirmation: string) => invoke<void>("activity_clear", { confirmation }),
 
   // Notes
   listNotes: () => invoke<NotesTree>("list_notes"),

@@ -1,3 +1,4 @@
+import { journalCommand } from "./journals";
 import { emit } from "./event";
 // Dev-only stand-in for @tauri-apps/api/core, used by `npm run mock` to preview
 // the UI in a plain browser with fake data. Never part of the shipped app.
@@ -153,6 +154,12 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
   if (!["list_notes", "search", "list_bin", "restore_bin_item", "empty_trash"].includes(cmd)) {
     const dbr = databaseCommand(cmd, args, tree, options);
     if (dbr !== NOT_HANDLED) return ok(dbr);
+  }
+  if (cmd.startsWith("history_") || cmd.startsWith("activity_")) {
+    return await journalCommand(cmd, args,
+      (id) => invokeCore("get_page", { id }),
+      async (id, body) => { await invokeCore("save_page", { id, ...body }); await invokeCore("set_page_look", { id, icon: body.icon, cover: body.cover }); },
+    ) as T;
   }
   switch (cmd) {
     case "vault_status":
@@ -566,8 +573,8 @@ function removeMockTree(root: string) {
 /** Revisions and an event after each mock write, matching the production signal contract. */
 export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   const value = await invokeCore<unknown>(cmd, args, options);
-  const write = /^(save_page|save_database|save_sticky|set_cells|create_row|delete_|trash_page|restore_|empty_trash|set_page_look|set_page_favorite|set_sticky_|close_sticky|open_sticky|hide_stickies|reorder)/.test(cmd);
-  const ids = (args.ids as string[] | undefined) ?? [String(args.id ?? args.rowId ?? (cmd === "save_database" ? JSON.parse(String(args.databaseJson)).id : ""))];
+  const write = /^(history_restore|activity_undo|save_page|save_database|save_sticky|set_cells|create_row|delete_|trash_page|restore_|empty_trash|set_page_look|set_page_favorite|set_sticky_|close_sticky|open_sticky|hide_stickies|reorder)/.test(cmd);
+  const ids = cmd === "activity_undo" ? ["p1"] : (args.ids as string[] | undefined) ?? [String(args.pageId ?? args.id ?? args.rowId ?? (cmd === "save_database" ? JSON.parse(String(args.databaseJson)).id : ""))];
   if (write) {
     for (const id of ids.filter(Boolean)) revs.set(id, (revs.get(id) ?? 0) + 1);
     await emit("items-changed", { ids: ids.filter(Boolean), kinds: ids.map((id) => String(mockItems().find((x) => x.id === id)?.kind ?? "page")), tree: true, by: "person", revs: Object.fromEntries(revs) });
