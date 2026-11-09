@@ -124,11 +124,29 @@ function Get-OwnedChildren {
       $known += [int]$child.ProcessId
       try {
         $p = Get-Process -Id $child.ProcessId -ErrorAction Stop
-        $owned += @{ id = $p.Id; started = $p.StartTime.ToUniversalTime().Ticks }
+        # Retain a handle to this exact descendant, rather than reopening its
+        # PID at cleanup (the OS could have reused that PID in the meantime).
+        $null = $p.Handle
+        $started = $null
+        try { if ($p.StartTime) { $started = $p.StartTime.ToUniversalTime().Ticks } } catch { }
+        $owned += @{ id = $p.Id; started = $started; process = $p }
       } catch { }
     }
   } while ($next.Count)
   return $owned
+}
+function Stop-OwnedStartupChild($Owned) {
+  $child = $Owned.process
+  if (-not $child -or $child.Id -ne $Owned.id) { return }
+  try {
+    if ($child.HasExited) { return }
+    $started = $null
+    try { if ($child.StartTime) { $started = $child.StartTime.ToUniversalTime().Ticks } } catch { }
+    if ($null -ne $started -and $null -ne $Owned.started -and $started -ne $Owned.started) { return }
+    # If StartTime is unreadable, the recorded ID plus retained process handle
+    # still refer to the owned child. Never find/stop a process by PID alone.
+    $child.Kill()
+  } catch { Write-Warning 'Could not stop an owned child; the listener check still decides cleanup success.' }
 }
 
 $appProcess = $null; $second = $null; $failed = $false
@@ -173,8 +191,7 @@ try {
   }
   if ($second -and -not $second.HasExited) { Stop-Process -Id $second.Id -Force }
   foreach ($owned in $ownedChildren) {
-    $child = Get-Process -Id $owned.id -ErrorAction SilentlyContinue
-    if ($child -and $child.StartTime.ToUniversalTime().Ticks -eq $owned.started) { Stop-Process -Id $child.Id -Force -ErrorAction SilentlyContinue }
+    Stop-OwnedStartupChild $owned
   }
   for ($i = 0; $i -lt 20 -and (Get-ListenerCount $Port) -gt 0; $i++) { Start-Sleep -Milliseconds 250 }
   $listeners = Get-ListenerCount $Port

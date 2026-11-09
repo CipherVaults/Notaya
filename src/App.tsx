@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "motion/react";
 import { toast, Toaster } from "sonner";
@@ -12,41 +12,30 @@ import TitleBar from "@/components/TitleBar";
 import UnlockScreen from "@/features/unlock/UnlockScreen";
 import Shell from "@/components/Shell";
 import { pollNotices } from "@/features/database/notices";
-
-// A hidden WebView can defer animation frames indefinitely. Prefer the first
-// paint, but never make startup (including ready-to-flush) depend on visibility.
-export function scheduleWindowReady(ready: () => void): () => void {
-  let done = false;
-  let frame = 0;
-  const cancel = () => {
-    done = true;
-    window.clearTimeout(timer);
-    window.cancelAnimationFrame(frame);
-  };
-  const finish = () => {
-    if (done) return;
-    cancel();
-    ready();
-  };
-  const timer = window.setTimeout(finish, 1000);
-  frame = window.requestAnimationFrame(() => {
-    frame = window.requestAnimationFrame(finish);
-  });
-  return cancel;
-}
+import { scheduleWindowReady, startupMark } from "@/lib/startup";
 
 export default function App() {
   const status = useApp((s) => s.status);
   const refreshStatus = useApp((s) => s.refreshStatus);
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
   const hasStatus = status !== null;
+  const [lockListenerReady, setLockListenerReady] = useState(false);
+  const readySent = useRef(false);
 
   // Run after React has committed the status-dependent screen. Rust still
   // decides whether to show it: --minimized stays hidden while a tray exists.
-  useEffect(() => {
-    if (!hasStatus) return;
-    return scheduleWindowReady(() => { void api.windowReady(); });
-  }, [hasStatus]);
+  useLayoutEffect(() => {
+    startupMark("effectRan", true);
+    if (!hasStatus || !lockListenerReady || readySent.current) return;
+    startupMark("screenCommittedAtMs");
+    startupMark("microtaskScheduled", true);
+    const cancel = scheduleWindowReady(() => {
+      readySent.current = true;
+      startupMark("microtaskFired", true);
+      void api.windowReady();
+    });
+    return () => { startupMark("readyCleanup", true); cancel(); };
+  }, [hasStatus, lockListenerReady]);
 
   // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
   const unlocked = status?.unlocked ?? false;
@@ -77,6 +66,8 @@ export default function App() {
   }, [unlocked]);
 
   useEffect(() => {
+    let active = true;
+    startupMark("startupEffectRan", true);
     // A message saved just before a reload (for example a restore that failed): show it once.
     try {
       const notice = sessionStorage.getItem("notaya.notice");
@@ -101,9 +92,10 @@ export default function App() {
         .catch(() => {});
     showNotice();
 
-    applyAppearance(cachedAppearance(), true).finally(() => {
-      void refreshStatus();
-    });
+    // CSS is applied synchronously. Native backdrop IPC must not hold status
+    // initialization hostage while the window is hidden.
+    startupMark("appearanceStartedAtMs");
+    void applyAppearance(cachedAppearance(), true).finally(() => startupMark("appearanceCompletedAtMs"));
 
     // Rust tells us when the vault locks (idle, Win+L, sleep, USB removed...).
     // Reloading discards every decrypted value held by the UI.
@@ -129,6 +121,10 @@ export default function App() {
         await api.flushDone(event.payload).catch(() => {});
       }
     });
+    void Promise.all([unlisten, unlistenLocking]).then(() => {
+      startupMark("lockListenerReadyAtMs");
+      if (active) setLockListenerReady(true);
+    });
     // The backend can also send a notice while the app is running.
     // The payload is ignored on purpose: taking the stored copy shows the message once and clears it.
     const unlistenNotice = listen<string>("app-notice", () => {
@@ -136,7 +132,9 @@ export default function App() {
     });
     // A notice set before the listener existed (while the window was reloading) would be missed: look once more now.
     unlistenNotice.then(() => showNotice());
+    void refreshStatus();
     return () => {
+      active = false;
       unlistenNotice.then((f) => f());
       unlisten.then((f) => f());
       unlistenLocking.then((f) => f());
