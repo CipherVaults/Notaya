@@ -713,6 +713,7 @@ pub(crate) fn delete_page_core(s: &mut Session, _actor: &Actor, id: String, appr
 
 #[cfg(test)]
 pub(crate) fn test_delete_page_core(s: &mut Session, actor: &Actor, id: String) -> Result<NotesTree> {
+    native_confirm::delete_target(s, 0, Delete::One(id.clone()))?;
     let mut approval = native_confirm::test_delete(s, Delete::One(id.clone()));
     delete_page_core(s, actor, id, &mut approval)
 }
@@ -1537,7 +1538,7 @@ mod native_delete_tests {
     }
     #[test]
     fn changed_title_subtree_or_bin_set_invalidates_approval_with_no_delete() {
-        for change in ["title","child","bin"] {
+        for change in ["title","child","bin","restore"] {
             let state=fixture();trash_page_person(&state,PAGE.into()).unwrap();
             let after_change=std::sync::Arc::new(Mutex::new(None));
             let saved=after_change.clone();let weak=std::sync::Arc::downgrade(&state);
@@ -1549,7 +1550,8 @@ mod native_delete_tests {
                     if change=="title" { let mut p=page(s,PAGE)?;p.title="Changed".into();s.put(Item::Page(p))?; }
                     else if change=="child" {
                         let mut p=page(s,PAGE)?;p.id=new_id();p.parent=PAGE.into();s.put(Item::Page(p))?;
-                    } else { crate::commands::stickies::delete_sticky_core(s,&Actor::Person,STICKY.into())?; }
+                    } else if change=="restore" { restore_page_core(s,&Actor::Person,PAGE.into())?; }
+                    else { crate::commands::stickies::delete_sticky_core(s,&Actor::Person,STICKY.into())?; }
                     Ok(())
                 }).unwrap();
                 *saved.lock().unwrap()=Some(snapshot(&state));true

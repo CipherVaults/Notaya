@@ -5,7 +5,7 @@ use crate::{
     state::AppState,
     vault::Session,
 };
-use std::sync::{Arc, Mutex, atomic::Ordering};
+use std::sync::{atomic::Ordering, Arc, Mutex};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
@@ -133,20 +133,32 @@ impl Target {
     fn prompt(&self) -> NativePrompt {
         match &self.kind {
             Kind::Delete { request, items, titles } => {
-                let title = if matches!(request, Delete::One(_)) { "Notaya — Delete for good?" }
-                    else { "Notaya — Empty the bin?" };
-                let mut body = format!("Permanently delete {} {} and their history? This cannot be undone.", items.len(), if items.len()==1 { "item" } else { "items" });
-                for title in titles { body.push_str(&format!("\n• {title}")); }
+                let title = if matches!(request, Delete::One(_)) {
+                    "Notaya — Delete for good?"
+                } else {
+                    "Notaya — Empty the bin?"
+                };
+                let mut body = format!(
+                    "Permanently delete {} {} and their history? This cannot be undone.",
+                    items.len(), if items.len() == 1 { "item" } else { "items" }
+                );
+                for title in titles {
+                    body.push_str(&format!("\n• {title}"));
+                }
                 if items.len() > titles.len() {
-                    let more=items.len()-titles.len();
-                    body.push_str(&format!("\n…and {more} more {}.",if more==1 {"item"}else{"items"}));
+                    let more = items.len() - titles.len();
+                    body.push_str(&format!("\n…and {more} more {}.", if more == 1 { "item" } else { "items" }));
                 }
                 NativePrompt { title, body }
             }
-            Kind::Enable { .. } => NativePrompt { title: "Notaya — Turn on AI access?",
-                body: "Turn on AI access? Paired AIs will be able to connect to your notes with the access you give them.".into() },
-            Kind::Pair { client, .. } => NativePrompt { title: "Notaya — Connect an AI?",
-                body: format!("Allow “{}” to connect to Notaya? It starts at Look and can read notebooks you have not hidden. Allow only a connection you started yourself.", label(client)) },
+            Kind::Enable { .. } => NativePrompt {
+                title: "Notaya — Turn on AI access?",
+                body: "Turn on AI access? Paired AIs will be able to connect to your notes with the access you give them.".into(),
+            },
+            Kind::Pair { client, .. } => NativePrompt {
+                title: "Notaya — Connect an AI?",
+                body: format!("Allow “{}” to connect to Notaya? It starts at Look and can read notebooks you have not hidden. Allow only a connection you started yourself.", label(client)),
+            },
         }
     }
 }
@@ -260,7 +272,9 @@ impl Approval {
     pub(crate) fn delete(&mut self, s: &Session, request: Delete) -> Result<Deletion> {
         let expected = self.target.take();
         let epoch = expected.as_ref().map_or(0, |t| t.epoch);
-        let current = delete_target(s, epoch, request)?;
+        // Removed/restored targets are stale approvals too, rather than a new
+        // invalid-input error after a person already answered the question.
+        let current = delete_target(s, epoch, request).map_err(|_| cancelled())?;
         let ids = match &current.kind {
             Kind::Delete { items, .. } => items.iter().map(|(id, _)| id.clone()).collect(),
             _ => unreachable!(),
@@ -300,9 +314,9 @@ pub(crate) fn check_epoch(state: &AppState, expected: u64) -> Result<()> {
 pub(crate) fn test_delete(s: &Session, request: Delete) -> Approval {
     let approvals = Approvals::default();
     approvals.inject(TestApprover(true));
-    delete_target(s, 0, request)
-        .map(|t| approvals.ask(t).unwrap())
-        .unwrap_or(Approval { target: None })
+    approvals
+        .ask(delete_target(s, 0, request).unwrap())
+        .unwrap()
 }
 #[cfg(test)]
 pub(crate) struct TestApprover(pub bool);
@@ -316,7 +330,7 @@ impl NativeApprover for TestApprover {
 #[cfg(test)]
 pub(crate) mod test_support {
     use super::*;
-    use serde_json::{Value, json};
+    use serde_json::{json, Value};
     pub const PAGE: &str = "20000000000000000000000000000003";
     pub const SECTION: &str = "20000000000000000000000000000002";
     pub const STICKY: &str = "20000000000000000000000000000004";
@@ -373,11 +387,9 @@ mod tests {
                     crate::commands::notes::trash_page_core(s, &crate::actions::Actor::Person, id)?;
                 }
                 let prompt = delete_target(s, 0, Delete::Empty)?.prompt();
-                assert!(
-                    prompt
-                        .body
-                        .starts_with("Permanently delete 9 items and their history?")
-                );
+                assert!(prompt
+                    .body
+                    .starts_with("Permanently delete 9 items and their history?"));
                 assert_eq!(
                     prompt.body.lines().filter(|s| s.starts_with('•')).count(),
                     5
@@ -397,11 +409,9 @@ mod tests {
                 approval.consume(enable_target(s, 0))?;
                 assert!(approval.consume(enable_target(s, 0)).is_err());
                 let mut approval = state.ai.native.ask(enable_target(s, 0))?;
-                assert!(
-                    approval
-                        .consume(pair_target(s, 0, "id".into(), "client".into()))
-                        .is_err()
-                );
+                assert!(approval
+                    .consume(pair_target(s, 0, "id".into(), "client".into()))
+                    .is_err());
                 assert!(approval.consume(enable_target(s, 0)).is_err());
                 Ok(())
             })

@@ -86,6 +86,21 @@ pub(crate) fn lexical(path: &str) -> Result<String> {
     Ok(p)
 }
 
+/// Only a reparse point read by Rust may supply an extended local drive name.
+/// Caller-supplied extended paths still go through lexical() unchanged.
+#[cfg(any(windows, test))]
+fn checked_link_name(raw: &str) -> Result<String> {
+    let raw = if raw.starts_with("\\\\?\\")
+        && raw.as_bytes().get(5) == Some(&b':')
+        && raw.as_bytes()[4].is_ascii_alphabetic()
+    {
+        &raw[4..]
+    } else {
+        raw
+    };
+    lexical(raw)
+}
+
 #[cfg(windows)]
 mod imp {
     use super::*;
@@ -95,11 +110,11 @@ mod imp {
         path::PathBuf,
     };
     use windows::{
-        Win32::Storage::FileSystem::{
-            FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
-            FILE_SHARE_READ, GetDriveTypeW, QueryDosDeviceW,
-        },
         core::PCWSTR,
+        Win32::Storage::FileSystem::{
+            GetDriveTypeW, QueryDosDeviceW, FILE_ATTRIBUTE_REPARSE_POINT,
+            FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_READ,
+        },
     };
 
     fn wide(s: &str) -> Vec<u16> {
@@ -151,16 +166,7 @@ mod imp {
         // Windows returns local junction destinations as \\?\C:\... . Only
         // this internally obtained drive form is unwrapped; UNC/Volume/device
         // forms still fail lexical(), before any target access.
-        let raw = if raw.as_bytes().get(5) == Some(&b':')
-            && raw.starts_with("\\\\?\\")
-            && raw.as_bytes()[4].is_ascii_alphabetic()
-        {
-            &raw[4..]
-        } else {
-            raw
-        };
-        let checked = lexical(raw)?;
-        let target = PathBuf::from(checked);
+        let target = PathBuf::from(checked_link_name(raw)?);
         Ok(if target.is_absolute() {
             target
         } else {
@@ -180,8 +186,8 @@ mod imp {
             if index == 0 {
                 continue;
             } // C: is not a root until the next component.
-            // Do not traverse reparse points. Denying write/delete sharing pins
-            // every inspected ancestor against rename and reparse retargeting.
+              // Do not traverse reparse points. Denying write/delete sharing pins
+              // every inspected ancestor against rename and reparse retargeting.
             #[cfg(test)]
             OPENS.set(OPENS.get() + 1);
             let file = OpenOptions::new()
@@ -286,9 +292,27 @@ mod tests {
             assert!(local_drive(r"\Device\HarddiskVolume1", kind).is_ok());
         }
     }
+    #[test]
+    fn reparse_names_are_checked_before_their_targets_can_be_opened() {
+        for raw in [
+            r"\\server\share\key",
+            r"\\?\UNC\server\share\key",
+            r"\\?\Volume{untrusted}\key",
+            r"\\.\NUL",
+            r"\??\UNC\server\key",
+            r"..\NUL.txt",
+        ] {
+            assert_eq!(checked_link_name(raw).unwrap_err().to_string(), LOCAL_ONLY);
+        }
+        assert_eq!(
+            checked_link_name(r"\\?\D:\folder\key").unwrap(),
+            r"D:\folder\key"
+        );
+        assert!(checked_link_name(r"..\ordinary\key").is_ok());
+    }
     #[cfg(windows)]
     #[test]
-    fn local_file_and_junction_work_and_junction_cycle_is_bounded() {
+    fn local_files_relative_paths_mixed_slashes_and_trailing_aliases_work() {
         let root =
             std::path::PathBuf::from(std::env::var_os("NOTAYA_HOME").expect("throwaway home"))
                 .join(format!("sf2-keyfile-{}", crate::model::new_id()));
@@ -301,6 +325,27 @@ mod tests {
             *crate::crypto::keyfile_digest(&key).unwrap(),
             crate::crypto::sha256(&bytes)
         );
+        for path in [
+            target.join("key.bin. "),
+            target.join("..\\ordinary\\key.bin"),
+            std::path::PathBuf::from(key.to_str().unwrap().replace('\\', "/")),
+        ] {
+            assert_eq!(
+                *crate::crypto::keyfile_digest(&path).unwrap(),
+                crate::crypto::sha256(&bytes)
+            );
+        }
+    }
+    #[cfg(windows)]
+    #[test]
+    fn local_junction_and_junction_cycle_where_creatable() {
+        let root =
+            std::path::PathBuf::from(std::env::var_os("NOTAYA_HOME").expect("throwaway home"))
+                .join(format!("sf2-junction-{}", crate::model::new_id()));
+        let target = root.join("ordinary");
+        std::fs::create_dir_all(&target).unwrap();
+        let bytes = crate::crypto::random_bytes::<64>();
+        std::fs::write(target.join("key.bin"), bytes).unwrap();
         let junction = root.join("junction");
         let made = std::process::Command::new("cmd.exe")
             .args(["/D", "/C", "mklink", "/J"])
@@ -308,14 +353,19 @@ mod tests {
             .arg(&target)
             .output()
             .unwrap();
-        assert!(made.status.success(), "could not create throwaway junction");
+        if !made.status.success() {
+            // The task explicitly requests junction checks where creatable.
+            // Some sandbox/volume combinations refuse junction creation.
+            eprintln!(
+                "NOT RUN: junction read/cycle checks; mklink exit {:?}: {}{}",
+                made.status.code(),
+                String::from_utf8_lossy(&made.stdout),
+                String::from_utf8_lossy(&made.stderr)
+            );
+            return;
+        }
         assert_eq!(
             *crate::crypto::keyfile_digest(&junction.join("key.bin")).unwrap(),
-            crate::crypto::sha256(&bytes)
-        );
-        let alias = target.join("key.bin. ");
-        assert_eq!(
-            *crate::crypto::keyfile_digest(&alias).unwrap(),
             crate::crypto::sha256(&bytes)
         );
         let cycle = root.join("cycle");
