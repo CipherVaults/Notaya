@@ -114,6 +114,7 @@ impl ChangeQueue {
 }
 
 pub struct AppState {
+    pub ai: crate::ai::Runtime,
     pub paths: Paths,
     change_sink: Mutex<Option<ChangeSink>>,
     changes: Mutex<ChangeQueue>,
@@ -158,6 +159,7 @@ fn guard<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 impl AppState {
     pub fn new(paths: Paths) -> Self {
         AppState {
+            ai: crate::ai::Runtime::default(),
             paths,
             change_sink: Mutex::new(None),
             changes: Mutex::new(ChangeQueue::default()),
@@ -258,6 +260,17 @@ impl AppState {
     }
 
     pub fn set_session(&self, mut session: Session) {
+        // Stop lasts until Resume AI or a new app process, not across restarts.
+        if !self.ai.started.swap(true, Ordering::SeqCst) {
+            let mut settings=session.settings();
+            if settings.ai.paused {
+                settings.ai.paused=false;
+                // Fail closed if the transient Stop flag cannot be reset.
+                if session.put(crate::model::Item::Settings(settings)).is_err() {
+                    self.ai.started.store(false, Ordering::SeqCst);
+                }
+            }
+        }
         session.drain_changes(); // creation/unlock is followed by a complete window load
         let mut current = guard(&self.session);
         guard(&self.changes).new_session();
@@ -278,9 +291,11 @@ impl AppState {
     }
 
     pub fn take_session(&self) -> Option<Session> {
+        self.ai.invalidate();
         // Messages of automations hold row titles: they do not outlive the unlocked session.
         crate::commands::automation::clear_notices();
         let mut session = guard(&self.session);
+        if let Some(s) = session.as_mut() { self.ai.flush_reads(s, None); }
         guard(&self.changes).new_session();
         session.take()
     }
@@ -293,9 +308,13 @@ impl AppState {
     }
 
     pub fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
+        self.with_actor(&crate::actions::Actor::Person, f)
+    }
+
+    pub fn with_actor<T>(&self, actor: &crate::actions::Actor, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
         let mut session = guard(&self.session);
         let s = session.as_mut().ok_or(Error::Locked)?;
-        let result = s.run_as(&crate::actions::Actor::Person, f);
+        let result = s.run_as(actor, f);
         // Some old cores perform several transactions. Publish durable partial writes even
         // if a later step failed; they must never leak into the next command's signal.
         if let Some(changes) = s.drain_changes() {

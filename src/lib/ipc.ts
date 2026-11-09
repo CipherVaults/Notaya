@@ -54,6 +54,70 @@ export interface CsvImportResult {
   notice: string | null;
 }
 
+// C5 window contract. These DTOs deliberately contain no pairing token or hash.
+// UI answers are window-only commands; none belongs in the bridge action registry.
+export type AiLevel = "look" | "edit" | "full";
+export interface AiPairing {
+  id: string;
+  name: string;
+  level: AiLevel;
+  created: number;
+  lastUsed: number | null;
+}
+export interface AiStatus {
+  enabled: boolean;
+  paused: boolean;
+  pairings: AiPairing[];
+  hiddenNotebooks: string[];
+  bigChangeConfirm: boolean;
+  bigChangeItems: number;
+}
+export interface AiPairingEvent {
+  id: string;
+  kind: "pairing";
+  details: { client: string };
+  word: null;
+}
+export interface AiConfirmEvent {
+  id: string;
+  kind: "confirm";
+  details: { client: string; action: string; items: { id: string; title?: string }[] };
+  word: string | null;
+}
+export interface AiActivityEvent {
+  pairingId: string;
+  name: string;
+  at: number;
+  items: string[];
+}
+// Window-local presentation state, assembled from status plus C5 events.
+// C5 enforces its own five-minute timeout; the local deadline only disables Allow.
+export interface AiPairingRequest {
+  id: string;
+  name: string;
+  expiresAt: number;
+}
+export interface AiConfirmRequest {
+  id: string;
+  pairingName: string;
+  summary: string;
+  items: string[];
+  kind: "ask" | "strong";
+  word: string | null; // random challenge supplied and checked by the core
+  expiresAt: number;
+}
+export interface AiActivity {
+  pairingId: string;
+  name: string;
+  lastActiveAt: number;
+  claims: string[];
+}
+export interface AiState extends AiStatus {
+  pairingRequests: AiPairingRequest[];
+  confirmRequests: AiConfirmRequest[];
+  activity: AiActivity[];
+}
+
 export interface HistoryMeta {
   pageId: string; versionId: string; at: number; actor: string; changeSet: string;
   title: string; words: number; pictureIds: string[]; beforeAi: boolean;
@@ -66,6 +130,18 @@ export interface ActivityEntry {
 }
 
 export const api = {
+  aiGetStatus: () => invoke<AiStatus>("ai_get_status"),
+  aiSetEnabled: (enabled: boolean, confirmation: string = "") =>
+    invoke<void>("ai_set_enabled", { enabled, confirmation }),
+  aiSetLevel: (pairingId: string, level: AiLevel) => invoke<void>("ai_set_level", { pairingId, level }),
+  aiRemovePairing: (pairingId: string) => invoke<void>("ai_remove_pairing", { pairingId }),
+  aiSetHidden: (notebookIds: string[]) => invoke<void>("ai_set_hidden", { notebookIds }),
+  aiSetBigChange: (enabled: boolean, items?: number) => invoke<void>("ai_set_big_change", { enabled, items }),
+  aiPairingAnswer: (id: string, allow: boolean) => invoke<void>("ai_pair_answer", { id, allow }),
+  aiConfirmAnswer: (id: string, allow: boolean, word: string | null = null) =>
+    invoke<void>("ai_confirm_answer", { id, allow, word }),
+  aiPause: () => invoke<void>("ai_pause"),
+  aiResume: () => invoke<void>("ai_resume"),
   // Vault
   vaultStatus: () => invoke<VaultStatus>("vault_status"),
   // Start new notes (no master password) when there is no vault but earlier copies exist

@@ -7,6 +7,7 @@ import { rowExportNotebook, useApp } from "@/store/app";
 import { Kbd } from "./ui";
 import Logo from "./Logo";
 import { openExport } from "@/features/notes/ExportDialog";
+import AiMarker from "@/features/ai/AiMarker";
 
 const win = getCurrentWindow();
 
@@ -67,6 +68,8 @@ export default function TitleBar() {
           Notaya
         </span>
       </div>
+
+      {unlocked && <AiMarker />}
 
       {unlocked && (
         <button

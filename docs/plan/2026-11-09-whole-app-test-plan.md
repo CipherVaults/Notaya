@@ -509,3 +509,188 @@ Use same reviewed release exe/hash, PC, power state, viewport/theme, security mo
 Phase 2 records one row per numbered ID in a separate coordinator-owned execution artifact: `ID | exact commit/dirty hashes | exe+bridge hashes | fixture/home | KIND/executor | UTC | passed/failed/not run | observed vs expected | evidence path | defect or blocking reason`. If a row has parameter variants, keep each observation: it passes only when all required variants pass. Report unsupported/inaccessible cases as not run or a named limitation, never quietly omit them. Summaries count each ID once by its assigned KIND. Source inventory above does not supply runtime evidence.
 
 Phase-1 verification is document-only: unique contiguous IDs, required fields/KINDs, counts by area/KIND, local source/command paths or explicitly labelled absent/separate refs, no changed app code, one W claims row and preservation of pre-existing inventory/staged work. No build/unit/browser/real-exe/audit/performance test was run. Claude reviews this produced plan, integrates C5/E, arranges the PC/manual run and owns the records/commit. Stop before phase 2.
+
+<!-- WHOLE_APP_ROUTING_START -->
+## Phase-2 slice 1: execution routing and scaffolding
+
+Dated 2026-11-09T03:24:24.999Z (system clock), Ahmed (AE0101), Gaming-PC. The current phase-2 instruction authorizes only tools/whole-app/* and this plan/results sheet, no app edits or execution here. Inspected W HEAD 04fcb96; Claude's integration of main 5077183 is staged, with no unresolved conflicts at orientation. The phase-1 facts above remain historical. No fetch, network, installs, Git writes, browser or real exe ran in this scaffolding session. Claude owns commits, authority/session/usage records and runtime execution. User-message time and quota receipts were not supplied.
+
+The PC runners use fresh GUID homes in D:\Notaya Tests\whole-app and unique archives in D:\Notaya-lanes\out\whole-app. They write fixed latest JSON files there. Both home variables and child TEMP/TMP/profile are isolated. Installed/portable path probes deliberately clear both home overrides for the app child and use only their disposable LocalAppData; no real profile or installation is used. All processes are owned by private kill-on-close Windows jobs. Port availability, teardown and unset WebView arguments are recorded (FI-01). Existing Notaya/Cipherleaf makes B/performance refuse launch. Dependencies/toolchain must already exist; Cargo is offline/locked. No downloads are attempted.
+
+Group A inventories all executable dev-mock CJS/MJS/MTS suites, including integrated AI scripts, and identifies the two consumer-only helpers. Its adapter records original hashes, infrastructure substitutions and executed CJS sources; selectors/assertions stay unchanged. It supplies the installed Playwright/Chrome, relocates output/temp and loopback ports, and transpiles the calculator into external temp. The views harness uses its own free port. Rust discovery precedes every listed module-prefix area; zero discovery/passing tests is not run. Bridge normal/native ignored tests and integrated AI modules are separate supporting suites. Legacy suite-to-ID mapping is supporting evidence; only W126 currently has an explicit complete A mapping. Most existing suites do not cover every variant of their plan row. Script success cannot silently pass the other A rows.
+
+Group B slice 1 runs optional-security p1-p5, restoreflow, independent page/sticky/close lockflow fixtures, and isolated installed/portable first/reopen probes. It adds exit/assertion guards to copies of legacy JS, bounds every phase, preserves fixtures and logs, and performs actual quit/reopen/readback. It does not run the historical password-manager tests (sources absent, feature removed). Existing tray script mixes tray checks with actual startup-registry changes and is deferred to a clean-user/session slice. No AI consent is answered through injected IPC.
+
+Performance defaults to blank startup plus 1,000 fake notes, a 1,000-block mixed text/list/code/RTL page and a 1,000-row database through the real app commands; five warm reopen/probe samples, median/range, first-window time, seven backend view-query times and sampled process-tree memory. Increase sizes explicitly after inspecting smaller fixtures. No performance threshold or zeroisation claim; protected unlock, richer long-page blocks, full view rendering, backup/restore and ten multiwindow cycles remain later measurements.
+
+Routing below covers all 166 B checks. **partial unattended** means the named suite runs but does not complete every plan variant. **later unattended harness** means scriptable work for a later slice, currently not run. **not unattended** means this runner cannot complete it without actual native-dialog/person/OS/AI-consent work or a reviewed fixture/fault/transport harness that it does not supply; this is a current execution limitation, not a claim automation can never exist. All unimplemented checks stay visible as not run in JSON/results. C's 27 checks still need a person.
+
+| ID | Feature | Slice-1 route | Suite or remaining work |
+|---|---|---|---|
+| W001 | First start and security-off notes | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W003 | Notebook ordering | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W004 | Sections | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W005 | Pages and title editing | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W006 | Nested sub-pages | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W007 | Page reorder/move | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W008 | Database move/drag in tree (1.6 A) | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W014 | Reopen last place (1.6 A) | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W021 | Autosave and save state | partial unattended | lock-page, close-page |
+| W036 | Picture acquisition/validation | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W039 | Web link validation | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W047 | Editor undo/redo and exact text | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W048 | Page icon/cover | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W050 | Dormant columns/comments compatibility | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W051 | Database creation/first-use backup | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W063 | Text property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W064 | Title property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W065 | Number property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W066 | Select property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W067 | Multi-select property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W068 | Status property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W069 | Date property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W070 | Person property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W071 | Files property | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W072 | Checkbox property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W073 | URL property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W074 | Email property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W075 | Phone property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W076 | Formula property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W077 | Relation property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W078 | Rollup property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W079 | Created time property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W080 | Created by property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W081 | Last edited time property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W082 | Last edited by property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W083 | ID property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W084 | Place property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W085 | Button property | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W086 | Property schema lifecycle | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W087 | Filters | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W088 | Sorts | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W089 | Groups/subgroups | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W090 | Footer calculations | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W091 | Row creation/duplicate/reorder | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W093 | Row templates | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W094 | Template legacy key safety | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W095 | Default row template | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W096 | Recurring row templates | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W097 | Sub-items | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W098 | Dependencies | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W099 | Database lock | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W101 | Database undo/redo | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W102 | Automation: row added | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W103 | Automation: property changed | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W104 | Automation: date arrives | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W105 | Automation limits/trash | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W106 | Date reminders | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W107 | CSV database creation/import | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W108 | CSV export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W109 | Database Markdown export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W110 | Database HTML export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W111 | Database Word export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W112 | Database PDF export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W113 | Database validation/size caps | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W114 | Fine-grained database saves (1.6 C4) | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W115 | Sticky creation/content | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W117 | Sticky styles | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W118 | Sticky geometry/on-top | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W120 | Sticky delete/bulk bin | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W121 | Open all/Close all | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W122 | Sticky save-before-lock | partial unattended | lock-sticky |
+| W123 | Calculator windows | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W127 | Shared calculation history | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W128 | History cap/clear | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W129 | Calculator Copy | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W132 | Global search | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W133 | Binned items excluded | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W135 | Recent searches | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W136 | Locked search | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W138 | Markdown importer | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W139 | Plain-text importer | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W140 | HTML importer | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W141 | Word importer | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W142 | PDF importer | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W143 | Folder/mixed-files import | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W144 | ZIP/nested Notion parts | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W145 | Notion Markdown+CSV databases | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W146 | Notion HTML plus CSV merge | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W147 | Obsidian/other Markdown folders | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W149 | Import progress/cancel | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W150 | Import bounds/hostile source | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W151 | Import report/original integrity | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W152 | Arabic/Hebrew importer fidelity | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W154 | Export scope/Save dialog | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W155 | Markdown export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W156 | HTML export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W157 | Word export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W158 | PDF export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W159 | Separate files/ZIP | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W160 | Inline database export fix (1.6 B) | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W161 | Database scope in notebook/section export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W162 | MD/HTML/DOCX round trips | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W163 | PDF round trip | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W164 | Internal-link round trip | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W165 | Export validation/failure | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W166 | Arabic/Hebrew round trips | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W168 | Security off | partial unattended | optional-security |
+| W169 | Enable security/master strength | partial unattended | optional-security |
+| W170 | Disable security | partial unattended | optional-security |
+| W171 | Unlock and guessing delay | partial unattended | optional-security |
+| W172 | Explicit lock | partial unattended | lock-page, lock-sticky |
+| W177 | Lock on minimize | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W178 | Keyfile create/pick/require | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W179 | Change master/re-key | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W180 | Re-key atomic failure | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W181 | Old unprotected-copy cleanup | partial unattended | optional-security |
+| W183 | Tamper/truncation detection | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W184 | Lock flush timeout/failure | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W185 | UI/IPC/security boundary | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W186 | Manual backup | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W187 | Lock/quit backup rotation | partial unattended | optional-security, restore-flow |
+| W188 | Hourly open-vault backup | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W189 | Predelete safety backup | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W190 | Backup failure/retry | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W191 | Backup list while locked/unlocked | partial unattended | restore-flow |
+| W192 | Restore from listed backup | partial unattended | restore-flow |
+| W193 | Native picked-file restore | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W194 | Restore validation/security downgrade | partial unattended | optional-security, restore-flow |
+| W195 | Restore rename/crash rollback | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W196 | Start over/recover | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W197 | Cipherleaf `.clf` open/upgrade | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W198 | 1.5.1 compatibility (spec G3) | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W206 | Accent/font/text size | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W207 | Width/density/layout settings | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W209 | Lock backdrop | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W210 | Default sticky colour | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W211 | Error log | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W213 | Settings persistence/cache hygiene | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W215 | Close to tray / quit | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W217 | Installed/portable paths and first start | partial unattended | installed-paths |
+| W218 | Import portable notes | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W219 | Single instance/legacy guard | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W221 | Start-with-Windows setting | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W225 | Startup failure reporting | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W226 | Recycle-bin groups/restore | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W227 | Permanent delete/empty bin | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W228 | Bin boundaries/attachment retention | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W230 | Edit leases/person wins | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W232 | Block operations/revision guard | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W233 | History snapshots/preview | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W234 | Restore page version | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W235 | History retention/size cap | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W236 | Activity list/filter/pagination | later unattended harness | Can be scripted on disposable data; no complete assertion driver for this row in slice 1. |
+| W237 | Activity integrity | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W238 | Undo activity change set | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W239 | Clear/prune activity | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W240 | Journal re-key/backup/restore | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W241 | Action registry and permissions matrix | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W242 | AI access Off/On and pipe lifecycle | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W243 | Pairing/reconnect/revoke | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W244 | Levels/hidden notebooks | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W245 | Ask/Strong/big-change confirms | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W246 | Live AI read/write fidelity | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W247 | AI Stop/resume/lock concurrency | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W248 | Bridge stdio and native pipe trust | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+| W249 | AI exchange import/export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
+<!-- WHOLE_APP_ROUTING_END -->

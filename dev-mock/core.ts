@@ -3,6 +3,7 @@ import { emit } from "./event";
 // Dev-only stand-in for @tauri-apps/api/core, used by `npm run mock` to preview
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
+import { aiCommand, aiLock } from "./ai";
 import { databaseCommand, databaseMetas, reorderDatabases, NOT_HANDLED, coordinationItems, removeCoordinatedItems } from "./database";
 
 const params = new URLSearchParams(location.search);
@@ -151,6 +152,7 @@ type Args = Record<string, unknown>;
 async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
+  if (cmd.startsWith("ai_")) return ok(aiCommand(cmd, args));
   if (!["list_notes", "search", "list_bin", "restore_bin_item", "restore_page", "delete_page", "empty_trash"].includes(cmd)) {
     const dbr = databaseCommand(cmd, args, tree, options);
     if (dbr !== NOT_HANDLED) return ok(dbr);
@@ -196,6 +198,7 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
     case "unlock_vault":
       if (args.password === "wrong") throw "Wrong master password or keyfile for this Notaya vault.";
       unlocked = true;
+      aiLock(false);
       return ok(null);
     case "start_over":
       exists = false;
@@ -203,6 +206,7 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
     case "lock_vault":
       if (!securityOn) return ok(null);
       unlocked = false;
+      aiLock(true);
       return ok(null);
     case "list_backups":
       return ok([
@@ -233,7 +237,7 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
       return ok(structuredClone(settings));
     case "save_settings": {
       const lastPlace = settings.lastPlace;
-      Object.assign(settings, args.settings as Args);
+      Object.assign(settings, Object.fromEntries(Object.entries(args.settings as Args).filter(([key]) => key !== "ai")));
       settings.lastPlace = lastPlace;
       return ok(structuredClone(settings));
     }
