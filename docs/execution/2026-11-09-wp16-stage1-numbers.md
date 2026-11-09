@@ -1,8 +1,8 @@
 # WP-16 Stage 1: P1–P5 measurements and hand-back
 
-Who and where: Ahmed (`AE0101`), Codex on Gaming-PC in the Windows sandbox, lane `AE0101/v1-6-p1`. Claude owns commits, pushes and the independent review. Result: in progress, uncommitted.
+Who and where: Ahmed (`AE0101`), Codex on Gaming-PC in the Windows sandbox, lane `AE0101/v1-6-p1`. Claude owns commits, pushes and the independent review. Result: produced; synthetic golden checks and frontend checks verified, full Rust suite has the known registry failure; handed back for independent review and PC checks. Automatic checkpoint plus uncommitted edits, described below.
 
-Authority: Ahmed's task in this session (message timestamp not supplied), A48 (2026-11-09 06:52:15 / 06:52:23 UTC). Actual starting HEAD: `5809969` (the brief named `3ec4d5e`; the two later commits are records). Start clock: 2026-11-09 07:03:47 UTC. Scope: Stage 1 only, listed database engine/UI/tools/fixtures; this numbers file and one claims row are the only documentation writes. Stop at uncommitted hand-back. No network, new libraries, real vaults or Git writes.
+Authority: Ahmed's task in this session (message timestamp not supplied), A48 (2026-11-09 06:52:15 / 06:52:23 UTC). Actual starting HEAD: `5809969` (the brief named `3ec4d5e`; the two later commits are records). Start clock: 2026-11-09 07:03:47 UTC. Scope: Stage 1 only, listed database engine/UI/tools/fixtures; this numbers file and one claims row are the only documentation writes. Stop at source hand-back for Claude; Codex makes no commit. No network, new libraries, real vaults or Git writes.
 
 ## Accuracy oracle
 
@@ -36,7 +36,7 @@ Tool preparation before baseline: added missing `SourceTag` to the db-bench stan
 ## Results
 
 All numbers apply to the uncommitted source at the stage named. Raw before output follows; intermediate/final results and checks are appended below.
-`n```text
+```text
 ==== 1000 rows ====
   [plain (no formulas)] no sort/filter                     compute      3.9 ms | JSON     0.9 ms |    0.3 MB | rows out 1000
   [plain (no formulas)] sort by Amount                     compute      3.7 ms | JSON     0.5 ms |    0.3 MB | rows out 1000
@@ -99,3 +99,348 @@ All numbers apply to the uncommitted source at the stage named. Raw before outpu
   [2 formulas + rollup] after one cell edit: row_result    11.3 ms (Ctx::new alone 8.5 ms)
 
 ```
+
+### P2 alone: gate and raw timings
+
+All three `database::golden::golden_*_byte_for_byte` tests passed after P2, before P3: **3 passed, 0 failed** (tools/db-bench, debug, same engine source included by path). No old fixture was changed.
+
+```text
+==== 1000 rows ====
+
+  [plain (no formulas)] no sort/filter                     compute      2.9 ms | JSON     1.0 ms |    0.3 MB | rows out 1000
+
+  [plain (no formulas)] sort by Amount                     compute      3.5 ms | JSON     0.7 ms |    0.3 MB | rows out 1000
+
+  [plain (no formulas)] filter Amount>4000                 compute      1.8 ms | JSON     0.1 ms |    0.1 MB | rows out 220
+
+  [plain (no formulas)] group by Category + sum footer     compute      3.0 ms | JSON     0.4 ms |    0.3 MB | rows out 1000
+
+  [plain (no formulas)] after one cell edit: row_result     0.3 ms (Ctx::new alone 0.4 ms)
+
+  [2 formulas] no sort/filter                     compute      8.8 ms | JSON     0.7 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] sort by Amount                     compute      9.1 ms | JSON     1.2 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] filter Amount>4000                 compute      2.9 ms | JSON     0.2 ms |    0.1 MB | rows out 220
+
+  [2 formulas] sort by formula                    compute      8.9 ms | JSON     0.9 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] filter on formula                  compute      4.0 ms | JSON     0.1 ms |    0.1 MB | rows out 133
+
+  [2 formulas] group by Category + sum footer     compute      9.6 ms | JSON     1.0 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] after one cell edit: row_result     0.4 ms (Ctx::new alone 0.4 ms)
+
+  [2 formulas + rollup] no sort/filter                     compute     11.5 ms | JSON     1.1 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] sort by Amount                     compute     12.5 ms | JSON     1.1 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] filter Amount>4000                 compute      3.6 ms | JSON     0.3 ms |    0.1 MB | rows out 220
+
+  [2 formulas + rollup] sort by formula                    compute     11.1 ms | JSON     0.9 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] filter on formula                  compute      4.8 ms | JSON     0.1 ms |    0.1 MB | rows out 133
+
+  [2 formulas + rollup] group by Category + sum footer     compute     12.6 ms | JSON     1.1 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] after one cell edit: row_result     0.3 ms (Ctx::new alone 0.4 ms)
+
+==== 10000 rows ====
+
+  [plain (no formulas)] no sort/filter                     compute     26.7 ms | JSON     6.2 ms |    2.7 MB | rows out 10000
+
+  [plain (no formulas)] sort by Amount                     compute     43.0 ms | JSON     5.6 ms |    2.7 MB | rows out 10000
+
+  [plain (no formulas)] filter Amount>4000                 compute     19.6 ms | JSON     1.1 ms |    0.6 MB | rows out 2092
+
+  [plain (no formulas)] group by Category + sum footer     compute     36.3 ms | JSON     7.8 ms |    2.9 MB | rows out 10000
+
+  [plain (no formulas)] after one cell edit: row_result     1.6 ms (Ctx::new alone 1.4 ms)
+
+  [2 formulas] no sort/filter                     compute     90.0 ms | JSON    11.1 ms |    3.8 MB | rows out 10000
+
+  [2 formulas] sort by Amount                     compute    114.9 ms | JSON     9.6 ms |    3.8 MB | rows out 10000
+
+  [2 formulas] filter Amount>4000                 compute     31.7 ms | JSON     1.8 ms |    0.8 MB | rows out 2092
+
+  [2 formulas] sort by formula                    compute    105.1 ms | JSON     9.3 ms |    3.8 MB | rows out 10000
+
+  [2 formulas] filter on formula                  compute     45.2 ms | JSON     1.1 ms |    0.5 MB | rows out 1274
+
+  [2 formulas] group by Category + sum footer     compute    103.8 ms | JSON    12.0 ms |    4.0 MB | rows out 10000
+
+  [2 formulas] after one cell edit: row_result     1.6 ms (Ctx::new alone 1.7 ms)
+
+  [2 formulas + rollup] no sort/filter                     compute    123.0 ms | JSON    15.9 ms |    4.3 MB | rows out 10000
+
+  [2 formulas + rollup] sort by Amount                     compute    141.4 ms | JSON    13.5 ms |    4.3 MB | rows out 10000
+
+  [2 formulas + rollup] filter Amount>4000                 compute     37.8 ms | JSON     2.5 ms |    0.9 MB | rows out 2092
+
+  [2 formulas + rollup] sort by formula                    compute    156.1 ms | JSON    13.2 ms |    4.3 MB | rows out 10000
+
+  [2 formulas + rollup] filter on formula                  compute     47.9 ms | JSON     1.5 ms |    0.5 MB | rows out 1274
+
+  [2 formulas + rollup] group by Category + sum footer     compute    128.4 ms | JSON    14.3 ms |    4.4 MB | rows out 10000
+
+  [2 formulas + rollup] after one cell edit: row_result     1.6 ms (Ctx::new alone 2.4 ms)
+
+==== 50000 rows ====
+
+  [plain (no formulas)] no sort/filter                     compute    146.7 ms | JSON    37.1 ms |   13.7 MB | rows out 50000
+
+  [plain (no formulas)] sort by Amount                     compute    285.8 ms | JSON    30.6 ms |   13.7 MB | rows out 50000
+
+  [plain (no formulas)] filter Amount>4000                 compute    111.9 ms | JSON     5.5 ms |    2.8 MB | rows out 10125
+
+  [plain (no formulas)] group by Category + sum footer     compute    220.3 ms | JSON    37.9 ms |   14.4 MB | rows out 50000
+
+  [plain (no formulas)] after one cell edit: row_result     9.8 ms (Ctx::new alone 9.8 ms)
+
+  [2 formulas] no sort/filter                     compute    469.0 ms | JSON    72.2 ms |   19.3 MB | rows out 50000
+
+  [2 formulas] sort by Amount                     compute    608.6 ms | JSON    54.5 ms |   19.3 MB | rows out 50000
+
+  [2 formulas] filter Amount>4000                 compute    169.6 ms | JSON     8.9 ms |    3.9 MB | rows out 10125
+
+  [2 formulas] sort by formula                    compute    584.9 ms | JSON    50.8 ms |   19.3 MB | rows out 50000
+
+  [2 formulas] filter on formula                  compute    239.9 ms | JSON     6.9 ms |    2.4 MB | rows out 6240
+
+  [2 formulas] group by Category + sum footer     compute    512.3 ms | JSON    63.6 ms |   20.0 MB | rows out 50000
+
+  [2 formulas] after one cell edit: row_result    11.3 ms (Ctx::new alone 9.1 ms)
+
+  [2 formulas + rollup] no sort/filter                     compute    610.5 ms | JSON    74.9 ms |   21.3 MB | rows out 50000
+
+  [2 formulas + rollup] sort by Amount                     compute    784.8 ms | JSON    65.5 ms |   21.3 MB | rows out 50000
+
+  [2 formulas + rollup] filter Amount>4000                 compute    195.9 ms | JSON    12.7 ms |    4.3 MB | rows out 10125
+
+  [2 formulas + rollup] sort by formula                    compute    728.0 ms | JSON    60.4 ms |   21.3 MB | rows out 50000
+
+  [2 formulas + rollup] filter on formula                  compute    272.3 ms | JSON     8.3 ms |    2.7 MB | rows out 6240
+
+  [2 formulas + rollup] group by Category + sum footer     compute    686.8 ms | JSON    80.6 ms |   22.0 MB | rows out 50000
+
+  [2 formulas + rollup] after one cell edit: row_result    10.6 ms (Ctx::new alone 9.6 ms)
+
+
+```
+
+### P2 + P3: gate and final raw timings
+
+The same three tests passed after P3: **3 passed, 0 failed**. Empty-last in both directions, select option order, comparison function, evaluation order and stable incoming tie order are unchanged.
+
+```text
+==== 1000 rows ====
+
+  [plain (no formulas)] no sort/filter                     compute      2.7 ms | JSON     0.9 ms |    0.3 MB | rows out 1000
+
+  [plain (no formulas)] sort by Amount                     compute      3.9 ms | JSON     0.6 ms |    0.3 MB | rows out 1000
+
+  [plain (no formulas)] filter Amount>4000                 compute      1.7 ms | JSON     0.1 ms |    0.1 MB | rows out 220
+
+  [plain (no formulas)] group by Category + sum footer     compute      3.1 ms | JSON     0.7 ms |    0.3 MB | rows out 1000
+
+  [plain (no formulas)] after one cell edit: row_result     0.4 ms (Ctx::new alone 0.4 ms)
+
+  [2 formulas] no sort/filter                     compute      7.5 ms | JSON     0.8 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] sort by Amount                     compute      8.7 ms | JSON     1.0 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] filter Amount>4000                 compute      2.6 ms | JSON     0.1 ms |    0.1 MB | rows out 220
+
+  [2 formulas] sort by formula                    compute      9.1 ms | JSON     0.8 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] filter on formula                  compute      3.7 ms | JSON     0.1 ms |    0.1 MB | rows out 133
+
+  [2 formulas] group by Category + sum footer     compute     10.7 ms | JSON     1.6 ms |    0.4 MB | rows out 1000
+
+  [2 formulas] after one cell edit: row_result     0.5 ms (Ctx::new alone 0.5 ms)
+
+  [2 formulas + rollup] no sort/filter                     compute      9.8 ms | JSON     1.1 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] sort by Amount                     compute     10.8 ms | JSON     1.0 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] filter Amount>4000                 compute      3.4 ms | JSON     0.2 ms |    0.1 MB | rows out 220
+
+  [2 formulas + rollup] sort by formula                    compute     10.0 ms | JSON     0.8 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] filter on formula                  compute      3.9 ms | JSON     0.1 ms |    0.1 MB | rows out 133
+
+  [2 formulas + rollup] group by Category + sum footer     compute     10.5 ms | JSON     1.5 ms |    0.4 MB | rows out 1000
+
+  [2 formulas + rollup] after one cell edit: row_result     0.3 ms (Ctx::new alone 0.4 ms)
+
+==== 10000 rows ====
+
+  [plain (no formulas)] no sort/filter                     compute     25.5 ms | JSON     6.5 ms |    2.7 MB | rows out 10000
+
+  [plain (no formulas)] sort by Amount                     compute     39.7 ms | JSON     6.5 ms |    2.7 MB | rows out 10000
+
+  [plain (no formulas)] filter Amount>4000                 compute     20.0 ms | JSON     1.3 ms |    0.6 MB | rows out 2092
+
+  [plain (no formulas)] group by Category + sum footer     compute     37.6 ms | JSON     6.4 ms |    2.9 MB | rows out 10000
+
+  [plain (no formulas)] after one cell edit: row_result     1.4 ms (Ctx::new alone 1.0 ms)
+
+  [2 formulas] no sort/filter                     compute     83.6 ms | JSON    10.9 ms |    3.8 MB | rows out 10000
+
+  [2 formulas] sort by Amount                     compute     91.3 ms | JSON    10.1 ms |    3.8 MB | rows out 10000
+
+  [2 formulas] filter Amount>4000                 compute     30.5 ms | JSON     1.7 ms |    0.8 MB | rows out 2092
+
+  [2 formulas] sort by formula                    compute     92.5 ms | JSON    10.7 ms |    3.8 MB | rows out 10000
+
+  [2 formulas] filter on formula                  compute     43.1 ms | JSON     1.2 ms |    0.5 MB | rows out 1274
+
+  [2 formulas] group by Category + sum footer     compute     95.9 ms | JSON    11.6 ms |    4.0 MB | rows out 10000
+
+  [2 formulas] after one cell edit: row_result     1.7 ms (Ctx::new alone 1.4 ms)
+
+  [2 formulas + rollup] no sort/filter                     compute    116.7 ms | JSON    14.1 ms |    4.3 MB | rows out 10000
+
+  [2 formulas + rollup] sort by Amount                     compute    124.1 ms | JSON    12.0 ms |    4.3 MB | rows out 10000
+
+  [2 formulas + rollup] filter Amount>4000                 compute     37.0 ms | JSON     2.4 ms |    0.9 MB | rows out 2092
+
+  [2 formulas + rollup] sort by formula                    compute    123.2 ms | JSON    12.7 ms |    4.3 MB | rows out 10000
+
+  [2 formulas + rollup] filter on formula                  compute     45.0 ms | JSON     1.5 ms |    0.5 MB | rows out 1274
+
+  [2 formulas + rollup] group by Category + sum footer     compute    123.7 ms | JSON    13.9 ms |    4.4 MB | rows out 10000
+
+  [2 formulas + rollup] after one cell edit: row_result     1.6 ms (Ctx::new alone 1.6 ms)
+
+==== 50000 rows ====
+
+  [plain (no formulas)] no sort/filter                     compute    138.6 ms | JSON    36.0 ms |   13.7 MB | rows out 50000
+
+  [plain (no formulas)] sort by Amount                     compute    215.2 ms | JSON    29.3 ms |   13.7 MB | rows out 50000
+
+  [plain (no formulas)] filter Amount>4000                 compute    105.9 ms | JSON     5.9 ms |    2.8 MB | rows out 10125
+
+  [plain (no formulas)] group by Category + sum footer     compute    211.5 ms | JSON    37.2 ms |   14.4 MB | rows out 50000
+
+  [plain (no formulas)] after one cell edit: row_result    10.9 ms (Ctx::new alone 10.6 ms)
+
+  [2 formulas] no sort/filter                     compute    430.6 ms | JSON    63.7 ms |   19.3 MB | rows out 50000
+
+  [2 formulas] sort by Amount                     compute    514.1 ms | JSON    54.3 ms |   19.3 MB | rows out 50000
+
+  [2 formulas] filter Amount>4000                 compute    158.2 ms | JSON    10.3 ms |    3.9 MB | rows out 10125
+
+  [2 formulas] sort by formula                    compute    554.3 ms | JSON    53.0 ms |   19.3 MB | rows out 50000
+
+  [2 formulas] filter on formula                  compute    235.8 ms | JSON     6.1 ms |    2.4 MB | rows out 6240
+
+  [2 formulas] group by Category + sum footer     compute    527.1 ms | JSON    64.2 ms |   20.0 MB | rows out 50000
+
+  [2 formulas] after one cell edit: row_result    10.7 ms (Ctx::new alone 6.4 ms)
+
+  [2 formulas + rollup] no sort/filter                     compute    613.4 ms | JSON    74.7 ms |   21.3 MB | rows out 50000
+
+  [2 formulas + rollup] sort by Amount                     compute    683.4 ms | JSON    65.1 ms |   21.3 MB | rows out 50000
+
+  [2 formulas + rollup] filter Amount>4000                 compute    200.9 ms | JSON    12.5 ms |    4.3 MB | rows out 10125
+
+  [2 formulas + rollup] sort by formula                    compute    695.1 ms | JSON    63.9 ms |   21.3 MB | rows out 50000
+
+  [2 formulas + rollup] filter on formula                  compute    263.8 ms | JSON     7.8 ms |    2.7 MB | rows out 6240
+
+  [2 formulas + rollup] group by Category + sum footer     compute    683.7 ms | JSON    77.3 ms |   22.0 MB | rows out 50000
+
+  [2 formulas + rollup] after one cell edit: row_result     9.5 ms (Ctx::new alone 8.5 ms)
+
+
+```
+
+### Comparison (compute ms, single runs on this PC)
+
+| Rows | Workload | Before | P2 alone | P2 + P3 |
+|---:|---|---:|---:|---:|
+| 1,000 | plain (no formulas): sort by Amount | 3.7 | 3.5 | 3.9 |
+| 1,000 | 2 formulas: no sort/filter | 14.0 | 8.8 | 7.5 |
+| 1,000 | 2 formulas: sort by Amount | 13.8 | 9.1 | 8.7 |
+| 1,000 | 2 formulas: sort by formula | 14.3 | 8.9 | 9.1 |
+| 1,000 | 2 formulas + rollup: sort by formula | 19.2 | 11.1 | 10.0 |
+| 10,000 | plain (no formulas): sort by Amount | 52.4 | 43.0 | 39.7 |
+| 10,000 | 2 formulas: no sort/filter | 152.7 | 90.0 | 83.6 |
+| 10,000 | 2 formulas: sort by Amount | 162.4 | 114.9 | 91.3 |
+| 10,000 | 2 formulas: sort by formula | 212.2 | 105.1 | 92.5 |
+| 10,000 | 2 formulas + rollup: sort by formula | 221.8 | 156.1 | 123.2 |
+| 50,000 | plain (no formulas): sort by Amount | 305.9 | 285.8 | 215.2 |
+| 50,000 | 2 formulas: no sort/filter | 750.2 | 469.0 | 430.6 |
+| 50,000 | 2 formulas: sort by Amount | 870.3 | 608.6 | 514.1 |
+| 50,000 | 2 formulas: sort by formula | 867.7 | 584.9 | 554.3 |
+| 50,000 | 2 formulas + rollup: sort by formula | 1042.3 | 728.0 | 695.1 |
+
+P1 browser before/after: **not run** (Claude on the PC). P4/P5: no speed target. P3 incremental comparison is P2 alone versus P2+P3, not baseline versus P2+P3. Small-run noise is retained: e.g. plain 1,000-row Amount sort was 3.5 ms after P2 and 3.9 ms after P3. Source remained unchanged in the engine between the final benchmark and the final Rust run.
+
+### Source identity and immutable oracle hashes
+
+Claude's automatic heartbeat created `2fe8bf1` at 2026-11-09 07:11:53 UTC while this run was active. Codex issued no Git write. Checks below apply to that checkpoint plus the explicitly listed subsequent worktree edits, not to an assumed clean commit. After the checkpoint, the Board optional transform was corrected and the limit notice was corrected to use the query result rather than the locally searched subset. The numbers record and claims row continue to be updated.
+
+- `views.jsonl`: 9,468,184 bytes, SHA-256 `537da8fb712d57dde48167ead1330db4ce408f4a033e6a435f9849a083a18700`.
+- `formulas.jsonl`: 117,476 bytes, SHA-256 `11781aa0589b6056e698b716987e19b8807cdcdf395f915c2f39e62c1d3ce9ad`.
+- `large.jsonl`: 9,270,016 bytes, SHA-256 `d6287572f118d94b535ae9a69194bb75c6815ba5ea8e09535880f881d2808d3c`.
+
+Outside write area, mechanical: `.gitattributes` adds `-text` for the golden JSONL files so a Windows checkout cannot turn their LF bytes into CRLF and break the oracle.
+
+## Final checks and hand-back
+
+- `cargo test --lib --offline` (Windows/MSVC, Codex sandbox, application crate): **716 passed, 1 failed, 5 ignored; exit 101; 150.96 s**. Only failure: `shell::tests::the_registry_value_can_be_written_read_and_removed`, sandbox denied registry access (Windows code 5), exactly the known failure in the brief. All three golden tests passed. Raw log: `D:\Notaya Tests\v1-6-P1\cargo-final.txt`. Six compiler warnings are pre-existing (unused `id` in vault/activity; unused claim/release helpers, title_prop, CALCS, with_deadline).
+- `npx tsc --noEmit -p tsconfig.json`: **passed, exit 0**, final frontend source. npm offline mode enabled. An earlier run found optional Board transform could be undefined; corrected to `transform ?? null`, then rerun passed.
+- `npm run build -- --configLoader native`: **passed, exit 0**, final frontend source, 4,413 modules, Vite build 9.48 s. Existing ineffective-dynamic-import warning: DatabaseView is imported both statically and dynamically. Built CSS contains the table selection attribute selector.
+- `tools/db-bench`: **passed, exit 0** before, P2 alone, and P2+P3 at 1,000/10,000/50,000 rows, release/offline; complete raw numbers above. Golden tests also passed separately at each engine stage (3/3 each).
+- `git diff --check`: initial record write had CRLF reported as trailing whitespace; corrected to LF, **final passed, exit 0**.
+- `npm audit`: **skipped as instructed**. `cargo audit`: **not run**. No new dependency was introduced; only the tool's cached transitive version was reconciled with the app lockfile.
+
+### What changed
+
+P1: memoized table cell content behind a small sortable wrapper; no sortable hooks on sorted/filtered plain rows; only mounted/paged/expanded row IDs participate in sortable context; table-level selection attribute replaces every row's global selection prop. Board card content and plain cards, List rows, Gallery cards are memoized with stable inputs/callbacks. Existing Board group moves remain possible under sorting; only when neither group movement nor manual reorder can do anything is the plain card mounted. Existing mouse/keyboard handlers and classes are retained. Visual/runtime acceptance is not claimed.
+
+P2: exact-text parsed AST/error cache in each query context, dropped with that context. Evaluation uses the same evaluator with a fresh step budget, the current row environment, and unchanged memo/cycle/depth rules. The mutable AST-cache borrow ends before recursive evaluation.
+
+P3: precomputed keys in incoming row order, stable sort of positions, same comparison and empty-last in ascending/descending. P4: one shared visible status notice reports the capped query row count and the database total distinctly; fixes misleading duplicate List/Gallery notices. Local search does not change the reported query cap. P5: standing offline/PC before-and-after routine above.
+
+### Still for Claude
+
+Browser timings and `database-ui-check.cjs` / `database-views-check.cjs`: **not run** here, per sandbox brief. Run before/after on generated 5,000-row data (300 and 1,200 shown); inspect selection/row numbers, keyboard editing, drag reorder, sort/filter disabling of table drag, groups, frozen columns and the P4 notice at >50,000 rows, with and without a view filter and local search. The 100,000-row real-app test and private finance formula/rollup comparison remain **not run**. No browser or debug port was started by Codex. Test data and logs were created only under `D:\Notaya Tests\v1-6-P1`; build products use the shared target and ignored frontend dist.
+
+Security self-check (author, **not independent**): inspected the engine diff, fixtures and changed UI/tool paths. No new input/IPC command, persistence, logging of note content, HTML sink, network code, dependency or privilege path. AST cache is per-query RAM only; immutable ASTs have no row-specific values; existing cycle/depth/step checks remain. Fixture data and benchmark output are synthetic. No findings in this bounded self-check. Claude's Security Guidance/built-in security review and a fresh independent review are **not run by this Codex author session** and remain required.
+
+Model: Codex (exact model ID and reasoning effort not exposed in this session). Token counts and before/after quota readings: **not available**; Claude/heartbeat records the actual meters in the ledger. Only the authorized numbers file and claims row were written; no other authority/session/ledger record was edited. No subagents.
+
+ADDITION: none implemented or proposed beyond the brief. Stop point: hand back source and evidence for Claude's review/commit/push and PC checks; no acceptance, merge or release claimed.
+
+`cargo clippy --lib --offline` (MSVC): **exit 0, 166 warnings**, 17.46 s. This is not warning-free. Full warnings: `D:\Notaya Tests\v1-6-P1\clippy-final.txt`; no broad warning cleanup was attempted in this lane.
+
+### Changed files (relative to starting 5809969)
+
+```text
+.gitattributes
+docs/execution/2026-11-09-wp16-stage1-numbers.md
+docs/handoff/claims.md
+src-tauri/src/database/engine.rs
+src-tauri/src/database/mod.rs
+src-tauri/src/database/golden/mod.rs
+src-tauri/src/database/golden/formulas.json
+src-tauri/src/database/golden/views.jsonl
+src-tauri/src/database/golden/formulas.jsonl
+src-tauri/src/database/golden/large.jsonl
+src/features/database/DatabaseView.tsx
+src/features/database/views/TableView.tsx
+src/features/database/views/BoardView.tsx
+src/features/database/views/ListView.tsx
+src/features/database/views/GalleryView.tsx
+src/features/database/views/shared.tsx
+tools/db-bench/Cargo.lock
+tools/db-bench/src/main.rs
+tools/db-bench/src/database.rs
+```
+
+Hand-back clock: 2026-11-09 07:16:43 UTC (system clock). All implementation source is unchanged since its respective final checks; subsequent writes are this record, the claims row and mechanical golden line-ending protection. Claude should commit the final tree and rerun the required checks on that exact commit. No commit/push/checkout/merge/add/reset was issued by Codex.
+
+Clippy warning categories include 91 collapsible-if, 10 unnecessary-map-or, 7 type-complexity and 7 manual-is-multiple-of warnings; remaining warnings are in the raw log. No claim that all warnings predate this lane.

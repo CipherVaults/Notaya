@@ -498,7 +498,7 @@ const CardFrame = memo(function CardFrame({ row, cover, fit, props, titles, onOp
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Transform.toString(transform ?? null), transition }}
       {...attributes}
       {...listeners}
       role="button"
