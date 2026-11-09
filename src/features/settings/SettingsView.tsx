@@ -12,6 +12,7 @@ import { Button, Field, Input, Modal, Segmented, Slider, Switch } from "@/compon
 import RestoreDialog from "@/features/unlock/RestoreDialog";
 import ActivityPanel from "./ActivityPanel";
 import ErrorLogPanel from "./ErrorLogPanel";
+import AiAccessPanel from "./AiAccessPanel";
 import OpenSourceDialog from "./OpenSourceDialog";
 import { DisableSecurityDialog, EnableSecurityDialog } from "./SecurityDialogs";
 
@@ -258,6 +259,7 @@ export default function SettingsView() {
           </Section>
         )}
 
+        <AiAccessPanel />
         <Section icon={<Archive size={16} />} title="Activity">
           <ActivityPanel />
         </Section>
