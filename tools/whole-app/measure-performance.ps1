@@ -30,7 +30,8 @@ function Get-WAMemory([int]$RootPid) {
         if ($p) { $values += @{ pid = $id; name = $p.ProcessName; workingSet = $p.WorkingSet64; privateBytes = $p.PrivateMemorySize64 } }
     }
     @{ utc = [DateTime]::UtcNow.ToString('o'); rootPid = $RootPid; processes = $values
-       workingSet = ($values | Measure-Object workingSet -Sum).Sum; privateBytes = ($values | Measure-Object privateBytes -Sum).Sum }
+       workingSet = [long](($values | ForEach-Object { $_.workingSet } | Measure-Object -Sum).Sum)
+       privateBytes = [long](($values | ForEach-Object { $_.privateBytes } | Measure-Object -Sum).Sum) }
 }
 
 function Invoke-WAPerfDriver([string[]]$Arguments, [string]$Log) {
@@ -134,8 +135,8 @@ try {
         }
     }
     if ($report.memorySamples.Count) {
-        $report.sampledPeakWorkingSetBytes = ($report.memorySamples | Measure-Object workingSet -Maximum).Maximum
-        $report.sampledPeakPrivateBytes = ($report.memorySamples | Measure-Object privateBytes -Maximum).Maximum
+        $report.sampledPeakWorkingSetBytes = ($report.memorySamples | ForEach-Object { $_.workingSet } | Measure-Object -Maximum).Maximum
+        $report.sampledPeakPrivateBytes = ($report.memorySamples | ForEach-Object { $_.privateBytes } | Measure-Object -Maximum).Maximum
     }
 } catch { $report.fatalError = $_.Exception.Message }
 finally {

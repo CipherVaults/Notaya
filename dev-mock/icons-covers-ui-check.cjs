@@ -197,8 +197,8 @@ const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= 
   is('with the same position', await p.getByTestId('page-cover').locator('img').evaluate((e) => Number(e.style.objectPosition.split(' ')[1].replace('%', ''))), savedY);
 
   // ----- Icon over a cover -----
-  await p.getByTestId('page-icon-row').hover();
-  await p.getByTestId('add-icon').click({ force: true });
+  await p.getByTestId('add-icon').hover();
+  await p.getByTestId('add-icon').click();
   await p.locator('[data-emoji="📚"]').click();
   await p.waitForTimeout(300);
   const ib = await p.getByTestId('page-icon').boundingBox();

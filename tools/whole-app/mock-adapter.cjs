@@ -25,17 +25,7 @@ substitute('D:/Notaya-lanes/out/A-shots', slash(artifactDir));
 for (const old of ['D:/Notaya Tests/v1-6-C2/browser', 'D:/Notaya Tests/v1-6-C3u', 'D:/Notaya Tests/v1-6-C4d']) {
   substitute(old, slash(process.env.TEMP));
 }
-// Preserve __dirname and original relative resolution; calculator output goes outside repo.
-if (file === 'calc-check.cjs') {
-  const ts = require(path.join(root, 'node_modules/typescript'));
-  const dir = path.join(process.env.TEMP, 'calc-compiled');
-  fs.mkdirSync(dir, { recursive: true });
-  const result = ts.transpileModule(fs.readFileSync(path.join(root, 'src/features/sticky/calc.ts'), 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-  });
-  fs.writeFileSync(path.join(dir, 'calc.cjs'), result.outputText);
-  substitute("require('../.calc-check/calc.js')", `require(${JSON.stringify(path.join(dir, 'calc.cjs'))})`);
-}
+// calc-check now resolves TypeScript normally and compiles into its child TEMP itself.
 const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === 'playwright' || request === 'playwright-core' || request === process.env.NOTAYA_PLAYWRIGHT_MODULE) {

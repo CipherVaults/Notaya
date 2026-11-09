@@ -16,6 +16,10 @@ function Save-AProgress {
 }
 try {
     $node = (Get-Command node -ErrorAction Stop).Source
+    $tsc = & $node "$PSScriptRoot\resolve-tool.cjs" typescript
+    if ($LASTEXITCODE -ne 0) { throw 'Existing TypeScript dependency could not be resolved' }
+    $vite = & $node "$PSScriptRoot\resolve-tool.cjs" vite
+    if ($LASTEXITCODE -ne 0) { throw 'Existing Vite dependency could not be resolved' }
     $manifestPath = Join-Path $run.output 'manifest.json'
     $inventory = Invoke-WACommand $node @("$PSScriptRoot\catalog.cjs", 'write-manifest', $manifestPath) $envs "$($run.output)\inventory.log" 30
     if ($inventory.status -ne 'passed') { throw 'Could not generate manifest; inspect inventory.log' }
@@ -40,7 +44,7 @@ try {
             $commandArgs = if ($mode -eq 'mock') {
                 @($npmCli, 'run', 'mock', '--', '--configLoader', 'native', '--host', '127.0.0.1', '--port', "$port", '--strictPort')
             } else {
-                @("$script:WARepo\node_modules\vite\bin\vite.js", '--config', 'vite.views.config.ts', '--configLoader', 'native', '--host', '127.0.0.1', '--port', "$port", '--strictPort')
+                @($vite, '--config', 'vite.views.config.ts', '--configLoader', 'native', '--host', '127.0.0.1', '--port', "$port", '--strictPort')
             }
             $server = Start-WAProcess $node $commandArgs $envs
             $servers += @{ handle = $server; name = $mode; port = $port }
@@ -109,7 +113,7 @@ try {
         $report.suites += $result; Save-AProgress
     }
     foreach ($command in @(
-        @{ name = 'typescript'; file = $node; argv = @("$script:WARepo\node_modules\typescript\bin\tsc", '--noEmit', '-p', 'tsconfig.json') },
+        @{ name = 'typescript'; file = $node; argv = @($tsc, '--noEmit', '-p', 'tsconfig.json') },
         @{ name = 'frontend-build'; file = $node; argv = @($npmCli, 'run', 'build', '--', '--configLoader', 'native') },
         @{ name = 'clippy'; file = $cargo; argv = @('clippy', '--manifest-path', 'src-tauri/Cargo.toml', '--all-targets', '--offline', '--locked') }
     )) {

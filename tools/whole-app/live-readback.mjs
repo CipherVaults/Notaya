@@ -4,7 +4,8 @@ const [port, mode, scenario] = process.argv.slice(2);
 const client = await connect(port);
 try {
   const status = await client.invoke('vault_status');
-  if (mode === 'lockflow') {
+  if (mode === 'lockflow' || mode === 'restore-flow') {
+    assert.equal(status.securityOn, true, 'fixture keeps security enabled across restart');
     assert.equal(status.unlocked, false, 'protected restart must be locked');
     await client.invoke('unlock_vault', { password: process.env.NOTAYA_TEST_PASSWORD, keyfile: null });
   } else { assert.equal(status.unlocked, true, 'open restart must be unlocked'); }

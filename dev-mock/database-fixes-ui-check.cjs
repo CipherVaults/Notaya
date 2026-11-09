@@ -116,6 +116,8 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   is('Ctrl+Y redoes too', await statusNow(), 'In progress');
 
   // a cleared value
+  const dateBeforeClear = (await cell(0, cDue).innerText()).trim();
+  yes('the date fixture is nonempty before Clear', dateBeforeClear.length > 0);
   await cell(0, cDue).click({ position: { x: 3, y: 3 } });
   await p.keyboard.press('Escape');
   await wait(200);
@@ -130,7 +132,7 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   await cell(0, cTask).click();
   await p.keyboard.press('Control+z');
   await wait(700);
-  yes('undo brings the date back', /Oct/.test(await cell(0, cDue).innerText()));
+  is('undo brings the date back', (await cell(0, cDue).innerText()).trim(), dateBeforeClear);
 
   // a checkbox
   const done = () => cell(2, cDone).getByRole('checkbox');
@@ -156,10 +158,16 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   await p.keyboard.press('Enter');
   await wait(150);
   await p.keyboard.type('xyz');
-  const undoneBefore = await p.locator('[data-sonner-toast]', { hasText: /Undone|Nothing to undo/ }).count();
+  yes('the text cell has keyboard focus', await p.evaluate(() => document.activeElement?.matches('input,textarea,[contenteditable="true"]')));
+  // Toasts expire on a timer. Compare the actual database undo/redo stack instead.
+  const undoDepth = () => p.evaluate(async () => {
+    const { undoDepth } = await import('/src/features/database/undo.ts');
+    return undoDepth(document.querySelector('[data-database]').getAttribute('data-database'));
+  });
+  const undoneBefore = await undoDepth();
   await p.keyboard.press('Control+z');
   await wait(400);
-  is('Ctrl+Z inside a text cell is the browser\'s (no database undo)', await p.locator('[data-sonner-toast]', { hasText: /Undone|Nothing to undo/ }).count(), undoneBefore);
+  is('Ctrl+Z inside a text cell is the browser\'s (no database undo)', JSON.stringify(await undoDepth()), JSON.stringify(undoneBefore));
   await p.keyboard.press('Escape');
   await wait(300);
   await cell(1, cTask).click();
