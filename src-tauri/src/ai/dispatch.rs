@@ -13,6 +13,7 @@ use crate::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{json, Value};
+use crate::native_confirm::{self, Approval, Delete};
 use std::{
     collections::{BTreeMap, HashSet},
     sync::atomic::Ordering,
@@ -41,6 +42,7 @@ pub fn error_code(e: &Error) -> &'static str {
                 "claimed_by_other_ai",
                 "item_changed",
                 "not_confirmed",
+                "cancelled",
                 "too_big",
                 "rate_limited",
             ] {
@@ -737,16 +739,26 @@ fn definition(s: &mut Session, a: &Actor, name: &str, q: &Value) -> Result<Value
 }
 
 pub fn execute(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> Result<Value> {
-    if r.spec.level == Required::Look { return execute_inner(s, p, r, paths); }
+    execute_approved(s, p, r, paths, None)
+}
+fn native_delete(s: &Session, r: &Prepared) -> Option<Delete> {
+    match r.spec.name {
+        "bin.delete_forever" => Some(Delete::One(text(&r.params, "id"))),
+        "bin.empty" => Some(Delete::Selected(r.targets.iter().filter(|id| s.in_bin(id)).cloned().collect())),
+        _ => None,
+    }
+}
+fn execute_approved(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, approval: Option<&mut Approval>) -> Result<Value> {
+    if r.spec.level == Required::Look { return execute_inner(s, p, r, paths, approval); }
     // VACUUM INTO cannot run inside a transaction. Make the existing safety
     // copy first, under the same session lock, before any action writes.
     let backup = matches!(r.spec.name,"notebook.trash" | "section.trash")
         || (r.spec.name=="db.create" && !s.items().any(|i| matches!(i,Item::Database(_))));
     if backup { crate::backup::make_safety_backup(paths,s).map_err(|e|crate::backup::safety_failure(&e))?; }
-    s.atomic_action(backup, |s| execute_inner(s, p, r, paths))
+    s.atomic_action(backup, |s| execute_inner(s, p, r, paths, approval))
 }
 
-fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> Result<Value> {
+fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, approval: Option<&mut Approval>) -> Result<Value> {
     let a = actor(p);
     let q = &r.params;
     let id = text(q, "id");
@@ -835,13 +847,13 @@ fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> R
             }
             "page.trash"|"db.trash"|"db.row.trash"=>out!(notes::trash_page_core(s,&a,id.clone())),
             "bin.restore"=>out!(notes::restore_bin_item_core(s,&a,id.clone(),false)),
-            "bin.delete_forever"=>out!(notes::delete_page_core(s,&a,id.clone())),
+            "bin.delete_forever"=>out!(notes::delete_page_core(s,&a,id.clone(),approval.ok_or_else(native_confirm::cancelled)?)),
             "bin.empty"=>{
                 // The authorization footprint also includes live relation and
                 // automation destinations. Only items already in the bin are
                 // deletion roots; the shared core keeps the permanent-delete guard.
-                let roots:Vec<_>=r.targets.iter().filter(|id|s.in_bin(id)).cloned().collect();
-                for id in roots{if s.get(&id).is_some(){notes::delete_page_core(s,&a,id)?;}}
+                let request=native_delete(s,r).ok_or_else(invalid)?;
+                notes::delete_selected_core(s,&a,request,approval.ok_or_else(native_confirm::cancelled)?)?;
                 Ok(Value::Null)
             }
             "db.create"=>out!(db::create_database_core(s,&a,paths,text(q,"sectionId"),text(q,"parent"),boolean(q,"inline"),text(q,"title"),text(q,"starterKind"))),
@@ -1054,6 +1066,10 @@ pub fn call(
             return Err(code("not_confirmed"));
         }
     }
+    // Rare permanent deletes get a second, native gate after the existing
+    // in-window Strong confirmation. Pipe workers already run off the event loop.
+    let target = state.with(|s| native_delete(s, &r).map(|request| native_confirm::delete_target(s, epoch, request)).transpose())?;
+    let mut approval = target.map(|target| state.ai.native.ask(target)).transpose()?;
     let answer = state.with_actor(&actor(p), |s| {
         if cancelled() || state.ai.epoch.load(Ordering::SeqCst) != epoch {
             return Err(code("stopped"));
@@ -1069,7 +1085,7 @@ pub fn call(
             .into_iter()
             .find(|current| current.id == p.id)
             .ok_or_else(|| code("not_paired"))?;
-        let answer = execute(s, &current, &again, &state.paths)?;
+        let answer = execute_approved(s, &current, &again, &state.paths, approval.as_mut())?;
         if again.spec.level == Required::Look {
             state.ai.read(&current);
         }
@@ -1241,7 +1257,8 @@ mod tests {
             // Simulate a late shared-core failure after the first deletion.
             s.coordination.editing(&second,"main",true);
             s.drain_changes(); let before=snapshot(s);
-            assert!(execute(s,&p,&r,&state.paths).is_err());
+            let mut approval=native_confirm::test_delete(s,native_delete(s,&r).unwrap());
+            assert!(execute_approved(s,&p,&r,&state.paths,Some(&mut approval)).is_err());
             assert_eq!(snapshot(s),before); assert!(s.get(&page).is_some());
             assert!(s.drain_changes().is_none());
             Ok(())
@@ -1263,7 +1280,8 @@ mod tests {
             let r = prepare(s,&p,"bin.empty",json!({}))?;
             assert!(r.targets.contains(&live) && r.targets.contains(&live_row),
                 "live relation destinations still require authorization");
-            execute(s,&p,&r,&state.paths)?;
+            let mut approval=native_confirm::test_delete(s,native_delete(s,&r).unwrap());
+            execute_approved(s,&p,&r,&state.paths,Some(&mut approval))?;
             assert!(s.get(&binned).is_none());
             assert!(s.get(&live).is_some() && s.get(&live_row).is_some());
             Ok(())
@@ -1763,6 +1781,10 @@ mod tests {
         )
         .unwrap();
         assert!(state.with(|s| Ok(s.in_bin(&page))).unwrap());
+        let before=crate::native_confirm::test_support::snapshot(&state);
+        assert_eq!(call(&state,&p,"bin.delete_forever",json!({"id":page}),false,||false,||{}).unwrap_err().to_string(),"cancelled");
+        assert_eq!(crate::native_confirm::test_support::snapshot(&state),before);
+        state.ai.native.inject(native_confirm::TestApprover(true));
         call(
             &state,
             &p,
@@ -1774,6 +1796,33 @@ mod tests {
         )
         .unwrap();
         assert!(state.with(|s| Ok(s.get(&page).is_none())).unwrap());
+    }
+
+    #[test]
+    fn native_bin_empty_deny_and_changed_target_leave_all_binned_items() {
+        for changed in [false,true] {
+            let (state,p,section,page)=fixture();
+            state.with_mut(|s|notes::trash_page_core(s,&Actor::Person,page.clone())).unwrap();
+            let state=std::sync::Arc::new(state);let weak=std::sync::Arc::downgrade(&state);
+            state.ai.bind(move |event,v| {
+                if event=="ai-confirm" { assert!(weak.upgrade().unwrap().ai.confirms.answer("confirm",v["id"].as_str().unwrap(),true,v["word"].as_str())); }
+            });
+            let before=crate::native_confirm::test_support::snapshot(&state);
+            if changed {
+                let weak=std::sync::Arc::downgrade(&state);
+                state.ai.native.inject(crate::native_confirm::test_support::Hook(Box::new(move || {
+                    let state=weak.upgrade().unwrap();
+                    state.with_mut(|s| {
+                        let next=notes::create_page_core(s,&Actor::Person,section.clone(),"New bin target".into())?.id.clone();
+                        notes::trash_page_core(s,&Actor::Person,next)
+                    }).unwrap();true
+                })));
+            }
+            let error=call(&state,&p,"bin.empty",json!({}),false,||false,||{}).unwrap_err();
+            assert!(matches!(error.to_string().as_str(),"cancelled"|"item_changed"));
+            assert!(state.with(|s|Ok(s.get(&page).is_some() && s.in_bin(&page))).unwrap());
+            if !changed { assert_eq!(crate::native_confirm::test_support::snapshot(&state),before); }
+        }
     }
 
     #[test]

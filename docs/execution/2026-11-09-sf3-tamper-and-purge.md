@@ -1,4 +1,4 @@
-# SF3: offline tamper evidence and permanent-delete content purge
+# SF3: offline tamper evidence and permanent-delete content purge (EX-2026-11-09-72)
 
 ## 1. Scope, authority and source
 
@@ -271,3 +271,12 @@ start time.
 
 Stop at this hand-back. No commit, push, merge, release, app run or acceptance by
 Codex. No new dependency or visible-design decision was made.
+
+## 13. Claude's review (2026-11-09, cloud thread, about 20:10 UTC by the system clock)
+
+Read the whole diff: `vault/anchor.rs` (new), `activity.rs`, `history.rs`, `store.rs`, `mod.rs`, `model.rs`, `security_tests.rs` and the `docs/security-design.md` additions. Checks the PC heartbeat ran on the lane tip `c3f7968` (clean tree equal to the pushed commit): `cargo test --lib` 733 passed, 0 failed, 5 ignored; `npm audit` 0 vulnerabilities; `tsc` and `npm run build` not run (no frontend file in the diff). Result state: **verified** on `c3f7968`.
+
+**The merge with `main` is not covered by that run.** `main` (S-FIX2) and this lane both changed the `Session` constructors in `vault/mod.rs`; the only conflict was the struct literal in `Session::open`, resolved by keeping both fields (`native_session_id` from main and `anchor` from SF3). All four constructors now carry both. The merged commit could not be compiled in the cloud container (no Windows build tools), so the PC heartbeat must run `cargo test --lib` on it before the merge into `main`.
+
+Flags for Ahmed: (1) this adds to the vault format (a new table and a `journalsAnchored` settings latch; no version bump; older vaults migrate silently once, and the G3 safety copy is planned but not yet built); (2) permanent delete re-links the activity chain and runs a verification on each call, so deleting a very large selection in a large vault may be slow; to be measured in the whole-app pass; (3) the visible effect is only that "Check the log" now fails on tampering it used to accept.
+

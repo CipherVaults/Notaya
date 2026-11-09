@@ -544,7 +544,7 @@ mod tests {
         }
         s.put(item).unwrap();
         assert!(!s.history_list(&id).unwrap().is_empty());
-        crate::commands::notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+        crate::commands::notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
         assert!(s.history_index.get(&id).is_none());
         s.collect_garbage().unwrap();
         assert!(s.get_attachment(&pic).is_err());
@@ -595,14 +595,14 @@ mod tests {
             // including bodies that are not returned in activity-list metadata.
             let history = s.store.all(Table::History).unwrap();
             let activity = s.store.all(Table::Activity).unwrap();
-            let error = crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).err().unwrap();
+            let error = crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, id.clone()).err().unwrap();
             assert_eq!(error.to_string(), "Only items in the bin can be permanently deleted.");
             assert_eq!(s.store.all(Table::History).unwrap(), history);
             assert_eq!(s.store.all(Table::Activity).unwrap(), activity);
             crate::commands::notes::trash_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
             // Include any versions taken by the bin operation in the deletion check.
             let versions = s.history_list(&id).unwrap();
-            crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
+            crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
             assert!(s.get(&id).is_none());
             assert!(!s.history_index.contains_key(&id));
             for version in &versions {

@@ -62,6 +62,20 @@ pub fn insert_unique(settings: &mut Settings, pairing: Pairing) -> crate::error:
     settings.pairings.push(pairing);
     Ok(())
 }
+/// Final pipe-side recheck, after the native-bound broker answer. Kept as a
+/// Rust core so tests exercise the same persistence path without opening a pipe.
+pub(crate) fn persist(state: &crate::state::AppState, pairing: Pairing, epoch: u64, cancelled: impl Fn() -> bool) -> crate::error::Result<()> {
+    state.with_mut(|s| {
+        let mut settings = s.settings();
+        if !settings.ai.enabled || settings.ai.paused || cancelled()
+            || crate::native_confirm::epoch(state) != epoch {
+            return Err(crate::error::Error::invalid("off"));
+        }
+        if settings.ai.pairings.len() >= 32 { return Err(crate::error::Error::invalid("too_big")); }
+        insert_unique(&mut settings.ai, pairing)?;
+        s.put(crate::model::Item::Settings(settings))
+    })
+}
 fn hash(token: &str) -> String {
     hex::encode(Sha256::digest(token.as_bytes()))
 }

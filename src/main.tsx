@@ -9,6 +9,9 @@ import StickyWindow from "./features/sticky/StickyWindow";
 import CalculatorWindow from "./features/sticky/Calculator";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { installErrorLog } from "./lib/errorlog";
+import { startupMark } from "./lib/startup";
+
+startupMark("bootstrapAtMs");
 
 // Before anything is drawn: errors of this window go to the local error log (a file on this computer).
 installErrorLog();

@@ -1004,9 +1004,15 @@ pub fn checked_destination(chosen: &Path, ext: &str, data_dir: &Path) -> Result<
         }
         longer
     };
+    checked_destination_path(&dest, data_dir)?;
+    Ok(dest)
+}
+
+/// Validate a final path independently of extension handling, including extensionless row files.
+pub(crate) fn checked_destination_path(dest: &Path, data_dir: &Path) -> Result<()> {
     let data = resolve(data_dir);
-    let target = resolve(&dest);
-    if target.starts_with(&data) || crate::filenames::path_has_vault_ext(&dest) {
+    let target = resolve(dest);
+    if target.starts_with(&data) || crate::filenames::path_has_vault_ext(dest) {
         return Err(Error::invalid(
             "That is the folder where Notaya keeps your notes and backups. Choose another folder for the export.",
         ));
@@ -1014,7 +1020,7 @@ pub fn checked_destination(chosen: &Path, ext: &str, data_dir: &Path) -> Result<
     if target.is_dir() {
         return Err(Error::invalid("That name is a folder. Choose a file name for the export."));
     }
-    Ok(dest)
+    Ok(())
 }
 
 /// Makes ready the `<name>.assets` folder for a Markdown export and says whether it was created
