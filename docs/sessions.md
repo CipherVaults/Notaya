@@ -144,6 +144,8 @@ Produced: the plan, two measuring tools, the records. Not verified on a PC, not 
 
 Ahmed answers Q57 onward; the coordinator writes Codex lane briefs from the plan (Stage 1 first); re-run both tools on the Gaming-PC to calibrate.
 
+**Dated addendum (2026-11-09 07:00 UTC):** Ahmed answered Q57 to Q60 (06:52:15 UTC) and put P8 into 1.6 as well (06:56:22 UTC, A48 addendum). This thread updated the roadmap artifact (cards 1.6-16 to 1.6-16d, 2.1-0, and 1.6-17 and 1.6-18 from A49), the usage ledger and forecast (+27 points for the speed work, then +7.5 for WP-17 and WP-18 per A49, so 1.6 is about 79.5 points in all), the plan and the Notion board (seven new cards and a dated line in the hub checkpoint, 2026-11-09; the checkpoint's merge counts of 2026-11-08 were not refreshed), and republished the handover artifact with a new "1.6 build" section (sections 1 to 16 of the page are unchanged from 2026-11-08 00:35). The version plan, spec, briefs, STATUS and handover guide in the repository already carried P8 and A49 from PR #108, so this thread left them as they are. Author: Ahmed's side (AE0101); machine: cloud. The questions below are answered.
+
 ## ❓ Open Questions
 
 Numbered in the thread report from Q57 (when to run Stage 1 and Stage 2; the one npm library; whether to keep a "Show more rows" button; the stricter "ask before any scratch install" reading).

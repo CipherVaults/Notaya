@@ -4,6 +4,7 @@
 **Baseline:** `origin/main` `805cf77` (2026-11-09 02:21 UTC, container clock). Product: released 1.5.1 plus the merged, unaccepted 1.6 lanes.
 **Asked by:** Ahmed, project chat 2026-11-09 02:08:59 UTC ("if it's more than 500 rows, it gets slower ... what if someone dumped and imported a huge Excel and wants to use data analytics ... try to see what optimizations can work"). Coordinator note 02:09:09 UTC: research and plan, not a build.
 **Result state:** *produced* (research and plan). Nothing in the app was changed. Not verified on a PC, not accepted.
+**Dated note (2026-11-09 07:00 UTC, [A48](approval-and-amendments.md) and its addendum, Ahmed 06:52:15 and 06:56:22 UTC):** Ahmed put **P1 to P8 into 1.6** (Stage 1, Stage 2 and the other views), in the polish step before the whole-app test closes. Wherever this plan says P8 "after P6 and P7" or "can wait for 2.x", read it as: in 1.6, after P6 and P7. Stage 3 (P9 to P12) is unchanged. The measurements below are as first written.
 **Rule that governs every item below:** formulas, filters, sorts, groups, rollups and totals must give **exactly the same answers** as today. No speed-up may change an answer. See section 6 (the accuracy gate).
 
 ---
