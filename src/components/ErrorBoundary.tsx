@@ -10,8 +10,8 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, { 
     return { failed: true };
   }
 
-  componentDidCatch(error: Error, _info: ErrorInfo) {
-    reportError("react", `${error?.name ?? "Error"}: ${error?.message ?? ""}`);
+  componentDidCatch(_error: Error, _info: ErrorInfo) {
+    reportError("react");
   }
 
   render() {
