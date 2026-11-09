@@ -21,7 +21,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 - Report: [2026-11-09-sf3-tamper-and-purge.md](2026-11-09-sf3-tamper-and-purge.md)
 - Executor: Codex (lane SF3, Gaming-PC), reviewed and merged by Claude
 - Outcome: membership-certificate anchor for the history and activity journals, content purge on permanent delete; checks on the lane tip pass (733 tests)
-- Integration / review: merged into `main` after a heartbeat run on the merged commit (see the PR); Claude read everything
+- Integration / review: merged into `main` after the PC ran 755 tests on the merged and repaired commit `f2d32ea`; Claude read everything
 - Acceptance: pending
 - Open dependency / next action: measure permanent delete on a large vault; G3 safety copy not built
 
