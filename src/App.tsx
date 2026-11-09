@@ -13,10 +13,40 @@ import UnlockScreen from "@/features/unlock/UnlockScreen";
 import Shell from "@/components/Shell";
 import { pollNotices } from "@/features/database/notices";
 
+// A hidden WebView can defer animation frames indefinitely. Prefer the first
+// paint, but never make startup (including ready-to-flush) depend on visibility.
+export function scheduleWindowReady(ready: () => void): () => void {
+  let done = false;
+  let frame = 0;
+  const cancel = () => {
+    done = true;
+    window.clearTimeout(timer);
+    window.cancelAnimationFrame(frame);
+  };
+  const finish = () => {
+    if (done) return;
+    cancel();
+    ready();
+  };
+  const timer = window.setTimeout(finish, 1000);
+  frame = window.requestAnimationFrame(() => {
+    frame = window.requestAnimationFrame(finish);
+  });
+  return cancel;
+}
+
 export default function App() {
   const status = useApp((s) => s.status);
   const refreshStatus = useApp((s) => s.refreshStatus);
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
+  const hasStatus = status !== null;
+
+  // Run after React has committed the status-dependent screen. Rust still
+  // decides whether to show it: --minimized stays hidden while a tray exists.
+  useEffect(() => {
+    if (!hasStatus) return;
+    return scheduleWindowReady(() => { void api.windowReady(); });
+  }, [hasStatus]);
 
   // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
   const unlocked = status?.unlocked ?? false;
@@ -72,10 +102,7 @@ export default function App() {
     showNotice();
 
     applyAppearance(cachedAppearance(), true).finally(() => {
-      refreshStatus().finally(() => {
-        // Show the window only after the first paint, so there is no white flash.
-        requestAnimationFrame(() => requestAnimationFrame(() => api.windowReady()));
-      });
+      void refreshStatus();
     });
 
     // Rust tells us when the vault locks (idle, Win+L, sleep, USB removed...).
