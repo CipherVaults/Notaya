@@ -4,6 +4,8 @@
 
 **Source provenance:** the Area 1 findings reviewed `13185af2c1be96a539ec1ec5446e99e0e14def89`. This worktree started from `d910034` and already contained automatic SF2 checkpoints `e891873` and `5fbcf569ca2643bc2a5b4ee05470f86dba8fb8b2` at entry to this completion run. They were preserved and reviewed against current code. Results below apply to that last checkpoint **plus the final working-tree changes**, not the checkpoint alone. Product-source manifest: `D:\Notaya Tests\v1-6-SF2\final-source-manifest-20261109T175844Z.json`, 20 product files, aggregate SHA-256 `e7377a5eb639474fe6cb5043e9a86a87d36d58f81eea58e9e06ba8f27f2bf96a`. The manifest hashes sorted path/hash entries, as recorded in that file. Documentation-only changes follow the source freeze.
 
+**Final checkpoint observation:** Claude's heartbeat created `9251d540556d5542dc9ee9dc7c8418f12a2e9d6b` at 2026-11-09 18:02:35 UTC while this run was completing. All 20 product-source hashes at that commit/current tree match the tested manifest; only this report's final evidence/provenance wording was still uncommitted at hand-back. This Codex session issued no commit/push command. The Rust/TypeScript/build results apply to the product source of `9251d54`; the entire final Markdown record is not asserted committed.
+
 **Scope / stop point:** five specified approval routes, keyfile locality in five credential commands, minimal cancellation handling, security promises and person-only checks. No dependency, install, network, application/browser launch, actual native dialog, Git mutation, merge or release by this Codex run. The finding and proof sources on lane S were read only; none were copied into the build. Claude owns commits, pushes, records integration, independent review and the final security decision.
 
 ## 1. Per-route changes and exact prompts
@@ -62,7 +64,7 @@ No changes to dependencies, capabilities, CSP, logging, `commands/database_io.rs
 
 ## 5. Tests added and results
 
-Final results are filled from the final-source run below, not from the review's old proof harness. Seventeen new tests cover:
+Final results are filled from the final-source run below, not from the review's old proof harness. Eighteen new tests cover:
 
 | Module | Added test coverage |
 |---|---|
@@ -74,11 +76,13 @@ Final results are filled from the final-source run below, not from the review's 
 | `commands::vault::keyfile_locality_tests` (1) | All five routes, both master-change keyfiles: 30 refused-path cases, zero guarded opens and identical vault/history/settings snapshot. |
 | `keyfile_path::tests` (5) | UNC/extended/mixed/device/ADS aliases before I/O, fixed/USB vs remote resolver policy, synthetic reparse target names, actual local digest reads with dot/space/mixed/relative components, conditional local junction and cycle. |
 
-The conditional junction test prints **NOT RUN** and returns before its junction assertions when Windows cannot create the fixture; that is not evidence that junction reading/cycle handling passed. Other test changes inject approvals into existing parity/history/bridge tests; they do not open a native dialog.
+**Final outcome:** 17 new tests completed their assertions and passed. The eighteenth, conditional junction test, printed **NOT RUN** and returned before its junction assertions because Windows could not create the fixture; that is not evidence that junction reading/cycle handling passed, although Rust counts the returned test as `ok`. Other test changes inject approvals into existing parity/history/bridge tests; they do not open a native dialog.
 
 ## 6. Checks and exact results
 
-Final Rust run in progress when this draft was written; final result to be inserted before hand-back. Log: `D:\Notaya Tests\v1-6-SF2\cargo-final-20261109T175844Z.log`. Both test-home variables point to `D:\Notaya Tests\v1-6-SF2`; Cargo runs offline with cached dependencies and the shared `D:\Notaya-lanes\_target` build directory.
+**Final Rust command:** `cargo test --lib --offline --manifest-path src-tauri/Cargo.toml -- --nocapture` (the requested library suite, with explicit manifest location and uncaptured diagnostics). Exit **101**: **734 passed, 1 failed, 5 ignored**, 0 measured/filtered, **228.82 s**. Sole failure: `shell::tests::the_registry_value_can_be_written_read_and_removed`, the known sandbox-only refusal **“Windows refused to open the start-up list (code 5).”** No SF2 assertion failed. The conditional junction fixture was unavailable as described above. Log: `D:\Notaya Tests\v1-6-SF2\cargo-final-20261109T175844Z.log`. Both test-home variables point to `D:\Notaya Tests\v1-6-SF2`; Cargo ran offline with cached dependencies and the shared `D:\Notaya-lanes\_target` build directory.
+
+Six compiler warnings: unused test `id` in `vault/activity.rs`, unused `claim_core`, `release_core`, `Database::title_prop`, `CALCS`, and `Control::with_deadline`. No change was made to those existing boundaries. The five ignored tests are the named-pipe listener check, two real-pipe bridge checks, one-time golden capture and sample PDF writer; no result is asserted for them.
 
 - `npx tsc --noEmit -p tsconfig.json`: exit **0**, no diagnostics.
 - `npm run build -- --configLoader native`: exit **0**, Vite 8.3.5, 4,413 modules, build 2.22 s. Warning: `DatabaseView.tsx` has both dynamic and static imports, so that dynamic import cannot create a separate chunk. No app/browser was launched.
