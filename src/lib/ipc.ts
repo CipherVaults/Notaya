@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { BinEntry, Revisioned } from "./changes";
 import { flushAll } from "./flush";
+import { startupMark } from "./startup";
 import type {
   BackupInfo,
   CalcEntry,
@@ -183,7 +184,17 @@ export const api = {
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
   setBackdrop: (kind: string, dark: boolean) => invoke<boolean>("set_backdrop", { kind, dark }),
-  windowReady: () => invoke<void>("window_ready"),
+  windowReady: async () => {
+    startupMark("invokeCalledAtMs");
+    startupMark("appReadyCalls", true);
+    try {
+      await invoke<void>("window_ready");
+      startupMark("invokeCompletedAtMs");
+    } catch (error) {
+      startupMark("appReadyRejected", true);
+      throw error;
+    }
+  },
   quitApp: async () => {
     await flushAll();
     return invoke<void>("quit_app");

@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-09 (Ahmed 07:38:18 UTC, reporter Mohamed Sayed), EX-2026-11-09-69: X-1, blank window at Start with Windows
+
+- [2026-11-09-x1-startup-fix.md](2026-11-09-x1-startup-fix.md): the window is shown right after the status screen commits (no animation-frame wait) and still shown if startup calls fail. Real-exe held-frame comparison: baseline ready only after frames were released, candidate 8 s earlier. Not shown to cure Mohamed's case; not accepted.
+
 ### 2026-11-09 (Ahmed's A51, Q63 and Q64), EX-2026-11-09-68: S-FIX2, Windows-owned confirmations and local keyfiles
 
 - [2026-11-09-sf2-native-confirmations.md](2026-11-09-sf2-native-confirmations.md): delete forever, empty the bin, turn AI on and approve a pairing now need a Windows-owned OK/Cancel question from Rust; keyfiles on network shares and device paths are refused. Written by Codex, reviewed in full by Claude; verified by the PC heartbeat on the exact commit; the hands-on checks A01 to A11 are not run; not accepted.

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { onItemsChanged, type BinEntry } from "@/lib/changes";
 import { api } from "@/lib/ipc";
+import { startupMark } from "@/lib/startup";
 import { getKey, setKey } from "@/lib/storage";
 import type { NotesTree, Settings, Sticky, VaultStatus } from "@/lib/types";
 
@@ -134,8 +135,10 @@ export const useApp = create<AppState>((set, get) => ({
   setView: (view) => set({ view }),
 
   refreshStatus: async () => {
+    startupMark("statusRequestedAtMs");
     const status = await api.vaultStatus();
     set({ status });
+    startupMark("statusSetAtMs");
     return status;
   },
 

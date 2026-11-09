@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "motion/react";
 import { toast, Toaster } from "sonner";
@@ -12,11 +12,31 @@ import TitleBar from "@/components/TitleBar";
 import UnlockScreen from "@/features/unlock/UnlockScreen";
 import Shell from "@/components/Shell";
 import { pollNotices } from "@/features/database/notices";
+import { scheduleWindowReady, startupMark, watchStartupInitialization } from "@/lib/startup";
 
 export default function App() {
   const status = useApp((s) => s.status);
   const refreshStatus = useApp((s) => s.refreshStatus);
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
+  const hasStatus = status !== null;
+  const [lockListenerReady, setLockListenerReady] = useState(false);
+  const [startupFailed, setStartupFailed] = useState(false);
+  const readySent = useRef(false);
+
+  // Run after React commits the status screen, or the initialization failure
+  // fallback. Rust still decides visibility: --minimized stays hidden with a tray.
+  useLayoutEffect(() => {
+    startupMark("effectRan", true);
+    if (readySent.current || (!startupFailed && (!hasStatus || !lockListenerReady))) return;
+    startupMark("screenCommittedAtMs");
+    startupMark("microtaskScheduled", true);
+    const cancel = scheduleWindowReady(() => {
+      readySent.current = true;
+      startupMark("microtaskFired", true);
+      void api.windowReady();
+    });
+    return () => { startupMark("readyCleanup", true); cancel(); };
+  }, [hasStatus, lockListenerReady, startupFailed]);
 
   // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
   const unlocked = status?.unlocked ?? false;
@@ -47,6 +67,7 @@ export default function App() {
   }, [unlocked]);
 
   useEffect(() => {
+    startupMark("startupEffectRan", true);
     // A message saved just before a reload (for example a restore that failed): show it once.
     try {
       const notice = sessionStorage.getItem("notaya.notice");
@@ -71,12 +92,10 @@ export default function App() {
         .catch(() => {});
     showNotice();
 
-    applyAppearance(cachedAppearance(), true).finally(() => {
-      refreshStatus().finally(() => {
-        // Show the window only after the first paint, so there is no white flash.
-        requestAnimationFrame(() => requestAnimationFrame(() => api.windowReady()));
-      });
-    });
+    // CSS is applied synchronously. Native backdrop IPC must not hold status
+    // initialization hostage while the window is hidden.
+    startupMark("appearanceStartedAtMs");
+    void applyAppearance(cachedAppearance(), true).finally(() => startupMark("appearanceCompletedAtMs"));
 
     // Rust tells us when the vault locks (idle, Win+L, sleep, USB removed...).
     // Reloading discards every decrypted value held by the UI.
@@ -102,17 +121,29 @@ export default function App() {
         await api.flushDone(event.payload).catch(() => {});
       }
     });
+    const stopStartup = watchStartupInitialization(
+      refreshStatus,
+      [unlisten, unlistenLocking],
+      () => {
+        startupMark("lockListenerReadyAtMs");
+        setLockListenerReady(true);
+      },
+      () => setStartupFailed(true),
+    );
     // The backend can also send a notice while the app is running.
     // The payload is ignored on purpose: taking the stored copy shows the message once and clears it.
     const unlistenNotice = listen<string>("app-notice", () => {
       showNotice();
     });
     // A notice set before the listener existed (while the window was reloading) would be missed: look once more now.
-    unlistenNotice.then(() => showNotice());
+    void unlistenNotice.then(() => showNotice(), () => {});
     return () => {
-      unlistenNotice.then((f) => f());
-      unlisten.then((f) => f());
-      unlistenLocking.then((f) => f());
+      stopStartup();
+      // Rejected registrations have no listener to remove. A registration
+      // completing after cleanup still removes its listener when it arrives.
+      void unlistenNotice.then((f) => f(), () => {});
+      void unlisten.then((f) => f(), () => {});
+      void unlistenLocking.then((f) => f(), () => {});
     };
   }, [refreshStatus]);
 
