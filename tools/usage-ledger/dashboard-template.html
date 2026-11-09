@@ -473,7 +473,7 @@ table("inputsTable", [{ t: "Input" }, { t: "Value" }, { t: "Range" }, { t: "Kind
     { html: `<span class="badge ${r.kind === "measured" ? "m" : r.kind === "rough" ? "r" : r.kind === "rule" ? "m" : "u"}">${esc(r.kind)}</span>` }, { html: esc(r.source) + (r.notes ? `<span class="sub">${esc(r.notes)}</span>` : "") }]));
 $("unknowns").innerHTML = [
   "<b>Mohamed.</b> He has no Codex, only a Claude Pro subscription (Ahmed, 08:57 UTC). Whether he builds, and how much of his week he gives, is his choice: the default is that he does not. The slider shows what it would add, on a guess that Claude building a plan point itself costs about 2% of a Claude week.",
-    "<b>How much of the plan is already built.</b> About 25 of 45 points of 1.6 is my estimate from which lanes merged, not a measurement.",
+    "<b>How much of the plan is already built.</b> About 40 of about 85.5 points of 1.6 (45 first planned, plus 27 for large-database speed, 7.5 for the security pass and the whole-app sweep, added 2026-11-09, and about 6 for the Notion import with real data, A52) is my estimate from which lanes merged, not a measurement; speed stage 1 (P1) is merged, stages P6 to P8, the security fixes and the Notion import are not.",
   "<b>Claude's cost per lane.</b> The weakest number: nobody has yet read Claude's weekly percentage before and after a lane. The new rule in the ledger README asks for that reading each time.",
   "<b>Gates.</b> New libraries, vault format changes and security behaviour need Ahmed's own words; time spent waiting for them is not modelled.",
   "<b>Quality risks.</b> A failed test run (like C4b) or a lane Claude sends back costs windows. The 'extra work' number is a guess for that.",

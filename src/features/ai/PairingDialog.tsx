@@ -24,7 +24,7 @@ export default function PairingDialog({ request, alreadyPaired, onAnswered }: {
       await api.aiPairingAnswer(request.id, allow);
       onAnswered();
     } catch (error) {
-      if (error === "pairing_refused" || error === "The vault is locked.") onAnswered();
+      if (error === "cancelled" || error === "pairing_refused" || error === "The vault is locked.") onAnswered();
       else setError(aiErrorText(error, "The answer could not be saved. Try again."));
     } finally {
       setBusy(false);

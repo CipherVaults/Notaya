@@ -3,14 +3,11 @@
 //! The log must never hold the person's notes, file names, passwords or paths. Rust's and the
 //! browser's own error messages sometimes embed a piece of the data they were working on (a string
 //! slice that failed, a JSON snippet that did not parse), so nothing is copied from a message as it
-//! is: a panic is reduced to a class from a fixed list, and a message from the UI loses everything
-//! that could be data. This is best effort (see P27), so the log is still plain text the person can
-//! read before sending it.
+//! is: panics and UI errors use closed classes. Renderer messages are never accepted by the log.
 
-/// The longest message from the UI that is kept, in characters.
-pub const MESSAGE_MAX: usize = 200;
-/// Raw input is cut to this many characters before any work is done on it.
-const RAW_MAX: usize = 2000;
+use serde::Deserialize;
+
+/// The longest accepted script basename, in ASCII bytes. Invalid input is replaced, never repaired.
 const SOURCE_MAX: usize = 60;
 /// A panic location file name or a backtrace frame is cut to this many characters.
 const FRAME_MAX: usize = 100;
@@ -96,137 +93,40 @@ fn truncate_chars(s: &str, max: usize) -> String {
     s.chars().take(max).collect()
 }
 
-/// Removes everything inside "…", '…', `…`, “…” and ‘…’, quotes included (replaced by "…"). An opening
-/// quote that is never closed removes the rest. A `'` after a letter (`don't`) is an apostrophe, and
-/// a `'` that closes a quote must not be followed by a letter, so `'don't tell'` is one quote.
-pub fn remove_quoted(s: &str) -> String {
-    let chars: Vec<char> = s.chars().collect();
-    let mut out = String::new();
-    let mut i = 0;
-    while i < chars.len() {
-        let c = chars[i];
-        let prev_alnum = i > 0 && chars[i - 1].is_alphanumeric();
-        let close = match c {
-            '"' => Some('"'),
-            '`' => Some('`'),
-            '\u{201c}' => Some('\u{201d}'),
-            '\u{2018}' => Some('\u{2019}'),
-            '\'' if !prev_alnum => Some('\''),
-            _ => None,
-        };
-        let Some(close) = close else {
-            out.push(c);
-            i += 1;
-            continue;
-        };
-        // Skip to the closing quote.
-        i += 1;
-        while i < chars.len() {
-            let d = chars[i];
-            if d == '\\' {
-                i += 2;
-                continue;
-            }
-            let ends = d == close && (close != '\'' || !chars.get(i + 1).is_some_and(|n| n.is_alphanumeric()));
-            i += 1;
-            if ends {
-                break;
-            }
+/// The only error classes sent by the window handlers and React boundary. No free text survives.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum FrontendKind {
+    Error,
+    UnhandledRejection,
+    React,
+    #[serde(other)]
+    Unknown,
+}
+
+impl FrontendKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Error => "error",
+            Self::UnhandledRejection => "unhandledrejection",
+            Self::React => "react",
+            Self::Unknown => "unknown",
         }
-        out.push('\u{2026}');
-    }
-    out
-}
-
-/// True for a word that looks like a file path or a URL.
-fn looks_like_path(word: &str) -> bool {
-    let b = word.as_bytes();
-    word.contains('\\')
-        || word.contains("://")
-        || word.starts_with("//")
-        || (b.len() >= 2 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b.len() == 2 || b[2] == b'/'))
-        || (word.starts_with('/') && word[1..].contains('/'))
-        || word.starts_with("~/")
-}
-
-/// Cuts the message at the first word that looks like a path, because a path may continue with spaces
-/// (`C:\Users\x\My notes.docx`).
-fn cut_at_path(s: &str) -> String {
-    let mut words = Vec::new();
-    for w in s.split_whitespace() {
-        if looks_like_path(w) {
-            words.push("<path removed>");
-            break;
-        }
-        words.push(w);
-    }
-    words.join(" ")
-}
-
-/// For text that mentions JSON or a token: drops everything after the first `:` that follows the
-/// mention (a parser's complaint often quotes the input there).
-fn cut_after_json_colon(s: &str) -> String {
-    let lower = s.to_ascii_lowercase();
-    let from = ["json", "token"].iter().filter_map(|k| lower.find(k)).min();
-    let Some(from) = from else { return s.to_string() };
-    match s[from..].find(':') {
-        Some(rel) => s[..from + rel].to_string(),
-        None => s.to_string(),
     }
 }
 
-/// "Unexpected token X in JSON": X is one character of the input, so the word after `token` goes.
-fn drop_word_after_token(s: &str) -> String {
-    let lower = s.to_ascii_lowercase();
-    let mut out = String::new();
-    let mut at = 0;
-    while let Some(rel) = lower[at..].find("token ") {
-        let end = at + rel + "token ".len();
-        out.push_str(&s[at..end]);
-        let rest = &s[end..];
-        let skip = rest.find(char::is_whitespace).unwrap_or(rest.len());
-        out.push('\u{2026}');
-        at = end + skip;
+/// Only a bounded source basename is metadata. A path, prose, or invalid character causes the
+/// entire field to become a fixed placeholder; filtering characters could retain note fragments.
+pub fn frontend_source(raw: &str) -> &str {
+    if raw.is_empty() || raw.len() > SOURCE_MAX
+        || !raw.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-')) {
+        return "unknown";
     }
-    out.push_str(&s[at..]);
-    out
-}
-
-/// A message from the UI, reduced to what cannot be data: no quoted text, no text after a JSON or
-/// token complaint's colon, no path, no control characters, at most [`MESSAGE_MAX`] characters.
-pub fn frontend_message(raw: &str) -> String {
-    let s = strip_controls(&truncate_chars(raw, RAW_MAX));
-    let s = cut_after_json_colon(&s);
-    let s = remove_quoted(&s);
-    let s = cut_at_path(&s);
-    let s = drop_word_after_token(&s);
-    let s = s.split_whitespace().collect::<Vec<_>>().join(" ");
-    truncate_chars(&s, MESSAGE_MAX)
-}
-
-/// The kind of a UI error: one of three known words, or "other".
-pub fn frontend_kind(raw: &str) -> &'static str {
-    match raw {
-        "error" => "error",
-        "unhandledrejection" => "unhandledrejection",
-        "react" => "react",
-        _ => "other",
-    }
-}
-
-/// The script a UI error came from: only the file name of a script or page (`index-AbC.js`), without
-/// folders, query or fragment, in a safe set of characters. Anything else (a document the person
-/// picked, for example) is "unknown".
-pub fn frontend_source(raw: &str) -> String {
-    let raw = truncate_chars(raw, RAW_MAX);
-    let no_query = raw.split(['?', '#']).next().unwrap_or("");
-    let name = no_query.rsplit(['/', '\\']).next().unwrap_or("");
-    let kept: String = name.chars().filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-')).collect();
-    let ext = kept.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
-    if kept.contains('.') && matches!(ext.as_str(), "js" | "mjs" | "cjs" | "ts" | "tsx" | "jsx" | "html") {
-        truncate_chars(&kept, SOURCE_MAX)
+    let ext = raw.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    if raw.contains('.') && matches!(ext.as_str(), "js" | "mjs" | "cjs" | "ts" | "tsx" | "jsx" | "html") {
+        raw
     } else {
-        "unknown".to_string()
+        "unknown"
     }
 }
 
@@ -309,62 +209,31 @@ mod tests {
     }
 
     #[test]
-    fn quoted_text_is_removed() {
-        let out = remove_quoted(r#"Cannot read 'title' of "my note" and `code` and “a” ‘b’"#);
-        for leaked in ["title", "my note", "code", "a\u{201d}", "b\u{2019}"] {
-            assert!(!out.contains(leaked), "{out}");
+    fn sources_accept_only_bounded_script_basenames() {
+        assert_eq!(frontend_source("index-AbC123.js"), "index-AbC123.js");
+        assert_eq!(frontend_source(&format!("{}.js", "a".repeat(SOURCE_MAX - 3))).len(), SOURCE_MAX);
+        for source in [
+            "", "noextension", "notes.docx", "../index.js", "C:/private/index.js",
+            r"C:\private\index.js", "http://tauri.localhost/assets/index.js", "index.js?note=1",
+            "private note.js", "private\"note.js", "private'note.js", "private:token.js",
+            "index.js\n", "index.js\u{202e}", "index-\u{e9}.js",
+            &format!("{}.js", "a".repeat(SOURCE_MAX - 2)),
+            &"x".repeat(100_000),
+        ] {
+            assert_eq!(frontend_source(source), "unknown");
         }
-        assert!(remove_quoted("it's fine, don't worry").contains("don't"));
-        // A nested apostrophe does not end the quote early.
-        assert!(!remove_quoted("see 'don't tell' now").contains("tell"));
-        // An unclosed quote removes the rest.
-        assert_eq!(remove_quoted("start \"unclosed secret"), "start \u{2026}");
     }
 
     #[test]
-    fn json_and_token_complaints_lose_their_input() {
-        let m = frontend_message(r#"Unexpected token 'h', "hello wor"... is not valid JSON"#);
-        assert!(!m.contains("hello") && !m.contains("'h'"), "{m}");
-        let m = frontend_message("SyntaxError: JSON.parse: unexpected character: my secret note at line 1");
-        assert!(!m.contains("secret"), "{m}");
-        let m = frontend_message("Unexpected token h in JSON at position 0");
-        assert!(!m.contains(" h "), "{m}");
-        let m = frontend_message("Unexpected token Z");
-        assert!(!m.contains('Z'), "{m}");
-    }
-
-    #[test]
-    fn paths_and_urls_are_cut() {
-        let m = frontend_message(r"Could not read C:\Users\x\secret.docx because of my notes");
-        assert!(!m.contains("secret") && !m.contains("Users") && !m.contains("notes"), "{m}");
-        let m = frontend_message("failed to load https://tauri.localhost/assets/a.js?q=note");
-        assert!(!m.contains("note") && !m.contains("assets"), "{m}");
-        let m = frontend_message("open /home/me/docs/diary failed");
-        assert!(!m.contains("diary"), "{m}");
-    }
-
-    #[test]
-    fn controls_are_removed_and_length_is_capped() {
-        let m = frontend_message("line one\nFAKE 2026-01-01T00:00:00Z ERROR forged\r\u{0}\u{202e}end");
-        assert!(!m.contains('\n') && !m.contains('\r') && !m.contains('\u{0}') && !m.contains('\u{202e}'), "{m:?}");
-        let long = frontend_message(&"x".repeat(100_000));
-        assert_eq!(long.chars().count(), MESSAGE_MAX);
-    }
-
-    #[test]
-    fn sources_keep_only_a_script_file_name() {
-        assert_eq!(frontend_source("http://tauri.localhost/assets/index-AbC123.js?x=1#y"), "index-AbC123.js");
-        assert_eq!(frontend_source(r"C:\Users\x\secret.docx"), "unknown");
-        assert_eq!(frontend_source("<script>alert(1)</script>"), "unknown");
-        assert_eq!(frontend_source(&format!("{}.js", "a".repeat(500))).len(), SOURCE_MAX);
-    }
-
-    #[test]
-    fn kinds_come_from_a_fixed_list() {
-        assert_eq!(frontend_kind("error"), "error");
-        assert_eq!(frontend_kind("unhandledrejection"), "unhandledrejection");
-        assert_eq!(frontend_kind("react"), "react");
-        assert_eq!(frontend_kind("my secret note"), "other");
+    fn kinds_deserialize_to_a_closed_class() {
+        for name in ["error", "unhandledrejection", "react", "unknown"] {
+            let kind: FrontendKind = serde_json::from_value(serde_json::json!(name)).unwrap();
+            assert_eq!(kind.as_str(), name);
+        }
+        for name in ["my secret note", "ERROR", "error\nforged", &"a".repeat(100_000)] {
+            let kind: FrontendKind = serde_json::from_value(serde_json::json!(name)).unwrap();
+            assert_eq!(kind, FrontendKind::Unknown);
+        }
     }
 
     #[test]

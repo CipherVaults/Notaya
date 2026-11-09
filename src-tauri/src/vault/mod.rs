@@ -26,6 +26,9 @@ const MAX_ITEM_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_ATTACHMENT_BYTES: usize = 900 * 1024 * 1024;
 
 pub struct Session {
+    // Memory-only identity: a dialog opened before lock/unlock cannot approve a
+    // later session, even when it opens the same vault with the same row revisions.
+    native_session_id: [u8; 16],
     /// The format the file is in. A vault from V1.3.0 or earlier is `Legacy` until `upgrade_format` runs.
     format: Format,
     dek: Key,
@@ -79,6 +82,7 @@ pub fn parse_id(id: &str) -> Result<RowId> {
 }
 
 impl Session {
+    pub(crate) fn native_session_id(&self) -> [u8; 16] { self.native_session_id }
     /// One dispatcher request, including nested cores, journals and attachment
     /// cleanup. The session mutex remains held until commit and event enqueue.
     pub(crate) fn atomic_action<T>(&mut self, safety_backup: bool, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
@@ -139,7 +143,7 @@ impl Session {
     pub fn create(path: &Path, password: &str, keyfile: Option<&[u8; 32]>, kdf: KdfParams) -> Result<Session> {
         let (header, dek) = Header::create(password, keyfile, kdf)?;
         let store = Store::create(path, &header)?;
-        let mut session = Session {
+        let mut session = Session { native_session_id: crypto::random_bytes(),
             format: header.format,
             dek,
             vault_id: header.vault_id,
@@ -159,7 +163,7 @@ impl Session {
     pub fn create_open(path: &Path) -> Result<Session> {
         let (header, dek) = Header::create_open()?;
         let store = Store::create(path, &header)?;
-        let mut session = Session {
+        let mut session = Session { native_session_id: crypto::random_bytes(),
             format: header.format,
             dek,
             vault_id: header.vault_id,
@@ -193,7 +197,7 @@ impl Session {
     #[cfg(test)]
     fn new_in(path: &Path, header: Header, dek: Key, open: bool) -> Result<Session> {
         let store = Store::create(path, &header)?;
-        let mut session = Session {
+        let mut session = Session { native_session_id: crypto::random_bytes(),
             format: header.format,
             dek,
             vault_id: header.vault_id,
@@ -239,7 +243,7 @@ impl Session {
             items.insert(item.id().to_string(), item);
         }
         store.ensure_journal_tables()?;
-        let mut session = Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+        let mut session = Session { native_session_id: crypto::random_bytes(), format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
             history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
         session.load_history()?;
         session.load_activity_head()?;
