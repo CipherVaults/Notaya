@@ -526,6 +526,8 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    const TEST_SECTION: &str = "11111111111111111111111111111111";
+
     fn with_session(test: impl FnOnce(&mut Session)) {
         let root = std::env::var_os("NOTAYA_HOME")
             .map(std::path::PathBuf::from)
@@ -533,10 +535,11 @@ mod tests {
             .join(new_id());
         std::fs::create_dir_all(&root).unwrap();
         let mut session = Session::create_open(&root.join("vault.nota")).unwrap();
+        session.put(Item::Section(serde_json::from_value(json!({"id": TEST_SECTION,"notebookId":"","name":"Test section","color":"","order":0,"created":1,"updated":1})).unwrap())).unwrap();
         session
             .put(Item::Database(Database::new(
                 "dddddddddddddddddddddddddddddddd".into(),
-                "s".into(),
+                TEST_SECTION.into(),
                 "\u{200f}عربي  ".into(),
                 1,
             )))
@@ -565,6 +568,7 @@ mod tests {
                 if bin_container {
                     let section_id = new_id();
                     s.put(Item::Section(crate::model::Section {
+                        source: None,
                         id: section_id.clone(),
                         notebook_id: new_id(),
                         name: "private container".into(),
@@ -623,7 +627,7 @@ mod tests {
             let mut db = add_property(s, &Actor::Person, id, prop("old")).unwrap();
             s.put(Item::Database(Database::new(
                 target.into(),
-                "s".into(),
+                TEST_SECTION.into(),
                 "target".into(),
                 1,
             )))
@@ -1022,9 +1026,9 @@ mod tests {
                 ("mismatch", PropKind::Relation, a, "different"),
                 ("wrong_db", PropKind::Relation, b, "rel"),
             ] {
-                let original = Database::new(a.into(), "s".into(), "Source".into(), 1);
+                let original = Database::new(a.into(), TEST_SECTION.into(), "Source".into(), 1);
                 s.put(Item::Database(original.clone())).unwrap();
-                let mut target = Database::new(b.into(), "s".into(), "Target".into(), 1);
+                let mut target = Database::new(b.into(), TEST_SECTION.into(), "Target".into(), 1);
                 if back_kind != PropKind::Title {
                     target.props.push(Property {
                         kind: back_kind,
@@ -1084,7 +1088,7 @@ mod tests {
             let b = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
             s.put(Item::Database(Database::new(
                 b.into(),
-                "s".into(),
+                TEST_SECTION.into(),
                 "Target".into(),
                 1,
             )))
@@ -1104,7 +1108,7 @@ mod tests {
                 assert!(relations::reciprocal(&saved, p, &target));
             }
             let c = "cccccccccccccccccccccccccccccccc";
-            let mut other = Database::new(c.into(), "s".into(), "Other target".into(), 1);
+            let mut other = Database::new(c.into(), TEST_SECTION.into(), "Other target".into(), 1);
             other.props.push(Property {
                 kind: PropKind::Relation,
                 relation_db: a.into(),
@@ -1136,7 +1140,7 @@ mod tests {
         with_session(|s| {
             s.put(Item::Database(Database::new(
                 "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".into(),
-                "s".into(),
+                TEST_SECTION.into(),
                 "Other".into(),
                 1,
             )))

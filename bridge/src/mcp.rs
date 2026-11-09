@@ -1,13 +1,13 @@
 //! Dual-era newline-delimited MCP, based on the coordinator's official-doc extracts:
 //! modern 2026-07-28 request metadata and legacy <= 2025-11-25 initialization.
 //! Modern subscriptions are NOT advertised: the offline extract omits their schema.
-use crate::{
+use super::{
     pipe::{ClientMessage, EventKind, Pairing, ServerMessage},
     tools::{self, Level},
 };
 use serde_json::{Value, json};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, VecDeque},
     io::{self, BufRead},
 };
 
@@ -54,6 +54,9 @@ pub struct Mcp {
     pending: BTreeMap<u64, Pending>,
     lists: Vec<Pending>,
     refresh_id: Option<u64>,
+    queued: VecDeque<(ClientMessage, usize)>,
+    queued_bytes: usize,
+    in_flight: Option<u64>,
 }
 
 fn rpc_result(id: Value, mut result: Value, era: Era) -> Effect {
@@ -91,7 +94,7 @@ pub fn read_line<R: BufRead>(reader: &mut R) -> io::Result<Option<Vec<u8>>> {
         }
         let newline = available.iter().position(|b| *b == b'\n');
         let count = newline.map_or(available.len(), |i| i + 1);
-        if bytes.len() + count > crate::pipe::MAX_REQUEST {
+        if bytes.len() + count > super::pipe::MAX_REQUEST {
             return Err(io::ErrorKind::InvalidData.into());
         }
         bytes.extend_from_slice(&available[..count]);
@@ -172,6 +175,9 @@ impl Mcp {
         self.welcome = None;
         self.problem = code;
         self.refresh_id = None;
+        self.queued.clear();
+        self.queued_bytes = 0;
+        self.in_flight = None;
         let mut effects = self.set_level(Level::Off);
         for (_, pending) in std::mem::take(&mut self.pending) {
             effects.push(tool_error(pending.rpc_id, code, pending.era));
@@ -234,6 +240,30 @@ impl Mcp {
         self.next_id
     }
 
+    fn enqueue(&mut self, message: ClientMessage) -> Vec<Effect> {
+        let bytes = serde_json::to_vec(&message).map_or(usize::MAX, |b| b.len());
+        if bytes > super::pipe::MAX_REQUEST || self.queued_bytes.saturating_add(bytes) > 2 * super::pipe::MAX_REQUEST {
+            if let ClientMessage::Call { id, .. } = message {
+                if self.refresh_id == Some(id) { self.refresh_id = None; }
+                if let Some(pending) = self.pending.remove(&id) {
+                    return vec![tool_error(pending.rpc_id, "rate_limited", pending.era)];
+                }
+            }
+            return vec![];
+        }
+        self.queued_bytes += bytes;
+        self.queued.push_back((message, bytes));
+        self.pump()
+    }
+
+    fn pump(&mut self) -> Vec<Effect> {
+        if self.in_flight.is_some() { return vec![]; }
+        let Some((message, bytes)) = self.queued.pop_front() else { return vec![]; };
+        self.queued_bytes -= bytes;
+        if let ClientMessage::Call { id, .. } = &message { self.in_flight = Some(*id); }
+        vec![Effect::Send(message)]
+    }
+
     fn refresh(&mut self) -> Vec<Effect> {
         if !self.paired || self.refresh_id.is_some() {
             return vec![];
@@ -242,7 +272,7 @@ impl Mcp {
         self.refresh_id = Some(id);
         // Hide stale tools immediately; the new list comes only from Notaya's answer.
         let mut effects = self.set_level(Level::Off);
-        effects.push(Effect::Send(ClientMessage::Call {
+        effects.extend(self.enqueue(ClientMessage::Call {
             id,
             action: "ai.permissions.get".into(),
             params: json!({}),
@@ -284,7 +314,17 @@ impl Mcp {
                     .find(|(_, pending)| pending.rpc_id == params["requestId"])
             {
                 self.pending.remove(&pipe_id);
-                return vec![Effect::Send(ClientMessage::Cancel { id: pipe_id })];
+                if self.in_flight == Some(pipe_id) {
+                    // Keep the transport slot until the server acknowledges completion.
+                    return vec![Effect::Send(ClientMessage::Cancel { id: pipe_id })];
+                }
+                self.queued.retain(|(message, bytes)| {
+                    if matches!(message, ClientMessage::Call { id, .. } if *id == pipe_id) {
+                        self.queued_bytes -= *bytes;
+                        false
+                    } else { true }
+                });
+                return vec![];
             }
             if method == "notifications/cancelled" {
                 self.lists
@@ -463,15 +503,28 @@ impl Mcp {
                 },
             },
         );
-        vec![Effect::Send(ClientMessage::Call {
+        self.enqueue(ClientMessage::Call {
             id: pipe_id,
             action: action.into(),
             params: arguments["params"].clone(),
             preview: arguments["preview"].as_bool(),
-        })]
+        })
     }
 
     pub fn server(&mut self, message: ServerMessage) -> Vec<Effect> {
+        let completed = match &message {
+            ServerMessage::Result { id, .. } | ServerMessage::Error { id: Some(id), .. } => self.in_flight == Some(*id),
+            _ => false,
+        };
+        let mut effects = self.server_inner(message);
+        if completed {
+            self.in_flight = None;
+            effects.extend(self.pump());
+        }
+        effects
+    }
+
+    fn server_inner(&mut self, message: ServerMessage) -> Vec<Effect> {
         match message {
             ServerMessage::Welcome { level, locked, .. } => {
                 self.welcome = Some((level, locked));
@@ -592,7 +645,48 @@ impl Mcp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipe::{MAX_REQUEST, MAX_RESPONSE, read_frame, write_frame};
+    #[test]
+    fn overlapping_calls_wait_through_confirmation_and_cancel_only_the_named_call() {
+        let mut mcp=initialized();
+        let first=fake_call(&mcp.input(call(json!(11))));
+        assert!(mcp.input(call(json!(12))).is_empty());
+        assert!(mcp.input(call(json!(13))).is_empty());
+        let progress=fake_reply(&mut mcp,ServerMessage::Event{kind:EventKind::ConfirmPending,id:Some(first),level:None});
+        assert_eq!(output(&progress).len(),1);
+        let queued_cancel=mcp.input(json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":12}}));
+        assert!(queued_cancel.is_empty());
+        // A permissions refresh shares the same serialized queue.
+        assert!(mcp.refresh().iter().all(|e|!matches!(e,Effect::Send(_))));
+        let active_cancel=mcp.input(json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":11}}));
+        assert!(matches!(active_cancel.as_slice(),[Effect::Send(ClientMessage::Cancel{id})] if *id==first));
+        assert!(mcp.in_flight==Some(first));
+        let reply=fake_reply(&mut mcp,ServerMessage::Error{id:Some(first),code:"stopped".into(),message:"ignored".into()});
+        let third=fake_call(&reply);
+        assert_ne!(first,third);
+        let reply=fake_reply(&mut mcp,ServerMessage::Result{id:third,ok:true,value:json!({"exact":"kept"}),rev:None});
+        assert_eq!(output(&reply)[0]["id"],13);
+        assert!(reply.iter().any(|e|matches!(e,Effect::Send(ClientMessage::Call{action,..}) if action=="ai.permissions.get")));
+        mcp.disconnected("stopped");
+        assert!(mcp.queued.is_empty() && mcp.in_flight.is_none() && mcp.queued_bytes==0);
+    }
+
+    #[test]
+    fn overlapping_call_queue_is_bounded_by_count_and_bytes() {
+        let mut mcp=initialized();
+        fake_call(&mcp.input(call(json!(1))));
+        for id in 2..=MAX_PENDING { assert!(mcp.input(call(json!(id))).is_empty()); }
+        let refused=mcp.input(call(json!(MAX_PENDING+1)));
+        assert_eq!(output(&refused)[0]["result"]["isError"],true);
+        mcp.disconnected("stopped");
+        let mut mcp=initialized();
+        fake_call(&mcp.input(call(json!(1))));
+        let mut big=call(json!(2));big["params"]["arguments"]["params"]["content"]=json!("x".repeat(6*1024*1024));
+        assert!(mcp.input(big.clone()).is_empty());
+        big["id"]=json!(3);assert!(mcp.input(big.clone()).is_empty());
+        big["id"]=json!(4);assert_eq!(output(&mcp.input(big))[0]["result"]["isError"],true);
+        assert!(mcp.queued_bytes<=2*super::super::pipe::MAX_REQUEST);
+    }
+    use super::super::pipe::{MAX_REQUEST, MAX_RESPONSE, read_frame, write_frame};
     use std::io::Cursor;
 
     fn output(effects: &[Effect]) -> Vec<Value> {
@@ -770,7 +864,7 @@ mod tests {
         let result = output(&mcp.input(modern(
             json!({"jsonrpc":"2.0","id":5,"method":"tools/list","params":{}}),
         )));
-        assert_eq!(result[0]["result"]["tools"].as_array().unwrap().len(), 10);
+        assert_eq!(result[0]["result"]["tools"].as_array().unwrap().len(), 9);
         let result = output(&mcp.input(modern(
             json!({"jsonrpc":"2.0","id":6,"method":"subscriptions/listen","params":{}}),
         )));
@@ -814,7 +908,11 @@ mod tests {
     fn mixed_era_pipe_replies_retain_each_requests_envelope() {
         let mut mcp = initialized();
         let modern_id = fake_call(&mcp.input(modern(call(json!(1)))));
-        let legacy_id = fake_call(&mcp.input(call(json!(2))));
+        assert!(mcp.input(call(json!(2))).is_empty());
+        let complete = fake_reply(&mut mcp, ServerMessage::Error { id: Some(modern_id), code: "private".into(), message: "private note".into() });
+        assert_modern(&output(&complete)[0]["result"]);
+        assert!(!output(&complete)[0].to_string().contains("private"));
+        let legacy_id = fake_call(&complete);
         let result = output(&fake_reply(
             &mut mcp,
             ServerMessage::Result {
@@ -825,16 +923,6 @@ mod tests {
             },
         ));
         assert!(result[0]["result"].get("resultType").is_none());
-        let result = output(&fake_reply(
-            &mut mcp,
-            ServerMessage::Error {
-                id: Some(modern_id),
-                code: "private".into(),
-                message: "private note".into(),
-            },
-        ));
-        assert_modern(&result[0]["result"]);
-        assert!(!result[0].to_string().contains("private"));
         let modern_id = fake_call(&mcp.input(modern(call(json!(3)))));
         let result = output(&fake_reply(
             &mut mcp,

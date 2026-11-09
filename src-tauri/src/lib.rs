@@ -1,3 +1,4 @@
+mod ai;
 mod changes;
 mod actions;
 mod backup;
@@ -147,6 +148,13 @@ pub fn run() {
             if shell::started_minimized() && state.tray_ready() {
                 state.set_tray_hidden(true);
             }
+            let ai_app=app.handle().clone();
+            state.ai.bind(move |event,value| {
+                use tauri::Emitter;
+                let _=ai_app.emit_to("main",event,value);
+                if matches!(event,"ai-confirm"|"ai-pairing") { shell::ai_notice(&ai_app); }
+            });
+            ai::pipe::spawn(app.handle().clone());
             state::spawn_monitor(app.handle().clone());
             Ok(())
         })
@@ -188,6 +196,16 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::ai::ai_get_status,
+            commands::ai::ai_set_enabled,
+            commands::ai::ai_set_level,
+            commands::ai::ai_remove_pairing,
+            commands::ai::ai_set_hidden,
+            commands::ai::ai_set_big_change,
+            commands::ai::ai_pause,
+            commands::ai::ai_resume,
+            commands::ai::ai_confirm_answer,
+            commands::ai::ai_pair_answer,
             actions::list_actions,
             vault_cmd::vault_status,
             vault_cmd::start_notes,
@@ -306,9 +324,10 @@ pub fn run() {
             eprintln!("Notaya could not start: {e}");
             std::process::exit(1);
         })
-        .run(|_app, event| {
+        .run(|app, event| {
             // Every normal end (the Quit button, the tray's Quit, the last window closing) passes here.
             if let tauri::RunEvent::Exit = event {
+                app.state::<state::AppState>().ai.invalidate();
                 logging::clean_exit();
             }
         });

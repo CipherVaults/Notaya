@@ -84,12 +84,16 @@ static NOTICES: Mutex<Vec<Reminder>> = Mutex::new(Vec::new());
 static LAST_TICK: Mutex<Option<HashMap<String, i64>>> = Mutex::new(None);
 
 /// Hands the messages of a finished run to the screen (shown on its next poll).
-pub fn finish(run: Run) {
-    if run.notices.is_empty() {
+pub fn finish(s: &mut Session, run: Run) {
+    s.automation_notices(run.notices);
+}
+
+pub(crate) fn publish_notices(notices: Vec<Reminder>) {
+    if notices.is_empty() {
         return;
     }
     let mut q = NOTICES.lock().unwrap_or_else(|e| e.into_inner());
-    q.extend(run.notices);
+    q.extend(notices);
     let extra = q.len().saturating_sub(50);
     q.drain(..extra);
 }
@@ -112,6 +116,7 @@ pub fn fire(s: &mut Session, run: &mut Run, row_id: &str, ev: &Event, depth: usi
 
 pub(crate) fn fire_core(s: &mut Session, _actor: &Actor, run: &mut Run, row_id: &str, ev: &Event, depth: usize) {
     if depth > MAX_DEPTH {
+        s.automation_failed();
         return;
     }
     let Ok(r) = row(s, row_id) else { return };
@@ -149,6 +154,7 @@ pub(crate) fn fire_core(s: &mut Session, _actor: &Actor, run: &mut Run, row_id: 
             exec(s, run, &name, row_id, &actions, depth);
             Ok(())
         }) {
+            s.automation_failed();
             run.say(s, row_id, &name, format!("The automation did not run: {e}"));
         }
     }
@@ -157,11 +163,13 @@ pub(crate) fn fire_core(s: &mut Session, _actor: &Actor, run: &mut Run, row_id: 
 fn exec(s: &mut Session, run: &mut Run, name: &str, row_id: &str, actions: &[Action], depth: usize) {
     for act in actions {
         if run.actions_left == 0 {
+            s.automation_failed();
             run.say(s, row_id, name, "Stopped: this run did too many actions.".into());
             return;
         }
         run.actions_left -= 1;
         if let Err(e) = do_action(s, run, name, row_id, act, depth) {
+            s.automation_failed();
             run.say(s, row_id, name, format!("An action did not run: {e}"));
         }
     }
@@ -395,7 +403,7 @@ pub(crate) fn tick_dates_at_core(s: &mut Session, _actor: &Actor, now: i64) {
         }) {
             if let Some(id) = job.rows.first() { run.say(s, id, &job.auto.name, format!("The automation did not run: {e}")); }
         }
-        finish(run);
+        finish(s, run);
     }
 }
 
