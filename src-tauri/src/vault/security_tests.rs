@@ -463,10 +463,13 @@ fn permanent_delete_and_empty_bin_purge_all_item_content_and_refuse_undo() {
 fn template_removal_purges_old_template_bodies_but_keeps_database() {
     let (mut s, path, password) = fixture();
     let marker = Zeroizing::new(format!("template{}", new_id()));
-    let file = s.put_attachment("application/octet-stream", marker.as_bytes()).unwrap();
+    let file = s
+        .put_attachment("application/octet-stream", marker.as_bytes())
+        .unwrap();
     // A separate live reference must survive the same cleanup.
     let kept_file = s.put_attachment("image/png", b"kept picture").unwrap();
-    s.put(page(&format!("clatt://localhost/{kept_file}"))).unwrap();
+    s.put(page(&format!("clatt://localhost/{kept_file}")))
+        .unwrap();
     let mut db = Database::new(new_id(), String::new(), "DB".into(), 1);
     db.templates.push(Template {
         id: new_id(),
@@ -534,10 +537,11 @@ fn thinning_moves_membership_and_records_an_authenticated_act() {
 
 #[test]
 fn failed_purge_rolls_back_deleted_records_and_relinked_activity() {
-    for fail_final_anchor in [false, true] {
+    for failure in 0..3 {
         let (mut s, path, password) = fixture();
         let marker = Zeroizing::new(new_id());
-        let item: Item=serde_json::from_value(serde_json::json!({"kind":"sticky","id":new_id(),"content":&*marker,"text":&*marker,"color":"yellow","x":0,"y":0,"w":320,"h":320,"onTop":false,"open":false,"created":1,"updated":1})).unwrap();
+        let file = s.put_attachment("image/png", marker.as_bytes()).unwrap();
+        let item: Item=serde_json::from_value(serde_json::json!({"kind":"sticky","id":new_id(),"content":format!("clatt://localhost/{file} {}", &*marker),"text":&*marker,"color":"yellow","x":0,"y":0,"w":320,"h":320,"onTop":false,"open":false,"created":1,"updated":1})).unwrap();
         let id = item.id().to_string();
         s.put(item).unwrap();
         edit(&mut s, &id);
@@ -547,21 +551,24 @@ fn failed_purge_rolls_back_deleted_records_and_relinked_activity() {
             Table::History,
             Table::Activity,
             Table::Anchor,
+            Table::Attachments,
         ]
         .into_iter()
         .map(|t| s.store.all(t).unwrap())
         .collect();
         let conn = Connection::open(&path).unwrap();
-        conn.execute_batch(if fail_final_anchor {
+        conn.execute_batch(if failure == 1 {
             // The deletion writes its journal/anchor, purges undo, re-links the
             // chain and then refreshes the final anchor in this SAME transaction.
             "CREATE TABLE anchor_writes(n INTEGER); INSERT INTO anchor_writes VALUES(0);
          CREATE TRIGGER fail_refresh BEFORE UPDATE ON journal_anchor WHEN NEW.id=zeroblob(16)
          BEGIN UPDATE anchor_writes SET n=n+1;
          SELECT CASE WHEN (SELECT n FROM anchor_writes)=2 THEN RAISE(ABORT,'fixture') END; END;"
-        } else {
+        } else if failure == 0 {
             "CREATE TRIGGER fail_purge BEFORE DELETE ON journal_anchor WHEN substr(OLD.id,1,1)=x'03'
          BEGIN SELECT RAISE(ABORT,'fixture'); END;"
+        } else {
+            "CREATE TRIGGER fail_file_purge BEFORE DELETE ON attachments BEGIN SELECT RAISE(ABORT,'fixture'); END;"
         })
         .unwrap();
         drop(conn);
@@ -574,6 +581,7 @@ fn failed_purge_rolls_back_deleted_records_and_relinked_activity() {
             Table::History,
             Table::Activity,
             Table::Anchor,
+            Table::Attachments,
         ]
         .into_iter()
         .zip(before)
@@ -777,4 +785,129 @@ fn bulk_sticky_bin_preserves_undo_until_empty_bin_purges_it() {
         .clone();
     assert_eq!(s.activity_undo(&ai(), &bin_set).unwrap().restored, 2);
     assert!(ids.iter().all(|id| !s.in_bin(id)));
-    crate::commands::stickies::delete_stickies_core(&mut s, &Acto
+    crate::commands::stickies::delete_stickies_core(&mut s, &Actor::Person, ids.clone()).unwrap();
+    crate::commands::notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+    assert_absent(&s, &marker);
+    for set in sets {
+        assert!(s.activity_undo(&ai(), &set).is_err());
+    }
+    s.activity_verify().unwrap();
+    drop(s);
+    let s = Session::unlock(&path, &password, None).unwrap();
+    assert_absent(&s, &marker);
+    s.verify_attachments().unwrap();
+}
+
+#[test]
+fn template_file_cleanup_failure_rolls_back_the_entire_purge() {
+    let (mut s, path, _) = fixture();
+    let marker = Zeroizing::new(new_id());
+    let file = s
+        .put_attachment("application/octet-stream", marker.as_bytes())
+        .unwrap();
+    let mut db = Database::new(new_id(), String::new(), "DB".into(), 1);
+    db.templates.push(Template {
+        id: new_id(),
+        name: "Template".into(),
+        content: marker.to_string(),
+        cells: serde_json::json!({"file":file}).to_string(),
+        ..Default::default()
+    });
+    let id = db.id.clone();
+    s.put(Item::Database(db)).unwrap();
+    edit(&mut s, &id);
+    let before: Vec<_> = [
+        Table::Records,
+        Table::History,
+        Table::Activity,
+        Table::Anchor,
+        Table::Attachments,
+    ]
+    .into_iter()
+    .map(|table| s.store.all(table).unwrap())
+    .collect();
+    Connection::open(&path).unwrap().execute_batch(
+        "CREATE TRIGGER fail_file_purge BEFORE DELETE ON attachments BEGIN SELECT RAISE(ABORT,'fixture'); END;"
+    ).unwrap();
+    let Item::Database(mut db) = s.get(&id).unwrap().clone() else {
+        unreachable!()
+    };
+    db.templates.clear();
+    assert!(crate::commands::database::save_database_core(
+        &mut s,
+        &Actor::Person,
+        serde_json::to_string(&db).unwrap(),
+    )
+    .is_err());
+    for (table, rows) in [
+        Table::Records,
+        Table::History,
+        Table::Activity,
+        Table::Anchor,
+        Table::Attachments,
+    ]
+    .into_iter()
+    .zip(before)
+    {
+        assert_eq!(s.store.all(table).unwrap(), rows);
+    }
+    assert!(matches!(s.get(&id), Some(Item::Database(db)) if db.templates.len() == 1));
+    s.activity_verify().unwrap();
+}
+
+#[test]
+fn template_purge_in_a_mixed_save_keeps_new_history_and_undo_files() {
+    let (mut s, _, _) = fixture();
+    let page_file = s
+        .put_attachment("image/png", b"page before picture")
+        .unwrap();
+    let row_file = s
+        .put_attachment("application/octet-stream", b"row before file")
+        .unwrap();
+    let mut db = Database::new(new_id(), String::new(), "DB".into(), 1);
+    db.templates.push(Template {
+        id: new_id(),
+        name: "Template".into(),
+        ..Default::default()
+    });
+    let db_id = db.id.clone();
+    s.put(Item::Database(db)).unwrap();
+    let Item::Page(mut p) = page("original") else {
+        unreachable!()
+    };
+    let page_id = p.id.clone();
+    s.put(Item::Page(p.clone())).unwrap();
+    // These person edits are newer than the existing history snapshots.
+    p.content = format!("clatt://localhost/{page_file}");
+    p.text.clear();
+    s.put(Item::Page(p.clone())).unwrap();
+    let mut r = Row::new(new_id(), &db_id, "Row".into(), 1);
+    s.put(Item::Row(r.clone())).unwrap();
+    r.cells = serde_json::json!({"file":row_file}).to_string();
+    s.put(Item::Row(r.clone())).unwrap();
+    let Item::Database(mut db) = s.get(&db_id).unwrap().clone() else {
+        unreachable!()
+    };
+    db.templates.clear();
+    p.content = "after".into();
+    r.cells = "{}".into();
+    s.run_as(&ai(), |s| {
+        s.put_many(vec![Item::Database(db), Item::Page(p), Item::Row(r)])
+    })
+    .unwrap();
+    // The page picture is now only in this transaction's new history body;
+    // the row file is only in its new indirect undo body. Both must survive.
+    assert!(s.get_attachment(&page_file).is_ok());
+    assert!(s.get_attachment(&row_file).is_ok());
+    assert!(s
+        .history_list(&page_id)
+        .unwrap()
+        .iter()
+        .any(|meta| meta.before_ai
+            && s.history_get(&page_id, &meta.version_id)
+                .unwrap()
+                .content
+                .contains(&page_file)));
+    assert_eq!(s.collect_garbage().unwrap(), 0);
+    s.activity_verify().unwrap();
+}

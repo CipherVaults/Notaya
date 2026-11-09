@@ -14,6 +14,9 @@ re-read the current source. Branch: `AE0101/v1-6-sf3`. Entry baseline:
 `4934a04b35f9c0ef32d88cf85cf6861d0bd851d1`, including automatic SF3 checkpoints
 `bbc01dd` and `4934a04` on base `d910034`. Their work was preserved and reviewed.
 The hand-back includes those checkpoints and the subsequent working-tree diff.
+The external heartbeat made checkpoint `e7bbe74` at 18:02:38 UTC during this
+continuation; Codex issued no Git mutation command. Its later edits still need
+Claude's final commit and exact-commit checks.
 
 Read: AGENTS, partner briefing, the entire security-review guide, security
 design, WP-02 through WP-05, current activity/history/store/session code, existing
@@ -111,8 +114,8 @@ Covered paths (no native-confirmation code was edited):
 | Notebook/section/page descendants | Tree deletion includes contained databases, rows and nested pages. |
 | Database and row delete from bin | `delete_database`/`delete_rows` -> `remove_many`, including row subpages. |
 | Single/bulk sticky bin | Binning preserves undo; a later permanent delete or empty-bin purges it. |
-| Template removal with database retained | `put_many` compares old/new template ids, removes matching replacement copies, purges database undo values containing those templates and refreshes the chain/anchor. This covers the existing database-save core too. |
-| Bin-related file/picture GC | Existing callers run `collect_garbage` after removal; it follows the remaining indirect undo bodies. Unreferenced files disappear; ordinary binning and surviving references preserve them. |
+| Template removal with database retained | `put_many` compares old/new template ids, removes matching replacement copies, purges database undo values containing those templates, refreshes the chain/anchor and collects unused files before commit. This covers the existing database-save core too. |
+| Bin-related file/picture GC | `remove_many` collects unused files in the purge transaction using the prospective items/settings and excluding deleted history; existing callers' later `collect_garbage` remains safe. GC follows the just-written undo head and preserves pictures in new snapshots not yet in the RAM index. Ordinary binning and surviving references preserve files. |
 | Clear/prune | Removes indirect bodies belonging to removed log entries and writes the authenticated clear/prune marker and anchor in one transaction. |
 
 There is no separate timed bin-expiry/GC deletion path in the current source;
@@ -129,7 +132,9 @@ page/table and single-half deletion and pair swaps; deleted/dropped/mismatched
 anchors; pre-C3 and pre-SF3 migration; thinning and typed clear; failed anchor
 write and failed purge/final refresh rollback; missing undo bodies; all-record
 random-marker scans after delete/empty-bin for page/sticky/row-cells/templates;
-template removal via the real save core; notebook/section cascades with row
+template removal via the real save core, including undo-only files; a mixed save
+that removes a template while keeping files needed by new history/undo; file-GC
+failure rolling back the complete purge; notebook/section cascades with row
 subpages and undo-only attachments; bulk sticky bin/undo/empty; and G3-style old
 reader tolerance. Attacks occur after dropping the session, use SQL without a key,
 and check restore rejection. Purge scans decrypt every current record in all five
@@ -144,17 +149,44 @@ specified explicit refusal. The 1,000-version test still proves lazy body reads
 and small metadata; re-key/security-switch/upgrade/backup regressions cover the
 added table.
 
-Final results: pending the final-source run; this section is updated before
-hand-back. Earlier baseline vault run: 89 passed, 0 failed, 645 filtered out,
-44.50 s; this is not the final-source result.
+Final-source focused result: `cargo test --lib --offline vault::`: **93 passed,
+0 failed, 0 ignored, 645 filtered out**, 44.19 s, exit 0. Log:
+`D:\Notaya-lanes\out\SF3-vault-final-4.log`. This includes 15 new security tests
+and the added legacy-inline activity regression. The full-suite result is in
+section 7.
 
 ## 7. Required checks and source identity
 
 Final Rust command: `cargo test --lib --offline` with the SF3 target directory.
-Final-source results, log paths and source hashes are recorded after the run.
+Full-suite result: **732 passed, 1 failed, 5 ignored, 0 measured, 0 filtered out**,
+185.34 s, exit 101. The sole failure is the known sandbox-only
+`shell::tests::the_registry_value_can_be_written_read_and_removed` at
+`src/shell.rs:339`: Windows refused to open the start-up list (code 5).
+The long rollup regression and all SF3 tests passed. Log:
+`D:\Notaya-lanes\out\SF3-full-tests-final-5.log`.
+The five existing ignored tests are three Windows named-pipe PC checks (sandbox
+error 5), the one-time old-engine golden capture, and PDF sample generation.
+Compiler warnings (six): unused `id` in the existing activity re-key failure
+test; unused `claim_core`, `release_core`, `title_prop`, `CALCS` and
+`Control::with_deadline`. No warning was suppressed and no ignored test was
+enabled or disabled by this lane.
+The source is `e7bbe74` plus the final working-tree Rust diff, with seven changed
+Rust-file hashes in `D:\Notaya-lanes\out\SF3-final-source-sha256.txt` (SHA-256 of
+that manifest: `a961d939aeb2d4bb0c09801e98db0c0eb7c004afffd34ea989353d728d6d209e`).
+The manifest was captured before the final full-suite run; all seven hashes were
+rechecked after it and were unchanged. Source results must be reattached to
+Claude's eventual final commit.
 TypeScript/build are not run because no front-end code changed. `npm audit` is
 explicitly skipped per the brief. `cargo audit`, clippy, app/browser tests and
-installs are not run. `git diff --check` will be recorded on the final diff.
+installs are not run. `git diff --check` exits 0; Git's LF-to-CRLF advisory is not
+a whitespace error. The final diff was checked again after completing this note.
+
+Earlier attempts are retained under `D:\Notaya-lanes\out`: the shared target
+hit LNK1104 because another test process held its exe; the existing lane-specific
+SF3 target avoids that collision. Two full runs were stopped by exact SF3 test
+process id when their source was superseded during GC work; neither is a final
+pass. The first GC build exposed a lifetime error, fixed before the successful
+focused run. Those attempts are not substituted for the final result.
 
 ## 8. Performance
 
@@ -201,6 +233,10 @@ is claimed. Old backups remain independent files.
 
 Self-check found no additional proven issue in scope. This is the implementer's
 check, not the independent Codex/Claude review or Claude's Security Guidance run.
+During the self-check, template-only file cleanup was found missing from the
+database-save path. It was fixed inside the purge transaction; normal item
+deletion now also collects its files before committing. Marker scans and injected
+GC failures cover that correction, and mixed-write tests protect retained files.
 
 ## 10. Files and changes outside the write area
 

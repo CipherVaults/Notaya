@@ -362,7 +362,7 @@ impl Session {
             let replaced: std::collections::HashSet<_> = items.iter().map(Item::id).collect();
             self.collect_garbage_for(
                 self.items.values().filter(|item| !replaced.contains(item.id())).chain(items.iter()),
-                &head, journal.picture_ids(),
+                &head, journal.picture_ids(), &[],
             )?;
             Ok(Some((head, anchor)))
         })?;
@@ -406,6 +406,13 @@ impl Session {
             journal.write(s)?;
             let head = self.purge_undo_in_store(journal.head(&self.activity_head), ids, &Default::default())?;
             let anchor = self.refresh_anchor_head(journal.anchor.next.clone(), &head, s)?;
+            // Purge orphaned files before committing deletion, using the new
+            // items/settings and excluding the history just removed on disk.
+            self.collect_garbage_for(
+                self.items.values().filter(|item| !ids.iter().any(|id| id == item.id())
+                    && !(settings.is_some() && item.id() == SETTINGS_ID)).chain(settings.iter()),
+                &head, std::iter::empty(), ids,
+            )?;
             Ok((head, anchor))
         })?;
         self.accept_journal(journal);
@@ -712,7 +719,7 @@ impl Session {
 
     /// Deletes attachments no page or sticky note refers to any more.
     pub fn collect_garbage(&mut self) -> Result<usize> {
-        let removed = self.collect_garbage_for(self.items.values(), &self.activity_head, std::iter::empty())?;
+        let removed = self.collect_garbage_for(self.items.values(), &self.activity_head, std::iter::empty(), &[])?;
         if removed > 0 {
             self.changed();
         }
@@ -720,14 +727,16 @@ impl Session {
     }
 
     fn collect_garbage_for<'a>(
-        &self,
+        &'a self,
         items: impl Iterator<Item = &'a Item>,
         head: &activity::Head,
         extra_pictures: impl Iterator<Item = &'a String>,
+        removed: &[String],
     ) -> Result<usize> {
         let mut referenced = String::new();
         let undo_attachments = self.undo_attachment_ids(head)?;
-        for id in self.history_index.values().flatten().flat_map(|meta| &meta.picture_ids).chain(extra_pictures) {
+        for id in self.history_index.iter().filter(|(page, _)| !removed.contains(page))
+            .flat_map(|(_, versions)| versions).flat_map(|meta| &meta.picture_ids).chain(extra_pictures) {
             referenced.push_str(id);
         }
         for item in items {

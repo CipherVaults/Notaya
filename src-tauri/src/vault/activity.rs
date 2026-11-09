@@ -547,7 +547,7 @@ impl Session {
                 }
                 if purge {
                     if let Some(body) = &previous.body { self.store.delete(Table::Anchor, &super::parse_id(body)?)?; }
-                    previous.before = None;
+                    previous.before.zeroize();
                     previous.body = None;
                     previous.body_hash = None;
                     previous.version = None;

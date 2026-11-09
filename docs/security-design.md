@@ -138,8 +138,9 @@ inline undo values. The log retains its existing titles, actors, times, item ids
 actions and counts. Undo refuses a change set containing permanently deleted
 content with a plain message. Ordinary binning preserves undo and history.
 Notebook/section/database cascades and empty-bin use this same storage boundary;
-their existing garbage collection removes files/pictures no surviving item,
-history version, replacement edit or undo body uses. SQLite `secure_delete=ON`
+item/template purges also collect files/pictures no surviving item, history
+version, replacement edit or undo body uses before that transaction commits.
+SQLite `secure_delete=ON`
 continues to overwrite freed database cells.
 
 **Limits:** whole-file rollback to an older consistent copy is not detectable
