@@ -849,6 +849,20 @@ function seed() {
     if (i % 7 === 0) r.cells[owner.id] = ["Mohamed"];
     if (i === 3) r.cells[link.id] = "https://example.com/docs";
   });
+  // Development only (EX-2026-11-09-65): `?rows=5000` adds generated tasks, to time big tables in the mock UI.
+  const extra = Number(new URLSearchParams(typeof location !== "undefined" ? location.search : "").get("rows") || 0);
+  for (let i = 25; i < extra; i++) {
+    const r = newRow(tasks, `Task number ${i}`);
+    r.created = now0 - (i % 90) * 86400000;
+    r.cells[status.id] = status.options[i % 4].id;
+    r.cells[due.id] = { start: day((i % 60) - 30) };
+    r.cells[prio.id] = prio.options[i % 3].id;
+    r.cells[tags.id] = [tags.options[i % 5].id];
+    r.cells[done.id] = i % 4 === 3;
+    r.cells[est.id] = [1, 2, 3, 5, 8, 13][i % 6];
+    r.cells[cost.id] = 100 * (i % 50) + 0.5;
+    r.cells[project.id] = [pr[i % 4].id];
+  }
 }
 
 // ---------------------------------------------------------------- commands
