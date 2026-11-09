@@ -68,7 +68,7 @@ function cellsForGroup(prop: Property | undefined, g: GroupBy | null | undefined
 }
 
 interface Actions {
-  select: (r: number, c: number, edit?: boolean) => void;
+  select: (r: number, c: number, edit?: boolean, itemKey?: string) => void;
   setEditing: (b: boolean) => void;
   commit: (row: DbRow, prop: Property, value: unknown) => void;
   patchLocal: (rowId: string, propId: string, value: unknown) => void;
@@ -96,6 +96,7 @@ interface RowProps {
   ariaIndex: number;
   cellId: (rowId: string, col: number) => string;
   measure: ((node: HTMLTableRowElement | null) => void) | undefined;
+  itemKey: string;
 }
 
 type TableItem =
@@ -110,9 +111,10 @@ const BG = "bg-bg";
 // remain memoized when the drag context changes on a click or selection elsewhere.
 const SortableRow = memo(function SortableRow(props: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.row.id });
+  const measure = useCallback((node: HTMLTableRowElement | null) => { setNodeRef(node); props.measure?.(node); }, [setNodeRef, props.measure]);
   return (
     <tr
-      ref={useCallback((node: HTMLTableRowElement | null) => { setNodeRef(node); props.measure?.(node); }, [setNodeRef, props.measure])}
+      ref={measure}
       data-index={props.virtualIndex}
       data-row-id={props.row.id}
       aria-rowindex={props.ariaIndex}
@@ -168,7 +170,7 @@ const RowGutter = memo(function RowGutter({ row, index, numbers, selected, canDr
   );
 });
 
-const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected, activeCol, editing, seed, actions, cellId }: RowProps) {
+const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected, activeCol, editing, seed, actions, cellId, itemKey }: RowProps) {
   return (
     <>
       {cols.map((c, ci) => {
@@ -180,7 +182,7 @@ const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected
           <td
             key={c.prop.id}
             role="gridcell"
-            id={cellId(row.id, ci)}
+            id={cellId(itemKey, ci)}
             tabIndex={-1}
             aria-colindex={ci + 2}
             aria-selected={isActive}
@@ -193,7 +195,7 @@ const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected
                 e.preventDefault();
                 if (isActive && editing) return; // the picker is open already; Radix closes it on a click outside
               }
-              actions.select(index, ci, interactive);
+              actions.select(index, ci, interactive, itemKey);
             }}
             className={cn(
               "db-cell relative align-top",
@@ -301,7 +303,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   const shell = useDbShell();
   const { editDb, editView, trashRows, duplicateRow, openProp, focusRowId, clearFocusRow, patchRowLocal } = shell;
   const [liveWidths, setLiveWidths] = useState<Record<string, number>>({});
-  const [active, setActive] = useState<{ id: string; c: number } | null>(null);
+  const [active, setActive] = useState<{ id: string; c: number; key?: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [seed, setSeed] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -401,7 +403,8 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     items.forEach((item, i) => { if (item.kind === "row") map.set(item.row.id, i); });
     return map;
   }, [items]);
-  const activeIndex = active ? itemIndexOfRow.get(active.id) : undefined;
+  const itemIndexOfKey = useMemo(() => new Map(items.map((item, i) => [item.key, i])), [items]);
+  const activeIndex = active ? (active.key ? itemIndexOfKey.get(active.key) : itemIndexOfRow.get(active.id)) : undefined;
   const dragIndex = draggingId ? itemIndexOfRow.get(draggingId) : undefined;
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
     count: items.length,
@@ -422,7 +425,10 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   });
   // A width/wrap change invalidates previously measured heights, including rows
   // that are currently off screen. Native scroll anchoring must not also adjust.
-  useLayoutEffect(() => { virtualizer.measure(); }, [virtualizer, cols, view.wrap]);
+  useLayoutEffect(() => {
+    virtualizer.measure();
+    if (view.wrap) wrapRef.current?.querySelectorAll<HTMLTableRowElement>("tr[data-index]").forEach(virtualizer.measureElement);
+  }, [virtualizer, cols, view.wrap]);
   const virtualRows = virtualizer.getVirtualItems();
   const canDrag = view.sorts.length === 0;
   // dnd-kit measures only mounted rows; drop resolution below uses virtual offsets
@@ -446,10 +452,10 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   const virtualRef = useRef({ virtualizer, itemIndexOfRow });
   virtualRef.current = { virtualizer, itemIndexOfRow };
 
-  const select = useCallback((r: number, c: number, edit = false) => {
+  const select = useCallback((r: number, c: number, edit = false, itemKey?: string) => {
     const row = flatRef.current[r];
     if (!row) return;
-    setActive({ id: row.id, c });
+    setActive({ id: row.id, c, key: itemKey });
     setEditing(edit);
     setSeed(undefined);
     pendingFocus.current = true;
@@ -459,9 +465,22 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   }, []);
   useLayoutEffect(() => {
     if (!pendingFocus.current || !active) return;
-    const cell = document.getElementById(cellId(active.id, active.c));
+    if (activeIndex != null) virtualizer.scrollToIndex(activeIndex, { align: "auto" });
+    const item = activeIndex == null ? undefined : items[activeIndex];
+    const cell = item ? document.getElementById(cellId(item.key, active.c)) : null;
     if (!cell) return;
     pendingFocus.current = false;
+    const wrap = wrapRef.current;
+    if (wrap && cols[active.c]?.left == null) {
+      const bounds = wrap.getBoundingClientRect();
+      const rect = cell.getBoundingClientRect();
+      const frozen = GUTTER + cols.filter((c) => c.left != null).reduce((sum, c) => sum + c.width, 0);
+      const rtl = getComputedStyle(wrap).direction === "rtl";
+      const left = bounds.left + (rtl ? 0 : frozen);
+      const right = bounds.left + wrap.clientWidth - (rtl ? frozen : 0);
+      if (rect.left < left) wrap.scrollLeft += rect.left - left;
+      else if (rect.right > right) wrap.scrollLeft += rect.right - right;
+    }
     // Interactive editors take their own focus. Selecting an ordinary cell must
     // not steal focus from a picker or focus every time a row is recycled.
     if (!editing) cell.focus({ preventScroll: true });
@@ -491,11 +510,6 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     });
     pendingFocus.current = true;
   }, []);
-  // Focus-driven movement (including Enter from an editor) scrolls before focus.
-  // Ordinary pointer/wheel scrolling deliberately does not pull the user back.
-  useLayoutEffect(() => {
-    if (pendingFocus.current && activeIndex != null) virtualizer.scrollToIndex(activeIndex, { align: "auto" });
-  }, [activeIndex, virtualizer]);
   const actions: Actions = useMemo(
     () => ({ select, setEditing, commit, patchLocal: patchRowLocal, open: openRow, toggleSelect, trash: (ids) => void trashRows(ids), duplicate: (id) => void duplicateRow(id), endEdit }),
     [select, commit, patchRowLocal, openRow, toggleSelect, trashRows, duplicateRow, endEdit],
@@ -505,10 +519,21 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   useEffect(() => {
     if (!focusRowId) return;
     const i = indexOfRow.get(focusRowId);
-    if (i == null || titleIdx < 0) return;
+    if (i == null) {
+      // New rows can land in a collapsed group. Reveal only their containing
+      // group/subgroup; filtering and hidden groups remain the engine's decision.
+      const group = groups?.find((g) => g.rows.includes(focusRowId) || g.subs.some((s) => s.rows.includes(focusRowId)));
+      if (group && view.group) {
+        const keys = new Set([group.key, ...group.subs.filter((s) => s.rows.includes(focusRowId)).map((s) => `${group.key}/${s.key}`)]);
+        const next = view.group.collapsed.filter((key) => !keys.has(key));
+        if (next.length !== view.group.collapsed.length) updateView({ group: { ...view.group, collapsed: next } });
+      }
+      return;
+    }
+    if (titleIdx < 0) return;
     select(i, titleIdx, true);
     clearFocusRow();
-  }, [focusRowId, indexOfRow, titleIdx, clearFocusRow, select]);
+  }, [focusRowId, indexOfRow, titleIdx, clearFocusRow, select, groups, view.group, updateView]);
 
   // Keep the selection to rows that still exist.
   useEffect(() => {
@@ -516,13 +541,13 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       const keep = new Set([...s].filter((id) => rowById.has(id)));
       return keep.size === s.size ? s : keep;
     });
-    if (active && !indexOfRow.has(active.id)) {
+    if (active && (activeIndex == null || !indexOfRow.has(active.id))) {
       setActive(null);
       setEditing(false);
       // A filtered/deleted/collapsed row cannot remain an active descendant.
       if (wrapRef.current?.contains(document.activeElement)) wrapRef.current.focus({ preventScroll: true });
     }
-  }, [rowById, indexOfRow, active]);
+  }, [rowById, indexOfRow, active, activeIndex]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (editing || !active) return;
@@ -614,10 +639,28 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     updateView({ columns: cs });
   };
   const onRowDrag = (e: DragEndEvent) => {
-    if (!e.over || e.active.id === e.over.id) return;
+    if (!canDrag) return;
+    let target = e.over ? String(e.over.id) : null;
+    const rect = e.active.rect.current.translated;
+    const wrap = wrapRef.current;
+    if (rect && wrap) {
+      const offset = rect.top + rect.height / 2 - wrap.getBoundingClientRect().top + wrap.scrollTop;
+      const hit = virtualizer.getVirtualItemForOffset(offset);
+      if (hit) {
+        // A group/add/footer line is not a drop destination. Resolve to its
+        // nearest data row without asking dnd-kit for an unmounted DOM node.
+        for (let distance = 0; distance < items.length; distance++) {
+          const before = items[hit.index - distance];
+          const after = items[hit.index + distance];
+          const item = after?.kind === "row" ? after : before?.kind === "row" ? before : null;
+          if (item?.kind === "row") { target = item.row.id; break; }
+        }
+      }
+    }
+    if (!target || String(e.active.id) === target) return;
     const ids = result.rows.map((r) => r.id);
     const from = ids.indexOf(String(e.active.id));
-    const to = ids.indexOf(String(e.over.id));
+    const to = ids.indexOf(target);
     if (from < 0 || to < 0) return;
     const next = [...ids];
     const [m] = next.splice(from, 1);
@@ -640,7 +683,6 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   // ----- rendering helpers
   const groupProp = view.group ? db.props.find((p) => p.id === view.group!.prop) : undefined;
   const subProp = view.subGroup ? db.props.find((p) => p.id === view.subGroup!.prop) : undefined;
-  const hasCalcs = view.calcs.length > 0;
   const totalCols = cols.length + 2;
 
   const toggleCollapsed = (key: string) => {
@@ -657,12 +699,12 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (row) shell.focusRow(row.id); // the table starts editing its title once the row is on screen
   };
 
-  const renderRows = (rows: DbRow[], keyPrefix: string) => {
-    return rows.map((r) => {
-      const idx = indexOfRow.get(r.id) ?? 0;
+  const renderRow = (item: Extract<TableItem, { kind: "row" }>, virtualIndex: number) => {
+      const r = item.row;
+      const idx = item.rowIndex;
       return (
         <RowView
-          key={keyPrefix + r.id}
+          key={item.key}
           row={r}
           index={idx}
           cols={cols}
@@ -670,18 +712,22 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           wrap={view.wrap}
           numbers={view.rowNumbers}
           selected={selected.has(r.id)}
-          activeCol={active && active.r === idx ? active.c : -1}
-          editing={!!active && active.r === idx && editing}
-          seed={active && active.r === idx ? seed : undefined}
+          activeCol={activeIndex === virtualIndex ? active!.c : -1}
+          editing={activeIndex === virtualIndex && editing}
+          seed={activeIndex === virtualIndex ? seed : undefined}
           canDrag={canDrag}
           actions={actions}
+          virtualIndex={virtualIndex}
+          ariaIndex={virtualIndex + 2}
+          cellId={cellId}
+          measure={view.wrap ? virtualizer.measureElement : undefined}
+          itemKey={item.key}
         />
       );
-    });
   };
 
-  const footerRow = (calcs: Record<string, string>, key?: string) => (
-    <tr key={key}>
+  const footerRow = (calcs: Record<string, string>, key?: string, index?: number) => (
+    <tr key={key} data-index={index} aria-rowindex={index == null ? items.length + 2 : index + 2} data-table-footer="" ref={view.wrap && index != null ? virtualizer.measureElement : undefined}>
       <td className={cn("db-cell sticky z-[2] h-8", BG)} style={{ insetInlineStart: 0 }} />
       {cols.map((c) => {
         const cfg = view.calcs.find((x) => x.prop === c.prop.id);
@@ -715,11 +761,11 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     </tr>
   );
 
-  const groupHeader = (g: GroupOut, key: string, prop: Property | undefined, spec: GroupBy | null, level: number) => {
+  const groupHeader = (g: GroupOut, key: string, prop: Property | undefined, spec: GroupBy | null, level: number, index: number, itemKey: string) => {
     const isCollapsed = collapsed.has(key);
     const opt: SelectOption | undefined = prop?.options.find((o) => o.id === g.key);
     return (
-      <tr key={`gh-${key}`} className="group/gh">
+      <tr key={itemKey} className="group/gh" data-index={index} aria-rowindex={index + 2} data-group-key={key} ref={view.wrap ? virtualizer.measureElement : undefined}>
         <td colSpan={totalCols} className={cn("db-cell p-0", BG)}>
           <div className="sticky flex h-9 items-center gap-1.5 ps-3 pe-3" style={{ insetInlineStart: 0, width: "max-content", paddingInlineStart: 12 + level * 22 }}>
             <button type="button" aria-expanded={!isCollapsed} aria-label={isCollapsed ? "Expand group" : "Collapse group"} onClick={() => toggleCollapsed(key)} className="rounded p-0.5 text-muted hover:bg-surface-2 hover:text-fg">
@@ -746,8 +792,8 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     );
   };
 
-  const addLine = (cells: Record<string, unknown>, key: string) => (
-    <tr key={`add-${key}`}>
+  const addLine = (cells: Record<string, unknown>, key: string, index: number) => (
+    <tr key={key} data-index={index} aria-rowindex={index + 2} ref={view.wrap ? virtualizer.measureElement : undefined}>
       <td colSpan={totalCols} className={cn("db-cell p-0", BG)}>
         <button
           type="button"
@@ -761,38 +807,23 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     </tr>
   );
 
-  let shownRows = 0;
-  const budget = (rows: DbRow[]) => {
-    const take = Math.max(0, limit - shownRows);
-    shownRows += Math.min(rows.length, take);
-    return rows.slice(0, take);
-  };
-
+  const spacer = (height: number, key: string) => height > 0 ? (
+    <tr key={key} aria-hidden="true" role="presentation" data-virtual-spacer="">
+      <td colSpan={totalCols} style={{ height, padding: 0, border: 0, lineHeight: 0 }} />
+    </tr>
+  ) : null;
   const body: React.ReactNode[] = [];
-  if (!groups) {
-    body.push(...renderRows(budget(result.rows), "r-"));
-    body.push(addLine({}, "end"));
-  } else {
-    for (const g of groups) {
-      body.push(groupHeader(g, g.key, groupProp, view.group, 0));
-      if (collapsed.has(g.key)) continue;
-      if (g.subs.length) {
-        for (const s of g.subs) {
-          const skey = g.key + "/" + s.key;
-          body.push(groupHeader(s, skey, subProp, view.subGroup, 1));
-          if (collapsed.has(skey)) continue;
-          body.push(...renderRows(budget(s.rows.map((id) => rowById.get(id)).filter((r): r is DbRow => !!r)), `r-${skey}-`));
-          body.push(addLine({ ...cellsForGroup(groupProp, view.group, g), ...cellsForGroup(subProp, view.subGroup, s) }, skey));
-          if (hasCalcs) body.push(footerRow(s.calcs, `f-${skey}`));
-        }
-      } else {
-        body.push(...renderRows(budget(g.rows.map((id) => rowById.get(id)).filter((r): r is DbRow => !!r)), `r-${g.key}-`));
-        body.push(addLine(cellsForGroup(groupProp, view.group, g), g.key));
-        if (hasCalcs) body.push(footerRow(g.calcs, `f-${g.key}`));
-      }
-    }
+  let previousEnd = 0;
+  for (const v of virtualRows) {
+    const item = items[v.index];
+    body.push(spacer(v.start - headerHeight - previousEnd, `space:${item.key}`));
+    if (item.kind === "row") body.push(renderRow(item, v.index));
+    else if (item.kind === "group") body.push(groupHeader(item.group, item.groupKey, item.level ? subProp : groupProp, item.level ? view.subGroup : view.group, item.level, v.index, item.key));
+    else if (item.kind === "add") body.push(addLine(item.cells, item.key, v.index));
+    else body.push(footerRow(item.calcs, item.key, v.index));
+    previousEnd = v.end - headerHeight;
   }
-  const more = flat.length > limit;
+  body.push(spacer(virtualizer.getTotalSize() - previousEnd, "space:end"));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -805,9 +836,9 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           <button type="button" onClick={() => setSelected(new Set())} className="ms-auto rounded-md px-2 py-1 text-muted hover:bg-surface-2 hover:text-fg">Clear selection</button>
         </div>
       )}
-      <div ref={wrapRef} tabIndex={0} onKeyDown={onKeyDown} role="application" aria-label="Table" className="db-scroll min-h-0 flex-1 overflow-auto outline-none" style={shell.compact ? { maxHeight: 480 } : undefined}>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => (view.columns.some((c) => c.prop === String(e.active.id)) ? onColumnDrag(e) : onRowDrag(e))}>
-          <table className="db-table text-sm" data-has-selection={selected.size > 0} style={{ tableLayout: "fixed", width: GUTTER + cols.reduce((n, c) => n + c.width, 0) + 44 }} role="grid" aria-rowcount={flat.length}>
+      <div ref={wrapRef} tabIndex={0} onKeyDown={onKeyDown} role="application" aria-label="Table" className="db-scroll min-h-0 flex-1 overflow-auto outline-none" style={{ overflowAnchor: "none", ...(shell.compact ? { maxHeight: 480 } : {}) }}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => { if (itemIndexOfRow.has(String(e.active.id))) setDraggingId(String(e.active.id)); }} onDragCancel={() => setDraggingId(null)} onDragEnd={(e) => { setDraggingId(null); if (view.columns.some((c) => c.prop === String(e.active.id))) onColumnDrag(e); else onRowDrag(e); }}>
+          <table className="db-table text-sm" data-has-selection={selected.size > 0} style={{ tableLayout: "fixed", width: GUTTER + cols.reduce((n, c) => n + c.width, 0) + 44 }} role="grid" aria-rowcount={items.length + 1 + (groups ? 0 : 1)} aria-colcount={totalCols}>
             <colgroup>
               <col style={{ width: GUTTER }} />
               {cols.map((c) => (
@@ -815,8 +846,8 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
               ))}
               <col style={{ width: 44 }} />
             </colgroup>
-            <thead>
-              <tr>
+            <thead ref={headRef}>
+              <tr aria-rowindex={1}>
                 <th className={cn("db-cell sticky top-0 z-[5] border-t border-t-line p-0", BG)} style={{ insetInlineStart: 0 }}>
                   <div className="flex h-8 items-center justify-end pe-2">
                     <button
@@ -862,11 +893,6 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           </table>
         </DndContext>
       </div>
-      {more && (
-        <button type="button" onClick={() => setLimit((n) => n + PAGE)} className="mx-auto my-3 shrink-0 rounded-md border border-line px-3 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg">
-          Show more rows ({flat.length - limit} left)
-        </button>
-      )}
       {result.rows.length === 0 && !groups && (
         <p className="shrink-0 px-4 py-3 text-sm text-faint">This table has no rows yet.</p>
       )}
