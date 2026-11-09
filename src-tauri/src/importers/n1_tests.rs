@@ -2,7 +2,7 @@
 //! The optional local probe reads source/target paths only from environment variables.
 
 use super::*;
-use crate::importers::{self, zip};
+use crate::importers::zip;
 use serde_json::json;
 use std::collections::{BTreeMap, HashSet};
 
@@ -112,6 +112,44 @@ fn n1_flat_home_links_define_containment() {
     assert_eq!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, Some(home));
 }
 
+#[test]
+#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
+fn n1_folder_without_id_keeps_its_source_home_as_parent() {
+    let v = fixture(vec![
+        (format!("Home {HUB}.md"), b"# Home\n\nBody\n".to_vec()),
+        (format!("Home/Child {CARD}.md"), b"# Child\n\nBody\n".to_vec()),
+    ]);
+    let p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let home = p.pages.iter().position(|p| p.title == "Home").unwrap();
+    assert_eq!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, Some(home));
+}
+
+#[test]
+#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
+fn n1_source_home_in_html_is_not_discarded_because_csv_shares_id() {
+    let v = fixture(vec![
+        (format!("Home {HUB}.html"), b"<html><title>Home</title><body><p>Dashboard body</p></body></html>".to_vec()),
+        (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        (format!("Card {CARD}.html"), b"<html><title>Card</title><body><p>Body</p></body></html>".to_vec()),
+    ]);
+    let p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    assert!(p.pages.iter().any(|p| p.title == "Home"));
+}
+
+#[test]
+#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
+fn n1_same_named_csv_views_with_different_ids_report_ambiguity() {
+    let a = format!("Table {TABLE}.csv");
+    let b = format!("Table {HUB}_all.csv");
+    let v = fixture(vec![
+        (a.clone(), b"Name,Status\nCard,Done\n".to_vec()),
+        (b.clone(), b"Name,Status,Detail\nCard,Done,Body\n".to_vec()),
+    ]);
+    let (_, _, notes) = notion_db::read_tables(&v, &[a, b]);
+    // Reporting ambiguity avoids silently merging two genuinely distinct databases.
+    assert!(!notes.is_empty());
+}
+
 fn error_kind(e: &str) -> &'static str {
     if e.contains("more than 5000 pages") { "page_limit" }
     else if e.contains("No pages were found") { "no_documents" }
@@ -136,7 +174,11 @@ fn n1_private_count_probe() {
         let mode = std::env::var("N1_MODE").unwrap_or_else(|_| "folder".into());
         let start = std::time::Instant::now();
         let ctl = Control::standard();
-        let vf = if mode == "zip" { Vfs::from_files(&[source]) } else { Vfs::from_folder(&source) };
+        let vf = if mode == "zip" {
+            let mut paths = vec![source];
+            if let Some(second) = std::env::var_os("N1_SOURCE_2") { paths.push(PathBuf::from(second)); }
+            Vfs::from_files(&paths)
+        } else { Vfs::from_folder(&source) };
         let v = match vf { Ok(v) => v, Err(e) => { println!("N1_COUNTS {}", json!({"error":error_kind(&e),"phase":"vfs","ms":start.elapsed().as_millis()})); return } };
         let mut extensions = BTreeMap::<String, usize>::new();
         for p in v.paths() { let ext = p.rsplit('.').next().unwrap_or("").to_ascii_lowercase(); let key = if ["md","html","csv","png","jpg","jpeg","webp","pdf","docx","txt","svg"].contains(&ext.as_str()) {ext} else {"other".into()}; *extensions.entry(key).or_default() += 1; }
@@ -153,7 +195,8 @@ fn n1_private_count_probe() {
         let row_pages = notion_db::prepare_pages(&tables, &mut p.pages);
         let row_ids: HashSet<_> = row_pages.iter().map(|r| r.page_id.clone()).collect();
         let (mut items, summary) = p.items(&ctl, &urls, 1, 0).expect("render failed");
-        std::fs::create_dir_all(&home).expect("home unavailable");
+        assert!(home.is_absolute() && !home.starts_with(env!("CARGO_MANIFEST_DIR")));
+        std::fs::create_dir(&home).expect("home must be new");
         let session = Session::create_open(&home.join("empty-probe.nota")).expect("empty vault unavailable");
         let sec = items.iter().find_map(|i| if let Item::Section(s) = i { Some(s.id.clone()) } else { None }).expect("section unavailable");
         let made = notion_db::import_databases(&tables, &row_pages, &items, &sec, &session, 1, &|_| Ok(())).expect("database stage failed");
@@ -165,7 +208,16 @@ fn n1_private_count_probe() {
         let pages: Vec<_> = items.iter().filter_map(|i| if let Item::Page(p) = i {Some(p)} else {None}).collect();
         let retained_row_pages = pages.iter().filter(|p| row_ids.contains(&p.id)).count();
         let paired_titles = pages.iter().filter(|p| items.iter().any(|i| matches!(i, Item::Row(r) if r.title.trim().to_lowercase() == p.title.trim().to_lowercase()))).count();
-        let d = json!({"planned_pages":planned,"generated_folder_pages":generated,"notebooks":items.iter().filter(|i| matches!(i,Item::Notebook(_))).count(),"sections":summary.sections,"pages":pages.len(),"databases":items.iter().filter(|i| matches!(i,Item::Database(_))).count(),"rows":items.iter().filter(|i| matches!(i,Item::Row(_))).count(),"root_pages":pages.iter().filter(|p| p.parent.is_empty()).count(),"loose_section_pages":pages.iter().filter(|pg| p.sections.iter().position(|s| s==plan::LOOSE_SECTION).is_some_and(|s| pg.section_id==items.iter().filter_map(|i| if let Item::Section(s)=i{Some(&s.id)}else{None}).nth(s).cloned().unwrap_or_default())).count(),"row_candidates":row_pages.len(),"row_pages_moved":moved,"row_pages_retained":retained_row_pages,"page_row_title_pairs":paired_titles,"source_docs_pruned":source_docs_removed,"root_source_docs_pruned":top_removed,"tables_read":tables.len(),"csv_rows":csv_rows,"table_notes":notes.len(),"images":summary.images,"skip_before":skipped,"skip_after_images":summary.skipped.len(),"vfs_refused":v.refused.len(),"vfs_extensions":extensions,"ms":start.elapsed().as_millis()});
+        let mut duplicates = BTreeMap::<String, HashSet<String>>::new();
+        for item in &items { if let Item::Row(r) = item { duplicates.entry(r.title.trim().to_lowercase()).or_default().insert(r.db.clone()); } }
+        let mut d = json!({"planned_pages":planned,"generated_folder_pages":generated,"notebooks":items.iter().filter(|i| matches!(i,Item::Notebook(_))).count(),"sections":summary.sections,"pages":pages.len(),"databases":items.iter().filter(|i| matches!(i,Item::Database(_))).count(),"rows":items.iter().filter(|i| matches!(i,Item::Row(_))).count(),"root_pages":pages.iter().filter(|p| p.parent.is_empty()).count(),"loose_section_pages":pages.iter().filter(|pg| p.sections.iter().position(|s| s==plan::LOOSE_SECTION).is_some_and(|s| pg.section_id==items.iter().filter_map(|i| if let Item::Section(s)=i{Some(&s.id)}else{None}).nth(s).cloned().unwrap_or_default())).count(),"row_candidates":row_pages.len(),"row_pages_moved":moved,"row_pages_retained":retained_row_pages,"page_row_title_pairs":paired_titles,"source_docs_pruned":source_docs_removed,"root_source_docs_pruned":top_removed,"tables_read":tables.len(),"csv_rows":csv_rows,"table_notes":notes.len(),"images":summary.images,"skip_before":skipped,"skip_after_images":summary.skipped.len(),"vfs_refused":v.refused.len(),"vfs_extensions":extensions,"ms":start.elapsed().as_millis()});
+        d["row_titles_in_multiple_databases"] = json!(duplicates.values().filter(|s| s.len() > 1).count());
+        d["retained_row_roots"] = json!(pages.iter().filter(|p| row_ids.contains(&p.id) && p.parent.is_empty()).count());
+        let shallow_depth = v.paths().filter(|p| p.ends_with(".md") || p.ends_with(".html")).map(|p| p.matches('/').count()).min();
+        let shallow: HashSet<_> = v.paths().filter(|p| (p.ends_with(".md") || p.ends_with(".html")) && Some(p.matches('/').count()) == shallow_depth).cloned().collect();
+        d["shallow_source_documents"] = json!(shallow.len());
+        d["shallow_source_documents_planned"] = json!(p.pages.iter().filter(|p| shallow.contains(&p.key)).count());
+        d["shallow_source_documents_survived"] = json!(p.pages.iter().filter(|p| shallow.contains(&p.key) && pages.iter().any(|q| q.id == p.id)).count());
         println!("N1_COUNTS {d}");
     });
     std::panic::set_hook(previous);
