@@ -34,6 +34,10 @@ use crate::model::{now_ms, Item};
 use crate::state::AppState;
 use crate::vault::Session;
 
+#[cfg(test)]
+#[path = "../importers/n1_tests.rs"]
+mod n1_tests;
+
 /// Most files one pick may hold.
 const MAX_PICKED: usize = 5_000;
 /// Conversion nests function calls (documents inside documents), so it runs on a thread with a
