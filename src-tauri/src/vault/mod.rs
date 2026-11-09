@@ -56,6 +56,9 @@ pub struct Session {
     activity_head: activity::Head,
     person_bursts: HashMap<String, i64>,
     journal_maintenance_at: i64,
+    ai_action_failed: bool,
+    ai_action_notices: Vec<crate::commands::database::Reminder>,
+    ai_safety_backup: bool,
 }
 
 /// AAD binds each ciphertext to this vault, its table and its row id, so rows
@@ -76,6 +79,57 @@ pub fn parse_id(id: &str) -> Result<RowId> {
 }
 
 impl Session {
+    /// One dispatcher request, including nested cores, journals and attachment
+    /// cleanup. The session mutex remains held until commit and event enqueue.
+    pub(crate) fn atomic_action<T>(&mut self, safety_backup: bool, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        let snapshot = (self.items.clone(), self.dirty, self.hourly_due,
+            self.held.clone(), self.revs.clone(), self.pending.clone(), self.coordination.clone(),
+            self.actor.clone(), self.ai_writers.clone(), self.replacement.clone(),
+            self.history_index.clone(), self.change_set.clone(), self.request_ai.clone(),
+            self.action_name, self.activity_head.clone(), self.person_bursts.clone(),
+            self.journal_maintenance_at, self.ai_action_failed, self.ai_action_notices.clone(), self.ai_safety_backup);
+        self.store.begin_action()?;
+        self.ai_action_failed = false;
+        self.ai_action_notices.clear();
+        self.ai_safety_backup = safety_backup;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
+        let result = match result {
+            Ok(Ok(_)) if self.ai_action_failed => Ok(Err(Error::invalid("invalid"))),
+            result => result,
+        };
+        let result = match result {
+            Ok(Ok(value)) => match self.store.commit_action() {
+                Ok(()) => {
+                    self.ai_safety_backup = false;
+                    crate::commands::automation::publish_notices(std::mem::take(&mut self.ai_action_notices));
+                    return Ok(value);
+                },
+                Err(error) => Ok(Err(error)),
+            },
+            other => other,
+        };
+        self.store.rollback_action();
+        (self.items, self.dirty, self.hourly_due, self.held, self.revs, self.pending,
+            self.coordination, self.actor, self.ai_writers, self.replacement,
+            self.history_index, self.change_set, self.request_ai, self.action_name,
+            self.activity_head, self.person_bursts, self.journal_maintenance_at,
+            self.ai_action_failed, self.ai_action_notices, self.ai_safety_backup) = snapshot;
+        match result { Ok(result) => result, Err(panic) => std::panic::resume_unwind(panic) }
+    }
+
+    pub(crate) fn ai_safety_backup_ready(&self) -> bool { self.ai_safety_backup }
+
+    pub(crate) fn automation_failed(&mut self) {
+        if self.request_ai.is_some() { self.ai_action_failed = true; }
+    }
+    pub(crate) fn automation_notices(&mut self, notices: Vec<crate::commands::database::Reminder>) {
+        if self.request_ai.is_some() {
+            self.ai_action_notices.extend(notices);
+        } else {
+            crate::commands::automation::publish_notices(notices);
+        }
+    }
+
     /// Records that something changed, for the backups made at lock or quit and the hourly ones.
     fn changed(&mut self) {
         self.dirty = true;
@@ -95,7 +149,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -115,7 +169,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -149,7 +203,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -186,7 +240,7 @@ impl Session {
         }
         store.ensure_journal_tables()?;
         let mut session = Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0 };
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
         session.load_history()?;
         session.load_activity_head()?;
         Ok(session)
@@ -252,6 +306,7 @@ impl Session {
         let mut seen = std::collections::HashSet::new();
         items.reverse(); items.retain(|item| seen.insert(item.id().to_string())); items.reverse();
         let actor = self.actor.clone().unwrap_or(Actor::Person);
+        self.ai_write_targets(&actor, &items)?;
         for item in &items {
             self.check_write(&actor, item.id(), None)?;
             if let Some(parent) = Self::parent_of(item) {
@@ -343,6 +398,50 @@ impl Session {
             Item::Database(x) => Some(if x.parent.is_empty() { &x.section_id } else { &x.parent }),
             Item::Row(x) => Some(&x.db), _ => None,
         }
+    }
+
+    /// Authorize both existing locations and the actual prospective ancestry.
+    /// Used by undo preview/recheck and by the final shared write boundary.
+    pub(crate) fn ai_write_targets(&self, actor: &Actor, items: &[Item]) -> Result<Vec<String>> {
+        let actor = self.request_ai.as_ref().unwrap_or(actor);
+        if !matches!(actor, Actor::Ai { .. }) { return Ok(vec![]); }
+        let proposed: HashMap<_, _> = items.iter().map(|i| (i.id(), i)).collect();
+        let hidden = self.settings().ai.hidden_notebooks;
+        let mut targets = std::collections::HashSet::new();
+        for item in items {
+            // Only a changed item affects its descendants. Destination ancestors
+            // must be checked themselves, without treating siblings as writes.
+            self.check_write(actor, item.id(), None)?;
+            for prospective in [false, true] {
+                let mut pending = vec![(item.id().to_string(), std::collections::HashSet::new())];
+                while let Some((id, mut path)) = pending.pop() {
+                    if id.is_empty() { continue; }
+                    if !path.insert(id.clone()) { return Err(Error::invalid("invalid")); }
+                    if hidden.contains(&id) { return Err(Error::NotFound); }
+                    targets.insert(id.clone());
+                    self.coordination.check(actor, |other| other == id)?;
+                    let current = self.get(&id);
+                    let next = if prospective { proposed.get(id.as_str()).copied().or(current) } else { current };
+                    if path.len() > 1 && next.is_none() { return Err(Error::NotFound); }
+                    if [current, next].into_iter().flatten().any(|i| matches!(i, Item::Database(d) if d.locked)) {
+                        return Err(Error::invalid("invalid"));
+                    }
+                    if let Some(next) = next {
+                        if let Some(parent) = Self::parent_of(next) {
+                            pending.push((parent.to_string(), path.clone()));
+                        }
+                        // A page/database also retains its section reference when parented.
+                        let section = match next {
+                            Item::Page(p) if !p.parent.is_empty() => Some(&p.section_id),
+                            Item::Database(d) if !d.parent.is_empty() => Some(&d.section_id),
+                            _ => None,
+                        };
+                        if let Some(section) = section { pending.push((section.clone(), path.clone())); }
+                    }
+                }
+            }
+        }
+        Ok(targets.into_iter().collect())
     }
 
     pub fn is_within(&self, id: &str, root: &str) -> bool {
@@ -841,6 +940,7 @@ mod tests {
 
     fn page(text: &str) -> Item {
         Item::Page(Page {
+            source: None,
             id: new_id(),
             section_id: new_id(),
             title: "Diary".into(),

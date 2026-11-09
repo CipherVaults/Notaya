@@ -159,20 +159,41 @@ impl Store {
     /// itself fails, the transaction is rolled back so the connection is never
     /// left inside an open transaction.
     pub fn transaction<T>(&self, f: impl FnOnce(&Store) -> Result<T>) -> Result<T> {
-        self.conn.execute_batch("BEGIN IMMEDIATE")?;
-        match f(self) {
+        let nested = !self.conn.is_autocommit();
+        self.conn.execute_batch(if nested { "SAVEPOINT store_write" } else { "BEGIN IMMEDIATE" })?;
+        let rollback = if nested { "ROLLBACK TO store_write; RELEASE store_write" } else { "ROLLBACK" };
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
+        match result {
+            Err(panic) => {
+                let _ = self.conn.execute_batch(rollback);
+                std::panic::resume_unwind(panic)
+            }
+            Ok(result) => match result {
             Ok(v) => {
-                if let Err(e) = self.conn.execute_batch("COMMIT") {
-                    let _ = self.conn.execute_batch("ROLLBACK");
+                if let Err(e) = self.conn.execute_batch(if nested { "RELEASE store_write" } else { "COMMIT" }) {
+                    let _ = self.conn.execute_batch(rollback);
                     return Err(e.into());
                 }
                 Ok(v)
             }
             Err(e) => {
-                let _ = self.conn.execute_batch("ROLLBACK");
+                let _ = self.conn.execute_batch(rollback);
                 Err(e)
             }
+            }
         }
+    }
+
+    pub(super) fn begin_action(&self) -> Result<()> {
+        self.conn.execute_batch("BEGIN IMMEDIATE")?;
+        Ok(())
+    }
+    pub(super) fn commit_action(&self) -> Result<()> {
+        self.conn.execute_batch("COMMIT")?;
+        Ok(())
+    }
+    pub(super) fn rollback_action(&self) {
+        let _ = self.conn.execute_batch("ROLLBACK");
     }
 }
 
@@ -208,6 +229,27 @@ impl Table {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn nested_saves_stay_inside_the_outer_action_and_failed_commit_recovers() {
+        let store = temp_store();
+        store.conn.execute_batch("PRAGMA foreign_keys=ON; CREATE TABLE parent(id INTEGER PRIMARY KEY); CREATE TABLE child(pid INTEGER REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED);").unwrap();
+        store.begin_action().unwrap();
+        store.transaction(|s|s.put(Table::Records,&[1;16],b"first")).unwrap();
+        let denied: Result<()> = store.transaction(|s| {
+            s.put(Table::Records,&[2;16],b"second")?;
+            Err(Error::NotFound)
+        });
+        assert!(denied.is_err());
+        assert!(store.get(Table::Records,&[2;16]).unwrap().is_none());
+        store.conn.execute_batch("INSERT INTO child(pid) VALUES(99)").unwrap();
+        assert!(store.commit_action().is_err());
+        store.rollback_action();
+        assert!(store.get(Table::Records,&[1;16]).unwrap().is_none());
+        store.begin_action().unwrap();
+        store.transaction(|s|s.put(Table::Records,&[3;16],b"kept")).unwrap();
+        store.commit_action().unwrap();
+        assert_eq!(store.get(Table::Records,&[3;16]).unwrap().unwrap(),b"kept");
+    }
 
     /// A bare store (no header) in a fresh temp folder, with the two data tables.
     fn temp_store() -> Store {

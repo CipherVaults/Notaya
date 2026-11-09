@@ -15,13 +15,14 @@ pub struct ItemsChanged {
     pub revs: BTreeMap<String, u64>,
 }
 
+#[derive(Clone)]
 struct Claim {
     owner: String,
     until: Instant,
     explicit: bool,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Coordination {
     leases: HashMap<String, HashMap<String, Option<Instant>>>,
     claims: HashMap<String, Claim>,

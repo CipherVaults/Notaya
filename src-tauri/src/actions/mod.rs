@@ -346,6 +346,7 @@ pub(crate) mod tests {
 
     fn seed_items() -> Vec<Item> {
         let n = Notebook {
+            source: None,
             id: "10000000000000000000000000000001".into(),
             name: "Notebook".into(),
             color: String::new(),
@@ -355,6 +356,7 @@ pub(crate) mod tests {
             updated: 1,
         trashed_at: None, };
         let section = Section {
+            source: None,
             id: "10000000000000000000000000000002".into(),
             notebook_id: "10000000000000000000000000000001".into(),
             name: "Section".into(),
