@@ -87,13 +87,6 @@ const GROUPS: &[Group] = &[
         edit: "",
         full: "settings.set",
     },
-    Group {
-        name: "notaya_batch",
-        description: "Run a group of named actions as one transaction. Notaya checks every step and handles confirmations in its own window.",
-        look: "",
-        edit: "batch.run",
-        full: "",
-    },
 ];
 
 fn actions(group: &Group, level: Level) -> Vec<&'static str> {
@@ -145,13 +138,15 @@ mod tests {
     fn levels_change_only_the_advertised_surface() {
         assert_eq!(list(Level::Off)["tools"], json!([]));
         assert_eq!(list(Level::Look)["tools"].as_array().unwrap().len(), 9);
-        assert_eq!(list(Level::Edit)["tools"].as_array().unwrap().len(), 10);
+        assert_eq!(list(Level::Edit)["tools"].as_array().unwrap().len(), 9);
         for level in [Level::Look, Level::Edit, Level::Full] {
             for tool in list(level)["tools"].as_array().unwrap() {
                 assert!(tool["description"].as_str().unwrap().contains(DATA_NOTICE));
             }
         }
         assert!(routes("notaya_settings", "settings.set"));
+        assert!(!routes("notaya_batch", "batch.run"));
+        assert!(!list(Level::Full).to_string().contains("batch.run"));
         assert!(!routes("notaya_page", "settings.set"));
         for action in [
             "ai_confirm_answer",

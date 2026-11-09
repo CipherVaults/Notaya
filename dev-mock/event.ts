@@ -1,11 +1,16 @@
-// Dev-only event bus. The production build resolves Tauri's event implementation.
-type Handler = (event: { payload: unknown; event: string; id: number }) => void;
-const handlers = new Map<string, Set<Handler>>();
-export async function listen<T>(event: string, fn: (event: { payload: T; event: string; id: number }) => void): Promise<() => void> {
-  const set = handlers.get(event) ?? new Set<Handler>();
-  set.add(fn as Handler); handlers.set(event, set);
-  return () => { set.delete(fn as Handler); };
+// Development-only event bus with the same callback envelope as Tauri.
+type Handler = (event: { event: string; id: number; payload: unknown }) => void;
+const handlers = new Map<string, Map<number, Handler>>();
+let nextId = 0;
+
+export async function listen<T = unknown>(event: string, handler: (event: { event: string; id: number; payload: T }) => void): Promise<() => void> {
+  const id = ++nextId;
+  const entries = handlers.get(event) ?? new Map<number, Handler>();
+  handlers.set(event, entries);
+  entries.set(id, handler as Handler);
+  return () => { entries.delete(id); if (!entries.size) handlers.delete(event); };
 }
-export async function emit(event: string, payload: unknown): Promise<void> {
-  for (const fn of handlers.get(event) ?? []) fn({ payload, event, id: 0 });
+
+export async function emit<T>(event: string, payload?: T): Promise<void> {
+  for (const [id, handler] of [...(handlers.get(event)?.entries() ?? [])]) handler({ event, id, payload });
 }

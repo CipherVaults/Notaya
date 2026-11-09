@@ -343,3 +343,6 @@ mod tests {
         registry::delete(&name).unwrap(); // already gone is not an error
     }
 }
+
+/// A pending AI question must be answered in the main window, including from the tray.
+pub fn ai_notice(app: &tauri::AppHandle) { show_main(app); }
