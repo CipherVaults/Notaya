@@ -17,7 +17,7 @@ import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/compo
 import type { ViewProps } from "../viewTypes";
 import { useDbShell } from "../context";
 import { KindIcon } from "../icons";
-import { CALC_LABELS, calcsFor, filterIsEmpty, isComputedKind } from "../model";
+import { CALC_LABELS, calcsFor, isComputedKind } from "../model";
 import { CheckBox, OptionChip } from "../cells/CellDisplay";
 import EditableCell from "../cells/CellEditor";
 import { NewPropertyPicker } from "../panels/PropertyMenu";
@@ -326,7 +326,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     return out;
   }, [groups, result.rows, rowById, collapsed]);
   const indexOfRow = useMemo(() => new Map(flat.map((r, i) => [r.id, i])), [flat]);
-  const canDrag = view.sorts.length === 0 && filterIsEmpty(view.filter);
+  const canDrag = view.sorts.length === 0;
   // Only mounted (uncollapsed, paged) rows participate in row dragging.
   const dragRowIds = useMemo(() => [...new Set(flat.slice(0, limit).map((r) => r.id))], [flat, limit]);
   const columnIds = useMemo(() => cols.map((c) => c.prop.id), [cols]);
