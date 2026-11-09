@@ -2,7 +2,7 @@
 // drag to reorder (when no sort is set), keyboard navigation and in-place editing.
 
 import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
+import { defaultRangeExtractor, useVirtualizer, type Range } from "@tanstack/react-virtual";
 import { Popover } from "radix-ui";
 import { ChevronDown, ChevronRight, Copy, ExternalLink, GripVertical, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
 import {
@@ -110,7 +110,7 @@ const BG = "bg-bg";
 // Only this small wrapper subscribes to dnd-kit. Its expensive cells have stable props and
 // remain memoized when the drag context changes on a click or selection elsewhere.
 const SortableRow = memo(function SortableRow(props: RowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.row.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.itemKey });
   const measure = useCallback((node: HTMLTableRowElement | null) => { setNodeRef(node); props.measure?.(node); }, [setNodeRef, props.measure]);
   return (
     <tr
@@ -307,7 +307,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   const [editing, setEditing] = useState(false);
   const [seed, setSeed] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const lastSelected = useRef<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -365,10 +365,11 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   // the full result. Headers, New lines and group totals occupy real scroll space.
   const items = useMemo(() => {
     const out: TableItem[] = [];
+    let rowIndex = 0;
     const rows = (ids: string[], prefix: string) => {
       for (const id of ids) {
         const row = rowById.get(id);
-        if (row) out.push({ kind: "row", key: `${prefix}:row:${id}`, row, rowIndex: indexOfRow.get(id) ?? 0 });
+        if (row) out.push({ kind: "row", key: `${prefix}:row:${id}`, row, rowIndex: rowIndex++ });
       }
     };
     if (!groups) {
@@ -404,24 +405,29 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     return map;
   }, [items]);
   const itemIndexOfKey = useMemo(() => new Map(items.map((item, i) => [item.key, i])), [items]);
+  const rowItemIndices = useMemo(() => items.flatMap((item, i) => item.kind === "row" ? [i] : []), [items]);
   const activeIndex = active ? (active.key ? itemIndexOfKey.get(active.key) : itemIndexOfRow.get(active.id)) : undefined;
-  const dragIndex = draggingId ? itemIndexOfRow.get(draggingId) : undefined;
+  const dragIndex = draggingKey ? itemIndexOfKey.get(draggingKey) : undefined;
+  const getScrollElement = useCallback(() => wrapRef.current, []);
+  const getItemKey = useCallback((i: number) => items[i].key, [items]);
+  const estimateSize = useCallback((i: number) => items[i].kind === "row" ? ROW_HEIGHT : items[i].kind === "group" ? 37 : 33, [items]);
+  const rangeExtractor = useCallback((range: Range) => {
+    const indices = new Set(defaultRangeExtractor(range));
+    if (activeIndex != null) indices.add(activeIndex);
+    if (dragIndex != null) indices.add(dragIndex);
+    return [...indices].sort((a, b) => a - b);
+  }, [activeIndex, dragIndex]);
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
     count: items.length,
-    getScrollElement: () => wrapRef.current,
-    estimateSize: (i) => items[i].kind === "row" ? ROW_HEIGHT : items[i].kind === "group" ? 37 : 33,
-    getItemKey: (i) => items[i].key,
+    getScrollElement,
+    estimateSize,
+    getItemKey,
     overscan: 6,
     scrollMargin: headerHeight,
     scrollPaddingStart: headerHeight,
     // Keep the active editor and drag source alive even outside the window. Gaps
     // between these and the window get their own spacers (no shifted row heights).
-    rangeExtractor: useCallback((range) => {
-      const indices = new Set(defaultRangeExtractor(range));
-      if (activeIndex != null) indices.add(activeIndex);
-      if (dragIndex != null) indices.add(dragIndex);
-      return [...indices].sort((a, b) => a - b);
-    }, [activeIndex, dragIndex]),
+    rangeExtractor,
   });
   // A width/wrap change invalidates previously measured heights, including rows
   // that are currently off screen. Native scroll anchoring must not also adjust.
@@ -433,7 +439,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   const canDrag = view.sorts.length === 0;
   // dnd-kit measures only mounted rows; drop resolution below uses virtual offsets
   // so an auto-scroll can target any row, including one not mounted at pickup.
-  const dragRowIds = useMemo(() => [...new Set(virtualRows.flatMap((v) => items[v.index].kind === "row" ? [(items[v.index] as Extract<TableItem, { kind: "row" }>).row.id] : []))], [virtualRows, items]);
+  const dragRowIds = useMemo(() => virtualRows.flatMap((v) => items[v.index].kind === "row" ? [items[v.index].key] : []), [virtualRows, items]);
   const columnIds = useMemo(() => cols.map((c) => c.prop.id), [cols]);
 
   // ----- actions
@@ -449,19 +455,19 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   flatRef.current = flat;
   const colsRef = useRef(cols);
   colsRef.current = cols;
-  const virtualRef = useRef({ virtualizer, itemIndexOfRow });
-  virtualRef.current = { virtualizer, itemIndexOfRow };
+  const virtualRef = useRef({ virtualizer, itemIndexOfRow, itemIndexOfKey, rowItemIndices, items });
+  virtualRef.current = { virtualizer, itemIndexOfRow, itemIndexOfKey, rowItemIndices, items };
 
   const select = useCallback((r: number, c: number, edit = false, itemKey?: string) => {
     const row = flatRef.current[r];
     if (!row) return;
-    setActive({ id: row.id, c, key: itemKey });
+    const current = virtualRef.current;
+    const index = itemKey ? current.itemIndexOfKey.get(itemKey) : current.rowItemIndices[r];
+    setActive({ id: row.id, c, key: index == null ? undefined : current.items[index].key });
     setEditing(edit);
     setSeed(undefined);
     pendingFocus.current = true;
-    const { virtualizer: v, itemIndexOfRow: indices } = virtualRef.current;
-    const index = indices.get(row.id);
-    if (index != null) v.scrollToIndex(index, { align: "auto" });
+    if (index != null) current.virtualizer.scrollToIndex(index, { align: "auto" });
   }, []);
   useLayoutEffect(() => {
     if (!pendingFocus.current || !active) return;
@@ -503,10 +509,14 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (how !== "enter" && how !== "tab") return;
     setActive((a) => {
       if (!a) return a;
-      const r = flatRef.current.findIndex((row) => row.id === a.id);
+      const current = virtualRef.current;
+      const index = a.key ? current.itemIndexOfKey.get(a.key) : current.itemIndexOfRow.get(a.id);
+      const item = index == null ? undefined : current.items[index];
+      const r = item?.kind === "row" ? item.rowIndex : -1;
       const nextRow = how === "enter" || a.c + 1 >= colsRef.current.length;
-      const row = flatRef.current[Math.min(flatRef.current.length - 1, r + (nextRow ? 1 : 0))];
-      return row ? { id: row.id, c: how === "enter" ? a.c : nextRow ? 0 : a.c + 1 } : null;
+      const nextIndex = current.rowItemIndices[Math.min(flatRef.current.length - 1, r + (nextRow ? 1 : 0))];
+      const next = current.items[nextIndex];
+      return next?.kind === "row" ? { id: next.row.id, key: next.key, c: how === "enter" ? a.c : nextRow ? 0 : a.c + 1 } : null;
     });
     pendingFocus.current = true;
   }, []);
@@ -553,13 +563,29 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (editing || !active) return;
     if ((e.target as HTMLElement).closest("input,textarea,select,[role=dialog]")) return;
     const c = active.c;
-    const r = indexOfRow.get(active.id) ?? -1;
+    const activeItem = activeIndex == null ? undefined : items[activeIndex];
+    const r = activeItem?.kind === "row" ? activeItem.rowIndex : -1;
     const col = cols[c];
     const row = flat[r];
     if (!col || !row) return;
     const move = (dr: number, dc: number) => {
       e.preventDefault();
       select(Math.max(0, Math.min(flat.length - 1, r + dr)), Math.max(0, Math.min(cols.length - 1, c + dc)));
+    };
+    const page = (direction: number) => {
+      e.preventDefault();
+      const position = virtualRows.find((v) => v.index === activeIndex);
+      const distance = Math.max(ROW_HEIGHT, (wrapRef.current?.clientHeight ?? 350) - headerHeight);
+      const offset = position ? position.start + direction * distance : 0;
+      const estimate = position && virtualizer.getVirtualItemForOffset(offset);
+      const hit = estimate && virtualizer.getVirtualItemForOffset(offset + estimate.size / 2);
+      if (!hit) return;
+      // Move by viewport pixels even with wrapped rows, then skip structural lines.
+      for (let i = hit.index; i >= 0 && i < items.length; i += direction) {
+        const item = items[i];
+        if (item.kind === "row") { select(item.rowIndex, c); return; }
+      }
+      select(direction > 0 ? flat.length - 1 : 0, c);
     };
     const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
     switch (e.key) {
@@ -569,8 +595,8 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       case "ArrowLeft": return move(0, rtl ? 1 : -1);
       case "Home": return move(-r, 0);
       case "End": return move(flat.length - 1 - r, 0);
-      case "PageDown": return move(Math.max(1, Math.floor(((wrapRef.current?.clientHeight ?? 350) - headerHeight) / ROW_HEIGHT)), 0);
-      case "PageUp": return move(-Math.max(1, Math.floor(((wrapRef.current?.clientHeight ?? 350) - headerHeight) / ROW_HEIGHT)), 0);
+      case "PageDown": return page(1);
+      case "PageUp": return page(-1);
       case "Tab": return move(0, e.shiftKey ? -1 : 1);
       case "Escape":
         e.preventDefault();
@@ -640,7 +666,10 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   };
   const onRowDrag = (e: DragEndEvent) => {
     if (!canDrag) return;
-    let target = e.over ? String(e.over.id) : null;
+    const source = items[itemIndexOfKey.get(String(e.active.id)) ?? -1];
+    if (source?.kind !== "row") return;
+    const over = items[itemIndexOfKey.get(String(e.over?.id)) ?? -1];
+    let target = over?.kind === "row" ? over.row.id : null;
     const rect = e.active.rect.current.translated;
     const wrap = wrapRef.current;
     if (rect && wrap) {
@@ -657,9 +686,9 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
         }
       }
     }
-    if (!target || String(e.active.id) === target) return;
+    if (!target || source.row.id === target) return;
     const ids = result.rows.map((r) => r.id);
-    const from = ids.indexOf(String(e.active.id));
+    const from = ids.indexOf(source.row.id);
     const to = ids.indexOf(target);
     if (from < 0 || to < 0) return;
     const next = [...ids];
@@ -837,7 +866,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
         </div>
       )}
       <div ref={wrapRef} tabIndex={0} onKeyDown={onKeyDown} role="application" aria-label="Table" className="db-scroll min-h-0 flex-1 overflow-auto outline-none" style={{ overflowAnchor: "none", ...(shell.compact ? { maxHeight: 480 } : {}) }}>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => { if (itemIndexOfRow.has(String(e.active.id))) setDraggingId(String(e.active.id)); }} onDragCancel={() => setDraggingId(null)} onDragEnd={(e) => { setDraggingId(null); if (view.columns.some((c) => c.prop === String(e.active.id))) onColumnDrag(e); else onRowDrag(e); }}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => { if (itemIndexOfKey.has(String(e.active.id))) setDraggingKey(String(e.active.id)); }} onDragCancel={() => setDraggingKey(null)} onDragEnd={(e) => { setDraggingKey(null); if (view.columns.some((c) => c.prop === String(e.active.id))) onColumnDrag(e); else onRowDrag(e); }}>
           <table className="db-table text-sm" data-has-selection={selected.size > 0} style={{ tableLayout: "fixed", width: GUTTER + cols.reduce((n, c) => n + c.width, 0) + 44 }} role="grid" aria-rowcount={items.length + 1 + (groups ? 0 : 1)} aria-colcount={totalCols}>
             <colgroup>
               <col style={{ width: GUTTER }} />

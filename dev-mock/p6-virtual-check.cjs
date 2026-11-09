@@ -19,7 +19,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
     for (const n of counts) {
       const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
       const p = await context.newPage();
-      p.setDefaultTimeout(30000);
+      p.setDefaultTimeout(n >= 20000 ? 120000 : 30000);
       const errors = [];
       p.on('pageerror', (e) => errors.push(e.message));
       await p.addInitScript(() => {
@@ -39,6 +39,13 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       const activeRowNumber = () => table.locator('tbody tr[aria-selected]').filter({ has: p.locator('.db-cell-active') }).getByRole('checkbox', { name: /^Select row / }).getAttribute('aria-label').then((s) => Number(s.replace('Select row ', '')));
       await title(0).waitFor();
       await finishPaint(p);
+      if (!baseline) assert.equal(await grid.getAttribute('aria-rowcount'), String(n + 3), 'Logical row count includes header, New line and footer');
+      if (!baseline) await p.evaluate(() => {
+        window.__p6MaxRows = 0;
+        const measure = () => { window.__p6MaxRows = Math.max(window.__p6MaxRows, document.querySelectorAll('[aria-label="Table"] tbody tr').length); };
+        window.__p6Observer = new MutationObserver(measure);
+        window.__p6Observer.observe(document.querySelector('[aria-label="Table"] tbody'), { childList: true }); measure();
+      });
       const report = { phase: baseline ? 'before P6 (P1, 300 drawn)' : 'after P6', rows: n, interactions: {} };
       const timeIt = async (name, action) => {
         const start = await p.evaluate(() => performance.now());
@@ -69,25 +76,28 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       };
       await timeIt('sort by title (toolbar)', sort);
       report.memory = await p.evaluate(() => ({ jsHeapBytes: performance.memory?.usedJSHeapSize ?? null, domNodes: document.querySelectorAll('*').length, domRows: document.querySelectorAll('[aria-label="Table"] tbody tr[aria-selected]').length }));
-      if (baseline) { console.log(JSON.stringify(report)); assert.deepEqual(errors, []); await context.close(); continue; }
+      // Preserve timings even if a later interaction assertion fails.
+      console.log(JSON.stringify(report));
+      if (baseline) { assert.deepEqual(errors, []); await context.close(); continue; }
       assert.equal(await table.getByRole('button', { name: 'Drag to reorder' }).count(), 0, 'Sorted rows cannot be dragged');
       await p.getByRole('button', { name: 'Sort', exact: true }).click();
       await p.getByRole('button', { name: 'Remove sort', exact: true }).click();
       await p.keyboard.press('Escape');
       await title(0).filter({ hasText: 'Design the landing page' }).waitFor();
-      await p.evaluate(() => {
-        window.__p6MaxRows = 0;
-        const measure = () => { window.__p6MaxRows = Math.max(window.__p6MaxRows, document.querySelectorAll('[aria-label="Table"] tbody tr').length); };
-        window.__p6Observer = new MutationObserver(measure);
-        window.__p6Observer.observe(document.querySelector('[aria-label="Table"] tbody'), { childList: true }); measure();
-      });
       const bounded = async () => {
         const count = await table.locator('tbody tr').count();
         assert(count < 120, `${n} loaded: ${count} tbody rows, must be <120 including spacers`);
       };
       const scroll = async (end) => {
         await table.evaluate((el, end) => { el.scrollTop = end ? el.scrollHeight : 0; }, end);
-        await rowNumber(end ? n : 1).waitFor(); await finishPaint(p); await bounded();
+        await p.waitForFunction((number) => {
+          const wrap = document.querySelector('[aria-label="Table"]');
+          const row = wrap.querySelector(`[aria-label="Select row ${number}"]`)?.closest('tr');
+          if (!row) return false;
+          const r = row.getBoundingClientRect(), v = wrap.getBoundingClientRect();
+          return r.top >= v.top + 32 && r.bottom <= v.bottom;
+        }, end ? n : 1);
+        await finishPaint(p); await bounded();
       };
       const estimateSum = Array.from({ length: n }, (_, i) => [1, 2, 3, 5, 8, 13][i % 6]).reduce((a, b) => a + b, 0);
       const footerText = () => table.locator('tfoot').getByRole('button', { name: 'Calculate Estimate', exact: true }).innerText();
@@ -95,6 +105,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       assert.equal(Number(totalBefore.replace(/[^\d.-]/g, '')), estimateSum, 'Full-result Estimate sum');
       await scroll(true);
       assert((await rowNumber(n).innerText()).includes(`Task number ${n - 1}`), 'Last row is scrollable');
+      assert.equal(await rowNumber(n).getAttribute('aria-rowindex'), String(n + 1), 'Last data row has its logical position');
       await scroll(false);
       assert.equal(await footerText(), totalBefore, 'Total survives scrolling');
       assert.equal(await p.getByRole('button', { name: /Show more rows/ }).count(), 0);
@@ -109,7 +120,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       });
       const before = await geometry();
       await table.evaluate((el) => { el.scrollTop = 8000; el.scrollLeft = 700; });
-      await p.waitForFunction(() => Number(document.querySelector('[aria-label="Table"] tbody tr[data-row-id]')?.dataset.index) > 100);
+      await p.waitForFunction(() => [...document.querySelectorAll('[aria-label="Table"] tbody tr[data-row-id]')].some((row) => Number(row.dataset.index) > 100));
       await finishPaint(p);
       const after = await geometry();
       for (const key of ['headerTop', 'headerX', 'headerWidth', 'bodyX', 'bodyWidth']) assert(Math.abs(before[key] - after[key]) <= 1.5, `Sticky geometry ${key}: ${before[key]} -> ${after[key]}`);
@@ -218,7 +229,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       report.maxTbodyRows = await p.evaluate(() => window.__p6MaxRows);
       assert(report.maxTbodyRows < 120, `Observed maximum tbody rows ${report.maxTbodyRows}`);
       assert.deepEqual(errors, [], 'No page errors');
-      console.log(JSON.stringify(report)); console.log(`ALL OK P6 ${n}`);
+      console.log(JSON.stringify({ rows: n, maxTbodyRows: report.maxTbodyRows })); console.log(`ALL OK P6 ${n}`);
       await context.close();
     }
   } finally { await browser.close(); }
