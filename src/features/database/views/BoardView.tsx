@@ -1,7 +1,7 @@
 // Board view: one column per group of the view's "group by" property; drag a card to another column to change
 // that property, drag it up or down to change the manual order. Optional swimlanes from the sub-group.
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -99,6 +99,9 @@ function BoardInner({ db, view, result, rowById, openRow, setCells, createRow, u
   const shown = useMemo(() => visibleProps(db, view, [g.prop, sub?.prop]), [db, view, g.prop, sub?.prop]);
   const titles = useMemo(() => titleMap(result.rows), [result.rows]);
   const guard = useDragClickGuard();
+  const openCard = useCallback((id: string) => {
+    if (!guard.recent()) openRow(id);
+  }, [guard, openRow]);
   const [adding, setAdding] = useState<string | null>(null);
   const [laneClosed, setLaneClosed] = useState<Set<string>>(new Set());
 
@@ -278,9 +281,8 @@ function BoardInner({ db, view, result, rowById, openRow, setCells, createRow, u
         props={shown}
         titles={titles}
         gp={gp}
-        onOpen={(id) => {
-          if (!guard.recent()) openRow(id);
-        }}
+        onOpen={openCard}
+        canDrag={view.sorts.length === 0 || (canMove && canMoveSub)}
         adding={adding === cell.id}
         onAdd={() => setAdding(cell.id)}
         onCancelAdd={() => setAdding((a) => (a === cell.id ? null : a))}
@@ -432,6 +434,7 @@ function BoardCell({
   props,
   titles,
   gp,
+  canDrag,
   onOpen,
   adding,
   onAdd,
@@ -447,6 +450,7 @@ function BoardCell({
   props: Property[];
   titles: Map<string, string>;
   gp: Property;
+  canDrag: boolean;
   onOpen: (id: string) => void;
   adding: boolean;
   onAdd: () => void;
@@ -465,7 +469,9 @@ function BoardCell({
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         {ids.map((id) => {
           const row = rowById.get(id.split("@")[0]);
-          return row ? <SortableCard key={id} id={id} cell={cell.id} row={row} cover={cover} fit={fit} props={props} titles={titles} onOpen={onOpen} /> : null;
+          return row ? (canDrag
+            ? <SortableCard key={id} id={id} cell={cell.id} row={row} cover={cover} fit={fit} props={props} titles={titles} onOpen={onOpen} />
+            : <CardFrame key={id} row={row} cover={cover} fit={fit} props={props} titles={titles} onOpen={onOpen} />) : null;
         })}
       </SortableContext>
       {adding ? (
@@ -477,26 +483,18 @@ function BoardCell({
   );
 }
 
-function SortableCard({
-  id,
-  cell,
-  row,
-  cover,
-  fit,
-  props,
-  titles,
-  onOpen,
-}: {
-  id: string;
-  cell: string;
-  row: DbRow;
-  cover: string;
-  fit: boolean;
-  props: Property[];
-  titles: Map<string, string>;
+interface CardProps {
+  row: DbRow; cover: string; fit: boolean; props: Property[]; titles: Map<string, string>;
   onOpen: (rowId: string) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, data: { cell } });
+}
+
+const SortableCard = memo(function SortableCard({ id, cell, ...props }: CardProps & { id: string; cell: string }) {
+  const sortable = useSortable({ id, data: { cell } });
+  return <CardFrame {...props} sortable={sortable} />;
+});
+
+const CardFrame = memo(function CardFrame({ row, cover, fit, props, titles, onOpen, sortable }: CardProps & { sortable?: ReturnType<typeof useSortable> }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable ?? {};
   return (
     <div
       ref={setNodeRef}
@@ -521,9 +519,9 @@ function SortableCard({
       <CardBody row={row} cover={cover} fit={fit} props={props} titles={titles} />
     </div>
   );
-}
+});
 
-function CardBody({ row, cover, fit, props, titles, overlay }: { row: DbRow; cover: string; fit: boolean; props: Property[]; titles: Map<string, string>; overlay?: boolean }) {
+const CardBody = memo(function CardBody({ row, cover, fit, props, titles, overlay }: { row: DbRow; cover: string; fit: boolean; props: Property[]; titles: Map<string, string>; overlay?: boolean }) {
   const img = cover ? firstImage(row, cover) : null;
   return (
     <div className={cn("overflow-hidden rounded-lg border border-line bg-elevated text-[0.85rem] transition-shadow hover:shadow-float", overlay && "shadow-float")}>
@@ -534,4 +532,4 @@ function CardBody({ row, cover, fit, props, titles, overlay }: { row: DbRow; cov
       </div>
     </div>
   );
-}
+});

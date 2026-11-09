@@ -13,3 +13,6 @@ pub(crate) mod relations;
 pub mod saves;
 pub mod types;
 pub mod value;
+
+#[cfg(test)]
+mod golden;
