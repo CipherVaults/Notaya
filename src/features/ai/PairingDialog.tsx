@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Modal } from "@/components/ui";
-import { aiErrorText, api, type AiPairingRequest } from "@/lib/ipc";
+import { api, type AiPairingRequest } from "@/lib/ipc";
+import { aiErrorText } from "./contract";
 
 export default function PairingDialog({ request, alreadyPaired, onAnswered }: {
   request: AiPairingRequest;

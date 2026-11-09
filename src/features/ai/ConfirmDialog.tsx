@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Field, Input, Modal } from "@/components/ui";
-import { aiErrorText, api, type AiConfirmRequest } from "@/lib/ipc";
+import { api, type AiConfirmRequest } from "@/lib/ipc";
+import { aiErrorText } from "./contract";
 
 export default function ConfirmDialog({ request, onAnswered }: {
   request: AiConfirmRequest;

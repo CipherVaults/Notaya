@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pause, Square } from "lucide-react";
-import { aiErrorText, api } from "@/lib/ipc";
+import { api } from "@/lib/ipc";
+import { aiErrorText } from "./contract";
 import { dismissAiRequest, useAiState } from "@/store/ai";
 import { useApp } from "@/store/app";
 export { useAiState } from "@/store/ai";

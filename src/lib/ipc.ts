@@ -323,17 +323,6 @@ export const api = {
   clearSearchHistory: () => invoke<void>("clear_search_history"),
 };
 
-/** Fixed AI error copy: never echo a client label, request body or backend message. */
-export function aiErrorText(error: unknown, fallback = "The AI access change could not be saved. Try again."): string {
-  const code = typeof error === "string" ? error
-    : error instanceof Error ? error.message
-    : error && typeof error === "object" && "code" in error ? error.code : null;
-  if (code === "rate_limited") return "Too many AI requests are waiting. Wait a moment, then try again.";
-  if (code === "pairing_refused") return "The connection could not be paired. Check existing pairings in Settings and try again.";
-  if (code === "The vault is locked." || code === "locked") return "Unlock Notaya and try again.";
-  return fallback;
-}
-
 /** Turns any thrown IPC error into a readable message. */
 export function errorText(e: unknown): string {
   if (typeof e === "string") return e;

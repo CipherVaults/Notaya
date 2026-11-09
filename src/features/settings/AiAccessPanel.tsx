@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
 import { Bot } from "lucide-react";
 import { Button, Field, Input, Modal } from "@/components/ui";
-import { aiErrorText, api, type AiLevel } from "@/lib/ipc";
+import { api, type AiLevel } from "@/lib/ipc";
+import { aiErrorText } from "@/features/ai/contract";
 import { useApp } from "@/store/app";
 import { useAiState } from "@/features/ai/AiMarker";
 
 const LEVELS: { level: AiLevel; label: string; sentence: string }[] = [
   { level: "look", label: "Look", sentence: "Read the notebooks you have not hidden, without changing them." },
-  { level: "edit", label: "Edit", sentence: "Read, create and edit notes; deleting still needs your confirmation." },
-  { level: "full", label: "Full", sentence: "Also bin or permanently delete whole pages, notebooks and hubs, with your confirmation." },
+  { level: "edit", label: "Edit", sentence: "Read, create and edit notes, and move items to the bin. Removing items still needs your confirmation." },
+  { level: "full", label: "Full", sentence: "Also permanently delete items from the bin, with your confirmation." },
 ];
 
 export default function AiAccessPanel() {
