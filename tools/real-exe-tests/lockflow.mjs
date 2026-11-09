@@ -10,10 +10,12 @@
 //   phase "type":   scenario page|sticky|close : type text, then lock/close at once
 //   phase "check":  unlock and print whether the typed text was saved
 import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
 
 const [port, phase, scenario = "page", pwFile] = process.argv.slice(2);
 const password = readFileSync(pwFile, "utf8").trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sockets = new Set();
 
 async function connect(match) {
   for (let i = 0; i < 60; i++) {
@@ -21,12 +23,14 @@ async function connect(match) {
       const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
       for (const hit of t) {
         const ws = new WebSocket(hit.webSocketDebuggerUrl);
+        sockets.add(ws);
+        ws.addEventListener('close', () => sockets.delete(ws), { once: true });
         await new Promise((r) => (ws.onopen = r));
         let id = 0;
         const pend = new Map();
         ws.onmessage = (m) => {
           const d = JSON.parse(m.data);
-          if (d.id) pend.get(d.id)?.(d);
+          if (d.id) { const resolve = pend.get(d.id); pend.delete(d.id); resolve?.(d); }
         };
         const send = (method, params = {}) => new Promise((res) => { const i = ++id; pend.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
         const ev = (expression) => send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }).then((r) => r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description);
@@ -45,6 +49,7 @@ const isMain = (l) => l === "main";
 const isSticky = (l) => String(l).startsWith("sticky-");
 const TYPED = "FLUSHTEST-" + scenario;
 
+try {
 const main = await connect(isMain);
 await sleep(1500);
 
@@ -57,7 +62,7 @@ if (phase === "setup") {
   await main.ev("location.reload()");
   await sleep(4000);
   const nb = await main.inv("create_notebook", { name: "T", color: "#888888", icon: "N" });
-  if (!nb.ok) { console.log("create_notebook failed:", JSON.stringify(nb)); process.exit(1); }
+  assert.ok(nb.ok, 'create_notebook must succeed');
   const sec = nb.ok.sections[0];
   const pg = await main.inv("create_page", { sectionId: sec.id, title: "Flush page" });
   console.log("page:", pg.ok?.id ? "created" : JSON.stringify(pg));
@@ -72,7 +77,9 @@ if (phase === "setup") {
   console.log("unlock:", JSON.stringify(await main.inv("unlock_vault", { password, keyfile: null })));
   await main.ev("location.reload()");
   await sleep(3000);
-  console.log("open page:", await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Flush page'); s?.click(); return !!s; })()`));
+  const opened = await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Flush page'); s?.click(); return !!s; })()`);
+  assert.equal(opened, true, 'Flush page must be opened through the sidebar');
+  console.log("open page:", opened);
   await sleep(1500);
   let sticky = null;
   if (scenario === "sticky") {
@@ -81,6 +88,7 @@ if (phase === "setup") {
   }
   const target = scenario === "sticky" ? sticky : main;
   const typed = await target.ev(`(() => { const pm=document.querySelector('.ProseMirror'); if(!pm) return 'no editor'; pm.focus(); document.execCommand('insertText', false, ${JSON.stringify(TYPED)}); return pm.textContent; })()`);
+  assert.ok(typeof typed === 'string' && typed.includes(TYPED), 'probe text must reach the editor');
   console.log("typed into editor:", JSON.stringify(typed));
   // lock or close at once, well inside the 350-500 ms save delay
   if (scenario === "close") {
@@ -105,5 +113,14 @@ if (phase === "setup") {
   const inSticky = (sg?.text ?? "") + (sg?.content ?? "");
   console.log(`page contains "${TYPED}":`, inPage.includes(TYPED));
   console.log(`sticky contains "${TYPED}":`, inSticky.includes(TYPED));
+} else { throw Error('Unknown lockflow phase'); }
+} finally {
+  // Node 24 on Windows can abort in libuv when process.exit tears down live
+  // WebSockets. Finish their close handshakes and let the event loop drain.
+  await Promise.all([...sockets].map(ws => new Promise(resolve => {
+    if (ws.readyState === WebSocket.CLOSED) return resolve();
+    const timer = setTimeout(resolve, 2000);
+    ws.addEventListener('close', () => { clearTimeout(timer); resolve(); }, { once: true });
+    ws.close();
+  })));
 }
-process.exit(0);

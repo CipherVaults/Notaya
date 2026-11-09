@@ -11,12 +11,18 @@ const rows = planChecks();
 const states = new Map(rows.map(row => [row.id, { status: 'not run', observations: [], defects: [] }]));
 let sheetSource = 'No execution JSON imported. All 250 checks are not run.';
 let imported = [];
+let runs = [];
+let triage = '';
 if (!init && fs.existsSync(destination)) {
-  const prior = fs.readFileSync(destination, 'utf8').match(/<!-- WHOLE_APP_STATE\n([\s\S]*?)\nWHOLE_APP_STATE -->/);
+  const body = fs.readFileSync(destination, 'utf8');
+  // Triage is authored by a reviewer. Refreshes must preserve it byte for byte.
+  triage = body.match(/<!-- WHOLE_APP_TRIAGE_START -->[\s\S]*?<!-- WHOLE_APP_TRIAGE_END -->/)?.[0] || '';
+  const prior = body.match(/<!-- WHOLE_APP_STATE\r?\n([\s\S]*?)\r?\nWHOLE_APP_STATE -->/);
   if (!prior) throw Error('Existing sheet has no machine state; refusing to overwrite manual work');
   const saved = JSON.parse(prior[1]);
   for (const [id, value] of Object.entries(saved.states)) { if (states.has(id)) states.set(id, value); }
   imported = saved.imported;
+  runs = saved.runs || [];
 }
 if (init && fs.existsSync(destination)) throw Error('--init never overwrites an existing result sheet');
 for (const file of files) {
@@ -26,6 +32,7 @@ for (const file of files) {
   if (imported.some(i => i.sha256 === hash)) continue;
   const report = JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, ''));
   if (report.schemaVersion !== 1 || !Array.isArray(report.checks) || !report.runId) throw Error(`Invalid report ${file}`);
+  if (!['A', 'B', 'C', 'performance'].includes(report.group) || (report.group === 'performance' && report.checks.length)) throw Error(`Invalid report group ${file}`);
   const seen = new Set();
   for (const observation of report.checks) {
     if (!states.has(observation.id) || seen.has(observation.id)) throw Error(`Unknown/duplicate check ${observation.id}`);
@@ -52,12 +59,17 @@ for (const file of files) {
     // resolves the earlier defect. This importer never silently erases failed evidence.
   }
   imported.push({ path: absolute, sha256: hash, group: report.group, runId: report.runId, utc: report.finishedUtc || report.startedUtc });
+  runs.push({ path: absolute, sha256: hash, group: report.group, runId: report.runId,
+    source: report.source, sourceAfter: report.sourceAfter, sourceChangedDuringRun: report.sourceChangedDuringRun,
+    binary: report.binary, executor: report.executor, startedUtc: report.startedUtc, finishedUtc: report.finishedUtc,
+    cleanup: report.cleanup, fatalError: report.fatalError, suites: report.suites,
+    workloads: report.workloads, limitations: report.limitations });
 }
 if (imported.length) sheetSource = `${imported.length} immutable JSON observation(s) imported. See provenance and machine state below.`;
 const safe = s => String(s ?? '').replaceAll('|', '&#124;').replace(/\r?\n/g, ' ');
 const tally = kind => ['passed', 'failed', 'not run'].map(status => rows.filter(r => r.kind === kind && states.get(r.id).status === status).length);
 let text = `# Whole-app test results - lane W, phase 2\n\n` +
-  `Produced scaffold for Ahmed Emara (AE0101), Gaming-PC; Claude executes and owns commits/records. Baseline: W HEAD 04fcb96 with staged integration of main 5077183. Runtime evidence applies only to the source and binary identities inside each imported report. No owner acceptance is implied.\n\n` +
+  `Produced for Ahmed Emara (AE0101), Gaming-PC; Claude executes and owns commits/records. Phase-2b triage baseline: 8437fbe; first real-exe reports declare build 5077183. Runtime evidence applies only to the source and binary identities inside each imported report. No owner acceptance is implied.\n\n` +
   `${sheetSource}\n\n` +
   `| KIND | Passed | Failed | Not run | Total |\n|---|---:|---:|---:|---:|\n`;
 for (const kind of ['A', 'B', 'C']) { const counts = tally(kind); text += `| ${kind} | ${counts.join(' | ')} | ${counts.reduce((a, b) => a + b)} |\n`; }
@@ -68,12 +80,22 @@ text += `\nEach numbered row appears once. Supporting suites have independent pa
   `## Checks\n\n| ID | KIND | Feature | Status | Evidence pointer / remaining reason | Defect group |\n|---|---|---|---|---|---|\n`;
 for (const row of rows) {
   const s = states.get(row.id), latest = s.observations.at(-1);
-  const evidence = latest ? `${latest.json} :: checks[${row.id}] (${latest.coverage || 'unspecified'}); ${latest.reason || ''}` : 'No execution evidence';
+  const evidence = latest ? `${latest.json} :: checks[id=${row.id}] (${latest.coverage || 'unspecified'}); ${[].concat(latest.evidence || []).join('; ') || 'No correlated suite log'}; ${latest.reason || ''}` : row.kind === 'C' ? 'Not run: actual person required; see this ID in the plan. No KIND C report supplied.' : 'Not run: no observation imported for this ID; coverage/prerequisite gap, not evidence of an app defect.';
   text += `| ${row.id} | ${row.kind} | ${safe(row.feature)} | ${s.status} | ${safe(evidence)} | ${safe([...new Set(s.defects)].join(', ')) || '-'} |\n`;
 }
 text += `\n## Imported provenance\n\n`;
 for (const entry of imported) text += `- ${safe(entry.path)}; SHA-256 ${entry.sha256}; run ${entry.runId}; KIND ${entry.group}; UTC ${entry.utc || 'not recorded'}.\n`;
 if (!imported.length) text += 'None. Browser, real exe, cargo suites and performance have not run in the scaffolding session. Syntax parsing is separate evidence.\n';
-text += `\n<!-- WHOLE_APP_STATE\n${JSON.stringify({ imported, states: Object.fromEntries(states) }, null, 2)}\nWHOLE_APP_STATE -->\n`;
+text += '\n## Suite outcomes (separate from complete feature coverage)\n\n';
+for (const run of runs) {
+  const counts = (run.suites || []).reduce((a, s) => { a[s.status] = (a[s.status] || 0) + 1; return a; }, {});
+  text += `\nRun ${safe(run.runId)}, group ${run.group}; source ${safe(run.source?.head)}; executor ${safe(run.executor)}; ${safe(JSON.stringify(counts))}. Fatal error: ${safe(run.fatalError || 'none')}. Cleanup: ${safe(JSON.stringify(run.cleanup))}.\n\n`;
+  if (run.binary) text += `Binary ${safe(run.binary.path)}; SHA-256 ${run.binary.sha256}; declared build ${safe(run.binary.declaredBuildCommit)}.\n\n`;
+  text += '| Suite / workload | Status | Evidence / remaining reason |\n|---|---|---|\n';
+  for (const s of run.suites || []) text += `| ${safe(s.name || s.script)} | ${s.status} | ${safe(s.evidence || s.reason || run.path)} |\n`;
+  for (const w of run.workloads || []) text += `| ${safe(w.name)} | ${safe(w.status)} | ${safe(w.evidence)}; ${safe(w.reason || '')}; ${w.samples?.length || 0} warm samples |\n`;
+}
+if (triage) text += `\n${triage}\n`;
+text += `\n<!-- WHOLE_APP_STATE\n${JSON.stringify({ imported, runs, states: Object.fromEntries(states) }, null, 2)}\nWHOLE_APP_STATE -->\n`;
 fs.writeFileSync(destination, text);
 console.log(`CHECKPOINT: result sheet refreshed (${rows.length} rows) done`);

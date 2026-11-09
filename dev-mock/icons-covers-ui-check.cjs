@@ -255,7 +255,7 @@ const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= 
       return Math.min(ratio(text, over(255)), ratio(text, over(0)));
     });
     truthy(`${theme}: the cover buttons are readable (contrast ${contrast.toFixed(1)})`, contrast >= 4.5, contrast);
-    await p.getByTestId('page-icon-row').hover();
+    await p.getByTestId('page-icon').hover();
     await p.waitForTimeout(150);
     await shot(`10-page-${theme}`);
     await home();

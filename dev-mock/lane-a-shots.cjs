@@ -197,16 +197,27 @@ async function functionalChecks(page, databaseId) {
       assert.equal(keys['other:dbview:keep'], 'keep-unrelated');
     };
     await checkStorage();
-    // Exercise the mock lock state, then reload as the real lock event does (mock events are inert).
-    await page.evaluate(async () => {
-      const { flushAll } = await import('/src/lib/flush.ts');
-      const { invoke } = await import('/dev-mock/core.ts');
-      const { useApp } = await import('/src/store/app.ts');
-      await invoke('enable_security', { password: crypto.randomUUID(), removeUnprotectedCopies: false });
-      await flushAll();
-      await invoke('lock_vault');
-      await useApp.getState().refreshStatus();
-    });
+    // A dev-server reload can destroy Runtime.evaluate before it acknowledges.
+    // Restart the entire disposable mock probe once after navigation, recording it.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await page.evaluate(async () => {
+          const { flushAll } = await import('/src/lib/flush.ts');
+          const { invoke } = await import('/dev-mock/core.ts');
+          const { useApp } = await import('/src/store/app.ts');
+          await invoke('enable_security', { password: crypto.randomUUID(), removeUnprotectedCopies: false });
+          await flushAll();
+          await invoke('lock_vault');
+          await useApp.getState().refreshStatus();
+        });
+        break;
+      } catch (error) {
+        if (attempt || !/Execution context was destroyed/.test(error.message)) throw error;
+        report.checks.push({ theme, harnessRetry: 'Mock lock evaluation interrupted by navigation; retry once after load' });
+        await page.waitForLoadState('load');
+        await page.getByRole('button', { name: 'New notebook', exact: true }).waitFor();
+      }
+    }
     await checkStorage();
     await page.reload();
     await page.getByRole('button', { name: 'New notebook', exact: true }).waitFor();

@@ -82,3 +82,17 @@ all seven JS files. Only document generation ran; no suite, browser, exe, build,
 audit or performance measurement ran in this scaffolding session. Head was `04fcb96` with
 Claude's staged main `5077183` integration; no unresolved merge conflicts were present.
 Claude owns commits/pushes, independent security review and records outside this write area.
+
+Phase-2b correction (2026-11-09, Ahmed / Gaming-PC): the first results are triaged in
+`docs/plan/2026-11-09-whole-app-test-results.md`. Installed TypeScript/Vite now resolve
+from the checkout or its ancestors; calc-check compiles in its isolated TEMP itself.
+The original seven-JS syntax count above describes scaffolding, not the later fixes.
+Import performance alongside A/B (it supplies measurement evidence, never feature passes):
+
+```powershell
+node tools/whole-app/merge-results.cjs 'D:\Notaya-lanes\out\whole-app\group-a-results.json' 'D:\Notaya-lanes\out\whole-app\group-b-results.json' 'D:\Notaya-lanes\out\whole-app\perf-results.json'
+```
+
+Refresh preserves the authored triage/register markers and all original observations.
+Compare the complete phase-2b diff against `8437fbe`; automatic checkpoint `61f070a`
+captured only an intermediate subset. Runtime fixes still require Claude's reruns.

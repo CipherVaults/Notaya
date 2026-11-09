@@ -52,7 +52,9 @@ const rustAreas = {
   'database-engine': ['database::'],
   import: ['commands::import_notes::', 'importers::'], export: ['commands::export::', 'export::'],
   roundtrips: ['roundtrip_tests::'], logging: ['logging::'],
-  'integrated-ai': ['ai::', 'commands::ai::'],
+  // commands::ai contains window adapters, no #[test] functions. Their core tests
+  // live under ai::; do not invent a zero-match required test suite.
+  'integrated-ai': ['ai::'],
 };
 // Rows requiring a person, actual native pickers/OS actions, or unavailable reviewed fixture routes.
 const human = new Set(ids(36, 39, 48, 71, ...range(107, 112), ...range(138, 147), ...range(149, 167),

@@ -24,7 +24,7 @@ let printed = [];
 const log = console.log.bind(console);
 console.log = (...values) => { printed.push(format(...values)); log(...values); };
 const exit = process.exit.bind(process);
-process.exit = code => {
+function guardedExitCode(code) {
   let bad = Number(code || 0) !== 0 || printed.some(line => /^\s*FAIL\b/.test(line));
   if (file !== 'lockflow.mjs') {
     if (!printed.some(line => /^PASS\b/.test(line))) { bad = true; log('FAIL no assertion output'); }
@@ -42,6 +42,9 @@ process.exit = code => {
     if (phase === 'setup' && (!printed.includes('page: created') || !printed.includes('sticky: created'))) { bad = true; log('FAIL setup did not create both probes'); }
   }
   delete process.env.NOTAYA_TEST_PASSWORD;
-  exit(bad ? 1 : 0);
-};
+  return bad ? 1 : 0;
+}
+process.exit = code => exit(guardedExitCode(code));
+// lockflow closes sockets and exits naturally; run the same guards on that route.
+process.once('beforeExit', () => { process.exitCode = guardedExitCode(process.exitCode); });
 await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);

@@ -62,7 +62,11 @@ const HOSTILE_FM = '---\nconfig:\n  securityLevel: loose\n  themeCSS: "svg{backg
   const settle = (ms = 1500) => p.waitForTimeout(ms);
 
   // The library is not loaded until a diagram is first shown.
-  const scripts = async () => p.evaluate(() => performance.getEntriesByType('resource').map((r) => r.name).filter((n) => /mermaid|Diagram|cytoscape|elk/i.test(n)).length);
+  // Vite loads our MermaidBlock.ts / mermaid.ts editor adapters eagerly. Only the
+  // installed renderer's JS entry (or its built chunk) proves the library loaded.
+  const scripts = async () => p.evaluate(() => performance.getEntriesByType('resource')
+    .filter((r) => /(?:^|\/)mermaid(?:[-.][\w-]+)?\.js$/i.test(new URL(r.name).pathname)).length);
+  await p.evaluate(() => { window.__mermaidBaselineScripts = [...document.querySelectorAll('script:not([src])')]; });
   is('the library is not loaded before a diagram is shown', await scripts(), 0);
 
   // 1. Insert from the "/" menu.
@@ -122,14 +126,24 @@ const HOSTILE_FM = '---\nconfig:\n  securityLevel: loose\n  themeCSS: "svg{backg
   const hostile = async (name, code) => {
     await area.fill(code);
     await settle(2500);
-    const r = await p.evaluate(() => ({
-      pwned: window.__pwned ?? null,
-      bad: document.querySelectorAll('script:not([src]), .mermaid-block script, .mermaid-block iframe, .mermaid-block object, .mermaid-block embed, .mermaid-block img, .mermaid-block a, .mermaid-block foreignObject iframe').length,
-      handlers: [...document.querySelectorAll('.mermaid-out *')].filter((e) => [...e.attributes].some((a) => /^on/i.test(a.name))).length,
-      hrefs: [...document.querySelectorAll('.mermaid-out *')].filter((e) => ['href', 'xlink:href', 'src'].some((n) => e.hasAttribute(n) && !(e.getAttribute(n) || '').startsWith('#'))).length,
-      outside: [...document.querySelectorAll('.mermaid-out style')].filter((s) => /@import|url\(\s*['"]?(?!#)/i.test(s.textContent)).length + [...document.querySelectorAll('.mermaid-out [style]')].filter((e) => /url\(\s*['"]?(?!#)/i.test(e.getAttribute('style'))).length,
-      drawn: document.querySelectorAll('.mermaid-out svg').length,
-    }));
+    const r = await p.evaluate(() => {
+      // Vite's existing inline React-refresh preamble is outside the drawing.
+      // Still fail on NEW inline scripts anywhere, and every hostile drawing node.
+      const badNodes = [...new Set([
+        ...[...document.querySelectorAll('script:not([src])')].filter((s) => !window.__mermaidBaselineScripts.includes(s)),
+        ...document.querySelectorAll('.mermaid-block script, .mermaid-block iframe, .mermaid-block object, .mermaid-block embed, .mermaid-block img, .mermaid-block image, .mermaid-block a, .mermaid-block link'),
+      ])];
+      return {
+        pwned: window.__pwned ?? null,
+        bad: badNodes.length,
+        badNodes: badNodes.map((node) => node.outerHTML.slice(0, 400)),
+        handlers: [...document.querySelectorAll('.mermaid-out *')].filter((e) => [...e.attributes].some((a) => /^on/i.test(a.name))).length,
+        hrefs: [...document.querySelectorAll('.mermaid-out *')].filter((e) => ['href', 'xlink:href', 'src'].some((n) => e.hasAttribute(n) && !(e.getAttribute(n) || '').startsWith('#'))).length,
+        outside: [...document.querySelectorAll('.mermaid-out style')].filter((s) => /@import|url\(\s*['"]?(?!#)/i.test(s.textContent)).length + [...document.querySelectorAll('.mermaid-out [style]')].filter((e) => /url\(\s*['"]?(?!#)/i.test(e.getAttribute('style'))).length,
+        drawn: document.querySelectorAll('.mermaid-out svg').length,
+      };
+    });
+    if (r.bad) console.log('DIAGNOSTIC hostile output nodes', name, JSON.stringify(r.badNodes));
     is(name + ': nothing ran', r.pwned, null);
     is(name + ': no script/iframe/img/link elements', r.bad, 0);
     is(name + ': no event-handler attributes', r.handlers, 0);

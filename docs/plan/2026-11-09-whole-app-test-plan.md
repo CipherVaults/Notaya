@@ -694,3 +694,13 @@ Routing below covers all 166 B checks. **partial unattended** means the named su
 | W248 | Bridge stdio and native pipe trust | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
 | W249 | AI exchange import/export | not unattended | Actual native dialog, OS/person action, AI window consent, or missing reviewed fault/time/legacy fixture route; see exact plan steps. |
 <!-- WHOLE_APP_ROUTING_END -->
+
+## Phase 2b: first-round triage hand-back (2026-11-09)
+
+Ahmed (AE0101), Gaming-PC; Codex inspects/fixes test scripts, Claude executes and owns Git/records. This is the current task's bounded script-only triage; it does not authorize application fixes or change any of the 250 checks or their KIND. Source input is W `8437fbe`; first B/performance exe is declared built from main `5077183`. The heartbeat made intermediate checkpoint `61f070a` during triage; review the final working tree against `8437fbe`.
+
+The [results sheet and defect register](2026-11-09-whole-app-test-results.md#phase-2b-triage-and-defect-register) imports the immutable A/B/performance JSON, records every failed/not-run suite and each feature status, and identifies DG-01 through DG-10. The first-round suite outcomes are A 57 passed / 8 failed / 5 not run and B 2 / 4 / 0. Performance seeded blank-1 but failed before any warm sample. Feature coverage remains A 0 / 21 / 36, B 0 / 7 / 159, C 0 / 0 / 27; harness failures are not product findings.
+
+Script changes address ancestor dependency resolution (including the views server), PowerShell hashtable aggregation, stale sidebar/hover selectors, unstable date/toast assertions, Mermaid development-page false positives, a bounded screenshot-navigation retry, protected restore reopen, and suspected Node/WebSocket exit failure. The impossible `commands::ai::` test prefix is removed; the actual `ai::` tests remain. Consumer-only helpers still honestly have no standalone run. The test-only clippy PI lint is reported for a separate lane, not suppressed or edited here.
+
+Next: Claude reviews the script diff, commits the final working tree, runs the exact A/B/performance commands in the results document, then refreshes it with `merge-results.cjs`. Preserve the original failed archives and this triage section; corrections do not erase old failures or complete partial coverage. The 27 KIND C checks and the plan's remaining Windows/manual/fixture routes remain open. Conditional application investigation briefs require an actual corrected failure and a separate bounded assignment. No runtime, application change, installation, network or Git write by Codex in this triage run.
