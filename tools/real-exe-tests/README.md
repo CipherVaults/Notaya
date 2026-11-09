@@ -37,9 +37,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-i
 
 ```
 
-Every runner first prints the **SHA-256 of the exe it tests**, and at the end the cleanup lines: port closed, env var not set, no process left, temp folder and passphrase file removed. `-Exe` is optional; it defaults to the release exe relative to the scripts.
+The older runners below first print the **SHA-256 of the exe they test**, and at the end the cleanup lines: port closed, env var not set, no process left, temp folder and passphrase file removed. `-Exe` is optional; it defaults to the release exe relative to the scripts. The X-1 startup runner instead retains its throwaway home and reports for comparison; its commands, safety boundaries and interpretation are in [startup-minimized.md](startup-minimized.md).
 
 ## What each test checks
+
+**run-startup-minimized.ps1** (`startup-minimized.mjs`, X-1, reporter Mohamed Sayed / AbyssWatcher2): normal and hidden `--minimized` startup, optional delayed bundle loading and held animation frames on a hidden reload, exact Run-key command validation without registry writes, native window visibility, DOM/layout, and second-instance restore. Requires manual pixel/tray and true sign-in observations separately. Browser-free scheduler regression: `node --test --test-isolation=none tools/real-exe-tests/startup-ready.test.mjs`.
 
 **run-restoreflow.ps1** (`restoreflow.mjs`):
 list_backups works while locked, newest first; live vault has CHANGED text; absolute path that was not picked is refused; UNC path refused; path traversal name refused; wrong password refused; vault unchanged after the failed restore; restore while locked succeeded and returned an undo file; restored vault is open with the ORIGINAL text; restore while unlocked succeeded; second restored vault is open with the CHANGED text; vault is unlocked after restore.

@@ -19,6 +19,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
+# Fail closed if listener enumeration itself is unavailable (not "zero listeners").
+function Get-ListenerCount([int]$Port) {
+  @(Get-NetTCPConnection -State Listen -ErrorAction Stop | Where-Object { $_.LocalPort -eq $Port }).Count
+}
 $Exe = Resolve-TestExe $Exe
 # The legacy guard is global: even a different-home test must not hand over to a real app.
 if (@(Get-Process Notaya, Cipherleaf -ErrorAction SilentlyContinue).Count) {
@@ -107,6 +111,25 @@ function Save-NativeWindows([string]$Phase) {
   $expected = $Mode -eq 'Normal' -or $Phase -eq 'restored'
   if ($windows[0].visible -ne $expected -or $windows[0].minimized) { throw "Unexpected native window state in $Phase" }
 }
+function Get-OwnedChildren {
+  # Remember descendants while the parent still exists. Never kill by name or port.
+  if ($script:appProcess.HasExited) { return @() }
+  try { $all = @(Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId) }
+  catch { Write-Warning 'Could not enumerate child processes; normal Quit and port check still required.'; return @() }
+  if ($script:appProcess.HasExited) { return @() }
+  $known = @($script:appProcess.Id); $owned = @()
+  do {
+    $next = @($all | Where-Object { $_.ParentProcessId -in $known -and $_.ProcessId -notin $known })
+    foreach ($child in $next) {
+      $known += [int]$child.ProcessId
+      try {
+        $p = Get-Process -Id $child.ProcessId -ErrorAction Stop
+        $owned += @{ id = $p.Id; started = $p.StartTime.ToUniversalTime().Ticks }
+      } catch { }
+    }
+  } while ($next.Count)
+  return $owned
+}
 
 $appProcess = $null; $second = $null; $failed = $false
 try {
@@ -142,12 +165,17 @@ try {
   $failed = $true
   Write-Warning $_.Exception.Message
 } finally {
+  $ownedChildren = if ($appProcess) { @(Get-OwnedChildren) } else { @() }
   if ($appProcess -and -not $appProcess.HasExited) {
     # Best-effort normal Quit so pending writes flush. Fall back only for this PID.
     & node (Join-Path $PSScriptRoot 'startup-minimized.mjs') --port $Port --phase quit --expect visible --timeout-ms 2000
     if (-not $appProcess.WaitForExit(8000)) { Stop-Process -Id $appProcess.Id -Force; $appProcess.WaitForExit() }
   }
   if ($second -and -not $second.HasExited) { Stop-Process -Id $second.Id -Force }
+  foreach ($owned in $ownedChildren) {
+    $child = Get-Process -Id $owned.id -ErrorAction SilentlyContinue
+    if ($child -and $child.StartTime.ToUniversalTime().Ticks -eq $owned.started) { Stop-Process -Id $child.Id -Force -ErrorAction SilentlyContinue }
+  }
   for ($i = 0; $i -lt 20 -and (Get-ListenerCount $Port) -gt 0; $i++) { Start-Sleep -Milliseconds 250 }
   $listeners = Get-ListenerCount $Port
   "Debug port $Port listeners after cleanup: $listeners"

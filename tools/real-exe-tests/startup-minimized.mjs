@@ -87,15 +87,19 @@ async function connection(address) {
 
 // Installed before the reload's bundle. No change to the production app or files.
 function frameProbe(ms) {
-  const probe = window.__notayaStartupProbe = { readyCalls: 0, readyAtMs: null, hookInstalled: false, heldFrames: 0 };
+  const probe = window.__notayaStartupProbe = { readyCalls: 0, readyCompleted: 0, readyAtMs: null, hookInstalled: false, heldFrames: 0, framesReleased: !ms };
   const start = performance.now();
   const hook = () => {
     const internals = window.__TAURI_INTERNALS__;
-    if (!internals?.invoke) { setTimeout(hook, 10); return; }
+    if (!internals?.invoke) { if (performance.now() - start < 30000) setTimeout(hook, 10); return; }
     const original = internals.invoke.bind(internals);
     internals.invoke = (cmd, ...rest) => {
-      if (cmd === "window_ready") { probe.readyCalls++; probe.readyAtMs = performance.now() - start; }
-      return original(cmd, ...rest);
+      const result = original(cmd, ...rest);
+      if (cmd !== "window_ready") return result;
+      probe.readyCalls++;
+      return result.then((value) => {
+        probe.readyCompleted++; probe.readyAtMs = performance.now() - start; return value;
+      });
     };
     probe.hookInstalled = true;
   };
@@ -107,6 +111,7 @@ function frameProbe(ms) {
   window.cancelAnimationFrame = (key) => { if (key < 0) held.delete(key); else cancel(key); };
   setTimeout(() => {
     window.requestAnimationFrame = request; window.cancelAnimationFrame = cancel;
+    probe.framesReleased = true;
     for (const fn of held.values()) request(fn);
     held.clear();
   }, ms);
@@ -176,8 +181,9 @@ try {
   do {
     try { report.snapshot = await cdp.evaluate(snapshotExpression); } catch { /* reload in progress */ }
     const s = report.snapshot;
-    if (s?.label === "main" && s.rootHasContent && s.titleBarText.includes("Notaya") && s.screenHasContent && s.screenHasLayout) {
-      if (!holdFrames || (s.probe?.hookInstalled && s.probe.readyCalls > 0)) break;
+    if (s?.label === "main" && s.rootHasContent && s.titleBarText.includes("Notaya") && s.screenHasContent && s.screenHasLayout &&
+        s.nativeVisible === (args.expect === "visible")) {
+      if (!holdFrames || (s.probe?.hookInstalled && s.probe.readyCompleted > 0)) break;
     }
     await sleep(200);
   } while (Date.now() < deadline);
@@ -185,8 +191,17 @@ try {
   report.checks.mainDOM = s?.label === "main" && s.rootHasContent && s.titleBarText.includes("Notaya") && s.screenHasContent && s.screenHasLayout;
   report.checks.visibility = s?.nativeVisible === (args.expect === "visible");
   if (holdFrames) {
-    report.checks.readyWithoutFrames = !!s?.probe?.hookInstalled && s.probe.readyCalls > 0 &&
+    report.checks.readyWithoutFrames = !!s?.probe?.hookInstalled && s.probe.readyCompleted > 0 &&
       s.probe.heldFrames > 0 && s.probe.readyAtMs < holdFrames;
+    // Preserve the readiness observation before frames resume. Let the test-only
+    // shim expire before the runner restores the window and inspects animation.
+    const releaseDeadline = Date.now() + timeout;
+    let released = s?.probe?.framesReleased;
+    while (!released && Date.now() < releaseDeadline) {
+      await sleep(200);
+      released = await cdp.evaluate("window.__notayaStartupProbe?.framesReleased").catch(() => false);
+    }
+    report.checks.frameShimReleased = released === true;
   }
   if (args.expect === "visible") {
     // Animations must settle after a tray restore; DOM existing alone is insufficient.
