@@ -1,0 +1,19 @@
+[package]
+name = "db-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Development only. Not part of the app or its build. It compiles the REAL database engine files
+# from ../../src-tauri/src/database/ (unmodified, by path) with tiny stand-ins for crate::model and
+# crate::error, builds generated rows in memory and times a query. No vault, no disk, no real data.
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zeroize = { version = "1.9.1", features = ["derive"] }
+hex = "0.4.3"
+
+[profile.release]
+opt-level = 3

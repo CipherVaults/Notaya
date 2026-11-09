@@ -582,7 +582,9 @@ function removeMockTree(root: string) {
 
 /** Revisions and an event after each mock write, matching the production signal contract. */
 export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
+  const __t0 = performance.now();
   const value = await invokeCore<unknown>(cmd, args, options);
+  ((window as unknown as { __inv?: [string, number][] }).__inv ??= []).push([cmd, performance.now() - __t0]); // dev timing (EX-2026-11-09-65)
   const write = /^(history_restore|activity_undo|save_page|save_database|save_sticky|set_cells|create_row|delete_|trash_page|restore_|empty_trash|set_page_look|set_page_favorite|set_sticky_|close_sticky|open_sticky|hide_stickies|reorder)/.test(cmd);
   const ids = cmd === "activity_undo" ? ["p1"] : (args.ids as string[] | undefined) ?? [String(args.pageId ?? args.id ?? args.rowId ?? (cmd === "save_database" ? JSON.parse(String(args.databaseJson)).id : ""))];
   if (write) {

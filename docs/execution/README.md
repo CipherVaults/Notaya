@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-09 (Ahmed's message 02:08:59 UTC), EX-2026-11-09-65: large databases, research and plan
+
+- [2026-11-09-large-database-performance-research.md](2026-11-09-large-database-performance-research.md): where Notaya slows down with thousands to 200,000 rows (measured: the Rust engine is fine; the screen redraws every row on every click and every change sends the whole result), the ranked plan P1 to P12 with licences and version fit, the accuracy gate, and two development-only measuring tools. Plan: [docs/plan/2026-11-09-large-database-performance-plan.md](../plan/2026-11-09-large-database-performance-plan.md). **Produced**; no app code changed; not accepted.
+
 ### 2026-11-08 (Ahmed's messages 16:59:07 to 17:00:48 UTC), EX-2026-11-08-63: README refresh for Notaya 1.5.1 and the GitHub About text
 
 - [2026-11-08-readme-refresh-v1-5-1.md](2026-11-08-readme-refresh-v1-5-1.md): the README rewritten for released 1.5.1 only (1.6 deliberately left out), a known-limits list, and the About description and topics handed over as text (repository settings are Mohamed's click). No screenshots (none exist for 1.5.1). **Produced**; not accepted.

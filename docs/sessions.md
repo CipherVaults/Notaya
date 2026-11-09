@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 52 | 2026-11-09 | Ahmed (`AE0101`) | cloud | [Large databases: research and plan (EX-2026-11-09-65)](#session-52) |
 | 51 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [README and About refresh for 1.5.1 (EX-2026-11-08-63)](#session-51) |
 | 50 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger refresh at 16:00 UTC (EX-2026-11-08-62)](#session-50) |
 | 49 | 2026-11-08 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [The 1.6 build day: Codex first, the heartbeat, seven lanes merged (EX-2026-11-08-61)](#session-49) |
@@ -72,6 +73,85 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-52"></a>
+
+# 📘 Session: 2026-11-09 · Ahmed · cloud · Large databases, research and plan
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud** (Linux container). No PC, no Remote Control.
+
+**What it covers:** the thread "Speed up large databases": [EX-2026-11-09-65](execution/2026-11-09-large-database-performance-research.md) and the [plan](plan/2026-11-09-large-database-performance-plan.md).
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (reader, measurer, writer of the plan and records) | `claude-sonnet-5-5` (configured) | not recorded | Its own usage was not read (a running session has no usage block) |
+| Coordinator (relay 02:09:09) | not read | not read | Message only |
+| Codex | not used | - | Research task; Codex lanes come later from the plan |
+
+**Record basis:** `origin/main` at `805cf77`; the database code at that commit; the feature inventory, version plan and licence study (project files); npm and crates.io metadata read on 2026-11-09.
+
+## 🕒 Time
+
+- Ahmed's message: 02:08:59 UTC; coordinator relay 02:09:09 UTC. Work began about 02:09 UTC; this entry written about 02:30 UTC (container clock). Active working time: not measured.
+- Reason for summary: A37 item 5 (every session that changes the repository).
+
+## 🎯 Session Goal
+
+Find why databases slow down above about 500 rows, measure it, and plan proven fixes for thousands to 100,000+ rows (a big imported Excel) without losing a feature or any accuracy.
+
+## 🧭 Starting State
+
+The feature inventory noted that Timeline has no virtual scrolling and that search has no index. The table showed 300 rows and a "Show more rows" button. A view returns at most 50,000 rows; a database may hold 200,000. Nothing in the records had measured any of it.
+
+## 🛠️ Actions Taken
+
+1. Read the records and the database code; checked open PRs for overlap (none).
+2. Built `tools/db-bench` (real engine files, generated data) and ran 1,000 to 200,000 rows. Built a scratch copy of the mock UI and timed the table at 40, 300 and 1,200 rows on screen; counted row renders to find the cause.
+3. Wrote the plan (P1 to P12), licences, the accuracy gate, the order of work, EX-65, the claims row, a STATUS line, this entry and a ledger row. Added the two measuring tools and two dev-only mock additions to the repository.
+
+## 🧠 Key Insights
+
+- The Rust engine is not the bottleneck (about 0.4 to 0.7 s for 50,000 rows with formulas and a rollup; loading 200,000 rows about 0.25 s; search 25 ms). The slowness Ahmed felt is on the screen: every click redraws all rows (600 renders for 300 rows), and every change sends the whole result.
+- Fewer rows alone is not enough: 40 rows still cost about 0.2 s per click until the redraw problem is fixed.
+- Formula text is parsed again for every row (about 150 ms of about 300 ms at 50,000 rows); sort looks keys up in a hash map on each comparison.
+- Views above 50,000 rows are cut silently.
+
+## 📌 Decisions Made
+
+None by Ahmed beyond the scope. No amendment. The plan's order is a recommendation.
+
+## ⚠️ Difficulties / Friction
+
+A first probe of the other views gave unreliable numbers (the views had not finished drawing); it was redone with longer waits and only element counts are used. The mock backend is JavaScript, so its time is listed apart and is not Rust's time.
+
+## 🔧 Adjustments Made
+
+Left the temporary render counter and the experiments (memoised list, 40-row page) in the scratch copy only; the repository holds just the measuring tools.
+
+## ❌ Mistakes / Risks Noted
+
+- `CLAUDE.md` says to ask before installing dependencies. I ran `npm ci --ignore-scripts` and downloaded the bench's four Rust crates in a throwaway scratch copy inside the container, without asking first. Nothing was installed on a PC or added to the project. Disclosed in EX-65 section 2.
+- Numbers are one run on a cloud container with headless Chromium, not WebView2 or the Gaming-PC.
+
+## 📍 Current Position
+
+Produced: the plan, two measuring tools, the records. Not verified on a PC, not integrated, not accepted. No app code changed.
+
+## 🔜 Next Steps
+
+Ahmed answers Q57 onward; the coordinator writes Codex lane briefs from the plan (Stage 1 first); re-run both tools on the Gaming-PC to calibrate.
+
+## ❓ Open Questions
+
+Numbered in the thread report from Q57 (when to run Stage 1 and Stage 2; the one npm library; whether to keep a "Show more rows" button; the stricter "ask before any scratch install" reading).
+
+## 🔍 Confidence Level
+
+**Direction:** high (the cause is visible in the code, the render counts and the timings agree). **Absolute times:** low (container, one run). **Estimated gains of the proposed fixes:** medium, none of them built or measured.
+
 ---
 
 <a id="session-51"></a>
