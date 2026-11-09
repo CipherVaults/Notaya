@@ -12,7 +12,7 @@ import TitleBar from "@/components/TitleBar";
 import UnlockScreen from "@/features/unlock/UnlockScreen";
 import Shell from "@/components/Shell";
 import { pollNotices } from "@/features/database/notices";
-import { scheduleWindowReady, startupMark } from "@/lib/startup";
+import { scheduleWindowReady, startupMark, watchStartupInitialization } from "@/lib/startup";
 
 export default function App() {
   const status = useApp((s) => s.status);
@@ -20,13 +20,14 @@ export default function App() {
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
   const hasStatus = status !== null;
   const [lockListenerReady, setLockListenerReady] = useState(false);
+  const [startupFailed, setStartupFailed] = useState(false);
   const readySent = useRef(false);
 
-  // Run after React has committed the status-dependent screen. Rust still
-  // decides whether to show it: --minimized stays hidden while a tray exists.
+  // Run after React commits the status screen, or the initialization failure
+  // fallback. Rust still decides visibility: --minimized stays hidden with a tray.
   useLayoutEffect(() => {
     startupMark("effectRan", true);
-    if (!hasStatus || !lockListenerReady || readySent.current) return;
+    if (readySent.current || (!startupFailed && (!hasStatus || !lockListenerReady))) return;
     startupMark("screenCommittedAtMs");
     startupMark("microtaskScheduled", true);
     const cancel = scheduleWindowReady(() => {
@@ -35,7 +36,7 @@ export default function App() {
       void api.windowReady();
     });
     return () => { startupMark("readyCleanup", true); cancel(); };
-  }, [hasStatus, lockListenerReady]);
+  }, [hasStatus, lockListenerReady, startupFailed]);
 
   // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
   const unlocked = status?.unlocked ?? false;
@@ -66,7 +67,6 @@ export default function App() {
   }, [unlocked]);
 
   useEffect(() => {
-    let active = true;
     startupMark("startupEffectRan", true);
     // A message saved just before a reload (for example a restore that failed): show it once.
     try {
@@ -121,23 +121,29 @@ export default function App() {
         await api.flushDone(event.payload).catch(() => {});
       }
     });
-    void Promise.all([unlisten, unlistenLocking]).then(() => {
-      startupMark("lockListenerReadyAtMs");
-      if (active) setLockListenerReady(true);
-    });
+    const stopStartup = watchStartupInitialization(
+      refreshStatus,
+      [unlisten, unlistenLocking],
+      () => {
+        startupMark("lockListenerReadyAtMs");
+        setLockListenerReady(true);
+      },
+      () => setStartupFailed(true),
+    );
     // The backend can also send a notice while the app is running.
     // The payload is ignored on purpose: taking the stored copy shows the message once and clears it.
     const unlistenNotice = listen<string>("app-notice", () => {
       showNotice();
     });
     // A notice set before the listener existed (while the window was reloading) would be missed: look once more now.
-    unlistenNotice.then(() => showNotice());
-    void refreshStatus();
+    void unlistenNotice.then(() => showNotice(), () => {});
     return () => {
-      active = false;
-      unlistenNotice.then((f) => f());
-      unlisten.then((f) => f());
-      unlistenLocking.then((f) => f());
+      stopStartup();
+      // Rejected registrations have no listener to remove. A registration
+      // completing after cleanup still removes its listener when it arrives.
+      void unlistenNotice.then((f) => f(), () => {});
+      void unlisten.then((f) => f(), () => {});
+      void unlistenLocking.then((f) => f(), () => {});
     };
   }, [refreshStatus]);
 

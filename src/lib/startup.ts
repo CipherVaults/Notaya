@@ -19,3 +19,44 @@ export function scheduleWindowReady(ready: () => void): () => void {
   });
   return () => { done = true; };
 }
+
+// Only a failure fallback: successful startup still signals after the screen
+// commits, without waiting for a timer or an animation frame.
+export const STARTUP_READY_TIMEOUT_MS = 5000;
+
+export function watchStartupInitialization(
+  refreshStatus: () => Promise<unknown>,
+  lockListeners: Promise<unknown>[],
+  listenersReady: () => void,
+  failed: () => void,
+): () => void {
+  let active = true;
+  let finished = false;
+  const fail = () => {
+    if (!active || finished) return;
+    finished = true;
+    clearTimeout(timer);
+    failed();
+  };
+  // One bound covers both status attempts and listener registration. A hung
+  // request cannot leave the native window hidden indefinitely.
+  const timer = setTimeout(fail, STARTUP_READY_TIMEOUT_MS);
+  const loadStatus = async () => {
+    try {
+      await refreshStatus();
+    } catch {
+      if (active && !finished) await refreshStatus();
+    }
+  };
+  const registered = Promise.all(lockListeners).then(() => {
+    if (active) listenersReady();
+  });
+  void Promise.all([loadStatus(), registered]).then(() => {
+    finished = true;
+    clearTimeout(timer);
+  }, fail);
+  return () => {
+    active = false;
+    clearTimeout(timer);
+  };
+}

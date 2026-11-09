@@ -1,12 +1,68 @@
 # Whole-app test results: X-1 addition
 
-Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox). FIX RUN 2 baseline: `9b64db2f85388c5d800c25926772fdc15a2c539b`; external heartbeat checkpoint `ba047062f4bd5162bf4e6f897b4228051aec8dda` contains the final tested code, with this results addendum uncommitted. Original baseline: `e4df9185a99fabf6002065c84c921cd8f8278e31`. Produced and locally checked, not integrated or accepted. Claude owns integration, exact candidate commit/exe hash and real-PC observations. **Current correction is in [FIX RUN 2](#fix-run-2-corrected-analysis-and-hand-back); the run-1 analysis and checks below it are historical, superseded where contradicted.**
+Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox). **Historical run-2 provenance:** FIX RUN 2 baseline `9b64db2f85388c5d800c25926772fdc15a2c539b`; external heartbeat checkpoint `ba047062f4bd5162bf4e6f897b4228051aec8dda` contains that run's tested code, with its results addendum then uncommitted. Original baseline: `e4df9185a99fabf6002065c84c921cd8f8278e31`. Produced and locally checked, not integrated or accepted. Claude owns integration, exact candidate commit/exe hash and real-PC observations. The [FIX RUN 2](#fix-run-2-corrected-analysis-and-hand-back) and run-1 analysis/checks below are historical, superseded where contradicted by run 3.
+
+**Current addendum: [FIX RUN 3](#fix-run-3-readiness-failure-regressions).** The run-2 analysis below remains historical evidence; its status/listener success-only gate is superseded by the bounded failure path described here. Original reporter: **Mohamed Sayed (AbyssWatcher2)**, via Ahmed. Run 2 and run 3 are both **unproven** as fixes for his white-window report.
 
 ## Defect register
 
 | Defect / check | Reporter | Report and scope | Status | Candidate and evidence needed |
 |---|---|---|---|---|
-| X-1 / WIN-X1, KIND B | **Mohamed Sayed (AbyssWatcher2)**, via Ahmed, 2026-11-09 07:38:18 UTC | v1.5.1 on Mohamed's PC: blank white window at sign-in with Start with Windows on | **Baseline reproduced / candidate 1 not fixed in Claude's reported held-frame run; candidate 2 not yet run.** The old readiness observer is invalid; actual sign-in/pixel cause remains unconfirmed. | Baseline `5077183`, SHA-256 `5FA039FC…`; candidate 1 `9b64db2`, `8F38C904…`. Both: normal/minimized/5000 ms delayed-page DOM controls passed; held frames 8000 ms failed at 45 s, `readyCalls=0`, `readyCompleted=0`, `readyAtMs=null`, `hookInstalled=true`, `heldFrames=2`, hidden, `readyWithoutFrames=false`. Candidate-1 delay-page reload also counted zero readiness and was shown by restore. See corrected analysis below and rerun both with the new observer. |
+| X-1 / WIN-X1, KIND B | **Mohamed Sayed (AbyssWatcher2)**, via Ahmed, 2026-11-09 07:38:18 UTC | v1.5.1 on Mohamed's PC: blank white window at sign-in with Start with Windows on | **Run-3 readiness regressions locally verified: 23 tests passed. Real exe not run by Codex; original X-1 fix remains unproven.** Historical baseline reproduced / candidate 1 not fixed in Claude's reported held-frame run; the old readiness observer is invalid. Actual sign-in/pixel cause remains unconfirmed. | Claude runs baseline `5077183` against the exact run-3 candidate after heartbeat checks, using `tools/real-exe-tests/startup-minimized.md`. Historical evidence: baseline `5077183`, SHA-256 `5FA039FC…`; candidate 1 `9b64db2`, `8F38C904…`. Both: normal/minimized/5000 ms delayed-page DOM controls passed; held frames 8000 ms failed at 45 s, `readyCalls=0`, `readyCompleted=0`, `readyAtMs=null`, `hookInstalled=true`, `heldFrames=2`, hidden, `readyWithoutFrames=false`. Candidate-1 delay-page reload also counted zero readiness and was shown by restore. See corrected analysis below and rerun both with the new observer. |
+
+## FIX RUN 3: readiness failure regressions
+
+**Who, authority and scope:** Ahmed's side (`AE0101`), Codex lane X1 on `GAMING-PC`, Windows sandbox. Ahmed's current FIX RUN 3 request (message timestamp not exposed); system-clock checkpoint **2026-11-09 17:57:00 UTC**. Baseline/head `b8a2883d9ac7372815b7471bd86fc9b1e9beaa56`, branch `AE0101/v1-6-x1`; local `origin/main` `066b23cab8ba9e6287cf2699810564fa0f133c3c` read without fetching, including the 13:45 UTC brief update. Result: **produced and locally verified for the named checks**, uncommitted, not integrated or accepted. Stop at hand-back; Claude commits, owns the records/ledger and runs the held-frame comparison after the heartbeat checks. Runtime model/effort, token totals and quota readings are not exposed to this tool session; no values invented.
+
+**Change and reason:** run 2 required a non-null status and both lock listeners before showing the initially hidden window. The production initialization watcher now retries a rejected status request once and permits readiness on the second rejection, on either listener rejection, or after **5000 ms total** across both attempts and listener registration. The successful path still follows the committed status screen and registered listeners through the existing cancellable microtask, without waiting for a frame or timer. The App ref sends `window_ready` once, including after late status/listener completion. Cleanup clears the deadline, cancels the readiness microtask, suppresses late watcher state changes and removes successful/late listeners; rejected lock and notice registrations have handled cleanup paths. A failure fallback permits the existing rendered surface; it does not invent status, unlock a vault, repair missing listeners, or add a new error screen. Rust still owns visibility, including the minimized/tray guard.
+
+### Regression evidence (plain JS, production hooks and watcher; simulated IPC/time)
+
+All names below are in `tools/real-exe-tests/startup-ready.test.mjs`; each passed:
+
+| Test name | Case and observed result |
+|---|---|
+| `status rejects: one retry also rejects, then window_ready is sent once` | Two attempts rejected; ready once despite a still-pending listener; late listener cannot resend. |
+| `status rejects once then succeeds: readiness follows the recovered status without waiting for the bound` | Two attempts, real status available, listener gate satisfied, no failure fallback, ready once. |
+| `first lock listener rejects: window_ready is sent once even while status is pending` | `vault-locked` rejects; ready once without waiting for status; remaining listeners removed on cleanup. |
+| `second lock listener rejects: window_ready is sent once and cleanup handles the rejected registration` | `vault-locking` rejects; ready once; rejected registration does not produce an unhandled cleanup rejection. |
+| `both lock listeners reject: window_ready is sent once with no unhandled registration or cleanup rejection` | Both reject; ready once; notice listener still removed. |
+| `status never resolves within the bound: window_ready is sent once at 5000 ms and late status cannot resend` | No readiness at 4999 ms, one call at 5000 ms; late success cannot resend. |
+
+Four more added tests passed: `pending lock registration is also bounded and is removed when it completes after cleanup`; `initialization cleanup cancels the bound and ignores late failures and listener completion`; `late rejection after timeout is handled without a retry or duplicate readiness`; `notice-listener rejection does not disrupt readiness or produce an unhandled cleanup rejection`. The original 13 scheduler, actual-hook, backdrop, appearance and transport-probe tests also passed. An initial run of the new tests failed because the VM harness redeclared `runHook`; the harness was corrected before the passing final run. That failure was in the test harness, not a native-app observation.
+
+### Final-source checks
+
+These checks apply to **the uncommitted run-3 source on `b8a2883`**, not to `b8a2883` alone or any later commit:
+
+| Command | Exact result |
+|---|---|
+| `npx tsc --noEmit -p tsconfig.json` | Exit **0**, no output/errors. |
+| `npm run build -- --configLoader native` | Exit **0**; Vite **8.3.5**, **4414 modules transformed**, built in **10.68 s**. Existing `INEFFECTIVE_DYNAMIC_IMPORT` warning for `DatabaseView.tsx` being imported both statically and dynamically. |
+| `node --test --test-isolation=none tools/real-exe-tests/startup-ready.test.mjs tools/real-exe-tests/startup-probe.test.mjs` | Exit **0**; **23 passed, 0 failed, 0 cancelled, 0 skipped, 0 todo**, **360.0987 ms**. |
+| `git diff --check` | Exit **0**, no whitespace errors; LF-to-CRLF notices only. |
+| `git diff --stat -- src-tauri` | Empty: Rust not touched. |
+| `npm audit`, `cargo test --lib`, `cargo clippy`, `cargo audit` | **Not run**. No network, installs or Rust/dependency changes in this run. |
+| Real Notaya.exe, browser, heartbeat candidate checks, held-frame baseline/candidate comparison, actual sign-in, Mohamed's PC, human pixels/tray and protected-vault lock/flush | **Not run by Codex**. No proof that run 2 or run 3 fixes the original X-1 report. |
+
+Final tested file SHA-256 (documentation excluded from this fingerprint):
+
+| File | SHA-256 |
+|---|---|
+| `src/App.tsx` | `4F8DBBF1881FE54E152AE41A84E2CC6DD7FD5F4CA52E051693B86443A0EB59F8` |
+| `src/lib/startup.ts` | `8AFBA6B3FC20D23934685CF11F3731E39D4DF5B6FCA0096524E46166C1105F00` |
+| `tools/real-exe-tests/startup-ready.test.mjs` | `2760E987CCBE785BAC9E48A622C7E0A2A05058699435F81763642C9EC0A366D2` |
+
+### Security self-check (guide section 4; not independent)
+
+- **Secrets/keys/crypto:** no new secret handling, persistence, random values or crypto; n/a to this diff. No vault, credential or private-note fixtures/logs.
+- **Commands/IPC:** traced status/listener outcomes to the existing argument-free `window_ready`; no new command, payload, permission or confirmation route. Rust's tray visibility and lock enforcement are unchanged. A failed listener remains unavailable; this test proves readiness fallback, not real lock-event delivery.
+- **Files/paths/parsing; AI pipe/bridge; storage/history/logs:** n/a; none changed. Test input is synthetic and in-memory; no vault is opened.
+- **Frontend:** read the full changed App/startup/test files. No new HTML rendering, script evaluation in production, CSP change, network call, browser storage or sensitive diagnostic field. Existing lock/reload and flush handlers are unchanged. Timer callbacks are functions, once-only scheduling/cleanup and late rejection handling are covered. Native auto-lock/screenshot behavior was not run.
+- **Dependencies/build:** no dependency or lockfile change; type check/build passed. Audits not run under the offline instruction. Browser-free VM execution exists only in the test harness.
+- **Findings:** no additional real, reachable security issue found in this bounded self-check. Independent Codex/Claude security review remains to be done by a session that did not write this diff.
+
+**Files changed:** `src/App.tsx`, `src/lib/startup.ts`, `tools/real-exe-tests/startup-ready.test.mjs`, and X-1 content in this results file and `2026-11-09-whole-app-test-plan.md`. **Outside write area, mechanical:** none. **ADDITION FOR AHMED:** visible changes: none expected; the authorized failure fallback restores readiness signaling only. No Git writes, network, installs, exe/browser launches, real-vault access or debug ports started by Codex. Mohamed Sayed remains credited as the reporter; Claude adds the commit credit.
 
 ## FIX RUN 2: corrected analysis and hand-back
 
