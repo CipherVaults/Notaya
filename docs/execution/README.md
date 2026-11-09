@@ -35,6 +35,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 ### 2026-11-08 (Ahmed's messages 11:41:49 and 11:42:04 UTC), EX-2026-11-08-61: refresh of the AI-facing records and the 1.6 build-day session entry
 
 - [2026-11-08-ai-pbs-records-refresh.md](2026-11-08-ai-pbs-records-refresh.md): the Codex briefing, `AGENTS.md`, a `CLAUDE.md` note, the claims rows, STATUS and session entry 49 brought up to date as dated corrections. Records only. **Produced**; not accepted.
+
 ### 2026-11-08 (Ahmed's message 08:27:53 UTC), EX-2026-11-08-60: usage ledger redesign and the 1.6 to 2.5 forecast
 
 - [2026-11-08-ledger-redesign-and-forecast.md](2026-11-08-ledger-redesign-and-forecast.md): the new dashboard (charts and a forecast model with Codex's banked resets and Claude's 70% cap), the 08:27 readings, one forecast instead of two. **Produced**; not accepted.
@@ -66,6 +67,7 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 ### 2026-11-07 (Ahmed's message 23:39:31 UTC), EX-2026-11-07-52: Dependency and licence study for the planned features
 
 - [2026-11-07-dependency-licence-study.md](2026-11-07-dependency-licence-study.md): a study and records; draft PR. Whiteboard strokes (perfect-freehand), global shortcuts (Tauri plugin, Rust side only), Greek/Cyrillic PDF font (Noto Sans subset; Arabic and Hebrew already exist), Excel (own writer; `rust_xlsxwriter` as the upgrade), MCP bridge (rmcp; named pipe needs an explicit access rule) ([the study](../plan/2026-11-07-dependency-licence-study.md)). **Produced** (verified only by the checks in its section 3); not accepted. No dependency is approved or installed.
+
 ### 2026-11-07 (Ahmed's messages 23:53:46 and 23:54:20 UTC), EX-2026-11-07-53: version plan updated with Ahmed's answers
 
 - [2026-11-07-version-plan-answers.md](2026-11-07-version-plan-answers.md): a plan update and records; the next PR after #62. Versions after 1.9 renumbered to 2.0–2.5; the AI CLI answers folded in; two authority rows; the Notion hub updated. **Produced** (verified only by its section 3); not accepted.
