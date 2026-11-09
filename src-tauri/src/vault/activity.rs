@@ -48,6 +48,12 @@ impl Default for Head {
         }
     }
 }
+impl Head {
+    pub(super) fn rows(&self) -> Result<u64> {
+        if self.first_seq == 0 || self.first_seq > self.last_seq.saturating_add(1) { return Err(Error::Corrupt); }
+        Ok(self.last_seq.saturating_add(1) - self.first_seq + u64::from(self.last_seq > 0))
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase")]
@@ -79,6 +85,12 @@ struct Previous {
     before: Option<String>,
     version: Option<String>,
     after_hash: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    body: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    body_hash: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    purged: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
@@ -104,9 +116,15 @@ pub(super) struct Journal {
     snapshots: Vec<Snapshot>,
     activity: Option<(RowId, Vec<u8>, Vec<u8>, Head)>,
     bursts: Vec<(String, i64)>,
+    bodies: Vec<(RowId, Vec<u8>)>,
+    pub(super) anchor: super::anchor::Update,
 }
 impl Journal {
+    pub(super) fn head<'a>(&'a self, current: &'a Head) -> &'a Head {
+        self.activity.as_ref().map(|(_, _, _, head)| head).unwrap_or(current)
+    }
     pub(super) fn write(&self, store: &Store) -> Result<()> {
+        for (id, bytes) in &self.bodies { store.put(Table::Anchor, id, bytes)?; }
         for snapshot in &self.snapshots {
             for (id, bytes) in &snapshot.rows {
                 store.put(Table::History, id, bytes)?;
@@ -116,11 +134,11 @@ impl Journal {
             store.put(Table::Activity, id, entry)?;
             store.put(Table::Activity, &HEAD, head)?;
         }
-        Ok(())
+        self.anchor.write(store)
     }
 }
 
-fn canonical<T: Serialize>(value: &T) -> Result<Zeroizing<Vec<u8>>> {
+pub(super) fn canonical<T: Serialize>(value: &T) -> Result<Zeroizing<Vec<u8>>> {
     fn sort(value: &mut serde_json::Value) {
         match value {
             serde_json::Value::Object(map) => {
@@ -273,6 +291,8 @@ impl Session {
             snapshots: vec![],
             activity: None,
             bursts: vec![],
+            bodies: vec![],
+            anchor: self.prepare_anchor(&self.activity_head, vec![])?,
         };
         let mut undo = vec![];
         let mut described = vec![];
@@ -360,11 +380,24 @@ impl Session {
                         serde_json::to_string(&item).map_err(|_| Error::Corrupt)
                     })
                     .transpose()?;
+                // All non-page values (sticky bodies, row cells, templates)
+                // live behind a purgeable encrypted reference, never inline in
+                // the immutable activity entry. Page bodies already use history.
+                let mut body = None;
+                let mut body_hash = None;
+                if let Some(before) = &before {
+                    let mut row = crate::crypto::random_bytes::<16>();
+                    row[0] = 3;
+                    body = Some(hex::encode(row));
+                    body_hash = Some(hex::encode(Sha256::digest(before.as_bytes())));
+                    journal.bodies.push((row, self.seal_json(Table::Anchor, &row, before)?));
+                }
                 undo.push(Previous {
                     id: id.into(),
-                    before,
+                    before: None,
                     version,
                     after_hash: new.map(item_hash).transpose()?,
+                    body, body_hash, purged: false,
                 });
             }
         }
@@ -392,10 +425,13 @@ impl Session {
             };
             journal.activity = Some(self.prepare_entry(&mut entry, self.activity_head.clone())?);
         }
+        let head = journal.activity.as_ref().map(|(_, _, _, head)| head).unwrap_or(&self.activity_head);
+        journal.anchor = self.prepare_anchor(head, journal.snapshots.iter().map(|s| super::anchor::addition(&s.meta)).collect())?;
         Ok(journal)
     }
 
     pub(super) fn accept_journal(&mut self, journal: Journal) {
+        self.anchor = journal.anchor.next;
         for snapshot in journal.snapshots {
             self.history_index
                 .entry(snapshot.meta.page_id.clone())
@@ -411,8 +447,11 @@ impl Session {
     /// Random row ids and encrypted backwards links conceal sequence/order on
     /// disk while keeping newest-first pagination independent of log size.
     fn walk_entries(&self, mut visit: impl FnMut(&Entry) -> Result<bool>) -> Result<()> {
-        let mut id = self.activity_head.last_id.clone();
-        for seq in (self.activity_head.first_seq..=self.activity_head.last_seq).rev() {
+        self.walk_entries_at(&self.activity_head, &mut visit)
+    }
+    fn walk_entries_at(&self, head: &Head, mut visit: impl FnMut(&Entry) -> Result<bool>) -> Result<()> {
+        let mut id = head.last_id.clone();
+        for seq in (head.first_seq..=head.last_seq).rev() {
             let row = super::parse_id(&id).map_err(|_| Error::Corrupt)?;
             let entry: Entry = self
                 .read_json(Table::Activity, &row)?
@@ -426,6 +465,89 @@ impl Session {
             }
         }
         Ok(())
+    }
+
+    fn previous_body(&self, previous: &Previous) -> Result<Option<Zeroizing<String>>> {
+        if previous.purged { return Ok(None); }
+        if let Some(id) = &previous.body {
+            let row = super::parse_id(id).map_err(|_| Error::Corrupt)?;
+            if row[0] != 3 || previous.before.is_some() { return Err(Error::Corrupt); }
+            let body: String = self.read_json(Table::Anchor, &row)?.ok_or(Error::Corrupt)?;
+            let body = Zeroizing::new(body);
+            if previous.body_hash.as_ref() != Some(&hex::encode(Sha256::digest(body.as_bytes()))) { return Err(Error::Corrupt); }
+            return Ok(Some(body));
+        }
+        if previous.body_hash.is_some() { return Err(Error::Corrupt); }
+        Ok(previous.before.clone().map(Zeroizing::new))
+    }
+
+    fn undo_body_rows(&self, entries: &[Entry]) -> Result<Vec<RowId>> {
+        entries.iter().flat_map(|e| &e.undo).filter_map(|p| p.body.as_ref())
+            .map(|id| super::parse_id(id).map_err(|_| Error::Corrupt)).collect()
+    }
+
+    fn verify_undo_bodies(&self) -> Result<()> {
+        let mut expected = HashSet::new();
+        self.walk_entries(|entry| {
+            for previous in &entry.undo {
+                if previous.purged && (previous.before.is_some() || previous.body.is_some() || previous.version.is_some()) { return Err(Error::Corrupt); }
+                if let Some(body) = self.previous_body(previous)? {
+                    let item: Item = serde_json::from_str(&body).map_err(|_| Error::Corrupt)?;
+                    if item.id() != previous.id { return Err(Error::Corrupt); }
+                }
+                if let Some(id) = &previous.body {
+                    if !expected.insert(super::parse_id(id).map_err(|_| Error::Corrupt)?) { return Err(Error::Corrupt); }
+                }
+            }
+            Ok(true)
+        })?;
+        let ids = self.store.ids(Table::Anchor)?;
+        let actual: HashSet<_> = ids.iter().copied().filter(|id| id[0] == 3).collect();
+        if expected != actual || ids.len() as u64 != 1 + self.anchor.certificates() + actual.len() as u64 { return Err(Error::Corrupt); }
+        Ok(())
+    }
+
+    /// Called INSIDE the same transaction as the permanent deletion. Removes
+    /// both new indirect bodies and legacy inline values, then re-links the
+    /// affected suffix. Titles/actors/times/actions and row ids are retained.
+    pub(super) fn purge_undo_in_store(&self, head: &Head, ids: &[String], templates: &BTreeMap<String, HashSet<String>>) -> Result<Head> {
+        let mut entries = vec![];
+        self.walk_entries_at(head, |e| { entries.push(e.clone()); Ok(true) })?;
+        entries.reverse();
+        let mut previous_hash = head.base_hash.clone();
+        for entry in &mut entries {
+            let old_hash = entry.hash.clone();
+            for previous in &mut entry.undo {
+                let mut purge = ids.contains(&previous.id);
+                if let Some(removed) = templates.get(&previous.id) {
+                    if let Some(body) = self.previous_body(previous)? {
+                        let item: Item = serde_json::from_str(&body).map_err(|_| Error::Corrupt)?;
+                        if let Item::Database(db) = item { purge |= db.templates.iter().any(|t| removed.contains(&t.id)); }
+                    }
+                }
+                if purge {
+                    if let Some(body) = &previous.body { self.store.delete(Table::Anchor, &super::parse_id(body)?)?; }
+                    previous.before = None;
+                    previous.body = None;
+                    previous.body_hash = None;
+                    previous.version = None;
+                    previous.after_hash = None;
+                    previous.purged = true;
+                }
+            }
+            entry.meta.undoable = entry.undo.iter().any(|p| !p.purged);
+            entry.prev_hash = previous_hash;
+            entry.hash = entry_hash(entry)?;
+            previous_hash = entry.hash.clone();
+            if entry.hash != old_hash {
+                let id = super::parse_id(&entry.id)?;
+                self.store.put(Table::Activity, &id, &self.seal_json(Table::Activity, &id, entry)?)?;
+            }
+        }
+        let mut next = head.clone();
+        next.last_hash = previous_hash;
+        self.store.put(Table::Activity, &HEAD, &self.seal_json(Table::Activity, &HEAD, &next)?)?;
+        Ok(next)
     }
 
     fn entries(&self) -> Result<Vec<Entry>> {
@@ -457,6 +579,13 @@ impl Session {
     }
 
     pub fn activity_verify(&self) -> Result<()> {
+        self.check_anchor()?;
+        self.verify_activity_chain()?;
+        self.verify_history_bodies()?;
+        self.verify_undo_bodies()
+    }
+
+    pub(super) fn verify_activity_chain(&self) -> Result<()> {
         let head: Head = self.read_json(Table::Activity, &HEAD)?.unwrap_or_default();
         if canonical(&head)?.as_slice() != canonical(&self.activity_head)?.as_slice() {
             return Err(Error::Corrupt);
@@ -499,7 +628,7 @@ impl Session {
                 }) {
                     continue;
                 }
-                if let Some(before) = &previous.before {
+                if let Some(before) = self.previous_body(previous)? {
                     for token in before
                         .split(|c: char| !c.is_ascii_hexdigit())
                         .filter(|s| s.len() == 32)
@@ -514,7 +643,10 @@ impl Session {
     }
 
     pub(super) fn verify_journals(&self) -> Result<()> {
-        self.activity_verify()?;
+        self.activity_verify()
+    }
+
+    pub(super) fn verify_history_bodies(&self) -> Result<()> {
         for versions in self.history_index.values() {
             for meta in versions {
                 self.history_get(&meta.page_id, &meta.version_id)?;
@@ -576,19 +708,38 @@ impl Session {
             hash: String::new(),
         };
         let (id, bytes, head, next) = self.prepare_entry(&mut entry, self.activity_head.clone())?;
+        let anchor = self.prepare_anchor(&next, vec![])?;
         self.store.transaction(|s| {
             s.put(Table::Activity, &id, &bytes)?;
-            s.put(Table::Activity, &HEAD, &head)
+            s.put(Table::Activity, &HEAD, &head)?;
+            anchor.write(s)
         })?;
+        self.anchor = anchor.next;
         self.activity_head = next;
         self.changed();
         Ok(())
+    }
+
+    pub(super) fn prepare_thinning(&self, removed: &[String]) -> Result<Journal> {
+        let mut entry = Entry {
+            id: String::new(), prev_id: String::new(), owner: None, undo: vec![],
+            prev_hash: String::new(), hash: String::new(),
+            meta: ActivityMeta {
+                seq: 0, at: now_ms(), actor: "person".into(), change_set: new_id(),
+                action: "history.thinned".into(), items: vec![],
+                counts: BTreeMap::from([("thinned".into(), removed.len() as u64)]), undoable: false,
+            },
+        };
+        let activity = self.prepare_entry(&mut entry, self.activity_head.clone())?;
+        let anchor = self.prepare_anchor(&activity.3, removed.iter().map(|id| (id.clone(), None)).collect())?;
+        Ok(Journal { snapshots: vec![], activity: Some(activity), bursts: vec![], bodies: vec![], anchor })
     }
 
     pub fn clear_activity(&mut self, actor: &Actor, confirmation: &str) -> Result<()> {
         if !matches!(actor, Actor::Person) || confirmation != "CLEAR" {
             return Err(Error::invalid("Type CLEAR to clear the activity log."));
         }
+        self.activity_verify()?;
         let mut entry = Entry {
             id: String::new(),
             prev_id: String::new(),
@@ -608,13 +759,18 @@ impl Session {
             hash: String::new(),
         };
         let (id, bytes, head, next) = self.prepare_entry(&mut entry, Head::default())?;
+        let anchor = self.prepare_anchor(&next, vec![])?;
+        let bodies = self.undo_body_rows(&self.entries()?)?;
         self.store.transaction(|s| {
+            for id in &bodies { s.delete(Table::Anchor, id)?; }
             for id in s.ids(Table::Activity)? {
                 s.delete(Table::Activity, &id)?;
             }
             s.put(Table::Activity, &id, &bytes)?;
-            s.put(Table::Activity, &HEAD, &head)
+            s.put(Table::Activity, &HEAD, &head)?;
+            anchor.write(s)
         })?;
+        self.anchor = anchor.next;
         self.activity_head = next;
         self.changed();
         Ok(())
@@ -655,13 +811,18 @@ impl Session {
             hash: String::new(),
         };
         let (id, bytes, sealed_head, next) = self.prepare_entry(&mut entry, head)?;
+        let anchor = self.prepare_anchor(&next, vec![])?;
+        let bodies = self.undo_body_rows(&entries[..remove])?;
         self.store.transaction(|s| {
+            for id in &bodies { s.delete(Table::Anchor, id)?; }
             for e in &entries[..remove] {
                 s.delete(Table::Activity, &super::parse_id(&e.id)?)?;
             }
             s.put(Table::Activity, &id, &bytes)?;
-            s.put(Table::Activity, &HEAD, &sealed_head)
+            s.put(Table::Activity, &HEAD, &sealed_head)?;
+            anchor.write(s)
         })?;
+        self.anchor = anchor.next;
         self.activity_head = next;
         self.changed();
         Ok(remove)
@@ -716,6 +877,7 @@ impl Session {
         let mut restore = vec![];
         let mut skipped = 0;
         for (id, undo) in previous {
+            if undo.purged { return Err(Error::invalid("This item was permanently deleted. Its previous content cannot be restored.")); }
             let Some(current) = self.get(&id) else {
                 skipped += 1;
                 continue;
@@ -727,8 +889,8 @@ impl Session {
                 skipped += 1;
                 continue;
             }
-            let mut item = if let Some(before) = &undo.before {
-                serde_json::from_str::<Item>(before).map_err(|_| Error::Corrupt)?
+            let mut item = if let Some(before) = self.previous_body(&undo)? {
+                serde_json::from_str::<Item>(&before).map_err(|_| Error::Corrupt)?
             } else {
                 let mut item = current.clone();
                 match &mut item {

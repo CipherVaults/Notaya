@@ -5,6 +5,7 @@ pub mod header;
 pub mod store;
 pub mod history;
 pub mod activity;
+mod anchor;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -54,6 +55,7 @@ pub struct Session {
     request_ai: Option<Actor>,
     action_name: Option<&'static str>,
     activity_head: activity::Head,
+    anchor: anchor::Anchor,
     person_bursts: HashMap<String, i64>,
     journal_maintenance_at: i64,
     ai_action_failed: bool,
@@ -86,7 +88,7 @@ impl Session {
             self.held.clone(), self.revs.clone(), self.pending.clone(), self.coordination.clone(),
             self.actor.clone(), self.ai_writers.clone(), self.replacement.clone(),
             self.history_index.clone(), self.change_set.clone(), self.request_ai.clone(),
-            self.action_name, self.activity_head.clone(), self.person_bursts.clone(),
+            self.action_name, self.activity_head.clone(), self.anchor.clone(), self.person_bursts.clone(),
             self.journal_maintenance_at, self.ai_action_failed, self.ai_action_notices.clone(), self.ai_safety_backup);
         self.store.begin_action()?;
         self.ai_action_failed = false;
@@ -112,7 +114,7 @@ impl Session {
         (self.items, self.dirty, self.hourly_due, self.held, self.revs, self.pending,
             self.coordination, self.actor, self.ai_writers, self.replacement,
             self.history_index, self.change_set, self.request_ai, self.action_name,
-            self.activity_head, self.person_bursts, self.journal_maintenance_at,
+            self.activity_head, self.anchor, self.person_bursts, self.journal_maintenance_at,
             self.ai_action_failed, self.ai_action_notices, self.ai_safety_backup) = snapshot;
         match result { Ok(result) => result, Err(panic) => std::panic::resume_unwind(panic) }
     }
@@ -149,7 +151,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -169,7 +171,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -203,7 +205,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -240,9 +242,10 @@ impl Session {
         }
         store.ensure_journal_tables()?;
         let mut session = Session { format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
+            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
         session.load_history()?;
         session.load_activity_head()?;
+        session.load_anchor()?;
         Ok(session)
     }
 
@@ -303,6 +306,9 @@ impl Session {
 
     /// Stores several items atomically: either all are saved or none.
     pub fn put_many(&mut self, mut items: Vec<Item>) -> Result<()> {
+        for item in &mut items {
+            if let Item::Settings(settings) = item { settings.journals_anchored = true; }
+        }
         let mut seen = std::collections::HashSet::new();
         items.reverse(); items.retain(|item| seen.insert(item.id().to_string())); items.reverse();
         let actor = self.actor.clone().unwrap_or(Actor::Person);
@@ -320,16 +326,27 @@ impl Session {
             items.push(Item::Settings(settings));
         }
         let sealed = items.iter().map(|i| self.seal_item(i)).collect::<Result<Vec<_>>>()?;
+        let removed_templates: std::collections::BTreeMap<String, std::collections::HashSet<String>> = items.iter().filter_map(|item| {
+            let Item::Database(new) = item else { return None; };
+            let Some(Item::Database(old)) = self.get(&new.id) else { return None; };
+            let removed: std::collections::HashSet<_> = old.templates.iter().filter(|t| !new.templates.iter().any(|n| n.id == t.id)).map(|t| t.id.clone()).collect();
+            (!removed.is_empty()).then_some((new.id.clone(), removed))
+        }).collect();
+        if !removed_templates.is_empty() { self.activity_verify()?; }
         self.maintain_journals()?;
         let journal = self.prepare_journal(&actor, &items, &[])?;
-        self.store.transaction(|s| {
+        let purged = self.store.transaction(|s| {
             for (id, data) in &sealed {
                 s.put(Table::Records, id, data)?;
             }
             journal.write(s)?;
-            Ok(())
+            if removed_templates.is_empty() { return Ok(None); }
+            let head = self.purge_undo_in_store(journal.head(&self.activity_head), &[], &removed_templates)?;
+            let anchor = self.refresh_anchor_head(journal.anchor.next.clone(), &head, s)?;
+            Ok(Some((head, anchor)))
         })?;
         self.accept_journal(journal);
+        if let Some((head, anchor)) = purged { self.activity_head = head; self.anchor = anchor; }
         for item in items {
             self.record_change(&item, &actor);
             self.items.insert(item.id().to_string(), item);
@@ -340,6 +357,8 @@ impl Session {
     }
 
     pub fn remove_many(&mut self, ids: &[String]) -> Result<()> {
+        if ids.is_empty() { return Ok(()); }
+        self.activity_verify()?;
         let actor = self.actor.clone().unwrap_or(Actor::Person);
         for id in ids { self.check_write(&actor, id, None)?; }
         let mut settings = self.settings();
@@ -348,9 +367,10 @@ impl Session {
         let settings = (before != settings.replaced_edits.len()).then_some(Item::Settings(settings));
         let sealed_settings = settings.as_ref().map(|i| self.seal_item(i)).transpose()?;
         let rows = ids.iter().map(|id| parse_id(id)).collect::<Result<Vec<_>>>()?;
-        let journal = self.prepare_journal(&actor, &[], ids)?;
+        let mut journal = self.prepare_journal(&actor, &[], ids)?;
         let versions: Vec<_> = ids.iter().filter_map(|id| self.history_index.get(id)).flatten().map(|m| m.version_id.clone()).collect();
-        self.store.transaction(|s| {
+        journal.anchor = self.prepare_anchor(journal.head(&self.activity_head), versions.iter().map(|id| (id.clone(), None)).collect())?;
+        let (head, anchor) = self.store.transaction(|s| {
             if let Some((id, bytes)) = &sealed_settings { s.put(Table::Records, id, bytes)?; }
             for row in &rows {
                 s.delete(Table::Records, row)?;
@@ -360,9 +380,13 @@ impl Session {
                 s.delete(Table::History, &history::body_id(id)?)?;
             }
             journal.write(s)?;
-            Ok(())
+            let head = self.purge_undo_in_store(journal.head(&self.activity_head), ids, &Default::default())?;
+            let anchor = self.refresh_anchor_head(journal.anchor.next.clone(), &head, s)?;
+            Ok((head, anchor))
         })?;
         self.accept_journal(journal);
+        self.activity_head = head;
+        self.anchor = anchor;
         for id in ids {
             self.history_index.remove(id);
             if let Some(item) = self.items.get(id).cloned() { self.record_change(&item, &actor); }
@@ -774,7 +798,7 @@ impl Session {
         let header = header_for(&new_dek, new_id)?;
         let (old_dek, old_id, old_format) = (&self.dek, self.vault_id, self.format);
         self.store.transaction(|s| {
-            for table in [Table::Records, Table::Attachments, Table::History, Table::Activity] {
+            for table in [Table::Records, Table::Attachments, Table::History, Table::Activity, Table::Anchor] {
                 for id in s.ids(table)? {
                     let sealed = s.get(table, &id)?.ok_or(Error::Corrupt)?;
                     let plain = crypto::open(old_dek, &aad(old_format, &old_id, table, &id), &sealed)?;
@@ -847,7 +871,7 @@ impl Session {
         if copy.read_header()?.to_bytes() != self.store.read_header()?.to_bytes() {
             return Err(Error::Corrupt);
         }
-        for table in [Table::Records, Table::Attachments, Table::History, Table::Activity] {
+        for table in [Table::Records, Table::Attachments, Table::History, Table::Activity, Table::Anchor] {
             if !copy.exists(table)? { return Err(Error::Corrupt); }
             let ids = copy.ids(table)?;
             if ids.len() != self.store.ids(table)?.len() {
