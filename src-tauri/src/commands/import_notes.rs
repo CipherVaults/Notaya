@@ -230,18 +230,16 @@ pub fn import_from_with<V: VaultAccess>(
                     return Err(Error::Other(LOCKED.into()));
                 }
                 if !tables.is_empty() {
-                    {
-                        let made = notion_db::import_databases(&tables, &row_pages, &items, &plan.csv_section_ids(&items), s, now, before_first_database)?;
-                        if made.databases > 0 {
-                            drop_row_pages(&mut items, &made.removed_pages, &plan.generated_page_ids());
-                            summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
-                        }
-                        imported_csv = made.covered;
-                        let rows = made.items.iter().filter(|i| matches!(i, Item::Row(_))).count();
-                        summary.notes.push(format!("Imported {} databases and {rows} rows.", made.databases));
-                        summary.notes.extend(made.notes);
-                        items.extend(made.items);
+                    let made = notion_db::import_databases(&tables, &row_pages, &items, &plan.csv_section_ids(&items), s, now, before_first_database)?;
+                    if made.databases > 0 {
+                        drop_row_pages(&mut items, &made.removed_pages, &plan.generated_page_ids());
+                        summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
                     }
+                    imported_csv = made.covered;
+                    let rows = made.items.iter().filter(|i| matches!(i, Item::Row(_))).count();
+                    summary.notes.push(format!("Imported {} databases and {rows} rows.", made.databases));
+                    summary.notes.extend(made.notes);
+                    items.extend(made.items);
                 }
                 // Importing the same export twice makes a second notebook; say so, so it is not mistaken for an update.
                 let existing: Vec<String> = s.items().filter_map(|i| if let Item::Notebook(n) = i { Some(n.name.trim().to_lowercase()) } else { None }).collect();

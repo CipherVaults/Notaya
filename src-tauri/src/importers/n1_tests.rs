@@ -122,7 +122,6 @@ fn n1_linked_row_has_one_body_and_links_target_the_row() {
 }
 
 #[test]
-#[ignore = "unapproved containment proposal; arbitrary links are not ownership evidence (Q66)"]
 fn n1_flat_home_links_define_containment() {
     // Q66 did not approve containment inferred from arbitrary navigation. Keep this as
     // a negative policy probe: a link alone must not make its target a child page.
@@ -252,6 +251,49 @@ fn n2_conflicting_csv_names_warn_once_and_never_merge_by_name() {
     assert_eq!(tables.len(), 3, "only the same-id plain/all pair is combined");
     assert_eq!(covered.len(), 4);
     assert_eq!(notes.iter().filter(|n| n.contains("ambiguous")).count(), 1);
+}
+
+fn persist_fixture(files: Vec<(String, Vec<u8>)>) -> (plan::ImportSummary, Vec<Item>) {
+    struct InventedVault(Mutex<Session>);
+    impl VaultAccess for InventedVault {
+        fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> { f(&self.0.lock().unwrap()) }
+        fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> { f(&mut self.0.lock().unwrap()) }
+    }
+    let root = std::env::temp_dir().join(format!("notaya-n2-invented-{}", crate::model::new_id()));
+    let data = root.join("data");
+    std::fs::create_dir_all(&data).unwrap();
+    let source = root.join("invented.zip");
+    let refs: Vec<_> = files.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+    std::fs::write(&source, zip::build(&refs, false)).unwrap();
+    let vault = InventedVault(Mutex::new(Session::create_open(&data.join("vault.nota")).unwrap()));
+    let summary = super::import_from(&vault, &[source], false, &data, 1, &Control::standard()).unwrap();
+    let items = vault.with(|s| Ok(s.items().cloned().collect())).unwrap();
+    (summary, items)
+}
+
+#[test]
+fn n2_persisted_summary_counts_csv_beyond_the_skip_cap_correctly() {
+    let mut files: Vec<_> = (0..500).map(|i| (format!("a{i:03}.bin"), vec![0])).collect();
+    files.push(("Home.md".into(), b"# Home\n\nBody\n".to_vec()));
+    files.push((format!("zTable {TABLE}_all.csv"), b"Name\nCard\n".to_vec()));
+    let (summary, items) = persist_fixture(files);
+    assert_eq!(summary.skipped.len(), 500);
+    assert_eq!(summary.pages, items.iter().filter(|i| matches!(i, Item::Page(_))).count());
+    assert!(summary.notes.iter().any(|n| n == "Imported 1 databases and 1 rows."));
+    assert!(!summary.notes.iter().any(|n| n.contains("more items were not imported") || n.contains("more database view files")));
+    assert!(!summary.skipped.iter().any(|s| s.item.ends_with(".csv")));
+}
+
+#[test]
+fn n2_failed_csv_beyond_the_skip_cap_is_still_reported() {
+    let mut files: Vec<_> = (0..500).map(|i| (format!("a{i:03}.bin"), vec![0])).collect();
+    files.push(("Home.md".into(), b"# Home\n\nBody\n".to_vec()));
+    files.push((format!("zTable {TABLE}.csv"), b"Name\n\"unclosed".to_vec()));
+    let (summary, items) = persist_fixture(files);
+    assert!(!items.iter().any(|i| matches!(i, Item::Database(_))));
+    assert_eq!(summary.skipped.len(), 500);
+    assert!(summary.notes.iter().any(|n| n.contains("1 more database view files were not imported")));
+    assert!(summary.notes.iter().any(|n| n.contains("was not imported") && n.contains("quoted value")));
 }
 
 fn error_kind(e: &str) -> &'static str {
