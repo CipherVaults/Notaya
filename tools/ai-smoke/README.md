@@ -102,3 +102,7 @@ The coordinator runs audit and Claude's independent security review. A core
 pass is not a live-app pass, and neither is partner acceptance. Wider WP-06 PC
 cases (Off/quit teardown, lock/Stop, removal, simultaneous AIs, hidden notebooks,
 ACL attack attempts and every registered action) remain a separate round.
+
+## Correction log
+
+- 2026-11-09: the Live script (`run-pc-check.ps1 -Mode Live`) was corrected. Its first Live attempt on a real PC failed right after the level change because the script asked the tool `notaya_notes` for the action `page.recent`; that action belongs to the tool `notaya_page`, so Notaya correctly refused the request and the script stopped with "MCP call did not succeed". The script now uses `notaya_page`, and a failed MCP call now prints the JSON-RPC error or the tool error code and message (never note content). The corrected script then passed all five live checkpoints (pairing, page read, denied edit with unchanged revision, person-editing refusal, confirmed edit and restored page read).

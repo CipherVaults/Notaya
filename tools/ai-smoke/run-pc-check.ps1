@@ -55,7 +55,12 @@ function Invoke-Page([int]$Id, [string]$Action, $Params, [switch]$Preview) {
     Receive-Rpc $Id
 }
 function Assert-Success($Reply) {
-    if ($Reply.error -or $Reply.result.isError -or -not $Reply.result) { throw 'MCP call did not succeed.' }
+    if ($Reply.error -or $Reply.result.isError -or -not $Reply.result) {
+        # Diagnostic only: the JSON-RPC error and the tool error code/message, never note content.
+        $why = if ($Reply.error) { "rpc error $($Reply.error.code): $($Reply.error.message)" } elseif ($Reply.result.isError) { 'tool error: ' + ([string]$Reply.result.content[0].text) } else { 'no result in the reply' }
+        if ($why.Length -gt 300) { $why = $why.Substring(0, 300) }
+        throw "MCP call did not succeed ($why)."
+    }
 }
 function Assert-Refusal($Reply, [string]$Code) {
     if (-not $Reply.result.isError -or -not ([string]$Reply.result.content[0].text).StartsWith($Code + ':')) {
@@ -137,7 +142,7 @@ try {
     $null = Read-Host 'Press Enter after changing the level, leaving the editor and waiting'
     # Get the generated id from a harmless list; no person needs to copy it from disk.
     Send-Rpc @{ jsonrpc = '2.0'; id = 3; method = 'tools/call'; params = @{
-        name = 'notaya_notes'; arguments = @{ action = 'page.recent'; params = @{} }
+        name = 'notaya_page'; arguments = @{ action = 'page.recent'; params = @{} }
     }}
     $recent = Receive-Rpc 3
     Assert-Success $recent
