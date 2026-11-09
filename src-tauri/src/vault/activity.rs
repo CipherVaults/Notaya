@@ -1,5 +1,7 @@
-//! Encrypted, append-only activity and undo. Only the encrypted head is loaded
-//! at unlock. Entry hashes cover canonical JSON, including encrypted undo data.
+//! Encrypted activity and undo. Activity entries stay lazy at unlock; the head
+//! is compared with the separate anchor. Hashes cover canonical JSON and undo
+//! references. Permanent deletion replaces undo with content-free tombstones
+//! and re-links the chain in the deletion transaction.
 use super::{
     history::{Snapshot, VersionBody, DAY},
     RowId, Session, Store, Table,
@@ -232,6 +234,9 @@ fn page_body_only(old: &Item, new: &Item) -> bool {
 impl Session {
     pub(super) fn maintain_journals(&mut self) -> Result<()> {
         let at = now_ms();
+        // The first settings write creates the initial anchor in its own data
+        // transaction. There is no existing journal to maintain yet.
+        if self.items.is_empty() { self.journal_maintenance_at = at; return Ok(()); }
         if at.saturating_sub(self.journal_maintenance_at) >= DAY
             || self
                 .activity_head
@@ -379,7 +384,7 @@ impl Session {
                         }
                         serde_json::to_string(&item).map_err(|_| Error::Corrupt)
                     })
-                    .transpose()?;
+                    .transpose()?.map(Zeroizing::new);
                 // All non-page values (sticky bodies, row cells, templates)
                 // live behind a purgeable encrypted reference, never inline in
                 // the immutable activity entry. Page bodies already use history.
@@ -390,7 +395,7 @@ impl Session {
                     row[0] = 3;
                     body = Some(hex::encode(row));
                     body_hash = Some(hex::encode(Sha256::digest(before.as_bytes())));
-                    journal.bodies.push((row, self.seal_json(Table::Anchor, &row, before)?));
+                    journal.bodies.push((row, self.seal_json(Table::Anchor, &row, &**before)?));
                 }
                 undo.push(Previous {
                     id: id.into(),
@@ -505,6 +510,18 @@ impl Session {
         let actual: HashSet<_> = ids.iter().copied().filter(|id| id[0] == 3).collect();
         if expected != actual || ids.len() as u64 != 1 + self.anchor.certificates() + actual.len() as u64 { return Err(Error::Corrupt); }
         Ok(())
+    }
+
+    pub(super) fn verify_legacy_undo(&self) -> Result<()> {
+        self.walk_entries(|entry| {
+            for previous in &entry.undo {
+                if let Some(body) = self.previous_body(previous)? {
+                    let item: Item = serde_json::from_str(&body).map_err(|_| Error::Corrupt)?;
+                    if item.id() != previous.id { return Err(Error::Corrupt); }
+                }
+            }
+            Ok(true)
+        })
     }
 
     /// Called INSIDE the same transaction as the permanent deletion. Removes
@@ -777,7 +794,8 @@ impl Session {
     }
 
     pub fn prune_activity(&mut self, at: i64) -> Result<usize> {
-        self.activity_verify()?;
+        self.check_anchor()?;
+        self.verify_activity_chain()?;
         let entries = self.entries()?;
         let remove = entries
             .iter()
@@ -846,6 +864,9 @@ impl Session {
         if selected.is_empty() {
             return Err(Error::NotFound);
         }
+        if selected.iter().any(|entry| entry.undo.iter().any(|previous| previous.purged)) {
+            return Err(Error::invalid("This change includes permanently deleted content. It cannot be undone."));
+        }
         if !selected.iter().any(|e| e.owner.is_some())
             || selected.iter().filter(|e| !e.undo.is_empty()).any(|e| {
                 e.owner.is_none()
@@ -877,7 +898,6 @@ impl Session {
         let mut restore = vec![];
         let mut skipped = 0;
         for (id, undo) in previous {
-            if undo.purged { return Err(Error::invalid("This item was permanently deleted. Its previous content cannot be restored.")); }
             let Some(current) = self.get(&id) else {
                 skipped += 1;
                 continue;
@@ -1341,5 +1361,44 @@ mod tests {
         s.store.put(Table::Activity, &row, &activity).unwrap();
         s.activity_verify().unwrap();
         s.verify_journals().unwrap();
+    }
+
+    #[test]
+    fn legacy_inline_sticky_undo_is_purged_without_losing_activity_metadata() {
+        let (mut s, path) = fixture();
+        let marker = Zeroizing::new(format!("legacy{}", new_id()));
+        let id = new_id();
+        s.put(serde_json::from_value(serde_json::json!({"kind":"sticky","id":id,"content":&*marker,"text":&*marker,"color":"yellow","x":0,"y":0,"w":320,"h":320,"onTop":false,"open":false,"created":1,"updated":1})).unwrap()).unwrap();
+        let mut changed = s.get(&id).unwrap().clone();
+        if let Item::Sticky(p) = &mut changed { p.content = "after".into(); p.text = p.content.clone(); }
+        s.run_as(&ai("one"), |s| s.put(changed)).unwrap();
+        let mut entry = s.entries().unwrap().last().unwrap().clone();
+        let body = s.previous_body(&entry.undo[0]).unwrap().unwrap();
+        let body_row = super::super::parse_id(entry.undo[0].body.as_ref().unwrap()).unwrap();
+        // Synthesize the exact old inline encoding, with a legitimate hash/head.
+        entry.undo[0].before = Some(body.to_string());
+        entry.undo[0].body = None; entry.undo[0].body_hash = None;
+        entry.hash = entry_hash(&entry).unwrap();
+        let mut head = s.activity_head.clone(); head.last_hash = entry.hash.clone();
+        let anchor = s.store.transaction(|store| {
+            store.delete(Table::Anchor, &body_row)?;
+            let row = super::super::parse_id(&entry.id)?;
+            store.put(Table::Activity, &row, &s.seal_json(Table::Activity, &row, &entry)?)?;
+            store.put(Table::Activity, &HEAD, &s.seal_json(Table::Activity, &HEAD, &head)?)?;
+            s.refresh_anchor_head(s.anchor.clone(), &head, store)
+        }).unwrap();
+        s.activity_head = head; s.anchor = anchor; s.activity_verify().unwrap();
+        drop(s);
+        let mut s = Session::unlock(&path, "throwaway", None).unwrap();
+        crate::commands::stickies::delete_sticky_core(&mut s, &Actor::Person, id.clone()).unwrap();
+        crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
+        for table in [Table::Records, Table::Attachments, Table::History, Table::Activity, Table::Anchor] {
+            for (row, bytes) in s.store.all(table).unwrap() {
+                let plain = crate::crypto::open(&s.dek, &super::super::aad(s.format, &s.vault_id, table, &row), &bytes).unwrap();
+                assert!(!plain.windows(marker.len()).any(|w| w == marker.as_bytes()));
+            }
+        }
+        assert!(s.activity_list(None, None, 500).unwrap().iter().any(|e| e.items.iter().any(|i| i.id == id)));
+        s.activity_verify().unwrap();
     }
 }

@@ -6,6 +6,8 @@ pub mod store;
 pub mod history;
 pub mod activity;
 mod anchor;
+#[cfg(test)]
+mod security_tests;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -325,14 +327,25 @@ impl Session {
             settings.replaced_edits.push(self.replacement.as_ref().unwrap().clone());
             items.push(Item::Settings(settings));
         }
-        let sealed = items.iter().map(|i| self.seal_item(i)).collect::<Result<Vec<_>>>()?;
         let removed_templates: std::collections::BTreeMap<String, std::collections::HashSet<String>> = items.iter().filter_map(|item| {
             let Item::Database(new) = item else { return None; };
             let Some(Item::Database(old)) = self.get(&new.id) else { return None; };
             let removed: std::collections::HashSet<_> = old.templates.iter().filter(|t| !new.templates.iter().any(|n| n.id == t.id)).map(|t| t.id.clone()).collect();
             (!removed.is_empty()).then_some((new.id.clone(), removed))
         }).collect();
-        if !removed_templates.is_empty() { self.activity_verify()?; }
+        if !removed_templates.is_empty() {
+            self.activity_verify()?;
+            // A person's replacement-history copy can also contain a template.
+            // Remove those copies at the same boundary as indirect activity undo.
+            let mut settings = items.iter().find_map(|i| if let Item::Settings(s) = i { Some(s.clone()) } else { None }).unwrap_or_else(|| self.settings());
+            let before = settings.replaced_edits.len();
+            settings.replaced_edits.retain(|e| !removed_templates.contains_key(&e.id));
+            if before != settings.replaced_edits.len() {
+                items.retain(|i| !matches!(i, Item::Settings(_)));
+                items.push(Item::Settings(settings));
+            }
+        }
+        let sealed = items.iter().map(|i| self.seal_item(i)).collect::<Result<Vec<_>>>()?;
         self.maintain_journals()?;
         let journal = self.prepare_journal(&actor, &items, &[])?;
         let purged = self.store.transaction(|s| {
@@ -358,6 +371,9 @@ impl Session {
 
     pub fn remove_many(&mut self, ids: &[String]) -> Result<()> {
         if ids.is_empty() { return Ok(()); }
+        let mut seen = std::collections::HashSet::new();
+        let unique: Vec<_> = ids.iter().filter(|id| seen.insert(id.as_str())).cloned().collect();
+        let ids = unique.as_slice();
         self.activity_verify()?;
         let actor = self.actor.clone().unwrap_or(Actor::Person);
         for id in ids { self.check_write(&actor, id, None)?; }
