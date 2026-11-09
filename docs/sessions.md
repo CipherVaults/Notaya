@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 53 | 2026-11-09 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [The 1.6 build, second day: lanes C2 to E merged, security pass, speed stage 1, live AI check (EX-2026-11-09-66)](#session-53) |
 | 52 | 2026-11-09 | Ahmed (`AE0101`) | cloud | [Large databases: research and plan (EX-2026-11-09-65)](#session-52) |
 | 51 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [README and About refresh for 1.5.1 (EX-2026-11-08-63)](#session-51) |
 | 50 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [Usage ledger refresh at 16:00 UTC (EX-2026-11-08-62)](#session-50) |
@@ -73,6 +74,115 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-53"></a>
+
+# 📘 Session: 2026-11-09 · Ahmed · cloud + Gaming-PC · The 1.6 build, second day: lanes C2 to E merged, security pass, speed stage 1, live AI check
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machines: **cloud** (this thread, "Build Notaya 1.6", reviews, merges and writes the records) and Ahmed's **Gaming-PC** (a Remote Control session of Claude for the checks and Codex for the building). No Mohamed-side work.
+
+**What it covers:** the build thread from about 11:45 UTC on 2026-11-08 (where [entry 49](#session-49) stops) to about 12:00 UTC on 2026-11-09. Running log: [EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5. Block summary: [EX-2026-11-09-66](execution/2026-11-09-v1-6-build-second-day.md). Reconstructed from the heartbeat log lines already in EX-55, the git history of `main`, the amendments record and the thread's own messages; **times are UTC, taken from message stamps, the heartbeat log or git commit times (stored at +02:00 and converted); an "about" marks a time not read exactly.**
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (briefs, diff inspection, PRs, merges, records, guiding Ahmed's hands-on test) | `claude-sonnet-5-5` (configured and last served, read with `get_session` at 11:56:27 UTC) | `high` | Usage block for the whole thread since 2026-11-08 00:15:44 UTC (not only this block): input 31,422, cache write 3,196,113, cache read 145,438,480, output 384,368 tokens, reported cost $31.48; weighted 20,492,251 (in + 1.25 cache write + 0.1 cache read + 5 output, the ledger's formula). Earlier snapshots are in [`claude-sessions.csv`](ledger/claude-sessions.csv). |
+| Coordinator (mother thread; relays Ahmed, Notion, roadmap, artifacts) | not read | not read | Messages only; its usage is a separate ledger row |
+| Gaming-PC Claude (Remote Control session: runs the heartbeat checks, builds the real exe, runs the PC scripts and the whole-app pass, queues lanes) | not recorded in this thread | not recorded | Reports arrive as messages; its transcript is scanned on the PC for the ledger (row added by the ledger-data branch, see EX-66) |
+| Codex lanes (C2, AG, C4d, C3, C2d, C3u, C5, C5d, E, P1, smoke fix, S-fix runs, fresh review sessions RC2 and RC5, security pass areas 1 and 2) | `gpt-6.1-sol`, reasoning `xhigh` | `xhigh` | One run per lane on the PC; token counts and quota meters are in `codex-runs.csv` and `quota-readings.csv` (PC heartbeat rows, see EX-66). Review sessions were fresh sessions that did not write the code. |
+
+**Record basis:** `origin/main` at `cce1bfd` (after PR #116); the amendments record A44 to A52; the 1.6 spec and briefs; the PC's heartbeat log lines copied into EX-55 section 5; the P1 numbers in [`2026-11-09-wp16-stage1-numbers.md`](execution/2026-11-09-wp16-stage1-numbers.md).
+
+## 🕒 Time
+
+- From about 11:45 UTC on 2026-11-08 to about 12:00 UTC on 2026-11-09 (about 24 hours of wall clock; the thread idled between Codex windows). Active working time: not measured.
+- Ahmed's own messages in this block: the relayed project-chat messages cited in A47 to A52, the quota messages of 07:10, 07:36, 07:38, 08:22, 08:24, 09:17, 10:42, 11:33, 11:52, 11:55 UTC, and the direct hands-on messages of 08:35 to 09:19 UTC.
+- Reason for summary: A37 item 5 (every session that changes the repository); Ahmed's request at 09:17:48 UTC and 11:55:17 UTC to bring the PBS records up to date.
+
+## 🎯 Session Goal
+
+Carry the 1.6 build to a safe, documented finish: merge every Codex lane after reading its diff and its checks, keep the quota rules, add the security pass, the speed work and the polish sweep that Ahmed added, test the AI door on Ahmed's own hands, and keep the records exact.
+
+## 🧭 Starting State
+
+At about 11:45 UTC on 2026-11-08: lanes C1, B, D, A, C4, AF and C2 merged (PRs #74 to #88); C4d, AG and C3 not merged; C5 and E not started or held; the heartbeat was a permanent task (every 10 minutes); Codex's 5-hour window was about to run out (12:01 UTC). The Claude 70% weekly line was in force (lifted later by A50).
+
+## 🛠️ Actions Taken
+
+Timeline (UTC; PRs are on `main`; "checked" means the PC heartbeat ran the named checks on the exact pushed commit):
+
+1. **12:01 to 12:04 (11-08)** the 5-hour window ran out (overshoot 4 points); the root cause of earlier lane deaths was found (the Codex install is visible only to the packaged Claude app); lanes now start from the real install path through WMI.
+2. **15:48 to 16:55** the window reset restarted C4d, AG and C3. AG (PR #93, 108 screenshots) and C4d (PR #92, `0f87b88`, 640 tests, found and fixed a lost C2 actor wrapper and bin guard) merged; C3 (PR #97, `55c0bd8`, 656 tests) merged. A fresh read-only review of merged C2 found 1 high (permanent delete accepted live containers and settings) and 5 medium findings; lane C2d fixed all of them and a double save (`6909482`, 647 tests).
+3. **17:07 to 17:11** the 5%-left stop line was hit (96%, overshoot 1); records PRs #90, #94 (verbatim quota and heartbeat messages), #95 (FI-08, FI-09), #96 (Q55) and #99 merged; Ahmed deleted the empty branch `AE0101/v1-6-c4` himself (17:09).
+4. **22:03 to 22:55** C2d (PR #101, `87a4370`, 665 tests) and the C3 screen-check fix (PR #102, `7361f62`, 4 of 4) merged. C5 (the AI server) was pushed (`dbea41c`, 693 tests, PC smoke passed); a fresh review RC5 found 1 high (formula-parser denial of service), 5 medium, 3 low and 2 notes, and good controls (user-only pipe ACL, remote rejected, hashed tokens, window-only confirmations).
+5. **02:06 (11-09)** Ahmed's release gate (A47): the whole app is tested and polished before 1.6 releases (PR #103); feature inventory added (PR #104).
+6. **02:50 to 06:50** C5d merged with C5 (PR #106, `eece649`, 714 tests); lane E merged (PR #70, `1294d69`, 42 of 42 checks, main `5077183`); a release exe was built from `5077183`; the whole-app pass began (250 checks, phase 1 plan; groups A and B showed script and harness failures, one possible app defect under evidence).
+7. **06:52 to 07:38** Ahmed's scope changes: A48 (06:52:15, large-database speed joins 1.6; plan PR #105, records PR #107), A49 (06:55:20 and 06:56:22: P8, security pass WP-17, polish sweep WP-18; new [Codex security review guide](handoff/codex-security-review-guide.md); PR #108), A50 (07:10:43: Claude 70% line lifted for 1.6, model choice by task, banked resets by Ahmed; PR #110). Ahmed applied the **first banked Codex reset himself** at about 07:36; Mohamed's defect **X-1** (blank white window with "Start with Windows") was reported at 07:38:18 and recorded (PR #111).
+8. **08:05 to 08:23** lane P1 (speed stage 1, P1 to P5) was reviewed in full, one change requested, then merged (PR #112, `a649a3c`, checked on `006736a`). The independent security pass area 1 (IPC commands and CSP) found four issues and one question. Ahmed said yes (08:22:33) to Windows-owned confirmations for five rare actions and to refusing keyfiles on network shares: A51 (PR #113).
+9. **08:35 to 09:19** Ahmed ran the live AI check with his own hands, guided one step at a time in the thread (pairing, Look to Edit, read, Deny, refusal while a person types, Allow, restore): five checkpoints passed on the real exe. The first attempt failed only because the test script asked for a wrong tool name; fixed and merged (PR #115). Records PR #114. Security pass area 2 (history, activity log, storage) found three Medium issues (S2-M1, M2, M3); lane S-fix3 was designed and queued.
+10. **09:17 to 09:25** Ahmed asked for the PBS records to be brought up to date; the PC gave Claude's meters (5-hour 87%, resets 11:40:00 UTC; weekly 71%, resets 2026-11-13 02:00:00 UTC) and queued the records lane R1.
+11. **10:42 to 10:49** Ahmed added the Notion import item (A52, WP-19, card 1.6-19; PR #116, `cce1bfd`, merged 10:44). The PC found his exports on `G:` reachable and made a read-only copy into `D:\Notaya Tests\v1-6-N1\notion-exports\` (nothing opened).
+12. **11:33 to 11:50** Ahmed asked for the recurring PowerShell pop-up to stop. The PC replaced the heartbeat's action with a hidden launcher (`wscript.exe //B ... heartbeat-hidden.vbs`); Ahmed ran `register-task-hidden.ps1` himself (dry run, then real, about 11:50) because a persistence change needs his own hand; the PC verified one task, no loop, logs and the 12:38:07 UTC stop line intact. 11:52: Ahmed switched replies to **lean mode** until he says detailed mode.
+13. **11:55 to 12:00** this records update (session entry 53, EX-66, ledger rows, claims, STATUS, handover, acceptance, Notion board).
+
+## 🧠 Key Insights
+
+- **A boundary is only as strong as who owns the prompt.** The first independent pass found that a script in the screen layer could press "Allow" for a destructive step; only a prompt owned by Windows from Rust's own state stops that (A51).
+- **Most failures here were in scripts and harnesses, not in the app**: the C3, AG, C4d, smoke and X-1 repro failures were timing races or wrong names; each cost a Codex run plus a PC run because browser-based checks cannot run in Codex's sandbox.
+- **Window arithmetic**: three xhigh lanes burn about 17 points of the 5-hour meter in 14 minutes and the meter only moves when a session writes, so the 5%-left line overshoots by 1 to 4 points. Never more than three lanes at once.
+- **The heartbeat's own meters were right when Ahmed's page was stale** (the reset-time mismatch of 09:19 came from a stale page; the PC's raw `resets_at` values matched).
+- **Hostile input and speed work touch the same code.** Lane S area 3 and the Notion import fix lanes (N2, N3) both read `src-tauri/src/importers/`, so the fixes wait for the review (WP-19 order rule).
+
+## 📌 Decisions Made
+
+By Ahmed, in his own words (full texts in the [amendments record](plan/approval-and-amendments.md)): **A47** (02:06:59) test the whole app before releasing 1.6; **A48** (06:52:15) speed work in 1.6, safe open-source libraries may be installed, banked resets stay manual; **A49** (06:55:20, 06:56:22) P8, full security pass, polish sweep; **A50** (07:10:43) Claude's 70% line lifted for 1.6, model choice by task; **A51** (08:22:33) Windows-owned confirmations and no network-share keyfiles; **A52** (10:42:50) Notion import with real data (WP-19). Process decisions by Ahmed: reply length (08:51:54 detailed, 11:52:54 lean), silent heartbeat run by his own hand (11:33 request, about 11:50 run). Decisions by Claude (not Ahmed's): merging each lane after reading it (standing rule of 2026-11-08 16:39); rating S1-H1 and S1-H2 as Medium (the reviewer said High).
+
+## ⚠️ Difficulties / Friction
+
+- A heartbeat bug marked C4 finished and pushed an empty branch (06:56 on 11-08); lanes stopped at write-area edges and sat idle for about 30 minutes (before this block, fixed).
+- C2d and C5 were stopped at the stop line with open merges, so no WIP commit could be made; the event text wrongly said "checkpoint committed" (work was intact).
+- The live AI test confused Ahmed twice (PowerShell waiting for Enter; closing PowerShell before Notaya); simpler one-step guidance fixed it and he asked for full explanations (08:51:54).
+- `merge_pull_request` needs the full 40-character head sha; short or guessed shas were refused.
+- The heartbeat re-read a stale limit-pause line (07:35) until it was fixed to ignore logs written before a manual clear.
+
+## 🔧 Adjustments Made
+
+Run at most three lanes at once; lanes start through WMI hidden; the stop line is 5% remaining; boundary stops count as idle; `claude_pause` raised to 100 for 1.6; the heartbeat now runs hidden; lean mode in the thread; every Codex lane starts from `AGENTS.md` and the partner briefing.
+
+## ❌ Mistakes / Risks Noted
+
+- Lanes were run four at a time once (before this block) and burned the window in about 50 minutes.
+- Claude's weekly probe may read 1 point low against the page; raw fractions are logged beside percentages.
+- The first X-1 fix (timer fallback, `9b64db2`) did not cure the real-exe repro; fix run 2 is queued.
+- S-fix1, S-fix2, S-fix3, X-1 fix run 2, P6, P7, P8, lane S areas 3 and 4 and the whole-app pass are **not done**; the 250-check pass has only partial results.
+- A result on one commit is not a result on a later one; every "checked" above names its commit.
+
+## 📍 Current Position
+
+**Merged into `main`, checked by the PC, not accepted:** lanes C2, AG, C4d, C3, C2d, C3u, C5, C5d, E, P1 and the smoke-script fix, and the records PRs listed above. **Verified, not accepted:** the live AI check on the exe built from `5077183`. **Produced, not verified:** the security findings areas 1 and 2 (on branch `AE0101/v1-6-s`, not merged), the Codex security guide, WP-17 to WP-19 records. **Not started:** Notion import lanes, P6 to P8, S-fixes (queued for the 12:38:07 UTC Codex reset), release notes. No release, no public release, no licence.
+
+## 🔜 Next Steps
+
+Codex resumes at 12:38:07 UTC: S-fix1, R1 (reduced to a consistency check), S-fix2, X-1 fix run 2, N1, S-fix3, P6, lane S areas 3 and 4, P7, P8, lane X, the whole-app pass; then release notes, the 1.6 Execution Summary, ledger and the A47 gate closing with a written result. Hands-on rounds still owed by Ahmed later: the native Windows prompts (person-only), the wider WP-06 round, the final whole-app pass.
+
+## ❓ Open Questions
+
+Next question number: **Q65**. Open for Ahmed: board cards are no longer pick-up-able while sorts are on and the group property is not editable (a visible P1 change, listed as an addition); with a filter active, `reorderRows` receives only the filtered ids (a finding for Ahmed's decision); G3 (the one local safety copy at first launch) belongs to the vault lane and is not built yet.
+
+## 🧾 Session Outcome
+
+Lanes C2 to E, their fix lanes and P1 (speed stage 1) merged and checked, six amendments recorded, the first security pass and the live AI check done, the heartbeat silent. 1.6 is not finished and not released.
+
+## 🔍 Confidence Level
+
+High for the merge list, test counts and amendments (each from a PR, a commit or Ahmed's stamped message). Medium for the lane timings (taken from the heartbeat log, which logs events, not durations). Low for any forecast.
+
+## 📎 Where things live
+
+[EX-2026-11-08-55](execution/2026-11-08-v1-6-build-start.md) section 5 (heartbeat log); [EX-2026-11-09-66](execution/2026-11-09-v1-6-build-second-day.md); [A44 to A52](plan/approval-and-amendments.md); [spec WP-16 to WP-19](plan/2026-11-08-v1-6-spec.md); [briefs](plan/2026-11-08-v1-6-codex-briefs.md); [STATUS.md](STATUS.md); [ledger](ledger/usage-ledger.md); [claims.md](handoff/claims.md).
+
 ---
 
 <a id="session-52"></a>
