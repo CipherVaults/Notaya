@@ -65,7 +65,8 @@ impl Store {
     pub fn ensure_journal_tables(&self) -> Result<()> {
         self.conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS history (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;
-             CREATE TABLE IF NOT EXISTS activity (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;",
+             CREATE TABLE IF NOT EXISTS activity (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;
+             CREATE TABLE IF NOT EXISTS journal_anchor (id BLOB PRIMARY KEY, data BLOB NOT NULL) WITHOUT ROWID;",
         )?;
         Ok(())
     }
@@ -203,6 +204,7 @@ pub enum Table {
     Attachments,
     History,
     Activity,
+    Anchor,
 }
 
 impl Table {
@@ -212,6 +214,7 @@ impl Table {
             Table::Attachments => "attachments",
             Table::History => "history",
             Table::Activity => "activity",
+            Table::Anchor => "journal_anchor",
         }
     }
 
@@ -222,6 +225,7 @@ impl Table {
             Table::Attachments => b"att",
             Table::History => b"his",
             Table::Activity => b"act",
+            Table::Anchor => b"anc",
         }
     }
 }
