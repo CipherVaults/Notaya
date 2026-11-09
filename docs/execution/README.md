@@ -16,6 +16,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-09 (Ahmed's A52), EX-2026-11-09-71: WP-19 lane N1, Notion import findings
+
+- Report: [2026-11-09-wp19-n1-findings.md](2026-11-09-wp19-n1-findings.md)
+- Executor: Codex (lane N1, Gaming-PC), reviewed and merged by Claude
+- Outcome: findings note and nine ignored invented-fixture tests; no production change; checks on the exact tip pass
+- Integration / review: merged into `main` (see the PR); Claude read everything
+- Acceptance: pending
+- Open dependency / next action: lanes N2 and N3 (A53), then the real-export re-run
+
 ### 2026-11-09 (Ahmed 19:31:00 UTC, Q66), EX-2026-11-09-70: WP-19, the six Notion arrangement changes (A53) and the N2/N3 briefs
 
 - Report: [2026-11-09-wp19-q66-n2-n3-briefs.md](2026-11-09-wp19-q66-n2-n3-briefs.md)
