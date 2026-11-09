@@ -221,3 +221,87 @@ pub(crate) fn ai_pair_answer_core(state: &AppState, id: String, allow: bool) -> 
     if result.is_err() { state.ai.confirms.answer("pairing", &id, false, None); }
     result
 }
+
+#[cfg(test)]
+mod native_ai_tests {
+    use super::*;
+    use crate::native_confirm::{test_support::*, TestApprover};
+    use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn enable_deny_preserves_vault_history_and_settings_allow_enables_and_no_answer_is_cached() {
+        let state=fixture();state.ai.native.inject(TestApprover(false));
+        let before=snapshot(&state);let epoch=native_confirm::epoch(&state);
+        assert_eq!(ai_set_enabled_core(&state,true,Some("ALLOW".into())).unwrap_err().to_string(),"cancelled");
+        assert_eq!(snapshot(&state),before);assert_eq!(native_confirm::epoch(&state),epoch);
+        state.ai.native.inject(TestApprover(true));
+        ai_set_enabled_core(&state,true,Some("ALLOW".into())).unwrap();
+        assert!(state.with(|s|Ok(s.settings().ai.enabled)).unwrap());
+        assert_eq!(native_confirm::epoch(&state),epoch+1);
+        state.ai.native.inject(TestApprover(false));let before=snapshot(&state);
+        assert!(ai_set_enabled_core(&state,true,Some("ALLOW".into())).is_err());
+        assert_eq!(snapshot(&state),before);
+        // Turning off still has its original behavior and needs no native answer.
+        ai_set_enabled_core(&state,false,None).unwrap();
+        assert!(!state.with(|s|Ok(s.settings().ai.enabled)).unwrap());
+    }
+    #[test]
+    fn enable_changed_target_invalidates_answer_without_enabling() {
+        let state=fixture();let weak=Arc::downgrade(&state);let saved=Arc::new(Mutex::new(None));let copy=saved.clone();
+        state.ai.native.inject(Hook(Box::new(move || {
+            let state=weak.upgrade().unwrap();
+            state.with_mut(|s| { let mut x=s.settings();x.ai.paused=true;s.put(Item::Settings(x)) }).unwrap();
+            *copy.lock().unwrap()=Some(snapshot(&state));true
+        })));
+        assert_eq!(ai_set_enabled_core(&state,true,Some("ALLOW".into())).unwrap_err().to_string(),"cancelled");
+        assert_eq!(snapshot(&state),saved.lock().unwrap().take().unwrap());
+    }
+    #[test]
+    fn pairing_deny_is_unchanged_allow_persists_look_and_script_and_replay_cannot_approve() {
+        for allow in [false,true] {
+            let state=fixture();
+            state.with_mut(|s| { let mut x=s.settings();x.ai.enabled=true;s.put(Item::Settings(x)) }).unwrap();
+            state.ai.native.inject(TestApprover(allow));
+            let before=snapshot(&state);let mut id=String::new();
+            let approved=state.ai.confirms.request("pairing",json!({"client":"SF2 test client"}),crate::actions::Confirm::Ask,|v| {
+                id=v["id"].as_str().unwrap().into();
+                assert!(!state.ai.confirms.answer("confirm",&id,true,None));
+                assert!(!state.ai.confirms.answer("pairing",&id,true,None));
+                let result=ai_pair_answer_core(&state,id.clone(),true);
+                if allow { result.unwrap(); } else { assert_eq!(result.unwrap_err().to_string(),"cancelled"); }
+            },||false);
+            assert_eq!(approved,allow);assert_eq!(snapshot(&state),before);
+            if approved {
+                let (p,token)=pairing::create("SF2 test client".into());
+                pairing::persist(&state,p.clone(),native_confirm::epoch(&state),||false).unwrap();
+                state.with(|s| {
+                    assert_eq!(s.settings().ai.pairings.len(),1);
+                    assert_eq!(s.settings().ai.pairings[0].level,Level::Look);
+                    assert!(pairing::authenticate(&s.settings().ai,&p.id,&token).is_some());Ok(())
+                }).unwrap();
+            }
+            let after=snapshot(&state);
+            assert!(ai_pair_answer_core(&state,id,true).is_err());
+            assert_eq!(snapshot(&state),after);
+        }
+    }
+    #[test]
+    fn pairing_changed_settings_or_cancelled_request_invalidates_native_answer() {
+        for change_settings in [false,true] {
+            let state=fixture();
+            state.with_mut(|s| { let mut x=s.settings();x.ai.enabled=true;s.put(Item::Settings(x)) }).unwrap();
+            let weak=Arc::downgrade(&state);let saved=Arc::new(Mutex::new(None));let copy=saved.clone();
+            state.ai.native.inject(Hook(Box::new(move || {
+                let state=weak.upgrade().unwrap();
+                if change_settings { state.with_mut(|s|{let mut x=s.settings();x.ai.paused=true;s.put(Item::Settings(x))}).unwrap(); }
+                else {state.ai.confirms.cancel_all();}
+                *copy.lock().unwrap()=Some(snapshot(&state));true
+            })));
+            assert!(!state.ai.confirms.request("pairing",json!({"client":"Original Rust client"}),crate::actions::Confirm::Ask,|v|{
+                assert_eq!(ai_pair_answer_core(&state,v["id"].as_str().unwrap().into(),true).unwrap_err().to_string(),"cancelled");
+            },||false));
+            assert_eq!(snapshot(&state),saved.lock().unwrap().take().unwrap());
+            assert!(state.with(|s|Ok(s.settings().ai.pairings.is_empty())).unwrap());
+        }
+    }
+}

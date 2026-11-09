@@ -178,4 +178,26 @@ mod tests {
             Duration::from_secs(1)
         ));
     }
+    #[test]
+    fn native_pairing_answer_after_expiry_or_wrong_request_is_refused() {
+        use crate::native_confirm::{test_support::*, TestApprover};
+        let state=fixture();let weak=std::sync::Arc::downgrade(&state);
+        state.ai.native.inject(Hook(Box::new(move || {
+            assert!(weak.upgrade().unwrap().is_unlocked());
+            std::thread::sleep(Duration::from_millis(10));true
+        })));
+        let before=snapshot(&state);
+        assert!(!state.ai.confirms.wait("pairing",json!({"client":"Expiring client"}),Confirm::Ask,|v|{
+            assert!(crate::commands::ai::ai_pair_answer_core(&state,v["id"].as_str().unwrap().into(),true).is_err());
+        },||false,Duration::from_millis(2)));
+        assert_eq!(snapshot(&state),before);
+        state.ai.native.inject(TestApprover(true));
+        assert!(!state.ai.confirms.wait("pairing",json!({"client":"Original"}),Confirm::Ask,|v|{
+            let request=state.ai.confirms.pairing_request(v["id"].as_str().unwrap()).unwrap();
+            let mut wrong=request.clone();wrong.client="Different".into();
+            assert!(!state.ai.confirms.answer_native_pairing(&wrong));
+            assert!(state.ai.confirms.answer("pairing",&request.id,false,None));
+        },||false,Duration::from_secs(1)));
+        assert_eq!(snapshot(&state),before);
+    }
 }

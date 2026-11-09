@@ -240,8 +240,8 @@ fn enable_security_person(
 
 pub(crate) fn enable_security_core(state: &AppState, password: String, keyfile: Option<String>) -> Result<()> {
     let password = Zeroizing::new(password);
-    let kf = read_keyfile(keyfile)?;
     check_new_password(&password)?;
+    let kf = read_keyfile(keyfile)?;
     state.with_mut(|s| s.make_protected(&password, kf.as_deref(), KdfParams::DEFAULT))?;
     Ok(())
 }
@@ -381,9 +381,9 @@ pub(crate) fn change_master_core(state: &AppState, current_password: String, cur
     let current_password = Zeroizing::new(current_password);
     let new_password = Zeroizing::new(new_password);
     state.check_rate_limit()?;
+    check_new_password(&new_password)?;
     let current_kf = read_keyfile(current_keyfile)?;
     let new_kf = read_keyfile(new_keyfile)?;
-    check_new_password(&new_password)?;
     let result = state.with_mut(|s| {
         s.change_credentials(
             &current_password,
@@ -397,6 +397,33 @@ pub(crate) fn change_master_core(state: &AppState, current_password: String, cur
         state.record_failure();
     }
     result
+}
+
+#[cfg(test)]
+mod keyfile_locality_tests {
+    use super::*;
+    use crate::native_confirm::test_support::{fixture,snapshot};
+    #[test]
+    fn every_keyfile_command_refuses_network_and_device_input_without_open_or_read() {
+        for command in ["unlock_vault","disable_security","change_master_current","change_master_new","enable_security","restore_vault"] {
+            for path in [r"\\server\share\key",r"\\?\UNC\server\share\key",r"\\.\NUL","NUL. ",r"C:\folder\COM1.txt"] {
+                let state=fixture();let before=snapshot(&state);
+                let password=crate::model::new_id();
+                crate::keyfile_path::reset_opens();
+                let result=match command {
+                    "unlock_vault"=>unlock_vault_core(&state,password,Some(path.into())).map(|_|()),
+                    "disable_security"=>disable_security_core(&state,password,Some(path.into())),
+                    "change_master_current"=>change_master_core(&state,password,Some(path.into()),crate::model::new_id(),None),
+                    "change_master_new"=>change_master_core(&state,password,None,crate::model::new_id(),Some(path.into())),
+                    "enable_security"=>enable_security_core(&state,password,Some(path.into())),
+                    _=>crate::commands::backup::restore_vault_stage_core(&state,"unused.nota",&password,Some(path.into()),None).map(|_|()),
+                };
+                assert_eq!(result.unwrap_err().to_string(),crate::keyfile_path::LOCAL_ONLY,"{command}");
+                assert_eq!(crate::keyfile_path::opens(),0,"{command} accessed a refused keyfile");
+                assert_eq!(snapshot(&state),before,"{command} changed the vault");
+            }
+        }
+    }
 }
 
 #[tauri::command(async)]

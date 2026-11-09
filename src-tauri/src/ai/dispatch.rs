@@ -1781,6 +1781,9 @@ mod tests {
         )
         .unwrap();
         assert!(state.with(|s| Ok(s.in_bin(&page))).unwrap());
+        let before=crate::native_confirm::test_support::snapshot(&state);
+        assert_eq!(call(&state,&p,"bin.delete_forever",json!({"id":page}),false,||false,||{}).unwrap_err().to_string(),"cancelled");
+        assert_eq!(crate::native_confirm::test_support::snapshot(&state),before);
         state.ai.native.inject(native_confirm::TestApprover(true));
         call(
             &state,
@@ -1793,6 +1796,33 @@ mod tests {
         )
         .unwrap();
         assert!(state.with(|s| Ok(s.get(&page).is_none())).unwrap());
+    }
+
+    #[test]
+    fn native_bin_empty_deny_and_changed_target_leave_all_binned_items() {
+        for changed in [false,true] {
+            let (state,p,section,page)=fixture();
+            state.with_mut(|s|notes::trash_page_core(s,&Actor::Person,page.clone())).unwrap();
+            let state=std::sync::Arc::new(state);let weak=std::sync::Arc::downgrade(&state);
+            state.ai.bind(move |event,v| {
+                if event=="ai-confirm" { assert!(weak.upgrade().unwrap().ai.confirms.answer("confirm",v["id"].as_str().unwrap(),true,v["word"].as_str())); }
+            });
+            let before=crate::native_confirm::test_support::snapshot(&state);
+            if changed {
+                let weak=std::sync::Arc::downgrade(&state);
+                state.ai.native.inject(crate::native_confirm::test_support::Hook(Box::new(move || {
+                    let state=weak.upgrade().unwrap();
+                    state.with_mut(|s| {
+                        let next=notes::create_page_core(s,&Actor::Person,section.clone(),"New bin target".into())?.id.clone();
+                        notes::trash_page_core(s,&Actor::Person,next)
+                    }).unwrap();true
+                })));
+            }
+            let error=call(&state,&p,"bin.empty",json!({}),false,||false,||{}).unwrap_err();
+            assert!(matches!(error.to_string().as_str(),"cancelled"|"item_changed"));
+            assert!(state.with(|s|Ok(s.get(&page).is_some() && s.in_bin(&page))).unwrap());
+            if !changed { assert_eq!(crate::native_confirm::test_support::snapshot(&state),before); }
+        }
     }
 
     #[test]
