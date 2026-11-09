@@ -1,7 +1,7 @@
 // Gallery view: a grid of cards with an optional cover picture (the first image of a files property),
 // the title and the visible properties. Groups become sections. The last card is "+ New".
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Image as ImageIcon, LayoutGrid, Plus } from "lucide-react";
 import type { DbRow, GroupBy, GroupOut, Property } from "@/lib/database-types";
 import type { ViewProps } from "../viewTypes";
@@ -91,12 +91,11 @@ export default function GalleryView({ db, view, result, rowById, openRow, create
       ) : (
         grid(result.rows, "all", null)
       )}
-      {result.truncated ? <div className="py-2 text-xs text-faint">Showing the first {result.rows.length} of {result.filtered} rows.</div> : null}
     </div>
   );
 }
 
-function Card({ row, cover, wantsCover, fit, coverH, props, titles, onOpen }: { row: DbRow; cover: string; wantsCover: boolean; fit: boolean; coverH: number; props: Property[]; titles: Map<string, string>; onOpen: (id: string) => void }) {
+const Card = memo(function Card({ row, cover, wantsCover, fit, coverH, props, titles, onOpen }: { row: DbRow; cover: string; wantsCover: boolean; fit: boolean; coverH: number; props: Property[]; titles: Map<string, string>; onOpen: (id: string) => void }) {
   const img = cover ? firstImage(row, cover) : null;
   const [broken, setBroken] = useState(false);
   return (
@@ -129,4 +128,4 @@ function Card({ row, cover, wantsCover, fit, coverH, props, titles, onOpen }: { 
       </div>
     </div>
   );
-}
+});
