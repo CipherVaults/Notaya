@@ -231,6 +231,8 @@ pub struct Plan {
     /// For each section, the notebook it belongs to (an index into `notebooks`).
     pub section_notebook: Vec<usize>,
     pub pages: Vec<PlanPage>,
+    /// CSV inputs are independent of the capped, presentation-only skipped list.
+    pub csv_paths: Vec<String>,
     pub images: Images,
     pub skipped: Vec<Skipped>,
     pub notes: Vec<String>,
@@ -590,6 +592,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     let html_count = paths.iter().filter(|p| kind_of(p) == Some(Kind::Html)).count();
     let mut root = Dir::default();
     let mut docs = 0usize;
+    let mut csv_paths = Vec::new();
     let mut notion_markdown = false;
     // The same Notion page in two formats (Markdown and HTML, zips or loose files, in any mix) has the same id at
     // the end of both file names. The Markdown page is kept and takes the HTML page's text and formatting. The
@@ -655,7 +658,11 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
                 root.insert(&parts, path);
             }
             None if extension(name) == "csv" => {
-                note_skip(&mut skipped, path.clone(), "A Notion database (table) view. Tables are not imported; the pages inside a database are, when they were exported.".into())
+                csv_paths.push(path.clone());
+                // Pending database work is not an omission, including beyond the report cap.
+                if skipped.len() < MAX_LISTED {
+                    skipped.push(Skipped { item: path.clone(), reason: "A Notion database view, waiting for the database import step.".into() });
+                }
             }
             None if is_picture_name(name) => {} // pictures are taken where a page uses them
             None => note_skip(&mut skipped, path.clone(), "This kind of file is not imported.".into()),
@@ -787,7 +794,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     if b.unlisted > 0 {
         notes.push(format!("{} more items were not imported than the list shows.", b.unlisted));
     }
-    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, images: b.images, skipped: b.skipped, notes, aliases })
+    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, csv_paths, images: b.images, skipped: b.skipped, notes, aliases })
 }
 
 /// `Err` with the message for the person when the import was cancelled or ran out of time.

@@ -16,8 +16,7 @@ fn fixture(files: Vec<(String, Vec<u8>)>) -> Vfs {
 }
 
 fn table_paths(p: &plan::Plan) -> Vec<String> {
-    p.skipped.iter().filter(|s| s.item.to_ascii_lowercase().ends_with(".csv") && s.reason.contains("database"))
-        .map(|s| s.item.clone()).collect()
+    p.csv_paths.clone()
 }
 
 fn finish(vfs: &Vfs, p: &mut plan::Plan, s: &Session) -> Vec<Item> {

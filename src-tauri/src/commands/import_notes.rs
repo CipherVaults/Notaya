@@ -214,11 +214,13 @@ pub fn import_from_with<V: VaultAccess>(
             let order = vault.with(|s| Ok(next_notebook_order(s)))?;
             // The tables of a Notion export: each becomes a database (the pages importer leaves them out), and the
             // row pages are folded into the rows.
-            let csv_paths: Vec<String> = plan.skipped.iter().filter(|k| k.item.to_ascii_lowercase().ends_with(".csv") && k.reason.contains("database")).map(|k| k.item.clone()).collect();
-            let (tables, covered, table_notes) = notion_db::read_tables(&vfs, &csv_paths);
+            let (tables, _, table_notes) = notion_db::read_tables(&vfs, &plan.csv_paths);
             let row_pages = notion_db::prepare_pages(&tables, &mut plan.pages);
             let (mut items, mut summary) = plan.items(ctl, &urls, now, order).map_err(Error::invalid)?;
+            // Pending CSV entries are replaced with final outcomes, never counted as left out.
+            summary.skipped.retain(|k| !plan.csv_paths.contains(&k.item));
             summary.notes.extend(table_notes);
+            let mut imported_csv = Vec::new();
             // Last chance to stop: after this the notebooks are saved in one step.
             plan::check(ctl).map_err(Error::invalid)?;
             // The notebooks, sections and pages in one transaction; the pictures are then in saved
@@ -232,10 +234,12 @@ pub fn import_from_with<V: VaultAccess>(
                     if let Some(section) = section {
                         let made = notion_db::import_databases(&tables, &row_pages, &items, &section, s, now, before_first_database)?;
                         if made.databases > 0 {
-                            summary.skipped.retain(|k| !covered.contains(&k.item));
                             drop_row_pages(&mut items, &made.removed_pages);
                             summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
                         }
+                        imported_csv = made.covered;
+                        let rows = made.items.iter().filter(|i| matches!(i, Item::Row(_))).count();
+                        summary.notes.push(format!("Imported {} databases and {rows} rows.", made.databases));
                         summary.notes.extend(made.notes);
                         items.extend(made.items);
                     }
@@ -253,6 +257,17 @@ pub fn import_from_with<V: VaultAccess>(
                 s.release_attachments(&stored);
                 Ok(())
             })?;
+            let failed_csv: Vec<_> = plan.csv_paths.iter().filter(|p| !imported_csv.contains(p)).collect();
+            let room = plan::MAX_LISTED.saturating_sub(summary.skipped.len());
+            for path in failed_csv.iter().take(room) {
+                summary.skipped.push(crate::importers::Skipped {
+                    item: (*path).clone(),
+                    reason: "The database view could not be imported; see the import notes.".into(),
+                });
+            }
+            if failed_csv.len() > room {
+                summary.notes.push(format!("{} more database view files were not imported than the list shows.", failed_csv.len() - room));
+            }
             Ok(summary)
         })();
         if result.is_err() && !stored.is_empty() {
