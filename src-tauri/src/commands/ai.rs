@@ -7,6 +7,8 @@ use crate::{
 };
 use serde_json::{json, Value};
 use tauri::{State, WebviewWindow};
+use tauri::{AppHandle, Manager};
+use crate::native_confirm;
 
 fn main_window(window: &WebviewWindow) -> Result<()> {
     if window.label() == "main" {
@@ -51,20 +53,34 @@ pub fn ai_get_status(window: WebviewWindow, state: State<'_, AppState>) -> Resul
     })
 }
 #[tauri::command]
-pub fn ai_set_enabled(
+pub async fn ai_set_enabled(
     window: WebviewWindow,
-    state: State<'_, AppState>,
+    app: AppHandle,
     enabled: bool,
     confirmation: Option<String>,
 ) -> Result<()> {
     main_window(&window)?;
+    tauri::async_runtime::spawn_blocking(move || ai_set_enabled_core(&app.state::<AppState>(), enabled, confirmation))
+        .await.map_err(|_| native_confirm::cancelled())?
+}
+pub(crate) fn ai_set_enabled_core(state: &AppState, enabled: bool, confirmation: Option<String>) -> Result<()> {
     if enabled && confirmation.as_deref() != Some("ALLOW") {
         return Err(Error::invalid("not_confirmed"));
     }
-    update(&state, "ai_set_enabled", |a| {
-        a.enabled = enabled;
-        Ok(())
-    })
+    if !enabled { return update(state, "ai_set_enabled", |a| { a.enabled = false; Ok(()) }); }
+    let epoch = native_confirm::epoch(state);
+    let target = state.with(|s| Ok(native_confirm::enable_target(s, epoch)))?;
+    let mut approval = state.ai.native.ask(target)?;
+    state.with_mut(|s| {
+        native_confirm::check_epoch(state, epoch)?;
+        approval.consume(native_confirm::enable_target(s, epoch))?;
+        s.run_action(&crate::actions::Actor::Person, "ai_set_enabled", |s| {
+            let mut settings = s.settings(); settings.ai.enabled = true;
+            s.put(Item::Settings(settings))
+        })
+    })?;
+    state.ai.invalidate();
+    Ok(())
 }
 #[tauri::command]
 pub fn ai_set_level(
@@ -174,16 +190,34 @@ pub fn ai_confirm_answer(
     Ok(())
 }
 #[tauri::command]
-pub fn ai_pair_answer(
+pub async fn ai_pair_answer(
     window: WebviewWindow,
-    state: State<'_, AppState>,
+    app: AppHandle,
     id: String,
     allow: bool,
 ) -> Result<()> {
     // Pairing approval and action confirmations share a broker but not an identifier.
     main_window(&window)?;
-    if !state.ai.confirms.answer("pairing", &id, allow, None) {
-        return Err(Error::invalid("pairing_refused"));
+    tauri::async_runtime::spawn_blocking(move || ai_pair_answer_core(&app.state::<AppState>(), id, allow))
+        .await.map_err(|_| native_confirm::cancelled())?
+}
+pub(crate) fn ai_pair_answer_core(state: &AppState, id: String, allow: bool) -> Result<()> {
+    if !allow {
+        if !state.ai.confirms.answer("pairing", &id, false, None) { return Err(Error::invalid("pairing_refused")); }
+        return Ok(());
     }
-    Ok(())
+    let epoch = native_confirm::epoch(state);
+    let request = state.ai.confirms.pairing_request(&id).ok_or_else(native_confirm::cancelled)?;
+    let target = state.with(|s| Ok(native_confirm::pair_target(s, epoch, request.id.clone(), request.client.clone())))?;
+    let result = (|| {
+        let mut approval = state.ai.native.ask(target)?;
+        state.with(|s| {
+            native_confirm::check_epoch(state, epoch)?;
+            approval.consume(native_confirm::pair_target(s, epoch, request.id.clone(), request.client.clone()))?;
+            if !state.ai.confirms.answer_native_pairing(&request) { return Err(native_confirm::cancelled()); }
+            Ok(())
+        })
+    })();
+    if result.is_err() { state.ai.confirms.answer("pairing", &id, false, None); }
+    result
 }

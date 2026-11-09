@@ -222,10 +222,7 @@ fn enable_security_person(
     keyfile: Option<String>,
     remove_unprotected_copies: bool,
 ) -> Result<EnableSecurityResult> {
-    let password = Zeroizing::new(password);
-    check_new_password(&password)?;
-    let kf = read_keyfile(keyfile)?;
-    state.with_mut(|s| s.make_protected(&password, kf.as_deref(), KdfParams::DEFAULT))?;
+    enable_security_core(&state, password, keyfile)?;
     // From here on the vault is protected: the stored screenshot choice (off unless chosen) applies.
     if let Ok(protect) = state.with(|s| Ok(s.protects_capture())) {
         ui::set_capture_protection(&app, protect);
@@ -235,14 +232,18 @@ fn enable_security_person(
     if remove_unprotected_copies {
         match state.with(|s| backup::make_backup(&state.paths, s)) {
             Ok(_) => removed_copies = openvault::delete_unprotected(&state.paths),
-            // No fresh backup: keep the old copies rather than leave none.
-            Err(e) => {
-                eprintln!("backup after turning security on failed: {e}");
-                backup_failed = true;
-            }
+            Err(e) => { eprintln!("backup after turning security on failed: {e}"); backup_failed = true; }
         }
     }
     Ok(EnableSecurityResult { removed_copies, backup_failed })
+}
+
+pub(crate) fn enable_security_core(state: &AppState, password: String, keyfile: Option<String>) -> Result<()> {
+    let password = Zeroizing::new(password);
+    let kf = read_keyfile(keyfile)?;
+    check_new_password(&password)?;
+    state.with_mut(|s| s.make_protected(&password, kf.as_deref(), KdfParams::DEFAULT))?;
+    Ok(())
 }
 
 /// Turns security off. The current master password (and keyfile) are required, and a
@@ -264,6 +265,12 @@ fn disable_security_person(
     current_password: String,
     current_keyfile: Option<String>,
 ) -> Result<()> {
+    disable_security_core(&state, current_password, current_keyfile)?;
+    ui::set_capture_protection(&app, false);
+    Ok(())
+}
+
+pub(crate) fn disable_security_core(state: &AppState, current_password: String, current_keyfile: Option<String>) -> Result<()> {
     let current_password = Zeroizing::new(current_password);
     state.check_rate_limit()?;
     let current_kf = match read_keyfile(current_keyfile) {
@@ -278,7 +285,6 @@ fn disable_security_person(
         Err(Error::BadCredentials) => state.record_failure(),
         Ok(()) => {
             state.record_success();
-            ui::set_capture_protection(&app, false);
         }
         Err(_) => {}
     }
@@ -301,11 +307,13 @@ fn unlock_vault_person(
     password: String,
     keyfile: Option<String>,
 ) -> Result<()> {
+    if unlock_vault_core(&state, password, keyfile)? { after_unlock(&app, &state); }
+    Ok(())
+}
+
+pub(crate) fn unlock_vault_core(state: &AppState, password: String, keyfile: Option<String>) -> Result<bool> {
     let password = Zeroizing::new(password);
     state.check_rate_limit()?;
-    if state.is_unlocked() {
-        return Ok(());
-    }
     let kf = match read_keyfile(keyfile) {
         Ok(k) => k,
         Err(e) => {
@@ -313,14 +321,14 @@ fn unlock_vault_person(
             return Err(e);
         }
     };
+    if state.is_unlocked() { return Ok(false); }
     match Session::unlock(&state.paths.vault, &password, kf.as_deref()) {
         Ok(mut session) => {
             // A vault from V1.3.0 or earlier is re-encrypted in the Notaya format, with the same password.
             session.upgrade_format_quietly(&password, kf.as_deref());
             // Refused (and the session wiped) if the window was closed to the tray meanwhile.
             state.set_session_unless_hidden(session)?;
-            after_unlock(&app, &state);
-            Ok(())
+            Ok(true)
         }
         Err(e) => {
             if matches!(e, Error::BadCredentials) {
@@ -362,12 +370,20 @@ fn change_master_person(
     new_password: String,
     new_keyfile: Option<String>,
 ) -> Result<()> {
+    change_master_core(&state, current_password, current_keyfile, new_password, new_keyfile)?;
+    if let Err(e) = state.with(|s| backup::make_backup(&state.paths, s)) {
+        state::report_backup_failure(&app, &state, &e);
+    }
+    Ok(())
+}
+
+pub(crate) fn change_master_core(state: &AppState, current_password: String, current_keyfile: Option<String>, new_password: String, new_keyfile: Option<String>) -> Result<()> {
     let current_password = Zeroizing::new(current_password);
     let new_password = Zeroizing::new(new_password);
     state.check_rate_limit()?;
-    check_new_password(&new_password)?;
     let current_kf = read_keyfile(current_keyfile)?;
     let new_kf = read_keyfile(new_keyfile)?;
+    check_new_password(&new_password)?;
     let result = state.with_mut(|s| {
         s.change_credentials(
             &current_password,
@@ -379,11 +395,6 @@ fn change_master_person(
     });
     if matches!(result, Err(Error::BadCredentials)) {
         state.record_failure();
-    }
-    if result.is_ok() {
-        if let Err(e) = state.with(|s| backup::make_backup(&state.paths, s)) {
-            state::report_backup_failure(&app, &state, &e);
-        }
     }
     result
 }

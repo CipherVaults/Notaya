@@ -2,6 +2,8 @@ use crate::actions::Actor;
 use serde::Serialize;
 use tauri::ipc::{InvokeBody, Request};
 use tauri::State;
+use tauri::{AppHandle, Manager};
+use crate::native_confirm::{self, Approval, Delete, Deletion};
 
 use super::database as dbc;
 use super::{check_color, limit, notebook, page, section};
@@ -686,35 +688,70 @@ pub(crate) fn restore_page_core(s: &mut Session, _actor: &Actor, id: String) -> 
 
 
 #[tauri::command]
-pub fn delete_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
-    delete_page_person(&state, id)
+pub async fn delete_page(app: AppHandle, id: String) -> Result<NotesTree> {
+    tauri::async_runtime::spawn_blocking(move || delete_page_person(&app.state::<AppState>(), id))
+        .await.map_err(|_| native_confirm::cancelled())?
 }
 
 fn delete_page_person(state: &AppState, id: String) -> Result<NotesTree> {
-    state.with_mut(|s| delete_page_core(s, &Actor::Person, id))
+    let epoch = native_confirm::epoch(state);
+    let target = state.with(|s| native_confirm::delete_target(s, epoch, Delete::One(id.clone())))?;
+    let mut approval = state.ai.native.ask(target)?;
+    state.with_mut(|s| {
+        native_confirm::check_epoch(state, epoch)?;
+        delete_page_core(s, &Actor::Person, id, &mut approval)
+    })
 }
 
-pub(crate) fn delete_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
+pub(crate) fn delete_page_core(s: &mut Session, _actor: &Actor, id: String, approval: &mut Approval) -> Result<NotesTree> {
+    let mut permit = approval.delete(s, Delete::One(id.clone()))?;
     s.run_as(_actor, |s| {
-    delete_bin_tree(s, &id)?;
+    delete_bin_tree(s, &id, &mut permit)?;
     Ok(tree(s))
     })
 }
 
+#[cfg(test)]
+pub(crate) fn test_delete_page_core(s: &mut Session, actor: &Actor, id: String) -> Result<NotesTree> {
+    let mut approval = native_confirm::test_delete(s, Delete::One(id.clone()));
+    delete_page_core(s, actor, id, &mut approval)
+}
+#[cfg(test)]
+pub(crate) fn test_empty_trash_core(s: &mut Session, actor: &Actor) -> Result<NotesTree> {
+    let mut approval = native_confirm::test_delete(s, Delete::Empty);
+    empty_trash_core(s, actor, &mut approval)
+}
+
 
 #[tauri::command]
-pub fn empty_trash(state: State<'_, AppState>) -> Result<NotesTree> {
-    empty_trash_person(&state)
+pub async fn empty_trash(app: AppHandle) -> Result<NotesTree> {
+    tauri::async_runtime::spawn_blocking(move || empty_trash_person(&app.state::<AppState>()))
+        .await.map_err(|_| native_confirm::cancelled())?
 }
 
 fn empty_trash_person(state: &AppState) -> Result<NotesTree> {
-    state.with_mut(|s| empty_trash_core(s, &Actor::Person))
+    let epoch = native_confirm::epoch(state);
+    let target = state.with(|s| native_confirm::delete_target(s, epoch, Delete::Empty))?;
+    let mut approval = state.ai.native.ask(target)?;
+    state.with_mut(|s| {
+        native_confirm::check_epoch(state, epoch)?;
+        empty_trash_core(s, &Actor::Person, &mut approval)
+    })
 }
 
-pub(crate) fn empty_trash_core(s: &mut Session, _actor: &Actor) -> Result<NotesTree> {
+pub(crate) fn empty_trash_core(s: &mut Session, _actor: &Actor, approval: &mut Approval) -> Result<NotesTree> {
+    delete_selected_core(s, _actor, Delete::Empty, approval)
+}
+
+pub(crate) fn delete_selected_core(s: &mut Session, _actor: &Actor, request: Delete, approval: &mut Approval) -> Result<NotesTree> {
+    let roots: Vec<String> = match &request {
+        Delete::Empty => s.items().filter(|i| Session::own_trash(i).is_some()).map(|i| i.id().into()).collect(),
+        Delete::Selected(ids) => ids.clone(),
+        Delete::One(id) => vec![id.clone()],
+    };
+    let mut permit = approval.delete(s, request)?;
     s.run_as(_actor, |s| {
-    let roots: Vec<String> = s.items().filter(|i| Session::own_trash(i).is_some()).map(|i| i.id().into()).collect();
-    for id in roots { if s.get(&id).is_some() { delete_bin_tree(s, &id)?; } }
+    for id in roots { if s.get(&id).is_some() { delete_bin_tree(s, &id, &mut permit)?; } }
     Ok(tree(s))
     })
 }
@@ -1135,8 +1172,8 @@ mod action_parity_tests {
     #[test]
     fn empty_trash_person_and_core_match() {
         compare(
-            |state| empty_trash_person(state),
-            |s, _paths| empty_trash_core(s, &Actor::Person),
+            |state| { state.ai.native.inject(native_confirm::TestApprover(true)); empty_trash_person(state) },
+            |s, _paths| test_empty_trash_core(s, &Actor::Person),
         );
     }
     #[test]
@@ -1144,11 +1181,11 @@ mod action_parity_tests {
         compare(
             |state| {
                 trash_page_person(state, "10000000000000000000000000000004".into())?;
-                delete_page_person(state, "10000000000000000000000000000004".into())
+                { state.ai.native.inject(native_confirm::TestApprover(true)); delete_page_person(state, "10000000000000000000000000000004".into()) }
             },
             |s, _paths| {
                 trash_page_core(s, &Actor::Person, "10000000000000000000000000000004".into())?;
-                delete_page_core(s, &Actor::Person, "10000000000000000000000000000004".into())
+                test_delete_page_core(s, &Actor::Person, "10000000000000000000000000000004".into())
             },
         );
     }
@@ -1443,13 +1480,14 @@ pub(crate) fn restore_bin_item_core(s: &mut Session, actor: &Actor, id: String, 
     })
 }
 
-fn delete_bin_tree(s: &mut Session, id: &str) -> Result<()> {
+fn delete_bin_tree(s: &mut Session, id: &str, permit: &mut Deletion) -> Result<()> {
     let item = s.get(id).ok_or(Error::NotFound)?;
     if !matches!(item, Item::Notebook(_) | Item::Section(_) | Item::Page(_) |
         Item::Database(_) | Item::Row(_) | Item::Sticky(_)) || !s.in_bin(id) {
         return Err(Error::invalid("Only items in the bin can be permanently deleted."));
     }
     let doomed: Vec<String> = s.items().filter(|i| s.is_within(i.id(), id)).map(|i| i.id().into()).collect();
+    permit.consume(&doomed)?;
     let dbs: Vec<String> = doomed.iter().filter(|id| matches!(s.get(id), Some(Item::Database(_)))).cloned().collect();
     for db in dbs { if s.get(&db).is_some() { dbc::delete_database(s, &db)?; } }
     let rows: Vec<String> = doomed.iter().filter(|id| matches!(s.get(id), Some(Item::Row(_)))).cloned().collect();
@@ -1458,4 +1496,87 @@ fn delete_bin_tree(s: &mut Session, id: &str) -> Result<()> {
     s.remove_many(&remaining)?;
     s.collect_garbage()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod native_delete_tests {
+    use super::*;
+    use crate::native_confirm::{test_support::*, TestApprover};
+    use std::sync::Mutex;
+
+    #[test]
+    fn deny_delete_and_empty_bin_preserves_file_history_activity_and_ai_even_after_trash() {
+        for empty in [false, true] {
+            let state=fixture();
+            trash_page_person(&state,PAGE.into()).unwrap();
+            state.ai.native.inject(TestApprover(false));
+            let before=snapshot(&state);
+            let result=if empty { empty_trash_person(&state) } else { delete_page_person(&state,PAGE.into()) };
+            assert_eq!(result.err().unwrap().to_string(),"cancelled");
+            assert_eq!(snapshot(&state),before);
+            // A fresh IPC call has to ask again; no prior in-window answer or
+            // trash operation is a Rust approval.
+            assert!(delete_page_person(&state,PAGE.into()).is_err());
+            assert_eq!(snapshot(&state),before);
+        }
+    }
+    #[test]
+    fn allow_delete_and_empty_bin_performs_existing_purge_and_keeps_live_items() {
+        for empty in [false,true] {
+            let state=fixture();trash_page_person(&state,PAGE.into()).unwrap();
+            state.ai.native.inject(TestApprover(true));
+            if empty { empty_trash_person(&state).unwrap(); } else { delete_page_person(&state,PAGE.into()).unwrap(); }
+            state.with(|s| {
+                assert!(s.get(PAGE).is_none());assert!(s.history_list(PAGE).is_err());
+                assert!(s.get(STICKY).is_some());s.activity_verify()?;Ok(())
+            }).unwrap();
+            drop(state.take_session());
+            let reopened=Session::unlock(&state.paths.vault,"throwaway",None).unwrap();
+            assert!(reopened.get(PAGE).is_none());assert!(reopened.get(STICKY).is_some());
+        }
+    }
+    #[test]
+    fn changed_title_subtree_or_bin_set_invalidates_approval_with_no_delete() {
+        for change in ["title","child","bin"] {
+            let state=fixture();trash_page_person(&state,PAGE.into()).unwrap();
+            let after_change=std::sync::Arc::new(Mutex::new(None));
+            let saved=after_change.clone();let weak=std::sync::Arc::downgrade(&state);
+            state.ai.native.inject(Hook(Box::new(move || {
+                let state=weak.upgrade().unwrap();
+                // This acquires the vault mutex during ask: the caller must
+                // have released it before invoking the native approver.
+                state.with_mut(|s| {
+                    if change=="title" { let mut p=page(s,PAGE)?;p.title="Changed".into();s.put(Item::Page(p))?; }
+                    else if change=="child" {
+                        let mut p=page(s,PAGE)?;p.id=new_id();p.parent=PAGE.into();s.put(Item::Page(p))?;
+                    } else { crate::commands::stickies::delete_sticky_core(s,&Actor::Person,STICKY.into())?; }
+                    Ok(())
+                }).unwrap();
+                *saved.lock().unwrap()=Some(snapshot(&state));true
+            })));
+            let result=if change=="bin" { empty_trash_person(&state) } else { delete_page_person(&state,PAGE.into()) };
+            assert_eq!(result.err().unwrap().to_string(),"cancelled");
+            assert_eq!(snapshot(&state),after_change.lock().unwrap().take().unwrap());
+            assert!(state.with(|s|Ok(s.get(PAGE).is_some())).unwrap());
+        }
+    }
+    #[test]
+    fn delete_tree_permit_is_exact_and_single_use_and_core_rejects_replay() {
+        let state=fixture();trash_page_person(&state,PAGE.into()).unwrap();
+        state.with_mut(|s| {
+            crate::commands::stickies::delete_sticky_core(s,&Actor::Person,STICKY.into())?;
+            let mut approval=native_confirm::test_delete(s,Delete::One(PAGE.into()));
+            let mut permit=approval.delete(s,Delete::One(PAGE.into()))?;
+            let before=serde_json::to_value(s.get(STICKY).unwrap()).unwrap();
+            assert!(delete_bin_tree(s,STICKY,&mut permit).is_err());
+            assert_eq!(serde_json::to_value(s.get(STICKY).unwrap()).unwrap(),before);
+            let original=s.get(PAGE).unwrap().clone();
+            delete_bin_tree(s,PAGE,&mut permit)?;
+            s.put(original)?; // Simulate reusing the old answer for the same id.
+            assert!(delete_bin_tree(s,PAGE,&mut permit).is_err());
+            assert!(delete_page_core(s,&Actor::Person,PAGE.into(),&mut approval).is_err());
+            assert!(s.get(PAGE).is_some());
+            Ok(())
+        }).unwrap();
+    }
 }

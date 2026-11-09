@@ -161,32 +161,7 @@ fn restore_vault_person(
     state.check_rate_limit()?;
     // One restore at a time (they share one temporary file and the picked path).
     let _gate = RESTORE_GATE.lock().unwrap_or_else(|e| e.into_inner());
-    let kf = match read_keyfile(keyfile) {
-        Ok(k) => k,
-        Err(e) => {
-            state.record_failure();
-            return Err(e);
-        }
-    };
-    let source = restore::resolve_source(&state.paths, &source, state.picked_backup().as_deref())?;
-
-    // Check the exact bytes that will be installed. Any failure removes the
-    // copy and leaves the vault alone.
-    if let Err(e) = restore::verify_and_stage(&state.paths, &source, &password, kf.as_deref()) {
-        if matches!(e, Error::BadCredentials) {
-            state.record_failure();
-        }
-        return Err(e);
-    }
-
-    // A backup made while security was off would turn security off for a vault that has a
-    // master password. That needs the person's explicit confirmation.
-    let live_protected =
-        state.paths.vault.exists() && Session::read_header(&state.paths.vault).map(|h| !h.open).unwrap_or(true);
-    if live_protected && restore::staged_is_open(&state.paths).unwrap_or(false) && allow_security_off != Some(true) {
-        restore::remove_temp(&state.paths);
-        return Err(Error::invalid(SECURITY_OFF_CONFIRM));
-    }
+    let kf = restore_vault_stage_core(&state, &source, &password, keyfile, allow_security_off)?;
 
     // The old vault file can only be replaced once it is closed: save the
     // windows' pending edits, make the normal backup, wipe the session.
@@ -204,6 +179,40 @@ fn restore_vault_person(
         let _ = app.emit("vault-locked", restore_failed_payload(e));
     }
     result.map(|undo_file| RestoreResult { undo_file })
+}
+
+/// Pure Rust preflight/staging shared by the adapter and locality regressions.
+pub(crate) fn restore_vault_stage_core(
+    state: &AppState, source: &str, password: &str, keyfile: Option<String>, allow_security_off: Option<bool>,
+) -> Result<Option<Zeroizing<[u8; 32]>>> {
+    let kf = match read_keyfile(keyfile) {
+        Ok(k) => k,
+        Err(e) => {
+            state.record_failure();
+            return Err(e);
+        }
+    };
+    let source = restore::resolve_source(&state.paths, source, state.picked_backup().as_deref())?;
+
+    // Check the exact bytes that will be installed. Any failure removes the
+    // copy and leaves the vault alone.
+    if let Err(e) = restore::verify_and_stage(&state.paths, &source, password, kf.as_deref()) {
+        if matches!(e, Error::BadCredentials) {
+            state.record_failure();
+        }
+        return Err(e);
+    }
+
+    // A backup made while security was off would turn security off for a vault that has a
+    // master password. That needs the person's explicit confirmation.
+    let live_protected =
+        state.paths.vault.exists() && Session::read_header(&state.paths.vault).map(|h| !h.open).unwrap_or(true);
+    if live_protected && restore::staged_is_open(&state.paths).unwrap_or(false) && allow_security_off != Some(true) {
+        restore::remove_temp(&state.paths);
+        return Err(Error::invalid(SECURITY_OFF_CONFIRM));
+    }
+
+    Ok(kf)
 }
 
 /// Payload of the `vault-locked` event after a failed restore: the prefix, then
