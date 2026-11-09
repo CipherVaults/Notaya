@@ -25,6 +25,7 @@ import { NewPropertyPicker } from "../panels/PropertyMenu";
 const GUTTER = 64;
 const MIN_W = 80;
 const PAGE = 300;
+const NO_DRAG_ROWS: string[] = [];
 
 function defaultWidth(p: Property): number {
   switch (p.kind) {
@@ -83,7 +84,6 @@ interface RowProps {
   wrap: boolean;
   numbers: boolean;
   selected: boolean;
-  anySelected: boolean;
   activeCol: number;
   editing: boolean;
   seed: string | undefined;
@@ -93,15 +93,35 @@ interface RowProps {
 
 const BG = "bg-bg";
 
-const RowView = memo(function RowView({ row, index, cols, dbId, wrap, numbers, selected, anySelected, activeCol, editing, seed, canDrag, actions }: RowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id, disabled: !canDrag });
+// Only this small wrapper subscribes to dnd-kit. Its expensive cells have stable props and
+// remain memoized when the drag context changes on a click or selection elsewhere.
+const SortableRow = memo(function SortableRow(props: RowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.row.id });
   return (
     <tr
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, position: isDragging ? "relative" : undefined, zIndex: isDragging ? 20 : undefined }}
-      className={cn("group/row", isDragging && "opacity-70", selected ? "bg-accent-soft" : "hover:bg-surface")}
-      aria-selected={selected}
+      className={cn("group/row", isDragging && "opacity-70", props.selected ? "bg-accent-soft" : "hover:bg-surface")}
+      aria-selected={props.selected}
     >
+      <RowGutter {...props} attributes={attributes} listeners={listeners} isDragging={isDragging} />
+      <RowCells {...props} />
+    </tr>
+  );
+});
+
+const RowView = memo(function RowView(props: RowProps) {
+  if (props.canDrag) return <SortableRow {...props} />;
+  return (
+    <tr className={cn("group/row", props.selected ? "bg-accent-soft" : "hover:bg-surface")} aria-selected={props.selected}>
+      <RowGutter {...props} />
+      <RowCells {...props} />
+    </tr>
+  );
+});
+
+const RowGutter = memo(function RowGutter({ row, index, numbers, selected, canDrag, actions, attributes, listeners, isDragging }: RowProps & Partial<Pick<ReturnType<typeof useSortable>, "attributes" | "listeners" | "isDragging">>) {
+  return (
       <td className={cn("db-cell sticky z-[2] p-0", BG)} style={{ insetInlineStart: 0, width: GUTTER, minWidth: GUTTER }}>
         <div className={cn("flex h-full items-center justify-end gap-0.5 pe-1", selected && "bg-accent-soft")}>
           <button
@@ -121,14 +141,20 @@ const RowView = memo(function RowView({ row, index, cols, dbId, wrap, numbers, s
               aria-checked={selected}
               aria-label={`Select row ${index + 1}`}
               onClick={(e) => actions.toggleSelect(row.id, e.shiftKey)}
-              className={cn("rounded", selected || anySelected ? "" : "opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100")}
+              className={cn("rounded [table[data-has-selection=true]_&]:opacity-100", selected ? "" : "opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100")}
             >
               <CheckBox checked={selected} />
             </button>
-            {numbers && !selected && !anySelected && <span className="pointer-events-none absolute text-xs tabular-nums text-faint group-hover/row:hidden">{index + 1}</span>}
+            {numbers && !selected && <span className="pointer-events-none absolute text-xs tabular-nums text-faint group-hover/row:hidden [table[data-has-selection=true]_&]:hidden">{index + 1}</span>}
           </span>
         </div>
       </td>
+  );
+});
+
+const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected, activeCol, editing, seed, actions }: RowProps) {
+  return (
+    <>
       {cols.map((c, ci) => {
         const isTitle = c.prop.kind === "title";
         const isActive = activeCol === ci;
@@ -200,7 +226,7 @@ const RowView = memo(function RowView({ row, index, cols, dbId, wrap, numbers, s
         );
       })}
       <td className="db-cell p-0" style={{ width: 44 }} />
-    </tr>
+    </>
   );
 });
 
@@ -301,6 +327,9 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   }, [groups, result.rows, rowById, collapsed]);
   const indexOfRow = useMemo(() => new Map(flat.map((r, i) => [r.id, i])), [flat]);
   const canDrag = view.sorts.length === 0;
+  // Only mounted (uncollapsed, paged) rows participate in row dragging.
+  const dragRowIds = useMemo(() => [...new Set(flat.slice(0, limit).map((r) => r.id))], [flat, limit]);
+  const columnIds = useMemo(() => cols.map((c) => c.prop.id), [cols]);
 
   // ----- actions
   const commit = useCallback(
@@ -505,7 +534,6 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           wrap={view.wrap}
           numbers={view.rowNumbers}
           selected={selected.has(r.id)}
-          anySelected={selected.size > 0}
           activeCol={active && active.r === idx ? active.c : -1}
           editing={!!active && active.r === idx && editing}
           seed={active && active.r === idx ? seed : undefined}
@@ -643,7 +671,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       )}
       <div ref={wrapRef} tabIndex={0} onKeyDown={onKeyDown} role="application" aria-label="Table" className="db-scroll min-h-0 flex-1 overflow-auto outline-none" style={shell.compact ? { maxHeight: 480 } : undefined}>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => (view.columns.some((c) => c.prop === String(e.active.id)) ? onColumnDrag(e) : onRowDrag(e))}>
-          <table className="db-table text-sm" style={{ tableLayout: "fixed", width: GUTTER + cols.reduce((n, c) => n + c.width, 0) + 44 }} role="grid" aria-rowcount={flat.length}>
+          <table className="db-table text-sm" data-has-selection={selected.size > 0} style={{ tableLayout: "fixed", width: GUTTER + cols.reduce((n, c) => n + c.width, 0) + 44 }} role="grid" aria-rowcount={flat.length}>
             <colgroup>
               <col style={{ width: GUTTER }} />
               {cols.map((c) => (
@@ -667,7 +695,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
                     </button>
                   </div>
                 </th>
-                <SortableContext items={cols.map((c) => c.prop.id)} strategy={horizontalListSortingStrategy}>
+                <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
                   {cols.map((c, ci) => (
                     <HeaderCell key={c.prop.id} c={c} ci={ci} locked={locked} wrapTitle={view.wrap} onResize={(w, done) => setWidth(c.prop.id, w, done)} onOpen={() => openProp(c.prop.id)} />
                   ))}
@@ -690,7 +718,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
                 </th>
               </tr>
             </thead>
-            <SortableContext items={flat.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={canDrag ? dragRowIds : NO_DRAG_ROWS} strategy={verticalListSortingStrategy}>
               <tbody>{body}</tbody>
             </SortableContext>
             {/* Every column offers a calculation at the foot, shown when the row is hovered or the column has one. */}

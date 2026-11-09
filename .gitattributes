@@ -2,3 +2,6 @@
 # so its SHA-256 in docs/plan/approval-and-amendments.md stays valid.
 docs/plan/approved-plan-2026-10-22.md -text
 src-tauri/test-data/** binary
+
+# Golden query answers are compared as exact serialized bytes on every platform.
+src-tauri/src/database/golden/*.jsonl -text

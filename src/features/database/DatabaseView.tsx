@@ -799,7 +799,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
         {result?.truncated && (
           <div className="flex items-center gap-2 border-b border-line bg-warn/10 px-6 py-1.5 text-xs" role="status">
-            <AlertTriangle size={13} className="text-warn-icon" /> Only the first rows are shown ({result.rows.length} of {result.filtered}). Add a filter to narrow it down.
+            <AlertTriangle size={13} className="text-warn-icon" /> View limit reached: only the first {result.rows.length.toLocaleString()} matching rows are included. This database has {result.total.toLocaleString()} rows in total. Add a filter to narrow it down.
           </div>
         )}
         {queryError && (
