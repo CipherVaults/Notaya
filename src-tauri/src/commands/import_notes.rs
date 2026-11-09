@@ -230,11 +230,10 @@ pub fn import_from_with<V: VaultAccess>(
                     return Err(Error::Other(LOCKED.into()));
                 }
                 if !tables.is_empty() {
-                    let section = items.iter().find_map(|i| if let Item::Section(sec) = i { Some(sec.id.clone()) } else { None });
-                    if let Some(section) = section {
-                        let made = notion_db::import_databases(&tables, &row_pages, &items, &section, s, now, before_first_database)?;
+                    {
+                        let made = notion_db::import_databases(&tables, &row_pages, &items, &plan.csv_section_ids(&items), s, now, before_first_database)?;
                         if made.databases > 0 {
-                            drop_row_pages(&mut items, &made.removed_pages);
+                            drop_row_pages(&mut items, &made.removed_pages, &plan.generated_page_ids());
                             summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
                         }
                         imported_csv = made.covered;
@@ -284,9 +283,9 @@ pub fn import_from_with<V: VaultAccess>(
     })?
 }
 
-/// Takes out the pages that became database rows, and the empty pages that only held them (the folder page of
-/// a Notion database, and so on up).
-fn drop_row_pages(items: &mut Vec<Item>, gone: &std::collections::HashSet<String>) {
+/// Takes out the pages explicitly moved into rows, then only empty generated folder parents.
+/// An empty source document is still a genuine page and must survive ancestor cleanup.
+fn drop_row_pages(items: &mut Vec<Item>, gone: &std::collections::HashSet<String>, generated: &std::collections::HashSet<String>) {
     use std::collections::HashSet;
     let mut held: HashSet<String> = items
         .iter()
@@ -301,7 +300,7 @@ fn drop_row_pages(items: &mut Vec<Item>, gone: &std::collections::HashSet<String
         let empty: HashSet<String> = items
             .iter()
             .filter_map(|i| match i {
-                Item::Page(p) if held.contains(&p.id) && p.text.trim().is_empty() && !parents.contains(&p.id) => Some(p.id.clone()),
+                Item::Page(p) if generated.contains(&p.id) && held.contains(&p.id) && p.text.trim().is_empty() && !parents.contains(&p.id) => Some(p.id.clone()),
                 _ => None,
             })
             .collect();

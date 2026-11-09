@@ -117,6 +117,11 @@ fn stem_of(name: &str) -> &str {
     if kind_of(name).is_some() { name.rsplit_once('.').map_or(name, |(s, _)| s) } else { name }
 }
 
+/// Full, untruncated name for sibling matching; display-title truncation is not identity.
+fn match_name(name: &str) -> String {
+    doc::collapse_ws(&strip_notion_id(name)).to_lowercase()
+}
+
 /// The 32-character id Notion puts at the end of a file name in every export (`Page 0123…cdef.md`, also
 /// `Table 0123…cdef_all.csv`). `None` for a name without one.
 fn notion_file_id(name: &str) -> Option<String> {
@@ -208,6 +213,10 @@ struct Dir {
 }
 
 impl Dir {
+    fn has_documents(&self) -> bool {
+        self.files.iter().any(|(name, _)| kind_of(name).is_some()) || self.dirs.values().any(Dir::has_documents)
+    }
+
     fn insert(&mut self, parts: &[&str], full: &str) {
         match parts {
             [] => {}
@@ -233,6 +242,8 @@ pub struct Plan {
     pub pages: Vec<PlanPage>,
     /// CSV inputs are independent of the capped, presentation-only skipped list.
     pub csv_paths: Vec<String>,
+    /// The section of each CSV in the source tree, including CSVs with no row documents.
+    pub csv_sections: HashMap<String, usize>,
     pub images: Images,
     pub skipped: Vec<Skipped>,
     pub notes: Vec<String>,
@@ -244,6 +255,8 @@ pub struct Plan {
 pub struct PlanPage {
     /// The page's path in the source (links between pages use it).
     pub key: String,
+    /// True only for a folder placeholder made by this importer, never a source document.
+    pub generated: bool,
     pub id: String,
     pub section: usize,
     pub parent: Option<usize>,
@@ -267,6 +280,11 @@ struct Builder<'a> {
     pdfs: usize,
     /// Markdown file -> the HTML file of the same page (same Notion id) whose text and formatting it takes.
     twins: HashMap<String, String>,
+    csv_sections: HashMap<String, usize>,
+    arrangement_notes: Vec<String>,
+    database_html: HashSet<String>,
+    empty_database_pages: usize,
+    kept_database_pages: usize,
     /// How many pages did take their text from an HTML twin.
     merged: usize,
 }
@@ -279,7 +297,8 @@ impl Builder<'_> {
         let dir = h_path.rsplit_once('/').map_or("", |(d, _)| d).to_string();
         let (mut blocks, icon, cover, cover_look) = {
             let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images: &mut self.images, problems: &mut self.skipped, name: h_path.to_string() };
-            let d = html::parse_document(&decode_text(&bytes), &mut ctx);
+            let text = decode_text(&bytes);
+            let d = if self.database_html.contains(h_path) { html::parse_database_document(&text, &mut ctx) } else { html::parse_document(&text, &mut ctx) };
             (d.blocks, d.icon.unwrap_or_default(), d.cover, d.cover_look.unwrap_or_default())
         };
         if doc::is_empty(&blocks) {
@@ -305,19 +324,43 @@ impl Builder<'_> {
         let mut used = HashSet::new();
         let mut files = d.files.clone();
         files.sort_by(|a, b| natural_cmp(&a.0, &b.0));
-        // Folders by lower-case name, made once (a long list of files must not search them all each time).
-        let mut lower: HashMap<String, &String> = HashMap::new();
-        for k in d.dirs.keys() {
-            lower.entry(k.to_lowercase()).or_insert(k);
+        // Only sibling names are candidates. Group once so ambiguous names never pick a first match.
+        let mut exact_files: HashMap<String, usize> = HashMap::new();
+        let mut clean_files: HashMap<String, usize> = HashMap::new();
+        for (name, _) in &files {
+            if kind_of(name).is_some() {
+                *exact_files.entry(stem_of(name).to_lowercase()).or_default() += 1;
+                *clean_files.entry(match_name(stem_of(name))).or_default() += 1;
+            }
         }
+        let mut exact_dirs: HashMap<String, Vec<&String>> = HashMap::new();
+        let mut clean_dirs: HashMap<String, Vec<&String>> = HashMap::new();
+        for k in d.dirs.keys() {
+            exact_dirs.entry(k.to_lowercase()).or_default().push(k);
+            clean_dirs.entry(match_name(k)).or_default().push(k);
+        }
+        let mut warned = HashSet::new();
         for (name, path) in files {
+            if extension(&name) == "csv" {
+                self.csv_sections.insert(path, section);
+                continue;
+            }
             let Some(index) = self.document(&name, &path, section, parent) else { continue };
             let stem = stem_of(&name);
-            let sub = d
-                .dirs
-                .get_key_value(stem)
-                .filter(|(k, _)| !used.contains(*k))
-                .or_else(|| lower.get(&stem.to_lowercase()).filter(|k| !used.contains(**k)).and_then(|k| d.dirs.get_key_value(*k)));
+            let exact = stem.to_lowercase();
+            let clean = match_name(stem);
+            let dirs = clean_dirs.get(&clean).map(Vec::as_slice).unwrap_or(&[]);
+            let idless = |name: &&String| strip_notion_id(name) == name.as_str();
+            let dropped_id = strip_notion_id(stem) != stem && dirs.iter().any(idless);
+            if dropped_id && (clean_files[&clean] != 1 || dirs.len() != 1) && warned.insert(clean.clone()) {
+                self.arrangement_notes.push(format!("The folder match for \"{}\" is ambiguous in its source folder; those pages were left in their original arrangement.", file_title(&name)));
+            }
+            let key = match exact_dirs.get(&exact).map(Vec::as_slice) {
+                Some([key]) if exact_files[&exact] == 1 => Some(*key),
+                _ if dropped_id && clean_files[&clean] == 1 && dirs.len() == 1 && idless(&dirs[0]) => Some(dirs[0]),
+                _ => None,
+            };
+            let sub = key.filter(|k| !used.contains(*k)).and_then(|k| d.dirs.get_key_value(k));
             if let Some((key, sub)) = sub {
                 used.insert(key.clone());
                 self.folder(sub, section, Some(index), "");
@@ -336,9 +379,15 @@ impl Builder<'_> {
             if self.pages.len() >= MAX_PAGES + 1 {
                 return;
             }
+            // A folder containing only CSVs needs a database location, not an empty page.
+            if !sub.has_documents() {
+                self.folder(sub, section, parent, &format!("{path}/{name}"));
+                continue;
+            }
             let key = format!("dir:{path}/{name}");
             self.pages.push(PlanPage {
                 key,
+                generated: true,
                 id: new_id(),
                 section,
                 parent,
@@ -398,7 +447,8 @@ impl Builder<'_> {
                 }
                 Kind::Text => blocks = plain_text(&decode_text(&bytes)),
                 Kind::Html => {
-                    let d = html::parse_document(&decode_text(&bytes), &mut ctx);
+                    let text = decode_text(&bytes);
+                    let d = if self.database_html.contains(path) { html::parse_database_document(&text, &mut ctx) } else { html::parse_document(&text, &mut ctx) };
                     declared = d.title;
                     icon = d.icon.unwrap_or_default();
                     cover = d.cover;
@@ -468,8 +518,17 @@ impl Builder<'_> {
             }
             self.merged += 1;
         }
+        let database_wrapper = self.database_html.contains(path) || self.twins.get(path).is_some_and(|h| self.database_html.contains(h));
+        if database_wrapper {
+            if doc::is_empty(&blocks) {
+                self.empty_database_pages += 1;
+                return None;
+            }
+            self.kept_database_pages += 1;
+        }
         self.pages.push(PlanPage {
             key: path.to_string(),
+            generated: false,
             id: new_id(),
             section,
             parent,
@@ -596,7 +655,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     let mut notion_markdown = false;
     // The same Notion page in two formats (Markdown and HTML, zips or loose files, in any mix) has the same id at
     // the end of both file names. The Markdown page is kept and takes the HTML page's text and formatting. The
-    // HTML page of a database (its table is imported from the CSV file) is not imported as a page.
+    // HTML database wrappers are parsed without their CSV-backed view table; useful content stays.
     let mut md_ids: HashMap<String, Vec<&String>> = HashMap::new();
     let mut html_ids: HashMap<String, Vec<&String>> = HashMap::new();
     let mut csv_ids: HashSet<String> = HashSet::new();
@@ -614,13 +673,13 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     }
     let mut twins: HashMap<String, String> = HashMap::new();
     let mut hidden_html: HashSet<String> = HashSet::new();
-    let mut database_pages = 0usize;
+    let mut database_html = HashSet::new();
     for (id, hs) in &html_ids {
         if let [h] = hs.as_slice() {
             if csv_ids.contains(id) {
-                hidden_html.insert((*h).clone());
-                database_pages += 1;
-            } else if let Some([m]) = md_ids.get(id).map(|v| v.as_slice()) {
+                database_html.insert((*h).clone());
+            }
+            if let Some([m]) = md_ids.get(id).map(|v| v.as_slice()) {
                 twins.insert((*m).clone(), (*h).clone());
                 hidden_html.insert((*h).clone());
             }
@@ -658,7 +717,13 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
                 root.insert(&parts, path);
             }
             None if extension(name) == "csv" => {
+                let parts: Vec<&str> = path.split('/').collect();
+                if parts.len() > MAX_FOLDERS {
+                    note_skip(&mut skipped, path.clone(), "Folders nested too deeply.".into());
+                    continue;
+                }
                 csv_paths.push(path.clone());
+                root.insert(&parts, path);
                 // Pending database work is not an omission, including beyond the report cap.
                 if skipped.len() < MAX_LISTED {
                     skipped.push(Skipped { item: path.clone(), reason: "A Notion database view, waiting for the database import step.".into() });
@@ -668,7 +733,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
             None => note_skip(&mut skipped, path.clone(), "This kind of file is not imported.".into()),
         }
     }
-    if docs == 0 {
+    if docs == 0 && csv_paths.is_empty() {
         return Err("No pages were found. Choose Markdown (.md), HTML, Word (.docx) or PDF files, a folder of them, or a ZIP file made by Notion.".into());
     }
 
@@ -680,7 +745,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     };
     let folder_name = |n: &str| -> String { clean_title(n, false).chars().take(MAX_NAME).collect() };
 
-    let mut b = Builder { vfs, ctl, pages: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0, twins, merged: 0 };
+    let mut b = Builder { vfs, ctl, pages: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0, twins, csv_sections: HashMap::new(), arrangement_notes: Vec::new(), database_html, empty_database_pages: 0, kept_database_pages: 0, merged: 0 };
     let mut sections: Vec<String> = Vec::new();
     let mut section_notebook: Vec<usize> = Vec::new();
     // Notebooks named after folders (the notebooks layout); otherwise one, named below.
@@ -741,17 +806,20 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     // A section with no page left (its documents could not be read) is not created.
     let mut keep: Vec<usize> = Vec::new();
     for s in 0..sections.len() {
-        if b.pages.iter().any(|p| p.section == s) {
+        if b.pages.iter().any(|p| p.section == s) || b.csv_sections.values().any(|section| *section == s) {
             keep.push(s);
         }
     }
-    if b.pages.is_empty() {
+    if b.pages.is_empty() && csv_paths.is_empty() {
         let first = b.skipped.first().map(|s| format!(" {}: {}", s.item, s.reason)).unwrap_or_default();
         return Err(format!("None of the files could be imported.{first}"));
     }
     let remap: HashMap<usize, usize> = keep.iter().enumerate().map(|(new, old)| (*old, new)).collect();
     for p in &mut b.pages {
         p.section = remap[&p.section];
+    }
+    for section in b.csv_sections.values_mut() {
+        *section = remap[section];
     }
     let mut section_notebook: Vec<usize> = keep.iter().map(|i| section_notebook[*i]).collect();
     let sections: Vec<String> = keep.iter().map(|i| sections[*i].clone()).collect();
@@ -778,12 +846,15 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
         kept.iter().map(|i| notebooks[*i].clone()).collect()
     };
 
-    let mut notes = Vec::new();
+    let mut notes = b.arrangement_notes;
     if b.merged > 0 {
         notes.push(format!("{} pages were in both exports (Markdown and HTML): each was imported once, with the text, colors and fonts of the HTML and the table data of the Markdown and CSV files.", b.merged));
     }
-    if database_pages > 0 {
-        notes.push(format!("{database_pages} HTML pages of databases were not imported as pages: their tables come from the CSV files."));
+    if b.empty_database_pages > 0 {
+        notes.push(format!("{} empty HTML database wrappers were not added as pages; their tables come from the CSV files.", b.empty_database_pages));
+    }
+    if b.kept_database_pages > 0 {
+        notes.push(format!("{} HTML database wrappers kept their content outside the view table as pages; their tables come from the CSV files.", b.kept_database_pages));
     }
     if notion_markdown && b.merged == 0 {
         notes.push("These pages come from Notion's Markdown export, which has no text colors or highlights. Export from Notion as HTML to keep them, or choose the HTML and the Markdown & CSV exports together.".to_string());
@@ -794,7 +865,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     if b.unlisted > 0 {
         notes.push(format!("{} more items were not imported than the list shows.", b.unlisted));
     }
-    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, csv_paths, images: b.images, skipped: b.skipped, notes, aliases })
+    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, csv_paths, csv_sections: b.csv_sections, images: b.images, skipped: b.skipped, notes, aliases })
 }
 
 /// `Err` with the message for the person when the import was cancelled or ran out of time.
@@ -812,6 +883,16 @@ pub fn picture_url(id: &str) -> String {
 }
 
 impl Plan {
+    pub fn generated_page_ids(&self) -> HashSet<String> {
+        self.pages.iter().filter(|p| p.generated).map(|p| p.id.clone()).collect()
+    }
+
+    /// Resolves plan section indices against the sections just rendered by `items`.
+    pub fn csv_section_ids(&self, items: &[Item]) -> HashMap<String, String> {
+        let sections: Vec<&str> = items.iter().filter_map(|i| if let Item::Section(s) = i { Some(s.id.as_str()) } else { None }).collect();
+        self.csv_sections.iter().filter_map(|(path, index)| sections.get(*index).map(|id| (path.clone(), (*id).to_string()))).collect()
+    }
+
     /// Stores every picture the pages use. `put` stores one (mime type, bytes) and returns the
     /// vault's id for it; an error from it stops the import. Returns, for each picture, its
     /// editor address, or `None` when it could not be used (it is then listed as skipped).

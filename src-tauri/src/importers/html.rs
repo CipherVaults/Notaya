@@ -226,8 +226,17 @@ pub struct HtmlDoc {
 }
 
 pub fn parse_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
+    parse_document_with_view(src, ctx, false)
+}
+
+/// A CSV supplies the database view; keep the surrounding document through the same sanitizer.
+pub fn parse_database_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
+    parse_document_with_view(src, ctx, true)
+}
+
+fn parse_document_with_view(src: &str, ctx: &mut Ctx, database_view: bool) -> HtmlDoc {
     let root = build(src, ctx.ctl);
-    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0 };
+    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0, database_view };
     if let Some(t) = root.find(&|e| e.name == "title") {
         let t = doc::collapse_ws(&t.text());
         if !t.is_empty() {
@@ -243,7 +252,7 @@ pub fn parse_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
 /// HTML inside a Markdown file (Notion's `<aside>` callouts, `<img>`, `<details>`...).
 pub fn parse_fragment(src: &str, ctx: &mut Ctx) -> Vec<Block> {
     let root = build(src, ctx.ctl);
-    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0 };
+    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0, database_view: false };
     let mut out = Out::default();
     c.walk(&root.children, &Marks::default(), &mut out);
     out.finish()
@@ -313,6 +322,7 @@ struct Conv<'c, 'a> {
     depth: usize,
     /// Table cells made so far on this page (the renderer keeps at most `doc::MAX_PAGE_CELLS`).
     cells: usize,
+    database_view: bool,
 }
 
 /// Bold, italic, underline and strike from a `style` attribute (Google Docs, Word HTML, Notion).
@@ -473,6 +483,11 @@ impl Conv<'_, '_> {
     fn element(&mut self, e: &El, parent: &Marks, out: &mut Out) {
         let name = e.name.as_str();
         if DROP.contains(&name) || name == "head" || name == "title" {
+            return;
+        }
+        // Notion collection tables (and plain view tables in older exports) are supplied by CSV.
+        // An explicitly marked simple-table is ordinary page content and is kept.
+        if self.database_view && name == "table" && (e.has_class("collection-content") || e.attr("class").unwrap_or("").trim().is_empty()) {
             return;
         }
         let mut m = parent.clone();

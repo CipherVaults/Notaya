@@ -24,9 +24,8 @@ fn finish(vfs: &Vfs, p: &mut plan::Plan, s: &Session) -> Vec<Item> {
     let (tables, _, _) = notion_db::read_tables(vfs, &table_paths(p));
     let rows = notion_db::prepare_pages(&tables, &mut p.pages);
     let (mut items, _) = p.items(&ctl, &[], 1, 0).unwrap();
-    let sec = items.iter().find_map(|i| if let Item::Section(x) = i { Some(x.id.clone()) } else { None }).unwrap();
-    let made = notion_db::import_databases(&tables, &rows, &items, &sec, s, 1, &|_| Ok(())).unwrap();
-    super::drop_row_pages(&mut items, &made.removed_pages);
+    let made = notion_db::import_databases(&tables, &rows, &items, &p.csv_section_ids(&items), s, 1, &|_| Ok(())).unwrap();
+    super::drop_row_pages(&mut items, &made.removed_pages, &p.generated_page_ids());
     items.extend(made.items);
     items
 }
@@ -39,14 +38,19 @@ fn empty_session() -> Session {
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
 fn n1_csv_only_source_reaches_database_import() {
     let v = fixture(vec![(format!("Table {TABLE}_all.csv"), b"Name,Status\nCard,Done\n".to_vec())]);
     assert!(plan::build(&v, &Control::standard(), None, 1).is_ok(), "CSV-only sources need a container plan");
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let items = finish(&v, &mut p, &empty_session());
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Notebook(_))).count(), 1);
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Section(_))).count(), 1);
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Database(_))).count(), 1);
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Row(_))).count(), 1);
+    assert!(!items.iter().any(|i| matches!(i, Item::Page(_))));
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
 fn n1_database_discovery_does_not_depend_on_capped_skip_report() {
     let mut files: Vec<_> = (0..500).map(|i| (format!("a{i:03}.bin"), vec![0])).collect();
     files.push(("Home.md".into(), b"# Home\n\nBody\n".to_vec()));
@@ -58,7 +62,6 @@ fn n1_database_discovery_does_not_depend_on_capped_skip_report() {
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
 fn n1_database_without_row_documents_stays_in_source_section() {
     let v = fixture(vec![
         ("Section A/Home.md".into(), b"# Home A\n\nBody\n".to_vec()),
@@ -72,7 +75,19 @@ fn n1_database_without_row_documents_stays_in_source_section() {
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
+fn n2_csv_only_section_is_kept_beside_an_unrelated_document_section() {
+    let v = fixture(vec![
+        ("Section A/Home.md".into(), b"# Home\n\nBody\n".to_vec()),
+        (format!("Section B/Tables/Table {TABLE}_all.csv"), b"Name\nCard\n".to_vec()),
+    ]);
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let items = finish(&v, &mut p, &empty_session());
+    let section = items.iter().find_map(|i| if let Item::Section(s) = i { (s.name == "Section B").then_some(&s.id) } else { None }).unwrap();
+    assert!(items.iter().any(|i| matches!(i, Item::Database(d) if &d.section_id == section)));
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Page(_))).count(), 1, "CSV folders create no empty placeholders");
+}
+
+#[test]
 fn n1_title_only_source_home_survives_row_cleanup() {
     let v = fixture(vec![
         (format!("Home {HUB}.md"), b"# Home\n".to_vec()),
@@ -81,12 +96,15 @@ fn n1_title_only_source_home_survives_row_cleanup() {
     ]);
     let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
     let home_id = p.pages.iter().find(|p| p.title == "Home").unwrap().id.clone();
+    let generated = p.generated_page_ids();
+    assert!(!generated.contains(&home_id));
     let items = finish(&v, &mut p, &empty_session());
     assert!(items.iter().any(|i| matches!(i, Item::Page(p) if p.id == home_id)));
+    assert!(!items.iter().any(|i| generated.contains(i.id())), "empty generated row containers are still cleaned up");
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
+#[ignore = "N3: canonical row identity/body, links and children (A53 item 2)"]
 fn n1_linked_row_has_one_body_and_links_target_the_row() {
     let v = fixture(vec![
         ("Home.md".into(), format!("# Home\n\n[Card](Card%20{CARD}.md)\n").into_bytes()),
@@ -104,20 +122,19 @@ fn n1_linked_row_has_one_body_and_links_target_the_row() {
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
+#[ignore = "unapproved containment proposal; arbitrary links are not ownership evidence (Q66)"]
 fn n1_flat_home_links_define_containment() {
-    // A proposed arrangement policy, not proof that arbitrary navigation means ownership.
+    // Q66 did not approve containment inferred from arbitrary navigation. Keep this as
+    // a negative policy probe: a link alone must not make its target a child page.
     let v = fixture(vec![
         (format!("Home {HUB}.md"), format!("# Home\n\n[Child](Child%20{CARD}.md)\n").into_bytes()),
         (format!("Child {CARD}.md"), b"# Child\n\nBody\n".to_vec()),
     ]);
     let p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    let home = p.pages.iter().position(|p| p.title == "Home").unwrap();
-    assert_eq!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, Some(home));
+    assert_eq!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, None);
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
 fn n1_folder_without_id_keeps_its_source_home_as_parent() {
     let v = fixture(vec![
         (format!("Home {HUB}.md"), b"# Home\n\nBody\n".to_vec()),
@@ -126,13 +143,44 @@ fn n1_folder_without_id_keeps_its_source_home_as_parent() {
     let p = plan::build(&v, &Control::standard(), None, 1).unwrap();
     let home = p.pages.iter().position(|p| p.title == "Home").unwrap();
     assert_eq!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, Some(home));
+    assert_eq!(p.sections.len(), 1, "children do not get a second section");
+    assert!(!p.pages.iter().any(|p| p.generated));
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
+fn n2_ambiguous_clean_names_are_reported_without_parenting() {
+    for files in [
+        vec![
+            (format!("Home {HUB}.md"), b"# Home\n".to_vec()),
+            (format!("Home {TABLE}.md"), b"# Home\n".to_vec()),
+            ("Home/Child.md".into(), b"# Child\n\nBody\n".to_vec()),
+        ],
+        vec![
+            (format!("Home {HUB}.md"), b"# Home\n".to_vec()),
+            ("Home/Child.md".into(), b"# Child\n\nBody\n".to_vec()),
+            (format!("Home {TABLE}/Other.md"), b"# Other\n\nBody\n".to_vec()),
+        ],
+    ] {
+        let p = plan::build(&fixture(files), &Control::standard(), None, 1).unwrap();
+        assert_eq!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, None);
+        assert_eq!(p.notes.iter().filter(|n| n.contains("ambiguous")).count(), 1);
+    }
+}
+
+#[test]
+fn n2_clean_name_matches_are_local_to_the_same_parent() {
+    let v = fixture(vec![
+        (format!("Area A/Home {HUB}.md"), b"# Home\n".to_vec()),
+        ("Area B/Home/Child.md".into(), b"# Child\n\nBody\n".to_vec()),
+    ]);
+    let p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let home = p.pages.iter().position(|p| p.title == "Home" && !p.generated).unwrap();
+    assert_ne!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, Some(home));
+}
+
+#[test]
 fn n1_source_home_in_html_is_not_discarded_because_csv_shares_id() {
-    // A proposed dashboard-preservation policy. Real HTML database views intentionally
-    // share the CSV id; a separate home page is not established by that id alone.
+    // Mandatory A53 item 5: preserve useful body outside the CSV-backed view table.
     let v = fixture(vec![
         (format!("Home {HUB}.html"), b"<html><title>Home</title><body><p>Dashboard body</p></body></html>".to_vec()),
         (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
@@ -143,9 +191,8 @@ fn n1_source_home_in_html_is_not_discarded_because_csv_shares_id() {
 }
 
 #[test]
-#[ignore = "fails until WP-19 fix lanes N2/N3 land"]
 fn n1_same_named_csv_views_with_different_ids_report_ambiguity() {
-    // A proposed warning, never permission to merge distinct ids by their display titles.
+    // Mandatory A53 item 6: warn, never merge distinct ids by their display titles.
     let a = format!("Table {TABLE}.csv");
     let b = format!("Table {HUB}_all.csv");
     let v = fixture(vec![
@@ -155,6 +202,56 @@ fn n1_same_named_csv_views_with_different_ids_report_ambiguity() {
     let (_, _, notes) = notion_db::read_tables(&v, &[a, b]);
     // Reporting ambiguity avoids silently merging two genuinely distinct databases.
     assert!(!notes.is_empty());
+}
+
+#[test]
+fn n2_database_wrappers_keep_only_useful_sanitized_content() {
+    for (body, wanted) in [
+        ("<h1>Home</h1><table class=\"collection-content\"><tr><td>View row</td></tr></table>", false),
+        ("<h1>Home</h1><table><tr><td>View row</td></tr></table>", false),
+        ("<h1>Home</h1><p>Dashboard body</p><table class=\"collection-content\"><tr><td>View row</td></tr></table><script>bad()</script>", true),
+        ("<h1>Home</h1><table class=\"simple-table\"><tr><td>Useful table</td></tr></table>", true),
+    ] {
+        let v = fixture(vec![
+            (format!("Home {HUB}.html"), format!("<html><title>Home</title><body>{body}</body></html>").into_bytes()),
+            (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        ]);
+        let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+        assert_eq!(p.pages.len(), usize::from(wanted));
+        let items = finish(&v, &mut p, &empty_session());
+        for page in items.iter().filter_map(|i| if let Item::Page(p) = i { Some(p) } else { None }) {
+            assert!(!page.text.contains("View row") && !page.text.contains("bad()"));
+            assert!(page.text.contains("Dashboard body") || page.text.contains("Useful table"));
+        }
+        assert_eq!(items.iter().filter(|i| matches!(i, Item::Database(_))).count(), 1);
+    }
+}
+
+#[test]
+fn n2_html_markdown_csv_wrapper_is_one_page_with_navigation() {
+    let v = fixture(vec![
+        (format!("Home {HUB}.html"), format!("<html><title>Home</title><body><p><a href=\"Card%20{CARD}.md\">Card</a></p><table class=\"collection-content\"><tr><td>View row</td></tr></table></body></html>").into_bytes()),
+        (format!("Home {HUB}.md"), b"# Home\n\nMarkdown body\n".to_vec()),
+        (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        (format!("Card {CARD}.md"), b"# Card\n\nCard body\n".to_vec()),
+    ]);
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let items = finish(&v, &mut p, &empty_session());
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Page(p) if p.title == "Home")).count(), 1);
+    let card = items.iter().find_map(|i| if let Item::Page(p) = i { (p.title == "Card").then_some(p) } else { None }).unwrap();
+    let home = items.iter().find_map(|i| if let Item::Page(p) = i { (p.title == "Home").then_some(p) } else { None }).unwrap();
+    assert!(home.content.contains(&card.id), "wrapper navigation survives");
+    assert!(!home.text.contains("View row"));
+}
+
+#[test]
+fn n2_conflicting_csv_names_warn_once_and_never_merge_by_name() {
+    let paths = vec![format!("Table {TABLE}.csv"), format!("Table {TABLE}_all.csv"), format!("Table {HUB}.csv"), format!("Table {CARD}.csv")];
+    let v = fixture(paths.iter().map(|p| (p.clone(), b"Name\nCard\n".to_vec())).collect());
+    let (tables, covered, notes) = notion_db::read_tables(&v, &paths);
+    assert_eq!(tables.len(), 3, "only the same-id plain/all pair is combined");
+    assert_eq!(covered.len(), 4);
+    assert_eq!(notes.iter().filter(|n| n.contains("ambiguous")).count(), 1);
 }
 
 fn error_kind(e: &str) -> &'static str {
@@ -212,10 +309,9 @@ fn n1_private_count_probe() {
         assert!(home.is_absolute() && !home.starts_with(env!("CARGO_MANIFEST_DIR")));
         std::fs::create_dir(&home).expect("home must be new");
         let session = Session::create_open(&home.join("empty-probe.nota")).expect("empty vault unavailable");
-        let sec = items.iter().find_map(|i| if let Item::Section(s) = i { Some(s.id.clone()) } else { None }).expect("section unavailable");
-        let made = notion_db::import_databases(&tables, &row_pages, &items, &sec, &session, 1, &|_| Ok(())).expect("database stage failed");
+        let made = notion_db::import_databases(&tables, &row_pages, &items, &p.csv_section_ids(&items), &session, 1, &|_| Ok(())).expect("database stage failed");
         let moved = made.removed_pages.len();
-        super::drop_row_pages(&mut items, &made.removed_pages);
+        super::drop_row_pages(&mut items, &made.removed_pages, &p.generated_page_ids());
         let source_docs_removed = docs.iter().filter(|id| !made.removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
         let top_removed = top.iter().filter(|id| !made.removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
         items.extend(made.items);
