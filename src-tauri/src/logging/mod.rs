@@ -17,6 +17,8 @@
 mod sanitize;
 mod store;
 
+pub use sanitize::FrontendKind;
+
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -232,8 +234,7 @@ pub fn backend_error(code: &str) {
 
 /// A record from the UI. Everything is cleaned again here, whatever the UI sent.
 pub struct FrontendReport<'a> {
-    pub kind: &'a str,
-    pub message: &'a str,
+    pub kind: FrontendKind,
     pub source: &'a str,
     pub line: Option<u32>,
 }
@@ -241,11 +242,10 @@ pub struct FrontendReport<'a> {
 fn frontend_text(r: &FrontendReport) -> String {
     let line = r.line.map(|l| format!(":{}", l.min(9_999_999))).unwrap_or_default();
     format!(
-        "UI error ({}) in {}{}: {}",
-        sanitize::frontend_kind(r.kind),
+        "UI error ({}) in {}{}.",
+        r.kind.as_str(),
         sanitize::frontend_source(r.source),
         line,
-        sanitize::frontend_message(r.message),
     )
 }
 
@@ -480,13 +480,17 @@ mod tests {
             embedded.push(format!("Error: ENOENT, open '{p}'"));
         }
         for message in &embedded {
-            let report = FrontendReport { kind: "error", message, source: "http://tauri.localhost/assets/index-1.js", line: Some(7) };
-            write_in(&dir, "ERROR", &frontend_text(&report));
+            let report: crate::commands::errorlog::FrontendError = serde_json::from_value(serde_json::json!({
+                "kind": "error", "message": message, "source": "index-1.js", "line": 7,
+            })).unwrap();
+            write_in(&dir, "ERROR", &frontend_text(&report.for_log()));
         }
         for h in notes.iter().copied().chain(paths) {
             // The kind and the source are free fields too: whatever comes in, only fixed words go out.
-            let report = FrontendReport { kind: h, message: "x is not a function", source: h, line: Some(7) };
-            write_in(&dir, "ERROR", &frontend_text(&report));
+            let report: crate::commands::errorlog::FrontendError = serde_json::from_value(serde_json::json!({
+                "kind": h, "message": "x is not a function", "source": h, "line": 7,
+            })).unwrap();
+            write_in(&dir, "ERROR", &frontend_text(&report.for_log()));
             // A panic whose message holds the data, and a location that is not a source file.
             let class = sanitize::panic_class(Some(&format!("byte index 3 is out of bounds of `{h}`")));
             let frames = sanitize::backtrace_frames(&format!("  0: {h}\n  1: ok::fn\n"), 5);
@@ -522,6 +526,82 @@ mod tests {
         for line in text.lines().filter(|l| !l.starts_with("    ")) {
             assert!(line.len() < 700, "{} chars", line.len());
         }
+    }
+
+    #[test]
+    fn renderer_messages_and_invalid_sources_never_reach_log_bytes() {
+        let marker = crate::model::new_id();
+        let title = format!("Throwaway note title {marker}");
+        let body = format!("Throwaway note body {marker} with ordinary unquoted prose");
+        let samples = [
+            marker.clone(), title, body,
+            format!("\"{marker}\".js"),
+            format!("'{marker}'.js"),
+            format!(r"D:\throwaway\{marker}.js"),
+            format!("/throwaway/{marker}.js"),
+            format!("token:{marker}.js"),
+            format!("index.js?token={marker}"),
+        ];
+        let dir = temp_dir();
+        for sample in &samples {
+            for (message, source) in [(sample.as_str(), "index.js"), ("", sample.as_str())] {
+                // Deserialize exactly the IPC shape, including a legacy or hostile message field.
+                let report: crate::commands::errorlog::FrontendError = serde_json::from_value(serde_json::json!({
+                    "kind": "error", "message": message, "source": source, "line": 1,
+                })).unwrap();
+                assert!(write_in(&dir, "ERROR", &frontend_text(&report.for_log())));
+            }
+            let report: crate::commands::errorlog::FrontendError = serde_json::from_value(serde_json::json!({
+                "kind": sample, "message": sample, "source": sample, "line": 1,
+            })).unwrap();
+            assert_eq!(frontend_text(&report.for_log()), "UI error (unknown) in unknown:1.");
+            assert!(write_in(&dir, "ERROR", &frontend_text(&report.for_log())));
+        }
+        let bytes = fs::read(dir.join(store::LOG_FILE)).unwrap();
+        assert!(!bytes.windows(marker.len()).any(|w| w == marker.as_bytes()), "generated note marker reached the plaintext log");
+        let text = String::from_utf8(bytes).unwrap();
+        assert_eq!(text.lines().count(), samples.len() * 3);
+        assert!(text.contains("UI error (error) in index.js:1."));
+        assert!(text.contains("UI error (error) in unknown:1."));
+    }
+
+    #[test]
+    fn renderer_classes_produce_fixed_diagnostics_without_a_message_field() {
+        let dir = temp_dir();
+        for class in ["error", "unhandledrejection", "react", "unknown"] {
+            // The current frontend sends no message at all; all known classes must still log.
+            let report: crate::commands::errorlog::FrontendError = serde_json::from_value(serde_json::json!({
+                "kind": class, "source": "index-AbC123.js", "line": 42,
+            })).unwrap();
+            let expected = format!("UI error ({class}) in index-AbC123.js:42.");
+            let text = frontend_text(&report.for_log());
+            assert_eq!(text, expected);
+            assert!(write_in(&dir, "ERROR", &text));
+            assert!(log_text(&dir).contains(&expected));
+        }
+    }
+
+    #[test]
+    fn renderer_source_and_line_bounds_hold_through_the_adapter() {
+        use crate::commands::errorlog::FrontendError;
+        let source = format!("{}.js", "a".repeat(57));
+        let mut report = FrontendError { kind: FrontendKind::Error, source: Some(source.clone()), line: Some(42.9) };
+        assert_eq!(frontend_text(&report.for_log()), format!("UI error (error) in {source}:42."));
+        for (line, suffix) in [
+            (Some(0.0), ":0"), (Some(-1.0), ""), (Some(f64::NAN), ""),
+            (Some(f64::INFINITY), ""), (Some(f64::NEG_INFINITY), ""), (None, ""),
+            (Some(9_999_999.0), ":9999999"), (Some(10_000_000.0), ":9999999"),
+            (Some(f64::MAX), ":9999999"),
+        ] {
+            report.line = line;
+            assert_eq!(frontend_text(&report.for_log()), format!("UI error (error) in {source}{suffix}."));
+        }
+        report.line = Some(1.0);
+        for source in [None, Some(format!("{}.js", "a".repeat(58))), Some("x".repeat(100_000))] {
+            report.source = source;
+            assert_eq!(frontend_text(&report.for_log()), "UI error (error) in unknown:1.");
+        }
+        assert!(serde_json::from_value::<FrontendError>(serde_json::json!({"kind": "error", "line": "1"})).is_err());
     }
 
     #[test]
