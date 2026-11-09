@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-09 (Ahmed's messages 06:52 to 11:55 UTC), EX-2026-11-09-66: the 1.6 build, second day
+
+- [2026-11-09-v1-6-build-second-day.md](2026-11-09-v1-6-build-second-day.md): lanes AG, C4d, C3, C2d, C3u, C5, E and P1 merged and checked by the PC, the first two security-pass areas (findings on `AE0101/v1-6-s`), the live AI check on Ahmed's own hands (verified, not accepted), amendments A47 to A52, defect X-1, and the silent heartbeat. Session entry [53](../sessions.md#session-53). **Produced and verified on named commits; nothing accepted; no release.**
+
 ### 2026-11-09 (Ahmed's message 02:08:59 UTC), EX-2026-11-09-65: large databases, research and plan
 
 - [2026-11-09-large-database-performance-research.md](2026-11-09-large-database-performance-research.md): where Notaya slows down with thousands to 200,000 rows (measured: the Rust engine is fine; the screen redraws every row on every click and every change sends the whole result), the ranked plan P1 to P12 with licences and version fit, the accuracy gate, and two development-only measuring tools. Plan: [docs/plan/2026-11-09-large-database-performance-plan.md](../plan/2026-11-09-large-database-performance-plan.md). **Produced**; no app code changed; not accepted.
