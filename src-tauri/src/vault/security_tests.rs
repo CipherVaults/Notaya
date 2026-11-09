@@ -432,9 +432,9 @@ fn permanent_delete_and_empty_bin_purge_all_item_content_and_refuse_undo() {
                     plain.windows(marker.len()).any(|w| w == marker.as_bytes())
                 })));
             if empty {
-                crate::commands::notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+                crate::commands::notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
             } else {
-                crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone())
+                crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, id.clone())
                     .unwrap();
             }
             assert!(s.get(&id).is_none());
@@ -572,8 +572,13 @@ fn failed_purge_rolls_back_deleted_records_and_relinked_activity() {
         })
         .unwrap();
         drop(conn);
+        let mut approval = crate::native_confirm::test_delete(&s, crate::native_confirm::Delete::One(id.clone()));
+        let err = crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone(), &mut approval)
+            .err()
+            .expect("the purge must fail");
         assert!(
-            crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).is_err()
+            !format!("{err:?}").contains(crate::native_confirm::CANCELLED),
+            "the purge must be what fails, not the approval: {err:?}"
         );
         assert!(s.get(&id).is_some());
         for (table, rows) in [
@@ -738,10 +743,10 @@ fn container_delete_and_bin_cleanup_purge_descendants_and_unreferenced_files() {
         s.put(item).unwrap();
         assert!(s.get_attachment(&picture).is_ok(), "binning retains files");
         if section_only {
-            crate::commands::notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+            crate::commands::notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
             assert!(s.get(&notebook).is_some());
         } else {
-            crate::commands::notes::delete_page_core(&mut s, &Actor::Person, root.clone()).unwrap();
+            crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, root.clone()).unwrap();
         }
         for id in [&root, &db_id, &row_id, &child_id] {
             assert!(s.get(id).is_none());
@@ -786,7 +791,7 @@ fn bulk_sticky_bin_preserves_undo_until_empty_bin_purges_it() {
     assert_eq!(s.activity_undo(&ai(), &bin_set).unwrap().restored, 2);
     assert!(ids.iter().all(|id| !s.in_bin(id)));
     crate::commands::stickies::delete_stickies_core(&mut s, &Actor::Person, ids.clone()).unwrap();
-    crate::commands::notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+    crate::commands::notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
     assert_absent(&s, &marker);
     for set in sets {
         assert!(s.activity_undo(&ai(), &set).is_err());

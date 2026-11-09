@@ -1408,7 +1408,7 @@ mod tests {
         let mut s = Session::unlock(&path, "throwaway", None).unwrap();
         assert!(s.settings().journals_anchored);
         crate::commands::stickies::delete_sticky_core(&mut s, &Actor::Person, id.clone()).unwrap();
-        crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
+        crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
         for table in [Table::Records, Table::Attachments, Table::History, Table::Activity, Table::Anchor] {
             for (row, bytes) in s.store.all(table).unwrap() {
                 let plain = crate::crypto::open(&s.dek, &super::super::aad(s.format, &s.vault_id, table, &row), &bytes).unwrap();
