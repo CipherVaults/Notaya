@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { format } from 'node:util';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const [file, artifactDir, ...args] = process.argv.slice(2);
@@ -16,6 +16,9 @@ if (file !== 'installed.mjs') {
   if (!source.includes(needle)) throw Error('Legacy password seam changed; review adapter before running');
   source = source.replace(needle, 'process.env.NOTAYA_TEST_PASSWORD');
 }
+// Keep a real source filename in stack traces; data: stacks used to print the
+// entire base64 script, burying the actual exception. Resolve its one local import.
+source = source.replace('from "./legacy-cdp.mjs"', `from ${JSON.stringify(pathToFileURL(path.join(root, 'tools/real-exe-tests/legacy-cdp.mjs')).href)}`);
 fs.mkdirSync(artifactDir, { recursive: true });
 fs.writeFileSync(path.join(artifactDir, 'adapter.json'), JSON.stringify({ sourcePath, sourceHash, args, changes: ['Read ephemeral password from child environment instead of temp file; assertion output/exit guard.'] }, null, 2));
 fs.writeFileSync(path.join(artifactDir, 'executed-source.mjs'), source);
@@ -23,7 +26,6 @@ process.argv = [process.execPath, sourcePath, ...args];
 let printed = [];
 const log = console.log.bind(console);
 console.log = (...values) => { printed.push(format(...values)); log(...values); };
-const exit = process.exit.bind(process);
 function guardedExitCode(code) {
   let bad = Number(code || 0) !== 0 || printed.some(line => /^\s*FAIL\b/.test(line));
   if (file !== 'lockflow.mjs') {
@@ -44,7 +46,7 @@ function guardedExitCode(code) {
   delete process.env.NOTAYA_TEST_PASSWORD;
   return bad ? 1 : 0;
 }
-process.exit = code => exit(guardedExitCode(code));
+// Legacy suites close their sockets in finally and exit naturally on every route.
 // lockflow closes sockets and exits naturally; run the same guards on that route.
 process.once('beforeExit', () => { process.exitCode = guardedExitCode(process.exitCode); });
-await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+await import(pathToFileURL(path.join(artifactDir, 'executed-source.mjs')).href);

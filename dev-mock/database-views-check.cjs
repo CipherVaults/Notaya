@@ -18,6 +18,10 @@ async function open(b, query, size = { width: 1280, height: 800 }) {
   const p = await b.newPage({ viewport: size, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) { fail++; console.log('FAIL console error', m.text()); } });
+  p.on('response', (r) => { if (r.status() >= 400 && new URL(r.url()).pathname !== '/favicon.ico') { fail++; console.log('FAIL resource', r.status(), r.url()); } });
+  // This standalone HTML harness has no favicon. Avoid a browser-generated
+  // favicon 404 without hiding failures for any application resource.
+  await p.route('**/favicon.ico', route => route.fulfill({ status: 204, body: '' }));
   await p.goto(`${BASE}?${query}`);
   await p.waitForSelector('#view-host > *');
   await p.waitForTimeout(400);

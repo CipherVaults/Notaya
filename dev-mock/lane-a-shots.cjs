@@ -185,6 +185,7 @@ async function functionalChecks(page, databaseId) {
       localStorage.setItem('other:dbview:keep', 'keep-unrelated');
     });
     page.on('pageerror', (error) => report.pageErrors.push({ theme, message: error.message }));
+    page.on('framenavigated', frame => { if (frame === page.mainFrame()) { (report.navigations ??= []).push({ theme, utc: new Date().toISOString(), url: frame.url() }); } });
     const url = new URL(target);
     url.search = new URLSearchParams({ db: '1', theme }).toString();
     await page.goto(url.href);
@@ -197,27 +198,39 @@ async function functionalChecks(page, databaseId) {
       assert.equal(keys['other:dbview:keep'], 'keep-unrelated');
     };
     await checkStorage();
-    // A dev-server reload can destroy Runtime.evaluate before it acknowledges.
-    // Restart the entire disposable mock probe once after navigation, recording it.
+    // Preload before changing fixture state. Only this read-only preparation may
+    // retry an optimiser navigation; replaying a half-completed lock hides failures.
     for (let attempt = 0; ; attempt++) {
       try {
         await page.evaluate(async () => {
           const { flushAll } = await import('/src/lib/flush.ts');
           const { invoke } = await import('/dev-mock/core.ts');
           const { useApp } = await import('/src/store/app.ts');
-          await invoke('enable_security', { password: crypto.randomUUID(), removeUnprotectedCopies: false });
-          await flushAll();
-          await invoke('lock_vault');
-          await useApp.getState().refreshStatus();
+          window.__laneALockProbe = { flushAll, invoke, useApp };
         });
+        await page.waitForLoadState('networkidle');
+        const stamp = await page.evaluate(() => performance.timeOrigin);
+        await page.waitForTimeout(1500);
+        assert.equal(await page.evaluate(() => performance.timeOrigin), stamp, 'Mock reloaded during lock preparation');
+        assert(await page.evaluate(() => !!window.__laneALockProbe), 'Preloaded probe survives settling');
         break;
       } catch (error) {
-        if (attempt || !/Execution context was destroyed/.test(error.message)) throw error;
-        report.checks.push({ theme, harnessRetry: 'Mock lock evaluation interrupted by navigation; retry once after load' });
+        if (attempt >= 2 || !/Execution context was destroyed|Mock reloaded during lock preparation|Preloaded probe survives settling/.test(error.message)) throw error;
+        report.checks.push({ theme, harnessRetry: 'Read-only lock preparation interrupted by optimiser navigation' });
         await page.waitForLoadState('load');
         await page.getByRole('button', { name: 'New notebook', exact: true }).waitFor();
       }
     }
+    const locked = await page.evaluate(async () => {
+      const { flushAll, invoke, useApp } = window.__laneALockProbe;
+      await invoke('enable_security', { password: crypto.randomUUID(), removeUnprotectedCopies: false });
+      await flushAll();
+      await invoke('lock_vault');
+      const status = await useApp.getState().refreshStatus();
+      delete window.__laneALockProbe;
+      return { securityOn: status.securityOn, unlocked: status.unlocked };
+    });
+    assert.deepEqual(locked, { securityOn: true, unlocked: false }, 'Mock lock actually completed');
     await checkStorage();
     await page.reload();
     await page.getByRole('button', { name: 'New notebook', exact: true }).waitFor();

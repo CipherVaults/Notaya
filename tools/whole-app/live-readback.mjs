@@ -31,4 +31,4 @@ try {
     }
   } else throw Error('Unknown readback mode');
   console.log('PASS actual quit/reopen persisted the expected synthetic content');
-} finally { client.close(); }
+} finally { await client.close(); }

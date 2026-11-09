@@ -41,14 +41,13 @@ try {
         $server = $null; $port = if ($mode -eq 'mock') { $mockPort } else { $viewsPort }
         try {
             if (-not (Test-WAPortClosed $port)) { throw "Port $port was taken before launch" }
-            $commandArgs = if ($mode -eq 'mock') {
-                @($npmCli, 'run', 'mock', '--', '--configLoader', 'native', '--host', '127.0.0.1', '--port', "$port", '--strictPort')
-            } else {
-                @($vite, '--config', 'vite.views.config.ts', '--configLoader', 'native', '--host', '127.0.0.1', '--port', "$port", '--strictPort')
-            }
+            $commandArgs = @("$PSScriptRoot\mock-server.mjs", $mode, "$port")
             $server = Start-WAProcess $node $commandArgs $envs
             $servers += @{ handle = $server; name = $mode; port = $port }
             Wait-WAHttp $port $server
+            $warm = Invoke-WACommand $node @("$PSScriptRoot\warm-mock.cjs", "http://127.0.0.1:$port", $mode) $envs "$($run.output)\$mode-warm.log" $ScriptTimeoutSeconds
+            $warm.script = "$mode server warm-up"; $warm.checkIds = @(); $report.suites += $warm
+            if ($warm.status -ne 'passed') { throw "$mode server warm-up failed; inspect $mode-warm.log" }
             $available[$mode] = $true
         } catch { $report.suites += @{ script = "$mode server"; status = 'not run'; reason = $_.Exception.Message; checkIds = @() } }
     }

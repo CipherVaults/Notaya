@@ -31,6 +31,8 @@ function Get-WASource {
         # Hash staged AND unstaged tracked changes plus all runner inputs, including untracked files.
         $paths = @(& git diff HEAD --name-only) + @('docs/plan/2026-11-09-whole-app-test-plan.md')
         $paths += @(Get-ChildItem $PSScriptRoot -File | ForEach-Object { $_.FullName })
+        $paths += @('vite.mock.config.ts', 'vite.views.config.ts')
+        $paths += @(Get-ChildItem "$script:WARepo\dev-mock", "$script:WARepo\tools\real-exe-tests" -File | ForEach-Object { $_.FullName })
         foreach ($path in @($paths | Sort-Object -Unique)) {
             if (Test-Path -LiteralPath $path -PathType Leaf) {
                 $hashes += @{ path = $path; sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
@@ -108,6 +110,7 @@ function Start-WAProcess([string]$File, [string[]]$Arguments, [hashtable]$Enviro
         $job.Assign($p.Handle)
         [pscustomobject]@{
             process = $p; job = $job; watch = $watch
+            environment = $Environment
             stdout = $p.StandardOutput.ReadToEndAsync(); stderr = $p.StandardError.ReadToEndAsync()
         }
     } catch {
@@ -259,11 +262,28 @@ function Get-WAPlanRows {
     }
 }
 
-function Close-WATestApp($Handle, [string]$Log) {
+function Close-WATestApp($Handle, [string]$Log, [int]$Port = 0, [bool]$RequireAlreadyExited = $false) {
     if ($null -eq $Handle) { return $false }
     $p = $Handle.process
-    $graceful = $p.HasExited
-    if (-not $graceful) { $null = $p.CloseMainWindow(); $graceful = $p.WaitForExit(40000) }
+    $quit = @{ pid = $p.Id; port = $Port; alreadyExited = $p.HasExited; requiredScenarioClose = $RequireAlreadyExited }
+    # The close scenario must prove its own UI close, never be rescued by another quit.
+    if ($RequireAlreadyExited -and -not $p.HasExited) { $null = $p.WaitForExit(10000) }
+    if (-not $p.HasExited -and -not $RequireAlreadyExited) {
+        if ($Port -gt 0) {
+            $node = (Get-Command node -ErrorAction Stop).Source
+            $quit.request = Invoke-WACommand $node @("$PSScriptRoot\quit-app.mjs", "$Port") $Handle.environment "$Log-quit-request.log" 20
+            $null = $p.WaitForExit(20000)
+        }
+        if (-not $p.HasExited) {
+            $quit.windowCloseRequested = $p.CloseMainWindow()
+            $null = $p.WaitForExit(20000)
+        }
+    }
+    $graceful = $p.HasExited -and $p.ExitCode -eq 0
+    $quit.gracefulExit = $graceful
+    $quit.forcedOwnedTreeCleanup = -not $p.HasExited
+    if ($p.HasExited) { $quit.exitCode = $p.ExitCode }
     $null = Complete-WAProcess $Handle $Log 1
+    Write-WAJson $quit "$Log-quit.json"
     return $graceful
 }

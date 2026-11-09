@@ -1,3 +1,4 @@
+import { connectLegacy, closeLegacyClients, createNotebookSection } from "./legacy-cdp.mjs";
 // lockflow.mjs - real-exe test of "unsaved edits survive a lock or a window close".
 // Purpose: types text into a page or sticky note, locks / closes at once (inside the save delay), unlocks,
 //          and prints whether the typed text was saved ("page contains ...: true").
@@ -15,36 +16,8 @@ import assert from "node:assert/strict";
 const [port, phase, scenario = "page", pwFile] = process.argv.slice(2);
 const password = readFileSync(pwFile, "utf8").trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const sockets = new Set();
+const connect = match => connectLegacy(port, match);
 
-async function connect(match) {
-  for (let i = 0; i < 60; i++) {
-    try {
-      const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
-      for (const hit of t) {
-        const ws = new WebSocket(hit.webSocketDebuggerUrl);
-        sockets.add(ws);
-        ws.addEventListener('close', () => sockets.delete(ws), { once: true });
-        await new Promise((r) => (ws.onopen = r));
-        let id = 0;
-        const pend = new Map();
-        ws.onmessage = (m) => {
-          const d = JSON.parse(m.data);
-          if (d.id) { const resolve = pend.get(d.id); pend.delete(d.id); resolve?.(d); }
-        };
-        const send = (method, params = {}) => new Promise((res) => { const i = ++id; pend.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
-        const ev = (expression) => send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }).then((r) => r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description);
-        const inv = (cmd, args = {}) => ev(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(cmd)}, ${JSON.stringify(args)}).then(v => ({ok: v ?? null}), e => ({err: String(e)}))`);
-        await send("Runtime.enable");
-        const label = await ev("window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? ''");
-        if (match(label)) return { ws, send, ev, inv, label };
-        ws.close();
-      }
-    } catch {}
-    await sleep(500);
-  }
-  throw new Error("no matching window");
-}
 const isMain = (l) => l === "main";
 const isSticky = (l) => String(l).startsWith("sticky-");
 const TYPED = "FLUSHTEST-" + scenario;
@@ -59,11 +32,8 @@ if (phase === "setup") {
   console.log("turn security on:", JSON.stringify(await main.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: false })));
   // The PC may have been idle for more than the 5-minute auto-lock: raise it at once (throwaway vault only).
   { const s = (await main.inv("get_settings")).ok; console.log("idle lock raised:", s ? JSON.stringify((await main.inv("save_settings", { settings: { ...s, idleLockMinutes: 180 } })).ok?.idleLockMinutes) : "settings unavailable (already locked?)"); }
-  await main.ev("location.reload()");
-  await sleep(4000);
-  const nb = await main.inv("create_notebook", { name: "T", color: "#888888", icon: "N" });
-  assert.ok(nb.ok, 'create_notebook must succeed');
-  const sec = nb.ok.sections[0];
+  await main.reload();
+  const sec = await createNotebookSection(main);
   const pg = await main.inv("create_page", { sectionId: sec.id, title: "Flush page" });
   console.log("page:", pg.ok?.id ? "created" : JSON.stringify(pg));
   const st = await main.inv("create_sticky", { open: true });
@@ -72,11 +42,9 @@ if (phase === "setup") {
   console.log("windows:", (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page").map((x) => x.title).join(" | "));
 } else if (phase === "type") {
   // open the page in the UI so its editor is mounted
-  await main.ev("location.reload()");
-  await sleep(2500);
+  await main.reload();
   console.log("unlock:", JSON.stringify(await main.inv("unlock_vault", { password, keyfile: null })));
-  await main.ev("location.reload()");
-  await sleep(3000);
+  await main.reload();
   const opened = await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Flush page'); s?.click(); return !!s; })()`);
   assert.equal(opened, true, 'Flush page must be opened through the sidebar');
   console.log("open page:", opened);
@@ -114,13 +82,4 @@ if (phase === "setup") {
   console.log(`page contains "${TYPED}":`, inPage.includes(TYPED));
   console.log(`sticky contains "${TYPED}":`, inSticky.includes(TYPED));
 } else { throw Error('Unknown lockflow phase'); }
-} finally {
-  // Node 24 on Windows can abort in libuv when process.exit tears down live
-  // WebSockets. Finish their close handshakes and let the event loop drain.
-  await Promise.all([...sockets].map(ws => new Promise(resolve => {
-    if (ws.readyState === WebSocket.CLOSED) return resolve();
-    const timer = setTimeout(resolve, 2000);
-    ws.addEventListener('close', () => { clearTimeout(timer); resolve(); }, { once: true });
-    ws.close();
-  })));
-}
+} finally { await closeLegacyClients(); }

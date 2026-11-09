@@ -1,3 +1,4 @@
+import { connectLegacy, closeLegacyClients, createNotebookSection } from "./legacy-cdp.mjs";
 // restoreflow.mjs - real-exe test of "restore from backup" (restore_vault, list_backups).
 // Purpose: creates a vault in the running test app, makes two backups (ORIGINAL and CHANGED text),
 //          then checks restore while locked and unlocked, and the refusals (bad paths, wrong password).
@@ -12,29 +13,8 @@ const [port, pwFile] = process.argv.slice(2);
 const password = readFileSync(pwFile, "utf8").trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function connectMain() {
-  for (let i = 0; i < 60; i++) {
-    try {
-      const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
-      for (const hit of t) {
-        const ws = new WebSocket(hit.webSocketDebuggerUrl);
-        await new Promise((r) => (ws.onopen = r));
-        let id = 0;
-        const pend = new Map();
-        ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id) pend.get(d.id)?.(d); };
-        const send = (method, params = {}) => new Promise((res) => { const i = ++id; pend.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
-        const ev = (expression) => send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }).then((r) => r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description);
-        const inv = (cmd, args = {}) => ev(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(cmd)}, ${JSON.stringify(args)}).then(v => ({ok: v ?? null}), e => ({err: String(e)}))`);
-        await send("Runtime.enable");
-        const label = await ev("window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? ''");
-        if (label === "main") return { inv, ev };
-        ws.close();
-      }
-    } catch {}
-    await sleep(500);
-  }
-  throw new Error("no main window");
-}
+const connectMain = () => connectLegacy(port);
+try {
 const m = await connectMain();
 await sleep(1500);
 const doc = (t) => JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: t }] }] });
@@ -50,9 +30,9 @@ await m.inv("vault_status");
 console.log("turn security on:", JSON.stringify(await m.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: false })));
 // The PC may have been idle for more than the 5-minute auto-lock: raise it at once (throwaway vault only).
 { const s = (await m.inv("get_settings")).ok; console.log("idle lock raised:", s ? JSON.stringify((await m.inv("save_settings", { settings: { ...s, idleLockMinutes: 180 } })).ok?.idleLockMinutes) : "settings unavailable (already locked?)"); }
-await m.ev("location.reload()"); await sleep(4000);
-const nb = await m.inv("create_notebook", { name: "T", color: "#888888", icon: "N" });
-const pg = await m.inv("create_page", { sectionId: nb.ok.sections[0].id, title: "R1" });
+await m.reload();
+const section = await createNotebookSection(m);
+const pg = await m.inv("create_page", { sectionId: section.id, title: "R1" });
 await m.inv("save_page", { id: pg.ok.id, title: "R1", content: doc("ORIGINAL-TEXT"), text: "ORIGINAL-TEXT" });
 await m.inv("lock_vault"); await sleep(3500);            // backup A (ORIGINAL)
 console.log("unlock:", JSON.stringify(await m.inv("unlock_vault", { password, keyfile: null })));
@@ -92,4 +72,6 @@ await sleep(1500);
 check("second restored vault is open with the CHANGED text", (await pageText()) === "CHANGED-AFTER-BACKUP", await pageText());
 const st = (await m.inv("vault_status")).ok;
 check("vault is unlocked after restore", st?.unlocked === true);
-process.exit(0);
+
+
+} finally { await closeLegacyClients(); }

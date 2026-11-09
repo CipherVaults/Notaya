@@ -234,7 +234,8 @@ const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= 
   await shot('06-home-sunrise');
   await p.getByTestId('home-card').filter({ hasText: 'Trip notes' }).first().click();
   await p.waitForTimeout(700);
-  is('clicking a card opens that page', await title.inputValue(), 'Morning pages'); // the mock serves the sample page body for every id; the sidebar shows the real selection
+  await p.waitForFunction(() => document.querySelector('input[placeholder="Untitled"]')?.value === 'Trip notes');
+  is('clicking a card opens that page', await title.inputValue(), 'Trip notes');
   await home();
 
   // ----- Every look: the banner, the buttons and Home -----

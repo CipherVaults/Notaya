@@ -1,3 +1,4 @@
+import { connectLegacy, closeLegacyClients, createNotebookSection } from "./legacy-cdp.mjs";
 // optionalsecurity.mjs - real-exe test of "notes first, security optional" (amendment A21).
 // Purpose: one phase of the test. The runner (run-optionalsecurity.ps1) starts a COPY of Notaya.exe in
 //          a temp folder, runs this script once per phase, closes the app by its window close button between
@@ -20,29 +21,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
 const check = (name, ok, extra = "") => { results.push([name, ok]); console.log(`${ok ? "PASS" : "FAIL"}  ${phase} ${name} ${extra}`); };
 
-async function connectMain() {
-  for (let i = 0; i < 60; i++) {
-    try {
-      const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
-      for (const hit of t) {
-        const ws = new WebSocket(hit.webSocketDebuggerUrl);
-        await new Promise((r) => (ws.onopen = r));
-        let id = 0;
-        const pend = new Map();
-        ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id) pend.get(d.id)?.(d); };
-        const send = (method, params = {}) => new Promise((res) => { const i = ++id; pend.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
-        const ev = (expression) => send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }).then((r) => r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description);
-        const inv = (cmd, args = {}) => ev(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(cmd)}, ${JSON.stringify(args)}).then(v => ({ok: v ?? null}), e => ({err: String(e)}))`);
-        await send("Runtime.enable");
-        const label = await ev("window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? ''");
-        if (label === "main") return { inv, ev };
-        ws.close();
-      }
-    } catch {}
-    await sleep(500);
-  }
-  throw new Error("no main window");
-}
+const connectMain = () => connectLegacy(port);
 
 const doc = (t) => JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: t }] }] });
 const TEXT = "OPEN-MODE-NOTE-7731";
@@ -56,6 +35,7 @@ function isOpenFile(path) {
 }
 const rawHas = (path, needle) => readFileSync(path).includes(Buffer.from(needle));
 
+try {
 const m = await connectMain();
 await sleep(2500);
 const status = async () => (await m.inv("vault_status")).ok;
@@ -77,8 +57,8 @@ if (phase === "p1") {
   await sleep(1500);
   st = await status();
   check("Lock does nothing while security is off", st?.unlocked === true && !lockRes.err, JSON.stringify(lockRes));
-  const nb = await m.inv("create_notebook", { name: "T", color: "#888888", icon: "N" });
-  const pg = await m.inv("create_page", { sectionId: nb.ok.sections[0].id, title: "Open note" });
+  const section = await createNotebookSection(m);
+  const pg = await m.inv("create_page", { sectionId: section.id, title: "Open note" });
   await m.inv("save_page", { id: pg.ok.id, title: "Open note", content: doc(TEXT), text: TEXT });
   check("text saved", (await pageText()) === TEXT);
   const chg = await m.inv("change_master", { currentPassword: "x", currentKeyfile: null, newPassword: password, newKeyfile: null });
@@ -183,4 +163,6 @@ if (phase === "p5") {
 
 const failed = results.filter((r) => !r[1]);
 console.log(`${phase}: ${results.length - failed.length}/${results.length} passed` + (failed.length ? "; FAILED: " + failed.map((x) => x[0]).join("; ") : ""));
-process.exit(failed.length ? 1 : 0);
+process.exitCode = failed.length ? 1 : 0;
+
+} finally { await closeLegacyClients(); }

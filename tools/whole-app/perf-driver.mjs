@@ -7,7 +7,7 @@ const [port, mode, workload, countText, manifestPath, outputPath] = process.argv
 const count = Number(countText);
 assert.ok(Number.isInteger(count) && count >= 1 && count <= 50000);
 assert.ok(['blank', 'notes', 'long-page', 'database'].includes(workload));
-const client = await connect(port);
+let client;
 const result = { mode, workload, count, startedUtc: new Date().toISOString(), timingsMs: {}, limitations: [] };
 const token = 'WPERFTOKEN';
 const paragraph = text => ({ type: 'paragraph', content: [{ type: 'text', text }] });
@@ -16,8 +16,9 @@ const sha = text => crypto.createHash('sha256').update(text).digest('hex');
 async function timed(name, action) { const start = performance.now(); const value = await action(); result.timingsMs[name] = performance.now() - start; return value; }
 async function checkpoint(manifest) { fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2)); }
 try {
-  await waitFor(client, `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Home')`);
-  const status = await client.invoke('vault_status');
+  client = await connect(port);
+  await timed('readyHome', () => waitFor(client, `Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Home')`));
+  const status = await timed('vaultStatus', () => client.invoke('vault_status'));
   assert.equal(status.securityOn, false, 'performance fixture is explicitly security-off');
   assert.equal(status.unlocked, true);
   let manifest;
@@ -114,4 +115,10 @@ try {
   } else throw Error('Expected seed or probe');
   result.status = 'passed';
 } catch (error) { result.status = 'failed'; result.error = error.message; process.exitCode = 1; }
-finally { client.close(); result.finishedUtc = new Date().toISOString(); fs.writeFileSync(outputPath, JSON.stringify(result, null, 2)); }
+finally {
+  try { if (client) await client.close(); }
+  catch (error) { result.status = 'failed'; result.closeError = error.message; process.exitCode = 1; }
+  result.finishedUtc = new Date().toISOString();
+  result.totalMs = Date.parse(result.finishedUtc) - Date.parse(result.startedUtc);
+  fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+}

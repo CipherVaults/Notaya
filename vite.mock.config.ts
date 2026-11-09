@@ -18,5 +18,7 @@ export default defineConfig({
       "@": p("./src"),
     },
   },
-  server: { port: 1421, strictPort: true, host: "127.0.0.1" },
+  // The lane worktrees share installed packages in the parent. Allow only this
+  // checkout and that dependency directory, never the whole parent or fs.strict=false.
+  server: { port: 1421, strictPort: true, host: "127.0.0.1", fs: { allow: [p("."), p("../node_modules")] } },
 });

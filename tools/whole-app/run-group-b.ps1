@@ -49,7 +49,7 @@ try {
                 if ($r.status -ne 'passed') { $suite.status = $r.status; break }
                 $needsClose = $entry.file -ne 'lockflow.mjs' -or ($entry.scenario -eq 'close' -and $phase -eq 'type')
                 if ($needsClose) {
-                    $graceful = Close-WATestApp $app "$artifacts\$phase-app.log"; $app = $null
+                    $graceful = Close-WATestApp $app "$artifacts\$phase-app.log" $port ($entry.file -eq 'lockflow.mjs' -and $entry.scenario -eq 'close' -and $phase -eq 'type'); $app = $null
                     $closed = Wait-WAPortClosed $port
                     $suite.steps += @{ phase = "$phase-quit"; status = $(if ($graceful -and $closed) { 'passed' } else { 'failed' }); gracefulQuit = $graceful; portClosed = $closed }
                     if (-not ($graceful -and $closed)) { $suite.status = 'failed'; break }
@@ -57,7 +57,7 @@ try {
             }
             if ($suite.status -eq 'passed') {
                 if ($null -ne $app) {
-                    $graceful = Close-WATestApp $app "$artifacts\before-readback-app.log"; $app = $null
+                    $graceful = Close-WATestApp $app "$artifacts\before-readback-app.log" $port; $app = $null
                     if (-not $graceful) { throw 'App needed forced cleanup before persistence readback' }
                 }
                 if (-not (Wait-WAPortClosed $port)) { throw 'Debug port still listening before readback' }
@@ -71,7 +71,7 @@ try {
             }
         } catch { $suite.status = 'failed'; $suite.reason = $_.Exception.Message }
         finally {
-            $graceful = Close-WATestApp $app "$artifacts\final-app.log"; $app = $null
+            $graceful = Close-WATestApp $app "$artifacts\final-app.log" $port; $app = $null
             $closed = Wait-WAPortClosed $port
             $suite.cleanup = @{ portClosed = $closed; gracefulQuit = $graceful }
             $report.cleanup["$($entry.name)-port-closed"] = $closed
@@ -115,7 +115,7 @@ try {
             $r = Invoke-WACommand $node $arguments $envs "$artifacts\$phase.log" $ScriptTimeoutSeconds
             $r.phase = $phase; $suite.steps += $r
             if ($r.status -ne 'passed') { $suite.status = $r.status; break }
-            $graceful = Close-WATestApp $app "$artifacts\$phase-app.log"; $app = $null
+            $graceful = Close-WATestApp $app "$artifacts\$phase-app.log" $port ($entry.file -eq 'lockflow.mjs' -and $entry.scenario -eq 'close' -and $phase -eq 'type'); $app = $null
             if (-not $graceful -or -not (Wait-WAPortClosed $port)) { throw 'Path-mode test failed normal quit/port closure' }
             if (-not (Test-Path -LiteralPath "$data\vault.nota")) { throw 'Expected disposable vault was not written' }
             if (-not $isPortable -and (Test-Path -LiteralPath "$program\data")) { throw 'Installed exe incorrectly wrote beside itself' }
@@ -123,7 +123,7 @@ try {
         }
     } catch { $suite.status = 'failed'; $suite.reason = $_.Exception.Message }
     finally {
-        if ($null -ne $app) { $null = Close-WATestApp $app "$artifacts\final-app.log"; $app = $null }
+        if ($null -ne $app) { $null = Close-WATestApp $app "$artifacts\final-app.log" $port; $app = $null }
         $report.cleanup.installedPathsPortClosed = Wait-WAPortClosed $port
         if (-not $report.cleanup.installedPathsPortClosed) { $suite.status = 'failed' }
         $watch.Stop(); $suite.durationSeconds = $watch.Elapsed.TotalSeconds
@@ -133,7 +133,7 @@ try {
     Write-Output "CHECKPOINT: installed and portable path assertions $($suite.status) done"
 } catch { $report.fatalError = $_.Exception.Message }
 finally {
-    Stop-WAProcess $app
+    if ($null -ne $app) { $null = Close-WATestApp $app "$($run.output)\final-app.log" $port; $app = $null }
     [Environment]::SetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', $null, 'Process')
     $report.cleanup.webviewEnvironmentCleared = -not [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
     if ($null -ne $port) { $report.cleanup.finalPortClosed = Wait-WAPortClosed $port }

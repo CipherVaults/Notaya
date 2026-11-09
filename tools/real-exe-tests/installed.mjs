@@ -1,3 +1,4 @@
+import { connectLegacy, closeLegacyClients, createNotebookSection } from "./legacy-cdp.mjs";
 // installed.mjs - real-exe test of where Notaya keeps its notes (installed vs portable).
 // Purpose: checks the first screen of an INSTALLED copy (no portable.txt, no data folder), that the
 //          notes go to <LOCALAPPDATA>\Notaya Notes\data, that a second start opens them by itself, and
@@ -10,30 +11,9 @@
 const [port, phase, expectedDir] = process.argv.slice(2);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function connectMain() {
-  for (let i = 0; i < 60; i++) {
-    try {
-      const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
-      for (const hit of t) {
-        const ws = new WebSocket(hit.webSocketDebuggerUrl);
-        await new Promise((r) => (ws.onopen = r));
-        let id = 0;
-        const pend = new Map();
-        ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id) pend.get(d.id)?.(d); };
-        const send = (method, params = {}) => new Promise((res) => { const i = ++id; pend.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
-        const ev = (expression) => send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }).then((r) => r.result?.result?.value ?? r.result?.exceptionDetails?.exception?.description);
-        const inv = (cmd, args = {}) => ev(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(cmd)}, ${JSON.stringify(args)}).then(v => ({ok: v ?? null}), e => ({err: String(e)}))`);
-        await send("Runtime.enable");
-        const label = await ev("window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label ?? ''");
-        if (label === "main") return { inv, ev };
-        ws.close();
-      }
-    } catch {}
-    await sleep(500);
-  }
-  throw new Error("no main window");
-}
+const connectMain = () => connectLegacy(port);
 const check = (name, ok, extra = "") => console.log(`${ok ? "PASS" : "FAIL"}  ${name} ${extra}`);
+try {
 const m = await connectMain();
 await sleep(1500);
 const sameDir = (a, b) => typeof a === "string" && a.replace(/\\\\\?\\/, "").toLowerCase() === b.toLowerCase();
@@ -66,4 +46,6 @@ if (phase === "first") {
 } else {
   throw new Error("phase must be first, second or portable");
 }
-process.exit(0); // the open DevTools socket would keep node (and run-installed.ps1) waiting for ever
+
+
+} finally { await closeLegacyClients(); }

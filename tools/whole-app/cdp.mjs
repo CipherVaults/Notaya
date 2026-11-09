@@ -2,7 +2,8 @@
 // No browser process is spawned here. All RPCs and target discovery are bounded.
 import assert from 'node:assert/strict';
 export const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-export async function connect(port) {
+export const isNavigationError = error => /context (was destroyed|not found)|Cannot find context|Inspected target navigated|Cannot find default execution context/i.test(error.message);
+export async function connect(port, match = label => label === 'main') {
   assert.match(String(port), /^\d+$/);
   const origin = `http://127.0.0.1:${port}`;
   for (let attempt = 0; attempt < 100; attempt++) {
@@ -34,18 +35,34 @@ export async function connect(port) {
         const key = ++id;
         const timer = setTimeout(() => { pending.delete(key); reject(Error(`CDP timeout: ${method}`)); }, 30000);
         pending.set(key, { resolve, reject, timer });
-        socket.send(JSON.stringify({ id: key, method, params }));
+        try { socket.send(JSON.stringify({ id: key, method, params })); }
+        catch (error) { pending.delete(key); clearTimeout(timer); reject(error); }
       });
       const evaluate = async expression => {
         const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
         if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
-        return r.result?.value;
+        if (!r.result || r.result.subtype === 'error') throw Error('CDP evaluation returned no usable result');
+        return r.result.value;
       };
       try {
         const label = await evaluate('window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label');
-        if (label !== 'main') { socket.close(); continue; }
-        return { send, evaluate, close: () => socket.close(),
+        if (!match(label)) { socket.close(); continue; }
+        const client = { send, evaluate, label,
+          close: () => new Promise((resolve, reject) => {
+            if (socket.readyState === WebSocket.CLOSED) return resolve();
+            const timer = setTimeout(() => reject(Error('CDP socket did not close within 3 seconds')), 3000);
+            socket.addEventListener('close', () => { clearTimeout(timer); resolve(); }, { once: true });
+            socket.close();
+          }),
           invoke: (command, args = {}) => evaluate(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)},${JSON.stringify(args)})`) };
+        client.ready = () => waitFor(client, `document.readyState === 'complete' && typeof window.__TAURI_INTERNALS__?.invoke === 'function'`);
+        client.reload = async () => {
+          const before = await evaluate('performance.timeOrigin');
+          await send('Page.reload');
+          await waitFor(client, `performance.timeOrigin !== ${before} && document.readyState === 'complete' && typeof window.__TAURI_INTERNALS__?.invoke === 'function'`);
+        };
+        await client.ready();
+        return client;
       } catch { socket.close(); }
     }
     await sleep(250);
@@ -54,6 +71,10 @@ export async function connect(port) {
 }
 export async function waitFor(client, expression, timeout = 30000) {
   const start = performance.now();
-  do { if (await client.evaluate(expression)) return performance.now() - start; await sleep(50); } while (performance.now() - start < timeout);
+  do {
+    try { if (await client.evaluate(expression)) return performance.now() - start; }
+    catch (error) { if (!isNavigationError(error)) throw error; }
+    await sleep(50);
+  } while (performance.now() - start < timeout);
   throw Error(`WebView condition not met: ${expression}`);
 }

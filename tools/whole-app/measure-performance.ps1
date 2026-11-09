@@ -15,6 +15,7 @@ $report.limitations = @('Security-off fixtures only; no cold OS cache claim, pro
 $node = $null
 $envs = Get-WAEnvironment $run
 $app = $null; $port = $null
+$stopFurtherWork = $false
 
 function Get-WAMemory([int]$RootPid) {
     $processes = @(Get-CimInstance Win32_Process)
@@ -102,7 +103,7 @@ try {
             if ($r.status -ne 'passed') { throw 'Fixture seed failed or timed out; inspect seed.log/seed.json' }
             $record.seedMemory = Get-WAMemory $app.process.Id
             $report.memorySamples += $record.seedMemory
-            $graceful = Close-WATestApp $app "$artifacts\seed-app.log"; $app = $null
+            $graceful = Close-WATestApp $app "$artifacts\seed-app.log" $port; $app = $null
             if (-not $graceful -or -not (Wait-WAPortClosed $port)) { throw 'Seed app did not quit cleanly' }
             for ($sample = 1; $sample -le $Samples; $sample++) {
                 $start = Start-WAPerfApp $copy $fixtureHome; $app = $start.handle
@@ -115,24 +116,50 @@ try {
                 Start-Sleep -Seconds 2
                 $entry.idleMemory = Get-WAMemory $app.process.Id
                 $report.memorySamples += $entry.idleMemory
-                $graceful = Close-WATestApp $app "$artifacts\sample-$sample-app.log"; $app = $null
+                $graceful = Close-WATestApp $app "$artifacts\sample-$sample-app.log" $port; $app = $null
                 if (-not $graceful -or -not (Wait-WAPortClosed $port)) { throw 'Sample app did not quit cleanly' }
                 Write-WAJson $report "$($run.output)\in-progress.json"
                 Write-Output "CHECKPOINT: performance $name sample $sample done"
             }
+            $record.status = 'measured'
+        } catch {
+            $record.status = 'failed'; $record.reason = $_.Exception.Message
+            if ($record.reason -like '*exceeds 6 GiB*') { $stopFurtherWork = $true }
+        }
+        finally {
+            if ($null -ne $app) {
+                $record.finalGracefulQuit = Close-WATestApp $app "$artifacts\final-app.log" $port
+                $app = $null
+                if (-not $record.finalGracefulQuit) { $record.status = 'failed' }
+            }
+            $closed = Wait-WAPortClosed $port; $report.cleanup["$name-port-closed"] = $closed
+            # Keep every reached phase and its timings even when seeding, a probe,
+            # or quit fails. Only validated driver observations enter summaries.
             $record.firstWindowSummaryMs = Get-WASummary @($record.samples | ForEach-Object { $_.firstWindowMs })
             $record.driverTimingSummaryMs = @{}
-            $observations = @($record.samples | ForEach-Object { Get-Content -Raw -LiteralPath "$artifacts\sample-$($_.number).json" | ConvertFrom-Json })
-            foreach ($metric in $observations[0].timingsMs.PSObject.Properties.Name) {
-                $record.driverTimingSummaryMs[$metric] = Get-WASummary @($observations | ForEach-Object { $_.timingsMs.$metric })
+            $observations = @()
+            foreach ($sampleEntry in $record.samples) {
+                $samplePath = "$artifacts\sample-$($sampleEntry.number).json"
+                if (Test-Path -LiteralPath $samplePath) {
+                    $sampleEntry.observation = Get-Content -Raw -LiteralPath $samplePath | ConvertFrom-Json
+                    if ($sampleEntry.driver.status -eq 'passed' -and $sampleEntry.observation.status -eq 'passed') { $observations += $sampleEntry.observation }
+                }
             }
+            if ($observations.Count) {
+                $metrics = @($observations | ForEach-Object { $_.timingsMs.PSObject.Properties.Name } | Sort-Object -Unique)
+                foreach ($metric in $metrics) {
+                    $values = @($observations | ForEach-Object { if ($_.timingsMs.PSObject.Properties[$metric]) { $_.timingsMs.$metric } })
+                    $record.driverTimingSummaryMs[$metric] = Get-WASummary $values
+                }
+            }
+            $record.validatedProbeCount = $observations.Count
+            if (Test-Path -LiteralPath "$artifacts\seed.json") { $record.seedObservation = Get-Content -Raw -LiteralPath "$artifacts\seed.json" | ConvertFrom-Json }
             $record.dataBytes = (Get-ChildItem -LiteralPath "$fixtureHome\data" -Recurse -File | Measure-Object Length -Sum).Sum
-            $record.status = 'measured'
-        } catch { $record.status = 'failed'; $record.reason = $_.Exception.Message; throw }
-        finally {
-            Stop-WAProcess $app; $app = $null
-            $closed = Wait-WAPortClosed $port; $report.cleanup["$name-port-closed"] = $closed
+            Write-WAJson $report "$($run.output)\in-progress.json"
+            Write-Output "CHECKPOINT: performance $name $($record.status), partial timings and cleanup done"
         }
+        if (-not $closed) { throw 'FI-01 cleanup failed; no further app launches' }
+        if ($stopFurtherWork) { throw 'Memory stop: larger workloads not run; partial evidence preserved' }
     }
     if ($report.memorySamples.Count) {
         $report.sampledPeakWorkingSetBytes = ($report.memorySamples | ForEach-Object { $_.workingSet } | Measure-Object -Maximum).Maximum
@@ -140,11 +167,15 @@ try {
     }
 } catch { $report.fatalError = $_.Exception.Message }
 finally {
-    Stop-WAProcess $app
+    if ($null -ne $app) { $null = Close-WATestApp $app "$($run.output)\final-app.log" $port; $app = $null }
+    if ($report.memorySamples.Count) {
+        $report.sampledPeakWorkingSetBytes = ($report.memorySamples | ForEach-Object { $_.workingSet } | Measure-Object -Maximum).Maximum
+        $report.sampledPeakPrivateBytes = ($report.memorySamples | ForEach-Object { $_.privateBytes } | Measure-Object -Maximum).Maximum
+    }
     [Environment]::SetEnvironmentVariable('WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS', $null, 'Process')
     $report.cleanup.webviewEnvironmentCleared = -not [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
     if ($null -ne $port) { $report.cleanup.finalPortClosed = Wait-WAPortClosed $port }
     Save-WAReport $report $run 'perf-results.json'
 }
 Write-Output "CHECKPOINT: performance JSON and cleanup report done: $script:WAOut\perf-results.json"
-if ($report.fatalError -or @($report.cleanup.Values | Where-Object { $_ -eq $false }).Count) { exit 1 }
+if ($report.fatalError -or @($report.workloads | Where-Object { $_.status -eq 'failed' }).Count -or @($report.cleanup.Values | Where-Object { $_ -eq $false }).Count) { exit 1 }
