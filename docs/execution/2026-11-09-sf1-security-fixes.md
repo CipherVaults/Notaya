@@ -4,7 +4,7 @@ Partner side: Ahmed Emara (`AE0101`). Machine: Gaming-PC, Codex sandbox.
 Baseline: `a649a3cd70f4eb2d4e2d1b8fdeff0da2c7a9a65c`, branch `AE0101/v1-6-sf1`.
 Authority: Ahmed's current S-FIX1 message in this session; its timestamp was not supplied. First system-clock observation: 2026-11-09 08:12:01 UTC.
 Scope: S1-M1 and S1-M2 only, in the exact code/test/docs write area in that message. Return: local diff, regression/check evidence, and this hand-back. Stop: hand back to Claude for independent review, commits and pushes. No integration or acceptance is claimed.
-Result state: produced; final verification is being recorded below. No git mutation, network, install, new dependency, browser or Notaya app launch.
+Result state: produced; final verification is being recorded below. Codex issued no git mutation, network, install, new dependency, browser or Notaya app launch. During the run Claude's heartbeat independently created automatic checkpoint `0e234bd3dfe1e56adf47dbe4ef8007d3da8501cb` at 2026-11-09 08:21:55 UTC. The seven code/test files exactly match that commit; subsequent local edits are records only.
 
 ## 1. What changed and why
 
@@ -54,7 +54,7 @@ Five destination tests in `commands::database_io::save_destination_tests`:
 - `every_attachment_extension_refuses_a_vault_destination_before_writing`.
 - `named_extension_rules_and_existing_longer_files_are_unchanged`.
 
-These cover empty/named extensions, existing byte markers, absent forbidden targets, external overwrites, uppercase/lowercase vault extensions, extension preservation and refusal to replace an existing extended filename. Junction coverage: pending final evidence. If OS link creation is unavailable, the test explicitly reports the limit and exercises the resolved data path instead.
+These cover empty/named extensions, existing byte markers, absent forbidden targets, external overwrites, uppercase/lowercase vault extensions, extension preservation and refusal to replace an existing extended filename. Focused final destination run: **5 passed, 0 failed, 0 ignored, 721 filtered out**, exit 0, 0.04 s. Junction creation failed with exit 1 and `The file or directory is corrupted and unreadable.` The test therefore exercised the resolved data path, not a live junction; actual junction containment remains unverified here. Evidence: `D:\Notaya-lanes\out\sf1-destinations-final.txt`. If OS link creation is unavailable, the test explicitly reports the limit and exercises the resolved data path instead.
 
 Three new tests in `logging::tests`:
 
@@ -64,17 +64,17 @@ Three new tests in `logging::tests`:
 
 Updated `logging::sanitize::tests::sources_accept_only_bounded_script_basenames` and `kinds_deserialize_to_a_closed_class` cover invalid characters, path/query/prose/control/Unicode rejection and unknown/huge classes. Existing hostile-input, panic, rotation and limiter tests remain applicable.
 
-The first full Rust attempt exposed a test-only mistake: checking that `<chosen>.` did not exist on Windows, which aliases that name to `<chosen>`. The invalid assertion was removed; the production return-path equality and saved bytes already verify the intended unchanged filename. Initial evidence is retained in `D:\Notaya-lanes\out\sf1-cargo-test-20261109T0817Z.txt`; it is not the final result.
+The first full Rust attempt exposed a test-only mistake: checking that `<chosen>.` did not exist on Windows, which aliases that name to `<chosen>`. The invalid assertion was removed; the production return-path equality and saved bytes already verify the intended unchanged filename. That attempt ended with 719 passed, 2 failed (the invalid assertion and expected registry denial), 5 ignored, exit 101, 182.97 s. Initial evidence is retained in `D:\Notaya-lanes\out\sf1-cargo-test-20261109T0817Z.txt`; it is not the final result.
 
 ## 4. Checks and how to verify
 
-All checks are by Codex on Gaming-PC, on this uncommitted source over the baseline above; no committed fix hash exists yet. Final source patch identity: pending.
+All checks are by Codex on Gaming-PC. The final source is the seven code/test files in automatic checkpoint `0e234bd3dfe1e56adf47dbe4ef8007d3da8501cb`, independently committed by Claude's heartbeat during this run; records were then completed locally. Initial checks preceded that checkpoint on identical code/test bytes. Final source diff: `D:\Notaya-lanes\out\sf1-source-final.patch`, SHA-256 `4205bd1f717f3d499c1799957547c7b15962a08ec1040fdbf08f128f77cfeca1` (code/tests only, relative to the baseline).
 
 | Check | Exact result |
 |---|---|
 | `cargo test --lib --offline` (from `src-tauri`) | Pending final rerun |
 | `npx tsc --noEmit -p tsconfig.json` | Exit 0 |
-| `npm run build -- --configLoader native` | Exit 0; Vite 8.3.5, 4,413 modules transformed, built in 2.11 s; warning `INEFFECTIVE_DYNAMIC_IMPORT` for `DatabaseView.tsx` imported both statically/dynamically |
+| `npm run build -- --configLoader native` | Exit 0; Vite 8.3.5, 4,413 modules transformed, final rerun built in 3.18 s; warning `INEFFECTIVE_DYNAMIC_IMPORT` for `DatabaseView.tsx` imported both statically/dynamically |
 | `git diff --check` | Pending final record check |
 | `npm audit` | Not run, expressly skipped |
 | `cargo clippy`, `cargo audit` | Not run, outside the requested offline check set |
@@ -83,9 +83,11 @@ Offline npm mode was set, so `npx` could not fetch a missing tool. Existing inst
 
 To recheck: use those environment values, run the exact four requested commands on Claude's eventual commit, and optionally filter Rust to `save_destination_tests` / `renderer_` / `logging::sanitize::tests`. Use `-- --nocapture` for the link test to see whether an actual junction was available. Retain the existing named-pipe ignored tests and registry failure as limits; do not disable OS protections to make them pass.
 
+A final full-suite attempt on the checkpoint initially failed to link (`LNK1104`, exit 101): another lane was executing the shared `_target\debug\deps\notaya_lib-fdc0922c1a322b2f.exe` (observed start 08:22:28 UTC). No process was interrupted and no shared artifact was deleted. That compile-failure evidence is preserved in `D:\Notaya-lanes\out\sf1-cargo-test-final.txt`; the retry result is recorded separately.
+
 ## 5. Verification limits and next action
 
-No native picker, live IPC invocation, Notaya exe, browser, UI pixels, installer or human acceptance was run/claimed, per the brief. Logging tests cover the IPC payload deserializer, adapter, formatter and production file sink; they do not start a window. Locked availability is preserved structurally by the command continuing to require no `AppState`/session; live locked IPC was not run. No race-proof redesign of the existing resolve-then-write guard was attempted.
+No native picker, live IPC invocation, Notaya exe, browser, UI pixels, installer or human acceptance was run/claimed, per the brief. Logging tests cover the IPC payload deserializer, adapter, formatter and production file sink; they do not start a window. Locked availability is preserved structurally by the command continuing to require no `AppState`/session; live locked IPC was not run.
 
 Independent review and Claude's Security Guidance `/security-review` have not been run by this writing session. Claude owns that review, the full session/ledger/authority records and every commit/push. Its next action is to inspect this local diff and evidence, run its independent security review and repeat required checks on the eventual exact commit. No PR, integration or acceptance is claimed.
 
@@ -108,4 +110,4 @@ None. Build/test outputs are ignored or outside the repository, under the permit
 
 ## 8. ADDITION FOR AHMED
 
-None. No visible feature, restyle, dialog, button, screen wording or other UI behaviour was added or changed.
+None. No visible feature, restyle, dialog, button or screen wording was edited. The requested destination fix necessarily refuses the previously permitted extensionless data-folder writes, and extensionless vault refusals now use the existing named-extension guard text rather than `Choose another file name.` (as explicitly requested). Diagnostic log entries use the requested fixed Rust text. Those are the only observable changes.
