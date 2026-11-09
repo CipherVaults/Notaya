@@ -4,7 +4,7 @@ Partner side: Ahmed Emara (`AE0101`). Machine: Gaming-PC, Codex sandbox.
 Baseline: `a649a3cd70f4eb2d4e2d1b8fdeff0da2c7a9a65c`, branch `AE0101/v1-6-sf1`.
 Authority: Ahmed's current S-FIX1 message in this session; its timestamp was not supplied. First system-clock observation: 2026-11-09 08:12:01 UTC.
 Scope: S1-M1 and S1-M2 only, in the exact code/test/docs write area in that message. Return: local diff, regression/check evidence, and this hand-back. Stop: hand back to Claude for independent review, commits and pushes. No integration or acceptance is claimed.
-Result state: produced; final verification is being recorded below. Codex issued no git mutation, network, install, new dependency, browser or Notaya app launch. During the run Claude's heartbeat independently created automatic checkpoint `0e234bd3dfe1e56adf47dbe4ef8007d3da8501cb` at 2026-11-09 08:21:55 UTC. The seven code/test files exactly match that commit; subsequent local edits are records only.
+Result state: produced, with the scoped regressions verified and the full-suite failure explicitly retained below; not integrated or accepted. Codex issued no git mutation, network, install, new dependency, browser or Notaya app launch. Claude's heartbeat independently created automatic checkpoints `0e234bd3dfe1e56adf47dbe4ef8007d3da8501cb` at 2026-11-09 08:21:55 UTC and `734d914c58b076d1c116a4476ecc301251925106` at 08:28:05 UTC (records only). Verification resumed on Gaming-PC at 12:42:00 UTC (system clock), with a clean worktree at `734d914`. All seven code/test files still exactly match `0e234bd` (`git diff --exit-code 0e234bd -- <code files>` exit 0); this continuation needed only record/claim edits. The original lane baseline and authority above remain unchanged. Fetch/open-PR checks were not run because this brief prohibits network access.
 
 ## 1. What changed and why
 
@@ -44,7 +44,7 @@ No screen, dialog, button, displayed wording or layout was changed. Only the two
 
 ## 3. Regression tests and exact results
 
-Final Rust result: pending.
+Final Rust result, run by Codex on Gaming-PC on the code in `734d914` (identical to `0e234bd`): **720 passed, 1 failed, 5 ignored, 0 measured, 0 filtered out**, exit **101**, 162.55 s. The only failure is `shell::tests::the_registry_value_can_be_written_read_and_removed`: `Windows refused to open the start-up list (code 5).` This is the expected sandbox registry denial, not a passing full suite. All eight added tests and both updated sanitizer regressions below passed. Six compiler warnings remain (unused variable `id`, unused `claim_core`, `release_core`, `title_prop`, `CALCS`, `with_deadline`); no warning cleanup was made.
 
 Five destination tests in `commands::database_io::save_destination_tests`:
 
@@ -56,6 +56,8 @@ Five destination tests in `commands::database_io::save_destination_tests`:
 
 These cover empty/named extensions, existing byte markers, absent forbidden targets, external overwrites, uppercase/lowercase vault extensions, extension preservation and refusal to replace an existing extended filename. Focused final destination run: **5 passed, 0 failed, 0 ignored, 721 filtered out**, exit 0, 0.04 s. Junction creation failed with exit 1 and `The file or directory is corrupted and unreadable.` The test therefore exercised the resolved data path, not a live junction; actual junction containment remains unverified here. Evidence: `D:\Notaya-lanes\out\sf1-destinations-final.txt`. If OS link creation is unavailable, the test explicitly reports the limit and exercises the resolved data path instead.
 
+The 12:43 UTC full-suite verification passed all five destination tests again. A focused junction rerun with `-- --nocapture` also finished **1 passed, 0 failed, 0 ignored, 725 filtered out**, exit 0, 0.04 s, and confirmed the same junction-creation failure and resolved-path fallback. Evidence: `D:\Notaya-lanes\out\sf1-link-verify-20261109T1247Z.txt` (attempt label; actual full-suite times are below).
+
 Three new tests in `logging::tests`:
 
 - `renderer_messages_and_invalid_sources_never_reach_log_bytes`: generated random marker as a note title/body, plain text, quotes, Windows/Unix paths, token-like strings and a URL query, in message/source/class fields; deserialize the IPC shape, run production adapter/formatter and write real log bytes; no marker remains.
@@ -64,26 +66,32 @@ Three new tests in `logging::tests`:
 
 Updated `logging::sanitize::tests::sources_accept_only_bounded_script_basenames` and `kinds_deserialize_to_a_closed_class` cover invalid characters, path/query/prose/control/Unicode rejection and unknown/huge classes. Existing hostile-input, panic, rotation and limiter tests remain applicable.
 
+All three named renderer tests and both named sanitizer regressions passed in the final full-suite run. Existing logging/store tests passed too; rotation and limiter implementation was not changed.
+
 The first full Rust attempt exposed a test-only mistake: checking that `<chosen>.` did not exist on Windows, which aliases that name to `<chosen>`. The invalid assertion was removed; the production return-path equality and saved bytes already verify the intended unchanged filename. That attempt ended with 719 passed, 2 failed (the invalid assertion and expected registry denial), 5 ignored, exit 101, 182.97 s. Initial evidence is retained in `D:\Notaya-lanes\out\sf1-cargo-test-20261109T0817Z.txt`; it is not the final result.
 
 ## 4. Checks and how to verify
 
-All checks are by Codex on Gaming-PC. The final source is the seven code/test files in automatic checkpoint `0e234bd3dfe1e56adf47dbe4ef8007d3da8501cb`, independently committed by Claude's heartbeat during this run; records were then completed locally. Initial checks preceded that checkpoint on identical code/test bytes. Final source diff: `D:\Notaya-lanes\out\sf1-source-final.patch`, SHA-256 `4205bd1f717f3d499c1799957547c7b15962a08ec1040fdbf08f128f77cfeca1` (code/tests only, relative to the baseline).
+All checks are by Codex on Gaming-PC. Final verification ran on HEAD `734d914c58b076d1c116a4476ecc301251925106`, whose seven code/test files exactly match automatic checkpoint `0e234bd3dfe1e56adf47dbe4ef8007d3da8501cb`; records were then completed locally. Initial checks preceded those checkpoints on identical code/test bytes. Final source diff: `D:\Notaya-lanes\out\sf1-source-final.patch`, SHA-256 `4205bd1f717f3d499c1799957547c7b15962a08ec1040fdbf08f128f77cfeca1` (code/tests only, relative to the baseline; hash rechecked during this continuation).
 
 | Check | Exact result |
 |---|---|
-| `cargo test --lib --offline` (from `src-tauri`) | Pending final rerun |
+| `cargo test --lib --offline` (from `src-tauri`) | Exit 101; 720 passed, 1 failed (expected registry code-5 denial above), 5 ignored; 162.55 s |
 | `npx tsc --noEmit -p tsconfig.json` | Exit 0 |
-| `npm run build -- --configLoader native` | Exit 0; Vite 8.3.5, 4,413 modules transformed, final rerun built in 3.18 s; warning `INEFFECTIVE_DYNAMIC_IMPORT` for `DatabaseView.tsx` imported both statically/dynamically |
-| `git diff --check` | Pending final record check |
+| `npm run build -- --configLoader native` | Exit 0; Vite 8.3.5, 4,413 modules transformed, final rerun built in 15.37 s; warning `INEFFECTIVE_DYNAMIC_IMPORT` for `DatabaseView.tsx` imported both statically/dynamically |
+| `git diff --check` | Exit 0; whole-lane `git diff a649a3c --check` also exit 0 |
 | `npm audit` | Not run, expressly skipped |
 | `cargo clippy`, `cargo audit` | Not run, outside the requested offline check set |
 
 Offline npm mode was set, so `npx` could not fetch a missing tool. Existing installed dependencies were used. Rust has `CARGO_NET_OFFLINE=true` and `CARGO_TARGET_DIR=D:\Notaya-lanes\_target`. For Rust checks, `TEMP`, `TMP`, `NOTAYA_HOME` and `CIPHERLEAF_HOME` were all process-locally set to `D:\Notaya Tests\v1-6-SF1`. Generated throwaway data and failed-attempt evidence are preserved; no real notes/vaults were opened.
 
+Final full-suite command started at **2026-11-09 12:43:13.084 UTC** and returned at **12:46:05.447 UTC** (system-clock receipts). Its output is preserved at `D:\Notaya-lanes\out\sf1-cargo-verify-20261109T1247Z.txt`; the `1247Z` in these filenames is an attempt label, not a measured start time. Frontend evidence: `sf1-tsc-verify-20261109T1247Z.txt` (empty output, exit 0) and `sf1-build-verify-20261109T1247Z.txt`, in that same output folder. No source changed after these checks.
+
 To recheck: use those environment values, run the exact four requested commands on Claude's eventual commit, and optionally filter Rust to `save_destination_tests` / `renderer_` / `logging::sanitize::tests`. Use `-- --nocapture` for the link test to see whether an actual junction was available. Retain the existing named-pipe ignored tests and registry failure as limits; do not disable OS protections to make them pass.
 
 A final full-suite attempt on the checkpoint initially failed to link (`LNK1104`, exit 101): another lane was executing the shared `_target\debug\deps\notaya_lib-fdc0922c1a322b2f.exe` (observed start 08:22:28 UTC). No process was interrupted and no shared artifact was deleted. That compile-failure evidence is preserved in `D:\Notaya-lanes\out\sf1-cargo-test-final.txt`; the retry result is recorded separately.
+
+The earlier `sf1-cargo-test-final-retry.txt` ends without a suite result; no completion is inferred from it. The complete 12:43 UTC verification above supplies the final result. Earlier evidence files were kept unchanged.
 
 ## 5. Verification limits and next action
 
