@@ -1,6 +1,6 @@
 # Whole-app test results - lane W, phase 2
 
-Produced for Ahmed Emara (AE0101), Gaming-PC; Claude executes and owns commits/records. Phase-2b triage baseline: 8437fbe; first real-exe reports declare build 5077183. Runtime evidence applies only to the source and binary identities inside each imported report. No owner acceptance is implied.
+Produced for Ahmed Emara (AE0101), Gaming-PC; Claude executes and owns commits/records. Initial harness baseline: 8437fbe; phase-2c triage baseline: 3b28de5 (automatic checkpoint after 19683f6). Real-exe reports declare build 5077183. Runtime evidence applies only to the source and binary identities inside each imported report. No owner acceptance is implied.
 
 6 immutable JSON observation(s) imported. See provenance and machine state below.
 
@@ -296,76 +296,76 @@ Run 20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e, group A; source 8437fb
 
 | Suite / workload | Status | Evidence / remaining reason |
 |---|---|---|
-| views server | not run | Child exited before its loopback endpoint was ready |
-| dev-mock/automations-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\automations-ui-check\suite.log |
-| dev-mock/block-ids-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\block-ids-check\suite.log |
-| dev-mock/block-ids-waits-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\block-ids-waits-check\suite.log |
-| dev-mock/c2-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c2-check\suite.log |
-| dev-mock/c2-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c2-ui-check\suite.log |
-| dev-mock/c3-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c3-check\suite.log |
-| dev-mock/c3-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c3-ui-check\suite.log |
-| dev-mock/calc-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\calc-check\suite.log |
-| dev-mock/calc-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\calc-ui-check\suite.log |
-| dev-mock/database-fixes-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-fixes-ui-check\suite.log |
-| dev-mock/database-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-ui-check\suite.log |
-| dev-mock/database-views-check.cjs | not run | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-views-check\suite.log |
-| dev-mock/database-mock-check.mts | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-mock-check\suite.log |
-| dev-mock/equation-identity-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\equation-identity-check\suite.log |
-| dev-mock/icons-covers-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\icons-covers-ui-check\suite.log |
-| dev-mock/lane-a-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\lane-a-check\suite.log |
-| dev-mock/lane-a-contrast-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\lane-a-contrast-check\suite.log |
-| dev-mock/lane-a-shots.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\lane-a-shots\suite.log |
-| dev-mock/mermaid-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\mermaid-ui-check\suite.log |
-| dev-mock/page-look-layers-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\page-look-layers-check\suite.log |
-| dev-mock/ribbon-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\ribbon-ui-check\suite.log |
-| dev-mock/rtl-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rtl-ui-check\suite.log |
-| dev-mock/template-keys-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\template-keys-check\suite.log |
-| dev-mock/ai-mock-check.mjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\ai-mock-check\suite.log |
-| dev-mock/ai-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\ai-ui-check\suite.log |
-| dev-mock/block-ids-waits.cjs | not run | Helper, executed through its consumers; not a standalone suite. |
-| dev-mock/lane-a-wait.cjs | not run | Helper, executed through its consumers; not a standalone suite. |
-| cargo test --lib --offline --locked -- --list | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-list.log |
-| cargo test --lib --offline --locked crypto:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-crypto-.log |
-| cargo test --lib --offline --locked model:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-model-.log |
-| cargo test --lib --offline --locked generator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-generator-.log |
-| cargo test --lib --offline --locked filenames:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-filenames-.log |
-| cargo test --lib --offline --locked vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-vault-.log |
-| cargo test --lib --offline --locked openvault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-openvault-.log |
-| cargo test --lib --offline --locked backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-backup-.log |
-| cargo test --lib --offline --locked restore:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-restore-.log |
-| cargo test --lib --offline --locked import:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-import-.log |
-| cargo test --lib --offline --locked portable:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-portable-.log |
-| cargo test --lib --offline --locked legacy_guard:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-legacy_guard-.log |
-| cargo test --lib --offline --locked shell:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-shell-.log |
-| cargo test --lib --offline --locked state:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-state-.log |
-| cargo test --lib --offline --locked actions:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-actions-.log |
-| cargo test --lib --offline --locked changes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-changes-.log |
-| cargo test --lib --offline --locked blocks:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-blocks-.log |
-| cargo test --lib --offline --locked commands::notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-notes-.log |
-| cargo test --lib --offline --locked commands::stickies:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-stickies-.log |
-| cargo test --lib --offline --locked commands::tools:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-tools-.log |
-| cargo test --lib --offline --locked commands::vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-vault-.log |
-| cargo test --lib --offline --locked commands::search_history:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-search_history-.log |
-| cargo test --lib --offline --locked commands::calculator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-calculator-.log |
-| cargo test --lib --offline --locked commands::backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-backup-.log |
-| cargo test --lib --offline --locked commands::database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-database-.log |
-| cargo test --lib --offline --locked commands::database_io:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-database_io-.log |
-| cargo test --lib --offline --locked commands::automation:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-automation-.log |
-| cargo test --lib --offline --locked commands::notion_db:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-notion_db-.log |
-| cargo test --lib --offline --locked database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-database-.log |
-| cargo test --lib --offline --locked commands::import_notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-import_notes-.log |
-| cargo test --lib --offline --locked importers:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-importers-.log |
-| cargo test --lib --offline --locked commands::export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-export-.log |
-| cargo test --lib --offline --locked export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-export-.log |
-| cargo test --lib --offline --locked roundtrip_tests:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-roundtrip_tests-.log |
-| cargo test --lib --offline --locked logging:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-logging-.log |
-| cargo test --lib --offline --locked ai:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-ai-.log |
-| cargo test --lib --offline --locked commands::ai:: | not run | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-list.log |
-| cargo bridge normal | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\bridge-normal.log |
-| cargo bridge native-ignored | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\bridge-native-ignored.log |
-| typescript | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\typescript.log |
-| frontend-build | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\frontend-build.log |
-| clippy | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\clippy.log |
+| views server | not run | D:\Notaya-lanes\out\whole-app\group-a-results.json; Child exited before its loopback endpoint was ready |
+| dev-mock/automations-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\automations-ui-check\suite.log;  |
+| dev-mock/block-ids-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\block-ids-check\suite.log;  |
+| dev-mock/block-ids-waits-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\block-ids-waits-check\suite.log;  |
+| dev-mock/c2-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c2-check\suite.log;  |
+| dev-mock/c2-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c2-ui-check\suite.log;  |
+| dev-mock/c3-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c3-check\suite.log;  |
+| dev-mock/c3-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\c3-ui-check\suite.log;  |
+| dev-mock/calc-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\calc-check\suite.log;  |
+| dev-mock/calc-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\calc-ui-check\suite.log;  |
+| dev-mock/database-fixes-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-fixes-ui-check\suite.log;  |
+| dev-mock/database-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-ui-check\suite.log;  |
+| dev-mock/database-views-check.cjs | not run | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-views-check\suite.log;  |
+| dev-mock/database-mock-check.mts | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\database-mock-check\suite.log;  |
+| dev-mock/equation-identity-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\equation-identity-check\suite.log;  |
+| dev-mock/icons-covers-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\icons-covers-ui-check\suite.log;  |
+| dev-mock/lane-a-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\lane-a-check\suite.log;  |
+| dev-mock/lane-a-contrast-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\lane-a-contrast-check\suite.log;  |
+| dev-mock/lane-a-shots.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\lane-a-shots\suite.log;  |
+| dev-mock/mermaid-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\mermaid-ui-check\suite.log;  |
+| dev-mock/page-look-layers-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\page-look-layers-check\suite.log;  |
+| dev-mock/ribbon-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\ribbon-ui-check\suite.log;  |
+| dev-mock/rtl-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rtl-ui-check\suite.log;  |
+| dev-mock/template-keys-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\template-keys-check\suite.log;  |
+| dev-mock/ai-mock-check.mjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\ai-mock-check\suite.log;  |
+| dev-mock/ai-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\ai-ui-check\suite.log;  |
+| dev-mock/block-ids-waits.cjs | not run | D:\Notaya-lanes\out\whole-app\group-a-results.json; Helper, executed through its consumers; not a standalone suite. |
+| dev-mock/lane-a-wait.cjs | not run | D:\Notaya-lanes\out\whole-app\group-a-results.json; Helper, executed through its consumers; not a standalone suite. |
+| cargo test --lib --offline --locked -- --list | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-list.log;  |
+| cargo test --lib --offline --locked crypto:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-crypto-.log;  |
+| cargo test --lib --offline --locked model:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-model-.log;  |
+| cargo test --lib --offline --locked generator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-generator-.log;  |
+| cargo test --lib --offline --locked filenames:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-filenames-.log;  |
+| cargo test --lib --offline --locked vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-vault-.log;  |
+| cargo test --lib --offline --locked openvault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-openvault-.log;  |
+| cargo test --lib --offline --locked backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-backup-.log;  |
+| cargo test --lib --offline --locked restore:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-restore-.log;  |
+| cargo test --lib --offline --locked import:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-import-.log;  |
+| cargo test --lib --offline --locked portable:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-portable-.log;  |
+| cargo test --lib --offline --locked legacy_guard:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-legacy_guard-.log;  |
+| cargo test --lib --offline --locked shell:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-shell-.log;  |
+| cargo test --lib --offline --locked state:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-state-.log;  |
+| cargo test --lib --offline --locked actions:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-actions-.log;  |
+| cargo test --lib --offline --locked changes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-changes-.log;  |
+| cargo test --lib --offline --locked blocks:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-blocks-.log;  |
+| cargo test --lib --offline --locked commands::notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-notes-.log;  |
+| cargo test --lib --offline --locked commands::stickies:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-stickies-.log;  |
+| cargo test --lib --offline --locked commands::tools:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-tools-.log;  |
+| cargo test --lib --offline --locked commands::vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-vault-.log;  |
+| cargo test --lib --offline --locked commands::search_history:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-search_history-.log;  |
+| cargo test --lib --offline --locked commands::calculator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-calculator-.log;  |
+| cargo test --lib --offline --locked commands::backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-backup-.log;  |
+| cargo test --lib --offline --locked commands::database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-database-.log;  |
+| cargo test --lib --offline --locked commands::database_io:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-database_io-.log;  |
+| cargo test --lib --offline --locked commands::automation:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-automation-.log;  |
+| cargo test --lib --offline --locked commands::notion_db:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-notion_db-.log;  |
+| cargo test --lib --offline --locked database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-database-.log;  |
+| cargo test --lib --offline --locked commands::import_notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-import_notes-.log;  |
+| cargo test --lib --offline --locked importers:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-importers-.log;  |
+| cargo test --lib --offline --locked commands::export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-commands-export-.log;  |
+| cargo test --lib --offline --locked export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-export-.log;  |
+| cargo test --lib --offline --locked roundtrip_tests:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-roundtrip_tests-.log;  |
+| cargo test --lib --offline --locked logging:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-logging-.log;  |
+| cargo test --lib --offline --locked ai:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-ai-.log;  |
+| cargo test --lib --offline --locked commands::ai:: | not run | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\rust-list.log;  |
+| cargo bridge normal | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\bridge-normal.log;  |
+| cargo bridge native-ignored | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\bridge-native-ignored.log;  |
+| typescript | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\typescript.log;  |
+| frontend-build | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\frontend-build.log;  |
+| clippy | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T033801361Z-3d5cefa0ba2148a09ddcf4ff7882d76e\clippy.log;  |
 
 Run 20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc, group B; source 8437fbe7cd08eb9b76774d938a1d3353401ccb88; executor Ahmed@GAMING-PC (Claude PC runner); {"passed":2,"failed":4}. Fatal error: none. Cleanup: {"lock-page-port-closed":true,"lock-sticky-port-closed":true,"finalPortClosed":true,"close-page-port-closed":true,"webviewEnvironmentCleared":true,"installedPathsPortClosed":true,"restore-flow-port-closed":true,"optional-security-port-closed":true}.
 
@@ -373,12 +373,12 @@ Binary D:\Notaya-lanes\_target_release\release\Notaya.exe; SHA-256 5FA039FCD0BE6
 
 | Suite / workload | Status | Evidence / remaining reason |
 |---|---|---|
-| optional-security | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\optional-security |
-| restore-flow | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\restore-flow |
-| lock-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\lock-page |
-| lock-sticky | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\lock-sticky |
-| close-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\close-page |
-| installed-paths | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\installed-paths |
+| optional-security | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\optional-security;  |
+| restore-flow | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\restore-flow; ; first failing phase reopen-readback: D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\restore-flow\reopen-readback.log (exit 1) |
+| lock-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\lock-page; ; first failing phase setup: D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\lock-page\setup.log (exit -1073740791) |
+| lock-sticky | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\lock-sticky; ; first failing phase setup: D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\lock-sticky\setup.log (exit -1073740791) |
+| close-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\close-page; ; first failing phase setup: D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\close-page\setup.log (exit -1073740791) |
+| installed-paths | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc\installed-paths;  |
 
 Run 20261109T035630759Z-62d9bc6e935442869665f4ca7856483c, group performance; source 8437fbe7cd08eb9b76774d938a1d3353401ccb88; executor Ahmed@GAMING-PC (Claude PC runner); {}. Fatal error: Cannot process argument because the value of argument "Property" is not valid. Change the value of the "Property" argument and run the operation again.. Cleanup: {"webviewEnvironmentCleared":true,"finalPortClosed":true,"blank-1-port-closed":true}.
 
@@ -386,80 +386,80 @@ Binary D:\Notaya-lanes\_target_release\release\Notaya.exe; SHA-256 5FA039FCD0BE6
 
 | Suite / workload | Status | Evidence / remaining reason |
 |---|---|---|
-| blank-1 | failed | D:\Notaya-lanes\out\whole-app\performance-20261109T035630759Z-62d9bc6e935442869665f4ca7856483c\blank-1; Cannot process argument because the value of argument "Property" is not valid. Change the value of the "Property" argument and run the operation again.; 0 warm samples |
+| blank-1 | failed | D:\Notaya-lanes\out\whole-app\performance-20261109T035630759Z-62d9bc6e935442869665f4ca7856483c\blank-1; Cannot process argument because the value of argument "Property" is not valid. Change the value of the "Property" argument and run the operation again.; 0 warm samples; fresh first window 120.802 ms; seed timings {} |
 
 Run 20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170, group A; source 19683f698f31294cf4e05ffc5b58d8cccc87bebb; executor Ahmed@GAMING-PC (Claude PC runner); {"passed":61,"failed":5,"not run":2}. Fatal error: none. Cleanup: {"port-55038-closed":true,"port-55037-closed":true,"webviewEnvironmentCleared":true}.
 
 | Suite / workload | Status | Evidence / remaining reason |
 |---|---|---|
-| dev-mock/automations-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\automations-ui-check\suite.log |
-| dev-mock/block-ids-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\block-ids-check\suite.log |
-| dev-mock/block-ids-waits-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\block-ids-waits-check\suite.log |
-| dev-mock/c2-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c2-check\suite.log |
-| dev-mock/c2-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c2-ui-check\suite.log |
-| dev-mock/c3-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c3-check\suite.log |
-| dev-mock/c3-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c3-ui-check\suite.log |
-| dev-mock/calc-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\calc-check\suite.log |
-| dev-mock/calc-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\calc-ui-check\suite.log |
-| dev-mock/database-fixes-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-fixes-ui-check\suite.log |
-| dev-mock/database-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-ui-check\suite.log |
-| dev-mock/database-views-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-views-check\suite.log |
-| dev-mock/database-mock-check.mts | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-mock-check\suite.log |
-| dev-mock/equation-identity-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\equation-identity-check\suite.log |
-| dev-mock/icons-covers-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\icons-covers-ui-check\suite.log |
-| dev-mock/lane-a-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\lane-a-check\suite.log |
-| dev-mock/lane-a-contrast-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\lane-a-contrast-check\suite.log |
-| dev-mock/lane-a-shots.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\lane-a-shots\suite.log |
-| dev-mock/mermaid-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\mermaid-ui-check\suite.log |
-| dev-mock/page-look-layers-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\page-look-layers-check\suite.log |
-| dev-mock/ribbon-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\ribbon-ui-check\suite.log |
-| dev-mock/rtl-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rtl-ui-check\suite.log |
-| dev-mock/template-keys-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\template-keys-check\suite.log |
-| dev-mock/ai-mock-check.mjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\ai-mock-check\suite.log |
-| dev-mock/ai-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\ai-ui-check\suite.log |
-| dev-mock/block-ids-waits.cjs | not run | Helper, executed through its consumers; not a standalone suite. |
-| dev-mock/lane-a-wait.cjs | not run | Helper, executed through its consumers; not a standalone suite. |
-| cargo test --lib --offline --locked -- --list | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-list.log |
-| cargo test --lib --offline --locked crypto:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-crypto-.log |
-| cargo test --lib --offline --locked model:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-model-.log |
-| cargo test --lib --offline --locked generator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-generator-.log |
-| cargo test --lib --offline --locked filenames:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-filenames-.log |
-| cargo test --lib --offline --locked vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-vault-.log |
-| cargo test --lib --offline --locked openvault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-openvault-.log |
-| cargo test --lib --offline --locked backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-backup-.log |
-| cargo test --lib --offline --locked restore:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-restore-.log |
-| cargo test --lib --offline --locked import:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-import-.log |
-| cargo test --lib --offline --locked portable:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-portable-.log |
-| cargo test --lib --offline --locked legacy_guard:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-legacy_guard-.log |
-| cargo test --lib --offline --locked shell:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-shell-.log |
-| cargo test --lib --offline --locked state:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-state-.log |
-| cargo test --lib --offline --locked actions:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-actions-.log |
-| cargo test --lib --offline --locked changes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-changes-.log |
-| cargo test --lib --offline --locked blocks:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-blocks-.log |
-| cargo test --lib --offline --locked commands::notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-notes-.log |
-| cargo test --lib --offline --locked commands::stickies:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-stickies-.log |
-| cargo test --lib --offline --locked commands::tools:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-tools-.log |
-| cargo test --lib --offline --locked commands::vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-vault-.log |
-| cargo test --lib --offline --locked commands::search_history:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-search_history-.log |
-| cargo test --lib --offline --locked commands::calculator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-calculator-.log |
-| cargo test --lib --offline --locked commands::backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-backup-.log |
-| cargo test --lib --offline --locked commands::database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-database-.log |
-| cargo test --lib --offline --locked commands::database_io:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-database_io-.log |
-| cargo test --lib --offline --locked commands::automation:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-automation-.log |
-| cargo test --lib --offline --locked commands::notion_db:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-notion_db-.log |
-| cargo test --lib --offline --locked database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-database-.log |
-| cargo test --lib --offline --locked commands::import_notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-import_notes-.log |
-| cargo test --lib --offline --locked importers:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-importers-.log |
-| cargo test --lib --offline --locked commands::export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-export-.log |
-| cargo test --lib --offline --locked export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-export-.log |
-| cargo test --lib --offline --locked roundtrip_tests:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-roundtrip_tests-.log |
-| cargo test --lib --offline --locked logging:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-logging-.log |
-| cargo test --lib --offline --locked ai:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-ai-.log |
-| cargo bridge normal | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\bridge-normal.log |
-| cargo bridge native-ignored | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\bridge-native-ignored.log |
-| typescript | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\typescript.log |
-| frontend-build | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\frontend-build.log |
-| clippy | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\clippy.log |
+| dev-mock/automations-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\automations-ui-check\suite.log;  |
+| dev-mock/block-ids-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\block-ids-check\suite.log;  |
+| dev-mock/block-ids-waits-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\block-ids-waits-check\suite.log;  |
+| dev-mock/c2-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c2-check\suite.log;  |
+| dev-mock/c2-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c2-ui-check\suite.log;  |
+| dev-mock/c3-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c3-check\suite.log;  |
+| dev-mock/c3-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\c3-ui-check\suite.log;  |
+| dev-mock/calc-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\calc-check\suite.log;  |
+| dev-mock/calc-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\calc-ui-check\suite.log;  |
+| dev-mock/database-fixes-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-fixes-ui-check\suite.log;  |
+| dev-mock/database-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-ui-check\suite.log;  |
+| dev-mock/database-views-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-views-check\suite.log;  |
+| dev-mock/database-mock-check.mts | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\database-mock-check\suite.log;  |
+| dev-mock/equation-identity-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\equation-identity-check\suite.log;  |
+| dev-mock/icons-covers-ui-check.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\icons-covers-ui-check\suite.log;  |
+| dev-mock/lane-a-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\lane-a-check\suite.log;  |
+| dev-mock/lane-a-contrast-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\lane-a-contrast-check\suite.log;  |
+| dev-mock/lane-a-shots.cjs | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\lane-a-shots\suite.log;  |
+| dev-mock/mermaid-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\mermaid-ui-check\suite.log;  |
+| dev-mock/page-look-layers-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\page-look-layers-check\suite.log;  |
+| dev-mock/ribbon-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\ribbon-ui-check\suite.log;  |
+| dev-mock/rtl-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rtl-ui-check\suite.log;  |
+| dev-mock/template-keys-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\template-keys-check\suite.log;  |
+| dev-mock/ai-mock-check.mjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\ai-mock-check\suite.log;  |
+| dev-mock/ai-ui-check.cjs | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\ai-ui-check\suite.log;  |
+| dev-mock/block-ids-waits.cjs | not run | D:\Notaya-lanes\out\whole-app\group-a-results.json; Helper, executed through its consumers; not a standalone suite. |
+| dev-mock/lane-a-wait.cjs | not run | D:\Notaya-lanes\out\whole-app\group-a-results.json; Helper, executed through its consumers; not a standalone suite. |
+| cargo test --lib --offline --locked -- --list | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-list.log;  |
+| cargo test --lib --offline --locked crypto:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-crypto-.log;  |
+| cargo test --lib --offline --locked model:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-model-.log;  |
+| cargo test --lib --offline --locked generator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-generator-.log;  |
+| cargo test --lib --offline --locked filenames:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-filenames-.log;  |
+| cargo test --lib --offline --locked vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-vault-.log;  |
+| cargo test --lib --offline --locked openvault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-openvault-.log;  |
+| cargo test --lib --offline --locked backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-backup-.log;  |
+| cargo test --lib --offline --locked restore:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-restore-.log;  |
+| cargo test --lib --offline --locked import:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-import-.log;  |
+| cargo test --lib --offline --locked portable:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-portable-.log;  |
+| cargo test --lib --offline --locked legacy_guard:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-legacy_guard-.log;  |
+| cargo test --lib --offline --locked shell:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-shell-.log;  |
+| cargo test --lib --offline --locked state:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-state-.log;  |
+| cargo test --lib --offline --locked actions:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-actions-.log;  |
+| cargo test --lib --offline --locked changes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-changes-.log;  |
+| cargo test --lib --offline --locked blocks:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-blocks-.log;  |
+| cargo test --lib --offline --locked commands::notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-notes-.log;  |
+| cargo test --lib --offline --locked commands::stickies:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-stickies-.log;  |
+| cargo test --lib --offline --locked commands::tools:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-tools-.log;  |
+| cargo test --lib --offline --locked commands::vault:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-vault-.log;  |
+| cargo test --lib --offline --locked commands::search_history:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-search_history-.log;  |
+| cargo test --lib --offline --locked commands::calculator:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-calculator-.log;  |
+| cargo test --lib --offline --locked commands::backup:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-backup-.log;  |
+| cargo test --lib --offline --locked commands::database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-database-.log;  |
+| cargo test --lib --offline --locked commands::database_io:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-database_io-.log;  |
+| cargo test --lib --offline --locked commands::automation:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-automation-.log;  |
+| cargo test --lib --offline --locked commands::notion_db:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-notion_db-.log;  |
+| cargo test --lib --offline --locked database:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-database-.log;  |
+| cargo test --lib --offline --locked commands::import_notes:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-import_notes-.log;  |
+| cargo test --lib --offline --locked importers:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-importers-.log;  |
+| cargo test --lib --offline --locked commands::export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-commands-export-.log;  |
+| cargo test --lib --offline --locked export:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-export-.log;  |
+| cargo test --lib --offline --locked roundtrip_tests:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-roundtrip_tests-.log;  |
+| cargo test --lib --offline --locked logging:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-logging-.log;  |
+| cargo test --lib --offline --locked ai:: | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\rust-ai-.log;  |
+| cargo bridge normal | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\bridge-normal.log;  |
+| cargo bridge native-ignored | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\bridge-native-ignored.log;  |
+| typescript | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\typescript.log;  |
+| frontend-build | passed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\frontend-build.log;  |
+| clippy | failed | D:\Notaya-lanes\out\whole-app\group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170\clippy.log;  |
 
 Run 20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e, group B; source 19683f698f31294cf4e05ffc5b58d8cccc87bebb; executor Ahmed@GAMING-PC (Claude PC runner); {"passed":2,"failed":4}. Fatal error: none. Cleanup: {"lock-page-port-closed":true,"lock-sticky-port-closed":true,"finalPortClosed":true,"close-page-port-closed":true,"webviewEnvironmentCleared":true,"installedPathsPortClosed":true,"restore-flow-port-closed":true,"optional-security-port-closed":true}.
 
@@ -467,12 +467,12 @@ Binary D:\Notaya-lanes\_target_release\release\Notaya.exe; SHA-256 5FA039FCD0BE6
 
 | Suite / workload | Status | Evidence / remaining reason |
 |---|---|---|
-| optional-security | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\optional-security |
-| restore-flow | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\restore-flow |
-| lock-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\lock-page |
-| lock-sticky | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\lock-sticky |
-| close-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\close-page |
-| installed-paths | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\installed-paths |
+| optional-security | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\optional-security;  |
+| restore-flow | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\restore-flow; ; first failing phase all: D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\restore-flow\all.log (exit 1) |
+| lock-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\lock-page; ; first failing phase setup: D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\lock-page\setup.log (exit 1) |
+| lock-sticky | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\lock-sticky; ; first failing phase setup: D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\lock-sticky\setup.log (exit 1) |
+| close-page | failed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\close-page; ; first failing phase setup: D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\close-page\setup.log (exit 1) |
+| installed-paths | passed | D:\Notaya-lanes\out\whole-app\group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e\installed-paths;  |
 
 Run 20261109T043919323Z-54f5bfb9cd4e46dd83d0cf0b69f5c8a3, group performance; source 19683f698f31294cf4e05ffc5b58d8cccc87bebb; executor Ahmed@GAMING-PC (Claude PC runner); {}. Fatal error: Seed app did not quit cleanly. Cleanup: {"webviewEnvironmentCleared":true,"finalPortClosed":true,"blank-1-port-closed":true}.
 
@@ -480,7 +480,7 @@ Binary D:\Notaya-lanes\_target_release\release\Notaya.exe; SHA-256 5FA039FCD0BE6
 
 | Suite / workload | Status | Evidence / remaining reason |
 |---|---|---|
-| blank-1 | failed | D:\Notaya-lanes\out\whole-app\performance-20261109T043919323Z-54f5bfb9cd4e46dd83d0cf0b69f5c8a3\blank-1; Seed app did not quit cleanly; 0 warm samples |
+| blank-1 | failed | D:\Notaya-lanes\out\whole-app\performance-20261109T043919323Z-54f5bfb9cd4e46dd83d0cf0b69f5c8a3\blank-1; Seed app did not quit cleanly; 0 warm samples; fresh first window 104.2106 ms; seed timings {} |
 
 <!-- WHOLE_APP_TRIAGE_START -->
 ## Phase 2b triage and DEFECT REGISTER
@@ -599,6 +599,73 @@ node tools/whole-app/merge-results.cjs 'D:\Notaya-lanes\out\whole-app\group-a-re
 Use that build declaration only for the existing reviewed exe; if rebuilt, supply the actual build commit. Keep both original archives and reruns. Original failed observations remain failed until coordinator review explicitly resolves them with complete applicable evidence; correcting a harness does not erase the first round. A47 remains open.
 
 **ADDITION:** none implemented. Proposed diagnostic assertions and reporting preservation are within the requested triage scope; no feature or visual change proposed.
+
+
+## Phase 2c: second triage register
+
+**Headline: five Group A and four Group B suite failures remain in Claude's re-run evidence; harness corrections produced, no application defect established, Windows re-run pending.** The test-only clippy error is deferred. Historical failed observations remain visible; a script correction is not a passing retest or acceptance.
+
+**Who / authority / baseline:** Ahmed Emara (AE0101), GAMING-PC; Codex developer hand, Claude coordinator/executor and sole Git writer. This phase-2c user brief is the bounded authority (message UTC not recorded); inspected clean HEAD `3b28de5` on `AE0101/v1-6-w`, an automatic checkpoint containing the re-run sheet after `19683f6`. Scope is the user's harness/mock/config/two-document allowlist only. No application change, Git write, network, installation, browser, exe or write under `out` in this triage. The mock-only `vite.mock.config.ts` change is explicitly listed. Result: **produced; syntax and named synthetic checks verified on the edited working tree**, runtime not run on these edits, not integrated/accepted. The heartbeat created automatic checkpoint `1b7be61` at 07:11:54 UTC during this run; Codex did not perform that Git write. Review the full change set against starting `3b28de5`, including subsequent working-tree edits. Claude owns records outside the write area. Model/effort/token/quota receipts are unavailable here and must be recorded by Claude from actual run receipts/meters.
+
+### Newest evidence and applicability
+
+All three newest reports name source `19683f698f31294cf4e05ffc5b58d8cccc87bebb`; B/performance declare build `5077183`, binary SHA-256 `5FA039FCD0BE63267601F2FB7E695875470E82D30954CF84B7666E26BB475C3C`. The declaration is not hash-to-source proof. Paths below are read-only archives under `D:\Notaya-lanes\out\whole-app`:
+
+- **A2** = `group-a-20261109T042447729Z-7758c8b219db476cb62ff8bc1cfda170`; suites 61 passed / 5 failed / 2 helpers not run; raw feature observations 1 passed / 18 failed / 38 not run.
+- **B2** = `group-b-20261109T043748353Z-05bffe35142e4c2dbea9508b7aa4bd5e`; suites 2 passed / 4 failed; raw feature observations 0 passed / 7 failed / 159 not run. Optional-security and installed-paths passed. Every legacy suite's final cleanup says gracefulQuit/portClosed true; Chrome window-class stderr is not the failing assertion.
+- **P2** = `performance-20261109T043919323Z-54f5bfb9cd4e46dd83d0cf0b69f5c8a3`; blank-1 seed driver passed, first window **104.2106 ms**, zero warm samples, fatalError `Seed app did not quit cleanly`; finalPortClosed true. Seed timing is a partial startup observation, not a workload performance verdict.
+
+The generated sheet retains six imported observations (first round plus re-run) and cumulative unresolved failures, which differ from the newest raw counts. Earlier failed suite correlations are intentionally retained until reviewed, applicable retests resolve them. All 250 IDs and KINDs, especially the 27 manual C checks, remain unchanged.
+
+### Every current failing / not-run suite
+
+| Failing item | Classification / group | Exact evidence and bounded correction |
+|---|---|---|
+| block-ids-check | Harness timing/cache, DG-11 | `A2/block-ids-check/suite.log`: dynamic import of `/dev-mock/equation-fixture.ts` failed before the probe. The mock and views configs previously shared the parent default Vite cache, despite different aliases; `A2/views-server.log` records config-change re-optimisation. Now each mode gets its own per-run TEMP cache and two clean warm loads, including that fixture, before suites. Root cause of that exact transient response was not captured; no application block-ID defect inferred. |
+| database-views-check | Harness file serving + resource diagnostics, DG-11 | `A2/views-server.log` explicitly denies `D:\Notaya-lanes\node_modules\@fontsource-variable\inter\files\inter-latin-wght-normal.woff2` outside its allowlist. `A2/mock-server.log` also denies JetBrains/KaTeX fonts. Suite has 32 console failures (403 and one initial 404) while view assertions continue to pass. Allow only checkout + parent node_modules in `vite.mock.config.ts`; runner applies the same narrow allowance to the views config without editing it. Add failed response URLs; supply a 204 only for `/favicon.ico` in this standalone HTML harness. The old log did not identify the 404 URL, so any non-favicon 404 still fails with its URL; none is broadly ignored. |
+| icons-covers-ui-check | Script expectation, DG-12; app suspicion rejected | `A2/icons-covers-ui-check/suite.log`: `"Trip notes" !== "Morning pages"`. The script clicks the Trip notes card but expected Morning pages with a stale comment. Current `src/features/notes/HomeView.tsx:204,215` binds `c.id` to the card callback; `:164-169` resolves that ID's section and calls `openPage(id)`; PageCard `:93-95` uses that callback. `dev-mock/core.ts:290-296` reads the requested page's metadata/title. Script now waits for and asserts Trip notes, retaining the click and title readback. Neither sorting nor a wrong app target is supported by this failure. |
+| lane-a-shots | Harness navigation, DG-04 updated | `A2/lane-a-shots/suite.log` and its nested `manifest.json` both name `Execution context was destroyed` at former line 204. Manifest records one failed retry, no functional checks/screenshots; it is not an unexplained exit 1. Isolate/warm caches as above; preload the lock probe's imports and wait for a stable document before any mutation. Retry only read-only preparation, never a half-run lock; explicitly assert securityOn true/unlocked false. Manifest now records main-frame navigation URLs/times. No layout failure established. |
+| clippy | Deferred test-only lint, DG-09 | `A2/clippy.log` still rejects `src-tauri/src/database/formula.rs:1121`, `Val::Num(3.14)`, under `#[cfg(test)]` at `:1047`. Keep the separate test-only brief below; no app code or lint suppression changed. |
+| restore-flow | Harness setup/transport; DG-06 updated + DG-13 | `B2/restore-flow/all.log` prints successful enable_security + idle=180, then TypeError on `nb.ok.sections[0]`; no restore assertion ran in this re-run. Current `commands/notes.rs:18-24,90-98,119-133` returns a flat NotesTree `{notebooks, sections, pages, databases}`; it is not a nested notebook. `list_notes` has the same shape; `Revisioned<T>` (`changes.rs:152-155`) flattens item fields, so page/sticky readback is still `.text/.content`, not `.item`. The old `nb.ok.sections[0]` access already addressed the flat tree, so the failure does not prove an IPC shape change; it also picked the first global section rather than the new notebook's section. The old transport ignored CDP errors and returned exception descriptions as values, allowing `.ok` to be undefined; the exact swallowed error was not recorded. New bounded CDP throws protocol/evaluation errors, waits for explicit reload completion, validates the raw tree, and selects the newly created notebook's own section. Preserve protected-restart unlock and exact CHANGED-AFTER-BACKUP readback. |
+| lock-page | Harness setup/transport; DG-07 updated + DG-13 | `B2/lock-page/setup.log`: assertion `create_notebook must succeed`, actual undefined; not a window-class failure. No type/lock/check phase ran. Same bounded transport/reload/tree correction as restore-flow, plus real sidebar/editor readiness waits. Original `B1/lock-page/setup.log:8` had Node/libuv `UV_HANDLE_CLOSING` after page/sticky creation; B2 no longer has that abort. All four B adapters now close sockets in finally and exit naturally on success/error; readable executed-source paths replace huge data/base64 stack frames. |
+| lock-sticky | Harness setup/transport; DG-07 updated + DG-13 | `B2/lock-sticky/setup.log`: same create_notebook assertion/undefined before typing; current cleanup graceful/port closed true. Same correction; keep sticky typing and persisted-text guards. Original B1 setup abort remains historical, not a new app crash. |
+| close-page | Harness setup/transport; DG-07 updated + DG-13 | `B2/close-page/setup.log`: same setup assertion before the tested close. Same correction. The runner now separately requires that the tested close itself exits the owned process; a later `quit_app` or WM_CLOSE cannot turn a failed close scenario into a pass. |
+| performance blank-1 / later workloads | Harness quit + reporting; DG-08 updated + DG-14 | `P2/blank-1/seed.json` passed; `seed-app.log` has only an empty stderr section; JSON supplies the real quit failure and 104.2106 ms startup. Old `Close-WATestApp` only called CloseMainWindow, waited, then job-cleaned; it recorded no close request/result, so a product quit bug is unproven. Now first request normal `quit_app` via the runner-owned loopback WebView, confirm that exact PID exits with code 0, then use WM_CLOSE fallback if needed; record each request/exit/forced-owned-tree cleanup in `*-app.log-quit.json`. No name-based termination. Keep seed timings, partial samples, per-phase errors and memory peaks on failure; continue independent workloads only after process/port cleanup. Driver emits JSON even if connect fails. |
+| block-ids-waits.cjs; lane-a-wait.cjs | Helpers, DG-10 | Consumer-only helpers still correctly not run as standalone suites. No IDs or invented standalone passes added. |
+
+`B1` above is the preserved first archive `group-b-20261109T035235954Z-717bf2fc02ca4c468aef5eda04af99bc`. The first restore round passed its own assertions but failed reopen; the second round stopped earlier in setup. Those observations are different and both survive.
+
+### App-defect decisions and bounded follow-up briefs
+
+**No supported application-code fix is authorized or justified by these re-run logs.** The strongest advertised candidate (Home opening the wrong card) is a demonstrable test expectation error. The remaining uncertainties concern uncaptured transport/navigation/quit failures; the new harness must expose their actual failing stage. These conditional lanes remain in the register rather than being silently closed:
+
+| Register group / trigger | Bounded lane brief and evidence required before an app fix |
+|---|---|
+| DG-12: a corrected, named Home-card click still opens a different ID/title | Candidate medium navigation defect. Read-only starting points: `HomeView.tsx`, `src/store/app.ts` openPage, `PageEditor.tsx` page load. Coordinator narrows a separate write area to the proven component and regression script. Capture chosen card ID/title, active store ID and returned get_page ID/title on the exact source. Test at least two named cards across different notebooks and recent/favorites, including changed sort order; no visual restyle. **Current evidence rejects this candidate; app lane not opened.** |
+| DG-13: clean post-reload CDP returns an IPC rejection or malformed NotesTree | Candidate medium IPC/setup defect, not yet observed. Start in `commands/notes.rs` create_notebook/list_notes and `src/lib/ipc.ts`; capture command name, protocol error or returned shape and exact exe/source, without credentials or note content. Add a regression proving one new notebook and its matching section in the raw flat tree, then create/read/reopen its page. Expand beyond these boundaries only after reproducing a backend failure. Do not retry mutating commands automatically. **Diagnostic escalation only.** |
+| DG-07: completed lock/close loses the typed marker | Candidate high unsaved-edit loss. Retain the earlier bounded brief: diagnose page/sticky save handlers, `src/lib/flush.ts`, Rust state/shell/commands-vault; coordinator chooses exact changed files. Type within the save delay, perform the actual lock/close once, confirm locked/exit state, quit/reopen/unlock and compare exact persisted marker. Must separate Node abort from app failure and include normal PID exit plus closed port. **Not reached by B2.** |
+| DG-14: owned quit_app request is delivered after UI readiness, but exact PID fails normal exit | Candidate medium quit defect (high only if data loss is separately demonstrated). Start diagnosis at `src-tauri/src/commands/vault.rs:621` -> `state::quit`, shell close handling and window-ready/prefs. Attach quit request log, PID/exit result, debug-port closure and reopened synthetic marker before narrowing a fix lane. Preserve app security/flush behavior; no process-name kill, global security or tray-settings workaround. **Old seed log cannot establish this defect.** |
+| DG-09: existing all-target clippy test lint | Low, test-only follow-up: in `src-tauri/src/database/formula.rs` cfg(test) replace expected `Val::Num(3.14)` with `Val::Num(314.0 / 100.0)`. Retain `round(3.14159, 2)` input and exact two-decimal result; do not use PI as the expected answer or suppress the lint. Run `cargo test --manifest-path src-tauri/Cargo.toml --lib --offline --locked number_functions` and `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --offline --locked`. Record all remaining warnings on the new exact commit. **Proposed only; Rust unedited.** |
+
+Earlier conditional date-undo and Mermaid briefs remain historical escalation routes; their corrected re-run suites passed, which is supporting evidence only. All manual C and incomplete A/B variants stay open under the plan.
+
+### Phase-2c validation and next executor
+
+- Node syntax (19 files), PowerShell AST parsing (10 files), mock-config syntax transpile and `git diff 3b28de5 --check` passed on the edited working tree over automatic checkpoint `1b7be61`; no app/browser/server was launched. Synthetic transport checks used fake fetch/WebSocket only: protocol errors and JS exceptions reject, missing CDP results reject, reload waits for a fresh document, flat-tree setup selects the new notebook's section, socket close completes, and a navigation-interrupted lock is issued once then verified with a status read. Synthetic PowerShell checks prove owned polite quit succeeds and an unobserved scenario-close remains failed without fallback masking. The extracted performance orchestration also ran with all launch/IPC/filesystem operations stubbed: a failed seed quit retained its timings, and all three later synthetic workloads completed five samples and summaries. A strict-mode variant rejected a truncated sample JSON, retained four valid observations and completed the subsequent workloads; natural-exit guards also rejected missing/wrong-target assertions and nonzero exits. No real data or app was used.
+- The results sheet is refreshed using the authorized `merge-results.cjs` with the three newest JSON files; original archives/latest JSON are read-only. Reimport deduplication, preserved prior triage/machine state and unchanged source-report hashes are checked. The newest raw counts above and cumulative unresolved status counts deliberately differ.
+- Runtime suites, browsers, Notaya exe, full frontend build, Rust tests, clippy and Claude's independent/security review **not run by Codex on this edited tree**. Claude reviews the diff, commits/pushes, re-runs sequentially and supplies actual model/usage/quota receipts in the records it owns. No owner acceptance or release claim.
+
+Commands from `D:\Notaya-lanes\W` (same reviewed exe; change BuildCommit only if Claude actually rebuilds):
+
+```powershell
+powershell -NoProfile -File .\tools\whole-app\run-group-a.ps1
+powershell -NoProfile -File .\tools\whole-app\run-group-b.ps1 -Exe 'D:\Notaya-lanes\_target_release\release\Notaya.exe' -BuildCommit 5077183
+powershell -NoProfile -File .\tools\whole-app\measure-performance.ps1 -Exe 'D:\Notaya-lanes\_target_release\release\Notaya.exe' -BuildCommit 5077183
+node tools/whole-app/merge-results.cjs 'D:\Notaya-lanes\out\whole-app\group-a-results.json' 'D:\Notaya-lanes\out\whole-app\group-b-results.json' 'D:\Notaya-lanes\out\whole-app\perf-results.json'
+```
+
+**ADDITION:** none. No new feature, app-code fix or visual change.
+
 <!-- WHOLE_APP_TRIAGE_END -->
 
 <!-- WHOLE_APP_STATE

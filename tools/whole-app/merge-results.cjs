@@ -69,7 +69,7 @@ if (imported.length) sheetSource = `${imported.length} immutable JSON observatio
 const safe = s => String(s ?? '').replaceAll('|', '&#124;').replace(/\r?\n/g, ' ');
 const tally = kind => ['passed', 'failed', 'not run'].map(status => rows.filter(r => r.kind === kind && states.get(r.id).status === status).length);
 let text = `# Whole-app test results - lane W, phase 2\n\n` +
-  `Produced for Ahmed Emara (AE0101), Gaming-PC; Claude executes and owns commits/records. Phase-2b triage baseline: 8437fbe; first real-exe reports declare build 5077183. Runtime evidence applies only to the source and binary identities inside each imported report. No owner acceptance is implied.\n\n` +
+  `Produced for Ahmed Emara (AE0101), Gaming-PC; Claude executes and owns commits/records. Initial harness baseline: 8437fbe; phase-2c triage baseline: 3b28de5 (automatic checkpoint after 19683f6). Real-exe reports declare build 5077183. Runtime evidence applies only to the source and binary identities inside each imported report. No owner acceptance is implied.\n\n` +
   `${sheetSource}\n\n` +
   `| KIND | Passed | Failed | Not run | Total |\n|---|---:|---:|---:|---:|\n`;
 for (const kind of ['A', 'B', 'C']) { const counts = tally(kind); text += `| ${kind} | ${counts.join(' | ')} | ${counts.reduce((a, b) => a + b)} |\n`; }
@@ -92,8 +92,11 @@ for (const run of runs) {
   text += `\nRun ${safe(run.runId)}, group ${run.group}; source ${safe(run.source?.head)}; executor ${safe(run.executor)}; ${safe(JSON.stringify(counts))}. Fatal error: ${safe(run.fatalError || 'none')}. Cleanup: ${safe(JSON.stringify(run.cleanup))}.\n\n`;
   if (run.binary) text += `Binary ${safe(run.binary.path)}; SHA-256 ${run.binary.sha256}; declared build ${safe(run.binary.declaredBuildCommit)}.\n\n`;
   text += '| Suite / workload | Status | Evidence / remaining reason |\n|---|---|---|\n';
-  for (const s of run.suites || []) text += `| ${safe(s.name || s.script)} | ${s.status} | ${safe(s.evidence || s.reason || run.path)} |\n`;
-  for (const w of run.workloads || []) text += `| ${safe(w.name)} | ${safe(w.status)} | ${safe(w.evidence)}; ${safe(w.reason || '')}; ${w.samples?.length || 0} warm samples |\n`;
+  for (const s of run.suites || []) {
+    const failedStep = s.steps?.find(step => step.status !== 'passed');
+    text += `| ${safe(s.name || s.script)} | ${s.status} | ${safe(s.evidence || run.path)}; ${safe(s.reason || '')}${failedStep ? `; first failing phase ${safe(failedStep.phase)}: ${safe(failedStep.evidence)} (exit ${safe(failedStep.exitCode)})` : ''} |\n`;
+  }
+  for (const w of run.workloads || []) text += `| ${safe(w.name)} | ${safe(w.status)} | ${safe(w.evidence)}; ${safe(w.reason || '')}; ${w.samples?.length || 0} warm samples; fresh first window ${safe(w.freshFirstWindowMs)} ms; seed timings ${safe(JSON.stringify(w.seedObservation?.timingsMs || {}))} |\n`;
 }
 if (triage) text += `\n${triage}\n`;
 text += `\n<!-- WHOLE_APP_STATE\n${JSON.stringify({ imported, runs, states: Object.fromEntries(states) }, null, 2)}\nWHOLE_APP_STATE -->\n`;

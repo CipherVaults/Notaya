@@ -6,6 +6,7 @@ export async function connectLegacy(port, match = label => label === 'main') {
   const client = await connect(port, match);
   clients.add(client);
   client.ev = client.evaluate;
+  client.waitFor = expression => waitFor(client, expression);
   client.inv = async (command, args = {}) => {
     try { return await client.evaluate(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)}).then(v => ({ok: v ?? null}), e => ({err: String(e)}))`); }
     catch (error) {

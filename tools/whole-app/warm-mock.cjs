@@ -4,7 +4,7 @@ const { chromium } = require(process.env.NOTAYA_PLAYWRIGHT_MODULE || 'playwright
 const [origin, mode] = process.argv.slice(2);
 assert.equal(new URL(origin).hostname, '127.0.0.1');
 assert.ok(['mock', 'views'].includes(mode));
-const fixtures = ['/dev-mock/equation-fixture.ts', '/dev-mock/core.ts', '/src/lib/flush.ts', '/src/store/app.ts', '/src/lib/theme.ts', '/src/lib/navHistory.ts'];
+const fixtures = ['/dev-mock/equation-fixture.ts', '/dev-mock/core.ts', '/dev-mock/ai.ts', '/src/features/database/undo.ts', '/src/lib/ipc.ts', '/src/lib/flush.ts', '/src/store/app.ts', '/src/lib/theme.ts', '/src/lib/navHistory.ts'];
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.NOTAYA_CHROMIUM_PATH, headless: true });
   try {
@@ -23,7 +23,7 @@ const fixtures = ['/dev-mock/equation-fixture.ts', '/dev-mock/core.ts', '/src/li
         await page.goto(url, { waitUntil: 'networkidle' });
         if (mode === 'mock') {
           await page.getByRole('button', { name: 'New notebook', exact: true }).waitFor();
-          await page.evaluate(async modules => { for (const module of modules) await import(module); }, fixtures);
+          await page.evaluate(async modules => { await Promise.all(modules.map(module => import(module))); }, fixtures);
         } else await page.locator('#view-host > *').first().waitFor();
         await page.evaluate(() => document.fonts.ready);
         await page.waitForLoadState('networkidle');

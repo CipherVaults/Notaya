@@ -20,7 +20,7 @@ if (file !== 'installed.mjs') {
 // entire base64 script, burying the actual exception. Resolve its one local import.
 source = source.replace('from "./legacy-cdp.mjs"', `from ${JSON.stringify(pathToFileURL(path.join(root, 'tools/real-exe-tests/legacy-cdp.mjs')).href)}`);
 fs.mkdirSync(artifactDir, { recursive: true });
-fs.writeFileSync(path.join(artifactDir, 'adapter.json'), JSON.stringify({ sourcePath, sourceHash, args, changes: ['Read ephemeral password from child environment instead of temp file; assertion output/exit guard.'] }, null, 2));
+fs.writeFileSync(path.join(artifactDir, 'adapter.json'), JSON.stringify({ sourcePath, sourceHash, args, changes: ['Read ephemeral password from child environment instead of temp file; assertion output/exit guard.', 'Resolve shared CDP import to its file URL; execute preserved source as a real file for readable stack traces.'] }, null, 2));
 fs.writeFileSync(path.join(artifactDir, 'executed-source.mjs'), source);
 process.argv = [process.execPath, sourcePath, ...args];
 let printed = [];
@@ -47,6 +47,6 @@ function guardedExitCode(code) {
   return bad ? 1 : 0;
 }
 // Legacy suites close their sockets in finally and exit naturally on every route.
-// lockflow closes sockets and exits naturally; run the same guards on that route.
+// Apply assertion guards after every suite has drained its socket close handshake.
 process.once('beforeExit', () => { process.exitCode = guardedExitCode(process.exitCode); });
 await import(pathToFileURL(path.join(artifactDir, 'executed-source.mjs')).href);

@@ -115,7 +115,7 @@ try {
             $r = Invoke-WACommand $node $arguments $envs "$artifacts\$phase.log" $ScriptTimeoutSeconds
             $r.phase = $phase; $suite.steps += $r
             if ($r.status -ne 'passed') { $suite.status = $r.status; break }
-            $graceful = Close-WATestApp $app "$artifacts\$phase-app.log" $port ($entry.file -eq 'lockflow.mjs' -and $entry.scenario -eq 'close' -and $phase -eq 'type'); $app = $null
+            $graceful = Close-WATestApp $app "$artifacts\$phase-app.log" $port; $app = $null
             if (-not $graceful -or -not (Wait-WAPortClosed $port)) { throw 'Path-mode test failed normal quit/port closure' }
             if (-not (Test-Path -LiteralPath "$data\vault.nota")) { throw 'Expected disposable vault was not written' }
             if (-not $isPortable -and (Test-Path -LiteralPath "$program\data")) { throw 'Installed exe incorrectly wrote beside itself' }

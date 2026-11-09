@@ -36,7 +36,7 @@ function Get-WAMemory([int]$RootPid) {
 }
 
 function Invoke-WAPerfDriver([string[]]$Arguments, [string]$Log) {
-    $driver = $null
+    $driver = $null; $failure = $null; $result = $null
     try {
         $driver = Start-WAProcess $node $Arguments $envs
         while (-not $driver.process.WaitForExit(1000)) {
@@ -45,8 +45,17 @@ function Invoke-WAPerfDriver([string[]]$Arguments, [string]$Log) {
             # Stop growth on an already pressured test process tree, preserving the fixture.
             if ($report.memorySamples[-1].workingSet -gt 6GB) { throw 'Test tree exceeds 6 GiB working set; stopping larger workloads' }
         }
-        Complete-WAProcess $driver $Log 1
-    } finally { Stop-WAProcess $driver }
+    } catch { $failure = $_.Exception.Message }
+    finally {
+        if ($null -ne $driver) { $result = Complete-WAProcess $driver $Log 1 }
+        Stop-WAProcess $driver
+    }
+    if ($null -eq $result) {
+        $result = @{ status = 'failed'; evidence = $Log; reason = $failure; exitCode = $null; timedOut = $false }
+        [IO.File]::WriteAllText($Log, [string]$failure)
+    }
+    if ($failure) { $result.status = 'failed'; $result.reason = $failure }
+    return $result
 }
 
 function Start-WAPerfApp([string]$Copy, [string]$fixtureHome) {
@@ -61,7 +70,12 @@ function Start-WAPerfApp([string]$Copy, [string]$fixtureHome) {
             Start-Sleep -Milliseconds 25
         }
         throw 'No first window within 60 seconds'
-    } catch { Stop-WAProcess $handle; throw }
+    } catch {
+        $startupError = $_
+        $name = Split-Path -Leaf $fixtureHome
+        $null = Close-WATestApp $handle "$($run.output)\$name-startup-failure-app.log" $port
+        throw $startupError
+    }
 }
 
 function Get-WASummary([double[]]$Values) {
@@ -100,7 +114,10 @@ try {
             Wait-WAHttp $port $app '/json'
             $commandArguments = @("$PSScriptRoot\perf-driver.mjs", "$port", 'seed', $workload.kind, "$($workload.count)", $fixture, "$artifacts\seed.json")
             $r = Invoke-WAPerfDriver $commandArguments "$artifacts\seed.log"; $record.seed = $r
-            if ($r.status -ne 'passed') { throw 'Fixture seed failed or timed out; inspect seed.log/seed.json' }
+            if ($r.status -ne 'passed') {
+                if ($r.ContainsKey('reason')) { throw $r.reason }
+                throw 'Fixture seed failed or timed out; inspect seed.log/seed.json'
+            }
             $record.seedMemory = Get-WAMemory $app.process.Id
             $report.memorySamples += $record.seedMemory
             $graceful = Close-WATestApp $app "$artifacts\seed-app.log" $port; $app = $null
@@ -112,7 +129,10 @@ try {
                 $r = Invoke-WAPerfDriver $commandArguments "$artifacts\sample-$sample.log"
                 $entry = @{ number = $sample; firstWindowMs = $start.firstWindowMs; driver = $r }
                 $record.samples += $entry
-                if ($r.status -ne 'passed') { throw "Sample $sample failed or timed out" }
+                if ($r.status -ne 'passed') {
+                    if ($r.ContainsKey('reason')) { throw $r.reason }
+                    throw "Sample $sample failed or timed out"
+                }
                 Start-Sleep -Seconds 2
                 $entry.idleMemory = Get-WAMemory $app.process.Id
                 $report.memorySamples += $entry.idleMemory
@@ -141,8 +161,10 @@ try {
             foreach ($sampleEntry in $record.samples) {
                 $samplePath = "$artifacts\sample-$($sampleEntry.number).json"
                 if (Test-Path -LiteralPath $samplePath) {
-                    $sampleEntry.observation = Get-Content -Raw -LiteralPath $samplePath | ConvertFrom-Json
-                    if ($sampleEntry.driver.status -eq 'passed' -and $sampleEntry.observation.status -eq 'passed') { $observations += $sampleEntry.observation }
+                    try {
+                        $sampleEntry.observation = Get-Content -Raw -LiteralPath $samplePath | ConvertFrom-Json
+                        if ($sampleEntry.driver.status -eq 'passed' -and $sampleEntry.observation.status -eq 'passed') { $observations += $sampleEntry.observation }
+                    } catch { $sampleEntry.observationError = $_.Exception.Message }
                 }
             }
             if ($observations.Count) {
@@ -153,7 +175,13 @@ try {
                 }
             }
             $record.validatedProbeCount = $observations.Count
-            if (Test-Path -LiteralPath "$artifacts\seed.json") { $record.seedObservation = Get-Content -Raw -LiteralPath "$artifacts\seed.json" | ConvertFrom-Json }
+            if (Test-Path -LiteralPath "$artifacts\seed.json") {
+                try { $record.seedObservation = Get-Content -Raw -LiteralPath "$artifacts\seed.json" | ConvertFrom-Json }
+                catch { $record.seedObservationError = $_.Exception.Message }
+            }
+            if ($record.status -eq 'measured' -and ($observations.Count -ne $Samples -or -not $record.ContainsKey('seedObservation') -or $record.seedObservation.status -ne 'passed')) {
+                $record.status = 'failed'; $record.reason = 'Missing/invalid phase JSON; partial timings retained'
+            }
             $record.dataBytes = (Get-ChildItem -LiteralPath "$fixtureHome\data" -Recurse -File | Measure-Object Length -Sum).Sum
             Write-WAJson $report "$($run.output)\in-progress.json"
             Write-Output "CHECKPOINT: performance $name $($record.status), partial timings and cleanup done"

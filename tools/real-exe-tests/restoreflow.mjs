@@ -73,5 +73,4 @@ check("second restored vault is open with the CHANGED text", (await pageText()) 
 const st = (await m.inv("vault_status")).ok;
 check("vault is unlocked after restore", st?.unlocked === true);
 
-
 } finally { await closeLegacyClients(); }

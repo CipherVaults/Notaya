@@ -45,6 +45,7 @@ if (phase === "setup") {
   await main.reload();
   console.log("unlock:", JSON.stringify(await main.inv("unlock_vault", { password, keyfile: null })));
   await main.reload();
+  await main.waitFor(`Array.from(document.querySelectorAll('aside span')).some(s => s.textContent === 'Flush page')`);
   const opened = await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Flush page'); s?.click(); return !!s; })()`);
   assert.equal(opened, true, 'Flush page must be opened through the sidebar');
   console.log("open page:", opened);
@@ -55,6 +56,7 @@ if (phase === "setup") {
     await sleep(800);
   }
   const target = scenario === "sticky" ? sticky : main;
+  await target.waitFor(`!!document.querySelector('.ProseMirror[contenteditable="true"]')`);
   const typed = await target.ev(`(() => { const pm=document.querySelector('.ProseMirror'); if(!pm) return 'no editor'; pm.focus(); document.execCommand('insertText', false, ${JSON.stringify(TYPED)}); return pm.textContent; })()`);
   assert.ok(typeof typed === 'string' && typed.includes(TYPED), 'probe text must reach the editor');
   console.log("typed into editor:", JSON.stringify(typed));

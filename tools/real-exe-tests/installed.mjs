@@ -1,4 +1,4 @@
-import { connectLegacy, closeLegacyClients, createNotebookSection } from "./legacy-cdp.mjs";
+import { connectLegacy, closeLegacyClients } from "./legacy-cdp.mjs";
 // installed.mjs - real-exe test of where Notaya keeps its notes (installed vs portable).
 // Purpose: checks the first screen of an INSTALLED copy (no portable.txt, no data folder), that the
 //          notes go to <LOCALAPPDATA>\Notaya Notes\data, that a second start opens them by itself, and
@@ -46,6 +46,5 @@ if (phase === "first") {
 } else {
   throw new Error("phase must be first, second or portable");
 }
-
 
 } finally { await closeLegacyClients(); }

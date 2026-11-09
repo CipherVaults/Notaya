@@ -5,6 +5,17 @@ Claude runs these commands outside the sandbox, with existing Node 24, PowerShel
 Chrome/Playwright, locked npm dependencies, Rust/MSVC cache and WebView2. No installation,
 network audit, application edit or Git write is performed by a runner.
 
+Phase 2c: A starts the mock and views configs with separate disposable optimiser caches,
+warms the app/fixture imports to two clean loads, and refuses dependent suites if warm-up
+fails. `vite.mock.config.ts` allows only this checkout and the parent `node_modules`;
+the runner applies that same dev-only allowance to views. Production Vite is untouched.
+B uses bounded CDP calls and explicit reload/IPC readiness; its legacy adapters preserve
+readable executed-source stack traces and close sockets naturally. B/performance ask
+their own app to `quit_app` before the window-close fallback and record each attempt in
+`*-app.log-quit.json`. The close-page scenario must exit from its own tested close action.
+Performance retains seed/partial probe timings and continues independent workloads after
+a phase failure only when the owned process tree and debug port have been cleaned up.
+
 From `D:\Notaya-lanes\W`:
 
 ```powershell
