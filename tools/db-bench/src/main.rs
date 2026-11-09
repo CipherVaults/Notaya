@@ -12,6 +12,8 @@ pub mod error {
     impl Error { pub fn invalid(m: impl Into<String>) -> Self { Error::Invalid(m.into()) } }
 }
 pub mod model {
+    #[derive(Clone, serde::Serialize, serde::Deserialize, zeroize::Zeroize)]
+    pub struct SourceTag { pub app: String, pub id: String }
     pub fn now_ms() -> i64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64 }
     pub fn new_id() -> String { use std::sync::atomic::*; static N: AtomicU64 = AtomicU64::new(1); format!("{:032x}", N.fetch_add(1, Ordering::Relaxed)) }
     #[derive(Clone, serde::Serialize, serde::Deserialize)]

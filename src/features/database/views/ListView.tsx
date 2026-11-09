@@ -1,6 +1,6 @@
 // List view: one compact line per row (icon, title, a few properties on the far side), checkboxes toggle in place.
 
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Check, ChevronDown, ChevronRight, List as ListIcon } from "lucide-react";
 import type { DbRow, GroupBy, GroupOut, Property } from "@/lib/database-types";
 import type { ViewProps } from "../viewTypes";
@@ -11,60 +11,23 @@ export default function ListView({ db, view, result, rowById, openRow, setCells,
   const g = view.group;
   const gp = groupProp(db, g);
   const shown = useMemo(() => visibleProps(db, view, [g?.prop]), [db, view, g?.prop]);
-  const checks = shown.filter((p) => p.kind === "checkbox");
-  const lead = checks[0];
-  const rest = shown.filter((p) => p !== lead);
+  const { lead, rest } = useMemo(() => {
+    const lead = shown.find((p) => p.kind === "checkbox");
+    return { lead, rest: shown.filter((p) => p !== lead) };
+  }, [shown]);
   const titles = useMemo(() => titleMap(result.rows), [result.rows]);
   const [adding, setAdding] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
 
-  const toggle = (row: DbRow, p: Property) => void setCells(row.id, { [p.id]: row.values[p.id] !== true });
+  const toggle = useCallback((row: DbRow, p: Property) => void setCells(row.id, { [p.id]: row.values[p.id] !== true }), [setCells]);
 
-  const moveFocus = (e: KeyboardEvent<HTMLElement>, delta: number) => {
+  const moveFocus = useCallback((e: KeyboardEvent<HTMLElement>, delta: number) => {
     const all = Array.from(host.current?.querySelectorAll<HTMLElement>("[data-list-row]") ?? []);
     const i = all.indexOf(e.currentTarget);
     all[i + delta]?.focus();
-  };
+  }, []);
 
-  const renderRow = (row: DbRow) => (
-    <div
-      key={row.id}
-      role="listitem"
-      tabIndex={0}
-      data-list-row={row.id}
-      onClick={() => openRow(row.id)}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.key === "Enter") {
-          e.preventDefault();
-          openRow(row.id);
-        } else if (e.key === "ArrowDown") {
-          e.preventDefault();
-          moveFocus(e, 1);
-        } else if (e.key === "ArrowUp") {
-          e.preventDefault();
-          moveFocus(e, -1);
-        }
-      }}
-      className="group/row flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-[0.88rem] outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent"
-    >
-      {lead ? <CheckBox checked={row.values[lead.id] === true} label={`${lead.name}: ${row.title || "Untitled"}`} onToggle={() => toggle(row, lead)} /> : null}
-      <RowTitle row={row} className={cn("flex-1", lead && row.values[lead.id] === true && "text-muted line-through")} />
-      <div className="flex min-w-0 max-w-[65%] shrink-0 items-center justify-end gap-3 text-[0.78rem] text-muted">
-        {rest.map((p) => {
-          if (p.kind === "checkbox") {
-            return <CheckBox key={p.id} checked={row.values[p.id] === true} label={`${p.name}: ${row.title || "Untitled"}`} onToggle={() => toggle(row, p)} small />;
-          }
-          const node = valueNode(p, row.values[p.id], titles);
-          return node ? (
-            <span key={p.id} className="min-w-0 max-w-[12rem] truncate" title={p.name} data-prop={p.id}>
-              {node}
-            </span>
-          ) : null;
-        })}
-      </div>
-    </div>
-  );
+  const renderRow = (row: DbRow) => <ListRow key={row.id} row={row} lead={lead} rest={rest} titles={titles} openRow={openRow} toggle={toggle} moveFocus={moveFocus} />;
 
   const cellsFor = (gr: GroupOut | null, gg: GroupBy | null): Record<string, unknown> => {
     if (!gr || !gg) return {};
@@ -126,7 +89,6 @@ export default function ListView({ db, view, result, rowById, openRow, setCells,
             {footer("all", null)}
           </>
         )}
-        {result.truncated ? <div className="px-2 py-2 text-xs text-faint">Showing the first {result.rows.length} of {result.filtered} rows.</div> : null}
       </div>
     </div>
   );
@@ -154,3 +116,49 @@ function CheckBox({ checked, label, onToggle, small }: { checked: boolean; label
     </button>
   );
 }
+
+const ListRow = memo(function ListRow({ row, lead, rest, titles, openRow, toggle, moveFocus }: {
+  row: DbRow; lead: Property | undefined; rest: Property[]; titles: Map<string, string>;
+  openRow: (id: string) => void; toggle: (row: DbRow, prop: Property) => void;
+  moveFocus: (e: KeyboardEvent<HTMLElement>, delta: number) => void;
+}) {
+  return (
+    <div
+      key={row.id}
+      role="listitem"
+      tabIndex={0}
+      data-list-row={row.id}
+      onClick={() => openRow(row.id)}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          openRow(row.id);
+        } else if (e.key === "ArrowDown") {
+          e.preventDefault();
+          moveFocus(e, 1);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          moveFocus(e, -1);
+        }
+      }}
+      className="group/row flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-[0.88rem] outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      {lead ? <CheckBox checked={row.values[lead.id] === true} label={`${lead.name}: ${row.title || "Untitled"}`} onToggle={() => toggle(row, lead)} /> : null}
+      <RowTitle row={row} className={cn("flex-1", lead && row.values[lead.id] === true && "text-muted line-through")} />
+      <div className="flex min-w-0 max-w-[65%] shrink-0 items-center justify-end gap-3 text-[0.78rem] text-muted">
+        {rest.map((p) => {
+          if (p.kind === "checkbox") {
+            return <CheckBox key={p.id} checked={row.values[p.id] === true} label={`${p.name}: ${row.title || "Untitled"}`} onToggle={() => toggle(row, p)} small />;
+          }
+          const node = valueNode(p, row.values[p.id], titles);
+          return node ? (
+            <span key={p.id} className="min-w-0 max-w-[12rem] truncate" title={p.name} data-prop={p.id}>
+              {node}
+            </span>
+          ) : null;
+        })}
+      </div>
+    </div>
+  );
+});

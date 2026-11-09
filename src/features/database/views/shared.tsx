@@ -1,7 +1,7 @@
 // Small pieces shared by the database views (board, calendar, timeline, list, gallery, chart).
 // They only display values and build the patches the shell's setCells understands.
 
-import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Check, Paperclip, Plus } from "lucide-react";
 import type { Database, DateCell, DbRow, FileCell, GroupBy, GroupOut, OptionColor, Property, SelectOption, View } from "@/lib/database-types";
@@ -480,10 +480,10 @@ export function titleMap(rows: DbRow[]): Map<string, string> {
 /** Whether the click that ended a drag should be ignored (a card dropped on itself must not open). */
 export function useDragClickGuard() {
   const last = useRef(0);
-  return {
+  return useMemo(() => ({
     mark: () => {
       last.current = Date.now();
     },
     recent: () => Date.now() - last.current < 250,
-  };
+  }), []);
 }

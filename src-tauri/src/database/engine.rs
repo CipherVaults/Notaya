@@ -29,6 +29,8 @@ pub struct Ctx<'a> {
     pub tz: i64,
     cells: RefCell<HashMap<String, Rc<Map<String, Value>>>>,
     memo: RefCell<HashMap<(String, String), Result<Val, String>>>,
+    /// Parsed formulas (including parse errors) live only for this query, keyed by exact text.
+    formulas: RefCell<HashMap<String, Result<Rc<formula::Expr>, String>>>,
     busy: RefCell<HashSet<(String, String)>>,
     /// How many formula or rollup values are being worked out inside one another right now.
     depth: std::cell::Cell<usize>,
@@ -54,7 +56,7 @@ impl<'a> Ctx<'a> {
         for v in rows.values_mut() {
             v.sort_by_key(|r| (r.order, r.created));
         }
-        Ctx { dbs, rows, by_id, now, tz, cells: RefCell::default(), memo: RefCell::default(), busy: RefCell::default(), depth: std::cell::Cell::new(0) }
+        Ctx { dbs, rows, by_id, now, tz, cells: RefCell::default(), memo: RefCell::default(), formulas: RefCell::default(), busy: RefCell::default(), depth: std::cell::Cell::new(0) }
     }
 
     pub fn rows_of(&self, db: &str) -> &[&'a Row] {
@@ -209,7 +211,9 @@ impl<'a> Ctx<'a> {
                 self.ctx.now
             }
         }
-        formula::run(&prop.formula, &Env { ctx: self, db, row })
+        // Release the cache borrow before evaluation: prop() can recursively evaluate a formula.
+        let parsed = self.formulas.borrow_mut().entry(prop.formula.clone()).or_insert_with(|| formula::parse(&prop.formula).map(Rc::new)).clone()?;
+        formula::eval(&parsed, &Env { ctx: self, db, row })
     }
 
     fn rollup_value(&self, db: &Database, row: &Row, prop: &Property) -> Result<Val, String> {
@@ -456,14 +460,18 @@ impl<'a> Ctx<'a> {
         }
     }
 
-    pub fn sorted<'r>(&self, db: &Database, mut rows: Vec<&'r Row>, sorts: &[Sort]) -> Vec<&'r Row> {
+    pub fn sorted<'r>(&self, db: &Database, rows: Vec<&'r Row>, sorts: &[Sort]) -> Vec<&'r Row> {
         if sorts.is_empty() {
             return rows; // already in manual order
         }
         let props: Vec<(&Property, bool)> = sorts.iter().filter_map(|s| db.prop(&s.prop).map(|p| (p, s.descending))).collect();
-        let keyed: HashMap<&str, Vec<Val>> = rows.iter().map(|r| (r.id.as_str(), props.iter().map(|(p, _)| self.sort_key(db, r, p)).collect())).collect();
-        rows.sort_by(|a, b| {
-            let (ka, kb) = (&keyed[a.id.as_str()], &keyed[b.id.as_str()]);
+        let keys: Vec<Vec<Val>> = rows.iter().map(|r| props.iter().map(|(p, _)| self.sort_key(db, r, p)).collect()).collect();
+        let mut positions: Vec<usize> = (0..rows.len()).collect();
+        // Stable sort preserves the incoming manual order for ties, including missing sort props.
+        // The same key generation and comparison (especially empty-last in BOTH directions)
+        // apply; comparisons now index positions instead of hashing row ids repeatedly.
+        positions.sort_by(|&a, &b| {
+            let (ka, kb) = (&keys[a], &keys[b]);
             for (i, (_, desc)) in props.iter().enumerate() {
                 let (x, y) = (&ka[i], &kb[i]);
                 let o = match (x, y) {
@@ -485,7 +493,7 @@ impl<'a> Ctx<'a> {
             }
             std::cmp::Ordering::Equal
         });
-        rows
+        positions.into_iter().map(|i| rows[i]).collect()
     }
 
     fn group_keys(&self, db: &Database, row: &Row, prop: &Property, g: &GroupBy) -> Vec<(String, String)> {

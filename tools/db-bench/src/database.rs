@@ -7,7 +7,10 @@ pub mod value;
 pub mod regex;
 #[path = "../../../src-tauri/src/database/formula.rs"]
 pub mod formula;
-#[path = "../../../src-tauri/src/database/clock.rs"]
-pub mod clock;
+// The query benchmark supplies a fixed clock to Ctx; the OS clock module is unused.
 #[path = "../../../src-tauri/src/database/engine.rs"]
 pub mod engine;
+
+#[cfg(test)]
+#[path = "../../../src-tauri/src/database/golden/mod.rs"]
+mod golden;
