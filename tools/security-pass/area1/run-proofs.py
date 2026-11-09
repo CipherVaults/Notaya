@@ -7,13 +7,20 @@ from pathlib import Path
 import datetime
 import re
 import shutil
+import sys
 import subprocess
 
 REPO = Path(__file__).resolve().parents[3]
 BASE = Path(r"D:\Notaya Tests\v1-6-S")
 STAMP = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-RUN = BASE / ("area1-proof-" + STAMP)
-RUN.mkdir(parents=True, exist_ok=False)
+if len(sys.argv) == 2:
+    # Reuse only the generated build cache; data-run always gets a fresh name.
+    RUN = Path(sys.argv[1]).resolve()
+    assert RUN.parent == BASE.resolve() and RUN.name.startswith("area1-proof-")
+    assert (RUN / "Cargo.toml").exists()
+else:
+    RUN = BASE / ("area1-proof-" + STAMP)
+    RUN.mkdir(parents=True, exist_ok=False)
 src = REPO / "src-tauri"
 manifest = (src / "Cargo.toml").read_text(encoding="utf-8")
 manifest = re.sub(r'^members = .*\n', '', manifest, flags=re.M)
@@ -33,8 +40,8 @@ body = Path(__file__).with_name("core-repro.rs").read_text(encoding="utf-8")
 (RUN / "proof.rs").write_text(prefix + body, encoding="utf-8")
 print("Proof execution directory:", RUN, flush=True)
 cmd = ["cargo", "run", "--offline", "--manifest-path", str(RUN / "Cargo.toml"),
-       "--target-dir", str(RUN / "target"), "--bin", "area1-core", "--", str(RUN / "data-run")]
+       "--target-dir", str(RUN / "target"), "--bin", "area1-core", "--", str(RUN / ("data-run-" + STAMP))]
 result = subprocess.run(cmd, cwd=REPO, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-(RUN / "result.txt").write_text(result.stdout, encoding="utf-8")
+(RUN / ("result-" + STAMP + ".txt")).write_text(result.stdout, encoding="utf-8")
 print(result.stdout[-16000:])
 raise SystemExit(result.returncode)
