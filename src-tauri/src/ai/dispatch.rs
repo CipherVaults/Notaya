@@ -1363,17 +1363,26 @@ mod tests {
     fn sibling_leases_and_claims_do_not_block_unrelated_writes_or_undo() {
         for protection in ["lease", "claim"] {
             let (state,p,section,page)=fixture();
-            let (sibling,set)=state.with_mut(|s| {
-                let sibling=notes::create_page_core(s,&Actor::Person,section.clone(),"Sibling".into())?.id.clone();
+            let sibling=state.with_mut(|s|Ok(notes::create_page_core(s,&Actor::Person,section.clone(),"Sibling".into())?.id.clone())).unwrap();
+            let set=state.with_mut(|s| {
                 s.run_action(&actor(&p),"page.rename",|s| {
                     let mut item=commands::page(s,&page)?;item.title="AI edit".into();s.put(Item::Page(item))
                 })?;
                 let set=s.activity_list(None,None,100)?.into_iter().find(|e|e.action=="page.rename").unwrap().change_set.clone();
+                Ok(set)
+            }).unwrap();
+            state.with_mut(|s| {
                 if protection=="lease" { s.coordination.editing(&sibling,"main",true); }
                 else { s.claim(&Actor::Ai{pairing_id:"other".into(),label:"Other".into()},std::slice::from_ref(&sibling))?; }
-                Ok((sibling,set))
+                Ok(())
             }).unwrap();
             call(&state,&p,"activity.undo",json!({"changeSetId":set}),true,||false,||{}).unwrap();
+            state.with_actor(&actor(&p),|s| {
+                let r=prepare(s,&p,"activity.undo",json!({"changeSetId":set}))?;
+                execute(s,&p,&r,&state.paths)?;
+                assert_eq!(commands::page(s,&page)?.title,"old");
+                Ok(())
+            }).unwrap();
             call(&state,&p,"page.rename",json!({"id":page,"title":"Unrelated edit"}),false,||false,||{}).unwrap();
             assert!(call(&state,&p,"page.rename",json!({"id":sibling,"title":"Blocked"}),false,||false,||{}).is_err());
             assert!(call(&state,&p,"section.trash",json!({"id":section}),true,||false,||{}).is_err());
