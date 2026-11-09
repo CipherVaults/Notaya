@@ -1,6 +1,6 @@
 # Whole-app test results: X-1 addition
 
-Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox). FIX RUN 2 baseline: `9b64db2f85388c5d800c25926772fdc15a2c539b`; final source is the uncommitted changes on it. Original baseline: `e4df9185a99fabf6002065c84c921cd8f8278e31`. Produced and locally checked, not integrated or accepted. Claude owns integration, exact candidate commit/exe hash and real-PC observations. **Current correction is in [FIX RUN 2](#fix-run-2-corrected-analysis-and-hand-back); the run-1 analysis and checks below it are historical, superseded where contradicted.**
+Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox). FIX RUN 2 baseline: `9b64db2f85388c5d800c25926772fdc15a2c539b`; external heartbeat checkpoint `ba047062f4bd5162bf4e6f897b4228051aec8dda` contains the final tested code, with this results addendum uncommitted. Original baseline: `e4df9185a99fabf6002065c84c921cd8f8278e31`. Produced and locally checked, not integrated or accepted. Claude owns integration, exact candidate commit/exe hash and real-PC observations. **Current correction is in [FIX RUN 2](#fix-run-2-corrected-analysis-and-hand-back); the run-1 analysis and checks below it are historical, superseded where contradicted.**
 
 ## Defect register
 
@@ -10,7 +10,7 @@ Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox
 
 ## FIX RUN 2: corrected analysis and hand-back
 
-**Authority/scope:** Ahmed's current FIX RUN 2 instruction (message timestamp not exposed); read-only orientation began on `9b64db2`, branch `AE0101/v1-6-x1`. System-clock checkpoint: 2026-11-09 12:49:44 UTC. Startup-only source, the startup tooling and these two plan/results records are the write area. Stop at checked local source and hand-back to Claude. No Git writes, fetch/PR/network, installs, real exe or browser runs in this session. Original reporter remains **Mohamed Sayed (AbyssWatcher2)**; Claude credits him in the eventual commit. Runtime report comes from Claude via Ahmed; raw report folders/timestamps were not supplied. Both full artifact hashes were independently read from the existing files in this run, without executing them.
+**Authority/scope:** Ahmed's current FIX RUN 2 instruction (message timestamp not exposed); read-only orientation began on `9b64db2`, branch `AE0101/v1-6-x1`. System-clock checkpoint: 2026-11-09 12:49:44 UTC. Startup-only source, the startup tooling and these two plan/results records are the write area. Stop at checked local source and hand-back to Claude. Codex issued no Git write, fetch/PR/network, install, real exe or browser command. The external heartbeat independently made automatic checkpoint `ba04706` at 2026-11-09 12:56:44 UTC; the tested eleven-file source fingerprint below remained identical afterwards. Original reporter remains **Mohamed Sayed (AbyssWatcher2)**; Claude credits him in the eventual commit. Runtime report comes from Claude via Ahmed; raw report folders/timestamps were not supplied. Both full artifact hashes were independently read from the existing files in this run, without executing them.
 
 ### Corrected root cause and candidate analysis
 
@@ -45,7 +45,37 @@ Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox
 
 ### Verification and return
 
-Final commands/results are recorded after the checks below. Scope is the uncommitted source on `9b64db2`, not a newly committed or real-exe-tested artifact. Local tests do not establish Windows rendering, real sign-in, protected-vault behavior or acceptance. Exact real-PC build/control/delay/held-frame commands are in [startup-minimized.md](../../tools/real-exe-tests/startup-minimized.md#fix-run-2-build-and-comparison).
+Final checks ran on working source on `9b64db2`; the external heartbeat then recorded that identical code as `ba04706`. Its eleven-file fingerprint was checked again after the checkpoint; only this results addendum differs from that commit:
+
+| Command/check | Final exact result |
+|---|---|
+| `npx tsc --noEmit -p tsconfig.json` | Exit **0**, no errors. |
+| `npm run build -- --configLoader native` | Exit **0**, Vite built in **1.85 s**. Existing `INEFFECTIVE_DYNAMIC_IMPORT` warning: `DatabaseView.tsx` is imported statically and dynamically. PowerShell renders this stderr warning as `NativeCommandError` when streams are merged for the tail; npm's exit code is 0. |
+| `node --check tools/real-exe-tests/startup-minimized.mjs`, `node --check tools/real-exe-tests/startup-ready.test.mjs`, `node --check tools/real-exe-tests/startup-probe.test.mjs` | All three exit **0**. |
+| `node --test --test-isolation=none tools/real-exe-tests/startup-ready.test.mjs tools/real-exe-tests/startup-probe.test.mjs` | Exit **0**, **13 passed, 0 failed, 0 cancelled, 0 skipped, 0 todo**, **372.9614 ms**. Original four scheduling scenarios retained with timer-free expectations, plus startup gate/backdrop/appearance and observer regressions. |
+| `powershell -NoProfile -File tools/real-exe-tests/startup-cleanup.test.ps1` | Exit **0**, **8 fake-process cases passed**, no live process control. |
+| Windows PowerShell AST `Parser::ParseFile` over `run-startup-minimized.ps1`, `startup-cleanup.test.ps1`, `startup-diagnostic.ps1` | Exit **0**, **0 parse errors** for each of the three files. |
+| `git diff --check` and `git diff 9b64db2 --check` | Exit **0**; only LF/CRLF notices. Repeated after the documentation readback. |
+| Rust test/build, real exe/CDP, pixels, actual sign-in, tray/auto-lock/protected-vault round, audits and independent security review | **not run** in FIX RUN 2. Rust unchanged; npm audit skipped by instruction. |
+
+Source identity (raw bytes before coordinator newline conversion): SHA-256 `bef3c7455de14edf632c05ea7a4ee7dd7576e32f5ba33e6016c9a25e88fb223a` over the following eleven paths sorted lexicographically, each encoded as UTF-8 path + NUL + raw file bytes + NUL: `src/App.tsx`, `src/lib/ipc.ts`, `src/lib/startup.ts`, `src/lib/theme.ts`, `src/main.tsx`, `src/store/app.ts`, `tools/real-exe-tests/run-startup-minimized.ps1`, `tools/real-exe-tests/startup-cleanup.test.ps1`, `tools/real-exe-tests/startup-minimized.mjs`, `tools/real-exe-tests/startup-probe.test.mjs`, `tools/real-exe-tests/startup-ready.test.mjs`. This identifies tested source now in `ba04706`, not an exe hash or real-exe result.
+
+Changed files: the eleven source/scripts just listed; `tools/real-exe-tests/README.md`, `tools/real-exe-tests/startup-minimized.md`; `docs/plan/2026-11-09-whole-app-test-plan.md`, `docs/plan/2026-11-09-whole-app-test-results.md` (**15 files**). Local tests do not establish Windows rendering, real sign-in, protected-vault behavior or acceptance. Exact real-PC build/control/delay/held-frame commands are in [startup-minimized.md](../../tools/real-exe-tests/startup-minimized.md#fix-run-2-build-and-comparison).
+
+Security self-check, [guide section 4](../handoff/codex-security-review-guide.md#4-checklist-for-notaya-check-each-write-na-when-it-does-not-apply), **self-review, not independent**:
+
+| Checklist area | Scope/result |
+|---|---|
+| Secrets/keys, zeroization, crypto, OS randomness | **n/a** to production changes; no new secret/key/crypto handling, no vault data/credentials in diff/tests. Harness reload IDs use Node's existing OS-backed `randomUUID`, not production security IDs. |
+| Commands/IPC/AI permissions/confirmations | Existing `window_ready` only, no new Rust command or authority. Read native handler and all ready/show call sites: registration precedes tray-hidden return. Main now confirms both lock-event listeners before readiness. Flush acknowledgement and native lock/show policy unchanged; real lock behavior **not run**. AI action registry and confirmation changes **n/a**. |
+| Files/paths/parsing | Runner's throwaway-root/reparse/port/Run-key checks unchanged. StartTime is null-safe; retained process handle and recorded ID avoid killing a newly reused PID. Eight fake cases verify the helper, not Windows runtime cleanup. Probe numeric bounds/loopback restrictions remain; observer retains callback IDs only to deduplicate and never records payloads/results. Archive/import/SQL checks **n/a**. |
+| AI pipe/bridge | **n/a**, unchanged. |
+| Storage/history/logs | **n/a** for vault/history/encryption/decrypted caches. Existing non-secret appearance cache remains allowlisted; revision guard prevents stale cached-startup response from rewriting newer settings/cache. Probe counters exist only on the page object created by the harness, with no disk/log/URL storage or status/note content. |
+| Front end | CSP, HTML sinks, clipboard and capture protection unchanged. No production eval/string timer/new HTML sink or network. Readiness uses a function microtask with cancellation and one-send guard. Test VM/CDP code is fixed repository code. Existing screen animations retained. |
+| Dependencies/build | No added/changed dependency, version, licence or installs. `npm audit` and `cargo audit` **not run**, no clean-audit claim. Frontend types/build passed on the identified source. |
+| Debug/test cleanup | No real process/debug listener opened by Codex. Runner still uses child-only environment, normal Quit and zero-listener requirement. Native cleanup/transport instrumentation **not runtime verified**; Claude runs it on throwaway data. |
+
+No reachable new security finding identified in this self-check. Independent Claude review and security acceptance remain outstanding.
 
 Outside write area, mechanical: **none**. No Rust changes; `cargo test --lib --offline` is **not run** in FIX RUN 2, as requested when Rust is unchanged. No npm audit/ci, cargo audit/clippy, install, real exe, browser, independent security review or network. Claude owns independent `/security-review`, exact commit/hash, records/claims/session/ledger and commit/push. Served model/effort, token counts, quota before/after and message timestamp were not exposed; do not infer them from repository defaults.
 
