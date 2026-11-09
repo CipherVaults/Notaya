@@ -46,7 +46,7 @@ if (Test-Path -LiteralPath $LogFile -PathType Leaf) {
   $logStatus = 'read; only fixed startup/error classes exported'
   foreach ($line in (Get-Content -LiteralPath $LogFile -Tail 120)) {
     # Parse just the fixed prefix; never export any raw message or source path.
-    if ($line -match '^(?<time>\d{4}-\d\d-\d\d[T ][0-9:.Z+\-]+)\s+(?<level>INFO|WARN|ERROR)\s+v(?<version>[0-9.]+)\s+\[[^\]]*\]\s+(?<body>.*)$') {
+    if ($line -match '^(?<time>\d{4}-\d\d-\d\d[T ][0-9:.Z+\-]+)\s+(?<level>INFO|WARN|ERROR|PANIC)\s+v(?<version>[0-9.]+)\s+\[[^\]]*\]\s+(?<body>.*)$') {
       $stamp = $Matches.time; $level = $Matches.level; $version = $Matches.version; $body = $Matches.body
       $kind = switch -Regex ($body) {
         '^Notaya started \(installed\)\.' { 'started-installed'; break }
