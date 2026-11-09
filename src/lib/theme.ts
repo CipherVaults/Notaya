@@ -88,7 +88,9 @@ export function resolveAccent(value: string, dark: boolean, look?: ResolvedTheme
 }
 
 /** Sets CSS variables and, for the main window, the Windows backdrop material. */
+let appearanceRevision = 0;
 export async function applyAppearance(a: Appearance, applyBackdrop: boolean) {
+  const revision = ++appearanceRevision;
   const root = document.documentElement;
   const dark = isDark(a.theme);
   const look = resolveTheme(a.theme);
@@ -106,12 +108,15 @@ export async function applyAppearance(a: Appearance, applyBackdrop: boolean) {
   if (applyBackdrop) {
     try {
       const on = await api.setBackdrop(a.backdrop, dark);
-      root.dataset.backdrop = on ? "on" : "off";
+      if (revision === appearanceRevision) root.dataset.backdrop = on ? "on" : "off";
     } catch {
-      root.dataset.backdrop = "off";
+      if (revision === appearanceRevision) root.dataset.backdrop = "off";
     }
   }
 
+  // Startup no longer waits for cached backdrop IPC before loading settings.
+  // A late cached response must not overwrite the newer settings/cache.
+  if (revision !== appearanceRevision) return;
   try {
     const cached: Appearance = {
       theme: a.theme,

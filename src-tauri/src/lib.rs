@@ -15,6 +15,8 @@ mod import;
 mod legacy_guard;
 mod logging;
 mod model;
+mod native_confirm;
+mod keyfile_path;
 mod openvault;
 mod portable;
 mod restore;
@@ -141,6 +143,7 @@ pub fn run() {
             }
             // The tray icon comes first: the window may only hide itself while there is a way back.
             let state = app.state::<state::AppState>();
+            state.ai.native.bind(app.handle().clone());
             match shell::build_tray(app.handle()) {
                 Ok(()) => state.set_tray_ready(true),
                 Err(e) => eprintln!("no tray icon: {e}"),

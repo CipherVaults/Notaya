@@ -164,12 +164,20 @@ const MAX_KEYFILE_BYTES: u64 = 64 * 1024 * 1024;
 
 /// A keyfile can be any file. Only its SHA-256 digest is used.
 pub fn keyfile_digest(path: &Path) -> Result<Zeroizing<[u8; 32]>> {
-    let meta = std::fs::metadata(path)
-        .map_err(|_| Error::invalid("The keyfile could not be read."))?;
+    use std::io::Read;
+    // Locality is checked before any access to the supplied path. Read from
+    // that same guarded handle, so a later junction swap cannot redirect it.
+    let file = crate::keyfile_path::open(path)?;
+    let meta = file.metadata().map_err(|_| Error::invalid("The keyfile could not be read."))?;
     if meta.len() == 0 || meta.len() > MAX_KEYFILE_BYTES {
         return Err(Error::invalid("A keyfile must be between 1 byte and 64 MB."));
     }
-    let bytes = Zeroizing::new(std::fs::read(path)?);
+    let mut bytes = Zeroizing::new(Vec::new());
+    file.take(MAX_KEYFILE_BYTES + 1).read_to_end(&mut bytes)
+        .map_err(|_| Error::invalid("The keyfile could not be read."))?;
+    if bytes.is_empty() || bytes.len() as u64 > MAX_KEYFILE_BYTES {
+        return Err(Error::invalid("A keyfile must be between 1 byte and 64 MB."));
+    }
     Ok(Zeroizing::new(sha256(&bytes)))
 }
 
