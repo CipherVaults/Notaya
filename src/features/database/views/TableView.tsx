@@ -301,14 +301,28 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   const shell = useDbShell();
   const { editDb, editView, trashRows, duplicateRow, openProp, focusRowId, clearFocusRow, patchRowLocal } = shell;
   const [liveWidths, setLiveWidths] = useState<Record<string, number>>({});
-  const [active, setActive] = useState<{ r: number; c: number } | null>(null);
+  const [active, setActive] = useState<{ id: string; c: number } | null>(null);
   const [editing, setEditing] = useState(false);
   const [seed, setSeed] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [limit, setLimit] = useState(PAGE);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const lastSelected = useRef<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLTableSectionElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(33);
+  const pendingFocus = useRef(false);
+  const instanceId = useId();
+  const cellId = useCallback((rowId: string, col: number) => `${instanceId}-${rowId}-${col}`, [instanceId]);
+  useLayoutEffect(() => {
+    const head = headRef.current;
+    if (!head) return;
+    const measure = () => setHeaderHeight(head.getBoundingClientRect().height);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(head);
+    return () => observer.disconnect();
+  }, []);
 
   // ----- columns
   const cols: Col[] = useMemo(() => {
@@ -345,9 +359,75 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     return out;
   }, [groups, result.rows, rowById, collapsed]);
   const indexOfRow = useMemo(() => new Map(flat.map((r, i) => [r.id, i])), [flat]);
+  // Build lightweight descriptors once per result/view change, never React cells for
+  // the full result. Headers, New lines and group totals occupy real scroll space.
+  const items = useMemo(() => {
+    const out: TableItem[] = [];
+    const rows = (ids: string[], prefix: string) => {
+      for (const id of ids) {
+        const row = rowById.get(id);
+        if (row) out.push({ kind: "row", key: `${prefix}:row:${id}`, row, rowIndex: indexOfRow.get(id) ?? 0 });
+      }
+    };
+    if (!groups) {
+      for (let i = 0; i < result.rows.length; i++) out.push({ kind: "row", key: `row:${result.rows[i].id}`, row: result.rows[i], rowIndex: i });
+      out.push({ kind: "add", key: "add:end", cells: {} });
+    } else {
+      const groupProp = db.props.find((p) => p.id === view.group?.prop);
+      const subProp = db.props.find((p) => p.id === view.subGroup?.prop);
+      for (const g of groups) {
+        out.push({ kind: "group", key: `group:${g.key}`, groupKey: g.key, group: g, level: 0 });
+        if (collapsed.has(g.key)) continue;
+        if (g.subs.length) {
+          for (const s of g.subs) {
+            const key = `${g.key}/${s.key}`;
+            out.push({ kind: "group", key: `group:${key}`, groupKey: key, group: s, level: 1 });
+            if (collapsed.has(key)) continue;
+            rows(s.rows, key);
+            out.push({ kind: "add", key: `add:${key}`, cells: { ...cellsForGroup(groupProp, view.group, g), ...cellsForGroup(subProp, view.subGroup, s) } });
+            if (view.calcs.length) out.push({ kind: "footer", key: `footer:${key}`, calcs: s.calcs });
+          }
+        } else {
+          rows(g.rows, g.key);
+          out.push({ kind: "add", key: `add:${g.key}`, cells: cellsForGroup(groupProp, view.group, g) });
+          if (view.calcs.length) out.push({ kind: "footer", key: `footer:${g.key}`, calcs: g.calcs });
+        }
+      }
+    }
+    return out;
+  }, [groups, result.rows, rowById, indexOfRow, collapsed, db.props, view.group, view.subGroup, view.calcs]);
+  const itemIndexOfRow = useMemo(() => {
+    const map = new Map<string, number>();
+    items.forEach((item, i) => { if (item.kind === "row") map.set(item.row.id, i); });
+    return map;
+  }, [items]);
+  const activeIndex = active ? itemIndexOfRow.get(active.id) : undefined;
+  const dragIndex = draggingId ? itemIndexOfRow.get(draggingId) : undefined;
+  const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
+    count: items.length,
+    getScrollElement: () => wrapRef.current,
+    estimateSize: (i) => items[i].kind === "row" ? ROW_HEIGHT : items[i].kind === "group" ? 37 : 33,
+    getItemKey: (i) => items[i].key,
+    overscan: 6,
+    scrollMargin: headerHeight,
+    scrollPaddingStart: headerHeight,
+    // Keep the active editor and drag source alive even outside the window. Gaps
+    // between these and the window get their own spacers (no shifted row heights).
+    rangeExtractor: useCallback((range) => {
+      const indices = new Set(defaultRangeExtractor(range));
+      if (activeIndex != null) indices.add(activeIndex);
+      if (dragIndex != null) indices.add(dragIndex);
+      return [...indices].sort((a, b) => a - b);
+    }, [activeIndex, dragIndex]),
+  });
+  // A width/wrap change invalidates previously measured heights, including rows
+  // that are currently off screen. Native scroll anchoring must not also adjust.
+  useLayoutEffect(() => { virtualizer.measure(); }, [virtualizer, cols, view.wrap]);
+  const virtualRows = virtualizer.getVirtualItems();
   const canDrag = view.sorts.length === 0;
-  // Only mounted (uncollapsed, paged) rows participate in row dragging.
-  const dragRowIds = useMemo(() => [...new Set(flat.slice(0, limit).map((r) => r.id))], [flat, limit]);
+  // dnd-kit measures only mounted rows; drop resolution below uses virtual offsets
+  // so an auto-scroll can target any row, including one not mounted at pickup.
+  const dragRowIds = useMemo(() => [...new Set(virtualRows.flatMap((v) => items[v.index].kind === "row" ? [(items[v.index] as Extract<TableItem, { kind: "row" }>).row.id] : []))], [virtualRows, items]);
   const columnIds = useMemo(() => cols.map((c) => c.prop.id), [cols]);
 
   // ----- actions
@@ -363,12 +443,29 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   flatRef.current = flat;
   const colsRef = useRef(cols);
   colsRef.current = cols;
+  const virtualRef = useRef({ virtualizer, itemIndexOfRow });
+  virtualRef.current = { virtualizer, itemIndexOfRow };
 
   const select = useCallback((r: number, c: number, edit = false) => {
-    setActive({ r, c });
+    const row = flatRef.current[r];
+    if (!row) return;
+    setActive({ id: row.id, c });
     setEditing(edit);
     setSeed(undefined);
+    pendingFocus.current = true;
+    const { virtualizer: v, itemIndexOfRow: indices } = virtualRef.current;
+    const index = indices.get(row.id);
+    if (index != null) v.scrollToIndex(index, { align: "auto" });
   }, []);
+  useLayoutEffect(() => {
+    if (!pendingFocus.current || !active) return;
+    const cell = document.getElementById(cellId(active.id, active.c));
+    if (!cell) return;
+    pendingFocus.current = false;
+    // Interactive editors take their own focus. Selecting an ordinary cell must
+    // not steal focus from a picker or focus every time a row is recycled.
+    if (!editing) cell.focus({ preventScroll: true });
+  });
   const toggleSelect = useCallback((id: string, shift: boolean) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -384,9 +481,21 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   }, []);
   const endEdit = useCallback((how: "enter" | "tab" | "blur" | "escape") => {
     wrapRef.current?.focus({ preventScroll: true });
-    if (how === "enter") setActive((a) => (a ? { r: Math.min(flatRef.current.length - 1, a.r + 1), c: a.c } : a));
-    else if (how === "tab") setActive((a) => (a ? (a.c + 1 < colsRef.current.length ? { r: a.r, c: a.c + 1 } : { r: Math.min(flatRef.current.length - 1, a.r + 1), c: 0 }) : a));
+    if (how !== "enter" && how !== "tab") return;
+    setActive((a) => {
+      if (!a) return a;
+      const r = flatRef.current.findIndex((row) => row.id === a.id);
+      const nextRow = how === "enter" || a.c + 1 >= colsRef.current.length;
+      const row = flatRef.current[Math.min(flatRef.current.length - 1, r + (nextRow ? 1 : 0))];
+      return row ? { id: row.id, c: how === "enter" ? a.c : nextRow ? 0 : a.c + 1 } : null;
+    });
+    pendingFocus.current = true;
   }, []);
+  // Focus-driven movement (including Enter from an editor) scrolls before focus.
+  // Ordinary pointer/wheel scrolling deliberately does not pull the user back.
+  useLayoutEffect(() => {
+    if (pendingFocus.current && activeIndex != null) virtualizer.scrollToIndex(activeIndex, { align: "auto" });
+  }, [activeIndex, virtualizer]);
   const actions: Actions = useMemo(
     () => ({ select, setEditing, commit, patchLocal: patchRowLocal, open: openRow, toggleSelect, trash: (ids) => void trashRows(ids), duplicate: (id) => void duplicateRow(id), endEdit }),
     [select, commit, patchRowLocal, openRow, toggleSelect, trashRows, duplicateRow, endEdit],
@@ -397,11 +506,9 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (!focusRowId) return;
     const i = indexOfRow.get(focusRowId);
     if (i == null || titleIdx < 0) return;
-    setActive({ r: i, c: titleIdx });
-    setEditing(true);
-    setSeed(undefined);
+    select(i, titleIdx, true);
     clearFocusRow();
-  }, [focusRowId, indexOfRow, titleIdx, clearFocusRow]);
+  }, [focusRowId, indexOfRow, titleIdx, clearFocusRow, select]);
 
   // Keep the selection to rows that still exist.
   useEffect(() => {
@@ -409,19 +516,25 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       const keep = new Set([...s].filter((id) => rowById.has(id)));
       return keep.size === s.size ? s : keep;
     });
-    setActive((a) => (a && a.r >= flat.length ? (flat.length ? { r: flat.length - 1, c: a.c } : null) : a));
-  }, [rowById, flat.length]);
+    if (active && !indexOfRow.has(active.id)) {
+      setActive(null);
+      setEditing(false);
+      // A filtered/deleted/collapsed row cannot remain an active descendant.
+      if (wrapRef.current?.contains(document.activeElement)) wrapRef.current.focus({ preventScroll: true });
+    }
+  }, [rowById, indexOfRow, active]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (editing || !active) return;
     if ((e.target as HTMLElement).closest("input,textarea,select,[role=dialog]")) return;
-    const { r, c } = active;
+    const c = active.c;
+    const r = indexOfRow.get(active.id) ?? -1;
     const col = cols[c];
     const row = flat[r];
     if (!col || !row) return;
     const move = (dr: number, dc: number) => {
       e.preventDefault();
-      setActive({ r: Math.max(0, Math.min(flat.length - 1, r + dr)), c: Math.max(0, Math.min(cols.length - 1, c + dc)) });
+      select(Math.max(0, Math.min(flat.length - 1, r + dr)), Math.max(0, Math.min(cols.length - 1, c + dc)));
     };
     const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
     switch (e.key) {
@@ -429,6 +542,10 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       case "ArrowUp": return move(-1, 0);
       case "ArrowRight": return move(0, rtl ? -1 : 1);
       case "ArrowLeft": return move(0, rtl ? 1 : -1);
+      case "Home": return move(-r, 0);
+      case "End": return move(flat.length - 1 - r, 0);
+      case "PageDown": return move(Math.max(1, Math.floor(((wrapRef.current?.clientHeight ?? 350) - headerHeight) / ROW_HEIGHT)), 0);
+      case "PageUp": return move(-Math.max(1, Math.floor(((wrapRef.current?.clientHeight ?? 350) - headerHeight) / ROW_HEIGHT)), 0);
       case "Tab": return move(0, e.shiftKey ? -1 : 1);
       case "Escape":
         e.preventDefault();
