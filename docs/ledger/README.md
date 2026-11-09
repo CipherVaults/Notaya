@@ -72,7 +72,7 @@ A dashboard page (an Artifact) is built from the CSV files with `python3 -I tool
 
 ## Pacing limits
 
-**Set by Ahmed on 2026-11-07 23:59:56 UTC ([A45](../plan/approval-and-amendments.md)): Claude up to 70% of its week, Codex up to 100% including its resets.** The dashboard shows both. Older text, kept: **not set for Notaya yet.** Ahmed has said the coordinator watches the hourly usage, keeps the work going and chooses models per task, and that Claude threads come first while the 2026-11-07 cloud credit lasts. He has not set a percentage at which work slows or stops. The FFmpeg Encoder project used 80% of a 5-hour window and 90% of a week; that is FFmpeg's decision and is not adopted here without Ahmed's word.
+**Dated note (A50, 2026-11-09 07:10 UTC): the Claude 70% line is lifted for 1.6 (up to 100%).** **Set by Ahmed on 2026-11-07 23:59:56 UTC ([A45](../plan/approval-and-amendments.md)): Claude up to 70% of its week, Codex up to 100% including its resets.** The dashboard shows both. Older text, kept: **not set for Notaya yet.** Ahmed has said the coordinator watches the hourly usage, keeps the work going and chooses models per task, and that Claude threads come first while the 2026-11-07 cloud credit lasts. He has not set a percentage at which work slows or stops. The FFmpeg Encoder project used 80% of a 5-hour window and 90% of a week; that is FFmpeg's decision and is not adopted here without Ahmed's word.
 
 ## Limits of this ledger
 
