@@ -412,3 +412,5 @@ Also open, asked in the project chat as **30 to 33** (from the survey, not repea
 - **Result state:** produced. Not verified, integrated or accepted.
 - **Mirrored to:** the Notaya Notion hub (Version Feature Board cards and the Human Roadmap page), updated in the same thread.
 - **Not done:** no code read beyond the inventory's findings, no build, no test, no app run. Sizes are judgement, not measurements.
+
+**Dated addition (2026-11-09 06:56 UTC, Ahmed's side, cloud; [A48](approval-and-amendments.md), Ahmed 06:52:15 UTC):** **1.6-16, large databases stay fast** (Stage 1 P1 to P5, then P6 virtual rows and P7 windowed rows; plan: [`2026-11-09-large-database-performance-plan.md`](2026-11-09-large-database-performance-plan.md); size M to L, Codex) joins 1.6 and runs in the polish step before the whole-app test (A47) closes. P8 (virtual List, Gallery, Board; Timeline) and Stage 3 (P9 to P12, engine speed for analytics) stay on the roadmap: P9 and P10 before dashboards 2.1, P8 with the 1.7 to 1.9 database work, P11 and P12 only if measured need.
