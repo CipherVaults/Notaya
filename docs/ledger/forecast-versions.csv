@@ -1,10 +1,10 @@
 version,theme,plan_points,points_low,points_high,done_points,basis
-1.6 (rest),The foundation: the AI can work with Notaya safely,20,17,23,25,"Spec sizes 1.6 at about 45 points (S=1, M=3, L=6, XL=12). Done so far is an ESTIMATE (about 25, range 22 to 28): lanes C1, B, A, D, C4, AF and C2 merged; E built and held (PR #70). Left: AG fix, C3, C4d fix, C5 (the AI server), integration and the PC round"
+1.6 (rest),The foundation: the AI can work with Notaya safely,54.5,45,63,25,"Spec sizes 1.6 at about 45 points (S=1, M=3, L=6, XL=12). Done so far is an ESTIMATE (about 25, range 22 to 28): lanes C1, B, A, D, C4, AF and C2 merged; E built and held (PR #70). Left: AG fix, C3, C4d fix, C5 (the AI server), integration and the PC round. UPDATE 2026-11-09 (A48, Ahmed 06:52:15 and 06:56:22 UTC): +27 points for large-database speed, now part of 1.6 (plan P1 to P8: quick wins M=3, virtual table rows L=6, windowed rows from Rust L=6, every other view XL=12 from List S + Gallery M + Board M + Timeline L = 13). So 1.6 is about 72 points in all (45 + 27) and plan_points 20 + 27 = 47 left; low 17 + 22, high 23 + 32 is rounded to 54. The remaining 20 points of the first estimate were NOT re-estimated here (C3, C5 and E have merged since 2026-11-08 16:00 UTC), so a refresh of that part is still due. UPDATE 2026-11-09 (A49, Ahmed 06:55:20 and 06:56:22 UTC): WP-17 full security pass (1.6-17, M=3) and WP-18 whole-app polish and tech-debt sweep (1.6-18, M to L, counted 4.5) added, so +7.5 points (low +6, high +9): plan_points 47 + 7.5 = 54.5, low 45, high 63; 1.6 is now about 79.5 points in all. The 1.6 thread estimates roughly 3 to 4 extra weeks of Codex work for P8, WP-17 and WP-18 together. Large-database work has not started"
 1.7,Your app your way: menus keys bars,36,,,,Version plan size check (2026-11-07)
 1.8,Pages that can hold your hubs,37,,,,Version plan size check
 1.9,Tabs and files in and out,59,,,,Version plan size check plus the survey's 13 extra points
 2.0,"Corkboard, calculator, manual",25,,,,Version plan size check
-2.1,Dashboards I: live tiles and filters,20,,,,Version plan size check
+2.1,Dashboards I: live tiles and filters,26,,,,"Version plan size check (20) plus 6 for the large-data engine groundwork (plan P9 and P10, item 2.1-0; 2026-11-09)"
 2.2,Dashboards II: measures,21,,,,Version plan size check
 2.3,Whiteboard I,18,,,,Version plan size check
 2.4,Whiteboard II,17,,,,Version plan size check
