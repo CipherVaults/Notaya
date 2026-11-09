@@ -1,7 +1,8 @@
 // The table view: header with property menus, frozen columns, groups and sub-groups, footers, row selection,
 // drag to reorder (when no sort is set), keyboard navigation and in-place editing.
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { Popover } from "radix-ui";
 import { ChevronDown, ChevronRight, Copy, ExternalLink, GripVertical, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
 import {
@@ -24,7 +25,9 @@ import { NewPropertyPicker } from "../panels/PropertyMenu";
 
 const GUTTER = 64;
 const MIN_W = 80;
-const PAGE = 300;
+// Existing cell content is 34px tall plus its 1px bottom border. Wrapped rows
+// are measured; unwrapped rows and the short structural rows have fixed heights.
+const ROW_HEIGHT = 35;
 const NO_DRAG_ROWS: string[] = [];
 
 function defaultWidth(p: Property): number {
@@ -89,7 +92,17 @@ interface RowProps {
   seed: string | undefined;
   canDrag: boolean;
   actions: Actions;
+  virtualIndex: number;
+  ariaIndex: number;
+  cellId: (rowId: string, col: number) => string;
+  measure: ((node: HTMLTableRowElement | null) => void) | undefined;
 }
+
+type TableItem =
+  | { kind: "row"; key: string; row: DbRow; rowIndex: number }
+  | { kind: "group"; key: string; groupKey: string; group: GroupOut; level: number }
+  | { kind: "add"; key: string; cells: Record<string, unknown> }
+  | { kind: "footer"; key: string; calcs: Record<string, string> };
 
 const BG = "bg-bg";
 
@@ -99,7 +112,10 @@ const SortableRow = memo(function SortableRow(props: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.row.id });
   return (
     <tr
-      ref={setNodeRef}
+      ref={useCallback((node: HTMLTableRowElement | null) => { setNodeRef(node); props.measure?.(node); }, [setNodeRef, props.measure])}
+      data-index={props.virtualIndex}
+      data-row-id={props.row.id}
+      aria-rowindex={props.ariaIndex}
       style={{ transform: CSS.Transform.toString(transform), transition, position: isDragging ? "relative" : undefined, zIndex: isDragging ? 20 : undefined }}
       className={cn("group/row", isDragging && "opacity-70", props.selected ? "bg-accent-soft" : "hover:bg-surface")}
       aria-selected={props.selected}
@@ -113,7 +129,7 @@ const SortableRow = memo(function SortableRow(props: RowProps) {
 const RowView = memo(function RowView(props: RowProps) {
   if (props.canDrag) return <SortableRow {...props} />;
   return (
-    <tr className={cn("group/row", props.selected ? "bg-accent-soft" : "hover:bg-surface")} aria-selected={props.selected}>
+    <tr ref={props.measure} data-index={props.virtualIndex} data-row-id={props.row.id} aria-rowindex={props.ariaIndex} className={cn("group/row", props.selected ? "bg-accent-soft" : "hover:bg-surface")} aria-selected={props.selected}>
       <RowGutter {...props} />
       <RowCells {...props} />
     </tr>
@@ -152,7 +168,7 @@ const RowGutter = memo(function RowGutter({ row, index, numbers, selected, canDr
   );
 });
 
-const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected, activeCol, editing, seed, actions }: RowProps) {
+const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected, activeCol, editing, seed, actions, cellId }: RowProps) {
   return (
     <>
       {cols.map((c, ci) => {
@@ -164,6 +180,9 @@ const RowCells = memo(function RowCells({ row, index, cols, dbId, wrap, selected
           <td
             key={c.prop.id}
             role="gridcell"
+            id={cellId(row.id, ci)}
+            tabIndex={-1}
+            aria-colindex={ci + 2}
             aria-selected={isActive}
             onMouseDown={(e) => {
               if (e.button !== 0 || (e.target as HTMLElement).closest("button,a,input,textarea")) return;
