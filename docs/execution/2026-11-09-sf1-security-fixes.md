@@ -1,4 +1,4 @@
-# S-FIX1: bounded security fixes for S1-M1 and S1-M2
+# S-FIX1: bounded security fixes for S1-M1 and S1-M2 (EX-2026-11-09-67)
 
 Partner side: Ahmed Emara (`AE0101`). Machine: Gaming-PC, Codex sandbox.
 Baseline: `a649a3cd70f4eb2d4e2d1b8fdeff0da2c7a9a65c`, branch `AE0101/v1-6-sf1`.
@@ -119,3 +119,13 @@ None. Build/test outputs are ignored or outside the repository, under the permit
 ## 8. ADDITION FOR AHMED
 
 None. No visible feature, restyle, dialog, button or screen wording was edited. The requested destination fix necessarily refuses the previously permitted extensionless data-folder writes, and extensionless vault refusals now use the existing named-extension guard text rather than `Choose another file name.` (as explicitly requested). Diagnostic log entries use the requested fixed Rust text. Those are the only observable changes.
+
+## 9. Claude's review (cloud thread, Ahmed's side, 2026-11-09 13:40 UTC, system clock)
+
+Reviewer: Claude (Sonnet 5.5), a different agent from the one that wrote the diff. Read in full: the whole diff against `main` (9 files, 423 insertions, 228 deletions), not only this note. Machine: cloud (no Windows, no PC run by me); the PC heartbeat ran `tsc`, `npm run build`, `cargo test --lib` and `npm audit` on the exact pushed commit `6462256` and reported all four as pass.
+
+- **S1-M1 (extensionless attachment destination).** The shared validator now runs on every row-file save, named extension or not. Checked: the data-folder test uses the resolved path, so a link into the data folder is refused too; vault extensions are refused in either letter case; a directory is refused; the refusal happens before any write. Nothing is added to the person's chosen name. The test for a live junction fell back to the resolved path on the PC (junction creation failed), so a live junction stays unverified. Call: **fixed**.
+- **S1-M2 (renderer message in the plaintext log).** The `message` member is gone from the command, the adapter and the log report; serde ignores a legacy `message` field. The class is a closed list with unknown strings mapped to `unknown`; the source must be a bounded ASCII script basename, otherwise the whole field becomes `unknown` (nothing is repaired). The only two callers of `reportError` and the one invoker of `log_frontend_error` were checked. Call: **fixed**. One note: a non-string `kind` fails to deserialize and the command returns an error the frontend ignores, which is acceptable.
+- **No visible change** (no screen, wording or layout), as Codex states. The only observable changes are the two refusals and the fixed log line.
+- **Not verified by anyone:** a live junction, the real exe, a locked-vault IPC call. S1-H1, S1-H2 and S1-Q1 are untouched and belong to S-fix2 and S-fix3.
+- Result state: **verified** (heartbeat checks on the exact source, independent diff review); integrated when merged; not accepted.

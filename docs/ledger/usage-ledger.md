@@ -4,6 +4,45 @@ How to read and refresh this file: [README.md](README.md). The numbers live in [
 
 ---
 
+## 2026-11-09, 12:00 UTC: the 1.6 build block (11-08 12:00 to 11-09 12:00), Codex runs, meters, and a recalibrated forecast
+
+**Who and where:** Ahmed's side (`AE0101`); written by the cloud thread "Build Notaya 1.6" (session 53 in [sessions.md](../sessions.md#session-53), [EX-2026-11-09-66](../execution/2026-11-09-v1-6-build-second-day.md)) at Ahmed's word (09:17:48 and 11:55:17 UTC). The data rows come from the Gaming-PC (branch `AE0101/v1-6-ledger-data`, commit `a65f927`, scanner and heartbeat output only, no message text).
+
+### What was read (measured)
+
+| Limit | Reading | Resets |
+|---|---|---|
+| Codex, weekly (Plus) | **16% used** at 11:51 UTC (it was reset by Ahmed's first banked reset at about 07:36 UTC) | 2026-11-16 07:38:07 UTC |
+| Codex, 5-hour | **100% used** at 11:51 UTC (the stop line is 95%); the window ran out at about 10:52 UTC | 12:38:07 UTC |
+| Claude, weekly (Pro) | **73% used** at 11:51 UTC (64% at 07:02, 71% at 09:12; Ahmed's page said 72% at 09:19) | 2026-11-13 02:00:00 UTC |
+| Claude, 5-hour | **3% used** at 11:51 UTC; before the 11:40:00 UTC reset it was 87% (09:12) to 102% (10:52): Claude's limit was reached at about 10:55 UTC and the PC Claude had to stop | 16:40:00 UTC |
+| Banked Codex resets | **one left** (Ahmed used the first himself; he applies them, no notice needed, A50) | - |
+
+### What the Codex runs were
+
+36 Codex lane runs since 2026-11-08 12:00 UTC are in [`codex-runs.csv`](codex-runs.csv): the lanes C5 (7 runs, including the fixes C5d), W (whole-app plan and pass, 6), C2d (3), P1 (3), S (security pass, 3), AG (2), C3 (2), C4d (2), E (2), and one each of RC2 and RC5 (the fresh reviews of C2 and C5), C3u, X1, P6 (not merged) and SF1 (S-fix1, not merged), with tokens from the last `total_token_usage` of each run and the meter before and after from the first and last rate-limit reading inside it. Model `gpt-6.1-sol` and reasoning `xhigh` are the heartbeat run command's settings, not read back from the rollout files. 11 runs have no matching heartbeat event (written "not recorded in the heartbeat events"). Hourly Claude and Codex readings, 17 per-lane Claude meter changes and the events (banked reset, window resets, stop line 97.0% at 08:28:00 UTC, the heartbeat task change at 11:49:58 UTC) are in [`quota-readings.csv`](quota-readings.csv).
+
+### What it means (derived, not measured)
+
+- **A week holds about 6.3 windows, again confirmed.** After Ahmed's reset one full 5-hour window (07:38 to 10:52, then the stop) used 16% of the week: 100 / 16 is 6.25. The range stays 5.8 to 6.8.
+- **1.6 is much bigger than the 45 points of the spec.** The estimate after A48 and A49 was about 79.5 points (45 first planned, plus 27 for large-database speed, plus 7.5 for the security pass and the whole-app sweep, from the published ledger of 02:30 UTC); WP-19 (A52) adds about 6, so **about 85.5 points**. Done so far is an estimate of **about 40** (range 34 to 46), so **about 45 remain** (range 39 to 52). This is a size score (about one developer-day each), not quota.
+- **Claude's cost per Codex window was higher than the 6% input.** Claude's week rose from 64% (07:02) to 73% (11:51), about 9 points in the one Codex window plus the hours around it. That includes the whole project (the coordinator, the PC Claude, this thread's review of P1 and the 08:35 to 09:12 live test with Ahmed's own hands). The input stays at 6 with the high bound 11; the cap of 70% is lifted for 1.6 (A50), so Claude is not what binds the pace now.
+- **Heartbeat changed (no cost change):** the task now runs hidden (a wscript launcher), same 10-minute schedule.
+
+### The forecast now (rough; same model, `tools/usage-ledger/forecast-model.cjs`)
+
+Default settings changed: one banked reset left (was 2), Claude cap 100% for 1.6 (the 70% line returns afterwards, so dates from 2.0 on are optimistic on Claude's side), 1.6 about 45.5 points to go. **1.6 likely finishes about 14 November** (best 10 November, worst 20 November); **2.5 likely about 15 December** (was 7 December; worst case 9 February 2027, was 19 February); Ahmed's own quota carries the plan to 1.8, and after 1.9 it runs on his weekly Codex allowance only. A forecast, not a measurement. The dates assume Codex works every window and Claude can read each lane; the Notion import and the whole-app pass are the least certain items.
+
+### What was not measured
+
+- No PC readings between 16:00 and 18:51 UTC on 2026-11-08 (not recorded).
+- Claude's cost per lane is only the weekly meter around it, not a per-lane measurement; the other Claude sessions of this account (the coordinator, other threads) are not in this block's rows unless their own rows exist.
+- The PC Claude's own rows are scanner output for the days 11-08 and 11-09 (replies 87 and 275), effort not recorded.
+- Figures before 2026-11-07 were never recorded.
+
+---
+
+
 ## 2026-11-08, 16:03 UTC: readings at about 16:00 (Codex week 47%, Claude week 37%) and a recalibrated forecast
 
 **Who and where:** Ahmed's side (`AE0101`); written by the cloud thread "Redesign the usage ledger with forecasts" (session 50 in [sessions.md](../sessions.md), [EX-2026-11-08-62](../execution/2026-11-08-ledger-refresh-1600.md)) at Ahmed's word (16:02:35 UTC: "update the usage ledger as well if you can", relayed by the coordinator at 16:02:44). Machine: cloud. Every reading below was **relayed** by the coordinator (from Ahmed's Codex page at 14:20 UTC, from the Build thread's note and from a Claude weekly reading at about 16:00 UTC); this thread saw no screen. The heartbeat's own log (`quota-readings.csv`) has nothing after 10:11 UTC in the repository yet.
