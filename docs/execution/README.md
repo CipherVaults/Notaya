@@ -16,6 +16,10 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-09 (Ahmed's A51, Q63 and Q64), EX-2026-11-09-68: S-FIX2, Windows-owned confirmations and local keyfiles
+
+- [2026-11-09-sf2-native-confirmations.md](2026-11-09-sf2-native-confirmations.md): delete forever, empty the bin, turn AI on and approve a pairing now need a Windows-owned OK/Cancel question from Rust; keyfiles on network shares and device paths are refused. Written by Codex, reviewed in full by Claude; verified by the PC heartbeat on the exact commit; the hands-on checks A01 to A11 are not run; not accepted.
+
 ### 2026-11-09 (Ahmed's A51 and the lane S area 1 findings), EX-2026-11-09-67: S-FIX1, the two Medium fixes of security area 1
 
 - [2026-11-09-sf1-security-fixes.md](2026-11-09-sf1-security-fixes.md): attachment destinations are checked on every save (S1-M1) and the renderer can no longer send free text to the plaintext log (S1-M2). Written by Codex, reviewed in full by Claude; verified by the PC heartbeat on the exact commit; not accepted.

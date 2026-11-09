@@ -457,22 +457,8 @@ mod native {
                     );
                     if allowed {
                         let (p, token) = super::super::pairing::create(name);
-                        let saved = with_authenticated_slot(&authenticated_counter, || state
-                            .with_mut(|s| {
-                                let mut settings = s.settings();
-                                if !settings.ai.enabled
-                                    || settings.ai.paused
-                                    || stop.load(Ordering::SeqCst)
-                                    || state.ai.epoch.load(Ordering::SeqCst) != epoch
-                                {
-                                    return Err(crate::error::Error::invalid("off"));
-                                }
-                                if settings.ai.pairings.len() >= 32 {
-                                    return Err(crate::error::Error::invalid("too_big"));
-                                }
-                                super::super::pairing::insert_unique(&mut settings.ai, p.clone())?;
-                                s.put(crate::model::Item::Settings(settings))
-                            }));
+                        let saved = with_authenticated_slot(&authenticated_counter, ||
+                            super::super::pairing::persist(&state, p.clone(), epoch, || stop.load(Ordering::SeqCst)));
                         if let Ok(((), slot)) = saved {
                             *approved_slot.lock().unwrap() = Some(slot);
                             *pairing.lock().unwrap() = Some(p.clone());
