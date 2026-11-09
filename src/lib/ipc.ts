@@ -136,7 +136,7 @@ export const api = {
   aiSetLevel: (pairingId: string, level: AiLevel) => invoke<void>("ai_set_level", { pairingId, level }),
   aiRemovePairing: (pairingId: string) => invoke<void>("ai_remove_pairing", { pairingId }),
   aiSetHidden: (notebookIds: string[]) => invoke<void>("ai_set_hidden", { notebookIds }),
-  aiSetBigChange: (enabled: boolean) => invoke<void>("ai_set_big_change", { enabled }),
+  aiSetBigChange: (enabled: boolean, items?: number) => invoke<void>("ai_set_big_change", { enabled, items }),
   aiPairingAnswer: (id: string, allow: boolean) => invoke<void>("ai_pair_answer", { id, allow }),
   aiConfirmAnswer: (id: string, allow: boolean, word: string | null = null) =>
     invoke<void>("ai_confirm_answer", { id, allow, word }),
@@ -322,6 +322,17 @@ export const api = {
   removeSearchTerm: (term: string) => invoke<string[]>("remove_search_term", { term }),
   clearSearchHistory: () => invoke<void>("clear_search_history"),
 };
+
+/** Fixed AI error copy: never echo a client label, request body or backend message. */
+export function aiErrorText(error: unknown, fallback = "The AI access change could not be saved. Try again."): string {
+  const code = typeof error === "string" ? error
+    : error instanceof Error ? error.message
+    : error && typeof error === "object" && "code" in error ? error.code : null;
+  if (code === "rate_limited") return "Too many AI requests are waiting. Wait a moment, then try again.";
+  if (code === "pairing_refused") return "The connection could not be paired. Check existing pairings in Settings and try again.";
+  if (code === "The vault is locked." || code === "locked") return "Unlock Notaya and try again.";
+  return fallback;
+}
 
 /** Turns any thrown IPC error into a readable message. */
 export function errorText(e: unknown): string {

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Bot } from "lucide-react";
 import { Button, Field, Input, Modal } from "@/components/ui";
-import { api, type AiLevel } from "@/lib/ipc";
+import { aiErrorText, api, type AiLevel } from "@/lib/ipc";
 import { useApp } from "@/store/app";
 import { useAiState } from "@/features/ai/AiMarker";
 
@@ -16,20 +16,20 @@ export default function AiAccessPanel() {
   const notebooks = useApp((s) => s.tree.notebooks);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [enableOpen, setEnableOpen] = useState(false);
   const [word, setWord] = useState("");
   const change = async (action: () => Promise<void>) => {
     if (inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
-    setError(false);
+    setError(null);
     try {
       await action();
       setEnableOpen(false);
       setWord("");
       await refresh();
-    } catch { setError(true); }
+    } catch (error) { setError(aiErrorText(error)); }
     finally { inFlight.current = false; setBusy(false); }
   };
   return <section aria-labelledby="ai-access-title" className="mb-10">
@@ -42,7 +42,7 @@ export default function AiAccessPanel() {
         <div><p className="text-sm font-medium">AI access</p><p className="mt-1 text-xs text-muted">{state.enabled ? "On — only paired AIs can connect." : "Off — no AI can connect."}</p></div>
         <Toggle label="AI access" checked={state.enabled} onChange={() => {
           if (state.enabled) void change(() => api.aiSetEnabled(false));
-          else { setWord(""); setError(false); setEnableOpen(true); }
+          else { setWord(""); setError(null); setEnableOpen(true); }
         }} />
       </div>
       {state.paused && state.enabled && <div className="flex items-center justify-between gap-4 rounded-lg border border-line p-3">
@@ -94,11 +94,11 @@ export default function AiAccessPanel() {
         </div>
       </details>
     </fieldset>}
-    {error && <p role="alert" className="mt-3 text-sm text-danger">The AI access change could not be saved. Try again.</p>}
+    {error && !enableOpen && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
     <Modal open={enableOpen} onOpenChange={(open) => { if (!busy) { setEnableOpen(open); setWord(""); } }}
       title="Turn on AI access?" description="Paired AIs can read the notebooks you have not hidden. You choose whether each AI can edit or delete.">
       <Field label="Type ALLOW to turn on AI access"><Input aria-label="Type ALLOW" value={word} disabled={busy} onChange={(e) => setWord(e.target.value)} /></Field>
-      {error && <p role="alert" className="mt-3 text-sm text-danger">AI access could not be enabled. Try again.</p>}
+      {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
       <div className="mt-6 flex justify-end gap-2"><Button disabled={busy} onClick={() => { setEnableOpen(false); setWord(""); }}>Cancel</Button>
         <Button variant="primary" disabled={busy || word !== "ALLOW"} onClick={() => void change(() => api.aiSetEnabled(true, word))}>Turn on AI access</Button></div>
     </Modal>

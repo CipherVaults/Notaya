@@ -7,14 +7,15 @@ export function pairingRequest(event: AiPairingEvent, receivedAt = Date.now()): 
 export function confirmRequest(event: AiConfirmEvent, receivedAt = Date.now()): AiConfirmRequest {
   const actions: Record<string, string> = {
     "page.trash": "move pages to the bin.", "page.delete": "permanently delete pages.",
-    "notebook.delete": "delete a notebook.", "section.delete": "delete a section.",
+    "notebook.trash": "move a notebook and its contents to the bin.",
+    "section.trash": "move a section and its contents to the bin.",
     "bin.empty": "empty the bin.", "history.restore": "restore a page version.",
     "activity.undo": "undo earlier changes.", "page.write": "change pages.",
-    "batch": "make a batch of changes.",
+    "ui.wait_for_person": "wait for your confirmation before continuing.",
   };
   return {
     id: event.id, pairingName: event.details.client,
-    summary: actions[event.details.action] ?? `run ${event.details.action.replace(/[._]/g, " ")}.`,
+    summary: actions[event.details.action] ?? "make this change.",
     items: event.details.items.map((item) => item.title || item.id),
     kind: event.word === null ? "ask" : "strong", word: event.word,
     expiresAt: receivedAt + 300_000,
