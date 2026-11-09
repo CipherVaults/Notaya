@@ -646,12 +646,135 @@ fn save_file_as_person(app: AppHandle, state: State<'_, AppState>, row_id: Strin
     let Some(chosen) = dlg.blocking_save_file().and_then(|f| f.into_path().ok()) else {
         return Ok(None);
     };
-    let dest = if ext.is_empty() { chosen.clone() } else { checked_destination(&chosen, &ext, &state.paths.data)? };
-    if crate::filenames::path_has_vault_ext(&dest) {
-        return Err(Error::invalid("Choose another file name."));
-    }
-    std::fs::write(&dest, bytes).map_err(|e| Error::Other(format!("The file could not be saved: {e}")))?;
+    let dest = save_row_file(&chosen, &ext, &state.paths.data, &bytes)?;
     Ok(Some(dest.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()))
+}
+
+/// Use the shared destination validation even when there is no attachment extension to add.
+fn save_row_file(chosen: &std::path::Path, ext: &str, data_dir: &std::path::Path, bytes: &[u8]) -> Result<PathBuf> {
+    let dest = if ext.is_empty() {
+        crate::export::checked_destination_path(chosen, data_dir)?;
+        chosen.to_path_buf()
+    } else {
+        checked_destination(chosen, ext, data_dir)?
+    };
+    std::fs::write(&dest, bytes).map_err(|e| Error::Other(format!("The file could not be saved: {e}")))?;
+    Ok(dest)
+}
+
+#[cfg(test)]
+mod save_destination_tests {
+    use super::*;
+    use std::fs;
+    use std::path::Path;
+
+    const ORIGINAL: &[u8] = b"existing throwaway file";
+    const PAYLOAD: &[u8] = b"generated throwaway attachment";
+    const REFUSAL: &str = "That is the folder where Notaya keeps your notes and backups. Choose another folder for the export.";
+
+    fn folders() -> (PathBuf, PathBuf) {
+        let root = std::env::temp_dir().join(format!("sf1-destination-{}", new_id()));
+        let data = root.join("data");
+        fs::create_dir_all(&data).unwrap();
+        fs::create_dir(root.join("outside")).unwrap();
+        (root, data)
+    }
+
+    fn refuses_unchanged(chosen: &Path, ext: &str, data: &Path) {
+        fs::write(chosen, ORIGINAL).unwrap();
+        assert_eq!(save_row_file(chosen, ext, data, PAYLOAD).unwrap_err().to_string(), REFUSAL);
+        assert_eq!(fs::read(chosen).unwrap(), ORIGINAL);
+    }
+
+    #[test]
+    fn every_attachment_extension_refuses_the_data_folder_before_writing() {
+        let (_, data) = folders();
+        for ext in ["", "json"] {
+            refuses_unchanged(&data.join("shell-prefs.json"), ext, &data);
+            let missing = data.join(if ext.is_empty() { "new-file" } else { "new-file.json" });
+            assert!(save_row_file(&missing, ext, &data, PAYLOAD).is_err());
+            assert!(!missing.exists());
+        }
+    }
+
+    #[test]
+    fn every_attachment_extension_refuses_a_link_into_data_before_writing() {
+        let (root, data) = folders();
+        let link = root.join("data-link");
+        #[cfg(windows)]
+        let linked = match std::process::Command::new("cmd")
+            .args(["/d", "/c", "mklink", "/J"])
+            .arg(&link).arg(&data).output() {
+            Ok(out) if out.status.success() => true,
+            Ok(out) => {
+                eprintln!("S-FIX1: junction creation failed ({}): {}", out.status, String::from_utf8_lossy(&out.stderr));
+                false
+            }
+            Err(e) => {
+                eprintln!("S-FIX1: junction creation unavailable: {e}");
+                false
+            }
+        };
+        #[cfg(not(windows))]
+        let linked = std::os::unix::fs::symlink(&data, &link).is_ok();
+        let folder = if linked {
+            assert_eq!(crate::export::resolve(&link), crate::export::resolve(&data));
+            link
+        } else {
+            eprintln!("S-FIX1: link creation unavailable; checking the resolved data path instead.");
+            crate::export::resolve(&data)
+        };
+        for ext in ["", "json"] {
+            refuses_unchanged(&folder.join("shell-prefs.json"), ext, &data);
+            let missing = folder.join(if ext.is_empty() { "new-file" } else { "new-file.json" });
+            assert!(save_row_file(&missing, ext, &data, PAYLOAD).is_err());
+            assert!(!data.join(missing.file_name().unwrap()).exists());
+        }
+    }
+
+    #[test]
+    fn every_attachment_extension_saves_to_an_external_folder() {
+        let (root, data) = folders();
+        for name in ["attachment", "attachment.json"] {
+            let chosen = root.join("outside").join(name);
+            fs::write(&chosen, ORIGINAL).unwrap();
+            assert_eq!(save_row_file(&chosen, &extension(name), &data, PAYLOAD).unwrap(), chosen);
+            assert_eq!(fs::read(&chosen).unwrap(), PAYLOAD);
+        }
+    }
+
+    #[test]
+    fn every_attachment_extension_refuses_a_vault_destination_before_writing() {
+        let (root, data) = folders();
+        for vault_ext in ["nota", "clf", "NOTA", "CLF"] {
+            let chosen = root.join("outside").join(format!("vault.{vault_ext}"));
+            // An extensionless attachment preserves the pick; a vault attachment already has its extension.
+            for ext in ["", vault_ext] {
+                refuses_unchanged(&chosen, ext, &data);
+            }
+        }
+    }
+
+    #[test]
+    fn named_extension_rules_and_existing_longer_files_are_unchanged() {
+        let (root, data) = folders();
+        let chosen = root.join("outside").join("attachment");
+        let longer = chosen.with_file_name("attachment.json");
+        assert_eq!(save_row_file(&chosen, "json", &data, PAYLOAD).unwrap(), longer);
+        assert_eq!(fs::read(&longer).unwrap(), PAYLOAD);
+        assert!(!chosen.exists());
+        fs::write(&chosen, ORIGINAL).unwrap();
+        assert!(save_row_file(&chosen, "json", &data, ORIGINAL).is_err());
+        assert_eq!(fs::read(&longer).unwrap(), PAYLOAD);
+        assert_eq!(fs::read(&chosen).unwrap(), ORIGINAL);
+        // The shared guard still validates the final name after adding a named attachment's extension.
+        let vault_pick = chosen.with_file_name("external.nota");
+        fs::write(&vault_pick, ORIGINAL).unwrap();
+        let dest = save_row_file(&vault_pick, "json", &data, PAYLOAD).unwrap();
+        assert_eq!(dest.file_name().unwrap(), "external.nota.json");
+        assert_eq!(fs::read(&vault_pick).unwrap(), ORIGINAL);
+        assert_eq!(fs::read(&dest).unwrap(), PAYLOAD);
+    }
 }
 
 /// Opens a file of a row in the program Windows chooses for it. A plain copy is written to a new

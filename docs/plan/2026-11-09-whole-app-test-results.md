@@ -1,0 +1,197 @@
+# Whole-app test results: X-1 addition
+
+Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox). **Historical run-2 provenance:** FIX RUN 2 baseline `9b64db2f85388c5d800c25926772fdc15a2c539b`; external heartbeat checkpoint `ba047062f4bd5162bf4e6f897b4228051aec8dda` contains that run's tested code, with its results addendum then uncommitted. Original baseline: `e4df9185a99fabf6002065c84c921cd8f8278e31`. Produced and locally checked, not integrated or accepted. Claude owns integration, exact candidate commit/exe hash and real-PC observations. The [FIX RUN 2](#fix-run-2-corrected-analysis-and-hand-back) and run-1 analysis/checks below are historical, superseded where contradicted by run 3.
+
+**Current addendum: [FIX RUN 3](#fix-run-3-readiness-failure-regressions).** The run-2 analysis below remains historical evidence; its status/listener success-only gate is superseded by the bounded failure path described here. Original reporter: **Mohamed Sayed (AbyssWatcher2)**, via Ahmed. Run 2 and run 3 are both **unproven** as fixes for his white-window report.
+
+## Defect register
+
+| Defect / check | Reporter | Report and scope | Status | Candidate and evidence needed |
+|---|---|---|---|---|
+| X-1 / WIN-X1, KIND B | **Mohamed Sayed (AbyssWatcher2)**, via Ahmed, 2026-11-09 07:38:18 UTC | v1.5.1 on Mohamed's PC: blank white window at sign-in with Start with Windows on | **Run-3 readiness regressions locally verified: 23 tests passed. Real exe not run by Codex; original X-1 fix remains unproven.** Historical baseline reproduced / candidate 1 not fixed in Claude's reported held-frame run; the old readiness observer is invalid. Actual sign-in/pixel cause remains unconfirmed. | Claude runs baseline `5077183` against the exact run-3 candidate after heartbeat checks, using `tools/real-exe-tests/startup-minimized.md`. Historical evidence: baseline `5077183`, SHA-256 `5FA039FC…`; candidate 1 `9b64db2`, `8F38C904…`. Both: normal/minimized/5000 ms delayed-page DOM controls passed; held frames 8000 ms failed at 45 s, `readyCalls=0`, `readyCompleted=0`, `readyAtMs=null`, `hookInstalled=true`, `heldFrames=2`, hidden, `readyWithoutFrames=false`. Candidate-1 delay-page reload also counted zero readiness and was shown by restore. See corrected analysis below and rerun both with the new observer. |
+
+## FIX RUN 3: readiness failure regressions
+
+**Who, authority and scope:** Ahmed's side (`AE0101`), Codex lane X1 on `GAMING-PC`, Windows sandbox. Ahmed's current FIX RUN 3 request (message timestamp not exposed); system-clock checkpoint **2026-11-09 17:57:00 UTC**. Baseline/head `b8a2883d9ac7372815b7471bd86fc9b1e9beaa56`, branch `AE0101/v1-6-x1`; local `origin/main` `066b23cab8ba9e6287cf2699810564fa0f133c3c` read without fetching, including the 13:45 UTC brief update. Result: **produced and locally verified for the named checks**, uncommitted, not integrated or accepted. Stop at hand-back; Claude commits, owns the records/ledger and runs the held-frame comparison after the heartbeat checks. Runtime model/effort, token totals and quota readings are not exposed to this tool session; no values invented.
+
+**Change and reason:** run 2 required a non-null status and both lock listeners before showing the initially hidden window. The production initialization watcher now retries a rejected status request once and permits readiness on the second rejection, on either listener rejection, or after **5000 ms total** across both attempts and listener registration. The successful path still follows the committed status screen and registered listeners through the existing cancellable microtask, without waiting for a frame or timer. The App ref sends `window_ready` once, including after late status/listener completion. Cleanup clears the deadline, cancels the readiness microtask, suppresses late watcher state changes and removes successful/late listeners; rejected lock and notice registrations have handled cleanup paths. A failure fallback permits the existing rendered surface; it does not invent status, unlock a vault, repair missing listeners, or add a new error screen. Rust still owns visibility, including the minimized/tray guard.
+
+### Regression evidence (plain JS, production hooks and watcher; simulated IPC/time)
+
+All names below are in `tools/real-exe-tests/startup-ready.test.mjs`; each passed:
+
+| Test name | Case and observed result |
+|---|---|
+| `status rejects: one retry also rejects, then window_ready is sent once` | Two attempts rejected; ready once despite a still-pending listener; late listener cannot resend. |
+| `status rejects once then succeeds: readiness follows the recovered status without waiting for the bound` | Two attempts, real status available, listener gate satisfied, no failure fallback, ready once. |
+| `first lock listener rejects: window_ready is sent once even while status is pending` | `vault-locked` rejects; ready once without waiting for status; remaining listeners removed on cleanup. |
+| `second lock listener rejects: window_ready is sent once and cleanup handles the rejected registration` | `vault-locking` rejects; ready once; rejected registration does not produce an unhandled cleanup rejection. |
+| `both lock listeners reject: window_ready is sent once with no unhandled registration or cleanup rejection` | Both reject; ready once; notice listener still removed. |
+| `status never resolves within the bound: window_ready is sent once at 5000 ms and late status cannot resend` | No readiness at 4999 ms, one call at 5000 ms; late success cannot resend. |
+
+Four more added tests passed: `pending lock registration is also bounded and is removed when it completes after cleanup`; `initialization cleanup cancels the bound and ignores late failures and listener completion`; `late rejection after timeout is handled without a retry or duplicate readiness`; `notice-listener rejection does not disrupt readiness or produce an unhandled cleanup rejection`. The original 13 scheduler, actual-hook, backdrop, appearance and transport-probe tests also passed. An initial run of the new tests failed because the VM harness redeclared `runHook`; the harness was corrected before the passing final run. That failure was in the test harness, not a native-app observation.
+
+### Final-source checks
+
+These checks apply to **the uncommitted run-3 source on `b8a2883`**, not to `b8a2883` alone or any later commit:
+
+| Command | Exact result |
+|---|---|
+| `npx tsc --noEmit -p tsconfig.json` | Exit **0**, no output/errors. |
+| `npm run build -- --configLoader native` | Exit **0**; Vite **8.3.5**, **4414 modules transformed**, built in **10.68 s**. Existing `INEFFECTIVE_DYNAMIC_IMPORT` warning for `DatabaseView.tsx` being imported both statically and dynamically. |
+| `node --test --test-isolation=none tools/real-exe-tests/startup-ready.test.mjs tools/real-exe-tests/startup-probe.test.mjs` | Exit **0**; **23 passed, 0 failed, 0 cancelled, 0 skipped, 0 todo**, **360.0987 ms**. |
+| `git diff --check` | Exit **0**, no whitespace errors; LF-to-CRLF notices only. |
+| `git diff --stat -- src-tauri` | Empty: Rust not touched. |
+| `npm audit`, `cargo test --lib`, `cargo clippy`, `cargo audit` | **Not run**. No network, installs or Rust/dependency changes in this run. |
+| Real Notaya.exe, browser, heartbeat candidate checks, held-frame baseline/candidate comparison, actual sign-in, Mohamed's PC, human pixels/tray and protected-vault lock/flush | **Not run by Codex**. No proof that run 2 or run 3 fixes the original X-1 report. |
+
+Final tested file SHA-256 (documentation excluded from this fingerprint):
+
+| File | SHA-256 |
+|---|---|
+| `src/App.tsx` | `4F8DBBF1881FE54E152AE41A84E2CC6DD7FD5F4CA52E051693B86443A0EB59F8` |
+| `src/lib/startup.ts` | `8AFBA6B3FC20D23934685CF11F3731E39D4DF5B6FCA0096524E46166C1105F00` |
+| `tools/real-exe-tests/startup-ready.test.mjs` | `2760E987CCBE785BAC9E48A622C7E0A2A05058699435F81763642C9EC0A366D2` |
+
+### Security self-check (guide section 4; not independent)
+
+- **Secrets/keys/crypto:** no new secret handling, persistence, random values or crypto; n/a to this diff. No vault, credential or private-note fixtures/logs.
+- **Commands/IPC:** traced status/listener outcomes to the existing argument-free `window_ready`; no new command, payload, permission or confirmation route. Rust's tray visibility and lock enforcement are unchanged. A failed listener remains unavailable; this test proves readiness fallback, not real lock-event delivery.
+- **Files/paths/parsing; AI pipe/bridge; storage/history/logs:** n/a; none changed. Test input is synthetic and in-memory; no vault is opened.
+- **Frontend:** read the full changed App/startup/test files. No new HTML rendering, script evaluation in production, CSP change, network call, browser storage or sensitive diagnostic field. Existing lock/reload and flush handlers are unchanged. Timer callbacks are functions, once-only scheduling/cleanup and late rejection handling are covered. Native auto-lock/screenshot behavior was not run.
+- **Dependencies/build:** no dependency or lockfile change; type check/build passed. Audits not run under the offline instruction. Browser-free VM execution exists only in the test harness.
+- **Findings:** no additional real, reachable security issue found in this bounded self-check. Independent Codex/Claude security review remains to be done by a session that did not write this diff.
+
+**Files changed:** `src/App.tsx`, `src/lib/startup.ts`, `tools/real-exe-tests/startup-ready.test.mjs`, and X-1 content in this results file and `2026-11-09-whole-app-test-plan.md`. **Outside write area, mechanical:** none. **ADDITION FOR AHMED:** visible changes: none expected; the authorized failure fallback restores readiness signaling only. No Git writes, network, installs, exe/browser launches, real-vault access or debug ports started by Codex. Mohamed Sayed remains credited as the reporter; Claude adds the commit credit.
+
+## FIX RUN 2: corrected analysis and hand-back
+
+**Authority/scope:** Ahmed's current FIX RUN 2 instruction (message timestamp not exposed); read-only orientation began on `9b64db2`, branch `AE0101/v1-6-x1`. System-clock checkpoint: 2026-11-09 12:49:44 UTC. Startup-only source, the startup tooling and these two plan/results records are the write area. Stop at checked local source and hand-back to Claude. Codex issued no Git write, fetch/PR/network, install, real exe or browser command. The external heartbeat independently made automatic checkpoint `ba04706` at 2026-11-09 12:56:44 UTC; the tested eleven-file source fingerprint below remained identical afterwards. Original reporter remains **Mohamed Sayed (AbyssWatcher2)**; Claude credits him in the eventual commit. Runtime report comes from Claude via Ahmed; raw report folders/timestamps were not supplied. Both full artifact hashes were independently read from the existing files in this run, without executing them.
+
+### Corrected root cause and candidate analysis
+
+**Proven cause of the zero-counter evidence: candidates 3 and 5, the harness hook.** Local pinned Tauri 2.12.5 `scripts/core.js` defines `__TAURI_INTERNALS__.invoke` using `Object.defineProperty(..., { value: ... })`, so it is neither writable nor configurable. The old injected function was evaluated as a non-strict script. Its assignment silently failed, then it set `hookInstalled=true` unconditionally. A browser-free VM reproduction using the actual old `frameProbe` and the same descriptor produced `nativeCalls=1`, `readyCalls=0`, `readyCompleted=0`, `hookInstalled=true`, `writable=false`. Thus the first fix was **not demonstrated to work**, but those runs also do **not prove its fallback failed to call Rust**. A hidden native window is expected under `--minimized`; two requested frames prove neither that App's effect ran nor that its timer was cancelled. Preserve the reported failures, correct their interpretation, and rerun with a valid observer.
+
+| Candidate | Code evidence and corrected conclusion |
+|---|---|
+| 1: readiness effect gated by null status | The original chain is `main.tsx` imports/bootstrap → React App → passive startup effect → `applyAppearance(cached,true)` → `set_backdrop` IPC → `refreshStatus` → `vault_status` IPC → Zustand `set({status})` → committed screen → readiness effect. Appearance CSS can exist while status is null; **the actual UnlockScreen cannot**, as both App and UnlockScreen explicitly require status. A full screen in the reload's DOM rules out a persistently null status there. An IPC delay can still precede it; stage counters locate it. New status loading runs independently of native backdrop completion. |
+| 2: cancellation/throttled timer, StrictMode, screen swaps | Candidate 1's timer was scheduled before its rAF request; cleanup cancels both. Dependency is the boolean `hasStatus`, so ordinary non-null status updates and lock/shell child swaps do not cancel it. StrictMode dev replay schedules again, and production does not run dev replay. No code evidence establishes cancellation in the PC run. The old observer cannot distinguish cancellation from successful completion. New layout-effect/microtask scheduling removes timer/paint waits, has cancellation plus a sent ref, and regression tests cover actual hook gating/cleanup/re-entry. |
+| 3: captured invoke / Rust early return | Actual wrapper is `src/lib/ipc.ts`, not `api.ts`. `api.windowReady` calls imported Tauri `invoke("window_ready")`; local API 2.12.4 `core.js:340-342` looks up `window.__TAURI_INTERNALS__.invoke` on each call, so it does not capture an old internals function. Rust `commands/vault.rs:598` marks the label ready **before** the tray-hidden early return; the unit return resolves successfully. A valid probe counts this as completion even though the native window stays hidden. The read-only hook, not captured-reference semantics, explains the false zero counts. |
+| 4: alternate ready/show path | Complete `rg` over `src/` and `src-tauri/src/` found main App, sticky and calculator readiness calls; only main App is changed. `shell::show_main` is called by tray, legacy handover, single instance and AI notice. It shows/focuses directly and does not call `window_ready`. Hence harness restore visibility does not prove readiness. `lib.rs` sets tray state after tray construction; `window_ready` retains the native guard. No additional `app_ready` route was found. |
+| 5: wrong reload / completion / deadline | New-document script is acknowledged before `Page.reload`. Old polling did not bind observations to that document and delay-only runs could pass without seeing readiness. Corrected probe stamps a reload ID and requires main label plus matching ID, exactly one real transport call and success callback. It distinguishes rejection, absent callback hook and late completion; keeps the 45 s observation limit. Held-frame success must precede both actual release and 8000 ms; CDP can release only the test shim if its own page timer is throttled. |
+| 6: earlier frame/visibility wait | No `fonts.ready`, decode promise, transition/animation-end await or rAF wait was found along bootstrap/appearance/status initialization. Font imports are CSS; motion/Radix can schedule animation frames but the status request does not await their animation. React's installed scheduler uses its host message loop, not rAF for this effect scheduling. **First explicit awaited paint gate in the original application startup chain was App's two-rAF readiness callback.** Native backdrop and vault-status IPC remain actual async stages; source alone cannot identify a PC-specific pending native call or compositor failure. No GPU/runtime/profile change is made. |
+
+**Fix and people's experience:** readiness now follows the committed status screen and confirmed `vault-locked`/`vault-locking` listener registration through a cancellable microtask. It uses neither rAF nor a timeout. The App ref sends once across screen/status swaps; cleanup cancels pending work and StrictMode can reschedule. Status no longer waits for backdrop IPC. An appearance revision guard prevents a late cached-backdrop completion overwriting newer loaded settings/cache when those calls overlap. Rust retains all visibility decisions (`--minimized` hidden while the tray exists), tray/single-instance/settings/auto-lock behavior and existing animations. No Rust source, setting or visible feature changes. The real blank-pixel incident remains unconfirmed by this sandbox.
+
+**Permanent opt-in diagnostics:** the page only fills a pre-existing `window.__notayaStartupProbe`; it never creates one in normal use. Fields contain counts/times only, never status values, note text, paths, credentials or IPC arguments/results. `timerScheduled=timerFired=0` is intentional: the new readiness path has no timers. `effectRan` counts layout-effect entries, including gated entries; `startupEffectRan` counts bootstrap-effect entries. `bootstrapAtMs`, `appearanceStartedAtMs`/`appearanceCompletedAtMs`, `statusRequestedAtMs`/`statusSetAtMs`, `lockListenerReadyAtMs`, `screenCommittedAtMs`, `microtaskScheduled`/`microtaskFired`, `readyCleanup`, `invokeCalledAtMs`/`invokeCompletedAtMs`, `appReadyCalls`/`appReadyRejected` locate progress. Baseline/candidate 1 do not have these page counters; zeros/null there mean unavailable, not a failed effect.
+
+| One more run shows | Interpretation |
+|---|---|
+| Wrong document ID / non-main label, or no bootstrap time on the **new** candidate | Invalid observation document or old/failed bundle. Check `probeDocument`, embedding/build identity and page bootstrap before blaming IPC. |
+| Bootstrap present, `startupEffectRan=0` | Startup effect not entered (bootstrap/render/commit or JavaScript failure); not timer cancellation. |
+| Appearance started but not completed; status request/set and ready progress succeed | Backdrop IPC is pending; it no longer gates status or readiness. |
+| `statusRequestedAtMs` present, `statusSetAtMs=null` | Status IPC is pending/rejected, before the readiness scheduler. |
+| Status set, no listener-ready time | Lock-listener registration pending/rejected. Ready intentionally withheld to preserve flush/lock behavior. |
+| Status/listener times present, no screen-commit time | React status-screen/layout-effect gate not reached. Inspect DOM/commit/error classes. |
+| Microtask scheduled but not fired, cleanup count grows | Effect cleanup cancelled pending work. A fresh eligible effect must reschedule; tests guard this. No timer throttling explanation applies to this scheduler. |
+| `invokeCalledAtMs` and `appReadyCalls=1`, no transport count | Transport observer missed/failed its hook, or IPC has not reached transport. Check `fetchHookInstalled`, `nativeHookInstalled`, `callbackHookFailed`; not evidence that App skipped invoking. |
+| `readyCalls=1`, completion 0, rejection 0 | Command was dispatched but no success/error callback returned by the bound. If page invoke completion exists, observer is invalid. |
+| `readyRejected=1` / `appReadyRejected=1` | IPC rejection, distinguished from Rust's successful hidden-tray return. |
+| Calls/completions both 1, `readyAtMs<8000` and before frame release, native hidden | Correct minimized readiness; `readyWithoutFrames=true`. Restored opacity/layout/native visibility must then pass, with pixels/tray checked by a person. White pixels despite that leave the compositor/runtime hypothesis open. |
+
+### Verification and return
+
+Final checks ran on working source on `9b64db2`; the external heartbeat then recorded that identical code as `ba04706`. Its eleven-file fingerprint was checked again after the checkpoint; only this results addendum differs from that commit:
+
+| Command/check | Final exact result |
+|---|---|
+| `npx tsc --noEmit -p tsconfig.json` | Exit **0**, no errors. |
+| `npm run build -- --configLoader native` | Exit **0**, Vite built in **1.85 s**. Existing `INEFFECTIVE_DYNAMIC_IMPORT` warning: `DatabaseView.tsx` is imported statically and dynamically. PowerShell renders this stderr warning as `NativeCommandError` when streams are merged for the tail; npm's exit code is 0. |
+| `node --check tools/real-exe-tests/startup-minimized.mjs`, `node --check tools/real-exe-tests/startup-ready.test.mjs`, `node --check tools/real-exe-tests/startup-probe.test.mjs` | All three exit **0**. |
+| `node --test --test-isolation=none tools/real-exe-tests/startup-ready.test.mjs tools/real-exe-tests/startup-probe.test.mjs` | Exit **0**, **13 passed, 0 failed, 0 cancelled, 0 skipped, 0 todo**, **372.9614 ms**. Original four scheduling scenarios retained with timer-free expectations, plus startup gate/backdrop/appearance and observer regressions. |
+| `powershell -NoProfile -File tools/real-exe-tests/startup-cleanup.test.ps1` | Exit **0**, **8 fake-process cases passed**, no live process control. |
+| Windows PowerShell AST `Parser::ParseFile` over `run-startup-minimized.ps1`, `startup-cleanup.test.ps1`, `startup-diagnostic.ps1` | Exit **0**, **0 parse errors** for each of the three files. |
+| `git diff --check` and `git diff 9b64db2 --check` | Exit **0**; only LF/CRLF notices. Repeated after the documentation readback. |
+| Rust test/build, real exe/CDP, pixels, actual sign-in, tray/auto-lock/protected-vault round, audits and independent security review | **not run** in FIX RUN 2. Rust unchanged; npm audit skipped by instruction. |
+
+Source identity (raw bytes before coordinator newline conversion): SHA-256 `bef3c7455de14edf632c05ea7a4ee7dd7576e32f5ba33e6016c9a25e88fb223a` over the following eleven paths sorted lexicographically, each encoded as UTF-8 path + NUL + raw file bytes + NUL: `src/App.tsx`, `src/lib/ipc.ts`, `src/lib/startup.ts`, `src/lib/theme.ts`, `src/main.tsx`, `src/store/app.ts`, `tools/real-exe-tests/run-startup-minimized.ps1`, `tools/real-exe-tests/startup-cleanup.test.ps1`, `tools/real-exe-tests/startup-minimized.mjs`, `tools/real-exe-tests/startup-probe.test.mjs`, `tools/real-exe-tests/startup-ready.test.mjs`. This identifies tested source now in `ba04706`, not an exe hash or real-exe result.
+
+Changed files: the eleven source/scripts just listed; `tools/real-exe-tests/README.md`, `tools/real-exe-tests/startup-minimized.md`; `docs/plan/2026-11-09-whole-app-test-plan.md`, `docs/plan/2026-11-09-whole-app-test-results.md` (**15 files**). Local tests do not establish Windows rendering, real sign-in, protected-vault behavior or acceptance. Exact real-PC build/control/delay/held-frame commands are in [startup-minimized.md](../../tools/real-exe-tests/startup-minimized.md#fix-run-2-build-and-comparison).
+
+Security self-check, [guide section 4](../handoff/codex-security-review-guide.md#4-checklist-for-notaya-check-each-write-na-when-it-does-not-apply), **self-review, not independent**:
+
+| Checklist area | Scope/result |
+|---|---|
+| Secrets/keys, zeroization, crypto, OS randomness | **n/a** to production changes; no new secret/key/crypto handling, no vault data/credentials in diff/tests. Harness reload IDs use Node's existing OS-backed `randomUUID`, not production security IDs. |
+| Commands/IPC/AI permissions/confirmations | Existing `window_ready` only, no new Rust command or authority. Read native handler and all ready/show call sites: registration precedes tray-hidden return. Main now confirms both lock-event listeners before readiness. Flush acknowledgement and native lock/show policy unchanged; real lock behavior **not run**. AI action registry and confirmation changes **n/a**. |
+| Files/paths/parsing | Runner's throwaway-root/reparse/port/Run-key checks unchanged. StartTime is null-safe; retained process handle and recorded ID avoid killing a newly reused PID. Eight fake cases verify the helper, not Windows runtime cleanup. Probe numeric bounds/loopback restrictions remain; observer retains callback IDs only to deduplicate and never records payloads/results. Archive/import/SQL checks **n/a**. |
+| AI pipe/bridge | **n/a**, unchanged. |
+| Storage/history/logs | **n/a** for vault/history/encryption/decrypted caches. Existing non-secret appearance cache remains allowlisted; revision guard prevents stale cached-startup response from rewriting newer settings/cache. Probe counters exist only on the page object created by the harness, with no disk/log/URL storage or status/note content. |
+| Front end | CSP, HTML sinks, clipboard and capture protection unchanged. No production eval/string timer/new HTML sink or network. Readiness uses a function microtask with cancellation and one-send guard. Test VM/CDP code is fixed repository code. Existing screen animations retained. |
+| Dependencies/build | No added/changed dependency, version, licence or installs. `npm audit` and `cargo audit` **not run**, no clean-audit claim. Frontend types/build passed on the identified source. |
+| Debug/test cleanup | No real process/debug listener opened by Codex. Runner still uses child-only environment, normal Quit and zero-listener requirement. Native cleanup/transport instrumentation **not runtime verified**; Claude runs it on throwaway data. |
+
+No reachable new security finding identified in this self-check. Independent Claude review and security acceptance remain outstanding.
+
+Outside write area, mechanical: **none**. No Rust changes; `cargo test --lib --offline` is **not run** in FIX RUN 2, as requested when Rust is unchanged. No npm audit/ci, cargo audit/clippy, install, real exe, browser, independent security review or network. Claude owns independent `/security-review`, exact commit/hash, records/claims/session/ledger and commit/push. Served model/effort, token counts, quota before/after and message timestamp were not exposed; do not infer them from repository defaults.
+
+**ADDITION FOR AHMED:** the existing window can report ready without waiting for hidden-window frames or timers, and cached backdrop work no longer delays loading its status screen. Start minimized, the current appearance and animations stay as configured. No new user-facing feature. Mohamed Sayed's blank-window report still needs the corrected real-exe comparison and pixel/sign-in observation; the first counter-based conclusion was overstated.
+
+## Run 1 historical root-cause analysis (superseded by FIX RUN 2)
+
+| Candidate | Evidence for | Evidence against / what is still needed |
+|---|---|---|
+| Hidden-page paint/readiness stall — **most likely code-level cause** | `ui::build_main` creates a hidden WebView. Original `App.tsx` waits for appearance, status and **two animation frames** before `window_ready`. A hidden page can defer those callbacks; there is no fallback. The body and unlock card also animate from opacity zero. This couples readiness to a paint while intentionally hidden. | Code proves the dependency, not that WebView2 actually withheld frames on Mohamed's PC. Every ordinary start uses a hidden window too, so frame suspension alone does not explain why his sign-in differs. A tray restore ordinarily resumes frames. The persistent-white incident still needs observation. The deterministic scheduler test proves the repair of this seam only. |
+| Window exposed before the page/status/animation is ready, or hidden-state initialization order | `shell::show_main` (tray, single-instance and legacy handover) unconditionally unminimizes/shows/focuses. It can expose a page during loading. Also, `lib.rs` sets `tray_hidden` only after building the hidden window and the tray; if an early readiness callback could run before setup finishes, it would see the default false flag. | A first Run-key start does **not** call `show_main`. The hidden flag is set in setup before the normal event loop runs; no evidence that readiness can overtake setup has been observed. Need a second instance/tray open, an early callback trace or a focus event at sign-in. No delayed-show thread or automatic native show was found on the first minimized path. |
+| Missing `--minimized`, or wrong executable/Run value | `run_command(exe, prefs.start_minimized)` writes the quoted exe and adds the flag only when selected. A stale Run value or Start minimized off could change the path. | Quoting and parsing are correct for the expected command; existing Rust tests cover quoting and flag. `started_minimized` checks exact argument equality. Need Mohamed's actual command shape and executable version. No registry change is proposed. |
+| Explorer/tray unavailable at sign-in | If tray creation fails, `lib.rs` deliberately leaves `tray_hidden` false; a ready window becomes visible so the app stays reachable. | Tray failure by itself should show a working page. There is no tray-dependent frontend load branch. Need native tray observation/logs at sign-in. No sleep, Explorer polling or startup semantics change is added. |
+| GPU/compositor/WebView2 runtime initialization failure | Strong timing clue: seen at sign-in on one PC. Can explain DOM present but white pixels, or a dead renderer. | No source proof, crash event or runtime version from that PC yet. The harness distinguishes no CDP page, empty DOM, hidden native window and visible layout, but cannot prove compositor pixels. No GPU flags or WebView2 settings are changed. |
+| WebView2 user-data folder locked/not ready | WebView2 uses `paths.webview`; session initialization might make it temporarily unavailable. | `ensure_dirs` runs before window creation, checks the data folder, and creation errors get a native startup error and sanitized log. A failed creation is therefore not silently treated as ready. This does not rule out a later renderer/profile failure. Need startup log/event classes and a no-page result. No profile deletion/reset is proposed. |
+| Vault-status/appearance IPC stall or startup JavaScript failure | The body is conditional on status, and backdrop IPC is awaited before fetching it. A pending call or module failure can leave only a title bar or an empty root. | `vault_status` returns explicit states for missing, unreadable and protected vaults; there is no minimized-specific lock-screen branch. Logging and ErrorBoundary already exist (module-load errors can precede the boundary). Need DOM and log classes, particularly whether the custom title bar exists. The readiness timer starts only after a status screen commits; it deliberately does not pretend a failed status call succeeded. |
+
+The smallest supported correction removes the unbounded animation-frame dependency: after the status screen commits, retain two-frame readiness normally, with a once-only 1-second timer fallback and effect cleanup. Rust's visibility/tray guard, single-instance handling, vault, settings, lock and screenshot policy are unchanged. This is a fix for a demonstrated startup seam; **the exact cause of Mohamed's persistent blank pixels remains unconfirmed** until the PC round. No before/after runtime timing or pixel result has been measured in this sandbox.
+
+## Run 1 historical source checks and hand-back (2026-11-09)
+
+Source: baseline `e4df9185a99fabf6002065c84c921cd8f8278e31`; the external heartbeat made checkpoints `cff91cc3180c5311203cc41d54cd333bd4d757fb` and `0df2c5ac391baa117d49eb55e653251c8e09c893` during this run. Codex did not commit, stage, push, fetch, switch or reset Git. Checks apply to the final local source represented by the latter checkpoint plus the diagnostic change and this record. The production code in `App.tsx` was unchanged throughout the checks. No real Notaya.exe or browser was run; no install or network operation was performed.
+
+| Check | Exact result |
+|---|---|
+| `cargo test --lib --offline`, Codex sandbox on Gaming-PC, `CARGO_TARGET_DIR=D:\Notaya-lanes\_target` | **FAILED**, final exit **101**: **713 passed, 1 failed, 4 ignored, 0 measured, 0 filtered**, 138.92 s. Only failure: `shell::tests::the_registry_value_can_be_written_read_and_removed`, `Windows refused to open the start-up list (code 5)`. Six compiler warnings (unused variable and dead code in unchanged files). Final run pinned `TEMP`, `TMP`, `NOTAYA_HOME`, `CIPHERLEAF_HOME` to `D:\Notaya Tests\v1-6-X1\unit-56b67ba0cd614f6db3dad34d3c24e8a5`; full output retained there as `cargo-test.log`. An earlier run used the suite's standard temp directories and had the same counts (180.67 s); the final run corrected fixture placement. |
+| `npx tsc --noEmit -p tsconfig.json` | Exit **0**, no errors. |
+| `npm run build -- --configLoader native` | Exit **0**; 4413 modules transformed, Vite build 2.54 s. Warning: `DatabaseView.tsx` is imported both dynamically and statically, so the dynamic import does not split that module. |
+| `node --check tools/real-exe-tests/startup-minimized.mjs` and `node --check tools/real-exe-tests/startup-ready.test.mjs` | Both exit **0** on final script source. |
+| `node --test --test-isolation=none tools/real-exe-tests/startup-ready.test.mjs` | **4 passed, 0 failed, 0 skipped**. Default test isolation was attempted first and failed with sandbox `spawn EPERM`; no claim of a pass for that invocation. |
+| Windows PowerShell AST parser, both new `.ps1` scripts | **0 parse errors**. The diagnostic command-redaction function also passed two synthetic assertions (recognized command redacted; unknown arguments omitted), without running live diagnostic collection. |
+| `git diff --check` and baseline diff whitespace check | Exit **0**; Git printed only LF/CRLF notices. |
+| Real exe/CDP/reproduction, pixels, actual sign-in, protected-vault/auto-lock/tray round | **not run**; Claude runs these outside the sandbox. |
+| `npm audit`, `npm ci`, `cargo audit`, `cargo clippy`, independent security review | **not run**. Audit skipped per lane instruction; no installs or dependencies. Claude owns independent `/security-review` and final security decision. |
+
+Raw-file SHA-256 of final executable source/scripts (before any coordinator line-ending conversion):
+
+| File | SHA-256 |
+|---|---|
+| `src/App.tsx` | `967226269A4035785A908A5489470ABDC513D87B1BB2C553B2CA7C07993BD622` |
+| `tools/real-exe-tests/startup-minimized.mjs` | `2D5A4381F867D01F0FBA3A8E42A7F264CD1DE1F3A795AFC96A3487317C671DC9` |
+| `tools/real-exe-tests/startup-ready.test.mjs` | `391586C6E1BA0199874338B2D5474164F7BE544EB138C732D5EE77A401550262` |
+| `tools/real-exe-tests/run-startup-minimized.ps1` | `4BBDE8C77F03BC6D502E97D5F4449143122F4E2826708737ECAEB3E082AAAE17` |
+| `tools/real-exe-tests/startup-diagnostic.ps1` | `38BB3E8DAC1D542B4EC80B78185C72F02F09FB583C448C8802734B45C3A4B1FC` |
+
+Security self-check, guide section 4 (**self-review, not independent**):
+
+| Checklist area | Reviewed result |
+|---|---|
+| Secrets/keys, zeroization, cryptography, randomness | No new key/secret handling, crypto or random production data: **n/a**. No secrets/vault fixtures in the diff. |
+| Commands/IPC and confirmations | Only the existing `window_ready` call is rescheduled, after a committed status screen. Its native `tray_hidden` check and ready/flush registration are unchanged. No new Tauri command, AI authority or confirmation path. Native lock/flush behavior is **not runtime tested** here. |
+| Files/paths/parsing | Runner pins child homes/profile under the allowed throwaway root, rejects reparse-point ancestors and existing app processes, validates the exact Run command before direct process creation (no shell evaluation), preserves artifacts, and never writes the Run key. Numeric CDP settings are bounded; WebSocket endpoints must remain on the expected loopback port. Diagnostic exports fixed log classes and allowlisted event fields, never raw text or exe paths. No import/archive/SQL path changed: remaining hostile-file checks **n/a**. |
+| AI pipe/bridge | No changes: **n/a**. |
+| Storage/history/logs | Vault format, history, decrypted caches and app logging unchanged. Diagnostic reads app-log metadata only and never opens a vault. Storage migration and history checks **n/a** to this diff. |
+| Front end | CSP, HTML sinks, storage, capture protection and auto-lock code unchanged. Timer/frame callbacks are functions, once-only and canceled on effect cleanup. Test-only CDP injection and VM evaluation use fixed tool/repository code, not user content, and do not ship in the app. |
+| Dependencies/build | No dependency/version/licence change; no installs. Dependency audits **not run**. Test tooling connects only to the explicitly enabled local child debug port; app networking unchanged. |
+| Test/debug cleanup | Runner uses child-only environment and normal Quit, with fallback restricted to its process and recorded descendants, and requires zero remaining listeners. No real exe was run here, so this cleanup path is **produced, not runtime verified**. |
+
+No reachable new security finding was identified in the self-check. Runtime, hostile-input review of the wider app, independent review and security acceptance remain separate.
+
+Outside write area, mechanical: **none**. Changed files: `src/App.tsx`; `tools/real-exe-tests/{README.md,startup-minimized.md,startup-minimized.mjs,run-startup-minimized.ps1,startup-ready.test.mjs,startup-diagnostic.ps1}`; the two whole-app plan/results files. No Rust source changed. The whole-app files and helper were absent at the baseline; only the X-1 additions were created, without reconstructing the rest of the test plan. Claude owns the final records, claim/ledger/session updates, review, commit/push and reporter credit in the commit body. Token counts, actual served model/effort and quota readings were not exposed to this run and must not be guessed.
+
+**ADDITION FOR AHMED:** startup timing correction only: if animation frames are delayed, the existing main window can become ready via a timer after its status screen has committed. Normal first-paint timing is retained; `--minimized` still stays hidden when the tray is available. No new visible feature, names, styling or startup setting. Persistent blank pixels remain an open observation question for the real-PC round.

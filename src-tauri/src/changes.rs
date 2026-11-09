@@ -252,7 +252,7 @@ pub(crate) mod tests {
             let history = history_snapshot(&s);
             let activity = serde_json::to_value(s.activity_list(None, None, 100).unwrap()).unwrap();
             let rev = s.rev(id);
-            let error = notes::delete_page_core(&mut s, &Actor::Person, id.into()).err().unwrap();
+            let error = notes::test_delete_page_core(&mut s, &Actor::Person, id.into()).err().unwrap();
             assert_eq!(error.to_string(), "Only items in the bin can be permanently deleted.");
             assert_eq!(serde_json::to_value(s.get(id).unwrap()).unwrap(), before);
             assert_eq!(s.rev(id), rev);
@@ -265,13 +265,13 @@ pub(crate) mod tests {
         notes::restore_page_core(&mut s, &Actor::Person, NB.into()).unwrap();
         let history = history_snapshot(&s);
         let activity = serde_json::to_value(s.activity_list(None, None, 100).unwrap()).unwrap();
-        assert!(notes::delete_page_core(&mut s, &Actor::Person, NB.into()).is_err());
+        assert!(notes::test_delete_page_core(&mut s, &Actor::Person, NB.into()).is_err());
         assert_eq!(history_snapshot(&s), history);
         assert_eq!(serde_json::to_value(s.activity_list(None, None, 100).unwrap()).unwrap(), activity);
         for id in [NB, SEC, PAGE, DB, ROW] { assert!(s.get(id).is_some() && !s.in_bin(id)); }
         // Effective bin membership is sufficient for children of binned containers.
         notes::delete_section_core(&mut s, &Actor::Person, &paths, SEC.into()).unwrap();
-        notes::delete_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
+        notes::test_delete_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
         assert!(s.get(PAGE).is_none());
         assert!(s.get(SEC).is_some() && s.in_bin(SEC));
     }
@@ -497,7 +497,7 @@ pub(crate) mod tests {
         save(&mut s, &Actor::Person, "last pending typing").unwrap();
         assert!(save(&mut s, &ai("Codex"), "binned edit").is_err());
         assert!(matches!(s.get(PAGE), Some(Item::Page(p)) if p.text == "last pending typing"));
-        notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+        notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
         assert!(s.settings().replaced_edits.is_empty());
         assert!(s.get_attachment(&pic).is_err());
     }
@@ -579,7 +579,7 @@ pub(crate) mod tests {
         let mut s = Session::unlock(&paths.vault, "throwaway", None).unwrap();
         assert_eq!(s.settings().replaced_edits.len(), 1);
         notes::trash_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
-        notes::delete_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
+        notes::test_delete_page_core(&mut s, &Actor::Person, PAGE.into()).unwrap();
         assert!(s.settings().replaced_edits.is_empty());
     }
 
@@ -627,7 +627,7 @@ pub(crate) mod tests {
         notes::restore_page_core(&mut s, &Actor::Person, SEC.into()).unwrap();
         assert!(!s.in_bin(PAGE));
         notes::delete_notebook_core(&mut s, &Actor::Person, &paths, NB.into()).unwrap();
-        notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+        notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
         for id in [NB, SEC, PAGE, DB, ROW] {
             assert!(s.get(id).is_none());
         }
@@ -654,7 +654,7 @@ pub(crate) mod tests {
         notes::restore_page_core(&mut s, &Actor::Person, STICKY.into()).unwrap();
         assert!(!s.in_bin(STICKY));
         stickies::delete_stickies_core(&mut s, &Actor::Person, vec![STICKY.into()]).unwrap();
-        notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+        notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
         assert!(s.get(STICKY).is_none());
     }
 
