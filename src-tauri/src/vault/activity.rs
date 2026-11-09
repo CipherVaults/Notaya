@@ -122,6 +122,9 @@ pub(super) struct Journal {
     pub(super) anchor: super::anchor::Update,
 }
 impl Journal {
+    pub(super) fn picture_ids(&self) -> impl Iterator<Item = &String> {
+        self.snapshots.iter().flat_map(|snapshot| &snapshot.meta.picture_ids)
+    }
     pub(super) fn head<'a>(&'a self, current: &'a Head) -> &'a Head {
         self.activity.as_ref().map(|(_, _, _, head)| head).unwrap_or(current)
     }
@@ -630,20 +633,20 @@ impl Session {
 
     /// Non-page previous values can contain pictures and file cells too. Read
     /// them lazily during cleanup, never into the unlock-time index.
-    pub(super) fn undo_attachment_ids(&self) -> Result<HashSet<String>> {
+    pub(super) fn undo_attachment_ids(&self, head: &Head) -> Result<HashSet<String>> {
         let mut referenced = HashSet::new();
-        self.walk_entries(|entry| {
+        self.walk_entries_at(head, |entry| {
             for previous in &entry.undo {
                 if self.get(&previous.id).is_none() {
                     continue;
                 }
-                if previous.version.as_ref().is_some_and(|version| {
-                    !self
-                        .history_index
-                        .get(&previous.id)
-                        .is_some_and(|metas| metas.iter().any(|m| m.version_id == *version))
-                }) {
-                    continue;
+                if let Some(version) = &previous.version {
+                    // GC can run inside the data transaction, before its new
+                    // snapshots have been accepted into the RAM index.
+                    let row = super::parse_id(version).map_err(|_| Error::Corrupt)?;
+                    if self.store.get(Table::History, &row)?.is_none() {
+                        continue;
+                    }
                 }
                 if let Some(before) = self.previous_body(previous)? {
                     for token in before
@@ -1378,6 +1381,11 @@ mod tests {
         // Synthesize the exact old inline encoding, with a legitimate hash/head.
         entry.undo[0].before = Some(body.to_string());
         entry.undo[0].body = None; entry.undo[0].body_hash = None;
+        let legacy = serde_json::to_value(&entry).unwrap();
+        let fields = legacy["undo"][0].as_object().unwrap();
+        assert_eq!(fields.len(), 4, "old entry hashes must not gain default fields");
+        assert!(fields.contains_key("before") && fields.contains_key("version")
+            && fields.contains_key("id") && fields.contains_key("after_hash"));
         entry.hash = entry_hash(&entry).unwrap();
         let mut head = s.activity_head.clone(); head.last_hash = entry.hash.clone();
         let anchor = s.store.transaction(|store| {
@@ -1388,8 +1396,17 @@ mod tests {
             s.refresh_anchor_head(s.anchor.clone(), &head, store)
         }).unwrap();
         s.activity_head = head; s.anchor = anchor; s.activity_verify().unwrap();
+        // An actual pre-SF3 file has no latch field or anchor table. Keep the
+        // inline ciphertext/hash just constructed and exercise silent migration.
+        let mut settings = serde_json::to_value(Item::Settings(s.settings())).unwrap();
+        settings.as_object_mut().unwrap().remove("journalsAnchored");
+        let settings_id = super::super::parse_id(crate::model::SETTINGS_ID).unwrap();
+        s.store.put(Table::Records, &settings_id,
+            &s.seal_json(Table::Records, &settings_id, &settings).unwrap()).unwrap();
         drop(s);
+        rusqlite::Connection::open(&path).unwrap().execute_batch("DROP TABLE journal_anchor").unwrap();
         let mut s = Session::unlock(&path, "throwaway", None).unwrap();
+        assert!(s.settings().journals_anchored);
         crate::commands::stickies::delete_sticky_core(&mut s, &Actor::Person, id.clone()).unwrap();
         crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
         for table in [Table::Records, Table::Attachments, Table::History, Table::Activity, Table::Anchor] {

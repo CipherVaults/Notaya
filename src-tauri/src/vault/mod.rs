@@ -356,6 +356,14 @@ impl Session {
             if removed_templates.is_empty() { return Ok(None); }
             let head = self.purge_undo_in_store(journal.head(&self.activity_head), &[], &removed_templates)?;
             let anchor = self.refresh_anchor_head(journal.anchor.next.clone(), &head, s)?;
+            // Template removal has no delete_bin_tree caller to collect files.
+            // Use the prospective items and just-written snapshots/undo here,
+            // so file cleanup is atomic with the purge and keeps other content.
+            let replaced: std::collections::HashSet<_> = items.iter().map(Item::id).collect();
+            self.collect_garbage_for(
+                self.items.values().filter(|item| !replaced.contains(item.id())).chain(items.iter()),
+                &head, journal.picture_ids(),
+            )?;
             Ok(Some((head, anchor)))
         })?;
         self.accept_journal(journal);
@@ -704,12 +712,25 @@ impl Session {
 
     /// Deletes attachments no page or sticky note refers to any more.
     pub fn collect_garbage(&mut self) -> Result<usize> {
-        let mut referenced = String::new();
-        let undo_attachments = self.undo_attachment_ids()?;
-        for meta in self.history_index.values().flatten() {
-            for id in &meta.picture_ids { referenced.push_str(id); }
+        let removed = self.collect_garbage_for(self.items.values(), &self.activity_head, std::iter::empty())?;
+        if removed > 0 {
+            self.changed();
         }
-        for item in self.items.values() {
+        Ok(removed)
+    }
+
+    fn collect_garbage_for<'a>(
+        &self,
+        items: impl Iterator<Item = &'a Item>,
+        head: &activity::Head,
+        extra_pictures: impl Iterator<Item = &'a String>,
+    ) -> Result<usize> {
+        let mut referenced = String::new();
+        let undo_attachments = self.undo_attachment_ids(head)?;
+        for id in self.history_index.values().flatten().flat_map(|meta| &meta.picture_ids).chain(extra_pictures) {
+            referenced.push_str(id);
+        }
+        for item in items {
             match item {
                 Item::Page(p) => {
                     referenced.push_str(&p.content);
@@ -743,9 +764,6 @@ impl Session {
                 self.store.delete(Table::Attachments, &id)?;
                 removed += 1;
             }
-        }
-        if removed > 0 {
-            self.changed();
         }
         Ok(removed)
     }

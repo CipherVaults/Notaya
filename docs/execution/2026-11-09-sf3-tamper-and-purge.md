@@ -1,0 +1,237 @@
+# SF3: offline tamper evidence and permanent-delete content purge
+
+## 1. Scope, authority and source
+
+Side: Ahmed Emara (`AE0101`). Machine: `GAMING-PC` (read from the execution
+environment). Codex is the developer hand; Claude owns independent review,
+records integration, commits and pushes. Result: produced, with the named
+verification results below; not integrated or accepted.
+
+The user's SF3 brief authorizes S2-M1, S2-M2 and S2-M3 and specifies the anchor,
+purge contract and tests. It cites Claude's security call of 2026-11-09 08:31 UTC;
+the user message's own time is not available. The review used `1c129af`; this run
+re-read the current source. Branch: `AE0101/v1-6-sf3`. Entry baseline:
+`4934a04b35f9c0ef32d88cf85cf6861d0bd851d1`, including automatic SF3 checkpoints
+`bbc01dd` and `4934a04` on base `d910034`. Their work was preserved and reviewed.
+The hand-back includes those checkpoints and the subsequent working-tree diff.
+
+Read: AGENTS, partner briefing, the entire security-review guide, security
+design, WP-02 through WP-05, current activity/history/store/session code, existing
+tamper tests, and both Area 2 proof sources under lane S (read only, not copied
+into the build). The repository PBS skill was used. This lane's claim is the
+user-assigned branch/write area; shared claim/session/ledger files remain for
+Claude to reconcile. No fetch/PR lookup/network, Git mutation, install, app,
+browser or real-vault access was performed. Throwaway data and TEMP/TMP are under
+`D:\Notaya Tests\v1-6-SF3`; build outputs use `D:\Notaya-lanes\_target\SF3`.
+
+## 2. Findings and resulting behavior
+
+| Finding | Before | After |
+|---|---|---|
+| S2-M1 | Erasing/dropping all activity could look like an untouched legacy log and start a fresh chain. | The independent anchor commits the expected head and row count; absence/mismatch fails unlock or verification and restore staging. |
+| S2-M2 | Removing both rows of a snapshot reduced both the index and the verifier's expected count. | A separate authenticated membership ledger defines the expected set. Missing pairs, one page's entire history, a table or either half fail membership checks. Bodies still load lazily at unlock. |
+| S2-M3 | Sticky text, row cells and database templates could remain in encrypted activity previous values after permanent deletion. | Hash-bound encrypted undo bodies are purgeable. Permanent deletion also purges old inline values, history and replacement edits, leaving content-free undo tombstones and a valid re-linked chain. Undo refuses the purged change set. |
+
+## 3. Anchor and deterministic construction
+
+- `journal_anchor`, closed `Table::Anchor`, AAD tag `b"anc"`. AAD otherwise
+  remains the existing format binding (`notaya` for NOTA v2), little-endian
+  version, vault id, table tag and 16-byte row id. All rows use the existing
+  padded XChaCha20-Poly1305 seal with a fresh OS-random nonce.
+- Fixed anchor id: sixteen zero bytes. Fields: activity `Head` (`last_seq`,
+  `last_hash`, `last_id`, `first_seq`, `base_hash`); total `activity_rows`
+  (entries plus the head when present); membership `tail`, `root`, `certificates`
+  and live `members` count.
+- Membership certificates have OS-random ids with first byte 2. A certificate
+  contains `previous`, `previous_hash`, monotonically increasing `sequence` and
+  `changes`. Changes are sorted by snapshot version id with duplicates refused.
+  An addition binds that id to `{ page, body_hash }`; a deletion has null binding.
+  The id names metadata row `00 || suffix` and body row `01 || suffix`.
+- Root construction is `SHA-256("notaya/history-membership/v1\0" || canonical
+  JSON(certificate))`. The previous root is part of that canonical JSON. Objects
+  are sorted recursively, array order is retained; the starting root is 64 zero
+  hex digits and the starting tail is empty. This reuses the existing SHA-256
+  linked-ledger pattern rather than introducing a commutative accumulator.
+- Replay the authenticated certificate chain backwards by sequence/hash, then
+  apply its sorted deltas forwards. Duplicate additions and missing removals
+  fail. Compare the resulting exact id/page/body-hash map to freshly read
+  authenticated metadata, compare counts, and compare both halves' ids to all
+  history row ids. A count derived from surviving metadata alone is insufficient.
+
+## 4. Write, check and migration boundaries
+
+The journal, snapshots, certificate and anchor are written in the same
+`Store::transaction` as the corresponding item write. Explicit snapshot writes,
+history thinning, activity markers, prune, clear, template removal and
+`remove_many` all update the anchor in their own data transaction. After a purge
+the final head/anchor refresh is in that same transaction too. In-memory heads,
+indexes and anchor are accepted only after success; the outer AI action rollback
+snapshot includes the anchor. Re-key/format upgrade and copy verification include
+the new table.
+
+Unlock checks the authenticated activity head/count, certificate chain and exact
+history metadata/pair membership. It never opens a history body for an already
+anchored vault. `activity_verify` (the existing Check the log command) additionally
+walks the entire activity chain, authenticates/hashes all history bodies and checks
+undo-body hashes and exact references. Restore reaches that same verifier through
+`verify_attachments` on its staged copy.
+
+The settings field `journalsAnchored` is an internal authenticated migration
+latch. A genuinely old file without an anchor/latch is fully verified (including
+legacy bodies/undo), then receives anchor+latch atomically and silently. A set
+latch with an absent anchor/table fails with a plain error; mismatch fails as
+damaged/tampered. New vaults set the latch with their first settings/journal write.
+Every later settings write preserves it. No schema/format version bump is used.
+Migration cannot recover knowledge of evidence erased before the first anchor.
+Whole-file rollback and coherent replay of an older authenticated journal set
+with matching anchor/latch have no offline freshness guarantee.
+
+## 5. Purge boundary and deletion-path coverage
+
+Previous values are stored in `anc` undo-body rows with random ids prefixed by 3;
+their SHA-256 hash and reference are covered by the activity entry hash. Page/row
+page text remains in version history; non-page values include sticky bodies, row
+cells and database templates. Full verification checks every body/reference and
+rejects missing, swapped, altered or unreferenced undo-body rows.
+
+`remove_many` deletes records, both history halves and relevant replacement
+edits, deletes matching indirect bodies and clears matching legacy inline undo.
+Affected `Previous` values retain the item id and a `purged` flag, with content,
+references and before/after hashes removed. Activity entries retain their existing
+metadata/ids and are re-sealed only when their hash changes; the affected suffix
+is re-linked and the anchor refreshed. A selected change set with any purged
+member is refused before undo writes anything.
+
+Covered paths (no native-confirmation code was edited):
+
+| Path | How the purge is reached |
+|---|---|
+| Page/sticky delete for good | `delete_page_core` -> `delete_bin_tree` -> `remove_many`. |
+| Empty bin | `empty_trash_core` visits binned roots through `delete_bin_tree`. |
+| Notebook/section/page descendants | Tree deletion includes contained databases, rows and nested pages. |
+| Database and row delete from bin | `delete_database`/`delete_rows` -> `remove_many`, including row subpages. |
+| Single/bulk sticky bin | Binning preserves undo; a later permanent delete or empty-bin purges it. |
+| Template removal with database retained | `put_many` compares old/new template ids, removes matching replacement copies, purges database undo values containing those templates and refreshes the chain/anchor. This covers the existing database-save core too. |
+| Bin-related file/picture GC | Existing callers run `collect_garbage` after removal; it follows the remaining indirect undo bodies. Unreferenced files disappear; ordinary binning and surviving references preserve them. |
+| Clear/prune | Removes indirect bodies belonging to removed log entries and writes the authenticated clear/prune marker and anchor in one transaction. |
+
+There is no separate timed bin-expiry/GC deletion path in the current source;
+`collect_garbage` itself removes attachments, not items. All actual item removal
+call sites converge on `remove_many`. Independently copied live content, retained
+search/calculator values, older backups/exports, host memory and physical disk
+remanence are outside this item-owned current-record purge promise.
+
+## 6. Regression tests
+
+`vault/security_tests.rs` covers offline activity erase/drop, tail truncation,
+middle deletion, replacement, swapping and old-head replay; offline history pair,
+page/table and single-half deletion and pair swaps; deleted/dropped/mismatched
+anchors; pre-C3 and pre-SF3 migration; thinning and typed clear; failed anchor
+write and failed purge/final refresh rollback; missing undo bodies; all-record
+random-marker scans after delete/empty-bin for page/sticky/row-cells/templates;
+template removal via the real save core; notebook/section cascades with row
+subpages and undo-only attachments; bulk sticky bin/undo/empty; and G3-style old
+reader tolerance. Attacks occur after dropping the session, use SQL without a key,
+and check restore rejection. Purge scans decrypt every current record in all five
+data tables and never print the random marker or credentials.
+
+The activity tests also cover real legacy inline undo (without a latch field or
+anchor table), preserved old serialization/hash fields, and purge after silent
+migration. Existing individual-row tamper tests remain intact. History fixture
+helpers that directly insert snapshots now write matching membership certificates
+transactionally; the existing permanent-delete undo assertion now expects the
+specified explicit refusal. The 1,000-version test still proves lazy body reads
+and small metadata; re-key/security-switch/upgrade/backup regressions cover the
+added table.
+
+Final results: pending the final-source run; this section is updated before
+hand-back. Earlier baseline vault run: 89 passed, 0 failed, 645 filtered out,
+44.50 s; this is not the final-source result.
+
+## 7. Required checks and source identity
+
+Final Rust command: `cargo test --lib --offline` with the SF3 target directory.
+Final-source results, log paths and source hashes are recorded after the run.
+TypeScript/build are not run because no front-end code changed. `npm audit` is
+explicitly skipped per the brief. `cargo audit`, clippy, app/browser tests and
+installs are not run. `git diff --check` will be recorded on the final diff.
+
+## 8. Performance
+
+The anchor has a fixed number of scalar/hash/id fields. A normal save appends
+one membership certificate containing only that save's additions (normally at
+most two versions per edited page) and writes the anchor: O(1) extra work per
+item/snapshot, no history or activity rescan for root calculation. An activity-only
+write needs no certificate. Batches cost O(their changes), with sorting confined
+to that batch. Maintenance can scan existing metadata; permanent deletion can
+scan/re-link the retained activity chain, as required to remove legacy inline
+content. Those costs are intentionally separate from ordinary saves.
+
+Certificates are content-free but retained: storage and unlock verification grow
+with the number of historical membership-change batches, including thinned
+versions. Unlock/explicit verification replay certificates and read metadata/ids;
+full verification also opens bodies. No latency benchmark or real-vault measurement
+is claimed. Old backups remain independent files.
+
+## 9. Security self-check (guide section 4; not independent)
+
+- Secrets/keys: existing vault AEAD/AAD and SHA-256 only; keys stay in Rust;
+  nonces and ids use existing OS randomness. New plaintext undo temporaries use
+  zeroizing wrappers and existing zeroizing item/entry types. No new credential
+  comparison, key export, log or event. Existing lock/zeroization path unchanged.
+- Commands/IPC: no new commands, action names exposed to callers, confirmation
+  plumbing or permissions. Native confirmations and pairing: untouched, n/a.
+  Undo keeps its existing owner/AI checks and refuses purged content before writes.
+- Files/paths/parsing: no new external path or archive/image parser. SQL values
+  are parameterized; table identifiers come only from the closed enum. Row ids
+  use the existing exact 16-byte parser; metadata/certificate/body mismatches fail.
+  Parsing resource budgets outside these existing encrypted-record paths: untouched,
+  n/a. Plain messages do not include note text or credentials.
+- AI pipe/bridge, ACLs, pairing, frame bounds and AI event text: untouched, n/a.
+- Storage/history/logs: checked head/count/root/membership, lazy bodies, table
+  erasure, unchanged old-entry hash encoding, exact undo-body references, all
+  data/anchor transaction boundaries, nested rollback, secure-delete, copy and
+  re-key coverage. Permitted metadata remains; purge re-linking is an explicit
+  authorized operation. No decrypted disk cache is introduced.
+- Front end, CSP, HTML rendering, localStorage, capture and auto-lock: untouched,
+  n/a.
+- Dependencies/build: no dependency/lockfile/package/tool addition or version
+  change. npm audit skipped as instructed; cargo audit not run. Diff checked for
+  secrets and vault artifacts; fixtures generate throwaway credentials/markers.
+
+Self-check found no additional proven issue in scope. This is the implementer's
+check, not the independent Codex/Claude review or Claude's Security Guidance run.
+
+## 10. Files and changes outside the write area
+
+Implementation: `src-tauri/src/vault/{activity,anchor,history,mod,store}.rs`.
+Regression additions: `src-tauri/src/vault/security_tests.rs`, plus tests next to
+activity/history. Documentation: this note and `docs/security-design.md`.
+
+Outside write area, mechanical: `src-tauri/src/model.rs` adds only the internal
+authenticated `journals_anchored` bool and its false legacy default (three lines).
+No `commands/notes.rs` or `commands/ai.rs` edit. No authority/session/ledger file
+was changed; Claude owns their final records.
+
+## 11. What remains for review and a person
+
+Claude must review the whole diff and independent security results, run its
+required Security Guidance check, integrate records/usage, commit and push. A
+post-commit run must attach results to that exact commit; these results apply to
+the final working source, not an as-yet nonexistent final commit. Actual 1.5.1 exe
+read-only opening of a copy, UI wording/feel, native confirmations, real restore,
+backup/lock timing, crash/power-loss hardware behavior and release acceptance are
+not exercised here. The G3 test verifies the old read pattern, not the old binary.
+
+Usage: this interface provides no `/status` or trustworthy model/effort/token/quota
+receipt; those values are not measured here. Claude/heartbeat must record the
+actual receipts; no estimates are substituted. Initial orientation time in this
+continuation was read as 2026-11-09 17:54:07 UTC; that is not the earlier SF3 run's
+start time.
+
+## 12. Addition for Ahmed and stop point
+
+**'Check the log' now fails on tampering it accepted before; nothing else visible.**
+
+Stop at this hand-back. No commit, push, merge, release, app run or acceptance by
+Codex. No new dependency or visible-design decision was made.

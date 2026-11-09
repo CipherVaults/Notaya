@@ -93,6 +93,70 @@ P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite passed agai
 
 ## Known limitations
 
+### 1.6 SF3: authenticated journals and permanent deletion (2026-11-09)
+
+**P33, strengthened:** activity and history membership are authenticated under the
+vault key. A separate encrypted anchor commits the activity head, sequence range
+and row count, and the head/root/counts of a SHA-256 history-membership ledger.
+Deleting the complete activity table, deleting a complete history metadata/body
+pair, or deleting the anchor after initialization fails verification. Unlock
+checks the activity head/count and exact history membership using metadata and
+row ids; history bodies stay lazy. **Check the log** and restore additionally
+check every activity link, history body hash and indirect undo body. They reject
+edited, missing, swapped or reordered journal records. Authentication uses the
+existing record AEAD and vault/format/table/row AAD; the added closed table tag is
+`anc`. No new cryptographic primitive or dependency is used.
+
+The fixed anchor is in the additional `journal_anchor` table. Content-free,
+encrypted membership certificates use the same SHA-256 chain pattern as the
+activity log: sorted add/remove deltas bind each snapshot id to its page id and
+body hash; replay reconstructs the exact expected snapshot set. The anchor and
+all associated data writes share one SQLite transaction. Clear/prune/thin move
+the anchor with authenticated `log.cleared`, `log.pruned` or `history.thinned`
+entries. Normal saves append only their own deltas and update a fixed-size
+anchor; they do not rescan old journal records to calculate a membership root.
+
+An authenticated `journalsAnchored` field in the existing settings record
+distinguishes a genuine older file from a removed anchor. An old file without
+that latch or an anchor is fully verified and migrated silently at its first
+writable open; the anchor and latch are written atomically. A set latch with a
+missing anchor is an error, never a reason to rebuild it. Migration verifies
+the old state that survives; it cannot discover evidence erased before any
+anchor existed. The vault remains NOTA v2. Version 1.5.1 can ignore the extra
+table and settings field when reading a copy; writing or re-keying that copy
+with an older version is not supported by this promise.
+
+**Delete for good includes undo:** permanently deleting a sticky, page, database
+row (including its cells), or database (including its templates), and removing a
+database template, removes the item's stored content from the current vault's
+records, replacement history, version history and activity undo. New previous
+values live in separate encrypted, hash-bound undo-body rows; page/row page
+bodies continue to use history. Deletion removes those rows and replaces affected
+undo entries with content-free tombstones, re-sealing and re-linking the activity
+chain and updating its anchor in the same transaction. It also purges legacy
+inline undo values. The log retains its existing titles, actors, times, item ids,
+actions and counts. Undo refuses a change set containing permanently deleted
+content with a plain message. Ordinary binning preserves undo and history.
+Notebook/section/database cascades and empty-bin use this same storage boundary;
+their existing garbage collection removes files/pictures no surviving item,
+history version, replacement edit or undo body uses. SQLite `secure_delete=ON`
+continues to overwrite freed database cells.
+
+**Limits:** whole-file rollback to an older consistent copy is not detectable
+offline. There is no external monotonic counter: replaying a complete, previously
+authenticated journal state together with its matching anchor and settings latch
+is also outside the freshness guarantee; the earlier single-record replay limit
+still applies to ordinary records. With security off the key is public, so
+someone can construct a consistent replacement. This is tamper evidence under a
+secret vault key, not evidence against someone who knows that key. Earlier
+automatic/manual/safety/restore-undo backups and exports retain their earlier
+content, and deletion does not erase an independently copied value in another
+live item, a search term or calculator entry. It does not promise forensic
+erasure from host memory, SQLite rollback journals left by a crash, filesystem
+snapshots, unallocated disk blocks or SSD remapping. Independent review and
+person-only runtime checks remain separate from the Rust regression results in
+[the SF3 execution note](execution/2026-11-09-sf3-tamper-and-purge.md).
+
 ### A24: KeePassXC removed (2026-10-27)
 
 - **What was removed.** The bundled KeePassXC 2.8.0 support: starting it after a hash check, the in-window overlay, the Passwords switch (`set_passwords_enabled`, the `passwordsEnabled` setting), the Passwords sidebar item, `Ctrl+2` and its command palette entry, the copies of the passwords file made on lock and their restore (`list_password_backups`, `pick_passwords_backup_file`, `restore_passwords`), and the Quit that waited up to 10 seconds for KeePassXC to close. Promises P6, P11 and P18 and threat 11 are marked removed; their numbers are kept. The `CIPHERLEAF_KEEPASSXC` environment variable is no longer read. No Rust or npm dependency changed.
