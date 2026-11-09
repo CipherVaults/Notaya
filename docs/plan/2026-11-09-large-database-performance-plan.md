@@ -186,3 +186,7 @@ node dev-mock/perf-table-check.cjs 5000 3      # after three "Show more rows"
 ```
 
 The numbers in this file came from one run each on 2026-11-09 between about 02:10 and 02:25 UTC (container clock), release build, a generated seed of 42, and the mock UI at commit `805cf77` plus the small additions in this PR (`?rows=N` seeding and a call timer in the mock; nothing in `src/` or `src-tauri/` was changed).
+
+---
+
+**Dated correction (2026-11-09 07:10 UTC, Ahmed's side, cloud; [A49](approval-and-amendments.md), Ahmed 06:56:22 UTC):** P8 (virtual List, Gallery and Board columns, Timeline time window, and any other part that needs it) is **part of 1.6** and runs after P6 and P7. Sections 4 and 7 above that place P8 later are superseded for P8 only; P9 to P12 are unchanged. Question (a) of section 8 and the P8 question are answered.
