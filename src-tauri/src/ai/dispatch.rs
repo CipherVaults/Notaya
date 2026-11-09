@@ -399,7 +399,13 @@ pub fn prepare(s: &Session, pairing: &Pairing, name: &str, mut params: Value) ->
         }
         let mut denied = None;
         for id in &targets {
-            if let Err(error) = s.check_write(&actor(p), id, None) {
+            // Undo's planner already checks changed roots and their descendants.
+            // Its footprint also contains destination ancestors, whose unrelated
+            // descendants are not themselves being restored.
+            let check = if name == "activity.undo" {
+                s.coordination.check(&actor(p), |other| other == id)
+            } else { s.check_write(&actor(p), id, None) };
+            if let Err(error) = check {
                 if error_code(&error) == "person_editing" {
                     denied = Some(error);
                     break;
@@ -768,9 +774,13 @@ fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> R
             }
             "notebook.get"|"section.get"|"db.get"|"sticky.get"=>value(s.get(&id).ok_or(Error::NotFound)?),
             "page.get"|"page.outline"|"block.list"=>{
-                // Look reads preserve legacy content and revisions exactly. Stable
-                // identities are persisted only by an authorized write operation.
-                let page=notes::get_page_core(s,&a,id.clone())?;let content=blocks::parse(&page.content)?;
+                // Legacy ID migration is a write: only an Edit/Full pairing with
+                // current lock/lease/hidden authorization may persist it. Other
+                // reads preserve legacy content and revisions exactly.
+                let may_migrate = p.level != rules::Level::Look && s.get(&id).is_some_and(|item|
+                    s.ai_write_targets(&a,std::slice::from_ref(item)).is_ok());
+                let page=if may_migrate {blocks::read(s,&a,&id)?} else {notes::get_page_core(s,&a,id.clone())?};
+                let content=blocks::parse(&page.content)?;
                 if name=="page.outline" {fn headings(v:&Value,out:&mut Vec<Value>){if v["type"]=="heading"{out.push(v.clone());}if let Some(c)=v["content"].as_array(){for v in c{headings(v,out);}}}let mut h=vec![];headings(&content,&mut h);return Ok(json!(h));}
                 if name=="block.list"{return Ok(content["content"].clone());}
                 Ok(json!({"id":page.id,"title":page.title,"format":q["format"].as_str().unwrap_or("markdown"),
@@ -826,7 +836,14 @@ fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths) -> R
             "page.trash"|"db.trash"|"db.row.trash"=>out!(notes::trash_page_core(s,&a,id.clone())),
             "bin.restore"=>out!(notes::restore_bin_item_core(s,&a,id.clone(),false)),
             "bin.delete_forever"=>out!(notes::delete_page_core(s,&a,id.clone())),
-            "bin.empty"=>{let roots:Vec<_>=r.targets.iter().filter(|id|s.get(id).is_some()).cloned().collect();for id in roots{if s.get(&id).is_some(){notes::delete_page_core(s,&a,id)?;}}Ok(Value::Null)}
+            "bin.empty"=>{
+                // The authorization footprint also includes live relation and
+                // automation destinations. Only items already in the bin are
+                // deletion roots; the shared core keeps the permanent-delete guard.
+                let roots:Vec<_>=r.targets.iter().filter(|id|s.in_bin(id)).cloned().collect();
+                for id in roots{if s.get(&id).is_some(){notes::delete_page_core(s,&a,id)?;}}
+                Ok(Value::Null)
+            }
             "db.create"=>out!(db::create_database_core(s,&a,paths,text(q,"sectionId"),text(q,"parent"),boolean(q,"inline"),text(q,"title"),text(q,"starterKind"))),
             "db.rename"|"db.set_look"=>{let d=db::database(s,&id)?;out!(db::set_database_look_core(s,&a,id.clone(),q["title"].as_str().unwrap_or(&d.title).into(),q["icon"].as_str().unwrap_or(&d.icon).into(),q["favorite"].as_bool().unwrap_or(d.favorite),d.locked))}
             "db.move"=>out!(db::move_database_core(s,&a,id.clone(),text(q,"sectionId"))),
@@ -1156,7 +1173,7 @@ mod tests {
             format!("{}1", "+".repeat(1000)), format!("{}1", "1^".repeat(1000)),
             format!("{}1 ?", "1+".repeat(1000)), format!("1{} ?", ".abs()".repeat(500)),
             format!("{}1", "1+".repeat(5000)), format!("[{}1]", "1,".repeat(3000)),
-            format!("\"{}\"", "x".repeat(65536))];
+            format!("\"{}\"", "x".repeat(65536)), " ".repeat(65537)];
         for _ in 0..32 {
             for expression in &attacks {
                 for (action, params) in [("calc.evaluate", json!({"expression":expression})),
@@ -1227,6 +1244,28 @@ mod tests {
             assert!(execute(s,&p,&r,&state.paths).is_err());
             assert_eq!(snapshot(s),before); assert!(s.get(&page).is_some());
             assert!(s.drain_changes().is_none());
+            Ok(())
+        }).unwrap();
+    }
+
+    #[test]
+    fn bin_empty_deletes_only_binned_items_not_live_relation_targets() {
+        let (state,p,section,_) = fixture();
+        state.with_actor(&actor(&p), |s| {
+            let binned = make_db(s,&state.paths,&section);
+            let live = make_db(s,&state.paths,&section);
+            let live_row = make_row(s,&live);
+            saves::add_property(s,&Actor::Person,&binned,Property {
+                id:"relation".into(), name:"Related".into(), kind:PropKind::Relation,
+                relation_db:live.clone(), ..Default::default()
+            })?;
+            notes::trash_page_core(s,&Actor::Person,binned.clone())?;
+            let r = prepare(s,&p,"bin.empty",json!({}))?;
+            assert!(r.targets.contains(&live) && r.targets.contains(&live_row),
+                "live relation destinations still require authorization");
+            execute(s,&p,&r,&state.paths)?;
+            assert!(s.get(&binned).is_none());
+            assert!(s.get(&live).is_some() && s.get(&live_row).is_some());
             Ok(())
         }).unwrap();
     }
@@ -1321,6 +1360,55 @@ mod tests {
     }
 
     #[test]
+    fn sibling_leases_and_claims_do_not_block_unrelated_writes_or_undo() {
+        for protection in ["lease", "claim"] {
+            let (state,p,section,page)=fixture();
+            let (sibling,set)=state.with_mut(|s| {
+                let sibling=notes::create_page_core(s,&Actor::Person,section.clone(),"Sibling".into())?.id.clone();
+                s.run_action(&actor(&p),"page.rename",|s| {
+                    let mut item=commands::page(s,&page)?;item.title="AI edit".into();s.put(Item::Page(item))
+                })?;
+                let set=s.activity_list(None,None,100)?.into_iter().find(|e|e.action=="page.rename").unwrap().change_set.clone();
+                if protection=="lease" { s.coordination.editing(&sibling,"main",true); }
+                else { s.claim(&Actor::Ai{pairing_id:"other".into(),label:"Other".into()},std::slice::from_ref(&sibling))?; }
+                Ok((sibling,set))
+            }).unwrap();
+            call(&state,&p,"activity.undo",json!({"changeSetId":set}),true,||false,||{}).unwrap();
+            call(&state,&p,"page.rename",json!({"id":page,"title":"Unrelated edit"}),false,||false,||{}).unwrap();
+            assert!(call(&state,&p,"page.rename",json!({"id":sibling,"title":"Blocked"}),false,||false,||{}).is_err());
+            assert!(call(&state,&p,"section.trash",json!({"id":section}),true,||false,||{}).is_err());
+        }
+    }
+
+    #[test]
+    fn authorized_edit_reads_expose_persistent_legacy_ids_for_targeted_edits() {
+        let (state,p,_,page)=fixture();
+        state.with_mut(|s| {
+            let mut item=commands::page(s,&page)?;
+            item.content=json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"exact legacy"}]}]}).to_string();
+            s.put(Item::Page(item))?;
+            let mut settings=s.settings();settings.ai.pairings[0].level=rules::Level::Look;
+            s.put(Item::Settings(settings))
+        }).unwrap();
+        let before=state.with(|s|Ok(snapshot(s))).unwrap();
+        for action in ["page.get","page.outline","block.list"] {
+            call(&state,&p,action,json!({"id":page}),false,||false,||{}).unwrap();
+            assert_eq!(state.with(|s|Ok(snapshot(s))).unwrap(),before);
+        }
+        state.with_mut(|s| {let mut settings=s.settings();settings.ai.pairings[0].level=rules::Level::Full;s.put(Item::Settings(settings))}).unwrap();
+        let first=call(&state,&p,"block.list",json!({"id":page}),false,||false,||{}).unwrap();
+        let bid=first[0]["attrs"]["bid"].as_str().unwrap();
+        assert_eq!(bid.len(),16);
+        let second=call(&state,&p,"block.list",json!({"id":page}),false,||false,||{}).unwrap();
+        assert_eq!(first,second);
+        call(&state,&p,"block.set_direction",json!({"pageId":page,"blockId":bid,"direction":"rtl"}),false,||false,||{}).unwrap();
+        let updated=call(&state,&p,"block.list",json!({"id":page}),false,||false,||{}).unwrap();
+        assert_eq!(updated[0]["attrs"]["bid"],bid);
+        assert_eq!(updated[0]["attrs"]["dir"],"rtl");
+        assert_eq!(updated[0]["content"][0]["text"],"exact legacy");
+    }
+
+    #[test]
     fn look_reads_and_previews_leave_locked_legacy_rows_unchanged() {
         let (state,p,section,_) = fixture();
         let row=state.with_mut(|s|{
@@ -1330,11 +1418,14 @@ mod tests {
             let mut settings=s.settings();settings.ai.pairings[0].level=rules::Level::Look;s.put(Item::Settings(settings))?;
             Ok(row)
         }).unwrap();
-        let before=state.with(|s|Ok(snapshot(s))).unwrap();
-        for action in ["page.get","page.outline","block.list"] {
-            for preview in [true,false] {
-                call(&state,&p,action,json!({"id":row}),preview,||false,||{}).unwrap();
-                assert_eq!(state.with(|s|Ok(snapshot(s))).unwrap(),before);
+        for level in [rules::Level::Look,rules::Level::Edit,rules::Level::Full] {
+            state.with_mut(|s| {let mut settings=s.settings();settings.ai.pairings[0].level=level;s.put(Item::Settings(settings))}).unwrap();
+            let before=state.with(|s|Ok(snapshot(s))).unwrap();
+            for action in ["page.get","page.outline","block.list"] {
+                for preview in [true,false] {
+                    call(&state,&p,action,json!({"id":row}),preview,||false,||{}).unwrap();
+                    assert_eq!(state.with(|s|Ok(snapshot(s))).unwrap(),before);
+                }
             }
         }
     }

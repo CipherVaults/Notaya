@@ -409,6 +409,9 @@ impl Session {
         let hidden = self.settings().ai.hidden_notebooks;
         let mut targets = std::collections::HashSet::new();
         for item in items {
+            // Only a changed item affects its descendants. Destination ancestors
+            // must be checked themselves, without treating siblings as writes.
+            self.check_write(actor, item.id(), None)?;
             for prospective in [false, true] {
                 let mut pending = vec![(item.id().to_string(), std::collections::HashSet::new())];
                 while let Some((id, mut path)) = pending.pop() {
@@ -416,7 +419,7 @@ impl Session {
                     if !path.insert(id.clone()) { return Err(Error::invalid("invalid")); }
                     if hidden.contains(&id) { return Err(Error::NotFound); }
                     targets.insert(id.clone());
-                    self.check_write(actor, &id, None)?;
+                    self.coordination.check(actor, |other| other == id)?;
                     let current = self.get(&id);
                     let next = if prospective { proposed.get(id.as_str()).copied().or(current) } else { current };
                     if path.len() > 1 && next.is_none() { return Err(Error::NotFound); }

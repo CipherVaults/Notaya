@@ -351,6 +351,10 @@ fn depth_of(e: &Expr, limit: usize) -> usize {
 }
 
 pub fn parse(src: &str) -> Result<Expr, String> {
+    // Apply the byte budget even to the empty/whitespace fast path.
+    if src.len() > 64 * 1024 {
+        return Err("Formula is too large".into());
+    }
     if src.trim().is_empty() {
         return Ok(Expr::Str(String::new()));
     }

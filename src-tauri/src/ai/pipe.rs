@@ -34,6 +34,16 @@ impl Drop for Slot {
     fn drop(&mut self) { self.0.fetch_sub(1, Ordering::SeqCst); }
 }
 
+/// Reserve delivery capacity before committing a newly approved credential.
+/// Holding a pairing approval itself does not occupy authenticated capacity.
+fn with_authenticated_slot<T>(counter: &Arc<AtomicUsize>, persist: impl FnOnce() -> crate::error::Result<T>)
+    -> crate::error::Result<(T, Slot)>
+{
+    let slot = Slot::take(counter, AUTHENTICATED_LIMIT)
+        .ok_or_else(|| crate::error::Error::invalid("rate_limited"))?;
+    Ok((persist()?, slot))
+}
+
 #[derive(Default)]
 struct Deadlines {
     frame: Option<Instant>,
@@ -311,6 +321,7 @@ mod native {
         let cancelled = Arc::new(AtomicBool::new(false));
         let busy = Arc::new(AtomicBool::new(false));
         let pairing = Arc::new(Mutex::new(None::<super::super::pairing::Pairing>));
+        let approved_slot = Arc::new(Mutex::new(None::<Slot>));
         let mut client = None::<(String, Instant)>;
         let mut greeted = false;
         let mut rate = Rate::new();
@@ -325,7 +336,8 @@ mod native {
         loop {
             if deadlines.expired(Instant::now()) { break; }
             if pairing.lock().unwrap().is_some() && authenticated.is_none() {
-                let Some(slot) = Slot::take(&slots.authenticated, AUTHENTICATED_LIMIT) else { break; };
+                let Some(slot) = approved_slot.lock().unwrap().take()
+                    .or_else(|| Slot::take(&slots.authenticated, AUTHENTICATED_LIMIT)) else { break; };
                 authenticated = Some(slot);
                 handshake = None;
                 _pairing_slot = None;
@@ -429,6 +441,8 @@ mod native {
                 let tx = tx.clone();
                 let stop = cancelled.clone();
                 let app = app.clone();
+                let authenticated_counter = slots.authenticated.clone();
+                let approved_slot = approved_slot.clone();
                 std::thread::spawn(move || {
                     let state = app.state::<crate::state::AppState>();
                     let allowed = state.ai.confirms.request(
@@ -443,7 +457,7 @@ mod native {
                     );
                     if allowed {
                         let (p, token) = super::super::pairing::create(name);
-                        let saved = state
+                        let saved = with_authenticated_slot(&authenticated_counter, || state
                             .with_mut(|s| {
                                 let mut settings = s.settings();
                                 if !settings.ai.enabled
@@ -458,9 +472,9 @@ mod native {
                                 }
                                 super::super::pairing::insert_unique(&mut settings.ai, p.clone())?;
                                 s.put(crate::model::Item::Settings(settings))
-                            })
-                            .is_ok();
-                        if saved {
+                            }));
+                        if let Ok(((), slot)) = saved {
+                            *approved_slot.lock().unwrap() = Some(slot);
                             *pairing.lock().unwrap() = Some(p.clone());
                             let _ = tx.try_send(ServerMessage::PairingResult {
                                 pairing_id: p.id,
@@ -493,6 +507,14 @@ mod native {
                     if completed {
                         active_id = None;
                         busy.store(false, Ordering::SeqCst);
+                    }
+                    if matches!(&message, ServerMessage::Error { id: None, .. })
+                        && pairing.lock().unwrap().is_none() {
+                        // A denied/failed pairing must not retain the sole
+                        // approval slot until the five-minute timeout.
+                        closing = true;
+                        closing_at = Some(Instant::now());
+                        _pairing_slot = None;
                     }
                     let bytes = match encoded(&message) {
                         Ok(bytes) => bytes,
@@ -761,6 +783,20 @@ mod native {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn pairing_at_capacity_never_persists_an_undeliverable_credential() {
+        let slots=Slots::default();
+        let active:Vec<_>=(0..AUTHENTICATED_LIMIT).map(|_|Slot::take(&slots.authenticated,AUTHENTICATED_LIMIT).unwrap()).collect();
+        let mut persisted=false;
+        let denied=with_authenticated_slot(&slots.authenticated, || { persisted=true; Ok(()) });
+        assert!(denied.is_err());assert!(!persisted);
+        drop(active);
+        let ((), reservation)=with_authenticated_slot(&slots.authenticated, || { persisted=true; Ok(()) }).unwrap();
+        assert!(persisted);assert_eq!(slots.authenticated.load(Ordering::SeqCst),1);
+        drop(reservation);assert_eq!(slots.authenticated.load(Ordering::SeqCst),0);
+        let failed:crate::error::Result<((),Slot)>=with_authenticated_slot(&slots.authenticated, || Err(crate::error::Error::NotFound));
+        assert!(failed.is_err());assert_eq!(slots.authenticated.load(Ordering::SeqCst),0);
+    }
     #[test]
     fn stalled_handshakes_and_pairing_do_not_take_authenticated_slots_and_release_on_drop() {
         let slots=Slots::default();
