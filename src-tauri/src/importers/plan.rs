@@ -232,6 +232,45 @@ impl Dir {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    static FOLDER_NAME_CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+fn idless_folder(name: &str) -> bool {
+    #[cfg(test)]
+    FOLDER_NAME_CHECKS.with(|checks| checks.set(checks.get() + 1));
+    strip_notion_id(name) == name
+}
+
+/// One index per parent folder: clean names are never matched across parents.
+struct SiblingFolders<'a> {
+    exact: HashMap<String, Vec<&'a String>>,
+    clean: HashMap<String, Vec<&'a String>>,
+    idless_clean: HashSet<String>,
+}
+
+impl<'a> SiblingFolders<'a> {
+    fn new(d: &'a Dir) -> Self {
+        let mut exact: HashMap<String, Vec<&String>> = HashMap::new();
+        let mut clean: HashMap<String, Vec<&String>> = HashMap::new();
+        let mut idless_clean = HashSet::new();
+        for k in d.dirs.keys() {
+            exact.entry(k.to_lowercase()).or_default().push(k);
+            let name = match_name(k);
+            if idless_folder(k) {
+                idless_clean.insert(name.clone());
+            }
+            clean.entry(name).or_default().push(k);
+        }
+        Self { exact, clean, idless_clean }
+    }
+
+    fn has_idless(&self, clean: &str) -> bool {
+        self.idless_clean.contains(clean)
+    }
+}
+
 /// The result of building: nothing is stored yet.
 pub struct Plan {
     /// The new notebooks' names (one, unless a Notaya ZIP of several notebooks is imported).
@@ -336,12 +375,7 @@ impl Builder<'_> {
                 *clean_files.entry(match_name(stem_of(name))).or_default() += 1;
             }
         }
-        let mut exact_dirs: HashMap<String, Vec<&String>> = HashMap::new();
-        let mut clean_dirs: HashMap<String, Vec<&String>> = HashMap::new();
-        for k in d.dirs.keys() {
-            exact_dirs.entry(k.to_lowercase()).or_default().push(k);
-            clean_dirs.entry(match_name(k)).or_default().push(k);
-        }
+        let folders = SiblingFolders::new(d);
         let mut warned = HashSet::new();
         for (name, path) in files {
             if extension(&name) == "csv" {
@@ -351,18 +385,20 @@ impl Builder<'_> {
             let stem = stem_of(&name);
             let exact = stem.to_lowercase();
             let clean = match_name(stem);
-            let dirs = clean_dirs.get(&clean).map(Vec::as_slice).unwrap_or(&[]);
+            let dirs = folders.clean.get(&clean).map(Vec::as_slice).unwrap_or(&[]);
             // A possible source home must remain a page so its folder can keep its parent.
             let has_folder = !dirs.is_empty();
             let Some(index) = self.document(&name, &path, section, parent, has_folder) else { continue };
-            let idless = |name: &&String| strip_notion_id(name) == name.as_str();
-            let dropped_id = strip_notion_id(stem) != stem && dirs.iter().any(idless);
-            if dropped_id && (clean_files[&clean] != 1 || dirs.len() != 1) && warned.insert(clean.clone()) {
+            let dropped_id = strip_notion_id(stem) != stem && folders.has_idless(&clean);
+            let exact_matches = folders.exact.get(&exact).map(Vec::as_slice);
+            let ambiguous_exact = exact_matches.is_some_and(|dirs| dirs.len() != 1 || exact_files[&exact] != 1);
+            let ambiguous_clean = dropped_id && (clean_files[&clean] != 1 || dirs.len() != 1);
+            if (ambiguous_exact || ambiguous_clean) && warned.insert(clean.clone()) {
                 self.arrangement_notes.push(format!("The folder match for \"{}\" is ambiguous in its source folder; those pages were left in their original arrangement.", file_title(&name)));
             }
-            let key = match exact_dirs.get(&exact).map(Vec::as_slice) {
+            let key = match exact_matches {
                 Some([key]) if exact_files[&exact] == 1 => Some(*key),
-                _ if dropped_id && clean_files[&clean] == 1 && dirs.len() == 1 && idless(&dirs[0]) => Some(dirs[0]),
+                _ if dropped_id && clean_files[&clean] == 1 && dirs.len() == 1 => Some(dirs[0]),
                 _ => None,
             };
             let sub = key.filter(|k| !used.contains(*k)).and_then(|k| d.dirs.get_key_value(k));
@@ -527,7 +563,10 @@ impl Builder<'_> {
         }
         let database_wrapper = self.database_html.contains(path) || self.twins.get(path).is_some_and(|h| self.database_html.contains(h));
         if database_wrapper {
-            if doc::is_empty(&blocks) {
+            // A sibling folder is source-home structure even when the HTML has only
+            // its title. Keep it available for pairing; only a view without that
+            // structure is redundant when its body is empty.
+            if doc::is_empty(&blocks) && !has_folder {
                 self.empty_database_pages += 1;
                 return None;
             }
@@ -1621,6 +1660,32 @@ mod tests {
         plan.pages[0].blocks = vec![Block::Table((0..3_000).map(|_| (0..100).map(|_| doc::Cell { header: false, colspan: 1, blocks: vec![] }).collect()).collect())];
         let (_, summary) = finish(&mut plan, &v);
         assert!(summary.notes.iter().any(|n| n.contains("table rows were left out")), "{:?}", summary.notes);
+    }
+
+    #[test]
+    fn n2c_twenty_thousand_colliding_names_have_linear_folder_inspections() {
+        // Test the production sibling index directly, without converting documents or
+        // bypassing the import's page cap. Every folder contains only an invented CSV.
+        const COUNT: usize = 20_000;
+        let mut d = Dir::default();
+        for i in 0..COUNT {
+            let document = format!("Home {i:032x}.md");
+            d.insert(&[&document], &document);
+            let folder = format!("Home {:032x}", i + COUNT);
+            let csv = format!("{folder}/Table.csv");
+            d.insert(&[&folder, "Table.csv"], &csv);
+        }
+        FOLDER_NAME_CHECKS.with(|checks| checks.set(0));
+        let folders = SiblingFolders::new(&d);
+        assert_eq!(folders.clean["home"].len(), COUNT);
+        for (i, (name, _)) in d.files.iter().enumerate() {
+            assert!(!folders.exact.contains_key(&stem_of(name).to_lowercase()));
+            assert!(!folders.has_idless(&match_name(stem_of(name))));
+            // Check after every query so a quadratic implementation fails promptly,
+            // instead of completing all 400 million candidate inspections first.
+            let inspected = FOLDER_NAME_CHECKS.with(|checks| checks.get());
+            assert!(inspected <= COUNT + i + 1, "{inspected} folder inspections after {} queries", i + 1);
+        }
     }
 
     #[test]

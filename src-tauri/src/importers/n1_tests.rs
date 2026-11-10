@@ -248,6 +248,47 @@ fn structured_wrapper(body: &str) -> Vec<u8> {
 }
 
 #[test]
+fn n2c_empty_html_source_home_keeps_children_while_empty_view_creates_nothing() {
+    for child_folder in [None, Some("Home".to_string()), Some(format!("Home {HUB}"))] {
+        let home_path = format!("Home {HUB}.html");
+        let mut files = vec![
+            (home_path.clone(), structured_wrapper("")),
+            (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        ];
+        if let Some(folder) = &child_folder {
+            files.push((format!("{folder}/Child.md"), b"# Child\n\nChild body\n".to_vec()));
+        }
+        let v = fixture(files);
+        let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+        assert_eq!(p.sections.len(), 1);
+        let home_id = if child_folder.is_some() {
+            let home = p.pages.iter().position(|p| p.key == home_path).expect("a title-only source home must survive wrapper classification");
+            assert!(!p.pages[home].generated);
+            assert_eq!(p.pages.iter().find(|p| p.title == "Child").unwrap().parent, Some(home));
+            Some(p.pages[home].id.clone())
+        } else {
+            assert!(p.pages.is_empty(), "an empty view without source-home structure creates no page");
+            None
+        };
+        let items = finish(&v, &mut p, &empty_session());
+        assert_eq!(items.iter().filter(|i| matches!(i, Item::Database(_))).count(), 1);
+        assert_eq!(items.iter().filter(|i| matches!(i, Item::Row(_))).count(), 1);
+        assert_eq!(items.iter().filter(|i| matches!(i, Item::Section(_))).count(), 1);
+        let pages: Vec<_> = items.iter().filter_map(|i| if let Item::Page(p) = i { Some(p) } else { None }).collect();
+        if let Some(id) = home_id {
+            assert_eq!(pages.len(), 2);
+            let home = pages.iter().find(|p| p.id == id).expect("source home survives cleanup");
+            assert!(home.text.is_empty());
+            let child = pages.iter().find(|p| p.title == "Child").unwrap();
+            assert_eq!(child.parent, id);
+            assert_eq!(child.section_id, home.section_id);
+        } else {
+            assert!(pages.is_empty());
+        }
+    }
+}
+
+#[test]
 fn n2c_long_plain_wrapper_falls_back_to_a_complete_page() {
     struct InventedVault(Mutex<Session>);
     impl VaultAccess for InventedVault {
@@ -286,6 +327,53 @@ fn n2c_long_plain_wrapper_falls_back_to_a_complete_page() {
             assert_eq!(summary.pages, 1);
         }
     }
+}
+
+#[test]
+fn n2c_ambiguous_exact_stems_are_reported_without_parenting() {
+    struct InventedVault(Mutex<Session>);
+    impl VaultAccess for InventedVault {
+        fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> { f(&self.0.lock().unwrap()) }
+        fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> { f(&mut self.0.lock().unwrap()) }
+    }
+    let mut files = Vec::new();
+    for (name, id) in [("Home", HUB), ("Board", TABLE)] {
+        files.push((format!("{name} {id}.md"), format!("# {name}\n\nBody\n").into_bytes()));
+        files.push((format!("{name} {id}/{name} child.md"), format!("# {name} child\n\nBody\n").into_bytes()));
+        files.push((format!("{} {id}/{name} other.md", name.to_uppercase()), format!("# {name} other\n\nBody\n").into_bytes()));
+    }
+    // A unique exact match still wins even when another folder shares its clean name.
+    files.push((format!("Solo {HUB}.md"), b"# Solo\n\nBody\n".to_vec()));
+    files.push((format!("Solo {HUB}/Unique child.md"), b"# Unique child\n\nBody\n".to_vec()));
+    files.push((format!("Solo {TABLE}/Unmatched.md"), b"# Unmatched\n\nBody\n".to_vec()));
+    let root = std::env::temp_dir().join(format!("notaya-n2c-ambiguity-{}", crate::model::new_id()));
+    let data = root.join("data");
+    std::fs::create_dir_all(&data).unwrap();
+    let source = root.join("invented.zip");
+    let refs: Vec<_> = files.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+    std::fs::write(&source, zip::build(&refs, false)).unwrap();
+    let path = data.join("vault.nota");
+    let vault = InventedVault(Mutex::new(Session::create_open(&path).unwrap()));
+    let summary = super::import_from(&vault, &[source], false, &data, 1, &Control::standard()).unwrap();
+    let warnings: Vec<_> = summary.notes.iter().filter(|n| n.contains("ambiguous")).collect();
+    assert_eq!(warnings.len(), 2, "one summary warning per ambiguous name");
+    for name in ["Home", "Board"] {
+        let expected = format!("The folder match for \"{name}\" is ambiguous in its source folder; those pages were left in their original arrangement.");
+        assert_eq!(warnings.iter().filter(|n| n.as_str() == expected).count(), 1);
+    }
+    drop(vault);
+    let reopened = Session::unlock_open(&path).unwrap();
+    let pages: Vec<_> = reopened.items().filter_map(|i| if let Item::Page(p) = i { Some(p) } else { None }).collect();
+    assert_eq!(pages.len(), 9, "all source pages survive");
+    assert_eq!(summary.pages, 9);
+    for name in ["Home", "Board"] {
+        for title in [name.to_string(), format!("{name} child"), format!("{name} other")] {
+            assert!(pages.iter().find(|p| p.title == title).unwrap().parent.is_empty(), "no ambiguous folder is guessed");
+        }
+    }
+    let solo = pages.iter().find(|p| p.title == "Solo").unwrap();
+    assert_eq!(pages.iter().find(|p| p.title == "Unique child").unwrap().parent, solo.id);
+    assert!(pages.iter().find(|p| p.title == "Unmatched").unwrap().parent.is_empty());
 }
 
 #[test]
