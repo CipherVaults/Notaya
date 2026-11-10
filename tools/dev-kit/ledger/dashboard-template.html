@@ -258,7 +258,7 @@ applyTheme();
 
 /* ---------- header ---------- */
 $("pills").innerHTML = [
-  ["As of", hhmm(F.inp.asOf)], ["Claude plan", "Pro"], ["Codex plan", "Plus, 0 credits"],
+  ["As of", hhmm(F.inp.asOf)], ["Inputs", "CSV records; see source notes"],
   ["Sessions", fmt(D.sessions.length)], ["Codex runs", fmt(D.codex.length)], ["Built", hhmm(D.built.replace("Z", ":00Z"))],
 ].map(([a, b]) => `<span class="pill">${esc(a)} <b>${esc(b)}</b></span>`).join("");
 
@@ -375,7 +375,7 @@ function render() {
   $("headline").innerHTML = `<b>At these settings:</b> ${esc(L[0].id)} finishes around <b>${day(L[0].end)}</b>; ${esc(last.id)} around <b>${day(last.end)}</b> (best ${day(C.best.end)}, worst ${day(C.worst.end)}).
     ${lastPrimary < 0 ? "No version fits the primary allowance at these settings." : `Primary allowance carries work through ${esc(L[lastPrimary].id)} with ${fmt(P.banks)} simulated banked resets.`}
     ${lim > 0.5 ? ` Claude's own weekly allowance holds the pace back for about ${fmt(lim, 1)} days in total.` : " Claude's allowance does not hold the pace back at these settings."}
-    These are <b>rough guesses</b>: only the size of the Codex week and the limits themselves are measured.`;
+    These are <b>rough guesses</b>. The example inputs are invented; source and kind columns describe real inputs when supplied.`;
   $("presets").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === activePreset)));
   SL.forEach((s) => ($("o-" + s.k).textContent = fmt(P[s.k], s.d)));
   drawGantt(C);

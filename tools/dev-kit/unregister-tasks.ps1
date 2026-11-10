@@ -12,9 +12,10 @@ if ($DryRun) {
   Write-Host 'DRY RUN: no task query, prompt, unregister, stop or file write performed.'
   return
 }
+$rootTasks = @(Get-ScheduledTask -ErrorAction Stop | Where-Object { $_.TaskPath -eq '\' })
 $tasks = @()
 foreach ($name in $names) {
-  $task = Get-ScheduledTask -TaskName $name -TaskPath '\' -ErrorAction SilentlyContinue
+  $task = $rootTasks | Where-Object { $_.TaskName -eq $name }
   if ($task) { Write-Host "Task: $name; state: $($task.State)"; $tasks += $task }
   else { Write-Host "Task: $name; absent" }
 }
@@ -28,7 +29,11 @@ foreach ($task in $tasks) {
   $xml = Export-ScheduledTask -TaskName $task.TaskName -TaskPath $task.TaskPath
   if (-not $xml -or $xml -notmatch '<Task\b') { throw 'XML export failed; no task removed.' }
   $file = Join-Path $dir ('task-' + $i + '-before-unregister-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffffffZ') + '-' + [guid]::NewGuid().ToString('N') + '.xml')
-  [IO.File]::WriteAllText($file, ($xml -join "`r`n"), (New-Object Text.UTF8Encoding($false)))
+  $document = New-Object System.Xml.XmlDocument
+  $document.XmlResolver = $null
+  $document.LoadXml(($xml -join "`r`n"))
+  if ($document.FirstChild -is [System.Xml.XmlDeclaration]) { $document.FirstChild.Encoding = 'utf-8' }
+  [IO.File]::WriteAllText($file, $document.OuterXml, (New-Object Text.UTF8Encoding($false)))
   if (-not (Test-Path -LiteralPath $file) -or (Get-Item -LiteralPath $file).Length -eq 0) { throw 'Task backup failed; no task removed.' }
   Write-Host "Backed up '$($task.TaskName)' to $file"; $i++
 }

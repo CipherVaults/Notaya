@@ -18,7 +18,11 @@ function Backup-Task($task) {
   $dir = Join-Path $h 'task-backup'
   New-Item -ItemType Directory -Force $dir | Out-Null
   $file = Join-Path $dir ('stopline-guard-before-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffffffZ') + '-' + [guid]::NewGuid().ToString('N') + '.xml')
-  [IO.File]::WriteAllText($file, ($xml -join "`r`n"), (New-Object Text.UTF8Encoding($false)))
+  $document = New-Object System.Xml.XmlDocument
+  $document.XmlResolver = $null
+  $document.LoadXml(($xml -join "`r`n"))
+  if ($document.FirstChild -is [System.Xml.XmlDeclaration]) { $document.FirstChild.Encoding = 'utf-8' }
+  [IO.File]::WriteAllText($file, $document.OuterXml, (New-Object Text.UTF8Encoding($false)))
   if (-not (Test-Path -LiteralPath $file) -or (Get-Item -LiteralPath $file).Length -eq 0) { throw 'Task backup failed; task unchanged.' }
   Write-Host "Backed up '$($task.TaskName)' to $file"
 }
@@ -28,7 +32,8 @@ if ($DryRun) {
   Write-Host 'DRY RUN: no task query, registration, process query, stop or file write performed.'
   return
 }
-$existing = Get-ScheduledTask -TaskName $name -TaskPath '\' -ErrorAction SilentlyContinue
+$rootTasks = @(Get-ScheduledTask -ErrorAction Stop | Where-Object { $_.TaskPath -eq '\' })
+$existing = $rootTasks | Where-Object { $_.TaskName -eq $name }
 if ($existing) { Backup-Task $existing }
 $action = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument "//B //Nologo `"$h\stopline-guard-hidden.vbs`" `"$config`"" -WorkingDirectory $h
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes $minutes) -RepetitionDuration (New-TimeSpan -Days 3650)
