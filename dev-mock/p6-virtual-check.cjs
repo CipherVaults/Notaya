@@ -230,16 +230,16 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       // Group count and a full-group footer sum, then collapse/expand. Grouping
       // is supplied by the mock engine, never calculated from mounted rows.
       await p.getByRole('button', { name: 'Group', exact: true }).click();
-      await p.getByLabel('Group', { exact: true }).selectOption({ label: 'Status' });
+      await p.getByRole('combobox', { name: 'Group', exact: true }).selectOption({ label: 'Status' });
       await p.keyboard.press('Escape');
       await scroll(false);
-      const firstGroup = table.locator('tr[data-group-key]').first();
+      const firstGroup = table.locator('tr[data-group-key]').filter({ hasText: 'Not started' }).first();
       await firstGroup.waitFor();
       const groupText = await firstGroup.innerText();
       const groupCount = Math.ceil(n / 4);
       assert(groupText.includes('Not started') && groupText.includes(String(groupCount)), 'First group label/count');
       await table.evaluate((el, count) => { el.scrollTop = count * 35 - 100; }, groupCount);
-      const groupFooter = table.locator('tr[data-table-footer]').first().getByRole('button', { name: 'Calculate Estimate', exact: true });
+      const groupFooter = table.locator('tr[data-table-footer]').filter({ has: p.getByRole('button', { name: /Calculate Estimate/ }).filter({ hasText: /[1-9]/ }) }).first().getByRole('button', { name: 'Calculate Estimate', exact: true });
       await groupFooter.waitFor();
       const groupTotal = await groupFooter.innerText();
       const expectedGroupSum = Array.from({ length: n }, (_, i) => i % 4 === 0 ? [1, 2, 3, 5, 8, 13][i % 6] : 0).reduce((a, b) => a + b, 0);
