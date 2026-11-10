@@ -128,6 +128,7 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
 
   // a cleared value (the mock date follows today's clock, not a fixed month)
   const dateBefore = (await cell(0, cDue).innerText()).trim();
+  yes('the date has a value before clearing', dateBefore.length > 0);
   await cell(0, cDue).click({ position: { x: 3, y: 3 } });
   await p.keyboard.press('Escape');
   await wait(200);
