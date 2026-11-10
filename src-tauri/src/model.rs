@@ -184,6 +184,8 @@ pub struct Sticky {
 #[derive(Clone, Serialize, Deserialize, Zeroize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
+    /// Internal authenticated migration latch. Older readers ignore this field.
+    pub journals_anchored: bool,
     pub ai: crate::ai::pairing::Settings,
     /// Previous AI values replaced by a person. Encrypted; never sent by get_settings.
     #[serde(default)]
@@ -257,6 +259,7 @@ pub struct CalcEntry {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            journals_anchored: false,
             ai: crate::ai::pairing::Settings::default(),
             replaced_edits: Vec::new(),
             // Sunrise is the default look (A28). Sunrise dark and the others are chosen in Settings.

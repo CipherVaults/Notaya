@@ -16,6 +16,30 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-10 (Ahmed's A48), EX-2026-11-10-75: WP-16 P6 and P6b, virtual table rows
+
+- Report: [2026-11-10-wp16-p6-p6b-merge.md](2026-11-10-wp16-p6-p6b-merge.md)
+- Executor: Codex (lanes P6, P6b, RV-P6b), merged by Claude
+- Outcome: Table view draws only visible rows; 5,000-row sort 4.5 s to 0.66 s; undo bug fixed; checks pass; two script defects and one focus question left open
+- Integration / review: merged into `main`; independent first-pass review (0 High, 0 Medium, 2 Low); Claude did not read every line (Claude's week)
+- Acceptance: pending
+- Open dependency / next action: P6c (scripts), P7, P8, hands-on feel check
+
+### 2026-11-10 (Ahmed's migration request, A55), EX-2026-11-10-73: full migration handoff from Claude to ChatGPT Pro and Codex
+
+- Report: [2026-11-10-migration-to-chatgpt-handoff.md](2026-11-10-migration-to-chatgpt-handoff.md)
+- Package: [`docs/handoff/migration-to-chatgpt/`](../handoff/migration-to-chatgpt/README.md)
+- Result state: produced, not run by ChatGPT or Codex, not accepted. Records: A55, session 54, claims row, STATUS dated line.
+
+### 2026-11-09 (Ahmed's security pass, area 2), EX-2026-11-09-72: SF3, offline tamper evidence and permanent-delete purge
+
+- Report: [2026-11-09-sf3-tamper-and-purge.md](2026-11-09-sf3-tamper-and-purge.md)
+- Executor: Codex (lane SF3, Gaming-PC), reviewed and merged by Claude
+- Outcome: membership-certificate anchor for the history and activity journals, content purge on permanent delete; checks on the lane tip pass (733 tests)
+- Integration / review: merged into `main` after the PC ran 755 tests on the merged and repaired commit `f2d32ea`; Claude read everything
+- Acceptance: pending
+- Open dependency / next action: measure permanent delete on a large vault; G3 safety copy not built
+
 ### 2026-11-09 (Ahmed's A52), EX-2026-11-09-71: WP-19 lane N1, Notion import findings
 
 - Report: [2026-11-09-wp19-n1-findings.md](2026-11-09-wp19-n1-findings.md)

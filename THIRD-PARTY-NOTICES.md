@@ -6,6 +6,8 @@ The license for Notaya's own code has not been chosen yet (the owner has not dec
 
 How this file was made: the lists in the Rust crates and npm packages sections were generated from the Rust lockfile (`src-tauri/Cargo.lock`, target `x86_64-pc-windows-msvc`) and from the npm lockfile and installed packages on 2026-10-23 (system clock, UTC). Copyright lines were copied from the license files of the packages. Where a package ships no copyright line, the table says so and gives the source of the name. Anything that could not be checked is marked "unverified".
 
+Added 2026-11-09 by hand: `@tanstack/react-virtual` 3.14.26 and `@tanstack/virtual-core` 3.19.11 (MIT), from their already installed package metadata and license files. The lists were not regenerated.
+
 Contents: At a glance, Open decisions and things to check, Rust crates, npm packages, License texts.
 
 ## At a glance
@@ -15,6 +17,7 @@ Contents: At a glance, Open decisions and things to check, Rust crates, npm pack
 | Tauri and the Rust crates | The application shell and the Rust core (226 crates linked into the Windows exe) | Mostly MIT or Apache-2.0 (dual); also Unicode-3.0, Zlib, BSD-3-Clause, MPL-2.0, Unlicense, CC0-1.0 | Full list in the Rust crates section. |
 | Microsoft Edge WebView2 runtime | Draws the interface | Loader library: Microsoft BSD-style license (text below). Runtime: Microsoft's own terms, not reproduced | Required on the PC. Not bundled. The Rust crate `webview2-com-sys` (MIT) links Microsoft's static WebView2 loader library (`WebView2LoaderStatic.lib`, Microsoft.Web.WebView2 SDK 1.0.3800.47) into the exe. That library's license text, from Microsoft's own package, is reproduced in the License texts section and ships in `Licenses\WebView2-LICENSE.txt`. The Edge WebView2 Runtime on the PC is Microsoft's product under Microsoft's own terms and is not part of the ZIP. |
 | React, TipTap, ProseMirror, KaTeX, Radix UI, and other npm packages | The user interface | Mostly MIT; also ISC, BSD-3-Clause, 0BSD, SIL OFL 1.1 | 114 package rows plus Tailwind CSS in the npm packages section. |
+| @tanstack/react-virtual 3.14.26 and @tanstack/virtual-core 3.19.11 | Visible table rows (screen layer) | MIT, Copyright (c) 2021-present Tanner Linsley | https://github.com/TanStack/virtual; full text below. Added by hand 2026-11-09. |
 | Inter and JetBrains Mono (fonts) | Interface and code fonts, via the Fontsource npm packages | SIL Open Font License 1.1 | Copyright lines and license text below. |
 | Noto Sans Arabic and Noto Sans Hebrew (fonts, subsets) | Arabic and Hebrew letters in PDF exports (`src-tauri/fonts/`, compiled into the exe) | SIL Open Font License 1.1, no Reserved Font Name | Copyright lines and license text below. Made by `tools/make-pdf-fonts.py` (glyph subsets, outlines unchanged). Added 2026-11-03 (system clock, UTC). |
 | KaTeX fonts | Math rendering | SIL Open Font License 1.1, with Reserved Font Names (one per family) | The npm package ships no separate license file; the notice is embedded in the font files. |
@@ -485,6 +488,15 @@ The user interface is bundled into the exe. These 115 rows are the packages whos
 
 Notes: `@tauri-apps/api` is offered under `MIT OR Apache-2.0` and is listed as MIT. `tslib` is 0BSD (no attribution required; listed anyway). `lucide-react` is ISC plus MIT for icons derived from Feather (both notices in the License texts section). `katex` is MIT for the code; its fonts are SIL OFL 1.1 (see below). Two versions of highlight.js are bundled (11.12.0 and 11.11.2, under lowlight); both license files are identical. Another 46 packages appear in the production dependency closure but are not inside the bundle (unused parts of the `radix-ui` umbrella, type-only packages and similar); they are MIT and are not shipped.
 
+### TanStack Virtual (added by hand 2026-11-09)
+
+These screen-layer packages were already installed by the coordinator; the earlier npm inventory was not regenerated.
+
+| Package | Version | License | Copyright | Source |
+|---|---|---|---|---|
+| @tanstack/react-virtual | 3.14.26 | MIT | Copyright (c) 2021-present Tanner Linsley | https://github.com/TanStack/virtual |
+| @tanstack/virtual-core | 3.19.11 | MIT | Copyright (c) 2021-present Tanner Linsley | https://github.com/TanStack/virtual |
+
 ### Build tools (not shipped)
 
 These development tools are not in the exe and are listed for credit: @tailwindcss/vite 4.3.3 (MIT); @tauri-apps/cli 2.12.4 (Apache-2.0 OR MIT); @types/node 26.6.5 (MIT); @types/react 19.3.0 (MIT); @types/react-dom 19.3.0 (MIT); @vitejs/plugin-react 6.1.2 (MIT); tailwindcss 4.3.3 (MIT); typescript 6.0.3 (Apache-2.0); vite 8.3.5 (MIT). Their license fields are as in `package.json`. `vite` may inject a few lines of its own MIT-licensed helper code into the bundle; that was not itemised.
@@ -643,6 +655,34 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ~~~~
+
+### MIT License, TanStack Virtual
+
+Used by `@tanstack/react-virtual` 3.14.26 and `@tanstack/virtual-core` 3.19.11. Source: their installed `LICENSE` files; https://github.com/TanStack/virtual.
+
+```text
+MIT License
+
+Copyright (c) 2021-present Tanner Linsley
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ### MIT License, Microsoft windows-rs family
 

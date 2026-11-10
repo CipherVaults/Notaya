@@ -11,7 +11,7 @@ const is = (name, got, want) => {
   if (got !== want) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name);
 };
 const yes = (name, got) => is(name, !!got, true);
-const URL = 'http://127.0.0.1:1421/?db=1';
+const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
 
 (async () => {
   const b = await chromium.launch();
@@ -22,7 +22,7 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   const shot = async (name) => { if (shots) await p.screenshot({ path: `${shots}/ui-${name}.png`, caret: 'initial' }); }; // (Playwright's default caret hiding redraws the page's React blocks)
   const wait = (ms = 250) => p.waitForTimeout(ms);
   const table = () => p.getByRole('application', { name: 'Table' });
-  const cell = (row, col) => table().locator('tbody tr').nth(row).locator('td').nth(col);
+  const cell = (row, col) => table().locator('tbody tr[aria-selected]').nth(row).locator('td').nth(col);
 
   await p.goto(URL);
   await wait(1200);
@@ -78,7 +78,7 @@ const URL = 'http://127.0.0.1:1421/?db=1';
     await p.keyboard.press('Enter');
     await wait(250);
   }
-  const rowTitles = async () => (await table().locator('tbody tr').evaluateAll((trs) => trs.map((tr) => (tr.querySelectorAll('td')[1]?.textContent || '').trim()))).filter(Boolean);
+  const rowTitles = async () => (await table().locator('tbody tr[aria-selected]').evaluateAll((trs) => trs.map((tr) => (tr.querySelectorAll('td')[1]?.textContent || '').trim()))).filter(Boolean);
   console.log('rows:', (await rowTitles()).join(' | '));
   await shot('rows-added');
   is('three rows were added', (await rowTitles()).join(','), 'Alpha,Beta,Gamma');
@@ -359,13 +359,13 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   await shot('templates-dialog');
   await p.keyboard.press('Escape');
   await wait(700);
-  const rowsBefore = await table().locator('tbody tr').count();
+  const rowsBefore = await table().locator('tbody tr[aria-selected]').count();
   await p.getByRole('button', { name: 'New with a template' }).click();
   yes('the new template is offered in the New menu', await p.getByRole('menuitem', { name: /Weekly/ }).count());
   await shot('new-menu');
   await p.getByRole('menuitem', { name: /Weekly/ }).click();
   await wait(900);
-  is('a row can be made from a template', await table().locator('tbody tr').count(), rowsBefore + 1);
+  is('a row can be made from a template', await table().locator('tbody tr[aria-selected]').count(), rowsBefore + 1);
 
   // ---------------------------------------------------------------- inline database and linked view inside a page
   await p.getByRole('treeitem', { name: 'Trip notes' }).click();
@@ -447,7 +447,7 @@ const URL = 'http://127.0.0.1:1421/?db=1';
   await wait(200);
   await p.getByRole('treeitem', { name: 'Check DB' }).hover();
   await p.getByRole('treeitem', { name: 'Check DB' }).getByRole('button', { name: 'Database options' }).click();
-  await p.getByRole('menuitem', { name: 'Move to trash' }).click();
+  await p.getByRole('menuitem', { name: 'Move to bin', exact: true }).click();
   await wait(700);
   is('a trashed database leaves the sidebar', await p.getByRole('treeitem', { name: 'Check DB' }).count(), 0);
   await p.getByRole('button', { name: /^Trash/ }).click();
@@ -507,7 +507,7 @@ const URL = 'http://127.0.0.1:1421/?db=1';
     await pg.keyboard.type('مهمة جديدة بالعربية');
     await pg.keyboard.press('Enter');
     await pg.waitForTimeout(500);
-    const t = pg.getByRole('application', { name: 'Table' }).locator('tbody tr', { hasText: 'مهمة جديدة' }).first();
+    const t = pg.getByRole('application', { name: 'Table' }).locator('tbody tr[aria-selected]', { hasText: 'مهمة جديدة' }).first();
     yes('an Arabic row title is saved and shown', await t.count());
     const dir = await t.locator('td').nth(1).evaluate((td) => { const el = td.querySelector('[dir]'); return el ? getComputedStyle(el).direction : 'none'; });
     is('the Arabic title reads right to left', dir, 'rtl');
