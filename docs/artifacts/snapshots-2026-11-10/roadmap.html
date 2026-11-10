@@ -1,0 +1,663 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Notaya Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a one-screen app. Compact top bars, then version columns that scroll up and down on their own,
+   with a custom sideways scroll bar pinned to the bottom of the screen. Categories inside each column fold open
+   to feature rows, and each feature folds open to its explanation. Own palette: leaf green on green-tinted neutrals. */
+:root{
+  --bg:#fbfcfa; --surface:#ffffff; --surface2:#eef2ec; --ink:#16201b; --ink2:#47544c; --muted:#68746d; --line:#d9dfd5;
+  --accent:#1d7556; --accent-soft:#dbeee5; --on-accent:#ffffff;
+  --amber:#8f5300; --amber-soft:#fbebcc; --slate:#365585; --slate-soft:#e2eaf6; --gray-soft:#e6e9e4;
+  --shadow:0 1px 2px rgba(22,32,27,.06);
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1512; --surface:#17201b; --surface2:#1e2923; --ink:#e7eee9; --ink2:#aebab2; --muted:#85928a; --line:#2a3830;
+  --accent:#4fc79a; --accent-soft:#1b3a2e; --on-accent:#0b1712;
+  --amber:#f0b658; --amber-soft:#3a2c12; --slate:#93b3ec; --slate-soft:#1d2a40; --gray-soft:#26302a;
+  --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1512; --surface:#17201b; --surface2:#1e2923; --ink:#e7eee9; --ink2:#aebab2; --muted:#85928a; --line:#2a3830;
+  --accent:#4fc79a; --accent-soft:#1b3a2e; --on-accent:#0b1712;
+  --amber:#f0b658; --amber-soft:#3a2c12; --slate:#93b3ec; --slate-soft:#1d2a40; --gray-soft:#26302a;
+  --shadow:none; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.45 var(--f-body);margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button,select,input,summary{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{height:100%;display:flex;flex-direction:column;gap:10px;padding-block:12px 12px;position:relative}
+
+/* top rows */
+.top{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between}
+.top h1{font-size:26px;font-weight:700;line-height:1.1}
+.top .lede{color:var(--ink2);font-size:13px;margin:0;flex:1 1 300px}
+.stats{display:flex;gap:6px;flex-wrap:wrap}
+.stats span{font-size:12.5px;color:var(--ink2);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:3px 11px;white-space:nowrap}
+.stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.tabs{display:flex;background:var(--surface2);border-radius:9px;padding:3px;gap:2px}
+.tabs button{border:0;background:none;padding:5px 14px;border-radius:7px;cursor:pointer;font-weight:500;color:var(--ink2)}
+.tabs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.sep{width:1px;height:22px;background:var(--line)}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:8px;padding:5px 11px;font-size:13px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--ink)}
+.btn.sq{padding:5px 9px;font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.filters input[type=search],.filters select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 10px;min-width:0;font-size:13px}
+.filters input[type=search]{width:170px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:99px;padding:4px 11px;font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.count-note{font-size:12.5px;color:var(--muted)}
+#key{position:absolute;right:0;top:92px;z-index:20;width:min(520px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:13px;color:var(--ink2)}
+#key p{margin:0 0 8px}#key p:last-child{margin:0}
+
+/* chips and tags */
+.size{font:500 11px/1 var(--f-mono);padding:4px 6px;border-radius:5px;border:1px solid var(--accent);color:var(--ink);white-space:nowrap}
+.sz-XS{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.sz-S{background:color-mix(in srgb,var(--accent) 20%,var(--surface))}
+.sz-M{background:color-mix(in srgb,var(--accent) 36%,var(--surface))}
+.sz-L{background:color-mix(in srgb,var(--accent) 60%,var(--surface))}
+.sz-XL{background:var(--accent);color:var(--on-accent)}
+.status{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;letter-spacing:.02em}
+.st-prog{background:var(--amber-soft);color:var(--amber)}
+.st-plan{background:var(--slate-soft);color:var(--slate)}
+.st-moved{background:var(--gray-soft);color:var(--muted)}
+.tag{font-size:12px;color:var(--ink2);background:var(--surface2);padding:2px 8px;border-radius:5px;white-space:nowrap}
+.tag.big{background:var(--ink);color:var(--bg)}
+.tag.gate{background:none;border:1px dashed var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.pid{font:400 11px var(--f-mono);color:var(--muted)}
+
+/* main area */
+#out{flex:1 1 auto;min-height:0;position:relative}
+#out.scroll{overflow-y:auto;padding-right:4px}
+
+/* board: columns scroll up and down on their own; the sideways bar sits under them, pinned to the screen */
+.board{height:100%;display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;align-items:flex-start;scrollbar-width:none}
+.board::-webkit-scrollbar{display:none}
+.col{flex:0 0 268px;min-width:0;max-height:100%;display:flex;flex-direction:column;background:var(--surface2);border-top:3px solid var(--accent);border-radius:0 0 12px 12px}
+.col.inprog{border-top-color:var(--amber)}
+.chead{padding:12px 12px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;flex:none}
+.chead .wave{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.chead .vnum{font:700 34px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.chead h3{font-size:14.5px;font-weight:600;margin-top:2px}
+.chead .theme{color:var(--ink2);font-size:12.5px;max-width:30ch}
+.chead .cnt{font-size:12.5px;font-weight:600;color:var(--ink)}
+.cbody{overflow-y:auto;min-height:0;padding:2px 10px 12px;display:flex;flex-direction:column;gap:8px}
+.hbar{flex:none;height:16px;background:var(--surface2);border-radius:8px;position:relative;touch-action:none}
+.hthumb{position:absolute;top:2px;bottom:2px;left:0;background:var(--accent);opacity:.88;border-radius:6px;cursor:grab;min-width:40px}
+.hthumb:active{cursor:grabbing;opacity:1}
+.arrows{display:flex;gap:4px}
+
+details>summary{list-style:none;cursor:pointer}
+details>summary::-webkit-details-marker{display:none}
+.chev{flex:none;width:8px;height:8px;border-right:2px solid var(--ink2);border-bottom:2px solid var(--ink2);transform:rotate(45deg);margin:0 3px 3px 6px;transition:transform .15s}
+details[open]>summary>.chev{transform:rotate(-135deg);margin-bottom:-3px}
+.cat{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.cat>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px}
+.cat>summary:hover{background:var(--accent-soft)}
+.cat .cn{font-weight:600;font-size:14px}
+.cat .cs{display:block;font-size:12px;color:var(--muted)}
+.feats{border-top:1px solid var(--line)}
+.feat+.feat{border-top:1px solid var(--line)}
+.feat>summary{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px}
+.feat>summary:hover{background:var(--surface2)}
+.feat .ft{flex:1;min-width:0;font-weight:500;font-size:13px;line-height:1.3}
+.feat.moved .ft{color:var(--muted)}
+.fbody{padding:0 12px 11px;display:flex;flex-direction:column;gap:8px}
+.fbody p{margin:0;font-size:13px;color:var(--ink2)}
+.fbody .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.empty{padding:10px 4px;font-size:13px;color:var(--muted)}
+
+/* list */
+.lsec{margin-bottom:26px;max-width:1100px}
+.lhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:8px 0;border-bottom:2px solid var(--ink)}
+.lhead .vnum{font:700 30px/1 var(--f-display);color:var(--accent)}
+.lhead h3{font-size:18px;font-weight:600}
+.lhead .theme{color:var(--ink2);font-size:14px;flex-basis:100%}
+.lhead .vcount{margin-left:auto;font-weight:600}
+.lcat{margin:14px 0 0;font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.row{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:4px 14px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start}
+.row .pid{padding-top:3px}
+.row h4{margin:0;font:600 15px/1.3 var(--f-body)}
+.row p{margin:3px 0 6px;color:var(--ink2);font-size:14px;max-width:72ch}
+.row .meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.row.moved h4{color:var(--muted)}
+
+/* waves */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px}
+.panel h2{font-size:20px;font-weight:700}
+.panel .sub{color:var(--ink2);font-size:13.5px;margin:4px 0 16px;max-width:75ch}
+.szlegend{display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 18px}
+.szlegend .li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2)}
+.swatch{font:500 11px/1 var(--f-mono);padding:5px 7px;border-radius:5px;border:1px solid var(--accent);color:var(--ink);min-width:30px;text-align:center}
+.sz-XL.swatch{color:var(--on-accent)}
+.plot{display:flex;flex-direction:column;gap:6px}
+.pa{position:relative;margin-right:110px;display:flex;flex-direction:column;gap:8px;
+  background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:var(--tick) 100%;border-left:1px solid var(--line)}
+.prow{display:grid;grid-template-columns:0 1fr;position:relative;height:30px}
+.plab{position:absolute;right:calc(100% + 12px);top:0;font:700 15px/1.1 var(--f-display);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.plab small{display:block;font:400 11px var(--f-body);color:var(--muted)}
+.ptrack{grid-column:2;position:relative;height:30px}
+.pbar{display:flex;gap:2px;height:30px}
+.pseg{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;font:500 12px var(--f-mono);border:0;border-radius:3px;color:var(--ink)}
+.pseg.sz-XL{color:var(--on-accent)}
+.pbar .pseg:last-child{border-radius:3px 6px 6px 3px}
+.pval{position:absolute;top:0;height:30px;display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:13px;color:var(--ink2)}
+.pval b{color:var(--ink);font:700 15px var(--f-display);font-variant-numeric:tabular-nums}
+.axis{position:relative;margin-right:110px;height:16px;font:400 11px var(--f-mono);color:var(--muted)}
+.axis span{position:absolute;transform:translateX(-50%)}
+.axis span:first-child{transform:none}
+.notquota{background:var(--amber-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:13.5px;margin:0 0 16px;max-width:80ch}
+.notquota a{color:var(--ink);font-weight:600}
+.note2{font-size:12.5px;color:var(--muted);margin:14px 0 0;max-width:80ch}
+.plot{padding-left:84px}
+.arrows[hidden]{display:none}
+.wgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.wave-col{background:var(--surface2);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.wave-col>.wl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.wave-col>h3{font-size:17px;font-weight:600}
+.wv{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+.wv .r{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.wv b{font:700 22px var(--f-display);color:var(--accent)}
+.wv .n{font-size:13px;font-weight:600}
+.wv .t{font-weight:600;font-size:14px;margin-top:2px}
+.wv .d{font-size:13px;color:var(--ink2)}
+.wv ul{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--ink2)}
+.wv li{margin:2px 0}
+.legend{font-size:12.5px;color:var(--muted);margin:12px 0 4px}
+
+@media (max-width:1000px){.wgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){
+  html,body{height:auto}
+  .app{height:auto}
+  #out,#out.scroll{overflow:visible;padding:0}
+  .board{flex-direction:column;height:auto;overflow:visible;align-items:stretch}
+  .col{flex:none;width:100%;max-height:none}
+  .cbody{overflow:visible}
+  .hbar,.arrows,.sepd{display:none}
+  .plot{padding-left:62px}
+  .pa,.axis{margin-right:92px}
+  .plab small{font-size:10px}
+  .wgrid{grid-template-columns:minmax(0,1fr)}
+  .filters{margin-left:0;width:100%}
+  .filters input[type=search]{flex:1 1 140px;width:auto}
+  .row{grid-template-columns:minmax(0,1fr) auto}
+  .row .pid{grid-column:1/-1;padding:0}
+  #key{top:auto;position:static;margin-bottom:8px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <h1>Notaya Roadmap</h1>
+    <p class="lede">Ten upcoming versions, 1.6 to 2.5 (updated 2026-11-09, 12:00 UTC). 1.6 is about 85.5 size points, about 40 done (an estimate); every planned 1.6 lane is merged and checked on Ahmed's PC, none accepted; the usage-ledger forecast puts 1.6 at about 14 November and 2.5 at about 15 December (a forecast, not a promise). A version is a bundle of features: open a category to see its features, open a feature to see what it does.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="group" aria-label="View">
+      <button type="button" data-view="board" aria-pressed="true">Board</button>
+      <button type="button" data-view="list" aria-pressed="false">List</button>
+      <button type="button" data-view="waves" aria-pressed="false">Waves</button>
+    </div>
+    <span class="sep sepd"></span>
+    <button type="button" class="btn" id="expand">Expand all categories</button>
+    <button type="button" class="btn" id="collapse">Collapse all</button>
+    <span class="arrows" id="arrows">
+      <button type="button" class="btn sq" id="prev" aria-label="Scroll left">‹</button>
+      <button type="button" class="btn sq" id="next" aria-label="Scroll right">›</button>
+    </span>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Search features" aria-label="Search features">
+      <select id="fstatus" aria-label="Status">
+        <option value="">Any status</option>
+        <option value="prog">In progress</option>
+        <option value="plan">Planned</option>
+      </select>
+      <button type="button" class="chip" id="fbig" aria-pressed="false">Big only</button>
+      <button type="button" class="chip" id="fgate" aria-pressed="false">Needs your OK</button>
+      <span class="count-note" id="note"></span>
+      <button type="button" class="btn" id="themebtn" title="Switch theme">Theme: Auto</button>
+      <button type="button" class="btn" id="keybtn" aria-expanded="false">How to read</button>
+    </div>
+  </div>
+
+  <div id="key" hidden>
+    <p><b>Points</b> (Waves tab) are a rough size score, about one developer working day each. They are not Claude or Codex quota or usage. The <a href="https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY" target="_blank" rel="noopener">usage ledger</a> tracks quota.</p>
+    <p><b>Sizes</b> run XS, S, M, L, XL. Big means L or XL; Small means anything below that. "Needs your OK" marks a feature that changes security behaviour, adds a library, or changes the vault format, so it waits for a go from Ahmed before it is built.</p>
+    <p>Sizes are judgement, not measurements, and no dates are promised. Version 1.6 is in progress; everything after it is planned. This page is a plan to read and adjust, not a go to build.</p>
+    <p><b>Not placed yet:</b> using all processor cores and in-memory indexes for huge databases (large-database plan items P11 and P12, only if measured need), synced blocks, button blocks, gallery covers from page content, an automatic backup helper, writing back to the old workspace, the whiteboard's later list (effect pens, handwriting to text, layers), and Notaya's own licence.</p>
+  </div>
+
+  <main id="out"></main>
+  <div class="hbar" id="hbar" aria-hidden="true"><div class="hthumb" id="hthumb"></div></div>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const WAVES = {
+  1:'Wave 1 · Foundation and comfort', 2:'Wave 2 · Corkboard and dashboards', 3:'Wave 3 · Whiteboard', 4:'Wave 4 · Notebook mode'
+};
+const VERS = [
+ {v:'1.6',w:1,name:'The foundation',theme:'The AI can work with Notaya, safely, plus quick fixes you see on day one.'},
+ {v:'1.7',w:1,name:'Your app, your way',theme:'Menus, keys and bars you can customize.'},
+ {v:'1.8',w:1,name:'Pages that can hold your hubs',theme:'Richer pages: columns, callouts, folds, mentions, code and diagrams.'},
+ {v:'1.9',w:1,name:'Tabs and files in and out',theme:'Work in several pages at once, and move files in and out.'},
+ {v:'2.0',w:2,name:'Corkboard, calculator, manual',theme:'The sticky corkboard, a better calculator and an in-app guide.'},
+ {v:'2.1',w:2,name:'Dashboards I',theme:'Live tiles, filters and click-through.'},
+ {v:'2.2',w:2,name:'Dashboards II',theme:'Named measures and a finance starter.'},
+ {v:'2.3',w:3,name:'Whiteboard I',theme:'Draw and arrange: canvas, pens with pressure, shapes, text.'},
+ {v:'2.4',w:3,name:'Whiteboard II',theme:'Templates, board notes, frames and export.'},
+ {v:'2.5',w:4,name:'Notebook mode',theme:'Notebooks that work like free canvases.'}
+];
+/* c(id,title,size,description,codes)  codes: S security gate, D new library, V vault format, A suggested addition, F fix, M moved */
+const C=(id,t,s,d,k='')=>({id,t,s,d,k,v:id.split('-')[0]});
+const CARDS=[
+C('1.6-1','One list of named actions','M','Every action Notaya can do gets one name, so menus, keys and the AI all call the same thing. Nothing visible yet.','A'),
+C('1.6-2','Change signals, small saves and clash protection','L','If the AI or a second window changes a page, the open window refreshes instead of overwriting it. If you are typing in the same place, you win.'),
+C('1.6-3','Activity log','M','A list of who changed what and when, you or "with Claude". Kept encrypted and cannot be quietly edited.','S'),
+C('1.6-4','Page version history, first step','L','Every page keeps earlier versions. Open the timeline, view an old version, restore it.'),
+C('1.6-5','Recycle bin for everything','M','Notebooks, sections, database rows and sticky notes also go to Trash first.'),
+C('1.6-6','AI CLI, first release','XL','Claude or Codex, from outside, can read everything and then edit it. Off by default, four levels (Off, Look, Edit, Full), deletes always ask you first in the Notaya window, hidden notebooks, and a Stop button. Built and merged; Ahmed tried it with his own hands on 2026-11-09 (pairing, read, deny, refusal while a person types, allow, restore): all worked on that build (checked, not accepted). A Windows-owned confirmation for turning AI on and for pairing (A51) is still to come.','S'),
+C('1.6-7','Fix: databases missing from exports','S','A database inside a page now appears in its PDF, Word, Markdown and HTML export.','F'),
+C('1.6-8','Fix: out-of-date sentence in the Import window','XS','It no longer says databases are not imported.','F'),
+C('1.6-9','"+ New notebook" always visible','XS','A modest "+ New notebook" line at the bottom of the notebook list, not only on mouse-over.'),
+C('1.6-10','Import and Export buttons in the top bar','S','Two clear buttons with icon and label, ready to become the first app-bar defaults.'),
+C('1.6-10b','"Export as" button next to Favorites','XS','The Export button ships together with Import, next to the Favorites star.'),
+C('1.6-11','Icons pass','S','Every icon checked in every theme, faded ones strengthened. The Favorite star is a clear outline when off and gold when on.'),
+C('1.6-12','Reopen where you left off','S','Notaya opens on the page you were on, also after unlocking.'),
+C('1.6-13','Drag databases in the sidebar','S','Drag a database to reorder it among the pages.'),
+C('1.6-14','Names in About','XS','"Made by Mohamed Sayed and Ahmed Emara, with Claude and ChatGPT."','A'),
+C('1.6-15','The checks 1.5.1 never had','S','Installer on a clean Windows user, tray "Close sticky notes", keyboard-layout shortcut, Start with Windows at a real sign-in.'),
+C('1.6-16','Large databases stay fast: quick wins','M','Clicking, selecting and editing a table no longer redraws every row (about one second per click at 300 rows today). Formulas are read once per query, sorting is faster, and a view cut at 50,000 rows says so. No answer changes: formulas, sorts, filters, groups and totals are proven identical by comparison tests. Added on Ahmed\'s word, 2026-11-09 (A48). Step one (parse formulas once, faster sorting, fewer redraws, the 50,000-row notice) is merged and checked on the PC; not accepted.','A'),
+C('1.6-16b','Large databases: only the rows you can see','L','The table draws just the rows on screen (library @tanstack/react-virtual, MIT, approved by Ahmed), so 5,000 or 200,000 rows feel the same. Replaces "Show more rows".','D'),
+C('1.6-16c','Large databases: Rust sends only the visible rows','L','Instead of resending every row (13 to 21 MB) after each change, Rust sends the order and totals plus just the rows in view. Removes the silent 50,000-row cut, so a big imported Excel opens in full. Cache lives in memory only and is wiped on lock.','S'),
+C('1.6-16d','Large databases: every view, not only the table','XL','List, Gallery, Board and Timeline also draw only what is on screen, so a 100,000-row database opens in every view. Added to 1.6 on Ahmed\'s word, 2026-11-09 (A48).'),
+C('1.6-17','Full security pass','M','A full security check of the whole app before 1.6 closes: the vault, every command the windows can call, import and export of hostile files, the AI server and its bridge, history and the log. Codex tests directly with attacks on throwaway data; Claude reviews every finding and makes the final call. Added on Ahmed\'s word, 2026-11-09 (A49).'),
+C('1.6-18','Whole-app polish and tidy-up sweep','L','Beyond databases: startup, big vaults, long pages, memory, design consistency, bug fixes and old technical debt cleaned up now, so nothing is carried into 1.7. Nothing people can see changes without being listed for Ahmed first. Counted as M to L. Added on Ahmed\'s word, 2026-11-09 (A49).'),
+C('1.6-19','Notion import with real data','L','Importing a real Notion export should bring in its databases, keep each section\'s home page, and not scatter loose copies of database rows outside the section. Ahmed\'s own exports (a full workspace export of about 1 GB and per-section exports) show databases not imported and loose pages from a partial import. First a read-only investigation on his exports, then fixes; any visible change to how imported content is arranged is listed for him first. Added on Ahmed\'s word, 2026-11-09 (A52).'),
+C('1.6-X1','Fix: blank window at Start with Windows','S','With Start with Windows on, Notaya opened at sign-in as an empty white window (reported by Mohamed Sayed on v1.5.1). Reproduced; the first fix did not cure it, a second run is queued.','F'),
+
+C('1.7-1','Right-click menus everywhere','L','Sidebar items, editor text, database rows, links and pictures, several items at once, keyboard hints and "Copy link to page".'),
+C('1.7-2','Customize the menus','S','Hide or turn off menu items in Settings.'),
+C('1.7-3','Duplicate page','S','Copy a page, with its sub-pages if you choose.'),
+C('1.7-4','Settings: Shortcuts','M','One list of every action and its keys. Rebind, get warned about clashes, reset one or all.'),
+C('1.7-5','Global shortcuts','M','Keys that work while Notaya is in the background: Ctrl+Alt+N for a new sticky note, a calculator pop-up key.','D'),
+C('1.7-6','Customizable app bar','M','A strip of quick buttons you arrange yourself: right-click, Customize, drag to add and reorder. Defaults are Import, Export, New page, New sticky note.'),
+C('1.7-7','Richer tray menu','S','Open, New page, New sticky note, Calculator, Quick search, Lock now, Show/hide sticky notes, Quit.'),
+C('1.7-8','Ctrl+F: Notaya\'s own find bar','M','Finds in the whole open page, including folded parts. Shows "3 of 12", Enter jumps to the next, with a "Search all notes" button.'),
+C('1.7-9','Ctrl+H: find and replace','S','Replace one or all in the open page.'),
+C('1.7-10','Home banner and page header','M','A banner picture per time of day, a taller banner, a big page icon overlapping it, live-preview settings, and a per-page override.'),
+C('1.7-11','Full-width per page','XS','One page can be wide while the others stay normal.'),
+C('1.7-12','AI CLI: files in and out','M','The AI can import, export and back up, but only through one exchange folder next to Notaya\'s data folder. Every file is logged and asks you first.','S'),
+C('1.7-13','Greek, Cyrillic and emoji in PDF','M','No more "?" in PDF for these scripts and for emoji. Arabic and Hebrew already work.','D'),
+
+C('1.8-1','Columns','M','Put blocks side by side and drag to resize. You can make them, not just view them.','V'),
+C('1.8-2','Callouts with colour and icon','S','A highlight box keeps its background colour and its own emoji or picture icon.'),
+C('1.8-3','Folding headings','M','A heading that folds its section. Imported toggles keep their open or closed state.'),
+C('1.8-4','@ mentions, backlinks and date chips','L','Type @ to mention a page or a date. Each page shows "Linked from".','V'),
+C('1.8-5','Link to a saved view of a database','S','A link opens a database on a chosen view, for example "Overdue".'),
+C('1.8-6','Code blocks: language, copy, wrap, exact text','M','A language picker on every code block. Copy returns the text byte for byte, so prompts and JSON still work.'),
+C('1.8-7','Diagrams from text (Mermaid)','M','Choose Mermaid as a code language and it is drawn, with zoom, download and copy. The old Diagram block merges into this.'),
+C('1.8-8','History: see what changed','M','Old versions show added and removed text highlighted.'),
+C('1.8-9','Activity panel','M','A panel of recent changes, AI ones marked "with Claude". Click to open the page or its version.'),
+C('1.8-10','File, audio, video and web-link cards','M','Attach any file to a page, play audio and video kept in the vault, and add a link card for a web address.','S'),
+C('1.8-11','Links to one block in another page','M','A link can land on one paragraph or heading, and keeps working after the target moves.','V'),
+C('1.8-12','Contents block','S','A block that lists the page\'s headings and jumps to them. Updates itself.'),
+C('1.8-13','Text direction per block, kept exactly','M','Each block can be right-to-left or left-to-right. Invisible direction characters are kept exactly as stored.','V'),
+C('1.8-14','Remember each item\'s original id on import','S','Every imported page, block and row keeps its original id, so links find the right copy even when titles repeat.'),
+
+C('1.9-1','Page tabs','L','Browser-style tabs: new, pin, groups, close, move, reopen closed (Ctrl+Shift+T). Open tabs come back after a restart.'),
+C('1.9-2','PDF that reads like a book','M','A printed contents page, bookmarks nested like the sidebar, clickable links between pages.'),
+C('1.9-3','Greek, Cyrillic and emoji in PDF','S','Moved up to 1.7 (card 1.7-13) because PDF export is critical.','M'),
+C('1.9-4','Contents page in .docx exports','S','A Word export starts with a table of contents.'),
+C('1.9-5','Spreadsheet export (.xlsx) with charts','L','Export a database or view as a real spreadsheet with numbers and dates, and its chart as a real chart where possible. Plain tables otherwise.','D'),
+C('1.9-6','Databases inside page and notebook exports','M','A notebook export includes its databases, and they come back in on re-import.'),
+C('1.9-7','Import into an existing place','M','Import into this notebook, section or page, not always a new notebook.'),
+C('1.9-8','Re-import without duplicates','L','A second import of the same export updates what is there and lists what changed. Your own edits are kept as a second version.'),
+C('1.9-9','"What did not carry over" report','S','After an import: pages, rows and pictures counted against the export, plus a list of what was simplified.','A'),
+C('1.9-10','Keep original dates','S','Imported pages keep their original created and edited dates.'),
+C('1.9-11','Import spreadsheets into databases','M','Pick an .xlsx file: each sheet becomes a database, or adds rows to an existing one.','D'),
+C('1.9-12','Saved views carried across','M','Each database comes in with its saved views: filters, sorts, grouping, board column order and hidden properties.'),
+C('1.9-13','Property descriptions','S','A property can carry a description shown on hover.'),
+C('1.9-14','Row page layouts','M','A row\'s page can pin chosen properties at the top, group the rest into named sections and fold them.'),
+C('1.9-15','Status groups: check the import','XS','Notaya\'s Status already has to-do, in progress and complete groups. Only checking that the importer and boards use them.'),
+C('1.9-16','Page templates and repeating templates','M','Templates for ordinary pages, a default template per database, and templates that make a new row every day.'),
+C('1.9-17','Sync ledger','M','One list of everything that came from the old workspace, so a monthly refresh touches only what changed.'),
+
+C('2.0-1','Sticky corkboard','L','An in-app corkboard with Grid and Free modes: drag, coloured pins, coloured strings between notes, right-click menu, create from the tray.'),
+C('2.0-1b','Swipe to select several sticky notes','S','Draw a box over notes on the corkboard to pick several at once.'),
+C('2.0-2','Calculator: history panel','S','A history on the right side of the calculator.'),
+C('2.0-3','Calculator: unit converters','M','Offline converters for length, weight, temperature, area, volume, time, data and more.'),
+C('2.0-4','In-app Manual','L','A browsable feature guide inside Notaya with pictures, icons and longer explanations. The same content is kept as an outside guide.'),
+C('2.0-5','Tour','S','A short, skippable overview. Replay it from Settings.'),
+C('2.0-6','About page, the professional side','S','Credits for both partners, open-source references, licences and Notaya\'s own notes.'),
+C('2.0-7','Notaya\'s own icon set','M','Line icons drawn for Notaya, usable for pages, notebooks and databases.'),
+
+C('2.1-0','Large-data engine groundwork','L','Dashboards over 100,000 rows answer quickly: cell values are read once and kept, and the query context is built once per change (plan items P9 and P10). Same "no answer may change" tests as 1.6.'),
+C('2.1-1','Dashboard pages with live tiles','XL','A new kind of item. Pages of tiles you drag and resize: number cards, bar, line, donut, pie, table and text, always read live from your databases.','V'),
+C('2.1-2','Filters, slicers, Reset and click-through','L','Drop-down, list, button, date-range and search slicers. Click a bar to filter the others, with an active-filters strip and Reset.'),
+C('2.1-3','Embed a dashboard in a page','S','Show a dashboard, or one tile, inside a page.','A'),
+
+C('2.2-1','Named reusable calculations (measures)','XL','"Total spent = sum of Amount where Kind is Expense", defined once and used anywhere, with previous period, share of total and top N.'),
+C('2.2-2','Matrix tile, partial-period marks, data-health tiles','M','Features that keep dashboards honest, with optional snapshots.'),
+C('2.2-3','Finance starter template','M','A starter that builds your report shape from a made-up dataset, never your real data.'),
+C('2.2-4','Database page layout, descriptions, quick filter chips','M','Rows open with your chosen layout, properties can have a description, and views get quick filter chips.'),
+
+C('2.3-1','Board canvas','L','Its own section like Sticky notes: infinite canvas, pan and zoom, backgrounds and patterns, undo and autosave.','VD'),
+C('2.3-2','Pens with pressure','L','Pen, pencil, marker, highlighter and eraser, with pressure from any tablet or pen screen Windows supports. Mouse and touch work too.'),
+C('2.3-3','Shapes, lines, text','M','Shapes, arrows, text boxes and automatic shapes.'),
+C('2.3-4','Select, move, ruler, insert space','M','Select, lasso, group, align, a ruler with a degree dial, and insert space.'),
+
+C('2.4-1','Connectors','M','Arrows that stay attached to boxes.'),
+C('2.4-2','Board sticky notes, linked or separate','M','Each note is either linked to a real sticky note or a separate copy.'),
+C('2.4-3','Pictures and frames','M','Pictures on the board, named frames, and presenting frame by frame.'),
+C('2.4-4','First five templates','M','Weekly planner, Kanban, mind map, SWOT and lined page. Save your own.'),
+C('2.4-5','Timer and stopwatch','S','A countdown on the board.','A'),
+C('2.4-6','Export and print','S','PNG, PDF with a page per frame, and copy.'),
+
+C('2.5-1','Notebook mode, chosen per notebook','XL','Coloured section tabs on top, the page list with sub-pages on the right, and pages as free canvases where you click anywhere to type.'),
+C('2.5-2','Free-canvas single pages','M','Switch one page in a normal notebook to a free canvas.'),
+C('2.5-3','Everything still works on canvas pages','M','Search, Ctrl+F, export, history, lock and the AI CLI all work on canvas pages.')
+];
+
+/* categories inside each version (Notaya's own grouping) */
+const CATS={
+ '1.6':{'Speed for big databases':['1.6-16','1.6-16b','1.6-16c','1.6-16d'],'AI access':['1.6-6','1.6-1'],'Safety net':['1.6-2','1.6-3','1.6-4','1.6-5'],'Everyday comfort':['1.6-9','1.6-10','1.6-10b','1.6-11','1.6-12','1.6-13','1.6-14'],'Fixes and checks':['1.6-7','1.6-8','1.6-15','1.6-17','1.6-18','1.6-19','1.6-X1']},
+ '1.7':{'Menus and keys':['1.7-1','1.7-2','1.7-3','1.7-4','1.7-5'],'Bars and tray':['1.7-6','1.7-7'],'Find and replace':['1.7-8','1.7-9'],'Page look':['1.7-10','1.7-11'],'AI access':['1.7-12'],'Export':['1.7-13']},
+ '1.8':{'Page building':['1.8-1','1.8-2','1.8-3','1.8-12'],'Links and mentions':['1.8-4','1.8-5','1.8-11'],'Code and diagrams':['1.8-6','1.8-7'],'History and activity':['1.8-8','1.8-9'],'Files and media':['1.8-10'],'Language and import':['1.8-13','1.8-14']},
+ '1.9':{'Tabs':['1.9-1'],'Export':['1.9-2','1.9-3','1.9-4','1.9-5','1.9-6'],'Import':['1.9-7','1.9-8','1.9-9','1.9-10','1.9-11','1.9-17'],'Databases and templates':['1.9-12','1.9-13','1.9-14','1.9-15','1.9-16']},
+ '2.0':{'Corkboard':['2.0-1','2.0-1b'],'Calculator':['2.0-2','2.0-3'],'Guide and About':['2.0-4','2.0-5','2.0-6'],'Look':['2.0-7']},
+ '2.1':{'Tiles':['2.1-1','2.1-3'],'Filters':['2.1-2'],'Engine':['2.1-0']},
+ '2.2':{'Measures':['2.2-1'],'Starter and honesty':['2.2-2','2.2-3'],'Database layout':['2.2-4']},
+ '2.3':{'Canvas':['2.3-1'],'Drawing':['2.3-2','2.3-3'],'Arrange':['2.3-4']},
+ '2.4':{'Connected items':['2.4-1','2.4-2'],'Content and templates':['2.4-3','2.4-4','2.4-5'],'Export':['2.4-6']},
+ '2.5':{'Notebook mode':['2.5-1','2.5-2'],'Compatibility':['2.5-3']}
+};
+const catOf={};Object.entries(CATS).forEach(([v,m])=>Object.entries(m).forEach(([n,ids])=>ids.forEach(i=>catOf[i]=n)));
+CARDS.forEach(c=>{
+  c.cat=catOf[c.id];
+  c.moved=c.k.includes('M');
+  c.status=c.moved?'moved':(c.v==='1.6'?'prog':'plan');
+  c.big=(c.s==='L'||c.s==='XL');
+  c.gates=[c.k.includes('S')&&'security',c.k.includes('D')&&'new library',c.k.includes('V')&&'vault format'].filter(Boolean);
+});
+const W={XS:.5,S:1,M:3,L:6,XL:12};
+const STLAB={prog:'In progress',plan:'Planned',moved:'Moved'};
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+const state={view:'board',q:'',status:'',big:false,gate:false};
+const catState=new Map(), featOpen=new Set();
+function match(c){
+  if(state.q){const q=state.q.toLowerCase();if(!(c.t+' '+c.d+' '+c.id+' '+c.cat).toLowerCase().includes(q))return false}
+  if(state.status&&c.status!==state.status)return false;
+  if(state.big&&!c.big)return false;
+  if(state.gate&&!c.gates.length)return false;
+  return true;
+}
+const filtering=()=>!!(state.q||state.status||state.big||state.gate);
+const live=c=>!c.moved;
+function counts(v){
+  const all=CARDS.filter(c=>c.v===v&&live(c));
+  return {total:all.length, shown:all.filter(match).length, all};
+}
+const featWord=n=>n+(n===1?' feature':' features');
+const countText=k=>filtering()?k.shown+' of '+featWord(k.total):featWord(k.total);
+const visible=c=>c.moved?!filtering():match(c);
+
+function tagsFor(c){
+  const t=el('div','tags');
+  t.append(el('span','tag'+(c.big?' big':''),c.big?'Big':'Small'));
+  c.gates.forEach(g=>t.append(el('span','tag gate','Needs your OK · '+g)));
+  if(c.k.includes('A'))t.append(el('span','tag','Suggested addition'));
+  if(c.k.includes('F'))t.append(el('span','tag','Fix'));
+  return t;
+}
+const sizeChip=c=>el('span','size sz-'+c.s,c.s);
+const statusChip=c=>el('span','status st-'+c.status,STLAB[c.status]);
+
+function renderStats(){
+  const l=CARDS.filter(live);
+  const s=$('#stats');s.textContent='';
+  [[VERS.length,'versions'],[l.length,'features'],[l.filter(c=>c.status==='prog').length,'in progress'],[l.filter(c=>c.big).length,'big']].forEach(([n,t])=>{
+    const sp=el('span');sp.append(el('b','',n),' '+t);s.append(sp)});
+}
+
+/* ---------- board ---------- */
+let curBoard=null;
+function feature(c){
+  const d=el('details','feat'+(c.moved?' moved':''));
+  d.open=featOpen.has(c.id);
+  d.addEventListener('toggle',()=>{d.open?featOpen.add(c.id):featOpen.delete(c.id)});
+  const s=el('summary');
+  s.append(el('span','ft',c.t),sizeChip(c),el('i','chev'));
+  const b=el('div','fbody');
+  b.append(el('p','',c.d));
+  const m=el('div','meta');
+  if(c.moved)m.append(el('span','status st-moved','Moved to 1.7'));
+  else{m.append(statusChip(c),el('span','pid',c.id));}
+  b.append(m);
+  if(!c.moved)b.append(tagsFor(c));
+  d.append(s,b);
+  return d;
+}
+function column(V){
+  const k=counts(V.v);
+  const prog=V.v==='1.6';
+  const col=el('section','col'+(prog?' inprog':''));col.setAttribute('aria-label','Version '+V.v);
+  const h=el('div','chead');
+  h.append(el('span','wave',WAVES[V.w].split(' · ')[0]),el('span','vnum',V.v),
+    el('span','status '+(prog?'st-prog':'st-plan'),prog?'● In progress':'○ Planned'),
+    el('h3','',V.name),el('div','theme',V.theme),
+    el('div','cnt',countText(k)+' · '+Object.keys(CATS[V.v]).length+' categories'));
+  const body=el('div','cbody');
+  let any=false;
+  Object.entries(CATS[V.v]).forEach(([name,ids])=>{
+    const cs=CARDS.filter(c=>ids.includes(c.id)&&visible(c));
+    if(!cs.length)return;any=true;
+    const key=V.v+'|'+name;
+    const d=el('details','cat');d.dataset.key=key;
+    d.open=catState.has(key)?catState.get(key):!!state.q;
+    d.addEventListener('toggle',()=>catState.set(key,d.open));
+    const n=cs.filter(live).length;
+    const s=el('summary');const l=el('div');
+    l.append(el('span','cn',name),el('span','cs',featWord(n)));
+    s.append(l,el('i','chev'));
+    const f=el('div','feats');cs.forEach(c=>f.append(feature(c)));
+    d.append(s,f);body.append(d);
+  });
+  if(!any)body.append(el('div','empty','No features match the filters.'));
+  col.append(h,body);
+  return col;
+}
+function board(){const b=el('div','board');VERS.forEach(V=>b.append(column(V)));return b}
+
+/* always-visible sideways bar */
+const hbar=$('#hbar'),thumb=$('#hthumb');
+function updBar(){
+  if(!curBoard){hbar.style.visibility='hidden';return}
+  const sw=curBoard.scrollWidth,cw=curBoard.clientWidth,bw=hbar.clientWidth;
+  if(sw<=cw+1){hbar.style.visibility='hidden';return}
+  hbar.style.visibility='visible';
+  const tw=Math.max(40,bw*cw/sw);
+  thumb.style.width=tw+'px';
+  thumb.style.transform='translateX('+(curBoard.scrollLeft/(sw-cw)*(bw-tw))+'px)';
+}
+let drag=null;
+thumb.addEventListener('pointerdown',e=>{drag={x:e.clientX,s:curBoard.scrollLeft};thumb.setPointerCapture(e.pointerId);e.preventDefault()});
+thumb.addEventListener('pointermove',e=>{
+  if(!drag||!curBoard)return;
+  const sw=curBoard.scrollWidth,cw=curBoard.clientWidth,tw=thumb.offsetWidth,bw=hbar.clientWidth;
+  curBoard.scrollLeft=drag.s+(e.clientX-drag.x)*(sw-cw)/Math.max(1,bw-tw);
+});
+['pointerup','pointercancel'].forEach(t=>thumb.addEventListener(t,()=>{drag=null}));
+hbar.addEventListener('pointerdown',e=>{
+  if(e.target===thumb||!curBoard)return;
+  const r=hbar.getBoundingClientRect(),f=(e.clientX-r.left)/r.width;
+  curBoard.scrollLeft=f*curBoard.scrollWidth-curBoard.clientWidth/2;
+});
+window.addEventListener('resize',updBar);
+const step=()=>(curBoard?Math.min(curBoard.clientWidth*.8,560):300);
+$('#prev').addEventListener('click',()=>curBoard&&curBoard.scrollBy({left:-step(),behavior:'smooth'}));
+$('#next').addEventListener('click',()=>curBoard&&curBoard.scrollBy({left:step(),behavior:'smooth'}));
+
+/* ---------- list ---------- */
+function list(){
+  const f=document.createDocumentFragment();
+  VERS.forEach(V=>{
+    const sec=el('section','lsec');
+    const k=counts(V.v);
+    const h=el('div','lhead');
+    h.append(el('span','vnum',V.v),el('h3','',V.name),el('span','vcount',countText(k)),el('div','theme',V.theme));
+    sec.append(h);
+    let any=false;
+    Object.entries(CATS[V.v]).forEach(([name,ids])=>{
+      const cs=CARDS.filter(c=>ids.includes(c.id)&&visible(c));
+      if(!cs.length)return;any=true;
+      sec.append(el('div','lcat',name));
+      cs.forEach(c=>{
+        const r=el('div','row'+(c.moved?' moved':''));
+        const main=el('div');main.append(el('h4','',c.t),el('p','',c.d));
+        main.append(c.moved?el('span','status st-moved','Moved to 1.7'):tagsFor(c));
+        const meta=el('div','meta');meta.append(sizeChip(c));if(!c.moved)meta.append(statusChip(c));
+        r.append(el('span','pid',c.id),main,meta);sec.append(r);
+      });
+    });
+    if(!any)sec.append(el('div','empty','No features match the filters.'));
+    f.append(sec);
+  });
+  return f;
+}
+
+/* ---------- waves ---------- */
+function waves(){
+  const f=document.createDocumentFragment();
+  const p=el('section','panel');
+  p.append(el('h2','','How much work is in each version'),
+    el('p','sub','Each bar is one version. Its length is the total size of the work in "points". A point is a rough size score for comparing features and versions: 1 point is about one developer working day. Each feature gets points from its size (shown just below), and the bar is split by size so you can see what the work is made of.'));
+  const nq=el('div','notquota');
+  nq.append(el('b','','Points are not AI quota or usage. '),'They do not measure Claude or Codex limits, tokens or money. They only say how big a piece of work is. For quota and when it runs out, see the ');
+  const la=el('a','','usage ledger');la.href='https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY';la.target='_blank';la.rel='noopener';
+  nq.append(la,'.');
+  p.append(nq);
+  const SZ=['XS','S','M','L','XL'];
+  const MEAN={XS:'under an hour',S:'about a day',M:'a few days',L:'about a week',XL:'more than a week'};
+  const lg=el('div','szlegend');
+  SZ.forEach(s=>{const i=el('div','li');i.append(el('span','swatch sz-'+s,s),el('span','',(W[s]===.5?'half a point':W[s]+(W[s]===1?' point':' points'))+' · '+MEAN[s]));lg.append(i)});
+  p.append(lg);
+  const rows=VERS.map(V=>{
+    const cs=CARDS.filter(c=>c.v===V.v&&live(c)&&match(c));
+    const by={};SZ.forEach(s=>by[s]=cs.filter(c=>c.s===s).length);
+    return {V,by,n:cs.length,pts:cs.reduce((a,c)=>a+W[c.s],0)};
+  });
+  const top=Math.max(...rows.map(r=>r.pts),1);
+  const axis=Math.max(10,Math.ceil(top/10)*10);
+  const plot=el('div','plot');
+  const pa=el('div','pa');pa.style.setProperty('--tick',(10/axis*100)+'%');
+  rows.forEach(r=>{
+    const row=el('div','prow');
+    const lab=el('div','plab',r.V.v);lab.append(el('small','',featWord(r.n)));
+    const track=el('div','ptrack');
+    const bar=el('div','pbar');bar.style.width=(r.pts/axis*100)+'%';
+    SZ.forEach(s=>{
+      if(!r.by[s])return;
+      const seg=el('span','pseg sz-'+s,String(r.by[s]));
+      seg.style.flexGrow=r.by[s]*W[s];
+      seg.title=r.by[s]+' × '+s+' = '+(r.by[s]*W[s])+' points';
+      bar.append(seg);
+    });
+    const val=el('span','pval');val.style.left='calc('+(r.pts/axis*100)+'% + 8px)';
+    val.append(el('b','',r.pts%1?r.pts.toFixed(1):r.pts),' points');
+    track.append(bar,val);row.append(lab,track);pa.append(row);
+  });
+  const ax=el('div','axis');
+  for(let tk=0;tk<=axis;tk+=10){const s=el('span','',String(tk));s.style.left=(tk/axis*100)+'%';ax.append(s)}
+  plot.append(pa,ax);
+  p.append(plot,el('p','note2','The number inside a coloured block is how many features of that size the version has. Hover a block to see its points. The total for each version is on the right of each bar. These are size points, not quota.'));
+  f.append(p);
+  const grid=el('div','wgrid');
+  [1,2,3,4].forEach(w=>{
+    const col=el('div','wave-col');
+    col.append(el('div','wl','Wave '+w),el('h3','',WAVES[w].split(' · ')[1]));
+    VERS.filter(V=>V.w===w).forEach(V=>{
+      const k=counts(V.v);const d=el('div','wv');
+      const r=el('div','r');r.append(el('b','',V.v),el('span','n',countText(k)));
+      d.append(r,el('div','t',V.name),el('div','d',V.theme));
+      const bigs=k.all.filter(c=>c.big&&match(c));
+      if(bigs.length){const ul=el('ul');bigs.forEach(c=>ul.append(el('li','',c.t+' ('+c.s+')')));d.append(ul)}
+      col.append(d);
+    });
+    grid.append(col);
+  });
+  f.append(grid,el('p','legend','Lists under each version show its big features (L and XL). Waves run left to right; later waves build on earlier ones, for example the whiteboard engine comes before Notebook mode.'));
+  return f;
+}
+
+/* ---------- render ---------- */
+function render(){
+  const out=$('#out');
+  const keep=curBoard?curBoard.scrollLeft:0;
+  out.textContent='';curBoard=null;
+  const isBoard=state.view==='board';
+  out.className=isBoard?'':'scroll';
+  if(isBoard){curBoard=board();out.append(curBoard);curBoard.scrollLeft=keep;curBoard.addEventListener('scroll',updBar)}
+  else out.append(state.view==='list'?list():waves());
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===state.view)));
+  ['#expand','#collapse','#arrows'].forEach(s=>{$(s).hidden=!isBoard});
+  document.querySelector('.sepd').hidden=!isBoard;
+  hbar.hidden=!isBoard;
+  const shown=CARDS.filter(c=>live(c)&&match(c)).length,tot=CARDS.filter(live).length;
+  $('#note').textContent=filtering()?shown+' of '+tot+' shown':'';
+  requestAnimationFrame(updBar);
+}
+function setView(v){state.view=v;try{history.replaceState(null,'','#'+v)}catch(e){location.hash=v}render()}
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+$('#q').addEventListener('input',e=>{state.q=e.target.value.trim();render()});
+$('#fstatus').addEventListener('change',e=>{state.status=e.target.value;render()});
+[['#fbig','big'],['#fgate','gate']].forEach(([s,k])=>$(s).addEventListener('click',e=>{
+  state[k]=!state[k];e.currentTarget.setAttribute('aria-pressed',String(state[k]));render()}));
+function setAll(open){
+  Object.entries(CATS).forEach(([v,m])=>Object.keys(m).forEach(n=>catState.set(v+'|'+n,open)));
+  document.querySelectorAll('details.cat').forEach(d=>{d.open=open});
+  updBar();
+}
+$('#expand').addEventListener('click',()=>setAll(true));
+$('#collapse').addEventListener('click',()=>{featOpen.clear();document.querySelectorAll('details.feat').forEach(d=>{d.open=false});setAll(false)});
+$('#keybtn').addEventListener('click',e=>{const k=$('#key');k.hidden=!k.hidden;e.currentTarget.setAttribute('aria-expanded',String(!k.hidden))});
+const THEMES=['light','dark','auto'],TLAB={auto:'Auto',light:'Light',dark:'Dark'};
+let theme='light'; /* white-ish Light is the default until the viewer picks another */
+try{const s=localStorage.getItem('notaya-roadmap-theme-v2');if(THEMES.includes(s))theme=s}catch(e){}
+function applyTheme(){
+  const r=document.documentElement;
+  if(theme==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',theme);
+  $('#themebtn').textContent='Theme: '+TLAB[theme];
+  $('#themebtn').setAttribute('aria-label','Theme: '+TLAB[theme]+'. Click to change.');
+}
+$('#themebtn').addEventListener('click',()=>{
+  theme=THEMES[(THEMES.indexOf(theme)+1)%3];
+  applyTheme();
+  try{localStorage.setItem('notaya-roadmap-theme-v2',theme)}catch(e){}
+});
+applyTheme();
+function fromHash(){const h=location.hash.slice(1);if(['board','list','waves'].includes(h))state.view=h;render()}
+window.addEventListener('hashchange',fromHash);
+renderStats();fromHash();
+</script>
+
+
+</body></html>
