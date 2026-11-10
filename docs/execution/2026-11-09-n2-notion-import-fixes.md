@@ -73,3 +73,86 @@ The seven full-suite ignores are the canonical-row probe, the private count-only
 **Outside write area, mechanical:** none. Changed files: commands/import_notes.rs, commands/notion_db.rs, importers/{plan.rs,html.rs,n1_tests.rs}, plus this note. No screen-side source changed; npm build, npm install/ci/audit, clippy, cargo audit, app/browser/picker checks, private rerun and independent Claude review are **not run**. Git mutations, ledger/claims/session updates and publication are Claude's work, not actions taken by this lane.
 
 **ADDITION FOR AHMED - visible arrangement only:** an unambiguous home holds its children; a title-only home stays visible; CSV-only databases stay with their source; useful dashboard content survives; conflicting database names are reported. One canonical row with all its navigation is still N3 work. No restyling.
+
+## 5. Run 2 correction and hand-back (2026-11-10)
+
+### 1. Boundary, diagnosis and fixes
+
+Ahmed (`AE0101`), Codex on `GAMING-PC`, Windows sandbox. Entry: clean branch `AE0101/v1-6-n2`, HEAD `d7209c65ac0929f47b7778cfd0e585c77317171e`. Authority is Ahmed's current bounded run-2 message (timestamp not exposed), with A52/A53 and the 19:35 UTC brief read from the existing local `origin/main`, without fetching. First captured run-2 clock: 2026-11-10 03:03:25 UTC (system). Scope: diagnose and fix the two existing failures, run the full offline library suite, update this execution record, then stop. No N3 implementation. The current instruction assigns commits, pushes, claims, ledger and session records to Claude; this session makes no Git mutations or changes to those records. Configured model/effort remains `gpt-6.1-sol` / `xhigh` per the lane brief; served identity, token receipt and before/after quota readings are not exposed here and must come from Claude's runner receipts.
+
+Both regressions originated in **step 5**, introduced in automatic checkpoint `d6ba073`, carried into `d7209c6`. Read-only history of both files confirms that before this step, the unique HTML file sharing a CSV's source id was added to `hidden_html`; step 5 instead put it in `database_html` (`plan.rs:679` on `d7209c6`) and kept any nonempty converted body (`plan.rs:521-527` on that commit).
+
+| Failing test on d7209c6 | Exact cause | Run-2 fix |
+|---|---|---|
+| `commands::import_notes::tests::markdown_csv_and_html_files_together_complete_each_other_into_database_rows`, `commands/import_notes.rs:593` | The row bodies correctly moved into rows, but step 5 also created an independent `Projects` wrapper page. The fixture's paragraph is nonempty content, even though its comment calls it only a view. Step 2's generated-parent cleanup and step 3's section mapping did not cause this failure. | The structured wrapper's one plain line becomes the existing database description only after successful database construction, and only then is its fallback source page removed (`commands/notion_db.rs:375-381`). Thus its text is preserved and no duplicate page remains. |
+| `importers::plan::tests::a_page_in_both_a_markdown_and_an_html_export_is_imported_once_with_the_html_formatting`, `importers/plan.rs:1234` on d7209c6 | The same step-5 classification added `Table` to the planned standalone pages. Markdown/HTML twin merging itself still worked. The later note assertion also requires the existing phrase `HTML pages of databases`. | Recognize the structured HTML wrapper (`importers/html.rs:242`) and plan its one unformatted line separately as a database header (`importers/plan.rs:536-545`), keeping the ordinary page list unchanged. The summary explains the description/fallback choice and preserves the tested phrase. |
+
+Header candidates still count against the existing page cap, are remapped with their source sections, and use the ordinary renderer, per-page byte cap, total text budget and cancellation checks. Only a unique shared source id connects a header to a CSV (`plan.rs:909`), never a title or its words. Formatting, links, multiple lines/paragraphs, icons, covers, generic HTML source homes and possible child folders keep a page. Incoming links, failed CSV parsing/construction, missing tables and ambiguous database ownership keep the rendered fallback page. Row identity, row link retargeting and the 3,000-page switch are unchanged.
+
+### 2. A53 compatibility correction
+
+**No remaining test/A53 contradiction.** The run-1 statement that these expectations required Ahmed to change the tests was too narrow; this dated correction supersedes it without rewriting the historical result. A53 item 5 says: **"A useful HTML database-view wrapper is kept as a page or as navigation on its database"**. The 19:35 brief explicitly allows **"the database's own header text"**. The existing `Database.description` is already visible below its title; it preserves a plain header without adding a standalone page. The schema and screens need no change. Nothing is classified by special-casing the fixture phrases. Empty view tables still create nothing; useful richer wrappers still keep their page.
+
+The two old tests' complete function bodies were compared with `git show d7209c6:<path>` (line endings normalized): both unchanged. No assertion, fixture, ignore or test registration was changed in them.
+
+### 3. Files changed in run 2
+
+- `src-tauri/src/importers/html.rs`: identify structured wrappers after the existing bounded HTML tree build.
+- `src-tauri/src/importers/plan.rs`: defer eligible headers; preserve section, page-count, render and fallback behavior; map headers by source id.
+- `src-tauri/src/commands/notion_db.rs`: preserve header text in the built database description, then remove only the consumed fallback page.
+- `src-tauri/src/commands/import_notes.rs`: pass the header-id map to database construction.
+- `src-tauri/src/importers/n1_tests.rs`: update the two helper call signatures and add three invented regression tests (description persistence/reopen, rich content/navigation/children, failed or ambiguous tables).
+- This execution record: dated correction, evidence and hand-back.
+
+### 4. Before/after checks and exact source
+
+| Check | Before (recorded) | After run 2 |
+|---|---|---|
+| Import-focused offline suite | Run 1: exit 1; 146 passed, 2 failed, 2 ignored, 612 filtered; 36.90 s | `cargo test --lib --offline import`: exit 0; **151 passed, 0 failed, 2 ignored, 0 measured, 612 filtered; 36.21 s** |
+| Full library suite, sandbox | Run 1: exit 101; 752 passed, 3 failed, 7 ignored; 145.43 s | `cargo test --lib --offline`: **exit 101; 757 passed, 1 failed, 7 ignored, 0 measured, 0 filtered; 164.36 s** |
+| Full library suite, PC heartbeat | d7209c6: exit 101; **753 passed, 2 failed, 7 ignored, 0 measured, 0 filtered; 264.66 s**, read from `D:\Notaya-lanes\out\N2.check-cargo-test.log` | No unsandboxed heartbeat rerun observed for the run-2 source; Claude owns that check |
+
+The import-focused log is `D:\Notaya Tests\v1-6-N2\n2-run2-import-20261110T030903Z.log`. The full `cargo test --lib --offline` started **2026-11-10 03:10:50 UTC** on `d7209c6` plus these five Rust working-tree edits. Log: `D:\Notaya Tests\v1-6-N2\n2-run2-lib-20261110T031049Z.log`. Source receipt with before/after SHA-256 and exit code: `D:\Notaya Tests\v1-6-N2\n2-run2-source-20261110T031049Z.json`.
+
+Finished **03:13:35 UTC** (system clock). The only failure is `shell::tests::the_registry_value_can_be_written_read_and_removed`, `shell.rs:339`: Windows refused to open the start-up list, code 5 (the known sandbox restriction). Both original importer tests and all eight active N1 probes pass. The same seven old ignores remain: N3 canonical row probe, private count-only probe, three PC-only named-pipe checks, old-engine golden capture and sample-PDF writer. Three new regression tests account for the total increasing from 762 to 765; no test was weakened or ignored. Six existing compiler warnings, no new warnings.
+
+The external heartbeat made **`ca525901588d7804cee81c44d7ecba83ce167d8e`** (automatic checkpoint labelled 03:11:38 UTC, commit timestamp 03:11:40 UTC) while the suite ran. It contains exactly the five Rust file changes; the agent issued no Git write. Before/after source hashes match (`source_unchanged: true`), and there is no Rust diff against that checkpoint. Subsequent work changes only this note. Result: **N2 fixes verified by the named library checks on the source now in ca52590; full-suite exit remains 101 for the registry restriction; not integrated or accepted**.
+
+| Rust source relative to src-tauri | Run-2 SHA-256 |
+|---|---|
+| src/commands/import_notes.rs | 556189B738FD389AE102BA131C236680D4955F0D750AC8EB6934AE56C3445193 |
+| src/commands/notion_db.rs | 840EAAB9C81DCB552927434BBF7F44A64E9393CAE0F55C0F1BA78A13A4E67BFA |
+| src/importers/html.rs | 4F65392B0FAAC0CF0A8435B54A2F50C88A81E29E7D186BE883A8B29C3583B373 |
+| src/importers/n1_tests.rs | D432E53C5BF07FEA779614CDECF3726EF744A66C2E26A274CF8BA14015E010FF |
+| src/importers/plan.rs | 9626F56A30A4D58C6217DEDF643FA6C75200B54EDC97FDA25103E743FCDD126E |
+
+`git diff --check` and `git diff --check d7209c6`: exit 0 (only the note's LF/CRLF informational notice). Final full-suite result and source receipt were read back. No further Rust edits or additional test run followed the full suite.
+
+### 5. Six visible changes for Ahmed (current N2 result)
+
+| A53 item | What a person sees | State |
+|---|---|---|
+| 1 | A uniquely matched exported home holds its children without a second section; ambiguity is reported. | N2 invented checks pass |
+| 2 | One canonical database row body, with old page links and children directed to that row. | N3; not implemented here |
+| 3 | A genuine title-only source home remains visible. | N2 invented checks pass |
+| 4 | A CSV-only database stays in its source container, away from unrelated sections. | N2 invented checks pass |
+| 5 | Plain text from a structured database wrapper can sit below the database title, without a duplicate page. Rich content, navigation and children keep a page; a failed/ambiguous table keeps its source page. Empty wrappers add nothing. | Both old failures and all new invented checks pass |
+| 6 | Databases with the same name and different source ids stay separate, with a warning. | N2 invented checks pass |
+
+### 6. Remaining work and stop point
+
+Stop at this N2 correction. N3 retains canonical row identity/body, redirected links and children, removal of the 3,000-page navigation switch, row deletion/restore checks, measured memory/progress/cancel work and the remaining hostile-input findings. Claude owns the private rerun after N3, the independent security review, Git commits/pushes and shared records. No private export is available to this lane. These library checks do not establish UI appearance, real-data fidelity or partner acceptance.
+
+### 7. Security self-check (self-review, not independent)
+
+Reviewed the complete run-2 diff and the affected conversion/rendering, CSV construction and persistence path. Hostile HTML goes through the existing bounded tree and sanitizer before it can become plain description text. Description is an existing React input value, not an HTML sink. Deferred pages retain the current page count, per-page render/text and total text budgets; source/ZIP limits and containment, reparse, archive entry/count/ratio/expanded-byte and checksum checks are untouched. Header matching uses source ids and refuses ambiguous ownership; failed construction and incoming navigation preserve the page. No raw HTML storage, new path/shell/SQL/log sink, fetch, dependency, key/crypto/IPC permission, pipe, history, clipboard, auto-lock or CSP change. Fixtures and saved throwaway vault content are invented; no private name, title, value or formula was read or copied. No application, browser, network or debug listener was started.
+
+Existing hostile-file/sanitizer/rollback tests passed in the import-focused run. No new reachable security finding in this self-check; this is not an independent audit. npm install/ci/build/audit, clippy, cargo audit, app/browser/native-picker/UI/private-data checks and Claude's independent review are **not run** in run 2.
+
+### 8. Outside write area, mechanical
+
+**None.** No `source.rs`, `zip.rs`, dependency, lockfile, screen or authority-record change. Test logs, generated fixtures and source receipts are only under `D:\Notaya Tests\v1-6-N2`; build output uses the preconfigured `D:\Notaya-lanes\_target`. No Git mutation was issued.
+
+### 9. ADDITION FOR AHMED: visible arrangement only
+
+A simple database-wrapper description appears beneath the database title instead of as an extra page. Content needing formatting, navigation or children stays on its page. If its database cannot import, that source page stays visible. The other five arrangement items above are unchanged; canonical rows remain N3. No restyling.
