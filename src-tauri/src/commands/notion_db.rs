@@ -47,7 +47,7 @@ pub struct RowPage {
 
 pub struct Imported {
     pub items: Vec<Item>,
-    /// Page ids that became rows and must not be saved as pages.
+    /// Page ids whose content moved into rows or database descriptions.
     pub removed_pages: HashSet<String>,
     pub covered: Vec<String>,
     pub notes: Vec<String>,
@@ -327,6 +327,7 @@ pub fn import_databases(
     row_pages: &[RowPage],
     items: &[Item],
     source_sections: &HashMap<String, String>,
+    header_pages: &HashMap<String, String>,
     s: &Session,
     now: i64,
     before_first: &dyn Fn(&Session) -> Result<()>,
@@ -369,6 +370,17 @@ pub fn import_databases(
                 continue;
             }
         };
+        // Consume a plain wrapper only after its database is built. A failed/ambiguous
+        // table or an incoming page link keeps the rendered source page as a fallback.
+        if let Some(id) = t.paths.iter().find_map(|p| header_pages.get(p)) {
+            let owners = tables.iter().filter(|table| table.paths.iter().any(|p| header_pages.get(p) == Some(id))).count();
+            if owners == 1 && !has_children.contains(id.as_str()) && !content_of_others(id) {
+                if let Some(page) = page_of.get(id.as_str()) {
+                    built.db.description = page.text.clone();
+                    out.removed_pages.insert(id.clone());
+                }
+            }
+        }
         // Each row takes the page with its title (in order, so equal titles pair up one by one).
         let mut used = vec![false; mine.len()];
         let mut notion_ids = Vec::with_capacity(built.rows.len());

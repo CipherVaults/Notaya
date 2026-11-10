@@ -240,6 +240,8 @@ pub struct Plan {
     /// For each section, the notebook it belongs to (an index into `notebooks`).
     pub section_notebook: Vec<usize>,
     pub pages: Vec<PlanPage>,
+    /// Plain HTML database headers, rendered as fallback pages until a database takes their text.
+    pub database_headers: Vec<PlanPage>,
     /// CSV inputs are independent of the capped, presentation-only skipped list.
     pub csv_paths: Vec<String>,
     /// The section of each CSV in the source tree, including CSVs with no row documents.
@@ -272,6 +274,7 @@ struct Builder<'a> {
     vfs: &'a Vfs,
     ctl: &'a Control,
     pages: Vec<PlanPage>,
+    database_headers: Vec<PlanPage>,
     images: Images,
     skipped: Vec<Skipped>,
     unlisted: usize,
@@ -345,11 +348,13 @@ impl Builder<'_> {
                 self.csv_sections.insert(path, section);
                 continue;
             }
-            let Some(index) = self.document(&name, &path, section, parent) else { continue };
             let stem = stem_of(&name);
             let exact = stem.to_lowercase();
             let clean = match_name(stem);
             let dirs = clean_dirs.get(&clean).map(Vec::as_slice).unwrap_or(&[]);
+            // A possible source home must remain a page so its folder can keep its parent.
+            let has_folder = !dirs.is_empty();
+            let Some(index) = self.document(&name, &path, section, parent, has_folder) else { continue };
             let idless = |name: &&String| strip_notion_id(name) == name.as_str();
             let dropped_id = strip_notion_id(stem) != stem && dirs.iter().any(idless);
             if dropped_id && (clean_files[&clean] != 1 || dirs.len() != 1) && warned.insert(clean.clone()) {
@@ -376,7 +381,7 @@ impl Builder<'_> {
             if used.contains(name) {
                 continue;
             }
-            if self.pages.len() >= MAX_PAGES + 1 {
+            if self.pages.len() + self.database_headers.len() >= MAX_PAGES + 1 {
                 return;
             }
             // A folder containing only CSVs needs a database location, not an empty page.
@@ -403,9 +408,9 @@ impl Builder<'_> {
     }
 
     /// Reads and converts one file into a page. `None` (with a reason in the skipped list) when it cannot.
-    fn document(&mut self, name: &str, path: &str, section: usize, parent: Option<usize>) -> Option<usize> {
+    fn document(&mut self, name: &str, path: &str, section: usize, parent: Option<usize>, has_folder: bool) -> Option<usize> {
         let kind = kind_of(name)?;
-        if self.pages.len() >= MAX_PAGES + 1 {
+        if self.pages.len() + self.database_headers.len() >= MAX_PAGES + 1 {
             return None;
         }
         if self.stopped.is_none() {
@@ -431,6 +436,7 @@ impl Builder<'_> {
         let mut icon = String::new();
         let mut cover = None;
         let mut cover_look = String::new();
+        let mut database_header = false;
         let mut blocks;
         // The same page exported as HTML too: its text and formatting are used (colors, highlights, fonts).
         let twin = if kind == Kind::Markdown { self.twins.get(path).cloned().and_then(|h| self.html_twin(&h)) } else { None };
@@ -453,6 +459,7 @@ impl Builder<'_> {
                     icon = d.icon.unwrap_or_default();
                     cover = d.cover;
                     cover_look = d.cover_look.unwrap_or_default();
+                    database_header = d.database_header;
                     blocks = d.blocks;
                 }
                 Kind::Docx => match docx::parse(bytes, &mut ctx, path) {
@@ -522,6 +529,18 @@ impl Builder<'_> {
         if database_wrapper {
             if doc::is_empty(&blocks) {
                 self.empty_database_pages += 1;
+                return None;
+            }
+            // One unformatted line fits the existing description without losing navigation,
+            // layout or images. Never classify prose by its wording, and never move a home.
+            let plain_header = matches!(blocks.as_slice(), [Block::Paragraph(inlines)] if inlines.iter().all(|i| {
+                matches!(i, Inline::Text(t, marks) if *marks == doc::Marks::default() && !t.contains(['\r', '\n']))
+            }));
+            if database_header && !has_folder && plain_header && icon.is_empty() && cover.is_none() && cover_look.is_empty() {
+                self.database_headers.push(PlanPage {
+                    key: path.to_string(), generated: false, id: new_id(), section, parent, title,
+                    icon, cover, cover_look, blocks,
+                });
                 return None;
             }
             self.kept_database_pages += 1;
@@ -745,7 +764,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     };
     let folder_name = |n: &str| -> String { clean_title(n, false).chars().take(MAX_NAME).collect() };
 
-    let mut b = Builder { vfs, ctl, pages: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0, twins, csv_sections: HashMap::new(), arrangement_notes: Vec::new(), database_html, empty_database_pages: 0, kept_database_pages: 0, merged: 0 };
+    let mut b = Builder { vfs, ctl, pages: Vec::new(), database_headers: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0, twins, csv_sections: HashMap::new(), arrangement_notes: Vec::new(), database_html, empty_database_pages: 0, kept_database_pages: 0, merged: 0 };
     let mut sections: Vec<String> = Vec::new();
     let mut section_notebook: Vec<usize> = Vec::new();
     // Notebooks named after folders (the notebooks layout); otherwise one, named below.
@@ -797,25 +816,25 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     }
     match b.stopped {
         Some(Stop::Cancelled) => return Err(CANCELLED.into()),
-        Some(Stop::TimedOut) if b.pages.is_empty() => return Err(TOO_SLOW.into()),
+        Some(Stop::TimedOut) if b.pages.is_empty() && b.database_headers.is_empty() => return Err(TOO_SLOW.into()),
         _ => {}
     }
-    if b.pages.len() > MAX_PAGES {
+    if b.pages.len() + b.database_headers.len() > MAX_PAGES {
         return Err(format!("This import has more than {MAX_PAGES} pages. Import it in smaller parts (for example one top-level folder at a time)."));
     }
     // A section with no page left (its documents could not be read) is not created.
     let mut keep: Vec<usize> = Vec::new();
     for s in 0..sections.len() {
-        if b.pages.iter().any(|p| p.section == s) || b.csv_sections.values().any(|section| *section == s) {
+        if b.pages.iter().chain(&b.database_headers).any(|p| p.section == s) || b.csv_sections.values().any(|section| *section == s) {
             keep.push(s);
         }
     }
-    if b.pages.is_empty() && csv_paths.is_empty() {
+    if b.pages.is_empty() && b.database_headers.is_empty() && csv_paths.is_empty() {
         let first = b.skipped.first().map(|s| format!(" {}: {}", s.item, s.reason)).unwrap_or_default();
         return Err(format!("None of the files could be imported.{first}"));
     }
     let remap: HashMap<usize, usize> = keep.iter().enumerate().map(|(new, old)| (*old, new)).collect();
-    for p in &mut b.pages {
+    for p in b.pages.iter_mut().chain(&mut b.database_headers) {
         p.section = remap[&p.section];
     }
     for section in b.csv_sections.values_mut() {
@@ -856,6 +875,9 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     if b.kept_database_pages > 0 {
         notes.push(format!("{} HTML database wrappers kept their content outside the view table as pages; their tables come from the CSV files.", b.kept_database_pages));
     }
+    if !b.database_headers.is_empty() {
+        notes.push(format!("{} HTML pages of databases have plain header text reserved for the database description; if a database cannot take it, its page is kept.", b.database_headers.len()));
+    }
     if notion_markdown && b.merged == 0 {
         notes.push("These pages come from Notion's Markdown export, which has no text colors or highlights. Export from Notion as HTML to keep them, or choose the HTML and the Markdown & CSV exports together.".to_string());
     }
@@ -865,7 +887,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     if b.unlisted > 0 {
         notes.push(format!("{} more items were not imported than the list shows.", b.unlisted));
     }
-    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, csv_paths, csv_sections: b.csv_sections, images: b.images, skipped: b.skipped, notes, aliases })
+    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, database_headers: b.database_headers, csv_paths, csv_sections: b.csv_sections, images: b.images, skipped: b.skipped, notes, aliases })
 }
 
 /// `Err` with the message for the person when the import was cancelled or ran out of time.
@@ -883,6 +905,12 @@ pub fn picture_url(id: &str) -> String {
 }
 
 impl Plan {
+    /// Only a shared source id can connect a header to a CSV, never its display title.
+    pub fn database_header_ids(&self) -> HashMap<String, String> {
+        let headers: HashMap<String, &str> = self.database_headers.iter().filter_map(|p| notion_file_id(&p.key).map(|id| (id, p.id.as_str()))).collect();
+        self.csv_paths.iter().filter_map(|p| notion_file_id(p).and_then(|id| headers.get(&id)).map(|id| (p.clone(), (*id).to_string()))).collect()
+    }
+
     pub fn generated_page_ids(&self) -> HashSet<String> {
         self.pages.iter().filter(|p| p.generated).map(|p| p.id.clone()).collect()
     }
@@ -931,6 +959,8 @@ impl Plan {
     /// Renders the pages and returns the new notebook, its sections and pages as vault items,
     /// with the summary. Pages too large to save are left out (their sub-pages move up).
     pub fn items(&mut self, ctl: &Control, urls: &[Option<String>], now: i64, notebook_order: i64) -> Result<(Vec<Item>, ImportSummary), String> {
+        // Fallbacks use the same renderer and byte/page budgets as ordinary source pages.
+        let pages: Vec<&PlanPage> = self.pages.iter().chain(&self.database_headers).collect();
         let image_out = |n: usize| match urls.get(n) {
             Some(Some(u)) => ImageOut::Url(u.clone()),
             _ => ImageOut::Text(format!("[Picture not imported: {}]", self.images.list.get(n).map_or("picture", |x| x.1.as_str()))),
@@ -939,7 +969,7 @@ impl Plan {
         let mut rendered: Vec<Option<(String, String)>> = Vec::new();
         let mut cut_rows = 0usize;
         for _ in 0..3 {
-            let mut ids: HashMap<&str, &str> = self.pages.iter().enumerate().filter(|(i, _)| !dropped.contains(i)).map(|(_, p)| (p.key.as_str(), p.id.as_str())).collect();
+            let mut ids: HashMap<&str, &str> = pages.iter().enumerate().filter(|(i, _)| !dropped.contains(i)).map(|(_, p)| (p.key.as_str(), p.id.as_str())).collect();
             // A link that points at the HTML file of a page that was imported from its Markdown file.
             for (alias, key) in &self.aliases {
                 if let Some(id) = ids.get(key.as_str()).copied() {
@@ -947,11 +977,11 @@ impl Plan {
                 }
             }
             let page_id = |k: &str| ids.get(k).map(|s| s.to_string());
-            rendered = Vec::with_capacity(self.pages.len());
+            rendered = Vec::with_capacity(pages.len());
             let mut too_big: Vec<usize> = Vec::new();
             let mut total = 0usize;
             cut_rows = 0;
-            for (i, p) in self.pages.iter().enumerate() {
+            for (i, p) in pages.iter().enumerate() {
                 check(ctl)?;
                 if dropped.contains(&i) {
                     rendered.push(None);
@@ -979,7 +1009,7 @@ impl Plan {
         }
         for i in &dropped {
             if self.skipped.len() < MAX_LISTED {
-                self.skipped.push(Skipped { item: self.pages[*i].title.clone(), reason: "The page is too large to store (over 20 MB of text), so it was not imported.".into() });
+                self.skipped.push(Skipped { item: pages[*i].title.clone(), reason: "The page is too large to store (over 20 MB of text), so it was not imported.".into() });
             }
         }
         if self.notebooks.is_empty() {
@@ -1019,11 +1049,11 @@ impl Plan {
             in_notebook[nb] += 1;
         }
         let kept = rendered.iter().filter(|r| r.is_some()).count();
-        for (i, p) in self.pages.iter().enumerate() {
+        for (i, p) in pages.iter().enumerate() {
             let Some((content, text)) = rendered[i].take() else { continue };
             let mut parent = p.parent;
             while let Some(q) = parent {
-                if dropped.contains(&q) { parent = self.pages[q].parent } else { break }
+                if dropped.contains(&q) { parent = pages[q].parent } else { break }
             }
             items.push(Item::Page(Page {
                 source: None,
@@ -1036,7 +1066,7 @@ impl Plan {
                 favorite: false,
                 icon: p.icon.clone(),
                 cover: p.cover.and_then(|c| urls.get(c).cloned().flatten()).unwrap_or_else(|| p.cover_look.clone()),
-                parent: parent.map(|q| self.pages[q].id.clone()).unwrap_or_default(),
+                parent: parent.map(|q| pages[q].id.clone()).unwrap_or_default(),
                 trashed_at: None,
                 created: now,
                 updated: now,

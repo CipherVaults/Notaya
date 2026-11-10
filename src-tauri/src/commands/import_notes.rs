@@ -230,7 +230,7 @@ pub fn import_from_with<V: VaultAccess>(
                     return Err(Error::Other(LOCKED.into()));
                 }
                 if !tables.is_empty() {
-                    let made = notion_db::import_databases(&tables, &row_pages, &items, &plan.csv_section_ids(&items), s, now, before_first_database)?;
+                    let made = notion_db::import_databases(&tables, &row_pages, &items, &plan.csv_section_ids(&items), &plan.database_header_ids(), s, now, before_first_database)?;
                     if made.databases > 0 {
                         drop_row_pages(&mut items, &made.removed_pages, &plan.generated_page_ids());
                         summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();

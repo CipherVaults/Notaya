@@ -217,6 +217,8 @@ pub fn build(src: &str, ctl: &Control) -> El {
 pub struct HtmlDoc {
     pub title: Option<String>,
     pub blocks: Vec<Block>,
+    /// A structured Notion page, eligible for a plain database description after conversion.
+    pub database_header: bool,
     /// The page's emoji (Notion's page icon).
     pub icon: Option<String>,
     /// The cover picture (Notion's page cover), as an image index.
@@ -237,6 +239,10 @@ pub fn parse_database_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
 fn parse_document_with_view(src: &str, ctx: &mut Ctx, database_view: bool) -> HtmlDoc {
     let root = build(src, ctx.ctl);
     let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0, database_view };
+    c.doc.database_header = database_view && root.find(&|e| e.name == "article" && e.has_class("page")).is_some_and(|page| {
+        page.elements().any(|e| e.name == "header" && e.elements().any(|h| h.name == "h1" && h.has_class("page-title")))
+            && page.elements().any(|e| e.name == "div" && e.has_class("page-body"))
+    });
     if let Some(t) = root.find(&|e| e.name == "title") {
         let t = doc::collapse_ws(&t.text());
         if !t.is_empty() {

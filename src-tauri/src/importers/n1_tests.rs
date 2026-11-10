@@ -24,7 +24,7 @@ fn finish(vfs: &Vfs, p: &mut plan::Plan, s: &Session) -> Vec<Item> {
     let (tables, _, _) = notion_db::read_tables(vfs, &table_paths(p));
     let rows = notion_db::prepare_pages(&tables, &mut p.pages);
     let (mut items, _) = p.items(&ctl, &[], 1, 0).unwrap();
-    let made = notion_db::import_databases(&tables, &rows, &items, &p.csv_section_ids(&items), s, 1, &|_| Ok(())).unwrap();
+    let made = notion_db::import_databases(&tables, &rows, &items, &p.csv_section_ids(&items), &p.database_header_ids(), s, 1, &|_| Ok(())).unwrap();
     super::drop_row_pages(&mut items, &made.removed_pages, &p.generated_page_ids());
     items.extend(made.items);
     items
@@ -243,6 +243,77 @@ fn n2_html_markdown_csv_wrapper_is_one_page_with_navigation() {
     assert!(!home.text.contains("View row"));
 }
 
+fn structured_wrapper(body: &str) -> Vec<u8> {
+    format!("<html><head><title>Home</title></head><body><article class=\"page sans\"><header><h1 class=\"page-title\">Home</h1></header><div class=\"page-body\">{body}</div></article></body></html>").into_bytes()
+}
+
+#[test]
+fn n2_plain_wrapper_text_is_saved_in_the_database_description_without_a_duplicate_page() {
+    let v = fixture(vec![
+        (format!("Home {HUB}.html"), structured_wrapper("<p>Read these invented instructions first.</p><script>bad()</script>")),
+        (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+    ]);
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    assert!(p.pages.is_empty());
+    assert_eq!(p.database_headers.len(), 1);
+    let root = std::env::temp_dir().join(format!("notaya-n2-header-{}", crate::model::new_id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let path = root.join("vault.nota");
+    let mut session = Session::create_open(&path).unwrap();
+    let items = finish(&v, &mut p, &session);
+    let db = items.iter().find_map(|i| if let Item::Database(d) = i { Some(d) } else { None }).unwrap();
+    assert_eq!(db.description, "Read these invented instructions first.");
+    assert!(!items.iter().any(|i| matches!(i, Item::Page(_))));
+    let db_id = db.id.clone();
+    session.put_many(items).unwrap();
+    // Read back from the saved vault, not only the transient importer result.
+    drop(session);
+    let reopened = Session::unlock_open(&path).unwrap();
+    assert!(reopened.items().any(|i| matches!(i, Item::Database(d) if d.id == db_id && d.description == "Read these invented instructions first.")));
+}
+
+#[test]
+fn n2_wrapper_navigation_formatting_children_and_multiline_text_stay_on_pages() {
+    for (body, extra, has_folder) in [
+        ("<p><strong>Read this first.</strong></p>", None, false),
+        ("<p>First line<br>Second line</p>", None, false),
+        ("<p>First paragraph</p><p>Second paragraph</p>", None, false),
+        ("<p>Home instructions</p>", None, true),
+        ("<p>Home instructions</p>", Some(format!("[Home](Home%20{HUB}.html)")), false),
+        ("<p><a href=\"https://example.com\">Read this first.</a></p>", None, false),
+    ] {
+        let mut files = vec![
+            (format!("Home {HUB}.html"), structured_wrapper(body)),
+            (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        ];
+        if has_folder { files.push((format!("Home {HUB}/Child.md"), b"# Child\n\nChild body".to_vec())); }
+        if let Some(link) = extra { files.push(("Guide.md".into(), format!("# Guide\n\n{link}").into_bytes())); }
+        let v = fixture(files);
+        let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+        let items = finish(&v, &mut p, &empty_session());
+        let home = items.iter().find_map(|i| if let Item::Page(p) = i { (p.title == "Home").then_some(p) } else { None }).expect("a page preserves the richer content or incoming navigation");
+        assert!(!home.text.is_empty());
+        assert!(items.iter().any(|i| matches!(i, Item::Database(d) if d.description.is_empty())));
+        if has_folder { assert!(items.iter().any(|i| matches!(i, Item::Page(p) if p.title == "Child" && p.parent == home.id))); }
+    }
+}
+
+#[test]
+fn n2_a_failed_or_ambiguous_database_keeps_its_plain_wrapper_page() {
+    for csvs in [
+        vec![(format!("Home {HUB}.csv"), b"".to_vec())],
+        vec![(format!("A/Home {HUB}_all.csv"), b"Name\nCard\n".to_vec()), (format!("B/Home {HUB}_all.csv"), b"Name\nOther\n".to_vec())],
+    ] {
+        let mut files = vec![(format!("Home {HUB}.html"), structured_wrapper("<p>Preserve this invented header.</p>"))];
+        files.extend(csvs);
+        let v = fixture(files);
+        let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+        let items = finish(&v, &mut p, &empty_session());
+        assert!(items.iter().any(|i| matches!(i, Item::Page(p) if p.title == "Home" && p.text == "Preserve this invented header.")));
+        assert!(items.iter().all(|i| !matches!(i, Item::Database(d) if !d.description.is_empty())));
+    }
+}
+
 #[test]
 fn n2_conflicting_csv_names_warn_once_and_never_merge_by_name() {
     let paths = vec![format!("Table {TABLE}.csv"), format!("Table {TABLE}_all.csv"), format!("Table {HUB}.csv"), format!("Table {CARD}.csv")];
@@ -351,7 +422,7 @@ fn n1_private_count_probe() {
         assert!(home.is_absolute() && !home.starts_with(env!("CARGO_MANIFEST_DIR")));
         std::fs::create_dir(&home).expect("home must be new");
         let session = Session::create_open(&home.join("empty-probe.nota")).expect("empty vault unavailable");
-        let made = notion_db::import_databases(&tables, &row_pages, &items, &p.csv_section_ids(&items), &session, 1, &|_| Ok(())).expect("database stage failed");
+        let made = notion_db::import_databases(&tables, &row_pages, &items, &p.csv_section_ids(&items), &p.database_header_ids(), &session, 1, &|_| Ok(())).expect("database stage failed");
         let moved = made.removed_pages.len();
         super::drop_row_pages(&mut items, &made.removed_pages, &p.generated_page_ids());
         let source_docs_removed = docs.iter().filter(|id| !made.removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
