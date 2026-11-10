@@ -23,8 +23,19 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   const shot = async (name) => { if (shots) await p.screenshot({ path: `${shots}/fix-${name}.png`, caret: 'initial' }); };
   const wait = (ms = 250) => p.waitForTimeout(ms);
   const table = () => p.getByRole('application', { name: 'Table' });
-  const row = (i) => table().locator('tbody tr').nth(i);
+  // A DOM index is a window position, not a row identity after New scrolls.
+  const row = (i) => table().locator('tbody tr[aria-selected]').filter({ has: p.getByRole('checkbox', { name: `Select row ${i + 1}`, exact: true }) });
   const cell = (r, c) => row(r).locator('td').nth(c);
+  const readRows = () => p.evaluate(async () => {
+    const { api } = await import('/src/lib/ipc.ts');
+    const databaseId = document.querySelector('[data-database]').dataset.database;
+    const db = await api.getDatabase(databaseId);
+    return (await api.queryView({ databaseId, viewId: db.views[0].id })).rows;
+  });
+  const backToFirstRow = async () => {
+    await table().evaluate((el) => { el.scrollTop = 0; });
+    await row(0).waitFor();
+  };
   const pop = () => p.locator('[data-radix-popper-content-wrapper]');
   const look = (t) => p.evaluate((x) => { document.documentElement.dataset.theme = x; document.documentElement.dataset.mode = /black|graphite|sunrise-dark/.test(x) ? 'dark' : 'light'; }, t);
   const col = async (name) => (await table().locator('thead th').allInnerTexts()).map((t) => t.trim()).indexOf(name) + 0;
@@ -115,7 +126,8 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   await wait(700);
   is('Ctrl+Y redoes too', await statusNow(), 'In progress');
 
-  // a cleared value
+  // a cleared value (the mock date follows today's clock, not a fixed month)
+  const dateBefore = (await cell(0, cDue).innerText()).trim();
   await cell(0, cDue).click({ position: { x: 3, y: 3 } });
   await p.keyboard.press('Escape');
   await wait(200);
@@ -130,7 +142,7 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   await cell(0, cTask).click();
   await p.keyboard.press('Control+z');
   await wait(700);
-  yes('undo brings the date back', /Oct/.test(await cell(0, cDue).innerText()));
+  is('undo brings the date back', (await cell(0, cDue).innerText()).trim(), dateBefore);
 
   // a checkbox
   const done = () => cell(2, cDone).getByRole('checkbox');
@@ -144,13 +156,18 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   is('undo flips the checkbox back', await done().getAttribute('aria-checked'), was);
 
   // a new row and its undo
-  const rowsBefore = await table().locator('tbody tr').count();
+  const beforeAdd = await readRows();
+  const rowsBefore = beforeAdd.length;
   await p.getByRole('button', { name: 'New', exact: true }).first().click();
   await wait(500);
   await p.keyboard.type('Undo me');
   await p.keyboard.press('Enter');
   await wait(600);
-  is('a row was added', await table().locator('tbody tr').count(), rowsBefore + 1);
+  const afterAdd = await readRows();
+  const addedRow = afterAdd.find((r) => !beforeAdd.some((before) => before.id === r.id));
+  is('a row was added', afterAdd.length, rowsBefore + 1);
+  is('the new row has the typed name', addedRow?.title, 'Undo me');
+  await backToFirstRow();
   // typing in a text field keeps its own undo: Ctrl+Z there must not undo the database
   await cell(1, cTask).click();
   await p.keyboard.press('Enter');
@@ -165,19 +182,26 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   await cell(1, cTask).click();
   await p.keyboard.press('Control+z'); // the name typed into the new row
   await wait(700);
-  yes('the first Ctrl+Z takes the typed name back', !(await table().innerText()).includes('Undo me'));
+  const afterNameUndo = await readRows();
+  is('the first Ctrl+Z keeps the new row', afterNameUndo.length, rowsBefore + 1);
+  is('the first Ctrl+Z takes the typed name back', afterNameUndo.find((r) => r.id === addedRow?.id)?.title, '');
   await p.keyboard.press('Control+z'); // the new row itself
   await wait(900);
-  is('the next Ctrl+Z takes the new row away again', await table().locator('tbody tr').count(), rowsBefore);
+  const afterRowUndo = await readRows();
+  is('the next Ctrl+Z takes the new row away again', afterRowUndo.length, rowsBefore);
+  yes('the added row ID is absent after undo', !afterRowUndo.some((r) => r.id === addedRow?.id));
   await p.keyboard.press('Control+Shift+z');
   await wait(900);
-  is('Ctrl+Shift+Z brings it back', await table().locator('tbody tr').count(), rowsBefore + 1);
+  const afterRowRedo = await readRows();
+  is('Ctrl+Shift+Z brings it back', afterRowRedo.length, rowsBefore + 1);
+  is('redo restores the same row with its empty name', afterRowRedo.find((r) => r.id === addedRow?.id)?.title, '');
   await p.keyboard.press('Control+Shift+z');
   await wait(700);
-  yes('and again the typed name', (await table().innerText()).includes('Undo me'));
+  is('and again the typed name', (await readRows()).find((r) => r.id === addedRow?.id)?.title, 'Undo me');
   await shot('after-undo');
 
   // The row page.
+  await backToFirstRow();
   await cell(0, cTask).getByRole('button', { name: 'Open row' }).click({ force: true });
   await wait(900);
   const pageStatus = p.getByRole('list', { name: 'Properties' }).getByText('In progress').first();

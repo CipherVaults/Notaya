@@ -34,7 +34,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       const grid = table.getByRole('grid');
       // Also works on P1, which does not yet have data-row-id.
       const rows = () => table.locator('tbody tr[aria-selected]');
-      const title = (i) => rows().nth(i).getByRole('gridcell').first();
+      const title = (i) => rows().nth(i).getByRole('gridcell').nth(1);
       const rowNumber = (number) => rows().filter({ has: p.getByRole('checkbox', { name: `Select row ${number}`, exact: true }) });
       const activeRowNumber = () => table.locator('tbody tr[aria-selected]').filter({ has: p.locator('.db-cell-active') }).getByRole('checkbox', { name: /^Select row / }).getAttribute('aria-label').then((s) => Number(s.replace('Select row ', '')));
       await title(0).waitFor();
@@ -63,7 +63,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
         await p.keyboard.press('Enter');
         await table.getByRole('textbox', { name: 'Task', exact: true }).fill(edited);
         await p.keyboard.press('Enter');
-        await rowNumber(4).getByRole('gridcell').first().filter({ hasText: edited }).waitFor();
+        await rowNumber(4).getByRole('gridcell').nth(1).filter({ hasText: edited }).waitFor();
         await p.waitForFunction((queries) => (window.__inv || []).filter(([cmd]) => cmd === 'query_view').length > queries, queries);
       });
       const sort = async () => {
@@ -171,6 +171,17 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
 
       // Drag from first row to a mounted target, then from first into an initially
       // undrawn window. Pointer movement at the lower edge must drive dnd auto-scroll.
+      const settleScroll = () => table.evaluate(async (el) => {
+        let previous = el.scrollTop, stable = 0;
+        const deadline = performance.now() + 5000;
+        while (stable < 8) {
+          await new Promise(requestAnimationFrame);
+          if (performance.now() > deadline) throw new Error('Drag auto-scroll did not settle away from the edge');
+          stable = el.scrollTop === previous ? stable + 1 : 0;
+          previous = el.scrollTop;
+        }
+        return el.scrollTop;
+      });
       const drag = async (autoScroll) => {
         await scroll(false);
         const sourceId = await rowNumber(1).getAttribute('data-row-id');
@@ -182,18 +193,33 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
           const viewport = await table.boundingBox();
           await p.mouse.move(source.x + source.width / 2, viewport.y + viewport.height - 12, { steps: 12 });
           await p.waitForFunction(() => document.querySelector('[aria-label="Table"]').scrollTop > 1800);
+          // Leave the auto-scroll zone BEFORE choosing a row. The old script read
+          // its coordinates at the edge, then spent eight pointer steps scrolling
+          // past them. Sortable siblings also have a temporary one-row transform;
+          // use their layout boxes, the geometry dnd-kit measures for collisions.
+          await p.mouse.move(source.x + source.width / 2, viewport.y + viewport.height / 2);
+          await settleScroll();
           const target = await table.locator('tbody tr[data-row-id]').evaluateAll((trs) => {
             const wrap = document.querySelector('[aria-label="Table"]').getBoundingClientRect();
-            const tr = trs.find((r) => { const b = r.getBoundingClientRect(); return b.top > wrap.top + 100 && b.bottom < wrap.bottom - 60; });
-            const b = tr.getBoundingClientRect(); return { id: tr.dataset.rowId, x: b.x + 45, y: b.top + b.height / 2 };
+            const candidates = trs.map((tr) => {
+              const b = tr.getBoundingClientRect();
+              const dy = new DOMMatrixReadOnly(getComputedStyle(tr).transform).m42;
+              return { id: tr.dataset.rowId, x: b.x + 45, y: b.top - dy + b.height / 2, height: b.height };
+            }).filter((r) => r.y - r.height / 2 > wrap.top + wrap.height * 0.3 && r.y + r.height / 2 < wrap.bottom - wrap.height * 0.3);
+            candidates.sort((a, b) => Math.abs(a.y - (wrap.top + wrap.height / 2)) - Math.abs(b.y - (wrap.top + wrap.height / 2)));
+            if (!candidates.length) throw new Error('No settled drop row in the middle of the viewport');
+            return candidates[0];
           });
           targetId = target.id;
-          await p.mouse.move(target.x, target.y, { steps: 8 });
+          await p.mouse.move(target.x, target.y);
+          await settleScroll();
         } else {
           const target = rowNumber(4); targetId = await target.getAttribute('data-row-id');
           const b = await target.boundingBox(); await p.mouse.move(source.x + source.width / 2, b.y + b.height / 2, { steps: 12 });
         }
+        // Capture the label at release, after the final scrolling and pointer move.
         const originalLabel = await table.locator(`tr[data-row-id="${targetId}"]`).getByRole('checkbox', { name: /^Select row / }).getAttribute('aria-label');
+        assert(originalLabel, 'Drop target still exists immediately before release');
         await p.mouse.up();
         // Source replaces target's former order position; query_view must finish.
         await p.waitForFunction(({ sourceId, originalLabel }) => document.querySelector(`tr[data-row-id="${sourceId}"]`)?.querySelector(`[aria-label="${originalLabel}"]`), { sourceId, originalLabel });
