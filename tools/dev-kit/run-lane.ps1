@@ -26,12 +26,15 @@ if ($DryRun) {
 if (-not (Test-Path -LiteralPath $wt -PathType Container)) { throw "Worktree missing: $wt" }
 if (-not (Test-Path -LiteralPath $Prompt -PathType Leaf)) { throw "Prompt missing: $Prompt" }
 if (-not (Test-Path -LiteralPath $Cfg.CodexCmd -PathType Leaf)) { throw 'Configured physical Codex wrapper not found.' }
-foreach ($p in @($wt, $Cfg.OutDir, $testHome)) {
+foreach ($p in @($wt, $Cfg.OutDir, $testHome, $Cfg.CargoTargetDir) + @($Cfg.AdditionalWriteDirs)) {
     $walk = [IO.Path]::GetFullPath($p)
     while ($walk) {
         if ((Test-Path -LiteralPath $walk) -and ((Get-Item -LiteralPath $walk -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Reparse point not allowed: $walk" }
         $walk = Split-Path -Parent $walk
     }
+}
+foreach ($p in @($log, (Join-Path $Cfg.OutDir "$Tag.md"))) {
+    if ((Test-Path -LiteralPath $p) -and ((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Reparse output not allowed: $p" }
 }
 $env:Path = [Environment]::ExpandEnvironmentVariables(
     [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +

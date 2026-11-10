@@ -28,11 +28,11 @@ function Assert-Child([string]$path, [string]$parent) {
   Assert-NoReparse $full
   return $full
 }
-foreach ($key in 'Root','KitDir','MainCheckout','TestsDir','CodexSessionsDir','CargoTargetDir') {
+foreach ($key in 'Root','KitDir','MainCheckout','TestsDir','CodexSessionsDir','CargoTargetDir','CheckCargoTargetDir') {
   if (-not [IO.Path]::IsPathRooted([string]$Cfg[$key])) { throw "$key must be absolute." }
   Assert-NoReparse $Cfg[$key]
 }
-foreach ($key in 'OutDir','LedgerDir','CargoTargetDir') { $Cfg[$key] = Assert-Child $Cfg[$key] $Cfg.Root }
+foreach ($key in 'OutDir','LedgerDir','CargoTargetDir','CheckCargoTargetDir') { $Cfg[$key] = Assert-Child $Cfg[$key] $Cfg.Root }
 foreach ($key in 'StateFile','EventsLog','HeartbeatLog','LanesFile') { $Cfg[$key] = Assert-Child $Cfg[$key] $Cfg.KitDir }
 if ($Cfg.Remote -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]*$') { throw 'Invalid remote name.' }
 function Assert-Ref([string]$ref) {
@@ -94,14 +94,16 @@ function Save-State {
 
 # JSON array order is launch priority; no project-specific lane table is shipped.
 $lanes = [ordered]@{}
-$laneEntries = Get-Content -LiteralPath $Cfg.LanesFile -Raw | ConvertFrom-Json
+$laneJson = Get-Content -LiteralPath $Cfg.LanesFile -Raw
+if (-not $laneJson.TrimStart().StartsWith('[')) { throw 'LanesFile must contain a JSON array.' }
+$laneEntries = $laneJson | ConvertFrom-Json
 foreach ($entry in $laneEntries) {
   if (-not $entry) { continue }
   $ld = ToHash $entry; $name = [string]$ld.name
   if ($name -notmatch '^[A-Za-z0-9][A-Za-z0-9_-]*$' -or $name -match '^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$') { throw "Invalid lane name: $name" }
   if ($lanes.Contains($name)) { throw "Duplicate lane: $name" }
   $lanePath = Assert-Child (Join-Path $root $name) $root
-  foreach ($reserved in @($Cfg.OutDir, $Cfg.TestsDir, $Cfg.KitDir, $Cfg.CargoTargetDir, $Cfg.LedgerDir, (Join-Path $root 'ledger-wt'), $Cfg.MainCheckout)) {
+  foreach ($reserved in @($Cfg.OutDir, $Cfg.TestsDir, $Cfg.KitDir, $Cfg.CargoTargetDir, $Cfg.CheckCargoTargetDir, $Cfg.LedgerDir, (Join-Path $root 'ledger-wt'), $Cfg.MainCheckout)) {
     if ($lanePath -eq [IO.Path]::GetFullPath($reserved)) { throw "Lane overlaps a configured runtime directory: $name" }
   }
   if (-not $ld.branch) { $ld.branch = $Cfg.BranchPrefix + $name }
@@ -138,7 +140,12 @@ try {
 
   # ---- process table
   $procs = @(Get-LaneProcesses)
-  function Alive($l) { return (@(Get-LaneProcesses $l).Count -gt 0) }
+  function Alive($l) {
+    # Tick-start snapshot plus the separate launched count avoids counting a
+    # newly started process twice when enforcing the concurrency ceiling.
+    $wtRx = [regex]::Escape((Join-Path $root $l))
+    return (@($procs | Where-Object { $_.CommandLine -match ('(?i)(?:^|\s)-C\s+(?:"' + $wtRx + '"|' + $wtRx + ')(?=\s|$)') }).Count -gt 0)
+  }
   function PathsFor($l, $tag) { return @{ md="$out\$tag.md"; log="$out\$tag.log"; err="$out\$tag.err" } }
   function Tail-Text($path, $n) {
     # last ~120 KB of a (UTF-16) log, last $n lines; fast, no full read
@@ -274,7 +281,7 @@ try {
       foreach ($k in @($lanes.Keys)) { if ($state.lanes[$k].status -eq 'paused-stopline') { $state.lanes[$k].status = 'pending'; $state.lanes[$k].resume = $true } }
       Ev '-' 'stopline-resume' ("Codex 5-hour window is at {0}% used again / its reset time has passed; lanes paused at the stop line are resumed" -f $r.p)
     } elseif ($sl.active -and [string]$sl.reason -match 'predicted' -and [long]$r.pr -eq [long]$sl.resetEpoch -and [long]$state.liftedForWindow -ne [long]$r.pr -and [double]$r.p -lt $Cfg.LiftBelowPct -and ([double]$r.p + $burn * $LookAheadMin) -lt $Cfg.StopAtPct -and -not (@(Get-LaneProcesses).Count)) {
-      $state.liftedForWindow = [long]$r.pr   # at most ONE predicted lift per window: the first lift (19:33Z) gave S two minutes of work and 5 points of meter before the line fired again at 89%, i.e. mostly relaunch cost
+      $state.liftedForWindow = [long]$r.pr # At most one predicted lift per window.
       $sl.active = $false
       if (Test-Path "$hb\stopline-guard.json") { try { Remove-Item "$hb\stopline-guard.json" -Force } catch { } }
       foreach ($k in @($lanes.Keys)) { if ($state.lanes[$k].status -eq 'paused-stopline') { $state.lanes[$k].status = 'pending'; $state.lanes[$k].resume = $true } }
@@ -550,7 +557,7 @@ try {
   function Run-Check($name, $cmd, $dir, $lane) {
     $lf = "$out\$lane.check-$name.log"
     if ($DryRun) { return @{ name=$name; exit=-1; log=$lf; skipped=$true } }
-    $env:CARGO_TARGET_DIR = $Cfg.CargoTargetDir; $env:CARGO_NET_OFFLINE = 'true'
+    $env:CARGO_TARGET_DIR = $Cfg.CheckCargoTargetDir; $env:CARGO_NET_OFFLINE = 'true'
     foreach ($key in $Cfg.LaneEnvironment.Keys) { [Environment]::SetEnvironmentVariable($key, ([string]$Cfg.LaneEnvironment[$key]).Replace('{TestsDir}', $Cfg.TestsDir).Replace('{lane}', $lane).Replace('{Root}', $root), 'Process') }
     Push-Location $dir; cmd /c "$cmd > `"$lf`" 2>&1"; $ec = $LASTEXITCODE; Pop-Location
     return @{ name=$name; exit=$ec; log=$lf; tail=((Get-Content $lf -Tail 6 -ErrorAction SilentlyContinue) -join ' | ') }
@@ -631,8 +638,12 @@ try {
   $effMax = $maxAlive; if ($rate -and [double]$rate.p -ge $Cfg.HighMeterPct) { $effMax = [Math]::Min($maxAlive, $Cfg.MaxAliveHigh) }
   $planBurn = if ($rate) { BurnPerMin $rate } else { 0.0 }
   if ($DryRun) { Write-Host ("DRYRUN lane models: " + (($lanes.Keys | Where-Object { $state.lanes[$_].status -in 'pending','paused-stopline' } | ForEach-Object { $mm = [string]$lanes[$_].model; if (-not $mm) { $mm = $Cfg.DefaultModel }; $ee = [string]$lanes[$_].effort; if (-not $ee) { $ee = $Cfg.DefaultEffort }; "$_=$mm/$ee" }) -join ', ')) }
-  if ($DryRun -and $rate -and $state.stopLine -and $state.stopLine.active) { $anyLane = @(Get-LaneProcesses).Count; $liftOk = ([string]$state.stopLine.reason -match 'predicted' -and [long]$rate.pr -eq [long]$state.stopLine.resetEpoch -and [double]$rate.p -lt $Cfg.LiftBelowPct -and ([double]$rate.p + $planBurn * $LookAheadMin) -lt $Cfg.StopAtPct -and -not $anyLane); Write-Host ("DRYRUN stop-line lift check: held because '{0}' since {1}, reset {2}; used {3}% burn {4}/min lanes running {5} -> {6}" -f $state.stopLine.reason, $state.stopLine.since, $state.stopLine.resetUtc, $rate.p, $planBurn, $anyLane, $(if ($liftOk) { 'WOULD LIFT (predicted line, nothing runs, used < 90, used + look-ahead x burn < 95)' } else { 'stays held' })) }
-  if ($DryRun -and $rate) { Write-Host ("DRYRUN stop-line plan: used {0}% burn {1} points/min predicted(5 min) {2}% -> line {3}; effective max lanes {4}; watch loop {5}" -f $rate.p, $planBurn, [math]::Round([double]$rate.p + $planBurn * $LookAheadMin, 1), $(if ([double]$rate.p -ge $Cfg.StopAtPct -or ($planBurn -gt 0 -and [double]$rate.p + $planBurn * $LookAheadMin -ge $Cfg.StopAtPct)) { 'REACHED' } else { 'not reached' }), $effMax, $(if ([double]$rate.p -ge $Cfg.WatchStartPct -or ($planBurn -gt 0 -and [double]$rate.p + $planBurn * $Cfg.WatchPredictMin -ge $Cfg.WatchPredictPct)) { ('on (' + $Cfg.WatchSampleSec + ' s samples)') } else { 'off' })) }
+  if ($DryRun -and $rate -and $state.stopLine -and $state.stopLine.active) {
+    $anyLane = @(Get-LaneProcesses).Count
+    $liftOk = ([string]$state.stopLine.reason -match 'predicted' -and [long]$rate.pr -eq [long]$state.stopLine.resetEpoch -and [long]$state.liftedForWindow -ne [long]$rate.pr -and [double]$rate.p -lt $Cfg.LiftBelowPct -and ([double]$rate.p + $planBurn * $LookAheadMin) -lt $Cfg.StopAtPct -and -not $anyLane)
+    Write-Host ("DRYRUN stop-line lift check: reason={0}; used {1}% burn {2}/min -> {3} (assuming no running lanes)" -f $state.stopLine.reason, $rate.p, $planBurn, $(if ($liftOk) { 'WOULD LIFT once this window' } else { 'stays held' }))
+  }
+  if ($DryRun -and $rate) { Write-Host ("DRYRUN stop-line plan: used {0}% burn {1} points/min predicted({6} min) {2}% -> line {3}; effective max lanes {4}; watch loop {5}" -f $rate.p, $planBurn, [math]::Round([double]$rate.p + $planBurn * $LookAheadMin, 1), $(if ([double]$rate.p -ge $Cfg.StopAtPct -or ($planBurn -gt 0 -and [double]$rate.p + $planBurn * $LookAheadMin -ge $Cfg.StopAtPct)) { 'REACHED' } else { 'not reached' }), $effMax, $(if ([double]$rate.p -ge $Cfg.WatchStartPct -or ($planBurn -gt 0 -and [double]$rate.p + $planBurn * $Cfg.WatchPredictMin -ge $Cfg.WatchPredictPct)) { ('on (' + $Cfg.WatchSampleSec + ' s samples)') } else { 'off' }), $LookAheadMin) }
   $script:launched = 0; $script:launchedFix = 0; $lineParts = @()
   foreach ($l in @($lanes.Keys)) {
     $ls = $state.lanes[$l]; $wt = "$root\$l"

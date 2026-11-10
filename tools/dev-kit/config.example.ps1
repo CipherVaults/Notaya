@@ -49,3 +49,4 @@ $Cfg.HeartbeatLog = Join-Path $Cfg.KitDir 'heartbeat.log' # UTC tick summaries a
 $Cfg.LanesFile = Join-Path $Cfg.KitDir 'lanes.json' # Ordered array of lane definitions (copy lanes.example.json).
 $Cfg.LedgerDir = Join-Path $Cfg.Root 'ledger' # Local quota CSV; hourly publication requires EnableRepoActions.
 $Cfg.CargoTargetDir = Join-Path $Cfg.Root '_target' # Shared offline Cargo build cache granted to lanes.
+$Cfg.CheckCargoTargetDir = Join-Path $Cfg.Root '_target_checks' # Separate Cargo cache for heartbeat finish checks, as in the original loop.
