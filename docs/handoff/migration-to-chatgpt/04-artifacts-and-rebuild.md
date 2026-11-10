@@ -1,5 +1,7 @@
 # The artifacts, and how to keep them alive without Claude
 
+**Dated pause correction (2026-11-10, R3):** This file's earlier open-item, heartbeat and next-lane statements are historical. Read the [pause resume note](../2026-11-10-pause-resume-note.md) first: development, fixes, scripts and merges are paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. A55 still requires his handover acceptance. Scheduled-task removal is not verified.
+
 **Who and where:** Ahmed's side (`AE0101`). Written by Claude, cloud, 2026-11-10 about 04:20 UTC (system clock). Source: the artifacts themselves, read from their claude.ai links on 2026-11-10 (versions named below), and `tools/usage-ledger/`. Result state: *produced*; the dashboard build command **was run once** in the cloud container on 2026-11-10 (`python3 -I tools/usage-ledger/build_dashboard.py /tmp/dash-test.html` read 37 sessions and wrote a 192 KB page, after this migration's ledger row was added); the forecast-CSV command and everything on the PC were **not run**.
 
 **The core fact:** Claude artifacts are web pages hosted on claude.ai. Only a Claude session can *edit* them. They do not disappear when Claude stops, and the links stay readable by whoever has access, but they will go stale. So each one now has a **local home in the repository**, and from now on the **repository file is the source of truth**.

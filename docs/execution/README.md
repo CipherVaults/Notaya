@@ -14,6 +14,11 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 ## Reports
 
+### 2026-11-10, EX-2026-11-10-76: R3 pause and handoff
+
+- Report: [2026-11-10-r3-pause-handoff.md](2026-11-10-r3-pause-handoff.md); [session 56](../sessions.md#session-56).
+- Produced records only; local refs and historical observations, pending review, integration and acceptance.
+
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
 ### 2026-11-10 (Ahmed 05:09 UTC, relayed), EX-2026-11-10-74: PBS and migration catch-up

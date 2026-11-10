@@ -1,5 +1,7 @@
 # Claim board
 
+**Dated stop-point overlay (2026-11-10, R3):** All old ?in progress?, queued and next-lane claims below are historical, not current authority. Development lanes are paused; see the [pause resume inventory](2026-11-10-pause-resume-note.md) for each observed tip and state. N1, P1, P6/P6b, SF1?SF3, X1 and migration records are integrated on local main; N2/N2c, RV-N2, RV-P6b, P6c, K1/K1a/K1b and W are unmerged; local K1c has no observed remote tracking ref; S area 3 is blocked, N3/P7/P8 and X sweep not started. R3 records are produced on `AE0101/v1-6-r3`, baseline `a9e4a90`, pending coordinator review. Remote state, task removal and every historical row's current PR state were not checked. Never infer acceptance from this overlay.
+
 Who is doing what, and which IDs are taken. Rules are in [collaboration-guide.md](collaboration-guide.md), section 4. **The live board is GitHub** (open PRs and remote branches); this file is the durable copy on `main`. Each PR adds or updates its own row in its first commit. Times are UTC.
 
 **People**
