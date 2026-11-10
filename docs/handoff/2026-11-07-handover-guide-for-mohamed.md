@@ -1,5 +1,7 @@
 # Notaya handover guide for Mohamed (2026-11-07)
 
+**Dated pause correction (2026-11-10, R3):** Later heartbeat, queue and next-lane statements in this historical document are snapshots. Development is paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. Read the [pause resume note](2026-11-10-pause-resume-note.md) and [STATUS](../STATUS.md) before any action; no lane restart or merge without fresh authority. A55 transfer remains conditional on Ahmed's handover acceptance.
+
 **Dated R2 correction (2026-11-10):** earlier state and role lines below are historical snapshots. For the later 1.6 lane state, unresolved N2 test conflict and the conditional A55 handover, read [STATUS](../STATUS.md) Continuation and session 55. A merged lane is not partner acceptance.
 
 **Who and where:** written for **Mohamed Sayed (`AbyssWatcher2`)** and his Claude, from **Ahmed's side (`AE0101`)**, by a Claude cloud thread in Ahmed's Claude project "Notaya" (machine: cloud). First written 2026-11-07, about 22:30 UTC (container clock), from the repository at `main` = `987bfc5` (merge of PR #56); updated 2026-11-07 about 23:56 UTC from `main` = `67b27e4` plus the manual PR #63, and again 2026-11-08 about 00:35 UTC from `main` = `c2ead6e` (PR #68) plus PR #69 (see the change log). A published page with the same content (private to Ahmed unless he shares it): <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>. This Markdown copy exists because the repository is the only memory the two Claudes share.

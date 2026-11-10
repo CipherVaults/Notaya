@@ -1,5 +1,7 @@
 # Standing rules and the project-memory snapshot
 
+**Dated pause correction (2026-11-10, R3):** This file's earlier open-item, heartbeat and next-lane statements are historical. Read the [pause resume note](../2026-11-10-pause-resume-note.md) first: development, fixes, scripts and merges are paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. A55 still requires his handover acceptance. Scheduled-task removal is not verified.
+
 **Who and where:** Ahmed's side (`AE0101`). Compiled by Claude, cloud, 2026-11-10 about 04:10 UTC (system clock), from Claude's shared project memory (`team/silo`, read at the start of this thread), `CLAUDE.md`, `AGENTS.md` and `docs/plan/approval-and-amendments.md`. Result state: *produced*. **The repository records win** where this file differs; the dated words below were relayed by the previous coordinator and are cited in the amendments record.
 
 This file exists because project memory belonged to Claude's project and ChatGPT cannot read it. Part 1 groups the rules by topic. Part 2 is the memory index word for word, as it stood on 2026-11-10 03:33 UTC, so nothing is lost in the grouping. Part 3 holds the other memory notes that carry ids and links.
