@@ -6,6 +6,8 @@
 
 ## For Ahmed: what to paste where (plain words)
 
+**Shortcut (added 2026-11-10 about 04:30 UTC at your request):** the Notaya Notion hub now has a page **[Claude → Blue Handoff](https://app.notion.com/p/414bd7ade63b81bb92efcf9c2402d2b5)** in the same style as your other Blue handoffs. It holds the current checkpoint, the steps, and where everything lives (GitHub, Notion, your PC folders), plus a paste-ready thread prompt. You can tell Blue: "Go read the Claude Handoff in the Notaya Notion hub." The steps below remain the full route.
+
 1. **Make a ChatGPT Project called "Notaya"** (Projects in the ChatGPT app). Paste block **A** from [`02-start-prompts.md`](02-start-prompts.md) into the project's *Instructions*. Upload (or connect) these files so the coordinator can read them: this folder, `docs/STATUS.md`, `docs/plan/approval-and-amendments.md`, `docs/handoff/claims.md`, `AGENTS.md`, `CLAUDE.md`. If the GitHub connector is available in ChatGPT, connect `CipherVaults/Notaya` read-only first.
 2. **Open the first chat in that Project** and paste block **B** (the first message). It makes ChatGPT read the records, check the live repository and tell you in plain words where things stand, then stop and wait. It changes nothing.
 3. **Open the Codex desktop app on the Gaming-PC**, pointed at `D:\Notaya` (no apostrophe in the path), and paste block **C**. Codex already reads `AGENTS.md` by itself; block C only adds the migration facts.

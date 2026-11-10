@@ -119,6 +119,7 @@ All of them, with dates and Ahmed's words, are in [`03-standing-rules.md`](03-st
 
 ## 8. Notion
 
+- **The Claude → Blue Handoff page** (https://app.notion.com/p/414bd7ade63b81bb92efcf9c2402d2b5), created 2026-11-10 about 04:30 UTC at Ahmed's request (04:00:09 UTC), is the short entry point for the ChatGPT coordinator (an authorised exception to "only the board and the scratch page change"). It carries a dated checkpoint, the start steps, a where-everything-lives list and paste-ready prompts. **When the checkpoint ages, update that page as the first line of the Notion-to-update list**; the repo wins.
 - **Notaya hub** (private draft in Ahmed's Notion): `https://app.notion.com/p/411bd7ade63b813ea823db0ceb199248`. Version Feature Board `…/05924f0186514045b26b491649aadc34` (data source `9a0ace4e-5f46-4882-aefc-6fe115d4928b`; properties Feature, Version, Lifecycle, Size, Area, Outcome, Evidence / Source, Order, Effort, Plan ID, Gate, Depends on, Build state, Build note), Human Roadmap `…/411bd7ade63b817fbd74ec9b9f1f4a31`.
 - **The board may be updated** (cards in place, at each lane merge: Build state and Build note, PR link in Evidence / Source). **Nothing else in Notion may change** except the scratch page.
 - The **PFS hub** (`…The-Personal-Financial-System-36cbd7ade63b804f90c5c91ef0fad946`) is **read-only**. Never copy real values. Formula text is private and never committed.
