@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 54 | 2026-11-10 | Ahmed (`AE0101`) | cloud | [Migration handoff from Claude to ChatGPT Pro and Codex (EX-2026-11-10-73)](#session-54) |
 | 53 | 2026-11-09 | Ahmed (`AE0101`) | cloud + Ahmed's Gaming-PC | [The 1.6 build, second day: lanes C2 to E merged, security pass, speed stage 1, live AI check (EX-2026-11-09-66)](#session-53) |
 | 52 | 2026-11-09 | Ahmed (`AE0101`) | cloud | [Large databases: research and plan (EX-2026-11-09-65)](#session-52) |
 | 51 | 2026-11-08 | Ahmed (`AE0101`) | cloud | [README and About refresh for 1.5.1 (EX-2026-11-08-63)](#session-51) |
@@ -74,6 +75,103 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-54"></a>
+
+# 📘 Session: 2026-11-10 · Ahmed · cloud · Migration handoff from Claude to ChatGPT Pro and Codex
+
+**Who and where:** partner side: **Ahmed Emara (`AE0101`)**, his Claude account and project "Notaya". Machine: **cloud** (thread "Prepare full migration handoff to ChatGPT Pro"), with a read-only look at the Gaming-PC's `D:\Notaya-lanes\heartbeat` folder. No Mohamed-side work.
+
+**What it covers:** 2026-11-10 from about 03:33 UTC (Ahmed's message 03:32:47 UTC) to the PR. Block summary: [EX-2026-11-10-73](execution/2026-11-10-migration-to-chatgpt-handoff.md). Amendment [A55](plan/approval-and-amendments.md). Package: [`docs/handoff/migration-to-chatgpt/`](handoff/migration-to-chatgpt/README.md). Times are UTC from message stamps and the container clock.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+| Role / work block | Model or tool identity | Effort setting | Evidence basis and verification limit |
+|---|---|---|---|
+| This thread (reading the records, writing the package, records, PR) | `claude-sonnet-5-5` | not recorded | Token usage not read, to spare the last of the weekly quota; ledger row says "not recorded". |
+| Coordinator (relayed Ahmed's message and the standing rules from project memory) | not read | not read | Message only. |
+| Gaming-PC heartbeat (source of the live lane and meter lines) | PowerShell scripts, Codex `gpt-6.1-sol` xhigh lanes | xhigh | Read as log lines at about 03:31 UTC; not re-run. |
+| ChatGPT Pro coordinator and Codex desktop app (the new actors) | GPT 6.1 Sol and Terra | not yet set | Nothing of them has run; every statement about their features is a "[Check]". |
+
+**Record basis:** `origin/main` `f5d7a55`; `CLAUDE.md`, `AGENTS.md`, `docs/STATUS.md`, the amendments A37 to A54, the Codex briefing and briefs, the handover guide, the heartbeat folder and logs, the four artifacts' published HTML, and Claude's project memory (copied word for word into `03-standing-rules.md`).
+
+## 🕒 Time
+
+- 2026-11-10 about 03:33 UTC to about 05:00 UTC (container clock). Active working time: not measured.
+- Ahmed's message: 03:32:47 UTC (project chat, relayed). Reason for the summary: A37 item 5 (every session that changes the repository) and the size of the change (a change of direction).
+
+## 🎯 Session Goal
+
+Prepare a complete, self-contained migration so that ChatGPT Pro plus the Codex desktop app can take over as lead coordinator and reviewer: vision, people, the full PBS method, standing rules, where 1.6 stands, the PC automation, the artifacts, Notion, the notes, and how Mohamed continues on Claude Pro.
+
+## 🧭 Starting State
+
+Baseline `main` `f5d7a55`. 1.6 merged to PR #126, nothing accepted (baseline V1.5.1). Heartbeat at 03:31 UTC: Codex 5-hour 62% and weekly 56% used, Claude weekly 91% and 5-hour 16% used. Lanes pushed but unreviewed: N2 (`e11b115`), P6b (`31c2ce8`); P6 held; lane S "attention" (security area 3 blocked by OpenAI's cyber filter, needs Daybreak access). Claude's weekly quota resets 2026-11-13 02:00 UTC.
+
+## 🛠️ Actions Taken
+
+1. **03:33 to 03:50** read the records (STATUS structure, A50 to A54, Codex briefing, Codex-lead handoff, first-session prompt, handover guide headings) and the live heartbeat folder; found that most of the method already lives in the repository and that only Claude's project files, memory, artifacts and the PC scripts were outside it.
+2. **03:50 to 04:10** read the four artifacts' HTML by their links (roadmap, handover guide, ledger dashboard, FFmpeg lessons) and staged 13 PC scripts; checked them and the project notes for secrets and private values by pattern search; decided what is safe for Git and what stays private.
+3. **04:10 to 04:45** wrote the guide (01), start prompts (02), standing rules with the memory snapshot (03), artifacts (04) and PC automation (05), then the README with Ahmed's "what to paste where".
+4. **04:45 to about 05:00** records: A55, EX-2026-11-10-73, this entry, claims row, STATUS dated line, dated notes in `AGENTS.md` and `CLAUDE.md`, handover guide section 18 and change log, ledger row; PR; copy of the private notes to Ahmed's PC.
+
+## 🧠 Key Insights
+
+- Most of the project's memory was already in the repository because Ahmed's PBS made the repo the shared memory; the migration risk was in what lived *outside* it: Claude's memory, project files, hosted artifacts, and PC scripts that call Claude.
+- The heartbeat still depends on Claude in two places (the Codex launcher path inside the Claude app's package folder, and a Claude quota probe). Both are listed with fixes.
+- Independence loses a layer when coordinator and builder are the same vendor; Mohamed's Claude Pro is the natural non-OpenAI reviewer.
+
+## 📌 Decisions Made
+
+| Decision | Status | Who |
+|---|---|---|
+| Prepare the migration package as a repo doc set under `docs/handoff/migration-to-chatgpt/` | **Confirmed** (Ahmed's request 03:32:47 UTC; the form was the coordinator's proposal) | Ahmed (request), Claude (form) |
+| The role change takes effect on Ahmed's "handover accepted" in ChatGPT | **Provisional** (Claude's reading of Ahmed's request; Ahmed may correct) | Claude, for Ahmed |
+| Private Notion survey, formulas, parity and dashboards studies stay out of Git | **Confirmed** by standing rules (formula text private, PFS values never copied) | Ahmed (earlier rules) |
+| Switch off the heartbeat's Claude probe | **Proposed**, Q67 | Claude |
+| Mohamed as second reviewer for risky diffs | **Proposed**, needs Mohamed | Claude |
+
+## ⚠️ Difficulties / Friction
+
+Claude's quota is nearly spent, so reading was limited to what the package needed; the N2 test status is contradictory between the heartbeat and the previous coordinator; no way to try anything in ChatGPT or Codex from here.
+
+## 🔧 Adjustments Made
+
+Shifted from "copy every project note into the repo" to "copy only what has no private values; keep the rest local". Shifted from "republish the handover artifact" to "repo Markdown wins; the artifact copy is stale and says so".
+
+## ❌ Mistakes / Risks Noted
+
+- Risk: the package states things about ChatGPT and Codex that may not hold; each is marked "[Check]".
+- Risk: live lane facts age quickly; the package tells the reader to trust `git fetch` and the heartbeat log over it.
+- Risk: the scripts in `tools/heartbeat/` contain Ahmed's Windows user name; the repo is private, and making it public needs both partners (re-check before any public step).
+
+## 📍 Current Position
+
+- **Before:** coordination by Claude; memory, artifacts and PC scripts outside the repository.
+- **After:** a complete package in the repository and a draft PR; nothing accepted; Claude still coordinator of record.
+- **Standing:** ready for Ahmed to paste blocks A and B into ChatGPT and say "handover accepted" when satisfied.
+
+## 🔜 Next Steps
+
+Ahmed pastes A, B, C (and D to Mohamed if needed); the ChatGPT coordinator checks N2's tests on `e11b115`, reads and merges N2 and P6b, queues N3, P7, P8, S areas 3 and 4, WP-18, and the 250-check pass. Notion to update: a one-line note on the board's hub checkpoint ("lead coordinator moved to ChatGPT, see A55"); not done by this thread.
+
+## ❓ Open Questions
+
+Q67 (switch off the Claude probe; Ahmed), Daybreak access (Ahmed with OpenAI), second reviewer (Mohamed, via Ahmed). Nothing blocks the package itself.
+
+## 🧾 Session Outcome
+
+Produced: the package, A55, EX-73, this entry, a draft PR, copies of private notes on Ahmed's PC. Not run: anything in ChatGPT or Codex, the PC scripts, the rebuild commands. Not accepted.
+
+## 🔍 Confidence Level
+
+High that the package matches the repository records and the heartbeat state at 03:31 UTC. Qualified for every claim about ChatGPT and Codex features and for the Daybreak details (relayed, not verified). Unknown: whether N2's tests pass on `e11b115`.
+
+## 📎 Where things live
+
+`docs/handoff/migration-to-chatgpt/`, `tools/heartbeat/`, `docs/artifacts/snapshots-2026-11-10/`, `docs/plan/notes-archive/`, [EX-2026-11-10-73](execution/2026-11-10-migration-to-chatgpt-handoff.md), [A55](plan/approval-and-amendments.md), the claims row, the STATUS dated line. Private notes on Ahmed's PC: `D:\Claude's Projects\Notaya-private-notes\`.
+
 ---
 
 <a id="session-53"></a>

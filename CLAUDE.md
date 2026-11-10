@@ -2,6 +2,8 @@
 
 These are this repository's working rules for Claude Code. This file doesn't hold the current task or status, and it doesn't grant permission. Current state and authority are in `docs/STATUS.md`.
 
+**Dated note (2026-11-10, Ahmed's side, [A55](docs/plan/approval-and-amendments.md), [EX-2026-11-10-73](docs/execution/2026-11-10-migration-to-chatgpt-handoff.md)):** Ahmed moved the lead coordinator and reviewer role from Claude to ChatGPT Pro plus the Codex desktop app (it takes effect on his "handover accepted" in ChatGPT). Wherever this file or `AGENTS.md` says "Claude" in the coordinator's place (the mother thread, merges, records, review), read it as the ChatGPT coordinator from then on; the rules, PBS and the roles of Codex do not change. Read [`docs/handoff/migration-to-chatgpt/`](docs/handoff/migration-to-chatgpt/README.md) first. Mohamed's side is unchanged (his Claude Pro; Mohamed merges).
+
 ## At the start of every session
 
 1. Read the owner's latest instruction.

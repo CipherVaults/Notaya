@@ -1,0 +1,535 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+
+<title>Notaya Handover Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,650&display=swap">
+<style>
+/* Layout: a calm reference document. Sticky contents rail on wide screens, one column on phones.
+   Three tags carry the key message: shared rule / Ahmed's side (Mohamed has not agreed) / needs both. */
+:root{
+  --bg:#f6f7f6; --surface:#ffffff; --fg:#1d2624; --muted:#5a6764; --line:#dbe1df;
+  --accent:#0f6b63; --accent-soft:#e0f0ed;
+  --ahmed:#8a5a00; --ahmed-soft:#fbf0d6;
+  --both:#6a3d8f; --both-soft:#efe5f6;
+  --good:#1f7a43; --warn:#a36200; --idle:#6b7774;
+  --code-bg:#eef2f1;
+  --serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#121817; --surface:#1a2220; --fg:#e4ebe9; --muted:#9aa8a5; --line:#2c3836;
+  --accent:#4fc2b5; --accent-soft:#17312e;
+  --ahmed:#f0b84a; --ahmed-soft:#33290f;
+  --both:#c79bec; --both-soft:#2b1f38;
+  --good:#58c37e; --warn:#e0a13a; --idle:#8a9895;
+  --code-bg:#202a28; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#121817; --surface:#1a2220; --fg:#e4ebe9; --muted:#9aa8a5; --line:#2c3836;
+  --accent:#4fc2b5; --accent-soft:#17312e;
+  --ahmed:#f0b84a; --ahmed-soft:#33290f;
+  --both:#c79bec; --both-soft:#2b1f38;
+  --good:#58c37e; --warn:#e0a13a; --idle:#8a9895;
+  --code-bg:#202a28; color-scheme:dark; }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 var(--sans);margin:0;
+  padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;padding-block:28px 72px}
+nav.toc{position:sticky;top:20px;align-self:start;font-size:14px;max-height:calc(100vh - 40px);overflow:auto}
+nav.toc b{display:block;font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+nav.toc a{display:block;color:var(--fg);text-decoration:none;padding:5px 10px;border-left:2px solid var(--line)}
+nav.toc a:hover{border-left-color:var(--accent);color:var(--accent)}
+main{min-width:0}
+h1{font:650 clamp(30px,5vw,44px)/1.1 var(--serif);margin:0 0 12px;text-wrap:balance}
+h2{font:650 26px/1.2 var(--serif);margin:0 0 12px;text-wrap:balance}
+h3{font:600 17px/1.3 var(--sans);margin:22px 0 6px}
+p{margin:0 0 12px;max-width:68ch}
+section{padding-top:44px;scroll-margin-top:8px}
+.lede{font-size:18px;color:var(--muted);max-width:62ch}
+.meta{font:400 13px/1.5 var(--mono);color:var(--muted);margin:14px 0 22px}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+ul,ol{padding-left:22px;margin:0 0 12px;max-width:72ch}
+li{margin-bottom:5px}
+.tag{display:inline-block;font:500 11.5px var(--mono);letter-spacing:.03em;padding:2px 8px;border-radius:99px;white-space:nowrap;vertical-align:1px}
+.t-shared{background:var(--accent-soft);color:var(--accent)}
+.t-ahmed{background:var(--ahmed-soft);color:var(--ahmed)}
+.t-both{background:var(--both-soft);color:var(--both)}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:18px 0}
+.legend div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:14.5px}
+.legend .tag{margin-bottom:6px}
+.callout{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:14px 16px;margin:16px 0;max-width:76ch}
+.callout.ahmed{border-left-color:var(--ahmed)}
+.callout.both{border-left-color:var(--both)}
+.callout p:last-child{margin-bottom:0}
+.tblwrap{overflow-x:auto;margin:12px 0 18px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font:500 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--code-bg)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:500}
+.prompt{position:relative;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px 14px;margin:12px 0;font:400 13.5px/1.55 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+button{font:500 13px var(--sans);background:var(--accent);color:var(--bg);border:0;border-radius:6px;padding:7px 14px;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button.ghost[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.st{white-space:nowrap}
+.anat{font:500 14px/1.7 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;white-space:nowrap}
+.anat span{padding:1px 4px;border-radius:3px}
+.a1{background:var(--accent-soft)} .a2{background:var(--ahmed-soft)} .a3{background:var(--both-soft)} .a4{background:var(--code-bg)}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding-left:38px;margin-bottom:10px}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:500 13px/26px var(--mono);text-align:center}
+.checks li{list-style:none;margin-left:-22px}
+.checks li::before{content:"☐ ";color:var(--muted)}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted);max-width:76ch}
+@media (max-width:860px){
+  .wrap{grid-template-columns:minmax(0,1fr);gap:0}
+  nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  nav.toc b{width:100%}
+  nav.toc a{border:1px solid var(--line);border-radius:99px;padding:3px 12px}
+}
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <b>Contents</b>
+  <a href="#short">The short version</a>
+  <a href="#start">Start a session</a>
+  <a href="#authority">Who can decide what</a>
+  <a href="#pbs">PBS, the method</a>
+  <a href="#who">Who wrote what</a>
+  <a href="#records">Where records live</a>
+  <a href="#ledger">Usage ledger</a>
+  <a href="#model">How Ahmed's side works</a>
+  <a href="#phases">Three phases</a>
+  <a href="#aicli">AI CLI foundation</a>
+  <a href="#features">Feature decisions</a>
+  <a href="#open">Still open</a>
+  <a href="#safety">Rules for both sides</a>
+  <a href="#handback">Stopping and picking up</a>
+  <a href="#sources">Sources and limits</a>
+  <a href="#checkpoint">Checkpoint 00:26 UTC</a>
+  <a href="#build16">1.6 build status</a>
+  <a href="#changelog">Change log</a>
+</nav>
+
+<main>
+<header>
+  <h1>Notaya handover guide</h1>
+  <p class="lede">Everything Ahmed's side has set up, studied and decided so far, written so that Mohamed and his Claude can carry the same methods on their own machine when Ahmed's cycle ends.</p>
+  <p class="meta">Repository records read at <code>main</code> = <code>c2ead6e</code> (PR #68) plus PR #69 · first written 2026-11-07, about 22:30 UTC, updated 2026-11-08 about 00:35 UTC (system clock) · Ahmed's side (AE0101), cloud thread · result state: produced, not yet read by Mohamed, not accepted</p>
+
+  <div class="callout"><p><b>Living document</b> (Ahmed, 2026-11-07 22:33:37 UTC, rule A39). This guide is updated at every milestone or decision on Ahmed's side, here and in the copy in the repository (<code>docs/handoff/2026-11-07-handover-guide-for-mohamed.md</code>), so that when Ahmed's cycle ends Mohamed has something solid with few or no gaps. <b>Last updated: 2026-11-09 about 12:00 UTC</b> (rebuilt from the repository copy: new section "The 1.6 build", including the large-database speed work A48, the full security pass and whole-app sweep A49). Earlier text: 2026-11-08 00:35 UTC (the checkpoint after Phase 2: Notion rules, quota rules, the plan, the 1.6 go; PR #69, section "Checkpoint"; before that the Notaya Manual, PR #63, and the Phase 1 decisions, PR #61). See the <a href="#changelog">change log</a>.</p></div>
+
+  <div class="legend" role="list" aria-label="How items are marked">
+    <div role="listitem"><span class="tag t-shared">Shared rule</span><br>Already in the repository for both sides (rules that existed before 2026-11-07, or that do not depend on who you are).</div>
+    <div role="listitem"><span class="tag t-ahmed">Ahmed's side</span><br>Decided by Ahmed for his own setup. <b>Mohamed has not agreed to these yet.</b> They are offered, not imposed.</div>
+    <div role="listitem"><span class="tag t-both">Needs both</span><br>Cannot happen unless Ahmed and Mohamed each say yes in their own words.</div>
+  </div>
+</header>
+
+<section id="short">
+  <h2>🧭 The short version</h2>
+  <p>Notaya now has two partners who work independently on the same repository: Mohamed Sayed (<code>AbyssWatcher2</code>, owner of the GitHub account) and Ahmed Emara (<code>AE0101</code>). Each has their own Claude. The only memory the two Claudes share is the repository, so anything that matters is written into a committed file.</p>
+  <ul>
+    <li><b>The method is PBS</b> (the AI Project Bootstrap System). On Ahmed's side it governs every task and every thread, with thorough records. <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>Every record says whose side and which machine.</b> Two people now write into the same records, so a reader must be able to tell whose decision and whose computer a line came from (rule A38). <span class="tag t-ahmed">Ahmed's side</span>, offered to Mohamed</li>
+    <li><b>A usage ledger</b> tracks how much Claude and Codex work each session used. It lives in <code>docs/ledger/</code>. <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>Order of work:</b> talk through every feature (<b>done on 2026-11-07, except the AI CLI action list</b>), then plan and stage across versions (<b>may start now</b>, Ahmed 23:39:31 UTC), then build (only on Ahmed's go per feature). Before discussing a feature, check what Notaya already has. Nothing is built yet. <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>The AI CLI is the foundation</b> of the next work: Claude or Codex will drive Notaya from outside. Every new feature gets named AI actions from its first design. Security is designed in from the start: sealed in, switch only in Settings, proven patterns, no home-made security. <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>Two design rules for every feature:</b> no trademarked or copyrighted names inside Notaya (own names, such as "Notebook mode" and "Default style"), and every menu or strip is customizable in Settings (A42). <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>Last accepted release:</b> V1.5.1, accepted by Mohamed on 2026-11-05 11:08:39 UTC. Nothing newer is accepted. <span class="tag t-shared">Shared rule</span></li>
+    <li><b>Making the repository public and adding a licence need both partners.</b> GitHub repository settings stay Mohamed's click. <span class="tag t-both">Needs both</span></li>
+  </ul>
+  <div class="callout">
+    <p><b>If a record and this page disagree, the record wins.</b> This page is a reading aid made on 2026-11-07. The authority is in <code>docs/plan/approval-and-amendments.md</code> and <code>docs/STATUS.md</code>.</p>
+  </div>
+</section>
+
+<section id="start">
+  <h2>🚀 Start a session on your machine</h2>
+  <p>Open Claude Code in your copy of the repository and paste the prompt below as the first message. It follows the start steps in <code>CLAUDE.md</code> and section 12 of the collaboration guide, with the new records rules added.</p>
+  <div class="prompt" id="starter">You are Claude Code working on Notaya for Mohamed Sayed (GitHub AbyssWatcher2), a partner. Ahmed Emara (AE0101) is the other partner and works independently with his own Claude.
+
+Read, in full and in this order: CLAUDE.md, docs/STATUS.md, docs/plan/approval-and-amendments.md (especially A34, A37, A38 and the dated notes after the table), docs/handoff/collaboration-guide.md, docs/handoff/claims.md, the newest resume note in docs/handoff/, the "Sessions at a glance" index and the newest entry of docs/sessions.md, and docs/ledger/README.md.
+
+Then run: git fetch --all --prune, git status, git log --oneline -5, and list the open pull requests.
+
+Tell me in plain words: the baseline commit, what is in flight and who owns it, what Ahmed's side has decided that I have not yet agreed to, what is free, and what you suggest. Do not change anything until I say what to work on, and claim the work (guide, section 4) before you start.</div>
+  <button type="button" id="copyBtn">Copy the prompt</button> <span id="copyNote" role="status" style="font-size:13px;color:var(--muted);margin-left:8px"></span>
+  <h3>Reading order, if you read it yourself</h3>
+  <ol class="steps">
+    <li><code>CLAUDE.md</code>: the working rules for any Claude in this repository.</li>
+    <li><code>docs/STATUS.md</code>: what is accepted and exactly where work resumes ("Exact next permitted action").</li>
+    <li><code>docs/plan/approval-and-amendments.md</code>: who said what, with exact times; amendments A1 to A43.</li>
+    <li><code>docs/handoff/collaboration-guide.md</code> and <code>claims.md</code>: how two people share one repository, and who has claimed what.</li>
+    <li>The newest entries of <code>docs/sessions.md</code> (entries 41 and 43, 2026-11-07: what each feature means and why) and <code>docs/ledger/README.md</code>.</li>
+  </ol>
+</section>
+
+<section id="authority">
+  <h2>🔑 Who can decide what</h2>
+  <p>Three things stay apart in every Notaya record: <b>permission</b> (only a partner's own words), <b>observation</b> (what a check showed, on which exact source) and <b>acceptance</b> (a partner's decision; a merge, a release or a screenshot is never acceptance).</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Question</th><th>Answer</th><th>Marking</th></tr></thead>
+    <tbody>
+      <tr><td>Whose words authorize work?</td><td>Each partner's own words authorize the work of <b>their own</b> Claude and Codex setup. Ahmed's govern Ahmed's side; Mohamed's govern Mohamed's side (Ahmed, 2026-11-07 20:23:20 UTC, A37 item 1).</td><td><span class="tag t-ahmed">Ahmed's side</span></td></tr>
+      <tr><td>Can a Claude merge or release?</td><td><b>Ahmed's side:</b> his coordinator merges (with "Create a merge commit") once the work is checked, and publishes a full release when it judges it ready. Ahmed's OK is enough and needs no review by Mohamed. <b>Mohamed's side:</b> unchanged. A Claude never merges or releases by itself; Mohamed merges, releases and accepts.</td><td><span class="tag t-ahmed">Ahmed's side</span></td></tr>
+      <tr><td>Who accepts a result?</td><td>A partner's own word, on both sides. A merge or release by a coordinator is never an acceptance.</td><td><span class="tag t-shared">Shared rule</span></td></tr>
+      <tr><td>Make the repository public, or add a licence</td><td>Both partners must agree, each in their own words, recorded. The licence for Notaya itself is still not chosen.</td><td><span class="tag t-both">Needs both</span></td></tr>
+      <tr><td>GitHub repository settings (invites, merge types, rulesets, visibility)</td><td>Only the owner of the GitHub account can click them: Mohamed.</td><td><span class="tag t-shared">Shared rule</span></td></tr>
+      <tr><td>The two partners give conflicting instructions about the same thing</td><td>The Claude that sees it stops and tells both. The later message does not win between two people.</td><td><span class="tag t-shared">Shared rule</span></td></tr>
+      <tr><td>Still asks first, on both sides</td><td>Installing tools or dependencies, deleting files, changing security behavior, force-push, deleting branches. On Ahmed's side the coordinator may commit, push and merge without asking each time; the others still need Ahmed's own words.</td><td><span class="tag t-shared">Shared rule</span></td></tr>
+    </tbody></table></div>
+  <div class="callout both">
+    <p><b>For Mohamed to confirm.</b> Amendment A34 (how two partners and two Claudes work together) has been "proposed" since 2026-10-29. Your confirmation of Claude's reading was never recorded (STATUS question 27). Ahmed's A37 settles how the two sides' authority fits, but only for his side. Please confirm or change the A34 reading, and say whether you want any of Ahmed's rules on your side.</p>
+  </div>
+</section>
+
+<section id="pbs">
+  <h2>📐 PBS, the method</h2>
+  <p>PBS is the AI Project Bootstrap System. You adopted its smallest useful form for Notaya yourself on 2026-10-27 19:08:33 UTC (A29). On 2026-11-07 21:56:54 UTC Ahmed made it the method for <b>all</b> Notaya development on his side, "across the entire development of Notaya, not just this task". The skill is in <code>.claude/skills/pbs-start-resume-handoff/</code> (method version 1.1). <span class="tag t-ahmed">Ahmed's side</span></p>
+  <h3>The work cycle for every task</h3>
+  <ol class="steps">
+    <li><b>Start.</b> Read the partner's latest instruction, STATUS and the amendments record. Look at the live repository. Take the baseline commit from <code>git log</code>.</li>
+    <li><b>State the task.</b> Baseline commit, the partner's message with its UTC time, exact scope and write area, what will be returned, the stop point. If one is missing, ask or take the narrowest reading and say which.</li>
+    <li><b>Keep three things apart:</b> permission, observation, acceptance (above).</li>
+    <li><b>Name the result state</b> of what you hand back: <i>produced</i> (it exists), <i>verified</i> (named checks passed on this exact source), <i>integrated</i> (merged into <code>main</code>), <i>accepted</i> (a partner said so). Most results stop at verified.</li>
+    <li><b>Stop at the approved endpoint.</b> "Standing by" is not completion. Say what is done, what is unverified and what you wait for.</li>
+    <li><b>Record by size.</b> Small: the PR description. Normal: an Execution Summary plus its index row, the changed lines of STATUS. Big: the 12-section Execution Summary and a Session Summary entry.</li>
+  </ol>
+  <h3>What Ahmed added on top</h3>
+  <ul>
+    <li><b>Thorough, mandatory documentation.</b> Records are read in full before acting, never skimmed. A model does not know the project's context unless it has read it (Ahmed, 20:12:10). <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>Every session that changes the repository, records a decision or ends a work block gets a Session Summary entry in the full 13-section form</b>, with the "Models, Effort, Roles and Provenance" block. No exemption for small tasks on his side. <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>One session file.</b> <code>docs/sessions.md</code> holds all entries, newest on top, oldest at the bottom, "even if it takes thousands of lines". Older entries are never rewritten; a correction is a dated note. <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>This guide is a living document.</b> It is updated at every milestone or decision, in both copies, with a change log (A39, Ahmed 22:33:37). <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>The Notion hub</b> (roadmap and feature board) and the PBS records are updated at each milestone, written so Mohamed can see what was done. The hub is private in Ahmed's Notion; the repository records win where they differ. <span class="tag t-ahmed">Ahmed's side</span></li>
+  </ul>
+</section>
+
+<section id="who">
+  <h2>🏷️ Who wrote what: partner and machine on every record</h2>
+  <p>Ahmed's reason (22:15:49 UTC): for the first time two different people share the same PBS, so it must be clear which developer did the work and from which machine each decision summary comes, "because naturally you will find different conversation, different decision, different thought passes". He also wants titles that are easy to scan, "but not to be flooded with everything". This is rule <b>A38</b>. <span class="tag t-ahmed">Ahmed's side</span>, offered to Mohamed's side</p>
+  <h3>Anatomy of a session title</h3>
+  <div class="anat"><span class="a4"># 📘 Session:</span> <span class="a1">2026-11-07</span> · <span class="a2">Ahmed</span> · <span class="a3">cloud + Gaming-PC</span> · <span class="a4">First feature discussion</span></div>
+  <p style="font-size:13.5px;color:var(--muted);margin-top:8px">date (UTC) · partner · machine · a few words of topic</p>
+  <h3>The five parts of the rule</h3>
+  <ol class="steps">
+    <li><b>Every record names the partner's side</b> (with GitHub login: Ahmed <code>AE0101</code>, Mohamed <code>AbyssWatcher2</code>) <b>and the machine</b> (cloud, Ahmed's <code>Gaming-PC</code>, Mohamed's PC, or a Remote Control session on a named PC). If unknown, write "not recorded". This covers session entries, authority rows, Execution Summaries, ledger rows and claims.</li>
+    <li><b>Short titles,</b> then a <b>Who and where</b> line under the title (partner and login, Claude account, machines, time range, records editor).</li>
+    <li><b>An index at the top of <code>sessions.md</code></b>, "Sessions at a glance", lists every entry with number, date, partner, machine and topic. Each entry has a stable anchor <code>session-NN</code> (the oldest is 01; the newest today is 43).</li>
+    <li><b>Older records are not rewritten.</b> Before 2026-11-07, "the owner" in the authority table means <b>Mohamed</b>. Execution reports before EX-2026-11-07-44 are Mohamed's side. The index, dated notes and new ledger columns say the rest.</li>
+    <li><b>Commit messages on Ahmed's side end with</b> <code>Side: Ahmed (AE0101) · Machine: &lt;machine&gt;</code>, because commits from cloud threads are authored "Claude" and say nothing about the side. Commit messages are also written as clear points a non-developer can follow.</li>
+  </ol>
+  <div class="callout ahmed">
+    <p><b>What this means for you.</b> If your Claude writes in these records, it should state that it is Mohamed's side (<code>AbyssWatcher2</code>) and which of your machines it ran on, in the same short-title form. That keeps the shared history readable by both of you. Your Claude keeps its own rules until you say otherwise.</p>
+  </div>
+  <h3>Reading older records correctly</h3>
+  <ul>
+    <li>Entries 1 to 37 in the index are Mohamed's side. Entry 38 (the hand-off to Ahmed's PC) was written by Mohamed's Claude account working for Ahmed.</li>
+    <li>Ahmed's voice-to-text sometimes mis-hears words. The records read "Hamatai" as Mohamed, "codecs" as Codex, and "PPS" or "BBS" as PBS.</li>
+  </ul>
+</section>
+
+<section id="records">
+  <h2>🗂️ Where each record lives</h2>
+  <p>Repository files own the facts. Project memory, chats and Notion are pointers only.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Question</th><th>Record</th></tr></thead>
+    <tbody>
+      <tr><td>What is accepted, and where does work resume?</td><td><code>docs/STATUS.md</code> ("Current state" holds only what a partner accepted; unaccepted work is under "Continuation")</td></tr>
+      <tr><td>What is authorized, who said it, when?</td><td><code>docs/plan/approval-and-amendments.md</code> (rows with exact UTC times; amendments A1 to A43)</td></tr>
+      <tr><td>What happened, in order, and why did choices change?</td><td><code>docs/sessions.md</code> (one file, newest on top, with the "Sessions at a glance" index)</td></tr>
+      <tr><td>What did a piece of work do, and what was checked?</td><td><code>docs/execution/</code> and its index <code>docs/execution/README.md</code> (latest in this guide's repository copy is EX-2026-11-07-48)</td></tr>
+      <tr><td>Which criteria are met, and who accepted?</td><td><code>docs/acceptance.md</code></td></tr>
+      <tr><td>How much Claude and Codex usage did a session take?</td><td><code>docs/ledger/</code> (<code>README.md</code>, <code>usage-ledger.md</code> and three CSV files)</td></tr>
+      <tr><td>Who is doing what, and which IDs are taken?</td><td><code>docs/handoff/claims.md</code> (the live board is GitHub: open PRs and branches)</td></tr>
+      <tr><td>How to pause and pick up work</td><td><code>docs/handoff/</code> resume notes and <code>collaboration-guide.md</code></td></tr>
+      <tr><td>What went wrong or nearly did</td><td><code>docs/failure-intelligence.md</code> (FI-01 to FI-07)</td></tr>
+      <tr><td>What does Notaya promise about security?</td><td><code>docs/security-design.md</code> (read before touching crypto, storage, IPC commands, CSP, clipboard or auto-lock)</td></tr>
+      <tr><td>What does Notaya already do?</td><td>The code and the full inventory <code>notes/2026-11-07-notaya-full-feature-inventory.md</code> in Ahmed's project files (it is not in the repository)</td></tr>
+      <tr><td>What does Notaya do today, in plain words?</td><td><b>The Notaya Manual</b>, first edition for 1.5.1 (2026-11-07): <code>docs/manual/notaya-manual-first-edition.html</code> and its published page <a href="https://claude.ai/artifact/K6HUfVdCJbuSFNCkiiCu3K">Notaya Manual</a> (private to Ahmed unless he shares it). It also lists the known limits and a draft "Coming soon". Each release gets a new edition (<code>docs/manual/README.md</code>). The repository records win where they differ.</td></tr>
+      <tr><td>The original plan</td><td><code>docs/plan/approved-plan-2026-10-22.md</code>. <b>Never edit it</b>; record changes as amendments.</td></tr>
+    </tbody></table></div>
+  <p>Take the next free <code>EX-</code> and <code>A</code> numbers only after checking <code>origin/main</code> and every open branch (commands in guide section 4). Taken when last updated: A40 to A43, EX-2026-11-07-48; the version-planning thread reserved EX-2026-11-07-50 and session 44. Read the "next free" line of <code>claims.md</code> before using a number.</p>
+</section>
+
+<section id="ledger">
+  <h2>📊 The usage ledger</h2>
+  <p>Ahmed asked for it on 2026-11-07 at 20:12:10 UTC because "we need to analyze how we are even using the data, and tokens going back and forth from where, so we can analyze our work to predict our pacing". It belongs to Notaya only; nothing from his FFmpeg Encoder project's ledger is copied or shared. <span class="tag t-ahmed">Ahmed's side</span></p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>File</th><th>One row per</th></tr></thead>
+    <tbody>
+      <tr><td><code>docs/ledger/usage-ledger.md</code></td><td>A dated block per session or day, newest on top, explaining the numbers in plain words</td></tr>
+      <tr><td><code>claude-sessions.csv</code></td><td>Claude session or task (columns include <code>partner</code> and <code>where</code>, so Ahmed's and Mohamed's rows stay apart)</td></tr>
+      <tr><td><code>codex-runs.csv</code></td><td>Codex run, with the quota read before and after</td></tr>
+      <tr><td><code>quota-readings.csv</code></td><td>A reading of a usage limit at a known time (5-hour, weekly, credit)</td></tr>
+    </tbody></table></div>
+  <h3>The first readings (2026-11-07, Ahmed's side)</h3>
+  <ul>
+    <li>Eight cloud sessions measured: <b>336,102 output tokens</b> and about <b>10.67 million weighted tokens</b>, reported cost about USD 18.41 for seven of them.</li>
+    <li>The two Gaming-PC sessions added about 1.06 million weighted tokens.</li>
+    <li>Most of the volume is cache reads (a session re-reading a large context), not new writing.</li>
+    <li>"Weighted" is a yardstick, not a bill: input 1, cache write 1.25, cache read 0.1, output 5.</li>
+    <li>Codex: no run yet.</li>
+  </ul>
+  <h3>Refresh it at every session stop</h3>
+  <ol class="steps">
+    <li>Cloud sessions: copy the usage block from the session record into <code>claude-sessions.csv</code> with the snapshot time.</li>
+    <li>Sessions on a PC: run <code>tools/usage-ledger/scan_claude_transcript.py</code> on that session's transcript, on that PC, and add its CSV line.</li>
+    <li>Codex: one row per run with the tokens it reports and the 5-hour and weekly quota before and after.</li>
+    <li>Add a quota reading, and a dated block at the top of <code>usage-ledger.md</code>. Quote the headline in the session summary.</li>
+  </ol>
+  <div class="callout ahmed">
+    <p><b>Limits to know.</b> Quotas are account-wide, so the ledger cannot separate Notaya's share inside one reading. <b>Your usage runs on your own account and is not visible from Ahmed's side</b>: if you want it tracked, your Claude adds its own rows (<code>partner</code> = <code>Mohamed (AbyssWatcher2)</code>). No pacing cap is set: Ahmed said to watch the 5-hour and weekly limits of Claude and Codex so work is not cut off mid-task (STATUS question 28). The FFmpeg project's 80% and 90% ceilings are not adopted here.</p>
+  </div>
+  <p>A ledger page exists (private to Ahmed, rebuilt from the files): <a href="https://claude.ai/artifact/SS1aMUgppEXH1gTYKMPjSY">Notaya usage ledger</a>. The files above are the source; the page is a view of them.</p>
+</section>
+
+<section id="model">
+  <h2>🧑‍🤝‍🧑 How Ahmed's side works</h2>
+  <p>This is Ahmed's operating model (A37). Use any of it that suits you. <span class="tag t-ahmed">Ahmed's side</span></p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Role</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Ahmed</td><td>Director and partner. Decides the product and gives the go per feature. Explanations to him are in plain words, with a short summary when something finishes, and open questions gathered into one numbered list. Unrequested improvements are welcome but must be listed clearly as additions.</td></tr>
+      <tr><td>Claude coordinator ("mother thread")</td><td>Leads and plans. Chooses model and effort for each task, starts and steers threads and Codex, inspects every Codex diff for Ahmed's vision, coherence and correctness, runs the security review, keeps the records and the ledger, and commits, pushes and merges.</td></tr>
+      <tr><td>Claude threads</td><td>Cloud (or Remote Control on a PC) sessions for one job each: reading, studying, records, planning. Opus 5.5 or Sonnet 5.5 at high effort. Used first while the 2026-11-07 cloud credit lasts.</td></tr>
+      <tr><td>Codex (<code>gpt-6.1-sol</code>, reasoning <code>xhigh</code>)</td><td>The developer hand that writes the bulk of the code and tests from a bounded brief. It does not merge, release or change records of authority. Its diff is reviewed by Claude, because the agent that wrote a diff is never its only reviewer.</td></tr>
+    </tbody></table></div>
+  <div class="callout ahmed"><p><b>Choosing models</b> (Ahmed 22:58:04; a reading by the coordinator, not yet accepted by him, A43). Model and effort are chosen per task from his model-economics artifact: Sonnet 5.5 high for reading and records, Opus 5.5 high for discussion and design, Codex <code>gpt-6.1-sol</code> xhigh for building, one Opus xhigh reviewer per substantive diff; never Opus max, Sonnet xhigh, Fable 5.1 or review panels. The coordinator's own chat is capped at low effort by the platform, so heavy work runs in threads. The cloud credit (USD 100) expires 2026-11-08 19:09 UTC; afterwards cloud work counts against the Pro limits. <span class="tag t-ahmed">Ahmed's side</span></p></div>
+  <h3>Where things run</h3>
+  <ul>
+    <li>The coordinator decides PC or cloud for each task. Cloud sessions cannot run the Windows exe; checks there are <code>tsc</code>, <code>npm run build</code>, <code>npm audit</code> and Rust tests under Wine. Whatever cannot run is reported as <b>not run</b>.</li>
+    <li>The real app is tested only through a Remote Control session on the PC, on throwaway data.</li>
+    <li><b>Ahmed's PC:</b> repository <code>D:\Notaya</code> (the path must not contain an apostrophe), tests in <code>D:\Notaya Tests</code>, machine name <code>Gaming-PC</code>. <b>Yours:</b> <code>E:\Project\Notaya\Notaya</code>, tests in <code>E:\Project\Notaya\Notaya Tests Excluded</code>.</li>
+    <li>After a merge, the PC copy is fast-forwarded (<code>git pull --ff-only</code> on <code>main</code>) and checked to equal <code>origin/main</code>. Never <code>git add -A</code> in a PC copy.</li>
+  </ul>
+  <div class="callout ahmed"><p><b>Dated update (2026-11-08 00:00 UTC, A45).</b> The cloud credit is used up (Ahmed, 23:59:56 UTC), so work runs on his Claude plan with its 5-hour and weekly limits. <b>Claude may use up to 70% of the weekly quota</b> until he changes it; <b>Codex may use up to 100%</b>, including all its resets. The line "used first while the credit lasts" above is history. Now: <b>Codex builds, Claude briefs, inspects, merges and records</b> (Ahmed, 00:18:27); fewer parallel Claude threads, Sonnet instead of Opus where it does the job, short reading lists. <span class="tag t-ahmed">Ahmed's side</span></p></div>
+</section>
+
+<section id="phases">
+  <h2>🪜 Three phases, and know what exists first</h2>
+  <ol class="steps">
+    <li><b>Discuss every feature</b> until Ahmed and Claude agree on what it means. No version is assigned. (Ahmed, 21:14:10: "there is a huge difference between me laying down the points like in a text way to remind myself what we need, and ... what we discuss".) <b>Done on 2026-11-07 at 23:29 UTC</b> for every feature on his list; only the AI CLI's list of actions is still being collected.</li>
+    <li><b>Plan and stage</b> across versions 1.6, 1.7, 1.8 and on, by what is doable. Ahmed (20:41:50): "we don't have to push everything and shove it into 1.6". At 23:39:31 UTC he said to push ahead in parallel and "Don't wait for my authority" for this mapping and planning work (A43). The coordinator brings a staging plan, a list of Notion features Notaya lacks and the Notion hub update. <i>This is where we are now.</i> <b>Phase 2 version plan</b> (2026-11-07, EX-2026-11-07-50, reported by the version-planning thread at 23:47 UTC; draft PR #62, not merged when this line was written, so a claim to re-check): every agreed feature staged across V1.6 to V1.15 in four waves; foundation first (the AI CLI and its safety net in 1.6); nothing greenlit to build. Ahmed has not yet reviewed it.</li>
+    <li><b>Build,</b> with Codex as the developer hand and the coordinator inspecting every diff, only on Ahmed's go per feature or version.</li>
+  </ol>
+  <div class="callout ahmed">
+    <p><b>Know what exists first (Ahmed, 21:00:14).</b> Before discussing, planning, designing or building any feature, check what Notaya already has in the code and in the records. Never redesign something that exists, and never break it. The full inventory read the code at <code>9474511</code> and found, for example, that there are no mouse right-click menus anywhere, that an inline database is silently dropped from page exports (read in the code, not yet seen in the app), and that no outside entry point for an AI exists yet. Re-check on the current commit before relying on any of it.</p>
+  </div>
+  <div class="callout ahmed"><p><b>Dated update (2026-11-08 00:35 UTC).</b> Phase 1 is done and <b>Phase 2 is finished</b>: the version plan (1.6 foundation, 1.7 comfort, 1.8 Notion page features, 1.9 tabs and import/export, then <b>2.0</b> corkboard and manual, 2.1 and 2.2 dashboards, 2.3 and 2.4 whiteboard, 2.5 Notebook mode; the Notion migration runs beside it) is in <code>docs/plan/2026-11-07-version-plan.md</code>; the 1.6 spec (15 work packages, nine lanes for Codex, four gates) is in <code>docs/plan/2026-11-08-v1-6-spec.md</code>. <b>Phase 3 has begun for 1.6 only:</b> Ahmed said go at 00:15:27 UTC (A44) and Codex is running the first lanes on his PC. The older line "draft PR #62, not merged" above is stale: PRs #62, #65 and #67 are merged. <span class="tag t-ahmed">Ahmed's side</span></p></div>
+</section>
+
+<section id="aicli">
+  <h2>🔌 The AI CLI foundation</h2>
+  <p>Ahmed uses Claude and Codex from outside to drive Notaya locally, in the way Claude uses Notion through MCP, but with more power and freedom, "because it's local and it's our code and it's our app". <span class="tag t-ahmed">Ahmed's side</span></p>
+  <h3>Agreed in principle</h3>
+  <ul>
+    <li>Every part of Notaya is reachable. The AI sees everything; <b>locked notes only after they are unlocked</b>.</li>
+    <li>The AI may create, edit and delete. <b>Deletes need confirmation.</b></li>
+    <li>An <b>activity log</b> records everything the AI does.</li>
+    <li><b>Every feature is designed with named AI actions</b> from its first design, including moving and copying pages and databases between places.</li>
+    <li><b>Long-term north star (direction only, not now):</b> Notaya eventually matches Notion closely enough that Ahmed's whole Notion can be pulled in as-is, as an always-on local backup.</li>
+  </ul>
+  <h3>Safety direction, agreed 22:45:28 and 22:49:30 UTC (A41)</h3>
+  <p>Direction only: nothing is built and no promise is in <code>docs/security-design.md</code> yet. Ahmed's reason: he fears the attack surface of an AI that can delete, write, change or even make malware, and also does not want a weaker feature set or a home-made security system ("We are not cybersecurity experts, but we have to do our best").</p>
+  <ul>
+    <li>Security is part of every feature from its first design.</li>
+    <li><b>Sealed in:</b> the AI reaches only Notaya's notes; no programs, no other files, no internet.</li>
+    <li><b>Off by default;</b> the on/off switch lives <b>only in Notaya's own Settings</b>, so the AI cannot flip it.</li>
+    <li>Permission levels (read-only, can edit, full) and limits to chosen notebooks; deletes go to a recycle bin after the person confirms; AI edits are kept in version history and can be undone; a log of AI actions that the AI cannot edit; locked notes stay locked.</li>
+    <li>Proven, well-known patterns; one simple confirm for deletes and very large changes; the AI is never given a way to change its own permissions; backups are the safety net.</li>
+  </ul>
+  <h3>Not decided yet</h3>
+  <ul>
+    <li>The action list itself (a thread is collecting it for Ahmed to review).</li>
+    <li>How an outside program reaches Notaya and proves it is allowed.</li>
+    <li>Whether the AI may work while the Notaya window is open, and how the window refreshes after an outside change (today the interface keeps its own copy of the data and is not refreshed from outside).</li>
+    <li>Where a delete is confirmed, where the activity log lives, and how it is made tamper-proof.</li>
+  </ul>
+  <div class="callout both">
+    <p><b>Security.</b> The AI CLI creates a new trust boundary. Under <code>CLAUDE.md</code>, changing security behavior needs the partner's own words, and <code>docs/security-design.md</code> must be updated with any new promise. Keys and secrets stay in the Rust core. Because this touches shared code and shared promises, Ahmed's design should be shown to Mohamed before it is built, and each promise must be written into <code>docs/security-design.md</code>, tested and reviewed first.</p>
+  </div>
+  <div class="callout ahmed"><p><b>Dated update (2026-11-08 00:35 UTC): the items under "Not decided yet" are now mostly decided</b> (Ahmed 23:53:46, A45; design details in the 1.6 spec, not yet built and not yet in <code>docs/security-design.md</code>). Four levels: Off (default), Look, Edit, Full (Full may delete whole hubs after a confirmation). Notebooks can be hidden from the AI. Confirmations appear only in the Notaya window. A big-change confirm is an optional setting, default 20 items. Edits are snapshotted and can be undone; a tamper-evident activity log. The door is a small companion program (<code>notaya-bridge</code>) speaking the standard AI tool protocol (MCP) over a private Windows pipe that only the same Windows account may open and that exists only while the AI is switched on; the AI cannot lock or unlock anything (locks deferred) and cannot change its own level. Files move through an exchange folder next to the data folder. Claude and Codex may be connected together if kept apart by claims and version checks. Gates G1 (the door and safety rules), G2 (the companion program), G3 (one local copy at the first 1.6 launch, wording for Ahmed to confirm) and G4 (deletes go to a bin) are approved (A44). <b>Mohamed should still read the 1.6 spec section 8 (security notes) before it ships.</b> <span class="tag t-ahmed">Ahmed's side</span> <span class="tag t-both">Needs both</span> for the security promises</p></div>
+</section>
+
+<section id="features">
+  <h2>🧩 Feature decisions so far</h2>
+  <p>All of these are <b>Ahmed's</b> decisions from the 2026-11-07 discussion (full tables with his reasons: <code>docs/sessions.md</code>, entries 41 and 43, section "Decisions Made"; amendments A40 and A41 hold the second half). <b>None of them is permission to build.</b> Mohamed has not yet reviewed them. ✅ agreed, 🟡 partly discussed (only the AI CLI's action list is still open).</p>
+  <div class="filters" role="group" aria-label="Filter features">
+    <button type="button" class="ghost" data-f="all" aria-pressed="true">All</button>
+    <button type="button" class="ghost" data-f="agreed" aria-pressed="false">✅ Agreed</button>
+    <button type="button" class="ghost" data-f="partly" aria-pressed="false">🟡 Partly</button>
+  </div>
+  <div class="tblwrap"><table id="ft">
+    <thead><tr><th>Feature</th><th>State</th><th>What was agreed</th><th>Exists today</th></tr></thead>
+    <tbody>
+      <tr data-s="agreed"><td>Mermaid in code blocks</td><td class="st">✅ Agreed</td><td>Language picker on every code block; pasted Mermaid is detected and drawn; code collapsed behind a click; zoom, download, copy, wrap. Merge with the existing Diagram block.</td><td>Separate Diagram block draws Mermaid; paste not detected; no language picker.</td></tr>
+      <tr data-s="agreed"><td>Import</td><td class="st">✅ Agreed</td><td>Keep every importer feature. Add a top-bar Import button. Fix the out-of-date sentence in the Import window.</td><td>Very complete importer; entry points are a hover icon, the empty sidebar and the command palette.</td></tr>
+      <tr data-s="agreed"><td>Export ("Save as")</td><td class="st">✅ Agreed</td><td>Top-bar Export button. PDF gets a contents page with clickable bookmarks. Excel export for databases. Fix the inline-database export bug after checking it in the real app.</td><td>Export dialog with scope, sub-pages, PDF/Word/Markdown/HTML. No Excel.</td></tr>
+      <tr data-s="agreed"><td>Sticky-notes corkboard</td><td class="st">✅ Agreed</td><td>In-app board with grid mode and free mode, drag, box-select, coloured pins and strings, right-click menu, New sticky note from the tray. No pins or strings on the Windows desktop.</td><td>Grid board, 8 colours, Select mode. Each note can already open as its own desktop window, with Keep on top.</td></tr>
+      <tr data-s="agreed"><td>App bar (like Office Quick Access)</td><td class="st">✅ Agreed</td><td>Customizable strip of quick buttons in the top bar. Defaults: Import, Export, New page, New sticky note. Not Favorites, not New notebook. Optional: Calculator and others. Pin any page to it; the AI can arrange it.</td><td>Fixed top bar.</td></tr>
+      <tr data-s="agreed"><td>Browser-style tabs</td><td class="st">✅ Agreed</td><td>New tab, pin, group, close, move, reopen with Ctrl+Shift+T. Open tabs return after a restart.</td><td>One page at a time.</td></tr>
+      <tr data-s="agreed"><td>Version history and activity</td><td class="st">✅ Agreed</td><td>Per-page timeline with added/removed highlighted and one-click restore. Activity list marks AI edits ("with Claude"). Check the existing backups first.</td><td>Whole-vault backups only.</td></tr>
+      <tr data-s="agreed"><td>Ctrl+F find (try, then tune)</td><td class="st">✅ Agreed</td><td>Notaya's own find bar for the open page, including folded and hidden parts, "3 of 12"; a "Search all notes" button widens it; Ctrl+H find and replace.</td><td>Ctrl+F shows the browser engine's bar; real search is Ctrl+K.</td></tr>
+      <tr data-s="agreed"><td>Editable shortcuts</td><td class="st">✅ Agreed</td><td>Settings page listing every action; click and press new keys; conflict warning; reset one or all; global shortcuts while Notaya is in the background.</td><td>Fixed in code, no settings page.</td></tr>
+      <tr data-s="agreed"><td>Calculator upgrades</td><td class="st">✅ Agreed</td><td>History panel on the right; offline unit converters (volume, length, weight, temperature, energy, area, speed, time, power, data, pressure, angle). No currency.</td><td>Basic and scientific calculators with history below.</td></tr>
+      <tr data-s="agreed"><td>"+ New notebook" button</td><td class="st">✅ Agreed</td><td>Always visible at the bottom of the notebook list only.</td><td>Shows only on mouse-over.</td></tr>
+      <tr data-s="agreed"><td>Icons pass</td><td class="st">✅ Agreed</td><td>Check every icon in every theme with screenshots on throwaway data. Favorite star: clear outline when off, gold when on.</td><td>Star is faint grey off, white on.</td></tr>
+      <tr data-s="agreed"><td>Reorder databases in the sidebar</td><td class="st">✅ Agreed</td><td>Drag databases among pages like any page. Moving them between pages or notebooks is a separate, later topic.</td><td>Databases are stuck below the pages.</td></tr>
+      <tr data-s="agreed"><td>AI CLI (foundation)</td><td class="st">✅ In principle</td><td>See the section above. Action list and safety design still open.</td><td>No outside entry point; about 120 internal commands the UI already uses.</td></tr>
+      <tr data-s="agreed"><td>Right-click menus</td><td class="st">✅ Agreed</td><td>Menus in sidebar items, page tabs, sticky notes, editor text ("Turn into...") and database rows; plus links and images, several items at once, keyboard hints, Copy link to page, and the empty sidebar space (on trial). Every menu customizable in Settings. No "Ask AI about this".</td><td>Menus behind "..." buttons and the Menu key; no mouse right-click.</td></tr>
+      <tr data-s="agreed"><td>Tray menu</td><td class="st">✅ Agreed</td><td>Open, New page, New sticky note, Calculator, Quick search, Lock now, Show/hide all stickies, Close stickies, Quit.</td><td>Open Notaya, Close sticky notes, Quit.</td></tr>
+      <tr data-s="agreed"><td>Dashboards (Power BI-style, inside Notaya)</td><td class="st">✅ Agreed</td><td>Three steps: dashboard pages with live tiles from Notaya databases (never stale); filters, Reset and click-through; named reusable calculations. The AI can build them. Details left to planning.</td><td>Bar, line, donut and number charts, one per view.</td></tr>
+      <tr data-s="agreed"><td>Guide, tour, About</td><td class="st">✅ Agreed</td><td>Guide: an in-app manual (feature list with images and icons) plus an outside copy kept in step. Tour: light, skippable, never forced. About: credits for both partners, open-source references and licences, Notaya's own licence once both partners choose.</td><td>About lists open-source credits only. The outside manual's first edition exists (2026-11-07, PR #63); the in-app manual and the tour are not built.</td></tr>
+      <tr data-s="agreed"><td>Home banner</td><td class="st">✅ Agreed</td><td>Settings picker per time of day (image or folder per period, shuffle, reset to built-in); taller banner by default; big clear page icon overlapping the banner; Settings with live preview for banner height, icon size and icon position; Change and Reposition buttons; per-page override.</td><td>Built-in daily gradient with a greeting; cover banners and page icons exist but are small.</td></tr>
+      <tr data-s="agreed"><td>Whiteboard</td><td class="st">✅ Agreed</td><td>Its own section; infinite freeform canvas; the core offline features of Microsoft's Whiteboard rebuilt in Notaya's own style (own templates, backgrounds, colours, shapes, pens, fonts, sizes, timer); OneNote's Draw tab as style inspiration; mouse, pen, touch and pressure-sensitive drawing tablets; first templates weekly planner, Kanban, mind map, SWOT, lined page; a board sticky note is linked or a separate copy, per note. Nine finer questions left for planning.</td><td>Nothing.</td></tr>
+      <tr data-s="agreed"><td>Notebook mode (with Default style)</td><td class="st">✅ Agreed</td><td>OneNote-like layout chosen per notebook next to the Default style (the Notion-like layout): coloured section tabs, page list with sub-pages, pages are free infinite canvases; a single page can switch to a free canvas; shares the whiteboard engine; the AI can switch modes.</td><td>Ribbon and notebook/section/page layout are OneNote-like already.</td></tr>
+      <tr data-s="partly"><td>AI CLI action list</td><td class="st">🟡 Partly</td><td>Every feature carries named actions; a thread is collecting them into one list for Ahmed to review.</td><td>About 120 internal commands the UI already uses.</td></tr>
+    </tbody></table></div>
+  <p>Set aside or rejected by Ahmed: "Ask AI about this" in any menu; Favorites and New notebook on the app bar; pins and strings on the Windows desktop; moving databases between pages as part of the sidebar change; "everything into v1.6" and "v1.6 stays one release".</p>
+</section>
+
+<section id="open">
+  <h2>❓ What is still open</h2>
+  <h3>For Mohamed</h3>
+  <ul>
+    <li><b>A34 / STATUS question 27:</b> confirm or change Claude's reading of how two partners work together. <span class="tag t-both">Needs both</span></li>
+    <li><b>Which of Ahmed's method rules you want on your side:</b> PBS for every task, the full 13-section entries, the ledger, and A38's partner-and-machine labels. <span class="tag t-ahmed">Ahmed's side</span></li>
+    <li><b>Licence and public repository:</b> not decided (STATUS question 11). <span class="tag t-both">Needs both</span></li>
+    <li><b>Review the AI CLI design</b> before it is built, since it changes a security promise.</li>
+    <li>Earlier open items still standing: STATUS questions 9, 10, 13, 14, 20, 23 and 25 (backlog and acceptance items, mostly yours). Also the postponed "Notaya as offline Notion" gap list on draft PR #45, which Ahmed's Notion north star will use.</li>
+  </ul>
+  <h3>For Ahmed's side</h3>
+  <ul>
+    <li>Review the AI CLI action list when the thread delivers it; the AI CLI's security design (A41) comes before any build.</li>
+    <li>Phase 2 (may run now): the Notion parity study (what Ahmed uses Notion for, what Notaya lacks, migration and backup both ways), a staging plan across versions, the Notion hub; then building with Codex on Ahmed's go per feature.</li>
+    <li>Details left for planning (STATUS question 29): nine Whiteboard questions, ten dashboard questions, whether the plain word "Whiteboard" is acceptable as a screen name.</li>
+    <li>Not yet run in the real exe: Start-with-Windows; <code>cargo clippy</code> for MSVC on the V1.5.1 commit.</li>
+  </ul>
+  <div class="callout ahmed"><p><b>Dated update (2026-11-08 00:35 UTC).</b> Items for Ahmed's side now open: the first-launch copy wording (G3), the seven-notebook proposal for the Notion migration, whether cloud threads may get Wine and MinGW to run the Rust tests, the library approvals at their versions (1.7 and 1.9), and Ahmed's review of the whiteboard and dashboard questions. They are in STATUS question 30 and in session entry 46. For Mohamed nothing new is asked.</p></div>
+</section>
+
+<section id="safety">
+  <h2>🛡️ Rules for both sides</h2>
+  <p><span class="tag t-shared">Shared rule</span> These come from <code>CLAUDE.md</code> and apply to every Claude and to Codex.</p>
+  <ul>
+    <li><b>Stable releases only.</b> No alpha, beta, rc, preview or nightly packages. npm versions are exact; Rust versions are locked.</li>
+    <li><b>Never edit</b> <code>docs/plan/approved-plan-2026-10-22.md</code>.</li>
+    <li><b>Never commit vault data or secrets:</b> <code>.devdata/</code>, <code>*.nota</code>, <code>*.clf</code>, <code>*.key</code>, password CSV exports, <code>.env</code>. Check <code>git status</code> before every commit.</li>
+    <li><b>Keep keys and secrets in the Rust core.</b> The interface receives only what it displays.</li>
+    <li><b>Never test on anyone's live window or real vault.</b> Use a throwaway vault in a separate process with <code>NOTAYA_HOME</code> (or <code>CIPHERLEAF_HOME</code>) pointing at the test folder. Close any debug port afterwards and confirm nothing listens (FI-01). Never leave <code>WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS</code> set. Nobody touches the other partner's notes, or the <code>E:</code> drive.</li>
+    <li><b>Quote times, do not estimate them.</b> Take them from message timestamps or the system clock (UTC) and say which. Otherwise write "not recorded".</li>
+    <li><b>Report what did not run as "not run",</b> never as passed. A result applies only to the exact commit it ran on.</li>
+    <li><b>Every code PR</b> gets a security review (the built-in security-review skill, plus the Security Guidance plugin where installed), and the PR says what each check found and what did not run.</li>
+    <li>Work on your own branch (<code>&lt;github-login&gt;/&lt;topic&gt;</code>, or the name the cloud thread gets), open a <b>draft</b> PR, merge only with "Create a merge commit". Never push to someone else's branch or to <code>main</code>.</li>
+    <li>Do not force-stop KeePassXC if it ever appears on a machine (it protects itself); close it politely.</li>
+  </ul>
+</section>
+
+<section id="handback">
+  <h2>🔁 Stopping, and picking up Ahmed's work</h2>
+  <h3>When Ahmed's cycle ends, his side should leave</h3>
+  <ul class="checks">
+    <li>Everything committed and pushed (a WIP branch is fine), with a draft PR titled <code>WIP:</code> if unfinished.</li>
+    <li>A resume note <code>docs/handoff/YYYY-MM-DD-&lt;topic&gt;-resume-note.md</code> (done / checked / not run / not finished / decisions by a person / state outside the repo / next permitted action).</li>
+    <li>The claims row updated; <code>docs/STATUS.md</code> "Exact next permitted action" brought up to date.</li>
+    <li>A full session entry and its index row; the ledger refreshed; the Notion hub updated.</li>
+    <li>Ahmed's list of open questions, numbered, and which features are discussed, staged or built.</li>
+  </ul>
+  <h3>When you pick it up</h3>
+  <ol class="steps">
+    <li>Read the resume note, the PR description and the last commits. Treat claims in them as <b>claims to re-check on the exact commit</b>, not facts.</li>
+    <li>Do not push to Ahmed's branches without his say-so. Continue on a new branch from theirs and say "continues #N" in the draft PR.</li>
+    <li>Never rewrite history on a branch you did not create.</li>
+    <li>If a note says "stopped" or "do not merge yet", do not resume without the partner who set that pause.</li>
+  </ol>
+</section>
+
+<section id="sources">
+  <h2>📎 Sources and limits</h2>
+  <ul>
+    <li><b>Read for the update of 23:52 UTC:</b> the whole project chat from 21:57 to 23:39 UTC, the model-choice guide, the headings and agreed sections of the dashboards and Whiteboard studies, and the records edited in PR #61 (A40 to A43, entry 43). The Notion parity study was not read in full.</li>
+    <li><b>Read for the first version of this guide:</b> <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/STATUS.md</code> (current-state, open questions, next action, where-things-live), A37 and A38 with their dated notes and the rows of 2026-11-07, the top of <code>docs/sessions.md</code> (index and entry 41 including Decisions Made and Next Steps), <code>docs/ledger/README.md</code> and the first ledger blocks and CSV headers, <code>docs/handoff/collaboration-guide.md</code> and <code>claims.md</code>, and Ahmed's project memory and shared notes.</li>
+    <li><b>Not re-read in full for this guide:</b> the older sessions, the 49+ execution reports, <code>docs/security-design.md</code>, <code>docs/acceptance.md</code>, and the plan records A9 to A35.</li>
+    <li><b>Nothing was run or tested.</b> This guide describes records, not the app. The feature "exists today" column comes from Ahmed's inventory of the code at <code>9474511</code>, and was not re-checked.</li>
+    <li><b>Freshness:</b> this is a living document (A39) and is updated as Ahmed's side decides things. Its "last updated" line is at the top. Between updates, check the newest <code>sessions.md</code> entry and STATUS before relying on any line here.</li>
+  </ul>
+  <ul><li><b>Read for the update of 2026-11-08 00:35 UTC:</b> the project chat from 20:51 to 00:24 UTC, the project memory, the repository records at <code>main</code> = <code>c2ead6e</code>, and the <code>get_session</code> records of eight threads. The Notion survey, the studies, the 1.6 spec and the formula file were not re-read in full for this update; their results are quoted from the threads' reports.</li></ul>
+  <footer>Written by Ahmed's side (AE0101), a Claude cloud thread, for Mohamed (AbyssWatcher2). Not sent to Mohamed yet. A Markdown copy in <code>docs/handoff/</code> lets his Claude read it, since an artifact is not part of the shared repository; both copies are kept in step.</footer>
+</section>
+<section id="checkpoint">
+  <h2>📍 Checkpoint: 23:39 to 00:26 UTC</h2>
+  <p>The full account, with Ahmed's questions 1 to 38 and his answers, is <code>docs/sessions.md</code> entry 46 and A45. The short version for Mohamed: <span class="tag t-ahmed">Ahmed's side</span></p>
+  <ul>
+    <li><b>The Notion track.</b> Ahmed's long-term goal is that his whole Notion can be copied into Notaya without gaps, so Notaya is built to be a full offline match. A full read-only survey was done on 2026-11-08 (77 top-level items, about 270 Discord pages, a German course in three copies, a finance system with many formulas; counts are the survey's). <b>Notion is never changed</b> (a scratch page excepted). Hubs that must work, home pages included: Projects and Ideas registry, Discord notebook, Reading knowledge control center, Personal Financial System, AI Project Bootstrap System, FFmpeg Encoder, Learn German with Mariam (Arabic), Freelancing Arc. <b>Formulas must be exact:</b> all formula text was read through the browser (read-only) and stored in the project's private notes with a checksum; it is <b>not in the repository</b> because it is finance data. <b>The backup is manual and driven by an AI</b> through the AI CLI, never automatic. Seven notebooks as shelves for whole hubs are a proposal. The first real test is a three-page trial after 1.8.</li>
+    <li><b>Libraries (studies, not approvals).</b> Pen lines (<code>perfect-freehand</code>), a global-shortcut plugin, a Greek and Cyrillic font subset, a colour emoji picture pack for PDFs, <code>rust_xlsxwriter</code> and <code>calamine</code> for Excel, and the <code>rmcp</code> kit for the bridge. All permissive licences; one whiteboard kit (tldraw) was ruled out. Each needs Ahmed's words at its version; the 1.6 spec adds no new crates except extra <code>windows</code> features. Study: <code>docs/plan/2026-11-07-dependency-licence-study.md</code>.</li>
+    <li><b>Roles and quota.</b> Codex builds; Claude briefs, inspects, merges and records. Claude up to 70% of the weekly quota, Codex up to 100% (see "How Ahmed's side works").</li>
+    <li><b>In flight at 00:26 UTC.</b> Codex on 1.6 lanes A, B, C1, D and E on Ahmed's PC (<code>Gaming-PC</code>), overnight, on throwaway data only. Nothing built is accepted.</li>
+    <li><b>What Mohamed may want to look at:</b> the 1.6 spec (security notes, the vault change at first launch, the new bin for notebooks, sections and sticky notes), and the usage ledger block of 00:26 UTC. <span class="tag t-both">Needs both</span> for the security promises</li>
+  </ul>
+</section>
+
+<section id="build16">
+  <h2>🏗️ The 1.6 build: where it stands <span class="tag t-ahmed">Ahmed's side</span></h2>
+  <p>Written 2026-11-08 about 07:18 UTC for Mohamed, so that whoever has quota left can continue at any point. Records that own the facts: STATUS (exact next permitted action), the Codex briefs, EX-2026-11-08-55 section 5 (heartbeat log), the 1.6 spec.</p>
+<ul>
+    <li><b>Method.</b> Codex (<code>gpt-6.1-sol</code>, xhigh) builds each lane in its own git worktree on Ahmed's PC (<code>D:\Notaya-lanes\&lt;lane&gt;</code>), on branch <code>AE0101/v1-6-&lt;lane&gt;</code>. Claude briefs, inspects each diff, opens the pull request, merges with a merge commit and writes the records. Claude writes no feature code. Codex's sandbox cannot run the Rust tests or write git, so a PC heartbeat runs the checks on the exact pushed commit, makes local checkpoint commits and pushes finished lanes. Everything is on throwaway data.</li>
+    <li><b>Merged into <code>main</code> (2026-11-08):</b> lane C1, the action core (PR #74; 588 Rust tests pass, 0 fail); lane B, databases inside a page appear in exports (PR #75; 529 pass); lane D, the companion program <code>notaya-bridge.exe</code> (PR #76; bridge crate 16 tests pass, 2 real-pipe tests ignored; inert until the AI server exists).</li>
+    <li><b>Update 2026-11-09 12:00 UTC (A51, A52, live check, silent heartbeat):</b> <code>main</code> is <code>cce1bfd</code>. Merged since 07:18: lane P1, speed stage 1 (PR #112, golden accuracy gate, numbers in <code>docs/execution/2026-11-09-wp16-stage1-numbers.md</code>), A51 (Ahmed 08:22:33 UTC: a Windows-owned confirmation for deleting forever, emptying the recycle bin, turning AI on and AI pairing; keyfiles on network shares refused; lanes S-fix1 and S-fix2 build it, not built yet), the live AI check passed on Ahmed's own hands (09:12 UTC, verified not accepted), the smoke-script fix, and <b>A52</b> (Ahmed 10:42:50 UTC: Notion import with his real exports, <b>WP-19 / card 1.6-19</b>: his 2026-11-03 workspace ZIP of about 1 GB and per-section exports show databases not imported and loose pages from a partial import; lane N1 investigates read-only, N2 and N3 fix; the exports stay on his PC). The security pass has areas 1 and 2 done (findings on <code>AE0101/v1-6-s</code>: area 1 four issues and one question, area 2 three Medium issues; fix lanes S-fix1 to S-fix3 queued). Defect X-1 (blank window at Start with Windows, reported by Mohamed) has a first fix that did not work; run 2 is queued. The heartbeat now runs hidden (a wscript launcher; the PC-only files are in <code>D:\Notaya-lanes\heartbeat</code>, backup of the old task in <code>task-backup</code>; Ahmed ran the registration himself). Codex resets at 12:38:07 UTC (weekly at 2026-11-16 07:38:07 UTC); one banked Codex reset remains and only Ahmed applies it. Ahmed asked for lean replies in the project thread from 11:52 UTC until he says detailed mode. <b>If you continue without Ahmed's Codex:</b> read <code>docs/STATUS.md</code> (As of line and Continuation), then <code>docs/sessions.md</code> entry 53, then the briefs; the order of the remaining lanes is in the STATUS line.</li>
+    <li><b>Update 07:10 UTC (A49):</b> P8 (visible rows for List, Gallery, Board, Timeline) is now part of 1.6 with P1, P6, P7; two more polish items were added: a <b>full security pass</b> (WP-17, using <code>docs/handoff/codex-security-review-guide.md</code>; the independent review of C5 and the bridge, with token zeroization and the pairing-model docs still open) and a <b>whole-app polish and technical-debt sweep</b> (WP-18). All must finish before the whole-app test (A47) closes. If you continue without Codex, the guide is also the checklist for your own Claude review.</li>
+    <li><b>Update 06:56 UTC:</b> all 1.6 lanes are merged (C1 to C5, A, B, D, E and the fix lanes); what remains is the whole-app test pass (A47, <code>docs/plan/2026-11-09-whole-app-test-plan.md</code> on branch <code>AE0101/v1-6-w</code>), the large-database speed lanes P1, P6, P7 (A48, WP-16: plan in <code>docs/plan/2026-11-09-large-database-performance-plan.md</code>, measuring tools in <code>tools/db-bench</code> and <code>dev-mock/perf-table-check.cjs</code>), the independent security review of C5 and the bridge, release notes. Ahmed's live test of the AI window is pending his own hands (steps on his PC in <code>D:\Notaya-lanes\out\live-run-steps.txt</code>). Codex banked resets are applied only by Ahmed himself.</li>
+    <li><b>Update 17:11 UTC:</b> lanes AG (PR #93), C4d (PR #92) and C3, history and activity log (PR #97) are merged, after C2 (PR #88). A fresh review of C2 found 1 high and 5 medium issues; lane C2d (<code>AE0101/v1-6-c2d</code>, <code>6909482</code>) fixes them and a double-save bug and is pushed but needs a merge with C3 (conflicts in <code>changes.rs</code>, <code>state.rs</code>, <code>PageEditor.tsx</code>). C5, the AI server, is half built (uncommitted on Ahmed's PC in <code>D:\Notaya-lanes\C5</code>). Both stopped at the 5%-left line and resume at about 20:52 UTC. To continue by hand: merge main into <code>AE0101/v1-6-c2d</code>, resolve those three files, run the checks, merge; then build C5 from the newest main following spec section 7 and the C5 brief.</li>
+    <li><b>Update 12:03 UTC:</b> lane C2 (change signals, edit leases, recycle bin) is merged (PR #88, <code>2ffaa2c</code>; 631 tests pass). Not merged: C4d (browser check <code>block-ids-check</code> still failing, <code>fe78527</code>), AG (screenshots script, <code>275d393</code>). Codex's 5-hour window ran out at 12:01 UTC and resets 15:48 UTC; the heartbeat restarts AG, C3 and C4d by itself. Ahmed's rule (11:48:49 UTC): use the window until 5% is left, then stop cleanly. Lane order after the reset: AG fix, C3, C4d fix run 2, then C5, lane E (PR #70), the independent security review, the PC round, release notes. The PC meter now reads Claude and Codex exactly (Claude weekly may read about 1 point low).</li>
+    <li><b>Update 11:07 UTC:</b> lanes C4 (block ids, block edits, database small saves; PR #85) and AF (fixes from the independent review of lane A; PR #86) are merged. C2 (recycle bin, change signals) is running; then C3 (history, activity log), C5 (AI server). The heartbeat is a permanent scheduled task on Ahmed's PC (<code>Notaya heartbeat</code>, every 10 minutes, script <code>D:\Notaya-lanes\heartbeat\heartbeat.ps1</code>), logging Codex and Claude meters to <code>docs/ledger/quota-readings.csv</code>.</li>
+    <li><b>Update 08:05 UTC:</b> lane A (small fixes WP-08 to WP-14, including 'reopen where you left off') is now merged (PR #79, <code>2e49b7b</code>; all PC checks passed). Lane C4b (block ids and block edits, branch <code>AE0101/v1-6-c4b</code>) is built but its Rust tests failed (exit 101); Codex is fixing it. C2 starts from <code>main</code> <code>2e49b7b</code>.</li>
+    <li><b>Who continues (Ahmed, 08:57:27 UTC):</b> Mohamed has <b>Claude (Pro) only and no Codex</b>. If Ahmed's Codex and Claude quotas end, Mohamed's Claude continues the development (Claude then also writes code, within its weekly limit), so briefs and records must stay complete. Ahmed's Codex banked weekly resets are used only after the whole weekly limit is spent, and never automatically.</li>
+    <li><b>Built but not merged:</b> lane E, the AI screens (<a href="https://github.com/CipherVaults/Notaya/pull/70">PR #70</a>, held until the AI server exists, otherwise the real app would show a broken AI panel); lane C4b (failing tests, see above).</li>
+    <li><b>Next, in order:</b> A (conflict fix, then merge), then C2 (change signals, revisions, leases, recycle bin for everything), C4 (block ids and block edits) in parallel, then C3 (history and activity log), then C5 (the AI server: pipe, pairing, dispatcher, confirmations), then integration, the independent security review, the PC round and release notes. Widened write areas that were agreed: C4 may add <code>mod blocks;</code> to <code>lib.rs</code>; C2 may touch <code>lib.rs</code> (registration lines), <code>src/lib/types.ts</code> and <code>commands/tools.rs</code>; A may touch <code>DatabasePage.tsx</code> and <code>DatabaseView.tsx</code>.</li>
+    <li><b>How to resume on your side.</b> Read <code>docs/STATUS.md</code> (Continuation), then the briefs, then <code>git fetch --all --prune</code> and look at <code>AE0101/v1-6-*</code> branches and open pull requests. Treat anything in the PC worktrees as unverified until the checks run on the pushed commit. Codex's limits are the pacing: first window used 15% of the weekly limit, second window 22% in total (the ledger holds the readings); the 5-hour window resets about every 5 hours.</li>
+    <li><b>Known gaps to close before 1.6 is complete:</b> the bridge's modern <code>subscriptions/listen</code> and <code>server/discover</code> details; lane E's Playwright check script (three timing bugs; the patched copy passes 40 checks); the title-bar marker (wired when A is merged); a security review of lanes C5 and D together; the real pipe, installer and registration checks on the PC; the one-time local safety copy at first launch (gate G3, confirmed by Ahmed 00:46:05 UTC, belongs to the vault lane).</li>
+</ul>
+</section>
+
+<section id="changelog">
+  <h2>🕘 Change log</h2>
+  <p>Newest first. Each line: when (UTC), what changed, which side's decision it records.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>When (UTC)</th><th>Change</th><th>Whose decision</th></tr></thead>
+    <tbody>
+      <tr><td>2026-11-09 12:00</td><td>Section 17 updated: P1 merged, A51 (Windows-owned confirmations), live AI check passed, A52 (Notion import with real data, WP-19), silent heartbeat, security pass areas 1 and 2, lean-mode note. Published page and repository copy now match.</td><td>Ahmed's side (08:22:33, 10:42:50, 11:33, 11:52:54)</td></tr>
+      <tr><td>2026-11-09 07:30</td><td>Published page rebuilt from the repository copy: new section "The 1.6 build: where it stands" (section 17 of the guide, updates of 2026-11-08 07:18 to 2026-11-09 07:10: all 1.6 lanes merged, who continues, A47 whole-app test, A48 large-database speed P1 to P8 now in 1.6, A49 full security pass and polish sweep). Sections 1 to 16 are unchanged from the 2026-11-08 00:35 version, so older lines (for example "draft PR #62, not merged") are history: the section 17 and the repository records win.</td><td>Ahmed's side (06:52:15, 06:56:22, 07:10 UTC)</td></tr>
+      <tr><td>2026-11-08 00:35</td><td>Checkpoint after Phase 2 (PR #69): last-updated line; dated updates in "How Ahmed's side works" (quota and roles), "Three phases" (Phase 2 finished, 1.6 go), "AI CLI foundation" (decisions), "Still open"; new section "Checkpoint" (Notion track, libraries, roles, what is in flight). Records: A45, entry 46, EX-2026-11-08-56.</td><td>Ahmed's side (23:49:01 to 00:24:41)</td></tr>
+      <tr><td>2026-11-07 23:56</td><td>Added the Notaya Manual, first edition (for 1.5.1): a row in "Where each record lives" and a note in the Guide row of the feature table. Source in <code>docs/manual/</code>, published page linked, PR #63. Versions after 1.9 are numbered 2.0 to 2.5 in the manual, as the coordinator directed.</td><td>Ahmed's side (agreed GUIDE feature, 23:04; "push ahead", 23:39:31)</td></tr>
+      <tr><td>2026-11-07 23:52</td><td>Pointer to the Phase 2 version plan (EX-2026-11-07-50, draft PR #62), added at the version-planning thread's request.</td><td>Ahmed's side (23:39:31); plan not yet reviewed by Ahmed</td></tr>
+      <tr><td>2026-11-07 23:50</td><td>Phase 1 decisions: short version, reading order, record numbers, model choice and credit, phases (Phase 1 done, Phase 2 may start), AI CLI safety direction, feature table (right-click, tray, dashboards, guide/tour/About, banner, Whiteboard, Notebook mode and Default style), open items and sources; new rules: no trademarked names, customizable menus. Records: A40 to A43, entry 43, PR #61.</td><td>Ahmed's side (22:40:55 to 23:39:31)</td></tr>
+      <tr><td>2026-11-07 22:45</td><td>Marked as a living document (A39); added this change log.</td><td>Ahmed's side (22:33:37)</td></tr>
+      <tr><td>2026-11-07 22:30</td><td>First version, from the repository at <code>main</code> <code>987bfc5</code>.</td><td>Ahmed's side (22:24:27)</td></tr>
+    </tbody></table></div>
+</section>
+</main>
+</div>
+
+<script>
+(function(){
+  var btn=document.getElementById('copyBtn'),note=document.getElementById('copyNote'),box=document.getElementById('starter');
+  btn.addEventListener('click',function(){
+    function fallback(){var r=document.createRange();r.selectNodeContents(box);var s=window.getSelection();s.removeAllRanges();s.addRange(r);note.textContent='Selected. Press Ctrl+C to copy.';}
+    try{navigator.clipboard.writeText(box.textContent).then(function(){note.textContent='Copied.';},fallback);}catch(e){fallback();}
+  });
+  var bs=document.querySelectorAll('.filters button'),rows=document.querySelectorAll('#ft tbody tr');
+  bs.forEach(function(b){b.addEventListener('click',function(){
+    var f=b.getAttribute('data-f');
+    bs.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+    rows.forEach(function(r){r.hidden=!(f==='all'||r.getAttribute('data-s')===f);});
+  });});
+})();
+</script>
+
+
+</body></html>
