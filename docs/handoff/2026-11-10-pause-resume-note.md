@@ -1,6 +1,6 @@
 # Pause and resume: 2026-11-10 (Ahmed's side)
 
-**Who and where:** Ahmed Emara (`AE0101`); reconstructed by Codex, Gaming-PC, R3. Baseline local `origin/main` and R3 `a9e4a90`. No network refresh: all refs below are local observations, not a current remote inventory. **Authority:** Ahmed's project-chat words 06:13:35 UTC, clarified 06:25:54 UTC, relayed in the R3 brief and heartbeat `events.log` 06:15:09 and 06:26:31 UTC: stop development safely; hand code, scripts and fixes to Blue/Codex. This record is produced, not accepted. A55's coordinator transfer takes effect on Ahmed's ?handover accepted? in ChatGPT. No development, merges or lane restart under this pause without Ahmed's fresh direction.
+**Who and where:** Ahmed Emara (`AE0101`); reconstructed by Codex, Gaming-PC, R3. Baseline local `origin/main` and R3 `a9e4a90`. No network refresh: all refs below are local observations, not a current remote inventory. **Authority:** Ahmed's project-chat words 06:13:35 UTC, clarified 06:25:54 UTC, relayed in the R3 brief and heartbeat `events.log` 06:15:09 and 06:26:31 UTC: stop development safely; hand code, scripts and fixes to Blue/Codex. This record is produced, not accepted. A55's coordinator transfer takes effect on Ahmed's "handover accepted" in ChatGPT. No development, merges or lane restart under this pause without Ahmed's fresh direction.
 
 ## Integrated state, not acceptance
 
@@ -20,7 +20,7 @@ This is an ancestry inventory against local `origin/main`; absence of an origin 
 | `origin/AE0101/v1-6-k1a` `3fc8d32` | Unmerged heartbeat, runner, configuration and formats under `tools/dev-kit/`; review before use. |
 | `origin/AE0101/v1-6-k1b` `9141770` | Unmerged checkpoint containing guard, registration and ledger kit pieces; incomplete status and end-to-end behavior not verified. |
 | local `AE0101/v1-6-k1c` `4ed8257` | No local origin tracking ref; local tip merges K1a and K1b. Heartbeat started K1c 06:16:35 UTC; completion and any uncommitted work not verified. Preserve its worktree and inspect before making decisions. Kit not verified end to end. |
-| `origin/AE0101/v1-6-s` `3a2581f` | Unmerged review findings: area 1 two High and two Medium; area 2 three Medium. SF1?3 are integrated on local main; native-dialog hands-on evidence remains outstanding. Area 3 blocked by OpenAI cybersecurity-content filter; Ahmed decides Daybreak access or a narrower brief. Area 4 remains. |
+| `origin/AE0101/v1-6-s` `3a2581f` | Unmerged review findings: area 1 two High and two Medium; area 2 three Medium. SF1 to SF3 are integrated on local main; native-dialog hands-on evidence remains outstanding. Area 3 blocked by OpenAI cybersecurity-content filter; Ahmed decides Daybreak access or a narrower brief. Area 4 remains. |
 | `origin/AE0101/v1-6-w` `1ae2c04` | Unmerged planning checkpoints; whole-app execution not completed. Preserve plan/results on branch under `docs/plan/`. |
 | `origin/AE0101/v1-6-r1` `397b870` | Unmerged WIP checkpoint; inspect before deciding whether any work is needed. |
 | `origin/AE0101/ledger-readings` `23fe829` | Unmerged heartbeat data branch; reconcile rows without duplicates. |
@@ -34,7 +34,7 @@ N3 (canonical row identity, links/children, memory/progress and hostile-input it
 
 ## Restart only after permission
 
-The live PC scripts are in `D:\Notaya-lanes\heartbeat`; `tools/heartbeat/` is a reference snapshot and K1 branches contain the proposed dev kit. Claude is to remove the scheduled tasks ?Notaya heartbeat? and ?Notaya stop-line guard? after this pass; removal is **not verified**. Inspect actual scheduler and script state before relying on it. Each lane needs a prompt beginning `Read AGENTS.md and docs/handoff/codex-partner-briefing.md first`, a bounded branch and write area, and a fresh brief. Sol xhigh is for importer, security and table logic; Terra high for records/scripts. Respect the 95% used stop line, at most three lanes, and no more than two starting above 60% of the five-hour window. Confirm the current rules and meter before starting. Cyber-filter refusal is a stop for a narrower authorized route, not something to bypass. Idle-checks are probes, not proof a lane finished or an automatic restart succeeded; inspect process, checkpoints and logs.
+The live PC scripts are in `D:\Notaya-lanes\heartbeat`; `tools/heartbeat/` is a reference snapshot and K1 branches contain the proposed dev kit. Claude is to remove the scheduled tasks "Notaya heartbeat" and "Notaya stop-line guard" after this pass; removal is **not verified**. Inspect actual scheduler and script state before relying on it. Each lane needs a prompt beginning `Read AGENTS.md and docs/handoff/codex-partner-briefing.md first`, a bounded branch and write area, and a fresh brief. Sol xhigh is for importer, security and table logic; Terra high for records/scripts. Respect the 95% used stop line, at most three lanes, and no more than two starting above 60% of the five-hour window. Confirm the current rules and meter before starting. Cyber-filter refusal is a stop for a narrower authorized route, not something to bypass. Idle-checks are probes, not proof a lane finished or an automatic restart succeeded; inspect process, checkpoints and logs.
 
 ## Ahmed and Mohamed
 
@@ -49,3 +49,13 @@ Ahmed decides Daybreak access or an appropriate area-3 brief, integration and me
 5. Present Ahmed the decisions and gates; wait for a fresh development restart instruction before execution.
 6. On that instruction, agree a bounded order, independently review candidate diffs and run exact-commit checks; keep acceptance separate.
 7. Reconcile records and hands-on partner checks before considering a release.
+
+## Dated addition (2026-11-10 about 07:00 UTC, Claude, cloud, Ahmed's side; EX-2026-11-10-77, session 57)
+
+- **Authority:** Ahmed, 06:31:31 UTC (project chat, relayed): only the handoff matters now; Claude finishes nothing of the development; Codex with ChatGPT ("Blue") finishes it; the AI PBS docs are `D:\Notaya\docs` (the repo's docs folder). Recorded as A56.
+- **Merged on `main` before this record:** #129 (P6 and P6b, EX-2026-11-10-75), #130 (R2 records, EX-74). R3's records (this note, EX-76, session 56) were read by Claude and merged with this addition; its "?" characters from a Windows text encoding were repaired (quotes, dashes, emoji headings) and nothing else in them was changed.
+- **Branch states Claude confirmed on `origin` at about 07:00 UTC** (tips as in the table above, unchanged): N2 `7806d00` (8 commits ahead of main; N2c fixes for RVN2-M1 and M2 unverified, **needs a fresh review and a `cargo test --lib` on its final tip**), RV-N2 `d8e0fcb`, RV-P6b `3b1756e`, P6c `ddb52d9`, K1 `ebd0141`, K1a `3fc8d32`, K1b `9141770`, S `3a2581f`, R1 `397b870`, W `1ae2c04`. **K1c is local only on the PC (`4ed8257`), not pushed.** The dev kit parts K1b and K1c are **not done**.
+- **Not started:** N3, P7, P8, security area 4, the 250-check whole-app test, the X polish sweep. **Blocked:** security area 3 (OpenAI cyber filter; Ahmed decides Daybreak access or a narrower brief).
+- **Not done:** removing the scheduled tasks "Notaya heartbeat" (10 minutes) and "Notaya stop-line guard" (2 minutes). Both were still registered at 06:31 UTC. Claude did not touch them. Ahmed or Blue removes them (commands in `docs/handoff/migration-to-chatgpt/05-pc-automation.md` section 1) once the lanes are no longer wanted.
+- **Other open PRs:** #109 (draft, ledger forecast; stale, base from 2026-11-09), #45 (Mohamed's old Notion plan).
+- **Entry point for Blue:** the Notion page [Claude to Blue Handoff](https://app.notion.com/p/414bd7ade63b81bb92efcf9c2402d2b5) then this note, then `docs/handoff/migration-to-chatgpt/README.md`. Ahmed runs `git pull --ff-only` in `D:\Notaya` on `main` to get these records (never `git add -A` there).
