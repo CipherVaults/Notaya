@@ -1,5 +1,7 @@
 # Codex partner briefing: read this before any lane
 
+**Dated R2 correction (2026-11-10):** earlier state and role lines below are historical snapshots. For the later 1.6 lane state, unresolved N2 test conflict and the conditional A55 handover, read [STATUS](../STATUS.md) Continuation and session 55. A merged lane is not partner acceptance.
+
 - **Who and where:** Ahmed's side (`AE0101`). Written by Claude in the cloud thread "Build Notaya 1.6" (machine: cloud container), 2026-11-08, about 08:35 UTC (system clock).
 - **Asked by:** Ahmed, project chat 2026-11-08 08:27:53 UTC: lean on Codex "as much as possible ... for everything basically", make Codex "not just an executor" but a partner who has "the entire documentation, understanding of the system, of the app, of the vision", and do not weaken PBS. Recorded as [A46](../plan/approval-and-amendments.md).
 - **Result state:** *produced*. It tells Codex where things stand and how to work. It is not a plan to build anything new.
