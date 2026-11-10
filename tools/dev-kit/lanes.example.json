@@ -1,0 +1,32 @@
+[
+  {
+    "name": "demo-widget",
+    "branch": "lane/demo-widget",
+    "base": "origin/main",
+    "merge": [],
+    "deps": [],
+    "title": "Invented widget example",
+    "promptFile": "prompt-demo-widget.md",
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh",
+    "review": false,
+    "gate": "",
+    "fix": false,
+    "range": ""
+  },
+  {
+    "name": "demo-check",
+    "branch": "lane/demo-check",
+    "base": "origin/main",
+    "merge": [],
+    "deps": ["demo-widget"],
+    "title": "Invented independent review example",
+    "promptFile": "prompt-demo-check.md",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "review": true,
+    "gate": "demo-widget",
+    "fix": false,
+    "range": ""
+  }
+]
