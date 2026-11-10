@@ -1,0 +1,503 @@
+<title>DevKit Usage Ledger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: the limits right now, the forecast (the main part), where the usage went, how the forecast is built, then the detail tables. */
+:root {
+  /* The same palette as the DevKit Roadmap page: leaf green on a white-ish, green-tinted neutral. Light is the default. */
+  --bg: #fbfcfa; --surface: #ffffff; --surface-2: #eef2ec; --ink: #16201b; --muted: #68746d; --line: #d9dfd5;
+  --accent: #1d7556; --accent-ink: #ffffff;
+  --claude: #1d7556; --codex: #b8591a; --opus: #6a5acd; --sonnet: #12968a; --both: #8a8f8d;
+  --warn: #8f5300; --warn-bg: #fbebcc; --good: #14693b; --bad: #a3282f;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --bg: #0f1512; --surface: #17201b; --surface-2: #1e2923; --ink: #e7eee9; --muted: #85928a; --line: #2a3830;
+    --accent: #4fc79a; --accent-ink: #0b1712; --claude: #4fc79a; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
+    --warn: #f0b658; --warn-bg: #3a2c12; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1512; --surface: #17201b; --surface-2: #1e2923; --ink: #e7eee9; --muted: #85928a; --line: #2a3830;
+  --accent: #4fc79a; --accent-ink: #0b1712; --claude: #4fc79a; --codex: #f0a05f; --opus: #9c92f0; --sonnet: #3fc2b2; --both: #98a3a0;
+  --warn: #f0b658; --warn-bg: #3a2c12; --good: #6fd29b; --bad: #ff9a9a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 56px; }
+main { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.2; font-family: var(--font-display); letter-spacing: -0.01em; }
+h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 21px; font-weight: 650; display: flex; gap: 10px; align-items: baseline; }
+h3 { font-size: 15px; font-weight: 600; }
+p { margin: 0; max-width: 70ch; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); } .small { font-size: 13px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+header { display: flex; flex-direction: column; gap: 12px; }
+.kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--ink); }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); }
+.pill b { color: var(--ink); font-weight: 600; }
+section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.two { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+.stat { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); min-width: 0; }
+.stat .label { font-size: 12.5px; color: var(--muted); }
+.stat .value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.stat .sub { font-size: 12.5px; color: var(--muted); }
+.meter { position: relative; height: 12px; background: var(--surface-2); border-radius: 3px; overflow: visible; }
+.meter > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--claude); }
+.meter.codex > i { background: var(--codex); }
+.meter > u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.note { background: var(--warn-bg); color: var(--ink); border-left: 3px solid var(--warn); padding: 10px 14px; font-size: 13.5px; border-radius: 0 4px 4px 0; max-width: 80ch; }
+.note.big { font-size: 15px; }
+.badge { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; display: inline-block; }
+.badge.m { border-color: var(--good); color: var(--good); } .badge.r { border-color: var(--warn); color: var(--warn); } .badge.u { border-color: var(--bad); color: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; gap: 7px; align-items: center; }
+.sw { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
+td.r, th.r { text-align: right; } td.nw { white-space: nowrap; }
+td .sub { display: block; font-size: 12px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { font: inherit; font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.sliders { display: grid; gap: 14px 22px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.sliders label { display: grid; gap: 3px; font-size: 13px; min-width: 0; }
+.sliders output { font: 600 14px var(--font-mono); }
+.sliders input { width: 100%; accent-color: var(--accent); }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--font-sans); fill: var(--ink); }
+svg .ax { fill: var(--muted); font-size: 11px; font-family: var(--font-mono); }
+svg .grid { stroke: var(--line); stroke-width: 1; }
+.rows { display: flex; flex-direction: column; gap: 7px; }
+.row { display: grid; grid-template-columns: minmax(120px, 250px) 1fr; gap: 12px; align-items: center; }
+.row .name { font-size: 13px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+.row .name small { display: block; color: var(--muted); font-size: 11.5px; }
+.track { display: flex; align-items: center; min-width: 0; height: 20px; }
+.bar { height: 14px; border-radius: 0 4px 4px 0; min-width: 2px; background: var(--claude); }
+.bar.codex { background: var(--codex); }
+.val { font-family: var(--font-mono); font-size: 12px; margin-left: 8px; white-space: nowrap; }
+.stack { display: flex; height: 30px; border-radius: 4px; overflow: hidden; background: var(--surface-2); }
+.stack > div { min-width: 2px; display: flex; align-items: center; justify-content: center; font: 500 11.5px var(--font-mono); color: #fff; overflow: hidden; }
+.files { display: grid; gap: 10px; }
+.file { display: grid; grid-template-columns: minmax(170px, 250px) 1fr; gap: 6px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.file:last-child { border-bottom: 0; } .file code { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+ul.plain, ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 80ch; }
+@media (max-width: 640px) { .row { grid-template-columns: 1fr; gap: 3px; } .file { grid-template-columns: 1fr; } .stat .value { font-size: 22px; } }
+</style>
+
+<main>
+  <header>
+    <div class="topline"><div class="kicker">DevKit · Primary's side (EXAMPLE-USER)</div><button type="button" class="btn" id="themebtn" title="Switch theme">Theme: Light</button></div>
+    <h1>DevKit usage ledger</h1>
+    <p>What Claude and Codex are using, where it goes, and how far the quotas reach through the plan in the supplied version list. The numbers come from <span class="mono">example/</span> in the repository. <span class="badge m">measured</span> means read from a screen or a record. <span class="badge r">rough guess</span> means my estimate, and it is marked wherever it is used.</p>
+    <div class="pills" id="pills"></div>
+  </header>
+
+  <section id="now" aria-labelledby="h-now">
+    <h2 id="h-now">⏱️ The limits right now</h2>
+    <div class="grid" id="gauges"></div>
+    <p class="small muted" id="gaugeNote"></p>
+  </section>
+
+  <section id="forecast" aria-labelledby="h-forecast">
+    <h2 id="h-forecast">🔮 What can be finished, version by version</h2>
+    <div class="note big" id="headline"></div>
+    <div class="panel">
+      <div class="chips" id="presets" role="group" aria-label="Forecast presets"></div>
+      <div class="sliders" id="sliders"></div>
+      <p class="small muted">Move a slider to see how the dates change. The best and worst dates always move the shaky numbers together (speed, extra work, Claude's share, the pause), so the range is wide on purpose.</p>
+    </div>
+    <div class="panel">
+      <h3>When each version is built</h3>
+      <p class="small muted">Each bar runs from the moment its work starts to the moment Claude has reviewed it (the <b>code is done</b>). The line behind it is the best-to-worst range. The pause for the PC round and your review comes after the bar and is already counted before the next one.</p>
+      <div style="overflow-x:auto"><svg id="gantt" style="min-width:600px" role="img" aria-label="Timeline of the supplied versions"></svg></div>
+      <div class="legend" id="ganttLegend"></div>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <h3>Codex allowance left (windows)</h3>
+        <p class="small muted">Drops as work is done, jumps up at the weekly reset and at each banked reset.</p>
+        <svg id="saw1" role="img" aria-label="Codex allowance over time"></svg>
+      </div>
+      <div class="panel">
+        <h3>Claude allowance left (% of the week, up to the configured cap)</h3>
+        <p class="small muted">Chat, records and reviewing every lane draw it down; it refills at the reset time in the input.</p>
+        <svg id="saw2" role="img" aria-label="Claude allowance over time"></svg>
+      </div>
+    </div>
+    <div class="tablewrap"><table id="forecastTable"></table></div>
+    <p class="small muted" id="forecastNote"></p>
+  </section>
+
+  <section id="where" aria-labelledby="h-where">
+    <h2 id="h-where">📊 Where the usage went</h2>
+    <div class="two">
+      <div class="panel">
+        <h3>Claude: threads using the most <span class="badge m">measured</span></h3>
+        <p class="small muted" id="screenNote"></p>
+        <div class="rows" id="screenBars"></div>
+      </div>
+      <div class="panel">
+        <h3>Claude: what the work was <span class="badge r">my grouping</span></h3>
+        <p class="small muted" id="catNote"></p>
+        <div class="stack" id="catStack"></div>
+        <div class="legend" id="catLegend"></div>
+        <div class="tablewrap"><table id="catTable"></table></div>
+      </div>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <h3>Codex: the first cycle, lane by lane <span class="badge m">measured</span></h3>
+        <p class="small muted" id="codexNote"></p>
+        <div class="rows" id="codexBars"></div>
+      </div>
+      <div class="panel">
+        <h3>The weekly limits so far <span class="badge m">measured</span></h3>
+        <p class="small muted">Each dot is a reading of the limit. The dashed line is the configured Claude cap.</p>
+        <svg id="weekChart" role="img" aria-label="Weekly limits used over time"></svg>
+        <div class="legend"><span><i class="sw" style="background:var(--claude)"></i>Claude week</span><span><i class="sw" style="background:var(--codex)"></i>Codex week</span></div>
+      </div>
+    </div>
+    <div class="two" id="modelPanels"></div>
+  </section>
+
+  <section id="how" aria-labelledby="h-how">
+    <h2 id="h-how">🧮 How the forecast is built</h2>
+    <ol class="steps">
+      <li><b>Supply.</b> The input assumes <span id="hWpw"></span> windows per week and <span id="hUsed"></span>% already used. Reset dates and banked resets come from the CSV inputs. Example figures are invented.</li>
+      <li><b>Work.</b> Each version has a size in plan points (small = 1, medium = 3, large = 6, extra large = 12) from the version plan. Points × extra work ÷ points per window = windows needed.</li>
+      <li><b>Claude's share.</b> Directing, inspecting every diff, merging and records draw from Claude's own weekly limit, using the configured cap. If Claude's allowance is empty, Codex waits, even if Codex has plenty left.</li>
+      <li><b>The calendar.</b> Day by day the model spends what both allowances and the daily window cap allow, adds a pause after each version, and records when each version finishes. Banked resets are used when the weekly allowance is empty and the next weekly reset is over a day away.</li>
+      <li><b>Who pays.</b> Primary allowance and optional secondary builder capacity are model inputs. The model simulates banked resets; it never applies them to an account.</li>
+    </ol>
+    <div class="tablewrap"><table id="inputsTable"></table></div>
+    <h3>What is not known</h3>
+    <ul class="plain" id="unknowns"></ul>
+  </section>
+
+  <section id="detail" aria-labelledby="h-detail">
+    <h2 id="h-detail">📒 The detail</h2>
+    <h3>Codex runs</h3>
+    <div class="tablewrap"><table id="codexTable"></table></div>
+    <h3>Every Claude session</h3>
+    <div class="chips" id="filters"></div>
+    <div class="tablewrap"><table id="sessionTable"></table></div>
+    <h3>Limit readings</h3>
+    <div class="tablewrap"><table id="quotaTable"></table></div>
+  </section>
+
+  <section id="track" aria-labelledby="h-track">
+    <h2 id="h-track">📁 Where this is tracked</h2>
+    <div class="panel"><div class="files">
+      <div class="file"><code>example/</code><span>The numbers live here as CSV files: <code>claude-sessions.csv</code>, <code>codex-runs.csv</code>, <code>quota-readings.csv</code>, <code>project-usage-screen.csv</code>, <code>forecast-inputs.csv</code>, <code>forecast-versions.csv</code> and <code>pace-forecast.csv</code>. <code>README.md</code> explains the input formats. This page never owns a fact.</span></div>
+      <div class="file"><code></code><span><code>build_dashboard.py</code> builds this page from the CSV files; <code>forecast-model.cjs</code> is the one forecast model, used by this page and to write <code>pace-forecast.csv</code>.</span></div>
+      <div class="file"><code>Refresh</code><span>At every session stop, and after every lane: add the rows and rebuild a local HTML file.</span></div>
+    </div></div>
+  </section>
+
+  <section id="gaps" aria-labelledby="h-gaps">
+    <h2 id="h-gaps">⚠️ What is not measured</h2>
+    <ul class="plain" id="gapList"></ul>
+  </section>
+</main>
+
+<script>
+/*FORECAST_MODEL*/
+</script>
+<script>
+const D = /*LEDGER_DATA*/null;
+const F = D.forecast;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (n, d = 0) => n == null || isNaN(n) ? "n/a" : Number(n).toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: d });
+const M = (n) => (n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "M";
+const day = (ms) => ms == null ? "beyond forecast horizon" : new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+const dayY = (ms) => ms == null ? "beyond forecast horizon" : new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const hhmm = (iso) => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false }) + " UTC" : "not recorded";
+const inputOf = (k) => (F.inputsTable.find((r) => r.key === k) || {}).value;
+const num5h = (k) => { const v = inputOf(k); return v === "" || v == null ? null : Number(v); };
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in (attrs || {})) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+function cellsOf(row) { return row.map((c) => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.html != null ? c.html : esc(c.t)}</td>`).join(""); }
+function table(id, head, rows) {
+  $(id).innerHTML = `<thead><tr>${head.map((h) => `<th${h.cls ? ` class="${h.cls}"` : ""}>${esc(h.t || h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${cellsOf(r)}</tr>`).join("")}</tbody>`;
+}
+
+
+/* ---------- theme: Light (default, white-ish like the roadmap), Dark, Auto ---------- */
+const THEMES = ["light", "dark", "auto"], TLAB = { light: "Light", dark: "Dark", auto: "Auto" };
+let theme = "light";
+try { const t = localStorage.getItem("devkit-ledger-theme"); if (THEMES.includes(t)) theme = t; } catch (e) {}
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", theme);
+  const b = document.getElementById("themebtn");
+  b.textContent = "Theme: " + TLAB[theme];
+  b.setAttribute("aria-label", "Theme: " + TLAB[theme] + ". Click to change.");
+}
+document.getElementById("themebtn").addEventListener("click", () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  applyTheme();
+  try { localStorage.setItem("devkit-ledger-theme", theme); } catch (e) {}
+});
+applyTheme();
+
+/* ---------- header ---------- */
+$("pills").innerHTML = [
+  ["As of", hhmm(F.inp.asOf)], ["Claude plan", "Pro"], ["Codex plan", "Plus, 0 credits"],
+  ["Sessions", fmt(D.sessions.length)], ["Codex runs", fmt(D.codex.length)], ["Built", hhmm(D.built.replace("Z", ":00Z"))],
+].map(([a, b]) => `<span class="pill">${esc(a)} <b>${esc(b)}</b></span>`).join("");
+
+/* ---------- gauges ---------- */
+function gauge(label, pct, sub, kind, cap) {
+  if (pct === null || !isFinite(pct)) {
+    return `<div class="stat"><span class="label">${esc(label)}</span><span class="value">not read</span>
+    <div class="meter ${kind}" role="img" aria-label="${esc(label)}: not read"><i style="width:0%"></i></div>
+    <span class="sub">${sub}</span></div>`;
+  }
+  return `<div class="stat"><span class="label">${esc(label)}</span><span class="value">${fmt(pct)}% used</span>
+    <div class="meter ${kind}" role="img" aria-label="${esc(label)}: ${pct}% used"><i style="width:${Math.min(100, pct)}%"></i>${cap ? `<u style="left:${cap}%" title="the ${cap}% cap"></u>` : ""}</div>
+    <span class="sub">${sub}</span></div>`;
+}
+$("gauges").innerHTML =
+  gauge("Claude, this week", F.inp.claudeUsed, `Configured cap ${F.inp.claudeCap}%. Resets ${hhmm(F.inp.claudeReset)}.`, "claude", F.inp.claudeCap) +
+  gauge("Claude, this 5-hour window", num5h("claude_5h_used_pct"), num5h("claude_5h_used_pct") === null ? `Not read at the as-of time (the last reading belongs to a window that has since reset). The next heartbeat reading fills it.` : `Resets ${hhmm(inputOf("claude_5h_reset_utc"))}. <span class="badge m">measured</span>`, "claude") +
+  gauge("Codex, this week", F.inp.codexUsed, `Resets ${hhmm(F.inp.codexReset)}. About ${fmt((1 - F.inp.codexUsed / 100) * F.params.wpw, 1)} windows left.`, "codex") +
+  gauge("Codex, this 5-hour window", num5h("codex_5h_used_pct"), num5h("codex_5h_used_pct") === null ? "Not recorded." : `${fmt(100 - num5h("codex_5h_used_pct"))}% left.`, "codex");
+$("gaugeNote").textContent = "Account-wide meters include other work. The bundled example contains invented data only; labels describe input roles, not verified measurements.";
+
+/* ---------- forecast ---------- */
+const BASE = JSON.parse(JSON.stringify(F.params));
+const INP = Object.assign({}, F.inp, { asOf: Date.parse(F.inp.asOf), codexReset: Date.parse(F.inp.codexReset), claudeReset: Date.parse(F.inp.claudeReset) });
+let P = JSON.parse(JSON.stringify(BASE));
+const SL = [
+  { k: "ppw", label: "Building speed (plan points per Codex window)", min: 6, max: 16, step: 0.5, kind: "r", d: 1 },
+  { k: "wpw", label: "Windows in a Codex week", min: 5, max: 7.5, step: 0.1, kind: "m", d: 1 },
+  { k: "ov", label: "Extra work for fixes and checks (×)", min: 1, max: 1.8, step: 0.05, kind: "r", d: 2 },
+  { k: "banks", label: "Banked Codex resets left", min: 0, max: 3, step: 1, kind: "g", d: 0 },
+  { k: "cap", label: "Most windows used in a day", min: 1, max: 4.8, step: 0.2, kind: "r", d: 1 },
+  { k: "cw", label: "Claude's weekly % per Codex window", min: 1, max: 8, step: 0.5, kind: "r", d: 1 },
+  { k: "base", label: "Claude's weekly % per day on chat and records", min: 1, max: 10, step: 0.5, kind: "r", d: 1 },
+  { k: "gap", label: "Pause after each version (days)", min: 0, max: 5, step: 0.5, kind: "r", d: 1 },
+  { k: "secondary", label: "Secondary builds with his Claude Pro (share of his week, 0 = he does not)", min: 0, max: 0.7, step: 0.1, kind: "u", d: 1 },
+  { k: "mcp", label: "Claude building a point itself (% of a Claude week per point)", min: 1, max: 5, step: 0.5, kind: "r", d: 1 },
+];
+const PRESETS = [
+  ["Likely (default)", {}],
+  ["Careful", { ppw: 8, wpw: 5.5, ov: 1.5, cw: 5, cap: 2, gap: 2 }],
+  ["Fast", { ppw: 14, wpw: 7, ov: 1.0, cw: 1.5, cap: 4.8, gap: 0.5 }],
+  ["No banked resets", { banks: 0 }],
+  ["Secondary builds too (Claude Pro)", { secondary: 0.5 }],
+];
+$("sliders").innerHTML = SL.map((s) => `<label for="s-${s.k}"><span>${esc(s.label)} <span class="badge ${s.kind === "g" ? "m" : s.kind}">${s.kind === "m" ? "measured" : s.kind === "g" ? "Primary's word" : s.kind === "u" ? "not known" : "rough"}</span> <output id="o-${s.k}"></output></span><input id="s-${s.k}" type="range" min="${s.min}" max="${s.max}" step="${s.step}"></label>`).join("");
+$("presets").innerHTML = PRESETS.map((p, i) => `<button class="chip" type="button" data-i="${i}" aria-pressed="false">${esc(p[0])}</button>`).join("");
+let activePreset = 0;
+function applyPreset(i) { activePreset = i; P = Object.assign(JSON.parse(JSON.stringify(BASE)), PRESETS[i][1]); SL.forEach((s) => ($("s-" + s.k).value = P[s.k])); render(); }
+$("presets").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) applyPreset(Number(b.dataset.i)); });
+SL.forEach((s) => $("s-" + s.k).addEventListener("input", (e) => { P[s.k] = Number(e.target.value); activePreset = -1; render(); }));
+
+function colorOf(burst) { return burst === "primary" ? "var(--claude)" : "var(--codex)"; }
+function drawGantt(C) {
+  const svg = $("gantt"); svg.innerHTML = "";
+  const W = 760, L = 78, R = 14, rowH = 30, top = 24, H = top + C.likely.versions.length * rowH + 24;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const t0 = INP.asOf;
+  const likelyEnd = C.likely.versions[C.likely.versions.length - 1].end || t0 + 60 * DevKitForecast.DAY;
+  const tEnd = Math.min(t0 + 120 * DevKitForecast.DAY, Math.max(likelyEnd + 10 * DevKitForecast.DAY, t0 + 21 * DevKitForecast.DAY));
+  const x = (t) => L + Math.max(0, Math.min(1, (t - t0) / (tEnd - t0))) * (W - L - R);
+  // weekly ticks
+  for (let t = t0, k = 0; t <= tEnd; t += 7 * DevKitForecast.DAY, k++) {
+    const xx = x(t); svg.appendChild(el("line", { x1: xx, x2: xx, y1: top - 4, y2: H - 22, class: "grid" }));
+    svg.appendChild(el("text", { x: xx, y: H - 8, "text-anchor": "middle", class: "ax" }, day(t)));
+  }
+  C.likely.resets.filter((r) => r.kind === "codex" && r.t <= tEnd).forEach((r) => {
+    svg.appendChild(el("line", { x1: x(r.t), x2: x(r.t), y1: top - 4, y2: H - 22, stroke: "var(--codex)", "stroke-dasharray": "3 3" }));
+  });
+  C.likely.bankAt.filter((t) => t <= tEnd).forEach((t) => {
+    const d = el("path", { d: `M${x(t)} ${top - 12} l5 5 l-5 5 l-5 -5 z`, fill: "var(--codex)" }); d.appendChild(el("title", {}, "A banked Codex reset is used here, " + day(t))); svg.appendChild(d);
+  });
+  svg.appendChild(el("text", { x: x(t0), y: 11, class: "ax", "text-anchor": "start" }, "today"));
+  C.likely.versions.forEach((v, i) => {
+    const y = top + i * rowH, b = C.best.versions[i], w = C.worst.versions[i];
+    svg.appendChild(el("text", { x: 0, y: y + 17, "font-size": 12.5, "font-weight": 600 }, v.id));
+    const lo = x(b.end == null ? tEnd : b.end), hi = x(w.end == null ? tEnd : w.end);
+    svg.appendChild(el("line", { x1: lo, x2: hi, y1: y + 14, y2: y + 14, stroke: "var(--muted)", "stroke-width": 1.5, opacity: 0.55 }));
+    const beyond = w.end == null || w.end > tEnd;
+    svg.appendChild(el(beyond ? "path" : "line", beyond ? { d: `M${W - R - 6} ${y + 9} l6 5 l-6 5`, fill: "none", stroke: "var(--muted)", opacity: 0.8 } : { x1: hi, x2: hi, y1: y + 9, y2: y + 19, stroke: "var(--muted)", opacity: 0.55 }));
+    if (beyond) svg.appendChild(el("text", { x: W - R - 10, y: y + 27, "text-anchor": "end", class: "ax" }, "worst " + day(w.end)));
+    const sx = x(v.start == null ? t0 : v.start), ex = x(v.end == null ? tEnd : v.end);
+    const bar = el("rect", { x: sx, y: y + 5, width: Math.max(4, ex - sx), height: 18, rx: 3, fill: colorOf(v.burst) });
+    bar.appendChild(el("title", {}, `${v.id}: starts ${day(v.start)}, code done about ${day(v.end)} (best ${day(b.end)}, worst ${day(w.end)}); ${fmt(v.windows, 1)} windows`));
+    svg.appendChild(bar);
+    svg.appendChild(el("text", { x: ex + 7, y: y + 18, "font-size": 11.5, "font-weight": 600, stroke: "var(--surface)", "stroke-width": 3, "paint-order": "stroke" }, day(v.end)));
+  });
+  $("ganttLegend").innerHTML = `<span><i class="sw" style="background:var(--claude)"></i>On Primary's quota</span><span><i class="sw" style="background:var(--codex)"></i>After his banked resets are gone: his weekly allowance only (plus Secondary's Claude if he builds)</span><span>◆ a banked reset used</span><span>┆ Codex weekly reset</span><span>— best to worst range</span>`;
+}
+function drawSaw(id, series, key, max, color, marks, label) {
+  const svg = $(id); svg.innerHTML = "";
+  const W = 380, H = 190, L = 34, R = 8, T = 10, B = 26;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const t0 = series[0].t, t1 = series[series.length - 1].t;
+  const x = (t) => L + (t - t0) / (t1 - t0 || 1) * (W - L - R), y = (v) => T + (1 - Math.max(0, v) / max) * (H - T - B);
+  [0, 0.5, 1].forEach((f) => { svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(max * f), y2: y(max * f), class: "grid" })); svg.appendChild(el("text", { x: L - 4, y: y(max * f) + 4, "text-anchor": "end", class: "ax" }, fmt(max * f, max < 10 ? 1 : 0))); });
+  const step = Math.max(1, Math.floor((t1 - t0) / DevKitForecast.DAY / 5));
+  for (let d = 0; d * DevKitForecast.DAY <= t1 - t0; d += step) svg.appendChild(el("text", { x: x(t0 + d * DevKitForecast.DAY), y: H - 8, "text-anchor": "middle", class: "ax" }, day(t0 + d * DevKitForecast.DAY)));
+  let path = `M${x(series[0].t)} ${y(series[0][key])}`;
+  series.forEach((p, i) => { if (i) path += ` L${x(p.t)} ${y(p[key])}`; });
+  svg.appendChild(el("path", { d: path + ` L${x(t1)} ${y(0)} L${x(t0)} ${y(0)} Z`, fill: color, opacity: 0.16 }));
+  svg.appendChild(el("path", { d: path, fill: "none", stroke: color, "stroke-width": 1.8 }));
+  (marks || []).forEach((t) => { if (t >= t0 && t <= t1) { const d = el("path", { d: `M${x(t)} ${T} l4 4 l-4 4 l-4 -4 z`, fill: color }); d.appendChild(el("title", {}, label + " " + day(t))); svg.appendChild(d); } });
+}
+function held(v) {
+  const c = v.waitClaude, x = v.waitCodex;
+  if (c + x < 0.25) return '<span class="badge m">nothing</span>';
+  return (c >= x ? `<span class="badge r">Claude's quota</span>` : `<span class="badge r">Codex's quota</span>`) + `<span class="sub">about ${fmt(Math.max(c, x), 1)} days waiting</span>`;
+}
+function render() {
+  const C = DevKitForecast.cases(INP, P, F.versions);
+  const L = C.likely.versions, last = L[L.length - 1];
+  let lastPrimary = -1; L.forEach((v, i) => { if (v.burst === "primary") lastPrimary = i; });
+  const lim = C.likely.claudeLimitedDays;
+  $("headline").innerHTML = `<b>At these settings:</b> ${esc(L[0].id)} finishes around <b>${day(L[0].end)}</b>; ${esc(last.id)} around <b>${day(last.end)}</b> (best ${day(C.best.end)}, worst ${day(C.worst.end)}).
+    ${lastPrimary < 0 ? "No version fits the primary allowance at these settings." : `Primary allowance carries work through ${esc(L[lastPrimary].id)} with ${fmt(P.banks)} simulated banked resets.`}
+    ${lim > 0.5 ? ` Claude's own weekly allowance holds the pace back for about ${fmt(lim, 1)} days in total.` : " Claude's allowance does not hold the pace back at these settings."}
+    These are <b>rough guesses</b>: only the size of the Codex week and the limits themselves are measured.`;
+  $("presets").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === activePreset)));
+  SL.forEach((s) => ($("o-" + s.k).textContent = fmt(P[s.k], s.d)));
+  drawGantt(C);
+  drawSaw("saw1", C.likely.series, "x", Math.max(P.wpw, 1), "var(--codex)", C.likely.bankAt, "Banked reset used");
+  drawSaw("saw2", C.likely.series, "c", INP.claudeCap, "var(--claude)", [], "");
+  table("forecastTable",
+    [{ t: "Version" }, { t: "What it is" }, { t: "Points", cls: "r" }, { t: "Codex windows", cls: "r" }, { t: "% of a Codex week", cls: "r" }, { t: "Claude, % of a week", cls: "r" }, { t: "Code done (likely, best to worst)" }, { t: "Held back by" }, { t: "Paid by" }],
+    L.map((v, i) => {
+      const ver = F.versions[i], b = C.best.versions[i], w = C.worst.versions[i];
+      return [{ t: v.id, cls: "nw" }, { html: '<div style="min-width:190px">' + esc(ver.theme) + (i === 0 ? `<span class="sub">${fmt(ver.done)} done points supplied in CSV</span>` : "") + '</div>' }, { t: fmt(v.pts), cls: "r num" }, { t: fmt(v.windows, 1), cls: "r num" }, { t: fmt(v.windows / P.wpw * 100) + "%", cls: "r num" }, { t: "about " + fmt(v.claude), cls: "r num" },
+        { html: `<b>${esc(day(v.end))}</b><span class="sub">${esc(day(b.end))} to ${esc(day(w.end))}</span>`, cls: "nw" },
+        { html: held(v) },
+        { html: v.burst === "primary" ? `<span class="badge m">Primary's quota</span>` : `<span class="badge r">weekly allowance only</span>` }];
+    }));
+  const totW = L.reduce((a, v) => a + v.windows, 0), totC = L.reduce((a, v) => a + v.claude, 0);
+  $("forecastNote").textContent = `Together: about ${fmt(totW, 1)} Codex windows (${fmt(totW / P.wpw, 1)} Codex weeks) and about ${fmt(totC)}% of one Claude week spent on directing, in addition to chat and records. "Code done" means built and reviewed by Claude; the PC round on throwaway data and Primary's acceptance come after it. Gates that need Primary's own words (new libraries, vault format, security behaviour) are not modelled and can only add delay.`;
+}
+
+/* ---------- where it went ---------- */
+function tokNum(s) { const m = /([\d.]+)\s*M/i.exec(s || ""); return m ? parseFloat(m[1]) : null; }
+(function usageScreen() {
+  const rows = D.screen; if (!rows.length) { $("screenBars").textContent = "No reading."; return; }
+  const shown = rows.map((r) => ({ n: r.thread, v: tokNum(r.tokens), sh: r.share })).filter((r) => r.v != null), total = shown.reduce((a, r) => a + r.v, 0);
+  const sum = shown.reduce((a, r) => a + r.v, 0), rest = total - sum;
+  const max = Math.max(...shown.map((r) => r.v), rest);
+  $("screenNote").textContent = `Supplied screen rows at ${hhmm(rows[0].time)} total ${fmt(total, 1)}M tokens. No unrecorded remainder is inferred.`;
+  $("screenBars").innerHTML = shown.map((r) =>
+    `<div class="row"><div class="name">${esc(r.n)}</div><div class="track"><div class="bar" style="width:${r.v / max * 78}%"></div><span class="val">${fmt(r.v, 1)}M · ${esc(r.sh)}</span></div></div>`).join("");
+})();
+const CATC = { "Coordinator chat": "#6a5acd", "Directing the build": "#b8591a", "Reading and studies": "#12968a", "Planning and writing": "#2f6fb0", "Records and ledger": "#8a8f8d", "Other": "#bcbfbd" };
+(function categories() {
+  const agg = {}; let tw = 0, tc = 0;
+  D.sessions.forEach((s) => { const k = s.category; const a = agg[k] = agg[k] || { w: 0, c: 0, n: 0, noMeasure: 0 }; a.n++; if (s.weighted) { a.w += s.weighted; tw += s.weighted; } else a.noMeasure++; if (s.cost != null) { a.c += s.cost; tc += s.cost; } });
+  const keys = Object.keys(agg).sort((a, b) => agg[b].w - agg[a].w);
+  $("catNote").textContent = `${fmt(tw / 1e6, 1)} million weighted tokens in the ledger's rows (input ×1, cache write ×1.25, cache read ×0.1, output ×5); groups are my reading of the thread names.`;
+  $("catStack").innerHTML = keys.map((k) => `<div style="width:${agg[k].w / tw * 100}%;background:${CATC[k] || "#999"}" title="${esc(k)}: ${fmt(agg[k].w / 1e6, 1)}M">${agg[k].w / tw > 0.07 ? fmt(agg[k].w / tw * 100) + "%" : ""}</div>`).join("");
+  $("catLegend").innerHTML = keys.map((k) => `<span><i class="sw" style="background:${CATC[k] || "#999"}"></i>${esc(k)}</span>`).join("");
+  table("catTable", [{ t: "Group" }, { t: "Threads", cls: "r" }, { t: "Weighted tokens", cls: "r" }, { t: "Reported USD", cls: "r" }],
+    keys.map((k) => [{ t: k }, { t: fmt(agg[k].n) + (agg[k].noMeasure ? ` (${agg[k].noMeasure} not measured)` : ""), cls: "r num" }, { t: M(agg[k].w), cls: "r num" }, { t: agg[k].c ? "$" + fmt(agg[k].c, 2) : "n/a", cls: "r num" }]));
+})();
+(function codexBars() {
+  const lanes = D.codex.map((r) => ({ n: r.run_label, task: r.task, used: Number((/tokens used' printed: ([\d,]+)/.exec(r.notes) || [])[1] && /tokens used' printed: ([\d,]+)/.exec(r.notes)[1].replace(/,/g, "")), all: Number(r.input) + Number(r.output), result: r.result }));
+  const max = Math.max(...lanes.map((l) => l.used));
+  const cyc = lanes.reduce((a, l) => a + l.used, 0), allIn = lanes.reduce((a, l) => a + l.all, 0);
+  $("codexNote").textContent = `Recorded runs: ${fmt(allIn)} input and output tokens; ${fmt(cyc)} new tokens printed. Empty fields are not independent evidence of zero usage.`;
+  $("codexBars").innerHTML = lanes.map((l) => `<div class="row"><div class="name">${esc(l.n)}<small>${esc(l.task)}</small></div><div class="track"><div class="bar codex" style="width:${l.used / max * 75}%"></div><span class="val">${fmt(l.used / 1000)}k</span></div></div>`).join("");
+})();
+(function weekChart() {
+  const pts = { claude: [], codex: [] };
+  D.quota.forEach((q) => {
+    const t = Date.parse(q.time.length === 17 ? q.time.replace("Z", ":00Z") : q.time); if (isNaN(t)) return;
+    if (q.tool === "Claude" && /weekly/.test(q.limit)) { const m = /(\d+(\.\d+)?)% used/.exec(q.reading); if (m) pts.claude.push([t, parseFloat(m[1])]); }
+    if (q.tool === "Codex" && /weekly/.test(q.limit)) { const m = /weekly (\d+(\.\d+)?)% used/.exec(q.reading) || /(\d+(\.\d+)?)% used/.exec(q.reading); if (m) pts.codex.push([t, parseFloat(m[1])]); }
+  });
+  const all = pts.claude.concat(pts.codex).map((p) => p[0]); const t0 = Math.min(...all), t1 = Math.max(...all);
+  const svg = $("weekChart"), W = 380, H = 220, L = 34, R = 10, T = 10, B = 28;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const x = (t) => L + (t - t0) / (t1 - t0 || 1) * (W - L - R), y = (v) => T + (1 - v / 100) * (H - T - B);
+  [0, 25, 50, 75, 100].forEach((v) => { svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "grid" })); svg.appendChild(el("text", { x: L - 4, y: y(v) + 4, "text-anchor": "end", class: "ax" }, v + "%")); });
+  svg.appendChild(el("line", { x1: L, x2: W - R, y1: y(F.inp.claudeCap), y2: y(F.inp.claudeCap), stroke: "var(--ink)", "stroke-dasharray": "4 3" }));
+  svg.appendChild(el("text", { x: W - R, y: y(F.inp.claudeCap) - 4, "text-anchor": "end", class: "ax" }, `Claude cap ${F.inp.claudeCap}%`));
+  [t0, t1].forEach((t, i) => svg.appendChild(el("text", { x: x(t), y: H - 8, "text-anchor": i ? "end" : "start", class: "ax" }, new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false }))));
+  [["claude", "var(--claude)"], ["codex", "var(--codex)"]].forEach(([k, c]) => {
+    const a = pts[k].sort((p, q) => p[0] - q[0]); if (!a.length) return;
+    svg.appendChild(el("path", { d: a.map((p, i) => (i ? "L" : "M") + x(p[0]) + " " + y(p[1])).join(" "), fill: "none", stroke: c, "stroke-width": 1.8 }));
+    a.forEach((p) => { const d = el("circle", { cx: x(p[0]), cy: y(p[1]), r: 3.5, fill: c }); d.appendChild(el("title", {}, `${k} week: ${p[1]}% at ${hhmm(new Date(p[0]).toISOString())}`)); svg.appendChild(d); });
+  });
+})();
+(function models() {
+  const bm = D.byModel, keys = Object.keys(bm);
+  const tw = keys.reduce((a, k) => a + bm[k].weighted, 0);
+  const MC = { "Opus 5.5": "var(--opus)", "Sonnet 5.5": "var(--sonnet)", "Opus + Sonnet 5.5": "var(--both)", "not recorded": "#bbb" };
+  const rates = D.rates;
+  const T = D.totals;
+  const cx = D.codex.reduce((a, r) => ({ input: a.input + Number(r.input), cached: a.cached + Number(r.cached_input), out: a.out + Number(r.output) }), { input: 0, cached: 0, out: 0 });
+  const stackRow = (name, parts) => { const tot = parts.reduce((a, p) => a + p[1], 0); return `<div><div class="small" style="margin-bottom:4px">${esc(name)}: ${M(tot)} tokens</div><div class="stack">${parts.map((p) => `<div style="width:${Math.max(p[1] / tot * 100, 0.4)}%;background:${p[2]}" title="${esc(p[0])}: ${M(p[1])}">${p[1] / tot > 0.08 ? fmt(p[1] / tot * 100) + "%" : ""}</div>`).join("")}</div><div class="legend">${parts.map((p) => `<span><i class="sw" style="background:${p[2]}"></i>${esc(p[0])} ${fmt(p[1] / tot * 100, 1)}%</span>`).join("")}</div></div>`; };
+  $("modelPanels").innerHTML = `<div class="panel"><h3>Claude: by model <span class="badge m">measured</span></h3>
+    <div class="stack">${keys.map((k) => `<div style="width:${bm[k].weighted / tw * 100}%;background:${MC[k] || "#999"}" title="${esc(k)}">${bm[k].weighted / tw > 0.08 ? fmt(bm[k].weighted / tw * 100) + "%" : ""}</div>`).join("")}</div>
+    <div class="legend">${keys.map((k) => `<span><i class="sw" style="background:${MC[k] || "#999"}"></i>${esc(k)}: ${M(bm[k].weighted)}</span>`).join("")}</div>
+    <p class="small muted">Opus cost ${rates["Opus 5.5"] ? "$" + rates["Opus 5.5"][0] + " to $" + rates["Opus 5.5"][1] : "n/a"} per million weighted tokens, Sonnet ${rates["Sonnet 5.5"] ? "$" + rates["Sonnet 5.5"][0] + " to $" + rates["Sonnet 5.5"][1] : "n/a"}, at list prices from the thread records while the cloud credit lasted.</p></div>
+    <div class="panel"><h3>What the tokens are: new work or rereading <span class="badge m">measured</span></h3>
+    ${stackRow("Claude, all ledger rows", [["fresh input", T.input, "#2f6fb0"], ["cache write", T.cw, "#8a8f8d"], ["cache read", T.cr, "#bcbfbd"], ["output", T.out, "#b8591a"]])}
+    ${stackRow("Codex, first cycle", [["new input", cx.input - cx.cached, "#2f6fb0"], ["cached input", cx.cached, "#bcbfbd"], ["output", cx.out, "#b8591a"]])}
+    <p class="small muted">Almost everything on both sides is cached rereading: the tool reads its growing context again at every turn. Only the thin slices are new text going in or out. This is why shorter contexts, not lower effort, are the lever that saves quota. The two bars are not the same unit and must not be compared as a price.</p></div>`;
+})();
+
+/* ---------- how and details ---------- */
+$("hWpw").textContent = fmt(F.params.wpw, 1);
+$("hUsed").textContent = fmt(F.inp.codexUsed);
+table("inputsTable", [{ t: "Input" }, { t: "Value" }, { t: "Range" }, { t: "Kind" }, { t: "Where it comes from" }],
+  F.inputsTable.map((r) => [{ t: r.key, cls: "nw" }, { t: r.value, cls: "num" }, { t: r.low || r.high ? `${r.low || "-"} to ${r.high || "-"}` : "", cls: "num nw" },
+    { html: `<span class="badge ${r.kind === "measured" ? "m" : r.kind === "rough" ? "r" : r.kind === "rule" ? "m" : "u"}">${esc(r.kind)}</span>` }, { html: esc(r.source) + (r.notes ? `<span class="sub">${esc(r.notes)}</span>` : "") }]));
+$("unknowns").innerHTML = [
+  "<b>Secondary capacity.</b> Optional direct-building capacity is an assumption. Set it to zero unless explicitly planned.",
+  "<b>Completed work.</b> Done points come only from forecast-versions.csv; they are not inferred from merges.",
+  "<b>Claude's cost per lane.</b> The weakest number: nobody has yet read Claude's weekly percentage before and after a lane. The new rule in the ledger README asks for that reading each time.",
+  "<b>Gates.</b> New libraries, vault format changes and security behaviour need Primary's own words; time spent waiting for them is not modelled.",
+  "<b>Quality risks.</b> Rework and failed checks can consume additional windows; overhead is an assumption.",
+].map((x) => `<li>${x}</li>`).join("");
+
+table("codexTable", [{ t: "Run" }, { t: "Task" }, { t: "Ended" }, { t: "New tokens printed", cls: "r" }, { t: "All input + output", cls: "r" }, { t: "Result" }],
+  D.codex.map((r) => [{ t: r.run_label }, { t: r.task }, { t: r.end_utc ? hhmm(r.end_utc) : "", cls: "nw" }, { t: fmt((/tokens used' printed: ([\d,]+)/.exec(r.notes) || [])[1] ? Number(/tokens used' printed: ([\d,]+)/.exec(r.notes)[1].replace(/,/g, "")) : null), cls: "r num" }, { t: M(Number(r.input) + Number(r.output)), cls: "r num" }, { t: r.result }]));
+
+const cats = ["All"].concat(Array.from(new Set(D.sessions.map((s) => s.category))));
+let curCat = "All";
+function sessionTable() {
+  $("filters").innerHTML = cats.map((c) => `<button class="chip" type="button" data-c="${esc(c)}" aria-pressed="${c === curCat}">${esc(c)}</button>`).join("");
+  const rows = D.sessions.filter((s) => curCat === "All" || s.category === curCat).slice().sort((a, b) => (b.weighted || 0) - (a.weighted || 0));
+  table("sessionTable", [{ t: "Thread" }, { t: "Group" }, { t: "Model" }, { t: "Where" }, { t: "Weighted tokens", cls: "r" }, { t: "Output tokens", cls: "r" }, { t: "Reported USD", cls: "r" }],
+    rows.map((s) => [{ html: esc(s.task) + (s.running ? ' <span class="badge">running</span>' : "") + `<span class="sub">${esc(s.effort)} · ${hhmm(s.start)}</span>` }, { t: s.category }, { t: s.model }, { t: s.machine }, { t: s.weighted ? M(s.weighted) : "not measured", cls: "r num" }, { t: s.out ? fmt(s.out) : "", cls: "r num" }, { t: s.cost != null ? "$" + fmt(s.cost, 2) : s.est ? `≈ $${s.est[0]} to $${s.est[1]} (est.)` : "", cls: "r num" }]));
+}
+$("filters").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { curCat = b.dataset.c; sessionTable(); } });
+sessionTable();
+table("quotaTable", [{ t: "Time (UTC)" }, { t: "Tool" }, { t: "Limit" }, { t: "Reading" }, { t: "Resets" }, { t: "Read by" }],
+  D.quota.map((q) => [{ t: hhmm(q.time.length === 17 ? q.time.replace("Z", ":00Z") : q.time), cls: "nw" }, { t: q.tool }, { t: q.limit }, { t: q.reading }, { t: q.resets, cls: "nw" }, { t: q.by }]));
+$("gapList").innerHTML = [
+  "Secondary's usage (his own account), and any Claude or Codex use outside DevKit on Primary's accounts: the limit screens count everything, the ledger rows only the supplied rows.",
+  "Runs missing from codex-runs.csv are not estimated or reconstructed.",
+  "Sessions on the PC (Remote Control) are not readable from the cloud; their rows stay empty until the scanner is run there.",
+  "Running sessions' own usage (including this thread's) is read at the next refresh.",
+  "Dollar totals apply only to rows that report a cost; no subscription bill is inferred.",
+].map((x) => `<li>${x}</li>`).join("");
+
+applyPreset(0);
+</script>
