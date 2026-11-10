@@ -335,12 +335,17 @@ Written 2026-11-08 about 07:18 UTC for Mohamed, so that whoever has quota left c
 - **How to resume on your side.** Read `docs/STATUS.md` (Continuation), then the briefs, then `git fetch --all --prune` and look at `AE0101/v1-6-*` branches and open pull requests. Treat anything in the PC worktrees as unverified until the checks run on the pushed commit. Codex's limits are the pacing: first window used 15% of the weekly limit, second window 22% in total (the ledger holds the readings); the 5-hour window resets about every 5 hours.
 - **Known gaps to close before 1.6 is complete:** the bridge's modern `subscriptions/listen` and `server/discover` details; lane E's Playwright check script (three timing bugs; the patched copy passes 40 checks); the title-bar marker (wired when A is merged); a security review of lanes C5 and D together; the real pipe, installer and registration checks on the PC; the one-time local safety copy at first launch (gate G3, confirmed by Ahmed 00:46:05 UTC, belongs to the vault lane).
 
+## 18. Ahmed's side moves to ChatGPT Pro and Codex (2026-11-10) [Ahmed's side]
+
+Ahmed's Claude weekly quota is nearly used up (about 91% on 2026-11-10 03:21 UTC). On 03:32:47 UTC he asked for a full migration of the lead coordinator and reviewer role to **ChatGPT Pro plus the Codex desktop app** ([A55](../plan/approval-and-amendments.md); it takes effect on his "handover accepted" in ChatGPT). The package is [`migration-to-chatgpt/`](migration-to-chatgpt/README.md). **For Mohamed:** nothing changes on your side. You keep Claude Pro (no Codex). If you must carry on, paste block D from [`migration-to-chatgpt/02-start-prompts.md`](migration-to-chatgpt/02-start-prompts.md) as your first message; you merge, release and accept on your side, and making the repository public or adding a licence still needs both of you. Ahmed may ask you for a second opinion on a risky diff (the one non-OpenAI review), only with your agreement. Section 17 stays the 1.6 state as of 2026-11-09 12:00 UTC; the current state is in the migration guide, section 6, and in `docs/STATUS.md`.
+
 ## Change log
 
 Newest first. Each line: when (UTC), what changed, which side's decision it records.
 
 | When (UTC) | Change | Whose decision |
 |---|---|---|
+| 2026-11-10 04:50 | New section 18: Ahmed's side moves to ChatGPT Pro and Codex (A55); what it means for Mohamed. Repo copy only; the published page was **not** republished (the HTML snapshot in `docs/artifacts/snapshots-2026-11-10/` is the 2026-11-08 content). | Ahmed's side (03:32:47) |
 | 2026-11-09 12:00 | Section 17 updated: P1 merged, A51 (Windows-owned confirmations), live AI check passed, A52 (Notion import with real data, WP-19), silent heartbeat, security pass areas 1 and 2, lean-mode note. Repo copy only; the published page is rebuilt by the coordinator. | Ahmed's side (08:22:33, 10:42:50, 11:33, 11:52:54) |
 | 2026-11-09 07:18 | Section 17 updated: Claude 70% line lifted for 1.6, model choice by task, banked resets by Ahmed (A50). Repo copy only. | Ahmed's side |
 | 2026-11-09 07:10 | Section 17 updated: P8 into 1.6, full security pass (WP-17) and whole-app polish sweep (WP-18) added (A49); new Codex security review guide. Repo copy only. | Ahmed's side |

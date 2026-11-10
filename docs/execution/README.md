@@ -16,6 +16,12 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-10 (Ahmed's migration request, A55), EX-2026-11-10-73: full migration handoff from Claude to ChatGPT Pro and Codex
+
+- Report: [2026-11-10-migration-to-chatgpt-handoff.md](2026-11-10-migration-to-chatgpt-handoff.md)
+- Package: [`docs/handoff/migration-to-chatgpt/`](../handoff/migration-to-chatgpt/README.md)
+- Result state: produced, not run by ChatGPT or Codex, not accepted. Records: A55, session 54, claims row, STATUS dated line.
+
 ### 2026-11-09 (Ahmed's security pass, area 2), EX-2026-11-09-72: SF3, offline tamper evidence and permanent-delete purge
 
 - Report: [2026-11-09-sf3-tamper-and-purge.md](2026-11-09-sf3-tamper-and-purge.md)
