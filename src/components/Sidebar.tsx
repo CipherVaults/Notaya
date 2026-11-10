@@ -1301,7 +1301,7 @@ export function TrashView() {
       useApp.getState().setTree(tree);
       const [bin, stickies] = await Promise.all([api.listBin(), api.listStickies()]);
       useApp.setState({ bin, stickies });
-    } catch (e) { toast.error(errorText(e)); }
+    } catch (e) { if (e !== "cancelled") toast.error(errorText(e)); }
   };
   const groups = [["notebook", "Notebooks"], ["section", "Sections"], ["page", "Pages"], ["database", "Databases"], ["row", "Rows"], ["sticky", "Sticky notes"]] as const;
   return <div className="h-full overflow-y-auto">

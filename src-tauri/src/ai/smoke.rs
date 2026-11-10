@@ -140,6 +140,7 @@ fn bridge_core_smoke_pair_read_confirm_refuse_person_editing_and_ordered_deliver
     s.put(Item::Settings(settings)).unwrap();
     let state = Arc::new(AppState::new(paths));
     state.set_session(s);
+    state.ai.native.inject(crate::native_confirm::TestApprover(true));
 
     let allow = Arc::new(AtomicBool::new(false));
     let confirms = Arc::new(AtomicUsize::new(0));
@@ -150,7 +151,7 @@ fn bridge_core_smoke_pair_read_confirm_refuse_person_editing_and_ordered_deliver
         let state = weak.upgrade().unwrap();
         // A real PC run must answer these through the Notaya window commands.
         match event {
-            "ai-pairing" => assert!(state.ai.confirms.answer("pairing", v["id"].as_str().unwrap(), true, None)),
+            "ai-pairing" => crate::commands::ai::ai_pair_answer_core(&state, v["id"].as_str().unwrap().into(), true).unwrap(),
             "ai-confirm" => {
                 window_confirms.fetch_add(1, Ordering::SeqCst);
                 assert!(state.ai.confirms.answer("confirm", v["id"].as_str().unwrap(), allow_window.load(Ordering::SeqCst), v["word"].as_str()));

@@ -238,12 +238,14 @@ impl Session {
         let snapshot = self
             .prepare_snapshot(item, &actor, matches!(actor, Actor::Ai { .. }), now_ms())?
             .ok_or(Error::NotFound)?;
+        let anchor = self.prepare_anchor(&self.activity_head, vec![super::anchor::addition(&snapshot.meta)])?;
         self.store.transaction(|s| {
             for (id, bytes) in &snapshot.rows {
                 s.put(Table::History, id, bytes)?;
             }
-            Ok(())
+            anchor.write(s)
         })?;
+        self.anchor = anchor.next;
         self.history_index
             .entry(id.into())
             .or_default()
@@ -312,13 +314,16 @@ impl Session {
             .filter(|m| !keep.contains(&m.version_id))
             .map(|m| m.version_id.clone())
             .collect();
+        if remove.is_empty() { return Ok(0); }
+        let journal = self.prepare_thinning(&remove)?;
         self.store.transaction(|s| {
             for id in &remove {
                 s.delete(Table::History, &parse_id(id)?)?;
                 s.delete(Table::History, &body_id(id)?)?;
             }
-            Ok(())
+            journal.write(s)
         })?;
+        self.accept_journal(journal);
         for versions in self.history_index.values_mut() {
             versions.retain(|m| keep.contains(&m.version_id));
         }
@@ -399,9 +404,12 @@ mod tests {
                 .seal_json(Table::History, &snap.rows[0].0, &snap.meta)
                 .unwrap();
         }
-        for (id, bytes) in &snap.rows {
-            s.store.put(Table::History, id, bytes).unwrap();
-        }
+        let anchor = s.prepare_anchor(&s.activity_head, vec![super::super::anchor::addition(&snap.meta)]).unwrap();
+        s.store.transaction(|store| {
+            for (id, bytes) in &snap.rows { store.put(Table::History, id, bytes)?; }
+            anchor.write(store)
+        }).unwrap();
+        s.anchor = anchor.next;
         let version = snap.meta.version_id.clone();
         s.history_index
             .entry(id.into())
@@ -536,7 +544,7 @@ mod tests {
         }
         s.put(item).unwrap();
         assert!(!s.history_list(&id).unwrap().is_empty());
-        crate::commands::notes::empty_trash_core(&mut s, &Actor::Person).unwrap();
+        crate::commands::notes::test_empty_trash_core(&mut s, &Actor::Person).unwrap();
         assert!(s.history_index.get(&id).is_none());
         s.collect_garbage().unwrap();
         assert!(s.get_attachment(&pic).is_err());
@@ -587,14 +595,14 @@ mod tests {
             // including bodies that are not returned in activity-list metadata.
             let history = s.store.all(Table::History).unwrap();
             let activity = s.store.all(Table::Activity).unwrap();
-            let error = crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).err().unwrap();
+            let error = crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, id.clone()).err().unwrap();
             assert_eq!(error.to_string(), "Only items in the bin can be permanently deleted.");
             assert_eq!(s.store.all(Table::History).unwrap(), history);
             assert_eq!(s.store.all(Table::Activity).unwrap(), activity);
             crate::commands::notes::trash_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
             // Include any versions taken by the bin operation in the deletion check.
             let versions = s.history_list(&id).unwrap();
-            crate::commands::notes::delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
+            crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, id.clone()).unwrap();
             assert!(s.get(&id).is_none());
             assert!(!s.history_index.contains_key(&id));
             for version in &versions {
@@ -614,8 +622,7 @@ mod tests {
                 assert!(!plain.contains("deleted undo body sentinel"));
                 assert!(!plain.contains("deleted AI body sentinel"));
             }
-            let summary = s.activity_undo(&Actor::Person, &change_set).unwrap();
-            assert_eq!((summary.restored, summary.skipped), (0, 1));
+            assert!(s.activity_undo(&Actor::Person, &change_set).err().unwrap().to_string().contains("permanently deleted"));
             assert!(s.get(&id).is_none(), "undo cannot recreate a permanently deleted item");
             s.activity_verify().unwrap();
         }
@@ -638,6 +645,7 @@ mod tests {
                     .unwrap(),
             );
         }
+        let anchor = s.prepare_anchor(&s.activity_head, snapshots.iter().map(|snap| super::super::anchor::addition(&snap.meta)).collect()).unwrap();
         s.store
             .transaction(|store| {
                 for snap in &snapshots {
@@ -645,7 +653,7 @@ mod tests {
                         store.put(Table::History, id, bytes)?;
                     }
                 }
-                Ok(())
+                anchor.write(store)
             })
             .unwrap();
         let body_bytes: u64 = snapshots.iter().map(|snap| snap.meta.bytes).sum();

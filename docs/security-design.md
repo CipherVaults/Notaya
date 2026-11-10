@@ -4,6 +4,18 @@ This record states what Cipherleaf protects, where its trust boundaries are, wha
 
 A dependency scan, a plaintext search or a passing test can support one specific claim. None of them shows on its own that the app is secure.
 
+## A51: native approvals and local keyfiles (2026-11-09, S-FIX2)
+
+**Authority:** Ahmed (`AE0101`), 2026-11-09 08:22:33 UTC, A51. Produced on `GAMING-PC`; integration, independent review and person acceptance are separate. The older record below is preserved. This section describes the new boundaries for these routes; it does not strengthen unrelated historical claims.
+
+- **Native approval promise.** Permanent deletion through `delete_page` and `empty_trash`, the internal `delete_bin_tree` sink, turning AI access on, and approving a new AI pairing require a Rust-owned Windows message dialog parented to the main window. Existing in-window dialogs come first. The native prompt uses the existing dialog plugin and runs on a blocking worker (the AI dispatcher already runs on a dedicated pipe worker), with no vault lock held while waiting. One outstanding native question is allowed; overlapping attempts are cancelled.
+- **Binding.** Rust builds deletion counts and up to five titles from the actual subtree/bin set. Titles and client labels have control characters, line separators and bidi formatting stripped and are truncated to 80 characters including an ellipsis. Pairing labels come from the pending Rust broker request. Rust retains a memory-only session identity, operation/target ids, item revisions, and the AI epoch; enable/pairing also bind the current AI settings and settings revision. After Windows answers, the core rechecks the target under the vault lock. A changed target, changed session/settings, expired/cancelled pairing or replay is refused. Approvals are single-use Rust values; internal delete permits also consume each allowed id. Nothing serialized to a window is an approval.
+- **What a compromised window cannot approve through these routes.** No IPC command, event, renderer text, `ALLOW` argument, Strong word or pairing request id can answer the native question. A script can request it or deny a pairing, but the gated operation needs Windows' affirmative answer. Cancel returns `cancelled`, without performing that operation or writing its history/settings. Tests inject an approver; they do not click a dialog.
+- **What remains window-owned.** Everyday AI action confirmations (`ai_confirm_answer`, including the Strong-word flow), level changes, hidden notebooks, pause/resume and other settings keep their existing behavior. Permanent AI deletes get the additional native step after their existing in-window confirmation. A compromised main window can still answer everyday action requests, change the settings it was already allowed to change, read unlocked notes, and move items to the bin. The A18/A21 optional-security/restore limitations below remain. This is not a general defense against a compromised renderer or same-user malware.
+- **Keyfile locality promise.** All five credential routes (`unlock_vault`, `disable_security`, both keyfiles in `change_master`, `enable_security`, `restore_vault`) use the guarded Rust reader before metadata/content access to the supplied path. It refuses UNC and mixed-slash UNC, all caller-supplied extended/device namespaces (`\\?\`, `\\.\`, NT device forms), DOS device aliases in any component (including extensions, trailing dots/spaces and superscript COM/LPT aliases), alternate streams and invalid Windows filename syntax. Windows resolves drive-relative/ordinary relative paths locally, expands SUBST mappings, and refuses redirectors and `DRIVE_REMOTE` before opening a path. Fixed and removable drives remain allowed; an unknown/unavailable drive fails closed.
+- **Junctions and reads.** Each local ancestor is opened without following reparse points and pinned against writes/deletion while inspected. Local drive-form junction/symlink destinations are checked recursively, before target access; remote/device or unsupported volume namespaces are refused. Reparse cycles/depth are bounded. The digest reads from the same inspected file handle with a 64 MB bound, rather than reopening the renderer path. Ordinary local folders and local junctions remain usable. This is a Windows filesystem boundary, not a claim about OS cloud/filter drivers, physical erasure, or every possible reparse provider.
+- **Limits and evidence.** Native appearance, parenting, keyboard/cancel behavior and actual human answers are person-only and **not run** in S-FIX2. See the numbered [whole-app checks](plan/2026-11-09-whole-app-test-plan.md) and [execution hand-back](execution/2026-11-09-sf2-native-confirmations.md). Deletion still uses the existing purge/history implementation: old backups and the independent Area 2 undo-retention findings are not repaired here. A native answer does not promise physical erasure of every earlier copy. No new dependency, frontend dialog text, crypto algorithm, CSP or pipe permission is introduced.
+
 **Status corrections (2026-11-07, second records PR [EX-2026-11-07-45](execution/2026-11-07-records-gaps-closed.md)).** The text below is not rewritten; these dated notes give the later state and its source. No promise, boundary or limit changes here, and no code changed.
 
 - **Name.** The app has been Notaya since A28 (2026-10-27). "Cipherleaf" in this record means Notaya; internal names that still say `cipherleaf` (the crate, `CIPHERLEAF_HOME` as a fallback for `NOTAYA_HOME`, the old `CLF1` format) are as stated where they appear.
@@ -92,6 +104,71 @@ Every app command is callable by any Cipherleaf window. So a script injected int
 P1–P3 were unit-tested at 11:37 UTC on 2026-10-22; the whole suite passed again on 2026-10-22 at 21:49 UTC (33 tests, source after commit `9a40a3c` plus the uncommitted A10, A11 and A12 changes), on 2026-10-23 on commit `dc95fd3` (39 tests), on commit `1273093` (68 tests) and on commit `442036e` (107 tests). For A21 (commits `84b281d`, `0929ae5` and `f9d2676`) the Rust core was tested in a Tauri-free harness on 2026-10-23: 69 tests pass, 13 of them new for A21 (header, session including re-keying and a failed re-key, model, restore and openvault); the cloud container has no GTK libraries, so the app crate was tested on the owner's PC: `cargo test --lib` passed 130 of 130 on `5ef5b07` (and on `dc5860a`) on 2026-10-23 (about 19:45 to 19:51 UTC, system clock), and the Tauri-free harness passed 73 tests on `3bc011b`. Through a running app, P11 (removed in A24) and P12 were checked by script on a throwaway vault, and the owner observed P7's "off" state; the rest have not been exercised in the running app. See [acceptance.md](acceptance.md).
 
 ## Known limitations
+
+### 1.6 SF3: authenticated journals and permanent deletion (2026-11-09)
+
+**P33, strengthened:** activity and history membership are authenticated under the
+vault key. A separate encrypted anchor commits the activity head, sequence range
+and row count, and the head/root/counts of a SHA-256 history-membership ledger.
+Deleting the complete activity table, deleting a complete history metadata/body
+pair, or deleting the anchor after initialization fails verification. Unlock
+checks the activity head/count and exact history membership using metadata and
+row ids; history bodies stay lazy. **Check the log** and restore additionally
+check every activity link, history body hash and indirect undo body. They reject
+edited, missing, swapped or reordered journal records. Authentication uses the
+existing record AEAD and vault/format/table/row AAD; the added closed table tag is
+`anc`. No new cryptographic primitive or dependency is used.
+
+The fixed anchor is in the additional `journal_anchor` table. Content-free,
+encrypted membership certificates use the same SHA-256 chain pattern as the
+activity log: sorted add/remove deltas bind each snapshot id to its page id and
+body hash; replay reconstructs the exact expected snapshot set. The anchor and
+all associated data writes share one SQLite transaction. Clear/prune/thin move
+the anchor with authenticated `log.cleared`, `log.pruned` or `history.thinned`
+entries. Normal saves append only their own deltas and update a fixed-size
+anchor; they do not rescan old journal records to calculate a membership root.
+
+An authenticated `journalsAnchored` field in the existing settings record
+distinguishes a genuine older file from a removed anchor. An old file without
+that latch or an anchor is fully verified and migrated silently at its first
+writable open; the anchor and latch are written atomically. A set latch with a
+missing anchor is an error, never a reason to rebuild it. Migration verifies
+the old state that survives; it cannot discover evidence erased before any
+anchor existed. The vault remains NOTA v2. Version 1.5.1 can ignore the extra
+table and settings field when reading a copy; writing or re-keying that copy
+with an older version is not supported by this promise.
+
+**Delete for good includes undo:** permanently deleting a sticky, page, database
+row (including its cells), or database (including its templates), and removing a
+database template, removes the item's stored content from the current vault's
+records, replacement history, version history and activity undo. New previous
+values live in separate encrypted, hash-bound undo-body rows; page/row page
+bodies continue to use history. Deletion removes those rows and replaces affected
+undo entries with content-free tombstones, re-sealing and re-linking the activity
+chain and updating its anchor in the same transaction. It also purges legacy
+inline undo values. The log retains its existing titles, actors, times, item ids,
+actions and counts. Undo refuses a change set containing permanently deleted
+content with a plain message. Ordinary binning preserves undo and history.
+Notebook/section/database cascades and empty-bin use this same storage boundary;
+item/template purges also collect files/pictures no surviving item, history
+version, replacement edit or undo body uses before that transaction commits.
+SQLite `secure_delete=ON`
+continues to overwrite freed database cells.
+
+**Limits:** whole-file rollback to an older consistent copy is not detectable
+offline. There is no external monotonic counter: replaying a complete, previously
+authenticated journal state together with its matching anchor and settings latch
+is also outside the freshness guarantee; the earlier single-record replay limit
+still applies to ordinary records. With security off the key is public, so
+someone can construct a consistent replacement. This is tamper evidence under a
+secret vault key, not evidence against someone who knows that key. Earlier
+automatic/manual/safety/restore-undo backups and exports retain their earlier
+content, and deletion does not erase an independently copied value in another
+live item, a search term or calculator entry. It does not promise forensic
+erasure from host memory, SQLite rollback journals left by a crash, filesystem
+snapshots, unallocated disk blocks or SSD remapping. Independent review and
+person-only runtime checks remain separate from the Rust regression results in
+[the SF3 execution note](execution/2026-11-09-sf3-tamper-and-purge.md).
 
 ### A24: KeePassXC removed (2026-10-27)
 

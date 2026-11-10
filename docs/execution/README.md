@@ -16,6 +16,49 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-09 (Ahmed's security pass, area 2), EX-2026-11-09-72: SF3, offline tamper evidence and permanent-delete purge
+
+- Report: [2026-11-09-sf3-tamper-and-purge.md](2026-11-09-sf3-tamper-and-purge.md)
+- Executor: Codex (lane SF3, Gaming-PC), reviewed and merged by Claude
+- Outcome: membership-certificate anchor for the history and activity journals, content purge on permanent delete; checks on the lane tip pass (733 tests)
+- Integration / review: merged into `main` after the PC ran 755 tests on the merged and repaired commit `f2d32ea`; Claude read everything
+- Acceptance: pending
+- Open dependency / next action: measure permanent delete on a large vault; G3 safety copy not built
+
+### 2026-11-09 (Ahmed's A52), EX-2026-11-09-71: WP-19 lane N1, Notion import findings
+
+- Report: [2026-11-09-wp19-n1-findings.md](2026-11-09-wp19-n1-findings.md)
+- Executor: Codex (lane N1, Gaming-PC), reviewed and merged by Claude
+- Outcome: findings note and nine ignored invented-fixture tests; no production change; checks on the exact tip pass
+- Integration / review: merged into `main` (see the PR); Claude read everything
+- Acceptance: pending
+- Open dependency / next action: lanes N2 and N3 (A53), then the real-export re-run
+
+### 2026-11-09 (Ahmed 19:31:00 UTC, Q66), EX-2026-11-09-70: WP-19, the six Notion arrangement changes (A53) and the N2/N3 briefs
+
+- Report: [2026-11-09-wp19-q66-n2-n3-briefs.md](2026-11-09-wp19-q66-n2-n3-briefs.md)
+- Executor: Claude (cloud thread "Build Notaya 1.6")
+- Outcome: A53 recorded; N2 and N3 briefs written; records only
+- Integration / review: not applicable
+- Acceptance: pending (Ahmed's Q66 answer is the authority, not acceptance of any result)
+- Open dependency / next action: lane N2 registered on the PC after security area 3 is under way; N1 merge after the exact-tip check
+
+### 2026-11-09 (Ahmed 07:38:18 UTC, reporter Mohamed Sayed), EX-2026-11-09-69: X-1, blank window at Start with Windows
+
+- [2026-11-09-x1-startup-fix.md](2026-11-09-x1-startup-fix.md): the window is shown right after the status screen commits (no animation-frame wait) and still shown if startup calls fail. Real-exe held-frame comparison: baseline ready only after frames were released, candidate 8 s earlier. Not shown to cure Mohamed's case; not accepted.
+
+### 2026-11-09 (Ahmed's A51, Q63 and Q64), EX-2026-11-09-68: S-FIX2, Windows-owned confirmations and local keyfiles
+
+- [2026-11-09-sf2-native-confirmations.md](2026-11-09-sf2-native-confirmations.md): delete forever, empty the bin, turn AI on and approve a pairing now need a Windows-owned OK/Cancel question from Rust; keyfiles on network shares and device paths are refused. Written by Codex, reviewed in full by Claude; verified by the PC heartbeat on the exact commit; the hands-on checks A01 to A11 are not run; not accepted.
+
+### 2026-11-09 (Ahmed's A51 and the lane S area 1 findings), EX-2026-11-09-67: S-FIX1, the two Medium fixes of security area 1
+
+- [2026-11-09-sf1-security-fixes.md](2026-11-09-sf1-security-fixes.md): attachment destinations are checked on every save (S1-M1) and the renderer can no longer send free text to the plaintext log (S1-M2). Written by Codex, reviewed in full by Claude; verified by the PC heartbeat on the exact commit; not accepted.
+
+### 2026-11-09 (Ahmed's messages 06:52 to 11:55 UTC), EX-2026-11-09-66: the 1.6 build, second day
+
+- [2026-11-09-v1-6-build-second-day.md](2026-11-09-v1-6-build-second-day.md): lanes AG, C4d, C3, C2d, C3u, C5, E and P1 merged and checked by the PC, the first two security-pass areas (findings on `AE0101/v1-6-s`), the live AI check on Ahmed's own hands (verified, not accepted), amendments A47 to A52, defect X-1, and the silent heartbeat. Session entry [53](../sessions.md#session-53). **Produced and verified on named commits; nothing accepted; no release.**
+
 ### 2026-11-09 (Ahmed's message 02:08:59 UTC), EX-2026-11-09-65: large databases, research and plan
 
 - [2026-11-09-large-database-performance-research.md](2026-11-09-large-database-performance-research.md): where Notaya slows down with thousands to 200,000 rows (measured: the Rust engine is fine; the screen redraws every row on every click and every change sends the whole result), the ranked plan P1 to P12 with licences and version fit, the accuracy gate, and two development-only measuring tools. Plan: [docs/plan/2026-11-09-large-database-performance-plan.md](../plan/2026-11-09-large-database-performance-plan.md). **Produced**; no app code changed; not accepted.

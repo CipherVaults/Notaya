@@ -18,6 +18,7 @@ use std::sync::{
 type EventSink = Arc<dyn Fn(&str, Value) + Send + Sync>;
 #[derive(Default)]
 pub struct Runtime {
+    pub(crate) native: crate::native_confirm::Approvals,
     pub confirms: confirm::Confirmations,
     pub epoch: AtomicU64,
     pub started: AtomicBool,

@@ -30,7 +30,10 @@ export default function AiAccessPanel() {
       setEnableOpen(false);
       setWord("");
       await refresh();
-    } catch (error) { setError(aiErrorText(error)); }
+    } catch (error) {
+      if (error === "cancelled") { setEnableOpen(false); setWord(""); }
+      else setError(aiErrorText(error));
+    }
     finally { inFlight.current = false; setBusy(false); }
   };
   return <section aria-labelledby="ai-access-title" className="mb-10">
