@@ -16,6 +16,13 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 > **Dated note (2026-11-07, [A38](../plan/approval-and-amendments.md)): who and where.** Every report before EX-2026-11-07-44 is from **Mohamed's side** (`AbyssWatcher2`); where it ran is in each report's own text. From EX-2026-11-07-44 each report has a **Who and where** line (Ahmed's side, `AE0101`, and the machine).
 
+### 2026-11-10 (Ahmed 05:09 UTC, relayed), EX-2026-11-10-74: PBS and migration catch-up
+
+- Report: [2026-11-10-r2-pbs-catchup.md](2026-11-10-r2-pbs-catchup.md); [session 55](../sessions.md#session-55).
+- Produced for review; integration and acceptance not established. Local refs only.
+
+**Dated correction (R2, 2026-11-10):** EX-73 below was integrated in local `origin/main` by PR #127 (`373e3de`); its package remains unaccepted unless Ahmed says otherwise.
+
 ### 2026-11-10 (Ahmed's A48), EX-2026-11-10-75: WP-16 P6 and P6b, virtual table rows
 
 - Report: [2026-11-10-wp16-p6-p6b-merge.md](2026-11-10-wp16-p6-p6b-merge.md)

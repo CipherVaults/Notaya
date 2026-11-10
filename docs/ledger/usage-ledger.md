@@ -1,5 +1,7 @@
 # Notaya usage ledger: readings, newest first
 
+**2026-11-10 R2 snapshot:** Terra trial: 28,991 input, 13,568 cached input, 5 output; exit 0, served model not independently recorded. Latest observed 05:11:08 UTC Codex 1% five-hour and 56% weekly; 05:12:46 UTC Claude probe 17% five-hour and 94% weekly. These are shared rounded meters, not a measured lane cost. The exact PC CSV rows appended to quota-readings preserve their individual source timestamps and stale flags; approximate probe-cost descriptions were excluded. R2 final usage and after reading not recorded; add from runner receipt.
+
 How to read and refresh this file: [README.md](README.md). The numbers live in [`claude-sessions.csv`](claude-sessions.csv), [`codex-runs.csv`](codex-runs.csv) and [`quota-readings.csv`](quota-readings.csv); this page explains them.
 
 ---
