@@ -23,6 +23,15 @@ Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix 
 
 **Dated correction (R2, 2026-11-10):** EX-73 below was integrated in local `origin/main` by PR #127 (`373e3de`); its package remains unaccepted unless Ahmed says otherwise.
 
+### 2026-11-10 (Ahmed's A48), EX-2026-11-10-75: WP-16 P6 and P6b, virtual table rows
+
+- Report: [2026-11-10-wp16-p6-p6b-merge.md](2026-11-10-wp16-p6-p6b-merge.md)
+- Executor: Codex (lanes P6, P6b, RV-P6b), merged by Claude
+- Outcome: Table view draws only visible rows; 5,000-row sort 4.5 s to 0.66 s; undo bug fixed; checks pass; two script defects and one focus question left open
+- Integration / review: merged into `main`; independent first-pass review (0 High, 0 Medium, 2 Low); Claude did not read every line (Claude's week)
+- Acceptance: pending
+- Open dependency / next action: P6c (scripts), P7, P8, hands-on feel check
+
 ### 2026-11-10 (Ahmed's migration request, A55), EX-2026-11-10-73: full migration handoff from Claude to ChatGPT Pro and Codex
 
 - Report: [2026-11-10-migration-to-chatgpt-handoff.md](2026-11-10-migration-to-chatgpt-handoff.md)
