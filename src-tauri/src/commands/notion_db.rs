@@ -375,7 +375,9 @@ pub fn import_databases(
         if let Some(id) = t.paths.iter().find_map(|p| header_pages.get(p)) {
             let owners = tables.iter().filter(|table| table.paths.iter().any(|p| header_pages.get(p) == Some(id))).count();
             if owners == 1 && !has_children.contains(id.as_str()) && !content_of_others(id) {
-                if let Some(page) = page_of.get(id.as_str()) {
+                // Keep the full fallback page when its text cannot fit the existing
+                // Database::sanitize description limit; never truncate it or fail the import.
+                if let Some(page) = page_of.get(id.as_str()).filter(|p| p.text.chars().take(2_001).count() <= 2_000) {
                     built.db.description = page.text.clone();
                     out.removed_pages.insert(id.clone());
                 }

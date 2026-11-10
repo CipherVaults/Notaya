@@ -248,6 +248,47 @@ fn structured_wrapper(body: &str) -> Vec<u8> {
 }
 
 #[test]
+fn n2c_long_plain_wrapper_falls_back_to_a_complete_page() {
+    struct InventedVault(Mutex<Session>);
+    impl VaultAccess for InventedVault {
+        fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> { f(&self.0.lock().unwrap()) }
+        fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> { f(&mut self.0.lock().unwrap()) }
+    }
+    for (count, character) in [(2_000, 'x'), (2_001, 'x'), (2_000, '\u{03bb}'), (2_001, '\u{03bb}')] {
+        let text: String = std::iter::repeat(character).take(count).collect();
+        let files = [
+            (format!("Home {HUB}.html"), structured_wrapper(&format!("<p>{text}</p>"))),
+            (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        ];
+        let root = std::env::temp_dir().join(format!("notaya-n2c-header-{}", crate::model::new_id()));
+        let data = root.join("data");
+        std::fs::create_dir_all(&data).unwrap();
+        let source = root.join("invented.zip");
+        let refs: Vec<_> = files.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+        std::fs::write(&source, zip::build(&refs, false)).unwrap();
+        let path = data.join("vault.nota");
+        let vault = InventedVault(Mutex::new(Session::create_open(&path).unwrap()));
+        let summary = super::import_from(&vault, &[source], false, &data, 1, &Control::standard())
+            .expect("a long wrapper must keep its page without aborting the import");
+        drop(vault);
+        let reopened = Session::unlock_open(&path).unwrap();
+        let db = reopened.items().find_map(|i| if let Item::Database(d) = i { Some(d) } else { None }).unwrap();
+        assert_eq!(reopened.items().filter(|i| matches!(i, Item::Row(_))).count(), 1);
+        let pages: Vec<_> = reopened.items().filter_map(|i| if let Item::Page(p) = i { Some(p) } else { None }).collect();
+        if count == 2_000 {
+            assert_eq!(db.description, text);
+            assert!(pages.is_empty());
+            assert_eq!(summary.pages, 0);
+        } else {
+            assert!(db.description.is_empty());
+            assert_eq!(pages.len(), 1);
+            assert_eq!(pages[0].text, text);
+            assert_eq!(summary.pages, 1);
+        }
+    }
+}
+
+#[test]
 fn n2_plain_wrapper_text_is_saved_in_the_database_description_without_a_duplicate_page() {
     let v = fixture(vec![
         (format!("Home {HUB}.html"), structured_wrapper("<p>Read these invented instructions first.</p><script>bad()</script>")),
