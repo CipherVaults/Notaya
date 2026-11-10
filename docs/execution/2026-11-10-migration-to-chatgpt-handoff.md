@@ -59,6 +59,10 @@ New: `docs/handoff/migration-to-chatgpt/{README,01-migration-guide,02-start-prom
 
 Every statement about ChatGPT's and Codex's features is a "[Check]" in the guide. Live numbers (branch tips, meters) are from about 03:27 to 03:31 UTC on 2026-11-10 and age fast. The ledger row for this thread has no token counts (reading them would cost quota). The handover guide's claude.ai copy and the Notion board were not updated.
 
+## 11b. Dated addition (2026-11-10 about 04:30 UTC)
+
+Ahmed (04:00:09 UTC, relayed) asked for the same handoff as a Blue-style page in the Notaya Notion hub, so that he only tells Blue to read it. Created **Claude → Blue Handoff** (https://app.notion.com/p/414bd7ade63b81bb92efcf9c2402d2b5) under the hub, in the shape of his FFmpeg "Blue — Handoff" page (dated checkpoint, start steps, where things live, paste-ready thread prompt), pointing to the GitHub package and to the PC folders. Ahmed's message authorises this one new page as an exception to the Notion rule (only the board and the scratch page change). No PFS values are on it. Blocks A and B and the README now point to it. Nothing else in Notion changed.
+
 ## 12. Resume
 
 Next permitted action: Ahmed pastes block A, then B (`02-start-prompts.md`); the ChatGPT coordinator reads, reports, waits for "handover accepted", then follows `01-migration-guide.md` section 11. The remaining 1.6 work is listed in the guide, section 6.
