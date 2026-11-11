@@ -12,6 +12,13 @@
 
 Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix A](2026-10-23-pbs-reconciliation.md#appendix-a-documentation-routine-going-forward)). Dates are UTC.
 
+
+### 2026-11-11 UTC, EX-2026-11-11-78: independent workspace and Notion import qualification
+
+- [Report](2026-11-11-codex-preservation-and-n2-qualification.md); full [sessions58–66](../sessions.md#session-66). Ahmed(AE0101), Gaming-PC; requested SolUltra, backend/usage unattested.
+- Independently verified148 distinct selected tests on N2 [Notion import fixes] exact7806 and pinned artifact76622265…; all668 source files unchanged. Native/full-app/private/integration/acceptance gates remain. Accepted1.5.1 unchanged.
+- Manual preservation and independent Git are scoped-verified; eligible generated closure and independent accounting completed; original-writer resumption stays owner-controlled. Notion progress checkpoint saved/read-back with prior content preserved. No product change, push, roadmap or release.
+
 ## Reports
 
 ### 2026-11-10, EX-2026-11-10-76: R3 pause and handoff

@@ -1,0 +1,26 @@
+# Notaya Codex qualification checkpoint — 2026-11-11 UTC
+
+**Who and where:** Ahmed(AE0101), Gaming-PC; Codex desktop coordinator plus non-author reviewers. Requested/inherited GPT-6.1 SolUltra; backend/realised effort/provider usage unattested. This local note resumes the existing Goal; it is not new product authority, acceptance or a new roadmap.
+
+Read [STATUS Continuation](../STATUS.md), [EX78](../execution/2026-11-11-codex-preservation-and-n2-qualification.md), [full sessions58–66](../sessions.md#session-66), the adopted ledger and current claims. Preserve A55/A56 history, the immutable approved plan, the complete studied-source record and all unapproved 1B/history/integration decisions. No onboarding restart or raw CLI-stream expansion is required.
+
+## Concrete working and evidence locations
+
+- Independent safe main: D:\Codex Projects\Notaya\resume-20261111T190954Z-ae1f50c8\active\main (main baseline9977e72e46432ef975407d9d5b17913a866b307e; local records branchcodex/pbs-qualification-20261111).
+- Exact qualified N2 [Notion import fixes]: same attempt\active\n2, revision7806d002fe302d3d22d97b4941590848066e4e93. Keep its code/index/HEAD unchanged until a separate reviewed integration step. Source branch's true delta from8e977724 is5Rust modifications+1record addition; do not overlay older N2 [Notion import fixes] records onto current main or assume a future three-way conflict result.
+- Fresh qualification root: same attempt\qualification\n2-20261111T212818Z-55cf121e. Actual test executabletarget\x86_64-pc-windows-msvc\debug\deps\notaya_lib-b1b1676f59df303b.exe; SHA2567662226545fa9511027cb7f4933a03b454a21929973c0d268d3b33acd6e533ed.
+- Detailed original immutable control records and receipts: same attempt\control; recovered earlier control at D:\Codex Projects\Notaya\Notaya Project Data\attempt-20261111T162255Z-c3f40645\control. Source/full-block and usage hashes are in this records package's transfer manifest. Do not commit entire restricted directories or private paths/payloads.
+
+## Current result and limits
+
+148 distinct selected N2 [Notion import fixes] tests passed (four exact+144 broader), zero selected failures/ignores/timeouts/zero matches. All668 source hashes/nine native fields, eight protected source/Git/lock/config files and the artifact stayed unchanged. Six build warnings remain. This is current bounded library evidence, not the785-test full suite, native/whole-app/private/export/packaging qualification or acceptance. The empty source-home case still has transient finish-only evidence, and the20000 case is an index-operation test, not a full import/P7 [database query windowing for performance] timing target. Ordinary person failure durability and AI outer atomicity remain separate.
+
+The Notaya hub's new progress callout is saved/read-back with prior content preserved; the22:45:28.894Zwork-code clarification readback is receiptD1E6C76188892C0CD5D61DB8C9C2A854AAA23D87F24BD1733F7F2AE87AD11FF4. No appearance/acceptance/roadmap/feature-lifecycle claim follows. One app-run usage row represents eight historical full blocks and the current ninth record; provider numbers stay blank, cumulative Goal meters are not billing.
+
+## Preservation and exact next permitted actions
+
+Original D:\Notaya and D:\Notaya-lanes and all copied historical lane metadata remain protected. Never run Git/project tools against their original-targeting pointers. Unique K1C/MAIN/R2/R3/S/W work is retained; matching a file to newer main or finding R2 rows in R3 is not permission to discard a lane/receipt.
+
+Generated preservation closed all112347 selected default-stream files/38184561421logical bytes through final paired hashes/native/namespace and independent559244-row accounting. Root observed terminal exit0 and reported eligible closure; reconciliation receipt2540E4CF92AFFBF84F4F4A2DCEB87DD9EF4244F8EAB4199B6A8E6C963EAC8894 preserves evidence and limits. Capture-only pausing is complete; original-writer resumption stays owner-controlled and no automation was restarted. Held/private/unclassified/non-default-stream material and copied Tests remain outside the verified/active boundary. This is not a complete or atomic archive.
+
+Finish the reviewed local record application/validation/commit without push, preserving all old bytes and exact N2 [Notion import fixes] evidence. Continue admitted P6c [large-table verification and focus checks] source/tool preparation and then its named-group/footer/zero-sum5000/20000 checks; observe compact focus/undo/row identity before a product fix. Before N3 [canonical Notion identity and arrangement] close the importer security baseline gate and retain delta review; P7 [database query windowing for performance]/P8 [virtualised database views], AI/security, WP18 [quality and polish survey] measurements, private person-controlled parity/exports and exact final-app/distributable gates remain. Do not contact Claude/Fable/Mohamed, restart automation, add dependencies/tools, use real/private inputs, alter a roadmap, release or imply owner acceptance.

@@ -21,6 +21,15 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 66 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Preservation closure and records preparation](#session-66) |
+| 65 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [PBS and Notion progress maintenance](#session-65) |
+| 64 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Notion import exact-revision qualification](#session-64) |
+| 63 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Git closure and isolated Notion import work](#session-63) |
+| 62 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Verified copy and independent main](#session-62) |
+| 61 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Resume after manual copy](#session-61) |
+| 60 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Capture stop and manual transfer](#session-60) |
+| 59 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Studies and capture qualification](#session-59) |
+| 58 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Goal authority and capture preflight](#session-58) |
 | 57 | 2026-11-10 | Ahmed (`AE0101`) | cloud | [Final handoff to Blue and the AI PBS records (EX-2026-11-10-77)](#session-57) |
 | 56 | 2026-11-10 | Ahmed (`AE0101`) | Gaming-PC | [development paused at a safe point by Ahmed's words of 2026-11-10 06:13:35 UTC (clarified 06:25:54 UTC)](#session-56) |
 | 55 | 2026-11-10 | Ahmed (`AE0101`) | Gaming-PC; earlier work cloud + Gaming-PC | [1.6 and migration records catch-up (EX-2026-11-10-74)](#session-55) |
@@ -78,6 +87,490 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-66"></a>
+
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · Preservation closure and records preparation
+
+**Who and where:** Ahmed (`AE0101`), Gaming-PC. Codex desktop coordinator and independent child reviewers. Requested/inherited GPT-6.1 Sol Ultra; actual backend model/effort and provider usage are not independently attested. This is a newly authored current record, not a retrospective verbatim control-file transfer. Eight preceding source records remain unchanged.
+
+## 🕒 Time
+Current work block follows control source05 (saved2026-11-11T22:37:21.4421578Z) through the record-preparation worker's factual cutoff 2026-11-11T23:15:20.5456201Z. Root-owned operations are identified separately below; statements about this worker do not deny the coordinator's actions. Full app/chat start and end are unknown. Source records retain their original clocks/cutoffs; this record is the ninth temporal checkpoint in the same existing app run.
+
+## 🎯 Session Goal
+Bring the adopted local PBS records up to the actual source-bound Notion import qualification, independently closed eligible preservation boundary and saved Notion progress, preserving history and separating proposed, verified, integrated and accepted work. Prepare only the narrow local documentation branch/application recipe for Root technical and non-author review; no future action is claimed.
+
+## 🛠️ Actions Taken
+Prepared eight source transfers into sessions58–65 with entire original headings, EOL and full bodies verbatim. Added index/transfer provenance outside those bodies, honest single-app-run usage, execution record78, local claim, current Continuation and dated resume candidates under control only. Prepared separate Switch/Apply/Inspect/Stage/Commit gates for subsequent technical review. The record-preparation worker performed no repository write or Git mutation. The Root-controlled metadata-only Switch separately completed eight fixed commands at2026-11-11T23:08:23.6612129Z: local branch `codex/pbs-qualification-20261111` remains on unchanged9977e72e46432ef975407d9d5b17913a866b307e with clean Windows-policy status. Its before/after672working files and Notion import source guards passed; it left original roots and the independently qualified import source untouched. Summary `restricted/pbs-switch-20261111T230806Z-fc5cfef4/summary.json`, SHA256DB6AE27607C8857BA74191560451E8334A8088A02CB8C46B3C28B35D8F5CF09B, owns this separate operation. Independent full Git-admin postreview remains pending in the latest supplied evidence; no document application, staging or commit is claimed.
+
+Root saved and read back the bounded Notaya hub progress at22:33:35.254Z and the later work-code readability correction at22:45:28.894Z, retaining the older complete page body. The latter receipt isD1E6C76188892C0CD5D61DB8C9C2A854AAA23D87F24BD1733F7F2AE87AD11FF4. Root separately reported eligible preservation closure after actual terminal exit0 and independent accounting. The hub capture-closure checkpoint was saved/read back at2026-11-11T22:53:59.135Z, SHA256982AAA2D2FFA5A99CCBDE73F221132F9242A3835C926012F531897322C53899F; prior whole-page content remains. No reviewer rehashed the112347payload files during closed-record audit.
+
+## 🧠 Key Insights
+Technical work codes need meanings in square brackets in new explanations; familiar AI PBS needs no expansion. A completed selected-file capture is narrower than a complete archive, and generated preservation does not admit historical caches/executables for use. An unchanged accepted baseline can coexist with unintegrated, currently qualified development. Historical “pending” states remain truthful at their original cutoff and must not be silently rewritten after later completion.
+
+## 📌 Decisions Made
+Ahmed's presentation clarification is preserved unchanged: "I know about the AI PBS, I meant things like N2, P6c, P7 and such." Current prose uses N2 [Notion import fixes], P6c [large-table verification and focus checks], P7 [database query windowing for performance] and P8 [virtualised database views]. The eight source blocks remain byte-exact. Use local sessions58–66 and EX-2026-11-11-78 provisionally after captured-ref/dirty-state collision review; no remotely published reservation or new authority amendment is inferred.
+
+Root reported eligible preservation complete and capture-only pausing complete; source-writer resumption remains owner-controlled. Originals and copied historical lanes remain protected. No automation was restarted or changed.
+
+## ⚠️ Difficulties / Friction
+The first source-transfer draft would have invented outer replacement titles. It was corrected additively before repository use: original full titles are now their actual headings, with new metadata outside. Earlier control-only draft packages/preparers remain preserved. The earlier open-PR result mentioned only109; a fresh query also found older draft45, so current prose corrects the incomplete result without altering history. The closure callout initially estimated the minute as22:54 although the clock returned22:53:19; Root immediately corrected it from a dynamically captured actual clock22:53:53. Use clock objects rather than manual estimates; no source/test/capture rerun resulted.
+
+## 🔧 Adjustments Made
+Added the later actual22:45Notion wording receipt outside source05. Replaced current generated-pending language with its closed evidence and limits, retaining all earlier pending source cutoffs. Verified PR45 head10e519c587979c1f781ae41b95370aaf341ba1c6 is already captured as refs/remotes/origin/claude/project-thread-73zkp7. Both PR45 and109 are in the103-commit ID audit. PR45 is PRODUCED/docs-only, with provisional A35 contingent on a future owner choice; it adds no approved product scope.
+
+## ❌ Mistakes / Risks Noted
+Do not count nine checkpoints as nine billable runs, invent unknown provider/quota/worker usage, impersonate a human Git author, or equate record review with product acceptance. Do not run Git in copied historical lanes, use old cache/tools because their bytes are preserved, omit ignored/private boundaries and call the result complete, or overwrite intervening documentation changes. No commit, merge, push, whole-app check or release is claimed here. The later document application requires Root as sole active/main writer, control-only workers and no running owned project/test process; the guards do not provide native no-follow-write, raceproof or sandbox assurance.
+
+## 📍 Current Position
+Accepted V1.5.1 remains95ca8b2; main remains9977e72. N2 [Notion import fixes] exact7806d002fe302d3d22d97b4941590848066e4e93 remains unintegrated/unaccepted with148distinct selected current library passes, all668source files unchanged and six retained compiler warnings. Transient empty source-home evidence, full/native/private/security/combined-candidate/release gates remain separate.
+
+Eligible generated preservation closed112347selected default-stream files/38184561421logical bytes. Independent559244-row accounting has no gaps; summaryA481E948F5F3439458265FAA78A5966F12D9463F27E2D8BF2BCB10763F5C8020, audit6563FD0E1CC6F61027C4EE098656B79106C3A5856D9C1927C99A757B327AECC9 and reconciliation2540E4CF92AFFBF84F4F4A2DCEB87DD9EF4244F8EAB4199B6A8E6C963EAC8894 bind the outcome. Held/private/unclassified content, non-default streams, copied test homes and extra material remain outside scope. This is not atomic/pre-manual-copy preservation or a complete archive.
+
+## 🔜 Next Steps
+Root reviews the exact final candidate manifest and separated stage script; a non-author reviews the record content and old-byte/source-transfer proofs. Apply only after the matching technical gate, validate only the eight allowed documentation paths and immutable other source, stage/commit only after separate approval, and read back the actual local commit. Preserve exact Notion import source/artifact. Continue bounded large-table evidence preparation and its named group/footer, zero-sum5000/20000and compact-focus observations under their own source/tool gates. No roadmap revision or unapproved study mechanism is implied.
+
+## ❓ Open Questions
+Consequential study/product decisions, N3 [canonical Notion identity and arrangement] security/delta gates, P7 [database query windowing for performance]/P8 [virtualised database views] contracts, private person-controlled parity/exports, whole-app native evidence and exact combined-candidate packaging remain. Final documentation review and local commit are pending, not blockers to preparing exact bounded evidence. Actual provider usage and backend identity remain unavailable.
+
+## 🧾 Session Outcome
+Produced a faithful control-only local PBS candidate package and current closure record; saved Notion progress/readability and eligible preservation closure have actual independent evidence. The record-preparation worker performed no repository edit or Git mutation. Root's separately reported local branch switch is recorded above; no document application, staging, commit, product change, owner acceptance or release is claimed. The existing1.6Goal continues.
+
+## 🔍 Confidence Level
+High for the saved closed receipts, source-transfer and explicit provenance boundaries; bounded for runtime evidence148selected tests. No complete correctness/security/native/full-archive assurance. Unknown timing/model/usage fields remain honest unknowns.
+
+---
+<a id="session-65"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-resume-block-05.md`, SHA256 `56FBBE8DB63667811B54AD64FEC1DEBB29D4C43351F1A508FBD4AEEBCE479C29`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · PBS and Notion progress maintenance
+
+**Who and where:** Ahmed (AE0101), GAMING-PC; Root coordinates and maintains progress records. This is another checkpoint within the existing Codex app run, not a new billable run. It awaits faithful transfer into the adopted Notaya session owner. All times use system UTC unless stated otherwise.
+
+## 🕒 Time
+Continues the prior 2026-11-11T22:15:15.5273774Z runtime checkpoint through this record's 22:36 UTC preparation. The owner's message time is not independently supplied. Cairo is November 12. Notion records its successful edit at 2026-11-11T22:33:35.254Z; the checkpoint itself describes the 22:31 UTC state.
+
+## 🎯 Session Goal
+Keep the adopted AI PBS documentation and Notaya Notion hub current while continuing the already authorised 1.6 Goal. Preserve exact source evidence, originals, historical lanes, chronology and owner acceptance boundaries. Do not restart onboarding or implement unapproved study proposals.
+
+## 🛠️ Actions Taken
+Re-read the applicable PBS skill, complete maintain-without-drift guide and the documentation-update lifecycle prompt. Fetched the current live Notaya hub and the Notion Markdown specification. Drafted a small top progress callout and obtained non-author semantic review from /root/n2_candidate_tools. Incorporated precise limits for remaining persistence and retained compatibility cases, and the explicit continuing source-writer pause. Inserted the checkpoint exactly once. Fetched the saved page for the PBS record readback: all prior content remains present, the 148 selected-test count and source-writer pause are present, and the actual edit timestamp is recorded. Preserved the prior page body and request/readback evidence in control records. Rechecked all three saved JSON records and SHA256 values.
+Confirmed live PR109 head0e74dd9969d63f9f529f71a6b84aa3cbfc81064e is the exact captured refs/remotes/origin/claude/project-thread-94b3c0 and already within the independent 103-commit record audit. The live six-file draft therefore introduces no new-head gap. Asked the PBS worker to prepare the faithful adopted-record package and a narrow local records-branch mutation recipe, without repository edits yet.
+Read the whole bounded P6c preparation proposal and closed N2 independent qualified-evidence receipt. The P6c worker completed16 whole files plus9 bounded partials,2763/6563 selected lines, and rechecked25 source hashes. Requested only remaining startup/test/event-path and SDK admission reads, no executions. Continued the existing generated verification session33479 without restart; its final hash pass advanced to88000/112347 in the latest reported output. No further N2 test, source build or source edit was repeated.
+
+## 🧠 Key Insights
+The prior hub checkpoint still described the old November10 pause and unfinished N2 review fixes. A dated progress callout can correct the entry route while preserving that historical snapshot. The new checkpoint records independent main/N2 Git metadata and bounded freshly built test evidence; it does not grant full executable, native-app or release qualification.
+The final copied P6c selector still uses the first nonzero footer; an exact group key and logical footer identity are already exposed. This is a verification defect, not proof of wrong product totals. The next bounded evidence can include legitimate empty and nonempty zero-sum groups, then observe compact focus/undo/row identity before a product fix is proposed.
+
+## 📌 Decisions Made
+Carry forward the owner's exact new instruction: “don't forget to keep the docs updated using The AI PBS skill, as well as Notaya's Notion hub with your progress.” This authorises bounded Notaya progress-documentation edits; it does not authorise external messages, contacting Claude/Fable, roadmap or product-scope changes, publication of code, release or acceptance. Root handles the hub; the records worker drafts the adopted local owners for independent review. The audit supports provisional sessions58–65 for eight work-block records and EX-2026-11-11-78, not a global published reservation or eight separate provider runs.
+
+## ⚠️ Difficulties / Friction
+The first PowerShell control-record save failed at parse time because a typographic apostrophe was recognised as a quote. No shell operation executed. The separately issued Notion insertion did succeed once. A second local persistence attempt was rejected before process creation because its command exceeded the Windows command-length limit. The Notion write was not repeated. The corrected local persistence used the direct file-edit tool after explicit absence and no-reparse ancestor checks, followed by SHA/JSON readback. Both failed paths remain documented rather than represented as successful prerequisites. One informal “22:37” message estimate was premature; the actual subsequent clock was22:35:55UTC, and the worker was told to use actual receipt timestamps.
+
+## 🔧 Adjustments Made
+Used ASCII-independent file editing for Unicode-bearing control content. Kept a concise public-facing hub checkpoint and detailed local PBS evidence in their respective owners. No whole-corpus reread, new record system, board acceptance change or roadmap edit. The worker's neutral “two retained import compatibility cases” wording and distinction between selected persistence evidence and remaining persistence gates were incorporated.
+
+## ❌ Mistakes / Risks Noted
+A successful Notion API response alone does not prove preservation, appearance or acceptance. The actual saved content was read back and compared; visual rendering and owner acceptance were not checked. The 785-name catalogue is metadata, not785 tests passed. Preserve the scoped148-test result and its current source/binary identities. Quiet capture remains unfinished even though its first complete generated content pass passed. Do not release original writers or activate historical copied Git pointers.
+
+## 📍 Current Position
+The Notaya hub progress checkpoint is saved and read back; the prior whole body remains. Accepted state is still1.5.1/95ca8b2. N2 exact7806 has148 distinct selected tests passing on artifact SHA7662226545fa9511027cb7f4933a03b454a21929973c0d268d3b33acd6e533ed, with668 source files unchanged, but remains unmerged/unaccepted. Six build warnings are retained. Generated final hashes/native/namespace and independent closure remain in progress. Held/private material, copied test homes and unclassified extras are outside the verified boundary; source writers remain paused. The adopted local records package is drafted/preparing, not committed or published.
+
+## 🔜 Next Steps
+Finish and independently audit the existing generated verification without rerunning it. Review the precise local records branch recipe and eight faithful source-block transfers, usage, full execution report, claims, Continuation and resume pointers. Apply only authorised derivative documentation changes, perform preservation/CSV/link and non-author checks, and make an authorised local records commit when gates pass; no push. Keep the hub updated at meaningful verified changes. Continue P6c's narrowly targeted admission reads and candidate/tool isolation before any selected mock test, preserving prior N2 evidence.
+
+## ❓ Open Questions
+Exact M2 persisted empty-source-home/native navigation, Area3 baseline beforeN3 and delta afterward, N3 canonical semantics, P7 uncapped independent oracle and consumer/generation contracts, P8 views, AI/security discrepancies, measured WP18, private person-controlled formula/rollup/export qualification, whole-app/native/independent rendering/final binary and packaging remain open. Mohamed's actual X1 sign-in/About disposition remains his evidence, not inferred. Study1B amendments/history mechanisms remain proposals absent explicit applicable decisions. No full-app or final-candidate acceptance is implied.
+
+## 🧾 Session Outcome
+Produced and verified a dated Notaya Notion progress update; preserved history and corrected current entry context. Prepared the next adopted PBS integration step and bounded P6c grounding. The overall1.6 Goal remains unfinished; no product change, integration, release or owner acceptance occurred.
+
+## 🔍 Confidence Level
+High for observed saved hub content, old-content preservation, closed scoped N2 evidence and current record-audit membership. No claim of atomic/pre-copy/full-filesystem capture, universal source correctness/security, full toolgraph confinement, native interaction, independent visual rendering or final acceptance.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra; actual backend identity and realised effort are not independently attested. Developer runtime remains Default; Root changed neither model nor mode. Ahmed AE0101/GAMING-PC; Root is executor/record maintainer, n2_candidate_tools is non-author hub semantic reviewer and P6c reader, git_closure_review is PBS preparer, generated_gate_review monitors closure. Provider tokens/cache/cost/quota remain unknown. Evidence: notion-progress-20261111T2231Z.actual-readback.json (SHA256F1C7EE4A095159D8CFE06BB72C0486A31163D96B36C16C72AC55DE9A2B738230), request550E5EE57F8DBD4C6309124E01ECA28879E66D859C261E1555FA46AF127E23BC, prior hub8EC2A36966EDAAD418EF3852D080DB90625CDD0FC43E9AD97903EBE4A089CCB7; P6C-targeted-readonly-preparation.proposal.md4BFE3AA92317D654ADDE999490B2804B00453D1834C9991FD4BA40B9AEB078DA. No originals/historical-lane write, Git mutation, product execution, dependency restore, private input, scheduler change, roadmap, external message or release in this block.
+
+
+---
+
+<a id="session-64"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-resume-block-04.md`, SHA256 `E9A953FDB57D23896AC7E9B1C8C7844D85A8498C803E31A05CFECDB96B2E70DD`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · N2 exact-revision qualification
+
+**Who and where:** Ahmed (AE0101), GAMING-PC; root executor/coordinator, with independent Git/artifact and product/test reviewers. Control-stage full record awaiting additive transfer into the adopted owners. All times below are system UTC; Cairo crossed into12November during this block. Owner message times are not supplied.
+
+## 🕒 Time
+Continues the saved21:23:46.4750102Z checkpoint through 2026-11-11T22:15:15.5273774Z. Observed compiler command158.7765546seconds, not a performance acceptance threshold. Root's latest owner instructions resume the existing Goal, request finishing isolation then exact-final N2 qualification, and ask for an assurance/status update.
+
+## 🎯 Session Goal
+Qualify preserved N2 revision7806d002fe302d3d22d97b4941590848066e4e93 after independent Git and command-specific executable/tool/source/cache isolation. Reuse existing work; keep originals and copied historical lanes protected. Retain PBS/Fable/independent-review and final-app gates without treating proposals or test counts as acceptance.
+
+## 🛠️ Actions Taken
+Closed actual N2 containment:3540files/62189283bytes,664regularstage0indexentries,ownmetadata/config/storage. Ran22fixed read-only Git commands with independent semantic readback and one combined2872-file9-native-field admin postcheck. Verified merge base8e977724db9814580b1c1f7bc3bd1167c6dc6579 and exact7806 tip. Root and the non-author product reviewer read the complete1244-line five-Rust-file patch; no new blocker identified. Actual branch delta is5Rust modifications plus1execution-record addition, not the71-path interval or27-path current-main comparison. Restored locked anonymous public dependencies into a fresh owned CARGO_HOME; all302archives/48521822bytes independently match the existing lock. Ran installed direct Cargo/Rust tools1.99.1 under a cleared environment with owned target/TEMP/profile/NOTAYA_HOME/CIPHERLEAF_HOME and explicit MSVC14.41/SDK26100 paths. Offline/locked --no-run compile succeeded. Bound the unique actual Cargo JSON library-test executable, discovered exactly4N2c tests and ran each separately. Then validated the full785-name compiled catalogue and ran144 additional admitted tests in15groups, explicitly skipping the prior4 and the2ignored private/N3 probes. All148distinct selected tests passed. Independent raw-output/current-source/artifact/consequence review closed the scoped result. Two read-only PBS ID probes ran on safe independent main; declaration/reservation/dirty-record interpretation and one final postcheck remain pending before allocating IDs or editing adopted records.
+
+## 🧠 Key Insights
+N2 merged older upstream8e977724 and is behind current main's newer records at9977e72e46432ef975407d9d5b17913a866b307e. Apparent record deletions in a two-tip comparison are divergence, not N2-authored deletions; a proper future three-way merge may preserve main automatically. Never reset/overlay main from old N2 or assume a conflict result. M1's2000Unicode-scalar guard and fallback, M2's source-home/generated provenance, L1's sibling index and L2's ambiguity warnings all have current passing regressions. M2 still checks transient finish(items), not its payload commit/reopen/native behavior. The20000collision case proves the index-operation bound, not a20000-document import, P7 or a timing target. Ordinary person import can durably write attachments/journal maintenance/backup before item transaction; AI outer atomicity is separate.
+
+## 📌 Decisions Made
+Continue independent locked restoration/qualification while historical generated verification runs: no old generated cache/binary participates in N2's admitted graph. This is dependency-based parallelism inside the Goal, not capture completion or permission to resume original writers. Preserve the old SDK/config/control evidence and all failed attempts. Use actual compiler artifact/captured test names, exact per-test/group outcomes and a complete allowlist; never newest-exe selection, zero-match success, unfiltered library tests or bulk ignored tests. Keep current main authority and all unaccepted N2 records separate; no product integration or acceptance decision was made. Use a fresh local codex records branch in safe main only after ID checks; N2 remains unchanged.
+
+## ⚠️ Difficulties / Friction
+Root's SDK-directory preflight accidentally concatenated a PowerShell path array, and nonterminating metadata errors did not stop that outer command. Only3direct version commands ran; they succeeded and source stayed unchanged. The directory claim was superseded by a strict explicit9-path/all-ancestor check, then independently verified before Fetch. The failed earlier N2 index-count verifier used byte-typed shifts; one corrected actual pass produced durable proof. The broad e11..7806 interval contained unrelated upstream merges, so additional names/history inspection narrowed the product review correctly. The first PBS ID pattern also matched A-prefixed hex-digest fragments; no maximum was allocated, and a small supplemental anchored/short-form query supplies the missing evidence. Preserve these control failures; none establishes product corruption or a passing test by itself.
+
+## 🔧 Adjustments Made
+Used exact existing direct SDK binaries instead of rustup shims, cleared child environment and fresh owned homes/cache/target, with no inherited credentials/config/old executable. Existing locked public archives were restored normally and checksum-verified; no new dependency, upgrade or tool installation. The reviewed build could rewrite only4known Tauri schemas, but all4actually stayed hash/natively unchanged. Broader selection used148active bodies of150declared tests,4already separately verified,2explicitly excluded; source body/support reading was bounded and recorded rather than inferred from names. Existing successful-test cleanup of owned UUID TEMP roots was admitted; no global cleanup or failed-evidence deletion was added.
+
+## ❌ Mistakes / Risks Noted
+Parser-zero and command exit-zero do not prove semantics; all selected names/counts/artifact/source identities were independently reconciled. Operational controlled environments are not arbitrary-code filesystem/registry sandboxes or full runtime/transitive-DLL attestations. Bounded direct-import inspection found17Windows/API-set descriptors, no delay imports or unresolved non-API-set names; actual OS API-set mapping is not claimed. Some earlier control notes record now-historical pending/native-tool states; preserve them and use dated corrections. The full catalogue has785entries, but only148are claimed run; no full-suite/registry/ignored-pipe/private/native/release green is inferred.
+
+## 📍 Current Position
+Scoped N2 qualification: VERIFIED148distinct selected tests (144new+4prior),0failures/ignored/timeouts/zero-match; all19test stderrfiles empty, both historically disputed compatibility tests individuallypassed. Exact executable notaya_lib-b1b1676f59df303b.exe is51332096bytes, SHA2567662226545fa9511027cb7f4933a03b454a21929973c0d268d3b33acd6e533ed. Independent current/snapshot/frozen joins prove all668source hashes and9native fields unchanged, including4schemas;8protected files and artifact unchanged. Build retained6unused/dead-code warnings and no cargo fix. No N2 product source edit, merge, owner acceptance or release. Global generated verification has completed the first112347 source/copy hash pairs for38184561421bytes; final paired revalidation is running. That is not final capture completion. Held/private/unknown material and copied Tests remain unopened, raw copies/originals unchanged, source writers remain paused.
+
+## 🔜 Next Steps
+Close generated final hashes/native/namespace/code/input receipts and independently audit the closed stream before declaring the eligible capture boundary finished. Finish PBS reservation/dirty-state/currentPR checks, transfer the6prior full control blocks plus this full block/usage faithfully into the adopted record owners, then non-author-review the exact docs package and make only authorized local changes/commit. Preserve source N2/artifact identities. Prepare the separate P6c verification fix against exact named group/footer and zero-sum5000/20000 cases; observe compact focus/undo/row identity before any product fix. Before N3, resolve the Area3 baseline review gate and retain delta review afterward. Keep all later pre-integration/combined-candidate/source-to-distributable gates visible.
+
+## ❓ Open Questions
+M2 exact persisted/native empty-home/parent/navigation remains unqualified. Area3 historical refusal/review route, N3 canonical row/body/link/child semantics, approved P7/P8 with uncapped reference/generation/consumer checks, AI/security contract discrepancies, WP18 measurements, WP19/whole-app/native/rendering/setup/portable checks remain. Private formulas/rollups and real export reruns need their own person-controlled authority; no private values or names are accessed or transmitted. Mohamed owns actual X1/About confirmation. All eight1B amendments and unapproved history/integration mechanisms remain proposals, not new product scope. No roadmap or external message/update was made.
+
+## 🧾 Session Outcome
+Produced and independently VERIFIED a bounded148-test N2 importer/CSV qualification on exact7806 with preserved source/artifact provenance. Reused the existing implementation; historical successes and failures retain their original scope. The accepted baseline stays1.5.1/95ca8b2. 1.6 and the overall Goal remain incomplete/unaccepted. Generated preservation is still running. Current work follows explicit owner resume; the administrative Goal API retains an old paused meter and has no available resume operation, so it is not used as current billing/active-time evidence.
+
+## 🔍 Confidence Level
+High for named scoped Git/hash/native/build/artifact/test observations and their unchanged-source applicability. No claim of atomic/pre-manual-copy/full-filesystem capture, complete correctness/security, full project understanding, native interaction, private qualification, integrated final candidate or owner acceptance.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited lead and workers GPT-6.1 Sol Ultra; backend serving model/effort not independently attested. Developer runtime reports Default mode; no model/mode switch was made by root. Windows process/file execution is observed on GAMING-PC through supported local tools; this does not assert local model serving or a native UI/sign-in connection. Root executes, non-author workers review; source authorship of existing N2 belongs to historical lanes. Tokens/cache/billing/quota unknown, recorded honestly. Principal evidence: n2-git-isolation.combined-22-command-closure.json; n2-compiler-artifact.actual-independent-binding.json; N2-product-final-delta.static-review.md; n2-exact-four.actual-independent-qualified-evidence.json; n2-broader.actual-independent-qualified-evidence.json (SHA256852596BC6AF14504D32B7DAB0F6D6614FAD79C0526770A641EAB7FF34F67AF85). No originals/historical-lane writes, push, external communication, scheduler change, private input, dependency upgrade, new tool or release.
+
+---
+
+<a id="session-63"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-resume-block-03.md`, SHA256 `747CDFFC3F836D09BFBFAC7523EED4E44895AD8ABBD5C942BEC84604DD7B69F7`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · Git closure and N2 preparation
+
+**Who and where:** Ahmed (AE0101), GAMING-PC. Control-stage record for later additive integration into the adopted Notaya records with original timestamps and provenance.
+
+## 🕒 Time
+System UTC observation/save: 2026-11-11T21:23:46.4750102Z. This block continues the prior saved block through independent Git readback, closure and isolated N2 construction. Owner message timestamps are not recorded; latest explicit instructions resume the existing Goal and request completion of isolation followed by exact-final N2 qualification.
+
+## 🎯 Session Goal
+Continue the existing approved 1.6 Goal without repeating completed preservation. Finish the independent Git readback, generated-default-stream verification and command-specific tool boundary; then qualify existing N2 on 7806d002fe302d3d22d97b4941590848066e4e93. Stop affected operations only for an actual unmet gate or owner decision.
+
+## 🛠️ Actions Taken
+Reconciled the saved Integrity result: all 13 commands succeeded, 138 refs and 668 index tuples match preservation, main9977e72 and accepted95ca8b2 exist. Independently reviewed the 210-line Closure launcher; executed 54 fixed commands. All 51 preserved HEAD commit checks succeeded. Independent readback and a necessary 2872-file nine-native-field postcheck closed that gate. Reviewed the generated verifier and its non-author/input audits, then launched exact v2 in fresh no-profile PowerShell under retained owner-confirmed quiescence. It remains in progress, not passed. Independently joined every one of 3538 N2 construction rows to prior frozen hashes/nine-native-field evidence; executed CreateNew-only construction, which saved a successful 3540-file standalone candidate including two fresh safety files. No Git or project tools ran in that candidate yet. Read-only GitHub connector refresh resolved CipherVaults/Notaya, confirmed remote main remains9977e72, and returned one open draft PR109 for ledger documentation, with no open N2 work observed.
+
+## 🧠 Key Insights
+All historical lane HEADs, including local-only K1C4ed8257 and detached MAIN13185af, exist independently. Main raw-policy status615 entries are all i/lf,w/crlf,attr-unspecified; explicit Windows-text command-only status is empty. Original effective autocrlf remains unknown. Four preserved ignored files are Tauri generated schemas, not missing private data. N2 has664 indexed files plus those4 schemas; all6 synthetic/legacy fixtures use already-qualified bytes with equal N2/main index OIDs.
+
+## 📌 Decisions Made
+Use a small standalone active/n2 repository, with independent common objects/refs and fresh safe configuration; do not activate or repair the51 copied historical checkouts. Keep all original/captured files unchanged. Qualify raw source snapshot and explicit text policy without normalization/reset. Admit only the four known derivative schema outputs for a later reviewed build. Locked anonymous public dependency restoration is already authorized; adding/upgrading dependencies/tools and private-input runs are not.
+
+## ⚠️ Difficulties / Friction
+A prepared tool launcher contained PowerShell return-token AST traps and was corrected additively before execution. An independent N2 verifier completed native/hash comparisons but failed its byte-typed index-count arithmetic; raw header v2/664 and checksum showed a control-parser defect. Its failed script is preserved and one explicitly corrected verification is in progress; no N2 GateA pass is claimed. Oversized metadata displays were corrected to bounded projections. None of these events is evidence of product corruption or passing runtime tests.
+
+## 🔧 Adjustments Made
+Retained all prior control attempts. Git inspection uses only explicit independent paths and cleared environment, with no inherited hooks, filters, credentials, transport or cleanup. Reused verified manual bytes; no second complete archive or source overlay. The 267-directory postcheck includes .git root, matching266 when root is excluded; the saved correction records the counting convention and no extra path. N2 exact-final delta will be names-classified before content rendering.
+
+## ❌ Mistakes / Risks Noted
+Parser-zero is not semantic proof; corrected controls still need actual receipts. Environment-controlled SDK use is operational containment, not an arbitrary-code filesystem/registry sandbox. The user confirmed source writers paused until capture finishes; the eligible capture has not yet been declared finished. Generated metadata admission/hashing does not qualify old binaries/caches for execution. Earlier native-tool availability statements are historical; no current native connection or interaction is claimed.
+
+## 📍 Current Position
+Independent main Git containment/integrity/51HEAD closure and postchecks are verified. Source/copy non-generated proof and six specific fixtures remain completed evidence. Generated112347files/38184561421bytes are being verified in session33479; private/unknown holds and copied Notaya Tests remain unopened. N2 construction succeeded at21:16:02.5398998Z with3538copied files/62188814bytes plus2fresh safety files; exact source, Git and tool qualification remain pending. No Cargo, build, test, app, product edit, integration, acceptance or release occurred in this block.
+
+## 🔜 Next Steps
+Close the generated run with terminal result and independent complete-record accounting. Close N2 actual containment and run the reviewed fixed Git stage, then classify/read exact final delta. Admit direct installed SDK identities with owned cache/target/temp/profile/app homes and clean child environment. Restore existing locked public crates only if needed, compile library tests without running, bind the actual compiler-produced executable, discover four exact N2c regressions, and run those exact tests. Broader compatibility/hostile/reopen/native qualification remains separate; no zero-match green. Integrate these control sessions/usage into adopted records at the appropriate milestone without rewriting historical records.
+
+## ❓ Open Questions
+Actual generated hash outcome, final N2 runtime results and exact artifact identity remain unknown. M2's existing regression is finish-only, not persisted/native proof. Area3 baseline and N3 delta review, P6c named footer/zero-sum and compact-focus observation, P7 uncapped oracle, security contracts and whole-app/packaging gates remain. Private formula parity and WP19 private exports require their own bounded person-controlled authority. Mohamed owns actual X1/About confirmation. Eight1B amendments and HD/technical history mechanisms remain proposals unless explicitly settled; no roadmap change or external contact is authorized by this record.
+
+## 🧾 Session Outcome
+Verified independent Git preservation and produced an isolated N2 candidate. Generated verification and N2 qualification are in progress. The Goal is incomplete and1.6 is unaccepted. The administrative Goal tool still exposes its earlier paused counter and cannot resume through its available status API; actual work follows Ahmed's newer explicit resume. No replacement Goal or invented active meter was created.
+
+## 🔍 Confidence Level
+High for the completed named Git/hash/native checks. No claim of full-copy atomicity, comprehensive correctness/security, runtime/native interaction, merged1.6 or owner acceptance. All historical successes retain their original source/executor limits.
+
+**Models, Effort, Roles and Provenance:** Lead and full-history workers retain requested/inherited GPT-6.1 Sol Ultra routing; independent serving-backend attestation is unavailable. Root coordinates and independently reviews non-author control artifacts; workers review generated preservation, Git/source closure and product corrections. Exact billed tokens, cost and before/after quota are unknown; no CLI quota probe ran. Originals, copied historical lanes, private inputs and automation remain protected. No push, external message, install/upgrade, scheduler change or release.
+
+---
+
+<a id="session-62"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-resume-block-02.md`, SHA256 `53FE236C36ECF780675B306827C1FBBEC0F863175B9D719E61DD3415739CCBD9`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · Verified copy and isolated main
+
+**Who and where:** Ahmed (AE0101), GAMING-PC. This is a control-stage full session awaiting transfer into the adopted record system with original timestamps and provenance.
+
+## 🕒 Time
+Evidence window: 2026-11-11T19:18:17Z through the save time in usage-resume-block-02.json. Times are system UTC. The owner's message time is not recorded.
+
+## 🎯 Session Goal
+Continue the existing 1.6 Goal after Ahmed's manual transfer. Preserve the originals and every unique lane state, verify the copied scope, and establish an independent working repository before product work.
+
+## 🛠️ Actions Taken
+Completed the source/copy namespace comparison, metadata admission and paired/final hashing of 35,391 non-generated files (676,961,480 bytes). All source native identities matched prior evidence; no shared source/copy identities were found. Qualified six indexed files by specific synthetic/legacy fixture contracts, then verified all six pairs and their final hashes; the three frozen oracles match recorded historical hashes. Populated a fresh main with 666 working files and 2,870 verified Git files plus two fresh safety files. Independently verified that base. Added the six fixtures, then checked the complete 3,544-file tree (62,177,907 bytes, 364 directories). Executed only two controlled Git Identity commands after actual non-author containment review.
+
+## 🧠 Key Insights
+The copied parent Git administration and all 51 copied lane pointers remain preservation material and still refer to original locations. Fresh main uses its own independent objects, refs, HEAD and index without those registrations. Source main is 9977e72e46432ef975407d9d5b17913a866b307e; accepted V1.5.1 is 95ca8b203403fae701e6f60521419329b30a7145. The effective copied ref inventory has 138 refs. The index has 668 regular stage-zero entries and only a TREE extension. Six tracked files required purpose classification; tracking itself did not override privacy. The 50017-row synthetic oracle intentionally captures the old cap and must remain frozen when P7 gets its separate uncapped reference.
+
+## 📌 Decisions Made
+Reuse verified manual bytes and a small fresh repository, with no second full archive. Keep generated content and all unknown/private material outside active qualification. Preserve both R2/R3 ledger variants, MAIN's runner/helper and every other named unique lane state. Disable inherited Git configuration/helpers, transport and cleanup in the new repository and launcher. Execute Identity first; require independent output/post-admin review before Integrity. Do not normalize working bytes or claim source EOL policy before examining it.
+
+## ⚠️ Difficulties / Friction
+The metadata verifier initially mishandled 103 sparse directory refinements and stopped before hashes; a real-schema overlay audit corrected it without invented IDs. The constructor copied all 3,536 source files but its final comparison falsely rejected two safety-file digests because PowerShell used uppercase hex and the helper lowercase. Canonical comparisons in two independent actual passes established zero content changes. The prior denied copied-.git rename remains unexecuted; no retry, elevation or permissions change occurred.
+
+## 🔧 Adjustments Made
+Preserved every failed script/report and added corrections. Reused the complete constructed base instead of copying again. Added only the six independently verified fixtures using CreateNew and native/hash checks. The final tree now has exact namespace membership and independent Links=1 storage. The Git Identity launcher uses a cleared child environment, empty global/system configuration, explicit own Git/worktree paths, pinned SDK executable and restricted raw output.
+
+## ❌ Mistakes / Risks Noted
+Production-schema and hex-case assumptions were missed by initial control-tool reviews. Fixture metadata and generated evidence must not be promoted to private-input authority or runtime qualification. Fifteen copied timestamps differ, although all qualified content hashes match. Generated bytes remain content-unverified. The manual transfer is not an atomic snapshot or a pre-copy content proof. Native CUA APIs are unavailable; no native interaction is claimed. Existing test suites include registry-writing tests, so unfiltered execution is not yet safe.
+
+## 📍 Current Position
+Core preservation: verified for the declared non-generated boundary plus six purpose-qualified fixtures. Full generated preservation remains metadata-accounted, not hash-qualified; other held files/subtrees and the copied Tests folder remain unread. Fresh main: fully byte-checked, with no actual content mismatch. Controlled Git Identity succeeded: version 2.40.0.windows.1 and the pinned exec-path, both exit 0 and empty stderr. Independent post-Identity admin check verified 2,872 files/266 directories unchanged. Integrity, status/EOL, project execution, builds and tests remain pending. No product implementation or owner acceptance is claimed.
+
+## 🔜 Next Steps
+Finish the independent six-fixture delta and Integrity containment report; run bounded graph/ref/index checks through the reviewed launcher. Reconcile EOL/status without reset or normalization. Establish the N2 development branch/lane and command-specific execution isolation, using fresh cache/home/target paths and locked dependencies. Qualify exact final N2 against all four findings before N3; retain Area 3 baseline and later delta review. Continue P6c, approved P7/P8, security contracts and WP-18 in their dependency order. Integrate the control session/usage history into adopted records at the approved milestone.
+
+## ❓ Open Questions
+Generated-content hashes, extra copied-object provenance, exact original EOL policy and final tool/build recipes remain unqualified. Private formula parity and private WP-19 export reruns are separate and not authorized. Mohamed's X-1/About obligations remain with him. All eight 1B amendments, HD1–HD12 and technical history mechanisms remain proposals/evidence questions; no roadmap changes were made.
+
+## 🧾 Session Outcome
+Verified the critical copied source/admin/lane boundary, recovered prior records and study identities, and produced a small independent repository. The first controlled Git calls succeeded. No Git ran against originals or inherited copied lanes; no project tool, app, build or test ran. The Goal remains incomplete. The administrative Goal counter still reports its previous paused state; current work is authorized by the newer explicit owner resume, not by an invented counter change.
+
+## 🔍 Confidence Level
+High for the scoped byte/native/namespace proofs and observed Identity results. Git graph, executable isolation, behavior, native interaction and 1.6 acceptance remain unverified.
+
+**Models, Effort, Roles and Provenance:** Lead retains the requested GPT-6.1 Sol Ultra routing; workers inherit it, with serving model/effort not independently attested. Root integrates; non-author workers review. Partner: Ahmed/AE0101. All original project/lane files and Git metadata remain unwritten by agents. No external contact, install, scheduler change, private input, roadmap edit or public release occurred.
+
+---
+
+<a id="session-61"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-resume-block-01.md`, SHA256 `EDACC27B90AF74A3D3F4BBA1DD72172724066F57D937E3892B31340D8E7ADA5A`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · Resume after manual copy
+
+Who and where: Ahmed (AE0101), GAMING-PC. Control-stage full session; no permanent adopted session ID assigned before derivative qualification.
+
+## 🕒 Time
+Start receipt2026-11-11T19:09:54Z; evidence cutoff is savedUtc in companion usage record (system UTC). Latest owner message explicitly resumes the existing Goal after completed manual copying.
+## 🎯 Session Goal
+Recover the existing1.6Goal and context; determine copy adequacy and original dependencies; establish independent working repository before continuing approved development. No onboarding restart or proposal-as-approval.
+## 🛠️ Actions Taken
+Read full activeGoal, installedPBSskill, handbook environmental procedure/lifecycle prompts, copiedAGENTS/CLAUDE. Delegated bounded Git topology, preservation, PBS/tool-path reviews. Observedmainproject underNotaya Project Data, Gitadminatworkspace.git, lanesunderNotaya-lanes; separateTests held. Recovered oldattempt insideProjectData and rechecked keyartifacthashes. All4fullstudyfiles retain originalhashes; previous2865-line delegatedcoverage preserved. Newrestrictedcontrol/scaffoldcreated. Metadata-only verifier now running withnohashflag; no projectdata copiedbyagents.
+## 🧠 Key Insights
+All51copiedlane pointers/backpointers stilltargetoriginal roots. Main9977e72e46432ef975407d9d5b17913a866b307e; acceptedtag95ca8b203403fae701e6f60521419329b30a7145.138effective refs,668indexentries; actualcopiedobjects2875versushistorical2766, so extrasmustsurviveandbeaccounted. Maincode livesbelowcopiedGitroot, so defaultrootGitstatuswouldmisinterpretrelocation. Originalequivalence/currentacceptance notprovedbythese observations.
+## 📌 Decisions Made
+Use manualcopyaspreservation, verifyeligiblecontentsandderiveonlysmallindependentmain/neededlanes. KeepcopiedGit/laneadministrationoutofexecution. Retainallunique K1C/MAIN/R2/R3/S/W work, K1Bexamples andextraobjects; no resets/clean/overwrites. No secondfullarchive assumed;36.34GBfreeobserved. Newscopewriteareaonlyresume-20261111T190954Z-ae1f50c8/control anddeclaredemptyactive/main scaffold.
+## ⚠️ Difficulties / Friction
+Windowsdeniedsame-parentrenameofcopiedworkspace.git; sourceexists/destinationabsentverified, underlyingcausenotestablished. Noretry/elevation/ACLchange. Fresh .git scaffoldcreationatnewownedrootdidwork. EarlierSESSION04savefailedatoldpathduringmanualcopy; recoveredoldrecordsarenowfound, notdeleted. Goaltoolstillreportspausedandcannotresumeviaavailabletool; ownerexplicitresumegovernswork, noactive-meterclaim.
+## 🔧 Adjustments Made
+Keepdeniedcopiedadminuntouched anduseexplicitnewGitroot. Reusehardenedhelper8DFEADA7...D66FC; do notreuseopaqueID-equalitybug. Newphase1verifierbyroot/path excludesgenerated/privatehashing, freshmetadataadmissionfirst, source/copyidentityindependence, paired/finalhashesonlyafterrootreviewreceipt. Independentlauncheradaptedbyonefixedrootconstant, parsecheckedbutunexecuted.
+## ❌ Mistakes / Risks Noted
+Priorrealcapturefailed0bytesduetoindependentlynumberedIDs; oldsyntheticpassesremainbounded. Metadata-onlyrunmustnotbecalledverifiedcontent. Copiedtoolsstillpointtooriginaloutputs/modules/testhomes/executables, inheritedchildenvironmentandcleanupneedadaptation. Tests/privateinputsareheld; noprofile/defaultvaultfallbackpermitted. ParentcopiedGitstillhasoriginalworktreepaths; noGitthere.
+## 📍 Current Position
+Freshmainhasempty.gitonly,noHEAD/objectsandisnotusablerepository. Preservationmetadata/defaultscriptE3688100...D7C9C livesession71123; nohashflag, noGit/projecttools. Git/execgatesclosed. Accepted1.5.1distinctfromintegrated/unaccepted1.6. All8CR/12HD/11HTunapprovedmechanismsstayopen.
+## 🔜 Next Steps
+Completefreshmetadata/source-copycomparison; reviewfinalsmallverifierandrun677MBnon-generatedpairedhashpassunderboundreceipt. Preserve/explainheldandextramaterial. Populatefreshmainfromverifiedbytes, independentlyreviewGateAthencontrolledGitidentity/integrity. Package-specificGateBbeforetests/builds. Exact-tipN2review/fourfindings, P6coracle/focus, approvedN3/P7/P8/security/WP18followexistingdependencies.
+## ❓ Open Questions
+Copycompleteness/contentidentity/generatedevidencepending; extraobjectprovenance, indexextensions/EOLpolicyandtoolclosurepending. Privateformula-parityandWP19exportrerunsnotauthorised. MohamedX1/Aboutacceptanceseparate. Requiredformat/history/receive/privacychangesremainownerchoices; don'tblockindependentapprovedwork.
+## 🧾 Session Outcome
+Recoveredretainedcontext/fullstudies/recordsandactualcopiedtopology. Verifiedoriginaldependenciesexist; nofalseisolationclaim. Producednewcontrolreceiptsandemptyfreshscaffold, preservationverificationinprogress. No productimplementation, projecttests/builds/Gitcommands/releaseorowneracceptance.
+## 🔍 Confidence Level
+Highforobservedpointers/reftext/retainedartifacthashes; preservationandindependentexecutionremainunverifieduntiltheiractualgates.
+
+Models, Effort, Roles and Provenance: Lead retained gpt-6.1-sol/ultra with no mode/model change initiated. Read-only workers inherit requestedSolUltra; actualservingmodelnotindependentlyattested. PBSinstalled/projectskillbyteidentical; liveNotionguidancecomplementary, adoptedNotayacontractkept. Documentationfetchdoesnotgrantwriteauthority. Originalsourcesnotwritten; noGit/projectexecutionagainstthem.
+
+---
+
+<a id="session-60"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-block-03-capture-stop-manual-handoff.md`, SHA256 `30E54254DC7560F5730A175D76B2E27AD4E4A5CBEECAE7785E37C0730FB73726`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# Ahmed-side session — block03: capture stop and person-copy handoff
+
+## 🕒 Time
+2026-11-11T17:14:36Z through2026-11-11T17:26:43Z, Gaming-PC.
+## 🎯 Session Goal
+Execute the independently reviewed eligible capture under the submitted Goal and confirmed quiet window.
+## 🛠️ Actions Taken
+Bound exact helper/driver/review/input hashes and3255663658bytes known-output budget in capture-technical-approval.json. Started fresh no-profile process; run began17:15:28Z and stopped17:23:46Z. Source namespace scan observed164495entries,6held subtrees not entered,0issues. Native sweep completed147738entries but all were held. Read closed control failure receipts and compared3opaque IDs by matching root/path/classification; no new original content access.
+## 🧠 Key Insights
+Prior native evidence used sequential numeric IDs1/2/3; classification usedM0000003/M0000004/M0000005 for the same paths/classes. The driver incorrectly required identical opaque ID namespaces. Synthetic fixtures used identical IDs and did not exercise this real input-schema mismatch. This is a tooling compatibility defect, not evidence of product/source drift.
+## 📌 Decisions Made
+Invalidate this run; preserve every artifact. No patch or automatic retry while Ahmed performs the offered manual copy. Future manual copy must be separately classified and verified before Git/project use; copied original administrative paths must not become active blindly. Goal remains incomplete.
+## ⚠️ Difficulties / Friction
+Real capture preflight rejected147738metadata records. Exit1 and invalid-attempt summary recorded. No source-initial hashes, copied bytes, destination hashes or final-source hashes were produced.
+## 🔧 Adjustments Made
+Immediately reported stop when observed, diagnosed control record IDs, notified author/reviewer and requested additive correction rather than replacement of prior evidence. Accepted Ahmed's offer to copy into a fresh destination, preserving originals and lanes with no overwrite/open/run. No automated copy retry is pending.
+## ❌ Mistakes / Risks Noted
+Root/non-author static and synthetic reviews missed ID-schema compatibility of actual manifests. All prior synthetic results retain bounded fixture value; they do not qualify production capture. Manual Explorer copy alone does not prove Git/executable isolation or across-copy content consistency. Private/unclassified handling remains explicit.
+## 📍 Current Position
+Capture remains empty; active remains empty; originals untouched.1002held files and6unentered subtrees remain preserved in originals. No original Git/project execution; no project tests/builds or product implementation. Exact run receipt: capture-20261111T171528Z-7698db78-summary.json.
+## 🔜 Next Steps
+Await Ahmed's manual-copy destination/completion. Keep source writers coordinated through copy/verification. Inspect its no-follow metadata before content; compare permitted content with provenance and disclose manual-copy verification limits. Establish independent GateA andGateB before relevant execution. No source repair, retry, deletion or overwrite.
+## ❓ Open Questions
+Manual-copy actual scope/path and preservation/verification evidence are pending. Source private categories remain held. Product mechanisms in studies remain proposals; all8CR,HD1–12,HT1–11 owner questions are open. Separate private gates remain unauthorised.
+## 🧾 Session Outcome
+Produced a safely stopped capture attempt and diagnosed manifest-ID incompatibility. Captured source bytes0; source bytes hashed0; source writes0. This is an invalid attempt, not preservation completion or accepted1.6 work.
+## 🔍 Confidence Level
+High for closed run counts and3observed ID mismatches; full error-category count awaits control-only aggregation. No capture or derivative qualification claimed.
+
+Provenance:Ahmed side/GAMING-PC; lead retained gpt-6.1-sol/ultra/default; workers requested/inheritedSolUltra with actual serving model unattested. Control-only records are temporary staging for the adopted PBS; retain timestamps and provenance when later integrated. No permanent record IDs assigned.
+
+---
+
+<a id="session-59"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-block-02-studies-and-capture-preparation.md`, SHA256 `8F05691AFD971124B6A666B928C857C0FDEC82C957E310FCA091D1A4EE0508E2`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# Ahmed-side session — block02: studies and capture qualification
+
+## 🕒 Time
+2026-11-11T16:47:53Z through evidence cutoff2026-11-11T17:13:58Z, Gaming-PC. This closes capture preparation, not the Goal.
+## 🎯 Session Goal
+Read the four full supplied design documents, qualify bounded inert-capture tooling and prepare owner-authorized source capture.
+## 🛠️ Actions Taken
+Classified full local study inputs and preserved exact copies/readback hashes; workers wholly read1A490lines,1B599,draft3847,history929:2865unique lines375431bytes. Root wholly read both reconciliations and final661-line controller. Metadata-only source preflight inspected147738eligible files;4982multi-link paths formed2491complete matching generated groups. No original source capture/hash yet. Control helper and controller were authored, reviewed and tested on control-only fixtures. Attempt ACL now restricts owner/SYSTEM/admin; capacity measured and recorded.
+## 🧠 Key Insights
+Studies are proposals with no runtime qualification. All8CR amendments andHD1–HD12/technical questions remain open. Initialv3 alias deletion succeeded under attribute-only holds; hardened read/list holds refuse tested secondary-file and empty-directory changes. Late destination tamper required final inventory/hash closure. Quiescent validation remains weaker than atomic snapshot.
+## 📌 Decisions Made
+Use explicitly complete eligible generated alias groups to independent Links1 outputs. Keep no-overwrite inert capture with .raw suffix; activate only necessary main/lanes afterward. Hold sensitive/unclassified content in originals. Technical current candidates are helper8DFEADA7E3B540373DE5F90ED34B91DD7CECA5E21B82292A690C66C3E95D66FC and controller9199B54F494E3816633FDF571E7FBD0908C8D420BD03C8C35AE891420994B0AA; actual production approval is separate and pending final independent report.
+## ⚠️ Difficulties / Friction
+Native snapshot inventory unavailable: CIM initialization failed;vssadmin permission denied, not retried/elevated. Prior Library browser auth failed before download; full local user-supplied files resolved access. Initial synthetic alias hold and a reviewer reflection setup failed; all failed evidence retained.
+## 🔧 Adjustments Made
+Additive hardenedv3 helper and controllerv2; no overwritten source versions. Fresh helper leases, complete alias receipts, actual read/list held handles, source before/after hashes and final frozen destination closure. Capacity plan includes records/allocation/initial main; no two-full-active-copy assumption or generic-warning veto.
+## ❌ Mistakes / Risks Noted
+Static preliminary review did not reveal attribute-only sharing failure; synthetic runtime did. Native EFS and3reparse fixtures remain not-run/unproven, with conservative admission holds. Exact filesystem ACL/ADS/hardlink topology restoration is not claimed. Current source preservation is not yet verified by a capture.
+## 📍 Current Position
+Capture and active directories remain empty at cutoff. Owner exact quiet answer remains: All source writers are paused until capture finishes. Helper author and independent suites30pass0fail4not-run each; controller author and independent12pass0fail each. These are control-fixture results, not project tests or 1.6 qualification. No original Git/project execution or source writes.
+## 🔜 Next Steps
+Obtain final combined independent report; bind exact tooling/input/quiet hashes and measured budget in root technical approval; run eligible capture. Validate content/refs/index evidence and held exclusions; report quiet-window completion only once capture is actually verified or stopped. Derive independent main only from verified frozen blobs; passGateA before Git andGateB before project execution.
+## ❓ Open Questions
+Product/privacy/security/format/history choices from studies remain undecided; raw-writer/currentness/purge-root questions need targeted derivative reads. Private formula parity and export reruns require bounded owner route and remain distinct. No implicit external contact or roadmap permission.
+## 🧾 Session Outcome
+Produced study reconciliations, exact coverage, synthetic tooling evidence, protected attempt and capacity plan. Original capture NOT RUN at cutoff; active copy NOT CREATED; GateA/GateB NOT RUN; no product implementation or owner acceptance claimed.
+## 🔍 Confidence Level
+High for delivered document coverage and observed fixture outcomes; bounded for native locking and non-atomic capture design; actual production preservation unverified until run.
+
+Provenance:Ahmed side; machineGAMING-PC. Lead retained runtime gpt-6.1-sol/ultra/default; workers inherit requestedSolUltra, actual serving model not independently attested. Current Goal governs; historical Plan-only restrictions superseded by submitted Goal. Authority copy/hash and detailed artifacts are in this control folder; no permanent adopted record IDs claimed. Later transfer must retain timestamps/provenance.
+
+---
+
+<a id="session-58"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following entire historical source block is preserved verbatim, including title, original cutoff and model/usage limits. Source `SESSION-block-01-goal-preflight.md`, SHA256 `E59B94EA3E4386E89D0D68A29B62C739DB0981C1F9896AE77621D2F030083A68`. This local record number and the reader key are new; no product acceptance follows.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+<a id="control-goal-preflight-block-01"></a>
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · Goal authority and capture preflight
+
+**Who and where:** Ahmed's side (AE0101), observed machine GAMING-PC. Temporary control record pending integration into the adopted derivative records with its original provenance; no permanent session/A/EX number allocated.
+
+## 🤖 Models, Effort, Roles and Provenance
+
+- Lead/executor: task configuration reports gpt-6.1-sol, effort ultra, mode default at 2026-11-11T16:21:31.660Z. This is configuration evidence, not serving-model attestation.
+- Three bounded workers: inherited requested Sol Ultra; independent serving identity/effort unverified. A fresh non-author capture-helper reviewer was additionally assigned.
+- Record basis: contemporaneous control record for this Goal block; earlier stages are referenced as historical context, not rerun evidence.
+
+## 🕒 Time
+
+- Goal activation: 2026-11-11 16:21:31 UTC, goal-tool metadata.
+- Control attempt created: 16:22:55 UTC, filesystem-operation receipt.
+- This block evidence cutoff: 16:47:53 UTC, clock tool.
+- Session type: execution recovery, metadata/privacy preflight, source discovery and capture-tool preparation.
+- Active working time: not independently measured. Goal tool reported 1,541 elapsed seconds at the cutoff.
+
+## 🎯 Session Goal
+
+Read the complete submitted objective, carry its staged authorization forward, protect both original trees, establish a classified capture boundary and locate the full design sources before dependent decisions. Continue independent authorized preparation without treating unresolved proposals as approved mechanisms.
+
+## 🛠️ Actions Taken
+
+1. Read all 44 lines of the 12,805-byte Goal attachment. Preserved an exact copy and SHA-256 receipt in control. Re-read governing AGENTS/CLAUDE after no-follow metadata classification; original Git/fetch/push directions remain overridden by this Goal.
+2. Created this no-overwrite attempt's control, capture and active directories. Restricted manifests use an inheritance-protected ACL limited to current owner, SYSTEM and Administrators. Original files/admin/indexes received no writes or Git commands.
+3. Completed no-follow metadata classification: 148,740 file entries and 15,755 directories, 51 linked pointer files, zero scan/refinement errors and no observed reparse entries. Six sensitive-directory candidates were not entered. Sensitive and ambiguous candidates remain held.
+4. Reviewed 53 configuration candidates as inert data and 328 technical-ledger headers. No row data was read. Lead dispositions qualified the earlier forecast-header schema and inert editor-cache hint; active settings will be rebuilt safely. These reviews establish purpose, not content-sanitization or capture consistency.
+5. Read-only WMI snapshot classes failed with initialization error 0x80041014. A separate vssadmin read was denied for lack of elevation; no elevation or retry followed. Both named tasks reported Disabled. Process metadata alone did not prove writer absence.
+6. Owner then confirmed all source writers are paused until capture finishes. The confirmation is preserved in owner-coordination-and-source-access.json. Byte/index/common-state validation is still required across the quiescent copy.
+7. Notion returned three index/context pages, not the full reports. The verified Claude link required sign-in; native UI navigation was blocked by state/geometry failures. Blue supplied four exact Library links. The first direct Library retrieval returned Missing or invalid access token; zero file bytes downloaded. The Library interface also showed login controls. No credential extraction, report substitution or external message occurred.
+8. Created the WP-01–WP-19/release-gate navigation index: 19 requirements plus 14 gates, with historical candidate identities explicitly unrefreshed and current qualification pending/not run.
+9. Selected reversible inert-capture/selective-activation layout under this attempt. Prepared a single-file no-follow capture primitive on control-only synthetic fixtures, with fresh non-author review. Source use awaits final hardening/test/review evidence.
+
+## 🧠 Key Insights
+
+Snapshot-query failure is not proof that no snapshot exists. Disabled tasks and process command lines are insufficient quiescence evidence. Owner coordination plus strongest available across-capture content evidence is therefore the selected route, with its non-atomic limitations disclosed.
+
+Full source reports remain unread despite verified links. Highlights cannot settle the eight 1B amendments or history/integration proposals. This blocks affected design reconciliation while independent preservation work continues.
+
+## 📌 Decisions Made
+
+- Confirmed by Ahmed's submitted Goal: necessary local copying and derivative development are authorized within stated gates; no repeated drive/substep approval is required.
+- Confirmed by user reply: all original-root writers remain paused until capture completion is reported.
+- Technical choice by lead within Goal: inert classified capture, then independent main and only needed active lanes; no automatic full historical activation or two-full-copy reserve.
+- Technical classification: known forecast schemas are project-usage data; the editor merge-base cache is inert Git metadata, not an active setting to carry forward blindly.
+- Still proposed: all unapproved foundation, integration and history mechanisms. No product/privacy tradeoff was selected in this block.
+
+## ⚠️ Difficulties / Friction
+
+Snapshot inventory encountered provider and permission limitations. Library retrieval lacks an available authenticated read route. Initial metadata-review guards compared differently typed timestamps and falsely held records; those attempts read zero content and were retained, then corrected using UTC precision. They are not evidence of source drift.
+
+## 🔧 Adjustments Made
+
+- Changed from the old Plan-only boundary to the new staged execution authority supplied by the user.
+- Kept raw administration inert and planned selective activation rather than activating every historical checkout.
+- Added independent destination readback, named-stream/EFS handling and case-sensitive containment checks to capture-helper review before original use.
+- Held source-access-dependent foundation work while continuing classified preservation preparation.
+
+## ❌ Mistakes / Risks Noted
+
+The timestamp guard bugs were implementation mistakes with no source-content impact. Both failed reports remain alongside corrected results. Native UI binding/geometry failures prevented reliable navigation; no message or project action was sent. Capture-helper review found conditional safety gaps before source use; no source capture occurred under those versions.
+
+## 📍 Current Position
+
+Control records are produced and read back. Metadata/purpose preflight is completed with explicit holds. Capture and active repository directories remain empty at this cutoff. Original project state has not been copied, hashed for capture, executed or changed. The Goal remains active.
+
+## 🔜 Next Steps
+
+1. Finish hardened helper synthetic verification and fresh non-author review tied to final file hashes.
+2. Refresh classified metadata under the confirmed quiet window, explicitly account for unsupported streams/links/attributes, then capture only eligible content with no-overwrite and independent hash readback.
+3. Verify frozen-capture consistency, derive independent main, and pass Gate A before controlled Git inspection and Gate B before project execution.
+4. Read full studies only after a supported source route supplies complete bytes; retain all unresolved amendments/HD questions.
+
+## ❓ Open Questions
+
+- Which supported route can materialize/read the four exact Library files without extracting credentials? Affects full design reconciliation, not independent capture preparation.
+- Does metadata/native preflight reveal any required held material or unsupported identity/stream/link case? Pause only that affected capture action if so.
+- Product/history/privacy decisions listed in the submitted Goal remain open until full sources and explicit owner decisions resolve them.
+
+## 🧾 Session Outcome
+
+The complete Goal was read and translated into a protected, evidence-bearing preparation attempt. The capture boundary and limitations are explicit, source writers are owner-confirmed paused, and the requirement/gate index exists. No technical check was promoted into product acceptance. The next block proceeds with reviewed capture mechanics while full-report access remains isolated as a source blocker.
+
+## 🔍 Confidence Level
+
+High for the Goal receipt, control writes/readback, observed metadata counts and exact access errors. Limited for whole-tree consistency until eligible bytes and common/index state are verified across capture. No confidence claim is made for unread full reports, unrun product tests or 1.6 owner acceptance.
+
 ---
 
 <a id="session-57"></a>
