@@ -13,6 +13,12 @@
 Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix A](2026-10-23-pbs-reconciliation.md#appendix-a-documentation-routine-going-forward)). Dates are UTC.
 
 
+### 2026-11-12 UTC, EX-2026-11-12-79: table tools and produced locked dependencies
+
+- [Report](2026-11-12-codex-table-tools-qualification.md); full [sessions67–70](../sessions.md#session-70), [resume](../handoff/2026-11-12-codex-table-tools-resume-note.md). Ahmed (`AE0101`), Gaming-PC; requested/inherited Sol Ultra, actual backend/usage unattested.
+- Local records f94ee615 verified/not pushed; detached P6c [large-table verification and focus checks] source remainsddb52d9. Independent Git2+18+1, installed SDK1837/direct Node/npm Identity and two-command produced-restoration/source-protection520FEF close their scoped evidence. Latest cutoff01:57:56.2721796Z; archives/expanded/native/startup/executable graph remain UNQUALIFIED.
+- Test-only proposal918765/non-author1B7D is produced/static-reviewed, not applied/run; code branch not created, compact focus unobserved. N2 [Notion import fixes] prior148 selected exact7806 passes remain unintegrated/unaccepted. Accepted1.5.1 unchanged; no roadmap/authority/acceptance/product source change, push or release.
+
 ### 2026-11-11 UTC, EX-2026-11-11-78: independent workspace and Notion import qualification
 
 - [Report](2026-11-11-codex-preservation-and-n2-qualification.md); full [sessions58–66](../sessions.md#session-66). Ahmed(AE0101), Gaming-PC; requested SolUltra, backend/usage unattested.

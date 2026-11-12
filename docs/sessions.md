@@ -21,6 +21,10 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 70 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Locked dependencies produced, source protection verified](#session-70) |
+| 69 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Node/npm Identity qualified](#session-69) |
+| 68 | 2026-11-11–12 | Ahmed (`AE0101`) | Gaming-PC | [Independent table-verification repository qualified](#session-68) |
+| 67 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Local PBS milestone verified](#session-67) |
 | 66 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Preservation closure and records preparation](#session-66) |
 | 65 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [PBS and Notion progress maintenance](#session-65) |
 | 64 | 2026-11-11 | Ahmed (`AE0101`) | Gaming-PC | [Notion import exact-revision qualification](#session-64) |
@@ -87,6 +91,275 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-70"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. Entire following source is byte-verbatim: original title/EOL/cutoff/full13sections/provenance. Source `SESSION-resume-block-09.md`, SHA256 `F3A268D742FAAD3E847D7B7F24C22BE12CEEE47D96208859DA181C7C45616363`. New local anchor/index and reader key do not rewrite dated statements or imply acceptance.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Locked dependencies produced, source protection verified
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root co-ordinates/executes, non-author reviewers inspect actual evidence. Next full ended-work-block checkpoint in SAME root app run; proposed adopted session70 after blocks06–08. Not a new billable run or Current record system.
+
+## 🕒 Time
+After block08 cutoff2026-11-12T01:45:42.9866290Z through 2026-11-12T01:57:56.2721796Z, UTC system clock. Complete app duration/provider counters unknown. Cairo November12.
+
+## 🎯 Session Goal
+Finish the separately admitted locked restoration, reconcile actual produced output and source/tool containment, prepare archive/expanded-graph qualification and the next adopted AI PBS records milestone. Continue existing1.6 Goal without original/private access or unapproved product work.
+
+## 🛠️ Actions Taken
+Restore controller22882 finished exit0/no parent stderr/notimeout. Exactly two direct npm-ci commands: frontend reported316 packages in16s, separate Playwright tools reported1 in2s. These are operational command reports, not performance thresholds or independently counted expanded files. Two106B/692B public manifest copies were CreateNew in a fresh owned tools root.
+Independent actual readback520FEF85B44F79807586F7A339E0FB2911958CE96C8AC562E03B843594409441 joined all3535 protected source hashes/native9 and1837 installed SDK groups/aliases before+after; unchanged. Both tools source inputsC775/Root3045 joined actual copies. All6 destination-native/hash records matched after-copy/immediate-pre/immediate-post tools-ci. Source package/lock/.npmrc unchanged.
+Child stderr was NOT empty:632 frontend+2 tools lines, entirely HTTP cache/fetch diagnostics.317 GET200 URLs and317 cache records exactly matched the Windows locked allowance; debuglogs1310 lines fully categorised, ADD paths exactly316frontend+1tools,0warnings/errors/deprecations. Config diagnostics used only no-dot builtin/fixed project/owned empty user+global configurations. No private config, SDK install/upgrade, lifecycle/bin scripts or browser download. Log hit/miss labels do not prove independent cache persistence.
+Actual produced summary687800731EE3BED139BFD8B28ED0727620E3718C8B5E373892B04D7728C99F14; Root parent0703C54D392A259374F308590827E7F208EDBC03076A6ED0D682F09AC22AE3FD. All owned controller processes closed. Fresh dependency graphs/cache remain UNQUALIFIED and unexecuted by app/plugin/browser.
+The reviewed post-restoration design packet3B58596981106AC0DD5C95AE27039D789BC918760E637AC46EECF1E55EAF2132 accounts379 non-root lock rows/373 archive records, expected316+1 and explicit56 platform+6 bundled WASI exclusions. It includes SRI-derived cache coordinates, raw tar metadata, exact Pacote strip/link-filter/gitignore and Windows-name transforms/collisions, both generated hidden locks and byte-equal expanded-file proof. Two distinct LightningCSS/native pairs remain explicit:1.33.0 root,1.32.0 nested Tailwind. Selected actual startup/native source reading remains after data qualification.
+Root assigned only a metadata-first/no-follow pass over those fresh trees/cache/logs plus a control-only verifier proposal. No archive parsing, expanded hashing, vendor/native execution or old cache/historical inputs admitted by that task. Implementation/review/data admission and actual archive/expanded proofs remain pending.
+The adopted records proposal is being prepared in control from actual mainf94ee6155e26bcc9ad584bea7e5285eb265ad513: five owner modifications plus two new report/resume files only. Actual66 anchors verified; sessions67–70 and EX79 locally free, remote recorded maximum remains captured main. Full blocks06–09/titles/bytes/usage must transfer verbatim; CSV's existing one root-app row stays unchanged. No proposal applied/staged/committed.
+
+## 🧠 Key Insights
+Successful locked installation and exact HTTP/ADD reports are meaningful produced evidence, while archive SRI/platform/extraction and executable graph qualification remain separate. A green banner is not all that passed, nor is it a browser/app result.
+Installed SDK, source preservation, necessary new dependency outputs and legacy copied generated caches have distinct identities. The new graphs use fresh cache/output/profile paths; protected historical generated data is preserved rather than used as executable authority.
+
+## 📌 Decisions Made
+Close only the produced-restoration/source-protection gate, retaining public graph qualification pending. Keep exact ordinary/zero-sum table proposal in control until relevant gates and final-source review.
+Use the approved SDK/locked versions; no upgrade, scripts enablement, arbitrary transport workaround, old node_modules reuse or automatic cleanup/retry. Proceed with metadata before any new public artifact payload processing.
+
+## ⚠️ Difficulties / Friction
+No actual restoration command failure, timeout or source drift. Rich child HTTP stderr is expected classified output; parent stderr0 must not be confused with child stderr0.
+Post-restoration plan found literal tar-name equality insufficient because the qualified npm extractor performs documented transformations. This is a verifier design requirement, not proof of incorrect installed bytes.
+Documentation cutoff08 recorded the controller still running; this later block records its actual completion. Preserve both temporal statements; do not rewrite the earlier full record.
+
+## 🔧 Adjustments Made
+Separated source/log/destination actual review from the later archive/expanded gate. Assigned exact fresh cache and two module roots, never original/historical caches. Metadata pass stays payload-free until new verifier source is independently reviewed and Root admits bounded data processing.
+Documentation proposal will include this block as a new dated continuation, maintaining the adopted source owners and full history.
+
+## ❌ Mistakes / Risks Noted
+Do not call317 banner/ADD paths an independently verified317-package expanded graph or treat HTTP200/cache hit as SRI proof. Do not reinterpret unrun plugin/browser/native/security/private parity as passing.
+Do not remove partial/unknown content, silently omit filtered tar headers, infer source privacy from public SDK filenames alone, or activate old linked worktrees. Original/common Git metadata and every dirty/unique preserved lane remain protected.
+
+## 📍 Current Position
+P6c [large-table verification and focus checks] still exactddb52d9d473d9331e9361baa714774fe78a0ad22, protected source/admin3535 rows unchanged. Git GateA6B927, SDK42C060, actual Node/npm IdentityF6B600 and produced-restoration/source-protection520FEF independently passed. Fresh modules/cache now exist but are not qualified for execution. No app/test/build/browser/plugin or test-patch application.
+N2 [Notion import fixes] prior148 selected tests on exact7806d00 remain scoped/unmerged/unaccepted. Accepted baseline1.5.1 and unaccepted1.6 unchanged. Mainf94 records remain local/not pushed; all record updates now proposed only.
+
+## 🔜 Next Steps
+Finish metadata classification and reviewed bounded verifier. Verify archive SRI, all raw-header transformations/dispositions, actual platform/package/hidden-lock graph and expanded bytes; then selected restored startup/native resolution, installed Chrome/Playwright compatibility, owned loopback mock/profile/output behavior.
+Prepare/review/apply only the seven adopted record owners after exact source and historical-byte checks, local-only commit gates. Then apply reviewed test-only change under a bounded fresh source brief, qualify final revision/ordinary+zero cases, observe compact focus before any product fix. No source repair campaign or roadmap update.
+
+## ❓ Open Questions
+Actual archive/expanded/native/startup/browser graphs remain open. Compact focus and optional added-row20k extension unobserved/unrun. N3 [canonical Notion rows], P7 [database query windowing], other views/AI/security, measured polish, person-controlled private parity/export, whole-app/final-binary/packaging and owner acceptance remain separate. No owner decision currently blocks bounded technical verification.
+
+## 🧾 Session Outcome
+Locked restoration produced and independently verified for exact source/SDK/log/destination protection. All failures/limits/pending gates remain explicit. Began only read-only metadata/verifier and documentation preparation; overall1.6 Goal incomplete.
+
+## 🔍 Confidence Level
+High for actual fixed-command/allowlisted-log/source/SDK/two-destination evidence. No SRI/expanded/module runtime/app correctness/security/native persistence/acceptance assurance yet.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited Sol Ultra, actual backend/effort/provider usage unattested; runtime Default, Root changed neither mode nor model. Root executes; git_closure_review independently audits actual restoration; generated_gate_review and read-only child review archive design/prepare verifier; n2_candidate_tools prepares adopted documentation after two public-input qualification. Provider input/cache/output/cost/quota unknown blank/null, same existing app run counted once. Evidence cutoff is dynamic UTC, not estimated. No original/copied historical write/Git, private/comparison payload, SDK install/upgrade, scheduler, roadmap, partner/Fable contact, push/release or acceptance.
+---
+
+<a id="session-69"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. Entire following source is byte-verbatim: original title/EOL/cutoff/full13sections/provenance. Source `SESSION-resume-block-08.md`, SHA256 `B4ECA7125FC52C05C9AF7D45BBF05329A20F26BA60E0A7F5B9AE3485EA11755A`. New local anchor/index and reader key do not rewrite dated statements or imply acceptance.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Node/npm Identity qualified
+
+**Who and where:** Ahmed (AE0101), Gaming-PC; Root executes/co-ordinates, non-author workers review. Full ended-work-block checkpoint in the SAME root app run, after block07. Pending faithful adopted-owner transfer, provisionally session69 after blocks06/07. Not a new billing run or Current system.
+
+## 🕒 Time
+After block07 cutoff2026-11-12T01:06:33.9539877Z through 2026-11-12T01:45:42.9866290Z. UTC system-clock timestamps; Cairo November12. Complete chat duration/owner timestamps/provider meter unknown.
+
+## 🎯 Session Goal
+Continue the authorised1.6 Goal after independent Git closure: qualify actual installed Node/npm, exact public tools inputs and isolated executable Identity; prepare locked restoration and test-only P6c [large-table verification and focus checks] corrections. Keep originals/history/private inputs protected, full AI PBS records and live hub current.
+
+## 🛠️ Actions Taken
+Updated/read back the live Notion checkpoint at2026-11-12T01:07:21.148Z. Exact expected body matched; only progress timestamp/current paragraph changed, entire older body retained. Receipt1530B410A9DAFA1737624D7E0FDCF5C96615963190D1C9B41BAA739F16B562CF. No roadmap/lifecycle/acceptance change.
+Independently reviewed actual Node/npm metadata30AE and typed held-leaf exclusion8012, then separately admitted exact HashOnly source34F681. Actual1837 eligible hashes102,501,357B closed: one bounded23-byte NO-dot builtin technical-config read/hash FIRST, exactly allowed literal APPDATA prefix without expansion,1836 ordinary strict HashOnly reads, all native9/namespace checks. The exact0B DOT-config leaf stayed unopened/unhashed. SDK1837eligible+1held physical files/458dirs,1773 runtime subset+64 eligible extras remain distinct.
+Independent actual SDK audit joined every1837 manifest/pre/post/native/alias row and3674 JSONL rows. Fresh qualified npm constructor lines58–75 closed startup provenance; other entry/config/flag source hashes matched earlier scoped reads. Final SDK closure42C060... and separate NodeRestore-v3 code review4B731... passed; this was not Node execution.
+Root separately admitted the three exact direct Node/npm Identity commands using new owned homes/configs/cache/temp/outputs. All three exited0/empty stderr/notimeout: Nodev24.14.0, npm11.9.0, Windowsx64, exact installed executable. Source3535 rows before/after matched650C and SDK1837 matched42C. Independent readbackF6B600... accounted exactly15 empty owned directories/14 expected files. Empty tools evidence is0bytes/0rows, not fabricated JSON. No dependency graph was produced by Identity.
+Qualified two public copied tools manifests without original access: package106B/lock692B, four hashes1596B; source identities match original closed COPY records M0096783/M0096782 and all native9. Machine rowsC775752...; Root non-author closed-record readback3045B1... confirmed54 native comparisons and known pins. No historical write, Git or tool execution.
+Refreshed relevant GitHub facts through read-only connector known-ref reads, not local Git fetch. Current main9977e72, P6c [large-table verification and focus checks] ddb52d9 and N2 [Notion import fixes]7806d00 match captured tips. Open bounded search returned draft/unmerged PR109(head0e74dd9) and45(head10e519c). ReceiptF7B80FB9E1B2BFA4123BC03FB9491BA2242DE6D48AC6EE8CF031D17E898D0C1C.
+Test-only v2 proposal produced/reviewed in control, not applied/run: exact group/footer key+index, independent full membership/sums, all four Status groups plus empty No Status, fresh5000/20000 ordinary and signed zero-sum cases, complete old positive routines. V2 adds clean-save/local+backend exact view-key/advancing revision waits for grouped/collapsed/expanded states; no forced save/refocus/product correction. Final packet918765... and non-author binding1B7D844...; coverage2519/5282 scoped lines,8whole/7partial, not repository-wide.
+At this cutoff Root has started the separately admitted fixed Restore controller (native session22882); actual npm-ci completion/outputs remain pending. It may produce only fresh candidate frontend modules, separate owned Playwright tools modules/cache and two CreateNew manifest copies. No server/browser/plugin/test/build or application source edit.
+
+## 🧠 Key Insights
+Physical namespace, eligible payload identity, selected runtime graph, observed tool Identity and restored executable graph are different claims. Actual Node/npm versions and unchanged sources do not qualify a future dependency tree.
+Public no-dot builtin config and held dot project config differ. Explicit owned prefixes/user+global configs have source-backed non-consumption semantics; no OS access trace or arbitrary-code sandbox is claimed.
+The test oracle's new guard queries can alter warm-up/GC. Timing action definitions are retained, but new measurements cannot be advertised as an identical historical before/after experiment. Compact focus remains unobserved.
+
+## 📌 Decisions Made
+Preserve exact held dot-leaf metadata without reading it; qualify only the known public builtin directive under a restricted native lease. Keep all1837 eligible files accounted, not a silently truncated1773 subset.
+Use a CreateNew byte-identical CONTROL evidence mirror of the closed Identity summary because unchanged Restore source requires summaryPath within control; original path and identical98F30... hash stay explicit. No result rewrite/rerun.
+Admit only already locked public dependencies, disabled scripts/bin links/audit/notifier/Git transports, owned fresh paths and exact reviewed URLs. Npm exit alone leaves graphs UNQUALIFIED. No new tool/version, browser download, product/history/roadmap/acceptance decision.
+
+## ⚠️ Difficulties / Friction
+Root again used send_message for a finished worker, delaying a one-literal request; list_agents/followup_task corrected dispatch. Root then confirmed that the proposed change was itself unnecessary: JSON rendering escaped one source backslash as two display characters. Author and independent AST/raw codepoint proofs confirmed one U+005C/21chars/23B CRLF. Root withdrew the request, acknowledged both issues in chat, and preserved unchanged v3; no misleading v4 or SDK action during that delay.
+Two independent SDK audit assertions needed control-only corrections (PowerShell h history-alias collision; uppercase-only hash spelling). Original failed audits remain, corrected audit exited0; no SDK access in those failed attempts.
+Main-ref connector response unexpectedly included a large repeated history diff, output truncated. No complete reading claimed and no historical instruction activated. Subsequent responses printed only selected metadata. PR-recorded base SHAs were not mistaken for current main; direct known-ref commit reads supplied actual tips.
+The test proposal v1 did not wait for700ms debounced saved generations; v2 corrected waits before application. Coverage accounting excluded seven null EOF lines. No product/test failure was observed.
+
+## 🔧 Adjustments Made
+Added restricted builtin-config classification before any other SDK hash; existing strict helper/Links1 unchanged. Retained actual metadata/hash/native closure, exact source pins and separate per-stage admissions.
+Preserved exact Identity summary through additive evidence mirror rather than changing results/controller. NodeRestore v3 resolves tools destination proof after-copy/immediate-pre/post-ci and exact held namespace accounting; earlier versions remain.
+Archive comparison planning now includes actual Pacote transformations/Windows filename handling and two distinct LightningCSS native paths/versions, rather than assuming literal tar-name equality or one global native module.
+
+## ❌ Mistakes / Risks Noted
+Always inspect actual source characters/AST before editing escaped tool displays, and use followup_task to start completed workers. A proposed source concern is not a proven bug.
+Do not count SDK hashes/source inspection/identity as passing app tests, restored graphs or security. Do not count repeated work-block checkpoints as new billable runs. Ordinary-person partial durability and AI outer atomicity remain separate.
+
+## 📍 Current Position
+Git GateA6B927 remains closed with frozen3535 files/index663/refs138; actual Node/npm IdentityF6B600 is now independently qualified on the same unchanged source/native manifest. Installed SDK closure42C060 retains1837 eligible groups/458dirs/one unopened held leaf. Root started Restore only after these gates; its actual outcome is pending.
+N2 [Notion import fixes] retains prior148 distinct selected passing Rust tests on exact7806d002fe302d3d22d97b4941590848066e4e93, not rerun/integrated/accepted. Main's local records commitf94ee6155e26bcc9ad584bea7e5285eb265ad513 remains last verified local committed state; no new main Git/source write here.
+Originals and51 copied historical lanes stay protected/inert; no source/historical Git metadata mutation. Accepted baseline1.5.1, unaccepted1.6 unchanged.
+
+## 🔜 Next Steps
+Finish Restore and independently read actual outcome/source+SDK+two-destination/native/log/network evidence. No retry over partial node_modules, cleanup, upgrade or hidden omission. Verify every public archive SRI, exact tar transform/disposition, installed package/version/platform/expanded bytes/native import paths, then selected restored startup sources before Vite/plugin/browser.
+Continue tool/browser/loopback/fresh-profile/output isolation, apply only reviewed test diff after relevant gates, qualify exact final revision, observe compact focus before product fix. Transfer full blocks06–08/usage into adopted sessions/execution/status/claims/usage at next substantive records milestone; preserve history and one root-app run semantics.
+
+## ❓ Open Questions
+Actual restoration, archive/expanded graph, browser compatibility and real-app/native/final-binary qualifications remain open. Added-row20k extension is proposed, not complete. Compact focus unobserved; no product fix presumed. N3 [canonical Notion rows], P7 [database query windowing], remaining database views, AI/security contract reconciliation, measured polish and person-controlled private parity/export gates remain separate. No new owner decision blocks current bounded technical work.
+
+## 🧾 Session Outcome
+Completed independent SDK identity and isolated tool Identity, exact tools-data provenance, remote-fact refresh and test-only proposal review. Started only separately authorised locked restoration, outcome pending. No product implementation, integration, acceptance or release claimed.
+
+## 🔍 Confidence Level
+High for scoped actual SDK/Identity/source/native/owned-output evidence. No universal isolation/security/correctness/native app/owner-acceptance claim.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra, actual backend/effort/provider counters unattested; runtime Default, Root switched neither. Root executes/maintains records/hub and reviews tools inputs; git_closure_review independently audits SDK/code/Identity and reads constructor; n2_candidate_tools produces source/metadata/two-input qualifications; generated_gate_review produces table-test and archive proposals with read-only child p6c_added_focus_review. Root-app input/cache/output/cost/quota unknown blank/null; one existing app-run row, checkpoints not new billable runs. No original/private/comparison payload, historical write, SDK install/upgrade, scheduler, roadmap, partner/Fable contact, push/release or acceptance. Locked restoration controller is active, not finished, at cutoff.
+---
+
+<a id="session-68"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. Entire following source is byte-verbatim: original title/EOL/cutoff/full13sections/provenance. Source `SESSION-resume-block-07.md`, SHA256 `7F34FF07CF52C5FD48D92657AAEE0ED1EB9B22ADF626A5BD4262B639A5418BAB`. New local anchor/index and reader key do not rewrite dated statements or imply acceptance.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: November 11–12, 2026 UTC · Ahmed · Gaming-PC · Independent table-verification repository qualified
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root executes/co-ordinates; non-author workers review. This full ended-work-block checkpoint follows block06 within the SAME existing root app run. Pending faithful transfer to the adopted owners, provisionally session68 after block06/session67. Not another billable run or replacement Current record.
+
+## 🕒 Time
+From preceding block06 cutoff2026-11-11T23:55:43.3919833Z through 2026-11-12T01:06:33.9539877Z. November12 in Cairo. Whole chat start/end, owner timestamps and provider duration remain unknown.
+
+## 🎯 Session Goal
+Continue the existing authorised1.6 Goal: preserve originals, construct/read back one P6c [large-table verification and focus checks] candidate, close read-only Git/tool admission, retain N2 [Notion import fixes] exact-final evidence, and prepare test-only continuation. Ahmed clarified that work codes need bracketed meanings; familiar AI PBS needs no expansion.
+
+## 🛠️ Actions Taken
+The CreateNew constructor selected3532 frozen qualified inputs and wrote three fresh admin files, closing3535 files/362 directories. Independent actual readback verified destination hashes/native9, unique independent Links1 identities, namespace,663 raw index entries and138 preserved refs. Exact detached tip ddb52d9d473d9331e9361baa714774fe78a0ad22. No original/live-main Git data, pointers, alternates, helpers or includes were activated.
+Git Identity v4 stopped BEFORE Git because installed SDK images had unclassified hardlinks. Metadata-only classification found six complete groups/fourteen aliases, all under Program Files Git. A separately admitted SDK HashOnly run through the unchanged helper's complete-group overload verified all six pinned images; independent actual readback passed.
+Corrected v5 Identity ran2 commands, then separately admitted Integrity ran18. All expected outcomes passed with empty stderr/no timeout.663 index tuples matched frozen index and exact tip tree;138 refs including logical origin/HEAD matched; one own detached worktree/common Git directory; captured main9977e72/accepted1.5.1 commit95ca8b2/tip objects exist. fsck exit0 retained16 dangling objects:14trees,1blob,1commit; no pruning/repair.
+v5 working-EOL fields were blank, retained as a gap. Root authored additive v6, obtained non-author code review, and separately ran ONE -C exactcandidate ls-files --eol -z supplement. All663 working columns populated:610 default-text indexLF/workingCRLF,4LF/-text,5CRLF,7mixed,37binary. The610 paths exactly explain raw-policy unstaged differences; Windows policy is clean. No normalisation or completed-stage replay. All3535 candidate hashes/native9 and SDK6/alias14 frames remained unchanged. Final independent Git GateA passed.
+Parallel control-only Node/npm preparation: all1838 physical SDK leaves/458dirs accounted,1837 eligible single-link/native9 groups/aliases, proposed runtime subset1773, one exact held dot-config unopened. The separate no-dot builtin npmrc requires secret-safe technical payload qualification. All379 non-root public lock records reconciled; projected316frontend+1tools packages are NOT restored counts. Review found tools-manifest destination proof missing; unexecuted v3 adds post-copy/immediate-pre/post native/hash checks and exact held metadata handling.
+A separate test-only oracle proposal was assigned after Git closure. No candidate/product edit or test/runtime execution is admitted by its existence.
+
+## 🧠 Key Insights
+Git independence and executable isolation are separate gates. A clean status, file inventory, source-read list, projected dependency count or zero process exit does not establish runtime correctness/security/acceptance. Preserved working bytes and Git Windows text semantics must both be qualified; dangling objects remain evidence.
+The virtual-table routine uses5000/20000 rows without adding one. The separate added-row undo script seeds5000 then observes5001; do not conflate them. Named group/footer identity needs exact key/index/membership; zero is valid, not a selector failure. Compact focus needs observation before a product fix.
+
+## 📌 Decisions Made
+Explicitly qualify only complete installed Git alias groups; candidate/copy Links1 rules remain unchanged. Preserve failed v4 and successful v5 evidence; close EOL through one reviewed supplement. Keep physical SDK namespace, eligible payload scope and runtime subset distinct. Retain exact held dot-config unopened; no generic config/private access.
+Keep proposed test changes in control until relevant tool/oracle gates pass. No product scope, history mechanism, roadmap, release or acceptance decision.
+
+## ⚠️ Difficulties / Friction
+The first candidate audit misapplied a Git lock-name rule to Cargo.lock outside Git; scoped correction passed without reconstructing the candidate. A flat-to-nested native-manifest adapter preserved all paths/hashes/native values and was reviewed only as a shape change.
+A hooks-name expectation was corrected before execution. Actual v4 SDK preflight correctly refused unclassified multi-links; Git commands in that attempt0, known non-execution, not a permission denial.
+Root's template placeholder guard initially matched Windows package-name double underscores, stopping before dispatch; narrowed to actual placeholder tokens. v6 source replacement initially assumed CRLF while source used LF; stopped before file creation/execution, then used observed newline. Two source path searches used incorrect names; corrected from observed paths. A full-checkpoint writer invocation had a JavaScript parser error before shell dispatch/no file creation, then used explicit raw-string serialization.
+Two clock-tool calls aborted before dispatch; dynamic Windows UTC system-clock timestamps were used, never guessed. A lock-audit label assumption was corrected through actual platform predicates. These are control/preparation issues, not product/test failures.
+
+## 🔧 Adjustments Made
+Bound independent complete SDK alias classification and actual six-image readback before corrected Git. v6 adds only the Eol stage and exact prior v5 Identity linkage; no receipt retagging or repeated completed2/18 stages. Existing protections/command arrays remain unchanged.
+NodeRestore v3 preserves v2, adds exact held-directory-entry handling and tools destination proof, still pending independent code/SDK admission. No automatic restoration, deletion or retry.
+
+## ❌ Mistakes / Risks Noted
+Do not infer current original/copy equality after frozen capture or equate a clean main with dirty historical lane MAIN. Originals and copied historical lanes remain protected/inert. No generic SDK-sharing waiver, held-payload omission, old caches, stale executable, private input or unapproved architecture.
+Native holds/cleared environments are bounded operational evidence, not arbitrary-code confinement, atomic installation capture or complete dynamic OS-loader attestation. Ordinary-person durable steps after failure remain distinct from AI's outer atomic transaction.
+
+## 📍 Current Position
+P6c [large-table verification and focus checks] actual Git GateA complete2+18+1 commands; aggregate6B927110812B4A672CF4C12232ED458BE0063C1916AA84E8377A6155171411F0.3535files/362dirs/index663/refs138 unchanged. No candidate branch/source changes, Node/npm restoration, server/browser/table tests or product build.
+N2 [Notion import fixes] retains prior exact7806d002fe302d3d22d97b4941590848066e4e93 evidence:148 distinct selected Rust tests passed, not repeated; unintegrated/unaccepted. Broader/persistence/native/final-candidate gates remain separate.
+Main's last independently verified records commit f94ee6155e26bcc9ad584bea7e5285eb265ad513 is local/not pushed. No new main Git check or write in this block. Eligible preservation closure is dated/frozen; original-writer resumption is owner-controlled.
+
+## 🔜 Next Steps
+Update the live Notion checkpoint with actual Git closure while retaining older body. Continue separate reviewed Node/npm SDK payload/technical-config admission, observed Identity, locked-public restoration, archive/expanded/native-module/source verification, then existing Chrome/Playwright/mock isolation. No new tool/version/browser download.
+Prepare/review exact named-footer/zero-sum test-only diff and compact focus/undo/view/row-identity observation; apply/run only after relevant gates and qualify exact final source. Transfer full blocks06/07 and honest usage into adopted owners at next substantive repository-record milestone, without multiplying app runs.
+
+## ❓ Open Questions
+Node/npm SDK payloads/config semantics/Identity/expanded graph, Chrome compatibility/owned profiles and outputs remain unqualified. Compact focus unobserved. N3 [canonical Notion rows] security baseline/delta ordering; P7 [database query windowing] uncapped reference/windows/metadata/consumer generations; other views/AI/security, measured polish, private person-controlled parity/export, whole-app/final-binary/packaging and acceptance remain open. Study/history proposals are not decisions. No new owner decision blocks current bounded technical work.
+
+## 🧾 Session Outcome
+Constructed and independently qualified one standalone table-verification repository and read-only Git gate. Preserved successful/failed/partial evidence and history. Prepared dependency/test-only work without invoking it or changing product source. Overall1.6 Goal/integration/acceptance/release incomplete.
+
+## 🔍 Confidence Level
+High for scoped actual construction/index/ref/Git/native/SDK/EOL evidence. No full correctness/security/native-app/private-archive or owner-acceptance claim.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra; actual backend/effort/provider counters unattested. Runtime Default; Root switched neither model nor mode. Root executes and authored the EOL control delta; n2_candidate_tools authored constructor/Node proposal/SDK metadata; generated_gate_review independently reviewed actual construction/SDK/Git and EOL delta; git_closure_review authored Git alias controls and independently reviewed constructor/Node locks/settings. Full SDK source, restored graph, browser and product test coverage are not claimed. Provider input/cache/output/cost/quota unknown blank/null. Same root app run counted once. Evidence: constructor9AB54/readback77D7; classification66CC/native650C; SDK metadata5D071/class65BD/hash032248; Identity2CAB; IntegrityAD02; EOL code5E3FF/actual497B; aggregate6B927. No original/copied-historical write/Git, private payload, install/upgrade, scheduler, roadmap, partner/Fable contact, push/release or acceptance.
+---
+
+<a id="session-67"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. Entire following source is byte-verbatim: original title/EOL/cutoff/full13sections/provenance. Source `SESSION-resume-block-06.md`, SHA256 `2C7AEFC55F43D04DD152C7B99804B32ED67431474E61CACADE16968A5EFECF73`. New local anchor/index and reader key do not rewrite dated statements or imply acceptance.
+
+**Work-code key (new):** N2 [Notion import fixes]; N3 [canonical Notion identity and arrangement]; P6c [large-table verification and focus checks]; P7 [database query windowing for performance]; P8 [virtualised database views]. Familiar AI PBS is unchanged.
+
+# 📘 Session: 2026-11-11 UTC · Ahmed · Gaming-PC · Local PBS milestone verified
+
+**Who and where:** Ahmed (AE0101), Gaming-PC; Root executes/co-ordinates, non-author workers review. Current full block for later faithful transfer into the adopted session owner, provisionally after session66. It is not a new app run or a replacement Current record.
+
+## 🕒 Time
+Follows the adopted session66 preparation cutoff2026-11-11T23:15:20.5456201Z through this actual system-clock checkpoint: 2026-11-11 23:55:42 UTC. Cairo is November12. Complete app/chat start/end and owner message times remain unknown.
+
+## 🎯 Session Goal
+Finish the adopted AI PBS documentation milestone, honour Ahmed's work-code explanations, and keep Notaya's live Notion progress current before continuing the existing authorised1.6 Goal.
+
+## 🛠️ Actions Taken
+Applied the eight independently reviewed documentation candidates in the isolated main repository, inspected the exact diff, staged only those eight paths, compared the complete670-entry staged index against668 baseline tuples, read all eight actual staged blobs, and obtained a separately bound non-author review before a local commit. The exact commit is f94ee6155e26bcc9ad584bea7e5285eb265ad513; sole parent9977e72e46432ef975407d9d5b17913a866b307e. Independent post-commit verification reconstructed the complete root tree9139e40f5bd09eee2e3dfe4c20b470366ee91dee from the qualified index and matched the actual commit. Status is clean. No push, product integration or product source change.
+The package retains eight whole historical source blocks verbatim, including titles/EOL, plus new full session66, existing history, one honest app-run ledger row, execution report/index, claim, status Continuation and resume note. Root dynamically updated the Notion progress checkpoint again and read it back at2026-11-11T23:54:02.625Z, retaining the complete older page body and the explicit local/not-pushed limit.
+In parallel a constructor proposal for P6c [large-table verification and focus checks] was authored and independently reviewed. It is not executed and the candidate is not yet created. The next bounded brief, exact input/code/helper pins and remaining Git/tool gates are recorded.
+
+## 🧠 Key Insights
+Preserving raw historical working bytes and Git's normal LF text representation are separate checks. Exactly six documentation modifications and two additions were staged; all other index tuples are unchanged. Actual eight Git blobs match strictUTF8 CRLF-to-LF-only expectations, with no trim/BOM/Unicode change. The accepted baseline remains1.5.1; currently qualified development remains unaccepted.
+The next candidate needs only about62MB of selected project/Git data, not activation of all old checkouts or another full archive. It uses frozen independent import-fix Git data instead of mutable current main metadata.
+
+## 📌 Decisions Made
+Use transparent command-local AI attribution Codex <codex@localhost>, explicitly chosen local automation metadata rather than a verified human/account/contact identity; preserve the adopted Ahmed-side/machine footer. Do not alter global Git configuration.
+Carry Ahmed's clarified style forward: work codes receive meanings in square brackets in new explanations; familiar AI PBS stays normal. Historical quotes, titles, IDs and bodies stay intact.
+Close only the local records milestone after actual independent post-commit evidence. Continue the existing Goal to the separately gated table-verification candidate. No architecture/history proposal, roadmap, release or acceptance decision was made.
+
+## ⚠️ Difficulties / Friction
+Root initially sent a new post-review task through send_message after a worker had completed; the task queued without starting. Root checked agent state, acknowledged the delay in chat and used followup_task. No source damage or failed Git action resulted.
+The first independent staged-audit assertion grouped mixed PowerShell -and/-or incorrectly and rejected the known109-byte normal LF/CRLF notice. Its initial suspicion about wording was corrected by exact byte comparison and a truth-table check; one narrowly corrected control audit passed. No producer rerun.
+The first post-commit audit compared approved CRLF text directly to LF commit/log output. The corrected audit verified direct commit-body equality using only CRLF-to-LF, and log equality to that body plus Git's one formatter newline. Failed control versions and exact corrections remain; no product failure or arbitrary warning waiver was inferred.
+
+## 🔧 Adjustments Made
+Corrected only new session66's temporal statements after Root's separate branch operation overlapped its preparation cutoff. The no-write/no-Git statements are preparation-worker scoped; actual Root Switch is explicitly sourced. Seven other candidate owners and all eight historical bodies remained unchanged. Final manifestF2CCD9E49191CF75F509A895181A99BFB5DA1B291D573C29D7BFAC7E96DEA0B6 and the matching launcher were independently reviewed before application.
+
+## ❌ Mistakes / Risks Noted
+A completed review cannot start a new follow-up merely because a message was sent. A control assertion failure is not a failed producer/test result. Normal text canonicalisation must not silently rewrite historical source bytes or be confused with full archive fidelity. Do not infer acceptance from a clean local commit or the unchanged148-test importer evidence.
+Quiet derivative writes are an operational Root-only condition with exclusive baseline hashing and post-native verification, not an adversarial-race or arbitrary-code sandbox guarantee.
+
+## 📍 Current Position
+Local records commit f94ee6155e26bcc9ad584bea7e5285eb265ad513 is independently verified: nine actual commit-stage commands passed, clean status, eight raw documentation hashes unchanged by commit, main674 working rows and the protected importer668 working/admin3/artifact states unchanged. Full own Git admin audit found exactly the legitimate additions/changes and no unexpected old object/ref/config drift.
+N2 [Notion import fixes] exact7806d002fe302d3d22d97b4941590848066e4e93 still has148 distinct selected tests passing and remains unintegrated/unaccepted. No importer tests/builds were repeated in this block.
+Eligible capture closure remains bounded to the enumerated default streams; held/private/unclassified material, copied test homes and extras remain outside. Capture-only pausing is complete; original-writer resumption is owner-controlled. Originals and copied historical lanes remain protected.
+The P6c [large-table verification and focus checks] constructor/code/input review passed, but construction, actual candidate verification, Git admission and executable qualification remain NOT RUN.
+
+## 🔜 Next Steps
+Prepare a fresh owned control/compilerTEMP and exact Root construction receipt only after this closed milestone. Run the reviewed CreateNew constructor for one standalone candidate, then obtain independent complete candidate/native/hash/index/ref readback before any Git command there. Continue installed-tool/locked-dependency isolation and selected startup source review before browser/mock use. Strengthen named group/footer and zero-sum5000/20000 evidence, observe compact focus/undo/row identity before a product fix, and record final-source checks with independent review. Carry this full block/usage into the adopted owners at the next appropriate substantive records milestone.
+
+## ❓ Open Questions
+Importer empty-source-home persisted/native navigation, importer security baseline before N3 [canonical Notion identity and arrangement] and later delta review, P7 [database query windowing] uncapped/generation/consumer contracts, other database views, AI/security discrepancies, measured polish, private person-controlled parity/export checks, whole-app/native/final-binary/packaging and owner acceptance remain separate. Unapproved study/history/integration mechanisms remain proposals. No new owner decision blocks the presently bounded construction step.
+
+## 🧾 Session Outcome
+Completed and independently verified the local adopted-record milestone and the live hub update. Reused the established1.6 work and preserved history. Overall Goal and product acceptance/release remain incomplete; the next source/tool-gated candidate is prepared only.
+
+## 🔍 Confidence Level
+High for actual scoped record/content/index/tree/commit and unchanged-source evidence. No claim of full archive/atomic capture, full product correctness/security, native app qualification or owner acceptance.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited lead/workers GPT-6.1 Sol Ultra; actual backend/effort/provider counters unattested. Runtime Default; Root changed neither model nor mode. Root executes; generated_gate_review independently reviews technical/runtime/index/tree evidence; n2_candidate_tools reviews document content and authors the next constructor; git_closure_review authors records/controller and independently reviews next constructor/input. Provider input/cache/output/cost/quota unknown, recorded blank/null; checkpoints do not multiply one app run into billable runs. Evidence: pbs-commit.actual-independent-closure.json SHA02A26BFB354A9E8C949DEBA26BF26A5F3B7DA0BA6CADFA0A06F5AB914908BA1B; staged gateDA051C35EA34167502618589E7489AC03E3F620ED5A1F7E15B9BA724552D5333; Notion docs milestone readbackBFF9BE9BEF5D2BEECDE1A69E3CF21121EEDC0E06C95B1FC00EA8942B8695CB42; next constructor reviewCDA5FAB29DB75EBA81BA812E2B0E7BE4832C0B89D263C09E642A4B84A4721DC4. No originals/historical-lane write, private input, project execution, new tool/dependency, scheduler change, roadmap, external message, push or release in this block.
+
 ---
 
 <a id="session-66"></a>

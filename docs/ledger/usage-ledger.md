@@ -1,5 +1,113 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261112"></a>
+
+## 2026-11-12 UTC · Ahmed (AE0101) · Gaming-PC · Four further checkpoints in the same app run
+
+Full [sessions67–70](../sessions.md#session-70) transfer ended blocks06–09, preserving original cutoffs/titles/EOL/provenance. They extend the SAME existing root app/chat run, NOT four new billable runs. The earlier `codex-runs.csv` row stays byte-identical as its dated checkpoint: no new row, invented app end/provider counters or current cumulative Goal figures. All original realised-model/input/cache/output/cost/quota fields below stay null. Requested/inherited Sol Ultra is configuration, not backend attestation; checkpoint clocks are not complete duration/active effort. No new totals/pace forecast.
+
+At latest source cutoff2026-11-12T01:57:56.2721796Z, independent Git/installed SDK/observed Node/npm Identity and produced-restoration/source-protection are closed within scope. Two ci commands reported316+1 packages with exact allowlisted log/source/SDK/destination evidence, while archives/expanded/module/runtime qualification remains pending. Earlier block08 correctly records Restore still running at its own cutoff; block09 records later completion. [EX79](../execution/2026-11-12-codex-table-tools-qualification.md) owns details. Accepted1.5.1 is unchanged. Prior148 selected N2 [Notion import fixes] passes on exact7806 remain scoped verification of unintegrated/unaccepted1.6 work; no new product acceptance/release. Raw usage JSON below is complete/verbatim, including original path spelling and unknown fields.
+
+### Source usage block09 · [session70](../sessions.md#session-70)
+
+Source `usage-resume-block-09.json`, SHA256 `87B010F0E0F8275625D5B52D8B04C17D8A67B05B93DAD8F0B6E5A797229EF081`; same existing root app run.
+
+```json
+{
+  "savedUtc": "2026-11-12T01:57:56.3061491Z",
+  "partner": "Ahmed (AE0101)",
+  "machine": "GAMING-PC",
+  "requestedModel": "gpt-6.1-sol",
+  "requestedEffort": "ultra",
+  "realizedModel": null,
+  "inputTokens": null,
+  "cachedTokens": null,
+  "outputTokens": null,
+  "cost": null,
+  "quotaBefore": null,
+  "quotaAfter": null,
+  "usageSemantics": "Full ended-block checkpoint in same root app run, not a new billable run",
+  "sessionPath": "D:\\Codex Projects\\Notaya\\resume-20261111T190954Z-ae1f50c8\\control\\SESSION-resume-block-09.md",
+  "sessionSha256": "F3A268D742FAAD3E847D7B7F24C22BE12CEEE47D96208859DA181C7C45616363",
+  "adoptedOwnerTransfer": "pending faithful transfer blocks06-09 at reviewed seven-owner documentation milestone"
+}
+```
+
+### Source usage block08 · [session69](../sessions.md#session-69)
+
+Source `usage-resume-block-08.json`, SHA256 `D16DCCA8F51C8ED188114FCB7A2FAD0349B6285B58254BD8912F1A2A7907CAD0`; same existing root app run.
+
+```json
+{
+  "savedUtc": "2026-11-12T01:45:43.0184688Z",
+  "partner": "Ahmed (AE0101)",
+  "machine": "GAMING-PC",
+  "requestedModel": "gpt-6.1-sol",
+  "requestedEffort": "ultra",
+  "realizedModel": null,
+  "inputTokens": null,
+  "cachedTokens": null,
+  "outputTokens": null,
+  "cost": null,
+  "quotaBefore": null,
+  "quotaAfter": null,
+  "usageSemantics": "Temporal full work-block checkpoint in same existing root app run; do not create another billable run",
+  "sessionPath": "D:\\Codex Projects\\Notaya\\resume-20261111T190954Z-ae1f50c8\\control\\SESSION-resume-block-08.md",
+  "sessionSha256": "B4ECA7125FC52C05C9AF7D45BBF05329A20F26BA60E0A7F5B9AE3485EA11755A",
+  "adoptedOwnerTransfer": "pending faithful transfer of blocks06-08 at next substantive repository-record milestone"
+}
+```
+
+### Source usage block07 · [session68](../sessions.md#session-68)
+
+Source `usage-resume-block-07.json`, SHA256 `3B37C6E91F11B45A92504A210C97F95A641A0265F657ED0C38DC63221D347208`; same existing root app run.
+
+```json
+{
+  "savedUtc": "2026-11-12T01:06:33.9811035Z",
+  "partner": "Ahmed (AE0101)",
+  "machine": "GAMING-PC",
+  "requestedModel": "gpt-6.1-sol",
+  "requestedEffort": "ultra",
+  "realizedModel": null,
+  "inputTokens": null,
+  "cachedTokens": null,
+  "outputTokens": null,
+  "cost": null,
+  "quotaBefore": null,
+  "quotaAfter": null,
+  "usageSemantics": "Full ended-block checkpoint in SAME existing root app run, not another billable run; provider counters unavailable",
+  "sessionPath": "D:\\Codex Projects\\Notaya\\resume-20261111T190954Z-ae1f50c8\\control\\SESSION-resume-block-07.md",
+  "sessionSha256": "7F34FF07CF52C5FD48D92657AAEE0ED1EB9B22ADF626A5BD4262B639A5418BAB",
+  "adoptedOwnerTransfer": "pending faithful transfer with block06 at next substantive repository-record milestone"
+}
+```
+
+### Source usage block06 · [session67](../sessions.md#session-67)
+
+Source `usage-resume-block-06.json`, SHA256 `A05AF92235CF6B39294CC3908C4EC6DCAB09E764F50F03EE30E9BAC1475C0807`; same existing root app run.
+
+```json
+{
+  "savedUtc": "2026-11-11T23:55:43.3919833Z",
+  "partner": "Ahmed (AE0101)",
+  "machine": "GAMING-PC",
+  "requestedModel": "gpt-6.1-sol",
+  "requestedEffort": "ultra",
+  "realizedModel": null,
+  "inputTokens": null,
+  "cachedTokens": null,
+  "outputTokens": null,
+  "cost": null,
+  "quotaBefore": null,
+  "quotaAfter": null,
+  "usageSemantics": "Checkpoint within same existing root app run; numeric provider usage unavailable; do not multiply checkpoints into billable runs",
+  "sessionSha256": "2C7AEFC55F43D04DD152C7B99804B32ED67431474E61CACADE16968A5EFECF73"
+}
+```
+
+---
+
 ## 2026-11-11 UTC · Ahmed (AE0101) · Gaming-PC · Existing Codex Goal checkpoint
 
 The eight historical full blocks plus the new current record [58–66](../sessions.md#session-66) belong to the same existing root Codex app run. They are continuity checkpoints, not nine billable runs. The ledger adds one app-run row. Provider input, cached input, output, per-worker usage, cost and current before/after quotas are not available and stay blank; requested/configured GPT-6.1 Sol Ultra is recorded as configuration, not backend attestation. No totals or pace forecast are inferred.
