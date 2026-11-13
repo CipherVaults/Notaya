@@ -585,3 +585,143 @@ fn n1_private_count_probe() {
     std::panic::set_hook(previous);
     assert!(result.is_ok(), "count-only probe stopped; details suppressed");
 }
+
+#[test]
+#[ignore = "requires an admitted fresh NOTAYA_N2_M2_QUALIFICATION_ROOT; run this exact test only"]
+fn n2q_empty_source_home_survives_import_reopen_with_children() {
+    use std::collections::BTreeSet;
+    use std::io::Write;
+    use std::path::{Component, PathBuf};
+
+    struct InventedVault(Mutex<Session>);
+    impl VaultAccess for InventedVault {
+        fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> {
+            f(&self.0.lock().unwrap())
+        }
+        fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
+            f(&mut self.0.lock().unwrap())
+        }
+    }
+    fn imported_ids(s: &Session) -> BTreeSet<String> {
+        s.items().filter(|i| matches!(i,
+            Item::Notebook(_) | Item::Section(_) | Item::Page(_) |
+            Item::Database(_) | Item::Row(_)
+        )).map(|i| i.id().to_owned()).collect()
+    }
+
+    // The separately reviewed launcher admits this exact fresh run root and its
+    // ancestry. Never fall back to a user's home or a private-count probe path.
+    let root = PathBuf::from(std::env::var_os("NOTAYA_N2_M2_QUALIFICATION_ROOT")
+        .expect("an explicit fresh qualification root is required"));
+    assert!(root.is_absolute(), "qualification root must be absolute");
+    assert!(root.components().all(|c| match c {
+        Component::Prefix(_) | Component::RootDir => true,
+        Component::Normal(p) => p.to_str().is_some_and(|s| !s.contains(':')),
+        _ => false,
+    }), "qualification root must have only ordinary components");
+    assert!(root.file_name().and_then(|n| n.to_str())
+        .is_some_and(|n| n.starts_with("n2-m2-")), "unexpected qualification root leaf");
+    #[cfg(windows)]
+    assert!(matches!(root.components().next(), Some(Component::Prefix(p))
+        if matches!(p.kind(), std::path::Prefix::Disk(_))), "UNC/device roots are refused");
+    let ancestors: Vec<_> = root.ancestors().skip(1).collect();
+    assert!(ancestors.len() <= 32, "qualification ancestry must be bounded");
+    for ancestor in ancestors.into_iter().rev() {
+        let meta = std::fs::symlink_metadata(ancestor).expect("qualification parent unavailable");
+        assert!(meta.is_dir() && !meta.file_type().is_symlink(), "ordinary parents required");
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            assert_eq!(meta.file_attributes() & (0x400 | 0x4000), 0,
+                "reparse/encrypted qualification parents are refused");
+        }
+    }
+    std::fs::create_dir(&root).expect("qualification root must be fresh; never overwrite");
+
+    for (label, child_folder) in [
+        ("empty-view", None),
+        ("idless-home", Some("Home".to_owned())),
+        ("exact-home", Some(format!("Home {HUB}"))),
+    ] {
+        let case = root.join(label);
+        std::fs::create_dir(&case).unwrap();
+        let data = case.join("data");
+        std::fs::create_dir(&data).unwrap();
+        let mut files = vec![
+            (format!("Home {HUB}.html"), structured_wrapper("")),
+            (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        ];
+        if let Some(folder) = &child_folder {
+            files.push((format!("{folder}/Child.md"), b"# Child\n\nChild body\n".to_vec()));
+        }
+        let source = case.join("invented.zip");
+        let refs: Vec<_> = files.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+        let mut output = std::fs::OpenOptions::new().write(true).create_new(true)
+            .open(&source).unwrap();
+        output.write_all(&zip::build(&refs, false)).unwrap();
+        drop(output);
+        let path = data.join("vault.nota");
+        let vault = InventedVault(Mutex::new(Session::create_open(&path).unwrap()));
+        let summary = super::import_from(&vault, &[source], false, &data, 1, &Control::standard())
+            .unwrap_or_else(|e| panic!("{label}: real import failed: {e}"));
+        let (before_ids, home_id, child_id) = vault.with(|s| {
+            let page_id = |title: &str| s.items().find_map(|i| match i {
+                Item::Page(p) if p.title == title => Some(p.id.clone()),
+                _ => None,
+            });
+            Ok((imported_ids(s), page_id("Home"), page_id("Child")))
+        }).unwrap();
+        drop(vault);
+
+        let reopened = Session::unlock_open(&path)
+            .unwrap_or_else(|e| panic!("{label}: saved vault did not reopen: {e}"));
+        assert_eq!(imported_ids(&reopened), before_ids, "{label}: imported IDs changed");
+        let notebooks: Vec<_> = reopened.items().filter_map(|i| if let Item::Notebook(n) = i { Some(n) } else { None }).collect();
+        let sections: Vec<_> = reopened.items().filter_map(|i| if let Item::Section(s) = i { Some(s) } else { None }).collect();
+        let databases: Vec<_> = reopened.items().filter_map(|i| if let Item::Database(d) = i { Some(d) } else { None }).collect();
+        let rows: Vec<_> = reopened.items().filter_map(|i| if let Item::Row(r) = i { Some(r) } else { None }).collect();
+        let pages: Vec<_> = reopened.items().filter_map(|i| if let Item::Page(p) = i { Some(p) } else { None }).collect();
+        assert_eq!((notebooks.len(), sections.len(), databases.len(), rows.len()), (1, 1, 1, 1), "{label}");
+        let database = databases[0];
+        assert_eq!(sections[0].notebook_id, notebooks[0].id, "{label}");
+        assert_eq!(database.section_id, sections[0].id, "{label}");
+        assert_eq!(rows[0].db, database.id, "{label}");
+        assert_eq!(rows[0].title, "Card", "{label}");
+        let expected_pages = if child_folder.is_some() { 2 } else { 0 };
+        assert_eq!(summary.pages, expected_pages, "{label}: summary pages");
+        assert_eq!(pages.len(), expected_pages, "{label}: saved pages");
+        let person = crate::actions::Actor::Person;
+        let tree = serde_json::to_value(crate::commands::notes::list_notes_core(&reopened, &person).unwrap()).unwrap();
+        let tree_pages = tree["pages"].as_array().expect("notes tree pages array");
+        let tree_ids: BTreeSet<String> = tree_pages.iter().map(|p| p["id"].as_str().unwrap().to_owned()).collect();
+        let page_ids: BTreeSet<String> = pages.iter().map(|p| p.id.clone()).collect();
+        assert_eq!(tree_ids, page_ids, "{label}: notes tree omitted or duplicated a page");
+        assert_eq!(tree_pages.len(), expected_pages, "{label}: duplicate tree metadata");
+        assert_eq!(tree["databases"].as_array().unwrap().len(), 1, "{label}");
+        if child_folder.is_some() {
+            let home = pages.iter().find(|p| Some(p.id.as_str()) == home_id.as_deref()).expect("saved home ID missing");
+            let child = pages.iter().find(|p| Some(p.id.as_str()) == child_id.as_deref()).expect("saved child ID missing");
+            assert_eq!(home.title, "Home", "{label}");
+            assert!(home.text.is_empty() && home.parent.is_empty(), "{label}: genuine empty root home changed");
+            assert_eq!(child.title, "Child", "{label}");
+            assert!(child.text.contains("Child body"), "{label}: child body missing");
+            assert_eq!(child.parent, home.id, "{label}: saved child lost its home");
+            assert_eq!(child.section_id, home.section_id, "{label}");
+            assert_eq!(home.section_id, database.section_id, "{label}");
+        } else {
+            assert!(home_id.is_none() && child_id.is_none(), "empty view created a page");
+        }
+        for stored in &pages {
+            let opened = crate::commands::notes::get_page_core(&reopened, &person, stored.id.clone()).unwrap();
+            assert_eq!(opened.id, stored.id, "{label}: get-page ID");
+            assert_eq!(opened.parent, stored.parent, "{label}: get-page parent");
+            assert_eq!(opened.section_id, stored.section_id, "{label}: get-page section");
+            assert_eq!(opened.content, stored.content, "{label}: get-page body");
+            let meta = tree_pages.iter().find(|p| p["id"].as_str() == Some(stored.id.as_str())).unwrap();
+            assert_eq!(meta["parent"].as_str(), Some(stored.parent.as_str()), "{label}: tree parent");
+            assert_eq!(meta["sectionId"].as_str(), Some(stored.section_id.as_str()), "{label}: tree section");
+        }
+        println!("N2_M2_CASE {label} passed");
+        // Retain the ZIP/vault evidence on success and on failure. No cleanup here.
+    }
+}
