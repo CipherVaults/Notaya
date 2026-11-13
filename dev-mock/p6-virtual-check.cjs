@@ -13,10 +13,149 @@ assert(counts.every((n) => n >= 300 && n <= 50000), 'Row counts must be 300..500
 const baseline = args.includes('--baseline');
 const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0)))));
 
+// TEST-ONLY: independent seed arithmetic; query calcs and mounted windows are checked outputs.
+const expectedSeed = (n, fixture) => {
+  const values = new Map(), pattern = [1, 2, 3, 5, 8, 13];
+  for (let status = 0; status < 4; status++) {
+    const ordinals = [];
+    for (let i = status; i < n; i += 4) ordinals.push(i);
+    for (let member = 0; member < ordinals.length; member += 2) {
+      const magnitude = pattern[(member / 2) % pattern.length];
+      for (let j = member; j < Math.min(member + 2, ordinals.length); j++) {
+        const i = ordinals[j];
+        values.set(i + 1, { status, estimate: fixture === 'ordinary' ? pattern[i % pattern.length] : member + 1 === ordinals.length ? 0 : j === member ? magnitude : -magnitude });
+      }
+    }
+  }
+  return values;
+};
+const mockSnapshot = (p) => p.evaluate(async () => {
+  const { invoke } = await import('/dev-mock/core.ts');
+  const tree = await invoke('list_notes');
+  const tasks = tree.databases.filter((d) => d.title === 'Tasks');
+  if (tasks.length !== 1) throw new Error('Expected exactly one synthetic Tasks database');
+  const database = await invoke('get_database', { id: tasks[0].id });
+  const tables = database.views.filter((v) => v.name === 'All tasks' && v.kind === 'table');
+  if (tables.length !== 1) throw new Error('Expected one synthetic All tasks table');
+  const view = tables[0];
+  const result = await invoke('query_view', { request: { databaseId: database.id, viewId: view.id } });
+  return { database, view, result };
+});
+const checkSeed = (snapshot, n, fixture, prior) => {
+  const { database, view, result } = snapshot;
+  const oneProp = (name, kind) => {
+    const props = database.props.filter((prop) => prop.name === name && prop.kind === kind);
+    assert.equal(props.length, 1, 'Unique property ' + name); return props[0];
+  };
+  const status = oneProp('Status', 'status'), estimate = oneProp('Estimate', 'number');
+  assert.deepEqual(status.options.map((o) => o.name), ['Not started', 'In progress', 'Review', 'Done']);
+  assert.equal(estimate.numberFormat, 'number');
+  assert.equal(result.total, n); assert.equal(result.filtered, n); assert.equal(result.truncated, false);
+  assert.equal(result.rows.length, n); assert.equal(new Set(result.rows.map((r) => r.id)).size, n);
+  const reference = expectedSeed(n, fixture), byId = new Map(), byNumber = new Map();
+  for (const row of result.rows) {
+    assert(!byNumber.has(row.number), 'Unique seeded row number');
+    const expected = reference.get(row.number); assert(expected, 'Seeded row ' + row.number);
+    assert.equal(row.values[status.id], status.options[expected.status].id, 'Seeded Status ' + row.number);
+    assert.equal(row.values[estimate.id], expected.estimate, 'Seeded Estimate ' + row.number);
+    byId.set(row.id, { ...expected, number: row.number }); byNumber.set(row.number, row.id);
+  }
+  if (prior) {
+    assert.equal(database.id, prior.databaseId); assert.equal(view.id, prior.viewId);
+    assert.equal(status.id, prior.status.id); assert.equal(estimate.id, prior.estimate.id);
+    assert.deepEqual([...byNumber].sort((a,b) => a[0]-b[0]), [...prior.byNumber].sort((a,b) => a[0]-b[0]), 'Same identities after edit, sort and drag');
+  }
+  return { databaseId: database.id, viewId: view.id, status, estimate, byId, byNumber, total: [...reference.values()].reduce((sum, row) => sum + row.estimate, 0) };
+};
+const digestIds = (ids) => require('node:crypto').createHash('sha256').update([...ids].sort().join('\n')).digest('hex');
+// Observe a completed saved generation; never force a save or move focus.
+const waitForSavedView = async (p, seed, collapsed, previousRevision = -1) => {
+  const handle = await p.waitForFunction(async ({ databaseId, viewId, statusId, collapsed, previousRevision }) => {
+    const { invoke } = await import('/dev-mock/core.ts');
+    const { peekDatabase, hasUnsaved } = await import('/src/features/database/dbStore.ts');
+    if (hasUnsaved(databaseId)) return false;
+    const local = peekDatabase(databaseId), localView = local?.views.find((view) => view.id === viewId);
+    if (!localView || localView.group?.prop !== statusId) return false;
+    if (JSON.stringify(localView.group.collapsed) !== JSON.stringify(collapsed)) return false;
+    const viewKey = JSON.stringify(localView);
+    const saved = await invoke('get_database', { id: databaseId });
+    const savedView = saved.views.find((view) => view.id === viewId);
+    const current = peekDatabase(databaseId), currentView = current?.views.find((view) => view.id === viewId);
+    if (hasUnsaved(databaseId) || saved.id !== databaseId || !savedView || !currentView) return false;
+    if (!Number.isInteger(saved.rev) || saved.rev <= previousRevision || current.rev !== saved.rev) return false;
+    if (JSON.stringify(savedView) !== viewKey || JSON.stringify(currentView) !== viewKey) return false;
+    return { databaseId, viewId, revision: saved.rev, viewKey };
+  }, { databaseId: seed.databaseId, viewId: seed.viewId, statusId: seed.status.id, collapsed, previousRevision });
+  try { return await handle.jsonValue(); } finally { await handle.dispose(); }
+};
+const verifyGroups = async (p, table, seed, n, fixture, bounded, finishPaint, completion) => {
+  const snapshot = await mockSnapshot(p);
+  checkSeed(snapshot, n, fixture, seed);
+  assert.equal(snapshot.database.id, completion.databaseId); assert.equal(snapshot.view.id, completion.viewId);
+  assert.equal(snapshot.database.rev, completion.revision, 'Snapshot uses completed saved revision');
+  assert.equal(JSON.stringify(snapshot.view), completion.viewKey, 'Snapshot uses exact completed view definition');
+  const { view, result } = snapshot;
+  assert.equal(view.group?.prop, seed.status.id); assert.equal(view.group.sort, 'manual');
+  assert.equal(view.group.dateBy, ''); assert.equal(view.group.hideEmpty, false);
+  assert.deepEqual(view.group.hidden, []); assert.deepEqual(view.group.collapsed, []);
+  assert.equal(view.subGroup, null); assert.deepEqual(view.sorts, []); assert.equal(view.wrap, false);
+  assert.equal(view.calcs.filter((c) => c.prop === seed.estimate.id && c.calc === 'sum').length, 1);
+  const keys = ['', ...seed.status.options.map((o) => o.id)];
+  assert.deepEqual(result.groups.map((g) => g.key), keys, 'Exact group order, including empty No Status');
+  const descriptors = []; let index = 0, pixels = 0;
+  for (const [position, group] of result.groups.entries()) {
+    const label = position === 0 ? 'No Status' : seed.status.options[position - 1].name;
+    const members = [...seed.byId].filter(([, row]) => position > 0 && row.status === position - 1);
+    const expectedIds = members.map(([id]) => id), expectedSet = new Set(expectedIds);
+    const sum = members.reduce((value, [, row]) => value + row.estimate, 0);
+    assert.equal(group.label, label); assert.equal(group.count, expectedIds.length); assert.deepEqual(group.subs, []);
+    assert.equal(new Set(group.rows).size, group.rows.length);
+    assert.deepEqual([...group.rows].sort(), [...expectedIds].sort(), label + ': complete membership independent of DOM');
+    assert.deepEqual(group.rows, result.rows.filter((row) => expectedSet.has(row.id)).map((row) => row.id), label + ': ordered membership');
+    assert.equal(group.calcs[seed.estimate.id], String(sum), label + ': calc versus independent seed arithmetic');
+    const headerIndex = index, headerOffset = pixels, addIndex = index + 1 + expectedIds.length, footerIndex = addIndex + 1;
+    const footerOffset = pixels + 37 + expectedIds.length * 35 + 33;
+    const header = table.locator('tbody tr[data-group-key="' + group.key + '"][data-index="' + headerIndex + '"]');
+    const mount = async (offset, locator) => {
+      await table.evaluate((el, offset) => { el.scrollTop = Math.max(0, offset - 50); }, offset);
+      await locator.waitFor({ state: 'attached' }); await finishPaint(p); await bounded();
+      assert.equal(await locator.count(), 1, 'Exact logical row identity');
+    };
+    await mount(headerOffset, header);
+    assert.equal(await header.getAttribute('aria-rowindex'), String(headerIndex + 2));
+    assert.equal(await header.getByText(label, { exact: true }).count(), 1);
+    assert.equal(await header.locator('td > div > span.text-xs.tabular-nums.text-faint').innerText(), String(expectedIds.length));
+    const footer = table.locator('tbody tr[data-table-footer][data-index="' + footerIndex + '"]');
+    await mount(footerOffset, footer);
+    assert.equal(await footer.getAttribute('aria-rowindex'), String(footerIndex + 2));
+    const add = table.locator('tbody tr[data-index="' + addIndex + '"]');
+    assert.equal(await add.getByRole('button', { name: 'New', exact: true }).count(), 1);
+    if (expectedIds.length) {
+      const lastId = group.rows.at(-1);
+      assert.equal(await table.locator('tbody tr[data-row-id="' + lastId + '"][data-index="' + (addIndex - 1) + '"]').count(), 1);
+    } else assert.equal(footerIndex, headerIndex + 2, 'Empty header/New/zero footer');
+    const button = footer.getByRole('button', { name: 'Calculate Estimate', exact: true });
+    assert.equal(await button.count(), 1);
+    assert.equal(await button.locator(':scope > span.text-faint').innerText(), 'Sum');
+    assert.equal(await button.locator(':scope > span.font-medium.tabular-nums.text-fg').innerText(), String(sum), 'Exact footer value; zero is valid');
+    descriptors.push({ key: group.key, label, count: expectedIds.length, sum, headerIndex, footerIndex, headerOffset, footerOffset, memberIdsSHA256: digestIds(expectedIds) });
+    index = footerIndex + 1; pixels = footerOffset + 33;
+  }
+  assert.equal(await table.getByRole('grid').getAttribute('aria-rowcount'), String(index + 1));
+  if (fixture === 'zero-sum') for (const group of descriptors) {
+    assert.equal(group.sum, 0);
+    if (group.count) {
+      const members = [...seed.byId.values()].filter((row) => row.status === seed.status.options.findIndex((o) => o.id === group.key));
+      assert(members.some((row) => row.estimate > 0) && members.some((row) => row.estimate < 0), 'Nonempty zero-sum has both signs');
+    }
+  }
+  return descriptors;
+};
+
 (async () => {
   const browser = await chromium.launch({ ...(process.env.NOTAYA_CHROMIUM_PATH ? { executablePath: process.env.NOTAYA_CHROMIUM_PATH } : {}), ignoreDefaultArgs: ['--hide-scrollbars'] });
   try {
-    for (const n of counts) {
+    for (const [n, fixture] of counts.flatMap((n) => (baseline ? ['ordinary'] : ['ordinary', 'zero-sum']).map((fixture) => [n, fixture]))) {
       const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
       const p = await context.newPage();
       p.setDefaultTimeout(n >= 20000 ? 120000 : 30000);
@@ -28,6 +167,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       });
       const url = new URL(base);
       url.searchParams.set('db', '1'); url.searchParams.set('rows', String(n));
+      if (!baseline) url.searchParams.set('p6Oracle', fixture);
       await p.goto(url.href);
       await p.getByRole('treeitem', { name: 'Tasks', exact: true }).click();
       const table = p.getByRole('application', { name: 'Table', exact: true });
@@ -38,6 +178,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       const rowNumber = (number) => rows().filter({ has: p.getByRole('checkbox', { name: `Select row ${number}`, exact: true }) });
       const activeRowNumber = () => table.locator('tbody tr[aria-selected]').filter({ has: p.locator('.db-cell-active') }).getByRole('checkbox', { name: /^Select row / }).getAttribute('aria-label').then((s) => Number(s.replace('Select row ', '')));
       await title(0).waitFor();
+      const seed = baseline ? null : checkSeed(await mockSnapshot(p), n, fixture);
       await finishPaint(p);
       if (!baseline) assert.equal(await grid.getAttribute('aria-rowcount'), String(n + 3), 'Logical row count includes header, New line and footer');
       if (!baseline) await p.evaluate(() => {
@@ -46,7 +187,7 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
         window.__p6Observer = new MutationObserver(measure);
         window.__p6Observer.observe(document.querySelector('[aria-label="Table"] tbody'), { childList: true }); measure();
       });
-      const report = { phase: baseline ? 'before P6 (P1, 300 drawn)' : 'after P6', rows: n, interactions: {} };
+      const report = { phase: baseline ? 'before P6 (P1, 300 drawn)' : 'after P6', rows: n, fixture, interactions: {} };
       const timeIt = async (name, action) => {
         const start = await p.evaluate(() => performance.now());
         await action(); await finishPaint(p);
@@ -99,10 +240,10 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
         }, end ? n : 1);
         await finishPaint(p); await bounded();
       };
-      const estimateSum = Array.from({ length: n }, (_, i) => [1, 2, 3, 5, 8, 13][i % 6]).reduce((a, b) => a + b, 0);
+      const estimateSum = seed.total;
       const footerText = () => table.locator('tfoot').getByRole('button', { name: 'Calculate Estimate', exact: true }).innerText();
       const totalBefore = await footerText();
-      assert.equal(Number(totalBefore.replace(/[^\d.-]/g, '')), estimateSum, 'Full-result Estimate sum');
+      assert.equal(await table.locator('tfoot').getByRole('button', { name: 'Calculate Estimate', exact: true }).locator(':scope > span.font-medium.tabular-nums.text-fg').innerText(), String(estimateSum), 'Independent full-result sum; zero is valid');
       await scroll(true);
       assert((await rowNumber(n).innerText()).includes(`Task number ${n - 1}`), 'Last row is scrollable');
       assert.equal(await rowNumber(n).getAttribute('aria-rowindex'), String(n + 1), 'Last data row has its logical position');
@@ -227,35 +368,32 @@ const finishPaint = (p) => p.evaluate(() => new Promise((resolve) => requestAnim
       };
       await drag(false); await drag(true);
 
-      // Group count and a full-group footer sum, then collapse/expand. Grouping
-      // is supplied by the mock engine, never calculated from mounted rows.
+      // Exact key/header index, complete seed membership and independent sum bind every footer.
       await p.getByRole('button', { name: 'Group', exact: true }).click();
       await p.getByRole('combobox', { name: 'Group', exact: true }).selectOption({ label: 'Status' });
       await p.keyboard.press('Escape');
-      await scroll(false);
-      const firstGroup = table.locator('tr[data-group-key]').filter({ hasText: 'Not started' }).first();
+      const grouped = await waitForSavedView(p, seed, []);
+      const beforeGroups = await verifyGroups(p, table, seed, n, fixture, bounded, finishPaint, grouped);
+      const notStarted = beforeGroups.find((group) => group.key === seed.status.options[0].id);
+      assert(notStarted);
+      const firstGroup = table.locator('tbody tr[data-group-key="' + notStarted.key + '"][data-index="' + notStarted.headerIndex + '"]');
+      await scroll(true); await scroll(false);
       await firstGroup.waitFor();
       const groupText = await firstGroup.innerText();
-      const groupCount = Math.ceil(n / 4);
-      assert(groupText.includes('Not started') && groupText.includes(String(groupCount)), 'First group label/count');
-      await table.evaluate((el, count) => { el.scrollTop = count * 35 - 100; }, groupCount);
-      const groupFooter = table.locator('tr[data-table-footer]').filter({ has: p.getByRole('button', { name: /Calculate Estimate/ }).filter({ hasText: /[1-9]/ }) }).first().getByRole('button', { name: 'Calculate Estimate', exact: true });
-      await groupFooter.waitFor();
-      const groupTotal = await groupFooter.innerText();
-      const expectedGroupSum = Array.from({ length: n }, (_, i) => i % 4 === 0 ? [1, 2, 3, 5, 8, 13][i % 6] : 0).reduce((a, b) => a + b, 0);
-      assert.equal(Number(groupTotal.replace(/[^\d.-]/g, '')), expectedGroupSum, 'Group full-result sum');
-      await scroll(true); await scroll(false);
-      assert.equal(await firstGroup.innerText(), groupText, 'Group label/count survive scrolling');
       await firstGroup.getByRole('button', { name: 'Collapse group', exact: true }).click();
       await firstGroup.getByRole('button', { name: 'Expand group', exact: true }).waitFor(); await bounded();
+      const collapsed = await waitForSavedView(p, seed, [notStarted.key], grouped.revision);
       await firstGroup.getByRole('button', { name: 'Expand group', exact: true }).click();
       await firstGroup.getByRole('button', { name: 'Collapse group', exact: true }).waitFor();
-      await table.evaluate((el, count) => { el.scrollTop = count * 35 - 100; }, groupCount);
-      await groupFooter.waitFor(); assert.equal(await groupFooter.innerText(), groupTotal);
+      const expanded = await waitForSavedView(p, seed, [], collapsed.revision);
+      assert.equal(await firstGroup.innerText(), groupText, 'Exact header/count survives scrolling and collapse/expand');
+      const afterGroups = await verifyGroups(p, table, seed, n, fixture, bounded, finishPaint, expanded);
+      assert.deepEqual(afterGroups, beforeGroups, 'All exact group identities/counts/footer sums survive collapse/expand');
+      console.log(JSON.stringify({ rows: n, fixture, groupOracle: afterGroups, groupSaveProof: { grouped, collapsed, expanded } }));
       report.maxTbodyRows = await p.evaluate(() => window.__p6MaxRows);
       assert(report.maxTbodyRows < 120, `Observed maximum tbody rows ${report.maxTbodyRows}`);
       assert.deepEqual(errors, [], 'No page errors');
-      console.log(JSON.stringify({ rows: n, maxTbodyRows: report.maxTbodyRows })); console.log(`ALL OK P6 ${n}`);
+      console.log(JSON.stringify({ rows: n, fixture, maxTbodyRows: report.maxTbodyRows })); console.log(`ALL OK P6 ${n} ${fixture}`);
       await context.close();
     }
   } finally { await browser.close(); }
