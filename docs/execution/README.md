@@ -13,6 +13,12 @@
 Add an entry for each new Execution Summary (see the routine in [EX-06 Appendix A](2026-10-23-pbs-reconciliation.md#appendix-a-documentation-routine-going-forward)). Dates are UTC.
 
 
+### 2026-11-12 UTC, EX-2026-11-12-80: installed data and durable empty-home backend check
+
+- [Report](2026-11-12-codex-installed-data-and-empty-home-qualification.md); full [sessions71–76](../sessions.md#session-76), [resume](../handoff/2026-11-12-codex-import-persistence-resume-note.md). Ahmed (`AE0101`), Gaming-PC; requested/inherited Sol Ultra, backend/usage unattested.
+- Installed public dependency data is qualified within explicit model/auditor limits. One actual three-case backend persistence test passes on production7806 plus exact uncommitted test appendEF77/new harnessF9D9; prior148selected base passes are retained separately. No native UI/full-suite/import integration or owner acceptance.
+- Factual source cutoff 2026-11-12T06:43:56.4413857Z; later owned Notion progress saved/read-back06:48:04.376Z without history/roadmap/acceptance changes. A39 [living handover guide] repository addendum proposed; private published copy remains pending/not attempted. Earlier EX79 and all old bodies remain unchanged.
+
 ### 2026-11-12 UTC, EX-2026-11-12-79: table tools and produced locked dependencies
 
 - [Report](2026-11-12-codex-table-tools-qualification.md); full [sessions67–70](../sessions.md#session-70), [resume](../handoff/2026-11-12-codex-table-tools-resume-note.md). Ahmed (`AE0101`), Gaming-PC; requested/inherited Sol Ultra, actual backend/usage unattested.

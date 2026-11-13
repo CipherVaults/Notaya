@@ -21,6 +21,13 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 77 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Verified PBS save and native-reader validation](#session-77) |
+| 76 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Durable empty-home backend check](#session-76) |
+| 75 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Import test applied and launch boundaries](#session-75) |
+| 74 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Installed data and import-check design](#session-74) |
+| 73 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Archive mapping and installed-data recovery](#session-73) |
+| 72 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Local documentation and synthetic verifier](#session-72) |
+| 71 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Archive integrity and PBS application](#session-71) |
 | 70 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Locked dependencies produced, source protection verified](#session-70) |
 | 69 | 2026-11-12 | Ahmed (`AE0101`) | Gaming-PC | [Node/npm Identity qualified](#session-69) |
 | 68 | 2026-11-11–12 | Ahmed (`AE0101`) | Gaming-PC | [Independent table-verification repository qualified](#session-68) |
@@ -91,6 +98,545 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 | 3 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [PBS reconciliation](#session-03) |
 | 2 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [First hands-on run and redesign](#session-02) |
 | 1 | 2026-10-22 | Mohamed (`AbyssWatcher2`) | Mohamed's PC (workspace `E:\Project\cipherleaf` in that day's reports) | [Plan, first build, PBS adoption](#session-01) |
+---
+
+<a id="session-77"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The following complete original block16 is byte-verbatim, including original title/EOL, all13sections, Time/model/provenance and cutoff2026-11-12T07:45:39Z. Source `SESSION-resume-block-16.md`, SHA256 `BE2B7E4CB3AAAD4D0BC6CA3B1D1DFDA7AFA623AA9B904ECFCF96E2F759A3A0A7`. This local anchor/index does not rewrite earlier cutoffs or create a separate billable run.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · PBS milestone and native-reader validation
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root continues the same Notaya 1.6 Goal and app run; this is a work-block record, not a new billable run or restart.
+
+## 🕒 Time
+After block 15's cutoff, 2026-11-12T06:43:56.4413857Z, through 2026-11-12T07:45:39Z. Cutoff is the clock tool's actual UTC reading. This is a covered interval, not measured continuous labour. Provider usage and whole-run duration are unavailable.
+
+## 🎯 Session Goal
+Faithfully adopt the six completed full session/usage records and qualified import milestone into Notaya's established PBS owners, independently verify preservation, and validate the bounded Windows native-file reader against invented memory inputs before any installed-image data pass. Ahmed's latest explicit request was to update the AI PBS.
+
+## 🛠️ Actions Taken
+1. Root and the documentation worker prepared the existing eight-owner milestone. Six full records, blocks 10–15, and their six usage records were transferred verbatim into sessions 71–76 with original cutoffs. Existing bodies, indexes, usage accounting and the earlier local claim addition were preserved. The final proposal clarified that the new two-file P6c [large-table verification and focus checks] proposal remains unapplied/unrun while historical checks retain their scoped value.
+2. Non-author content review 66180D904E57FBB784EDB3F1CB14C5193BA6672B39BEF6B39123ADD1C0295823 and its 617-check proof bound the eight final candidate hashes, 12 raw transfers, exact old-text preservation and 38 references. Raw byte/structure verification is not a new semantic reread of the entire historical chronology.
+3. Root separately ran the reviewed eight-document Apply with fixed owned paths and no Git. Closed parent BC5DA0731E9E29FAC46DD00606162B88901A4D465804E5218EAA75EF99639D80 and actual child B23B0955FC804CC39E60AEF1B5ADDA7310EF35B3B0A958B9E735D20B2239F7AC report all eight writes complete, six modifications and two additions. Main working rows changed 676 to 678; Git administration stayed unchanged. N2 [Notion import fixes] and both bound test executables stayed unchanged.
+4. Independent actual Apply receipt 9B1476474136F57E8BBE252AE8515CB5D23505082C9B9BAB73B42B5A1F6CD973 passed 57,669 row assertions and a separate 19-check authority supplement. It verified all eight final document hashes, 670 unaffected working rows, 2,903 unchanged administration rows, 3,540 unchanged N2 native rows and the old/new executable identities. The reviewer corrected its auxiliary authority predicate and timestamp comparison in retained CONTROL evidence; no producer/data rerun followed. The milestone is saved and verified, still unstaged/uncommitted relative to main documentation HEAD 622b3daac386cea8f90d39ba34a3f36bd1318aab.
+5. Root finished source review of the bounded PE [Windows native-file format] reader, synthetic suite and fixed controller. The reader takes a supplied read-only seekable stream; it does not open selected installed binaries or load native code. Synthetic cases have independent literal expected facts and bounded malformed/budget outcomes.
+6. The first synthetic attempt stopped at its mandatory PowerShell module-path preflight before compilation or fixture execution. Receipt A91C65287532AE799D40D5CCE9463C3A2FA3F06580B48622013C3381FC44458A is retained. A BCL-only environment query, 2E6F4356ADC88158017971E96463EB8889C1610D79D02E6300EE0680AAF1E092, showed PowerShell startup adding the owned profile module directory and Program Files module directory even when the parent supplied only the trusted module path. No real-user module directory was observed. This own-check failure is not an automatic-policy denial or a product failure.
+7. Independently reviewed BCL-first bootstraps now set the trusted host module path before any cmdlet and bind one exact target. PE bootstrap E592F9D29CF5D70FB2753A6C46F9A52E54DC85AE44AD6CBE358CBFD63EDE2167 and documentation bootstrap D4F0A13B81FA9E5E3962730D56581C2087F22D86339F57C966303D26BF91EF10 were used in their respective successful attempts. Unexecuted earlier source versions and failed evidence remain preserved. This is operational isolation, not a global loader trace or OS sandbox.
+8. The separately admitted synthetic run compiled the unchanged reader/suite and matched all 24 expected memory-case outcomes: two complete positive cases, 20 malformed/subset holds and two budget refusals. Parent 585C57EC0E0DB96BF55E3823FD538C77AB632388226DFAEBD18FB74A04A090CF and child DF71F2BFE84C8AC32A64EAA3E2F3A9C2EDEE3D4F87F52014E0B37DDDB4E71D42 closed successfully without timeout or stderr. There were zero case/closure failures and zero selected real-image inputs. Eight input identity/hash closures matched.
+9. Independent actual synthetic receipt 7D158B4E99FB4A1EDB0AB57CD5A3E3A768C3E03C50A8C8FE6D29E065EF6A304C passed 2,552 CONTROL assertions. It verified all 24 rows, literal facts, expected refusals, stream/read-only/disposal counters, bindings and recorded measurements. Parent wall time was 2,108.8843 ms and CPU time 1,875 ms; maximum observed OS process-peak counter was 184,537,088 bytes over 32 live samples. This is an observed counter, not a guaranteed exact end peak or forecast for real images.
+10. The worker prepared a separate source-only proposal for the 32 already classified public files, of which 22 are PE candidates. Its 585,708,813-byte total is metadata length, not completed payload hashing/parsing. No installed native image, browser, addon or app was executed. Actual public-data and subsequent startup gates require their own bounded review and admission.
+11. Root answered status requests promptly and continued authorised work. After Ahmed asked to update the AI PBS, Root refreshed applicable rules and the current hub, then made three targeted owned progress edits. Exact full-content readback confirmed the saved 20,646-character body at page edit 2026-11-12T07:45:25.769Z. The progress snapshot is explicitly as of 07:44 UTC. It now states the independently verified eight-file save, still-uncommitted status, bounded 24-case tool result, remaining startup/product gates and unchanged acceptance. No roadmap, feature-board lifecycle, authority or acceptance record was changed.
+12. A Root read used a guessed review-receipt path that did not exist; the exact final path was supplied by the reviewer and read successfully. One initial read call aborted before dispatch and was retried as a read; no mutation was uncertain or repeated. The earlier optional preparation-note policy rejection remains preserved and was not retried. Fixed future documentation Git stages are prepared separately; no Git stage/commit ran in this block.
+
+## 🧠 Key Insights
+The documentation transfer and the independent verification are now actual results, rather than a proposed adoption. Their evidence does not establish a commit.
+A control parser passing invented memory cases does not qualify native libraries, ABI compatibility, the Windows loader, CSS scanners or browser startup. The new bootstrap closes the observed module-search preflight issue within its stated operational limits; it does not invalidate the separately scoped historical test receipts.
+
+## 📌 Decisions Made
+Continue within Ahmed's existing Goal; his status questions and PBS-update request do not restart onboarding or authorise new product choices.
+Retain the existing record owners, full session structure, original cutoffs and one-root-run accounting. Keep native data, native execution, product tests, integration and owner acceptance separate.
+Use the already classified 32-public-file/22-PE scope for the next technical proposal, with no automatic payload or runtime action inferred.
+
+## ⚠️ Difficulties / Friction
+PowerShell startup expands module search paths, requiring a BCL-first correction before dependent cmdlets. The first attempt stopped correctly.
+Reviewer-only comparison/schema friction was corrected additively; no repository or synthetic rerun was needed. The external private A39 [living handover guide] Artifact still lacks an available authorised update route; it remains pending, not silently replaced.
+
+## 🔧 Adjustments Made
+The owned parent and exact child bootstrap now restrict PowerShell module search before cmdlets. The reviewed reader/suite/controller and their test expectations remained unchanged.
+Documentation status moved from planned adoption to actual saved-and-independently-verified adoption. Current-facing Notion wording was updated without altering older dated snapshots.
+
+## ❌ Mistakes / Risks Noted
+Do not call the newest documents committed, the 24 tool cases Notaya product tests, selected SDK metadata hashed payloads, or browser/native isolation complete.
+The module-query result does not prove a complete historical dynamic module trace. Earlier successful checks retain only their documented scope. The optional denied note remains NOT RUN/no retry.
+
+## 📍 Current Position
+V1.5.1 remains accepted; V1.6 is unaccepted. Originals, all 51 inert historical lanes and six dirty/unique states remain protected.
+Eight documentation owners are saved and independently verified, unstaged/uncommitted after 622b3da. Sessions 71–76 contain blocks 10–15. This block records the later actual adoption/audit and native-reader results at its own cutoff.
+N2 [Notion import fixes] has 148 selected passes on production revision 7806d002fe302d3d22d97b4941590848066e4e93 and a separate verified single persistence test with three cases on that production source plus the explicit uncommitted test-only overlay. These are not 149 tests run on one source.
+P6c [large-table verification and focus checks] remains an unapplied/unrun test proposal. The new PE control tool is synthetically qualified; actual public-image data, native runtime and startup remain open.
+
+## 🔜 Next Steps
+Faithfully adopt this full block and its usage into the existing session and usage owners, preserving this cutoff; finish bounded local documentation Git qualification without a push.
+Continue the separately reviewed selected-public-image data wrapper, then applicable executable/startup containment before the P6c [large-table verification and focus checks] scenarios and focus observation. Do not repeat completed archive, installed-data, test or preservation passes absent a concrete new concern.
+Keep the N2 [Notion import fixes] native/safety/integration gates, the third security-area baseline before N3 [canonical Notion identity and arrangement], private person-controlled parity and final candidate qualification explicit under the existing Goal.
+
+## ❓ Open Questions
+Native UI/persistence beyond the tested cases, the actual safety-backup callback, crash/power-loss, full-suite, private parity, packaging and owner acceptance remain unqualified.
+The private external handover update route is pending. Study 1B amendments and history-design decisions remain proposals unless explicit owner evidence settles them; no new product or roadmap decision was made here.
+
+## 🧾 Session Outcome
+The existing PBS milestone was applied and independently verified; the bounded native-file reader passed independent actual synthetic review. The hub now reflects those exact states and limits. Current Goal continues with no merge, push, release or acceptance.
+
+## 🔍 Confidence Level
+High for the named saved-document preservation, closed CONTROL audits, exact synthetic outcomes and exact Notion saved-content readback. Limited for installed-image parsing and actual native/app behavior, which have not yet run.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra; actual backend model, effort and provider usage are unattested. Runtime Default; Root changed neither mode nor model. Root coordinates, executes and records. git_closure_review authored the documentation/controller proposals. generated_gate_review independently audited source, content and actual outcomes; its child prepares the separate public-image data proposal. No original/historical mutation, private input, new tool/dependency installation, browser/native-addon/app startup, automation change, roadmap adoption, partner/Fable contact, push, release or owner acceptance.
+
+
+
+---
+
+<a id="session-76"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The entire following source, including its original title, all13sections, Time/model/provenance, original EOL and cutoff, is byte-verbatim. Source `SESSION-resume-block-15.md`, SHA256 `BDEE999B4730B594E22AAEE4FF321B0A83B2993623F8EB3D30E9A608AEADFD7C`. Local anchor/index/provenance do not rewrite its earlier pending states or imply a separate billed run or owner acceptance.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Import persistence qualified
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root continues the existing app run and1.6 Goal. This ended work block follows block14; full original bodies are retained for faithful adopted-record transfer. No new billable run.
+
+## 🕒 Time
+After block14 cutoff2026-11-12T05:53:56.3684669Z through 2026-11-12T06:43:56.4413857Z, actual Windows UTC. Full app duration/provider counters unknown.
+
+## 🎯 Session Goal
+Build and independently bind the exact new N2 [Notion import fixes] test harness, discover only the intended ignored test and execute its three invented import/reopen cases. Keep original/historical work, old148passes, product source, Git metadata and owner acceptance separate.
+
+## 🛠️ Actions Taken
+Root measured the previous owned build target using bounded no-follow metadata only:4030files/707directories/4240783753B,0holds,0payload reads. Dfree75519684608B at05:59:24Z. Capacity recordN2-M2-fresh-build.capacity-observation.json names reused cache, fresh output and preserved oldtarget; no invented reserve or guaranteed future peak.
+Compile source review covered the fixed64-line launcher and44-line guards plus exact final deltas. Reviewer A506E78E9C5D91B60FC9F3752E4734EE52F0DA563ACB16EC039F32F4B25AAF8F binds launcherAB3FAF5B6E35CE4BFB614DF915387B1BD8879D895EF76BC9467963F1966F7888/guardsC34418B7E0D9BFD11768DE2C0EBA36EEE4060AAAD05AB668CCABF61D012F51B8. Before execution, exact mutable Cargo accounting leaves gained NTFS/Links1/ADS0 native checks; no expanded descendant/body re-audit was invented.
+Root separately admitted one direct offline/locked/no-run Cargo build in fresh qualification/n2-m2-20261112T060614Z-7a9891ec, reusing the qualified public cache. Pinned NoProfile/cleared/owned parentAA38D48431C2D6CAC3D14DEA7BA4A021436904C03D1152C5D23F11F7E40DDAA1 closed0/no timeout/empty parentstderr. Actual7218230A224A6E2A9DE4EDF7F6FE744A0CD2C44120001931B4917B7440184B80:Cargo0/133.3829046s, six childwarnings,493CargoJSON records/434artifacts/58buildscript records/one success. Childstderr contains progress/warnings and is not empty. No cargo fix/dependency install/fetch/test was run.
+All668source/3540native/106admin/101ref state remained byte-identical to ApplyBF6FE74A470F001B5394FFE06A94B13543DD750E7C12358B5A142D0957C82B00 and7BA59E431D8F7D1C290FB7FF95AE95391E9D45889D3D2778EFB37365A04EC715; no generated schema delta. Nine selected SDK image hashes/native leases closed unchanged. Both302lockedarchive checks and302expanded package-root metadata matched; three storage-qualified owned accounting leaves retained. Reused expanded descendant bodies/namespace are not freshly audited; Root sole-writer protocol and earlier public-cache proof are explicit operational limits.
+Independent actual Compile source-stateC2877206D0D29CB828327A8DB00250F863BBCB807480E5BDD45D10206400AD6B and detail551FC76384E7E9D96D825B83E9627C99361352E35F94EC241AF411D83B184AE5 passed. Reviewer first mishandled root/registry row shape; preserved that CONTROL-only failure, then made one exact directory-row disposition without Cargo/SDK/cache rerun. Actual Cargo metadata uniquely selected the fresh notaya_lib test executable, not an old filename wildcard.
+One separately admitted metadata-first new-artifact data read93CF42FD8EE4416CF0238B103E4184BE9F8C3CA1E7DA33F217166FA2FE5ED318 under fresh owned host established51436032B SHA F9D9FA6D8B25E2806BC915CABB090A073930EFE43905A7EA108E62013AEAAF82, strict native9/NTFS/Links1/ADS0. Artifact receipt62B30C40A9CF98B2F09E32AF7FD41DD5A5824DEBB5DCFD307CB90E495C6A50C2 binds exact source, command and unique actual Cargo metadata. Production7806 plus dirty EF77 test overlay remains exact harness source, harnessCommit=null.
+Root whole-read53-line SingleTest preview,24-line source-only guard and final delta. Root caught a second HashOnly on a one-read lease before any runtime attempt. Additive final controller805244BF5D246197AB08C0F5FB51E4AE3150F0EFB3E6D435CB22E67ACB4D4B87 uses a distinct post-read lease while the primary immutable-image lease stays held. GuardEEAAB41D7A1478FD694990A001053949BFCF182067E68860E556E849E8A9F9F4 has no compiler/cache routines. Non-author final51FAD6083B6831B18EB813408F95001D6B1487A0BE7ED9D47D8DF9BE40E10E72 cleared source; unexecuted earlier versions remain.
+Root separately admitted exact discovery only. ParentA6F80D7502E5876A89ACE1C880000474591A8C807A2BA3FEDA8B6DDBED9A06D9/actual376C7632BA9B2FEA0A9D831A8BA130AD36A9737E4635D2D3933E3C877FBD82A3 closed0/no timeout/empty child+parentstderr. Actual output is only the exact fullname plus1test0benchmarks under --exact --ignored --list. No body/fixture ran. Independent discoveryC4BC334A84E2F2ECA36BB44EBEAAD265F6168D39ECEF7E1B2BBA6901624EE056 and source-state2290F40A063AA8181054623CAB7934278E79E3F50036C4F617D74419BD52C1BB passed65checks, using transitive raw manifest equality rather than replaying the entire3540-row audit.
+Root then separately admitted only the exact ignored persistence test with fresh absent direct-child synthetic root. Parent9C4D2B295940CFE93D9F47998DE3F2CFB19E9EE84E5FCCA9B84CAC886CFEBAE1/actualD2C07E234D3C8747BEA4FD5B219E5A4CFC1AC248F79CDE2BCF9EAFC5F2B6BE8E closed0/no timeout/empty child+parentstderr. One test passed,0failed,0ignored,785filtered; all three N2_M2_CASE markers appeared exactly once. Reported test duration0.63s, commandwall0.6832787s. Source/native/index/ref and F9D9 before/after hashes unchanged,0schema deltas.
+Independent final D5D48DCE6285A32AD2CC6E8D559845616D2FC9992FB267117FDC6B2252EA843C and post-test source-stateF6DF30E722EBF1959AF9854BA76B1B79954B4DC9703F7FFB8A1B06B5598F1D11 passed221checks. Exact reviewed assertions establish real import_from, drop/unlock_open same saved vault path, persistent IDs/counts/parenting/section ownership and UI-facing command-core agreement for empty-view/idless-home/exact-home invented cases. Genuine Home retains empty content, not an empty title. Thirteen explicit outward synthetic ZIP/data/vault locations were stable under metadata-only read; vault subtrees, keys, bodies and ZIP members were not reopened/read/hashed by reviewer. All test material is retained; no cleanup.
+Root kept user status questions as steering, answered promptly in commentary and continued the Goal. New work codes retain bracketed descriptions. The Notion hub was updated through produced build/source-test application at06:10UTC; exact full-content readback8842D966510C606707E419B9FAA3BAE720A6BA8CC11913A4787E2FF118B1FB44 records page edit06:18:42.968Z. It honestly marked new test not run at that dated cutoff; final result update is next, not backdated.
+Selected native metadata qualification closed independently A3EC6A6B31B677D59ABCEDF98B1765D431CE9372D8D2077F2DF96AF47176CC86:51stable rows/32files/19dirs/0holds.585708813B is file-length metadata, not a payload read. Four addons, Node and current Chrome.51 public targets were classified, with no SDK payload parsing/hash/browser/module execution.
+An automatic policy review rejected one optional CreateNew UTF8 Markdown preparation note at control/native-image-preflight-20261112T055434Z-c02882e8/NATIVE-PE-PREFLIGHT.proposal.md before execution. Exact visible reason: rejected: blocked by policy. The provider truncated its displayed command; omitted text is not reconstructed. No note creation, retry or alternate-tool write was claimed; the complete plan was delivered in chat from existing evidence. This does not block the independent backend Goal.
+Whole PEv3 source review found two pre-execution defects: byte-budget check after reading and overstrong resource-read wording with string lookahead. Root directed only additive source corrections; v4 SHA439D262A95833FD57FF1A69D25087C299A6847BADA306FBDCE44C83DFCEF7D03 is prepared with exact inverse proof, uncompiled/unrun and under narrow non-author review. No fixture/realSDK/native data stage follows automatically.
+Root assigned a CONTROL-only eight-owner PBS proposal: adopt full blocks10–15 with original cutoffs, update current continuation/claims/execution/usage/resume and a bounded living repository handover addendum. A39's other private Artifact copy is known stale/unavailable in this task; no contact/publication or snapshot rewrite is authorised or claimed. Draft remains unadopted at this cutoff.
+
+## 🧠 Key Insights
+The concrete backend evidence gap is now closed by actual import/close/reopen behavior and durable core relationships. Native UI and the app's safety-backup callback remain separate.
+One executed parameterised test with three cases is one pass, not three tests or149passes on one exact source. The prior148 belong to the original7806 artifact and remain separately valid.
+Byte-identical closed manifests permit transitive evidence reuse; repeated corpus/SDK/cache sweeps are unnecessary without new drift or concern.
+
+## 📌 Decisions Made
+Accept final bounded backend evidence D5D48 within its limits. Keep source identity7806+EF77 dirty test overlay and actual executableF9D9 explicit; no commit/merge/acceptance inferred.
+Preserve all old artifacts, synthetic effects and checker failures. Use one Root admission per distinct technical command without asking Ahmed to reconfirm routine substeps already authorised by his Goal.
+Retain A39 external-copy update as pending/unavailable; prepare the living repo addendum within scope, not a new artifact or implicit partner contact.
+
+## ⚠️ Difficulties / Friction
+CONTROL audit corrected root/registry record shape, and final test receipt corrected reviewer prose from empty title to empty content. Prior failures/receipt5425598A148D6902FDFC269C1C23355358CE681F580B368FB702EFF7EA233662 remain; actual test/source/output evidence did not change.
+Root corrected its guard filename read after a nonexistent-path error; no build/test/source operation depended on that failed read.
+Optional note creation was denied before exec; no retry or bypass. It is not a denial of the separately authorised build/test/source reads.
+
+## 🔧 Adjustments Made
+Separated compiler-only9SDK/302archive checks from exact listing/test stages. Those stages use only the bound library executable, source/admin/native guards and owned profiles/root.
+Fixed one-read lease handling before execution; distinct post lease preserves actual hash-before/after proof.
+Kept source-only native preparation, public metadata, PE fixtures/data, actual browser startup, product tests and acceptance as separate evidence boundaries.
+
+## ❌ Mistakes / Risks Noted
+Do not turn785filtered tests into passes, six warnings into empty childstderr, metadata bytes into hashed/read payloads or public synthetic persistence into complete import fidelity.
+Do not represent the native PE/source/metadata plan as GateB/runtime qualification or the optional note denial as a full development blocker.
+Operational guards are not a global writer/loader trace, OS sandbox, power-loss guarantee or security/owner acceptance.
+
+## 📍 Current Position
+Accepted1.5.1 and unaccepted1.6 remain. Originals/all51historical lanes/sixdirty unique states stay protected. Main has the reviewed local claim addition after622; no push.
+N2 [Notion import fixes] retains148selected production7806 passes plus the newly qualified single three-case check on7806+EF77/F9D9. Sole test-file append remains uncommitted; production/index/refs unchanged. The bounded empty-home backend persistence/core gap is verified; broader native/integration/security/private gates remain.
+P6c [large-table verification and focus checks] test proposal/marker/controller remain unapplied and unrun; native SDK/source/metadata preparation is partly qualified, PE/parser/runtime and compact focus remain open. No new architecture/history/roadmap choice.
+
+## 🔜 Next Steps
+Update owned hub progress with the final qualified test; faithfully adopt full later sessions/usage and the scoped milestone in the existing record owners after concrete review. Preserve all cutoffs and unknown usage.
+Finish narrow PEv4/source+owned synthetic validation preparation, then separately admit exact classified public-image data and eventual executable/startup containment. Only then run the reviewed P6c [large-table verification and focus checks] ordinary/zero-sum5000/20000 scenarios and observe focus before product changes.
+Reconcile remaining N2 [Notion import fixes] native/safety/integration gates, Area3 baseline before N3 [canonical Notion identity and arrangement], approved performance/security/AI work and unresolved owner decisions under the existing Goal.
+
+## ❓ Open Questions
+Native app navigation/rendering, safety-backup callback, crash/power-loss, private exports/formula parity, full-suite/whole-app/distributable and owner acceptance remain unqualified by this one backend test.
+PE/source fixes are technical preparation, with no parser execution/data/startup authorisation yet. A39 private external Artifact update lacks a supported authorised publication route in this task; repository and Notion can still be maintained.
+Study1B's eight amendments and HD1–12 remain open proposals unless later owner evidence settles them; required AI/batch/security and roadmap choices are not silently waived.
+
+## 🧾 Session Outcome
+Fresh isolated build, source/executable binding, exact discovery and one three-case backend persistence test passed independent actual review. Historical/source/admin/refs remained preserved. Current Goal incomplete; no integration, release or owner acceptance claimed.
+
+## 🔍 Confidence Level
+High for the named public synthetic backend check and exact source/artifact/output/retention evidence. Limited for broader runtime/security/private/fidelity/distribution claims, which remain open.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra; actual backend/model/effort/provider usage unattested. Runtime Default; Root changed neither mode nor model. Root coordinates/executes/records; git_closure_review authored reviewed controllers/test and prepares PBS drafts; generated_gate_review independently reviewed controller/source and actual Compile/Discover/ExactTest, including one data-only new-exe hash and13metadata-only synthetic locations; its child prepares native metadata/source-only PE tools. Same Root app run counted once; unavailable token/cache/output/cost/quota blank/null. No original/historical mutation/Git, private input, new install, browser/native-addon/app execution, automation, roadmap adoption, partner/Fable contact, push/release or acceptance. Cargo/build-script/library-test execution occurred only as expressly scoped above.
+
+
+---
+
+<a id="session-75"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The entire following source, including its original title, all13sections, Time/model/provenance, original EOL and cutoff, is byte-verbatim. Source `SESSION-resume-block-14.md`, SHA256 `E27A177C33754432FACA0234B0E31BF71D6F861EE9CD2F38AB015928C21B2BD4`. Local anchor/index/provenance do not rewrite its earlier pending states or imply a separate billed run or owner acceptance.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Focused import test applied and launch-source boundaries
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root coordinates the same app run; this ended work block follows block13 and adds no billable run. Adopted session transfer is pending the next reviewed milestone.
+
+## 🕒 Time
+After block13 cutoff2026-11-12T05:31:32.5657187Z through 2026-11-12T05:53:56.3684669Z, actual Windows UTC. Provider counters and complete duration unknown.
+
+## 🎯 Session Goal
+Safely apply the independently reviewed N2 [Notion import fixes] backend persistence test in the existing isolated checkout, preserving production7806, all refs/index and old148-pass evidence. Close selected startup source questions and prepare, without starting, the fresh backend build.
+
+## 🛠️ Actions Taken
+Root wholly read the final73-line source preflight5CCA0B5F36F3CD0330DAEB9DF803FE5329DE6E115D25CEACCB7339CEE75FC893, its schema and independent static4EB4EA36ABDC1111752B7BEBF3AA12A05EE615BC7620D30D18B752939808642C. The final exact Ordinal name guards close a preview case-only rename gap while retaining case-insensitive collision refusal; no rename occurred.
+A separately admitted fresh pinned NoProfile/cleared-environment read-only parent6CF9352945D79CA89EEAA7544D35F31BEFC0AC23F8DA2C2235DC6A0192EB9478 closed0/no timeout/empty stderr. Actual preflight484C38B6627D05624D0D9C6F22003328AE9FF59010C76A52E751EAED6910A319:3540 native file rows, both3540-file/365-directory namespaces,774 current payload hashes including668 source+106 non-object administration; productionHEAD/ref7806 and indexF6D4 unchanged. Object payload/fsck proof was reused, not rerun. Nine Rust/tool images were metadata-only Links1/ADS0/NTFS with no alias holds; cache/config presence guards read no credential/config bodies. Independent actual11BBE0A7BFDE492DEAF305CE6795DA0BA2781370E253A41FACC0276BCC6EAE7A passed51923 CONTROL checks with explicit operational/not-global-process limitations.
+Root applied the separately reviewed C79 local ownership paragraph to active/main/docs/handoff/claims.md only. Before75428A56390B2C32E62CC5EB8383E5FFD7F8E026A2F10FD3341B50F337BB8156/29571B, after11EB944FE1994FBD5C9084DAD6A4C3EAD929DF2A07ECA6C8286C2D9AC9040130/30529B:958B exact insertion, full prior bytes preserved. CreateNew before backup remains under the owned parent. Actual9FC5B95369EEAC885C43568CA71A54EECB703A74F3FFB341C61BFA688D6838D1 closed0/empty stderr. Non-author CE107A38A5A7954FF77C81521B2E6969463813B1742F6A5C0819D61EA8A59784 reconstructed expected new bytes from backup+C79 without reopening target body. This is local ownership, not a published reservation or product/authority change.
+Root wholly read67-line Applyv1 and exact v2 delta/schema, then independent static1CAABC976FDBE1C579757444AE2E1DD1EFF9CF428521B33671EB6E9F9A8A5087. Final244E89388AC681F3E851A9C957CA43B4A9907616E78C618AA41FCD46A453FAD5 checks the freshly read complete candidate hash before opening the target, independently preserves original36766B prefix and appends8500B only under an exclusive existing-file hash check. No replacement/truncation/rollback/cleanup or Git command.
+Root separately admitted that exact source append. Actual parent871D88DAD1C4CAF49B89131CD4DF25099AD29455AA54A76D18C26FE9CBBF1FF1 closed0/no timeout/empty stderr. Actual C018E59BAACA32BF50C3483C242DD8C92A7AC274A9648C00269BCD1ABDB76594 at05:46:49Z confirms8500B appended, old167E30B26EDE5A56B86680AACE2A2DE81C16330E6286D94B6ABDD4FB81D3C3DF to finalEF77D719FEE2EF10CDD91F772F26CACDFDC47E1607F1545BEAE44F77BBE2E3EF/45266B, no uncertain partial outcome. Production7806 plus explicit dirty test overlay is the harness identity; harnessCommit=null. Before698BEC/15E776 equals the actual preflight; after-nativeBF6FE74A470F001B5394FFE06A94B13543DD750E7C12358B5A142D0957C82B00 and after-hashes7BA59E431D8F7D1C290FB7FF95AE95391E9D45889D3D2778EFB37365A04EC715 bind the final source.
+Independent actual Apply8391B98C13AEB8DE68D3CAADB9EE17AB952E0B79B521E3AC98E500D1754CE0A1 passed24280 CONTROL checks: all3540 rows/774 hashes reconcile, only the target length/lastWrite/hash changed;106admin/101ref files/index and other source stayed unchanged. Auditor first compared lowercase/uppercase SHA hex as case-sensitive text, preserved that failed control909CEF, then corrected only validated digest comparison. No producer/source rerun or test weakening followed.
+Root performed a bounded known-public Chrome image metadata/hash/version read, not a launch/profile read. First owned helper called HashOnly twice on a one-read lease and failed before emitting its result; retained parentEAE244384907CEE71DDFAF880B604D94576F03A1FC3ACA08A2082AFF410C1D8B. Exact v2 correction0125F8060B87CCFCF0EBE0B9E922594C73FF81DCCE4E48B5B1CB783184D8C298 uses one hash plus native9 closure under the held no-write lease. Fresh parentACA2D97EB6FDBAAAA8C59171ADE3E2FD5C01A7FBB7EE0C8EB1B95E1285551AF2 closed0/empty stderr: current chrome.exe4191896B SHA5B835C10836045119334D9524E62437110E00E1BD20612C9072A0AE155F94A17, FileVersion/Product157.0.8103.51, sole numeric version directory.51, NTFS/Links1/ADS0. Historical.50 is stale. Independent B02DB7B8C8961B658EE29905ED2E7C5569579EECDF208DF294E1C8381BD23F6F audits current image identity only, not loader/resources/runtime.
+Playwright source recipe304F9D456C1B5F9C5DFAC82557526F5B7EE48DAA6E55463CC21F91F3C4F5F692 was wholly read by Root. Worker exact coverageE532E33007BCBA121D9D847C243F2E703668388D14D531423780301A14B63E41:five small files278lines wholly, bundles targeted3228lines; serverRegistry captured/search-only. Explicit absolute entry/Chrome path, clean env, owned TEMP profile/artifacts, optional native lookup disables, service-worker/request/WebSocket guards and Windows shell/taskkill fallback are explicit. No Node/browser/module execution.
+Vite/plugin source-only closure063E15FDCDC986A20778BA22202720F3B33355ECBF15CA103C6F0F884714C432 and reportFDCE4E18775A0F04A59D6A9C123C7EFD37E47307D0DFCECA1BEF9EEFFC85FB61 were produced; Root wholly read the report. Eight capture children closed0/empty stderr/zero closure errors.47captured files/1748749B are not full semantic coverage. Exact coverage0BD97F2EE1A4D38F2050E932677DB18581475A3F022B087DC15356A7DE4E5E94 records17whole code files686L,4whole native manifests135L,11manifest field reads,3byte-identical helper reuses and declared partial ranges. Source supports API configFile:false/envDir:false, owned cacheDir, and an existence-only workspace stop marker proposal; no marker/config was written. Selected entry CSS/imported Tailwind/KaTeX/Fontsource chain declares no external/private source. Native scanner behavior remains unqualified. Four selected native binaries remain distinct, especially top/nested LightningCSS versions.
+A narrow compile/discovery/test adaptation remains in preparation. Root reviewed the initial runtime-guard helper preview as source; it has not executed. Fresh SDK pins/cache metadata, exact source/tool/output bindings and meaningful build/test gates remain separate. N2 [Notion import fixes] has not been newly built or run in this block.
+
+## 🧠 Key Insights
+The test-only overlay is explicit final source, not pristine production7806 or a new accepted revision. Old148 passes remain bound to their original production/artifact.
+Current browser metadata can drift while historical tests retain scoped value. A new image identity does not qualify its DLL/resource/child graph or runtime behavior.
+Vite serving permissions alone do not bound its workspace search or Tailwind native scanner. configFile/envDir/cache and an explicit reviewed workspace stop need separate handling.
+
+## 📌 Decisions Made
+Reuse existing independent active/n2 with a named one-file dirty test overlay; no branch/ref/index change, source clone or old lane activation. Root owns the sole test write and locally recorded that claim.
+Admit only the exact reviewed8500B append after actual non-author preflight/source review. Preserve all old evidence and every failure/partial result; no automatic rollback or retry.
+Keep the zero-byte workspace marker and any native/Chrome/loader/runtime action as separate concrete proposals/admissions. They introduce no new product/history/security architecture decision.
+
+## ⚠️ Difficulties / Friction
+One Root public-image reader misused a one-read lease; source/cause/outcome are preserved and the exact one-hash/native closure correction succeeded without browser execution.
+A static controller review found a missing fresh whole-candidate hash before target open; fixed before application. The independent actual audit's digest letter-case mismatch was format-only, not source drift.
+One task update arrived just as its worker completed. Root explicitly triggered the next bounded audit instead of assuming send_message restarted an idle worker.
+
+## 🔧 Adjustments Made
+Raw HEAD/ref/index/source proofs permit this overlay without unnecessary new branch/Git command machinery. A later harness commit still requires its own reviewed source/staged/commit binding.
+Compilation may reuse the already-qualified public cache with named owned Cargo lock/accounting writes. Discovery/test do not need to rerun compiler/cache payload checks when those tools are not selected; no wholeSDK/newframework is required.
+Separately queued metadata-only selected-native/current-Chrome preparation, no new SDK payload hash/PE parse or module/browser invocation by that preparation.
+
+## ❌ Mistakes / Risks Noted
+Do not call source-only launch preparation, static PE expectations, current Chrome identity or an applied test a runtime PASS.
+Do not represent a source/case/digest checker correction as a product fix or discard its failed evidence.
+Operational quiet-window/metadata/hash guards are not atomic snapshots, a global process attestation, ACL/OS sandbox or complete security assurance.
+
+## 📍 Current Position
+Accepted1.5.1 unchanged;1.6 unaccepted. Originals, all51historical lane copies and sixdirty unique states remain protected.
+Local main has one reviewed, uncommitted claims insertion after verified docs622; no push. Later full blocks10–14/usage await faithful adoption into existing owners.
+N2 [Notion import fixes] production7806 retains148selected passes; new ignored-by-default persistence test is applied and independently read back, uncommitted/unbuilt/unrun. HEAD/index/refs unchanged. P6c [large-table verification and focus checks] remains untouched atddb52d9; no marker/config/two-file test patch/startup/table scenarios run.
+
+## 🔜 Next Steps
+Finish minimal compile controller review, admit fresh owned outputs and selected SDK/cache/source boundaries, then compile without running. Bind actual Cargo JSON/artifact/source. Discover and run only the exact named --ignored test; require1passed/0failed/0ignored and all three case markers, retaining synthetic data and independent readback.
+Finish bounded static native/Chrome target classification and separate concrete Vite/Playwright controller/marker/source/tool qualification; only then separately admit startup/P6c [large-table verification and focus checks] scenarios/focus observation.
+Adopt full later session/usage bodies and current evidence into the existing PBS milestone docs, preserve chronology, and update owned hub progress at the next meaningful result. No roadmap/acceptance change.
+
+## ❓ Open Questions
+Actual new persistence test result is unknown. Relevant SDK current payloads, cache metadata consequences, native/browser/ABI/scanner/loader/runtime and compact focus remain pending.
+Open Study1B/HD proposals, required AI/security capability, Area3 baseline before N3 [canonical Notion identity and arrangement], person-controlled private parity/export and native/whole-app/distributable/acceptance gates are unchanged. No owner choice currently blocks the bounded backend qualification preparation.
+
+## 🧾 Session Outcome
+Reviewed local ownership and one-file import test applied, independently read back, historical source/admin/refs preserved. Source-only launch recipes and current browser identity documented. No build/test/runtime/integration result or acceptance claimed. Overall1.6 Goal incomplete.
+
+## 🔍 Confidence Level
+High for scoped source/admin/appended-byte/current image/source-recipe evidence. Pending new backend build/test and native/runtime/security/private/release gates.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra; actual backend/model/effort/provider usage unattested. Runtime Default; Root changed neither mode nor model. Root executes/records/wrote local ownership; git_closure_review authored preflight/apply/runtime proposals and import test; generated_gate_review independently reviewed source/actual preflight/apply/claims/Chrome; its child read Vite/plugins/CSS and prepares metadata-only native targets. Same Root app run counted once; unknown token/cache/output/cost/quota remain blank/null. No original/historical write/Git, private input, new install, project/vendor/native/browser/build/test execution, automation, roadmap adoption, partner/Fable contact, push/release or acceptance this block.
+
+
+---
+
+<a id="session-74"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The entire following source, including its original title, all13sections, Time/model/provenance, original EOL and cutoff, is byte-verbatim. Source `SESSION-resume-block-13.md`, SHA256 `954A641A47D0A5C21B1D9237CF7F0F47A17DC28A55E5AAEC0B33EF6D87AA5D63`. Local anchor/index/provenance do not rewrite its earlier pending states or imply a separate billed run or owner acceptance.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Installed-data closure and focused import qualification
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root coordinates the existing app run; this ended work block continues block12 and is not a new billable run. Later adoption into the single adopted sessions file is pending the next reviewed documentation milestone.
+
+## 🕒 Time
+After block12 cutoff2026-11-12T04:52:07.0719281Z through 2026-11-12T05:31:32.5657187Z, actual Windows UTC. The comparator started before that boundary and finished during this block. Full app duration/provider counters are unknown.
+
+## 🎯 Session Goal
+Close the installed public dependency data comparison and independent readback, then advance the smallest remaining N2 [Notion import fixes] persistence check and executable/startup isolation. Preserve originals, historical work, accepted1.5.1 and all existing scoped evidence.
+
+## 🛠️ Actions Taken
+Corrected installed comparator V5 closed0/no timeout/empty stderr. Actual E563928920E7A5631A34C0A1CD6025DAA6840168463293EE66B3EC255981243C and parentD92E1F6BB7BBBA14F318CFDAC175CF001337124F93A8D3867A3066A881B1274C bind all22469 ordinary files/384674985B to the qualified archive map before317 package identities and two generated hidden locks. Both23966-row native/namespace boundaries matched; zero producer holds/closure errors. Three JSON guard cases and seven constant model checks passed. No Node/vendor/project/browser execution occurred.
+Independent non-author actual readback4C59FFCBAFF731362ABEC1453F4F6D7DBE582D111EC098D6B02F7392501DF6CF passed within its recorded limits:872825 executed data checks plus38 supplemental corrective checks. The auditor preserved its own untyped-array/report-construction errors and unusable nullv2 report; exact typed corrections did not rerun the producer or installed payload pass. Producer records do not contain full observed package/hidden-lock bodies; the audit joins recorded file tuples, exact reviewed code/model/runtime and317 row/two top dispositions, not an independent whole-body JSON recomparison. V4 early CONTROL-only BOM failure remains preserved.
+N2 [Notion import fixes] reviewed remaining-check briefAE2B and minimal design2A74 reuse148 actual selected passes and prior exact final-delta review rather than repeat them. A concrete append-only one-file test packet2A33F55B27CFD1C151B9D1725BBDE8EA62B32959B1CF1795BBE3B7BC533AD83B proposes139 new lines with explicit ignored-by-default admission. CandidateEF77D719FEE2EF10CDD91F772F26CACDFDC47E1607F1545BEAE44F77BBE2E3EF preserves the original36766B/587-line prefix; expected normalized blob799623cdfe874bbd7e1c6d9a223be39a0339c572. Independent non-author source reviewD3E6E7C998B65569CB00A12A136E0693EEBFA5F568915168C4ABD6BA1491B49F approved the source/oracle within limits, not execution. One parameterised test uses three invented ZIP/vault cases, actual import_from, close/reopen and stored-ID/parent/command-core assertions. No source application, compile, fixture, test or native app action occurred this block.
+Root wholly read the68-line reuse/application/build brief91DE54EFFECBE87928BD6077B67733162ACC5AB21B91C4859D1B395573E09D6F and evidence bindings64A9C80E8BC7A679EEDB580D351C3B4DCE5FDF40D45C050ABBA418149AB9B30D. Existing active/n2 is preferred, with an explicitly bound test-only overlay or later local harness revision; production7806, old executable and148 receipts remain preserved. A small additive controller adaptation, fresh contained source/admin/tool/cache window and one named --exact --ignored test are being prepared. This Rust backend check does not depend on P6c [large-table verification and focus checks] browser startup.
+Root refreshed supported read-only GitHub facts at05:27UTC. Stable repositoryID1431108904 resolves toCipherVaults/Notaya. Remote main remains9977e72e46432ef975407d9d5b17913a866b307e and remote N2 [Notion import fixes] remains7806d002fe302d3d22d97b4941590848066e4e93. Explicit open-PR query returned109/45, distinct from the initial author-filtered empty query. Old-name PR search returned422; one canonical request was materially justified by stable-ID metadata and succeeded. No Git fetch, push, remote mutation, reservation or person contact occurred. Receipt3419F4115BFC504FC1D9A4CD4755FAEAC34EB08FF780ED5EE7966CE52B3D1C9F retains bounds.
+Notion's four owned progress replacements saved and exact complete-content readback matched, with no formatting correction or mutation retry this time. ReceiptE85313106C77FB52CCA4720EA25F9CEB3148DD289249B9F05AF675493CC8032E records the qualified archive/installed data, reviewed-unrun import check and remaining startup/product gates. Roadmap, feature lifecycle, authority and acceptance remain unchanged.
+Bounded installed package-source reading is underway under exact native/map hash guards. The Vite worker reports actual CLI compile-cache setup, independent config-bundle .vite-temp writes and supported configFile:false API flow; the Playwright worker reports explicit executablePath, owned TEMP profile/artifacts, unset Selenium and optional native-lookup guards, and Windows shell/taskkill cleanup. These are provisional source observations until their final coverage/recipes close; no package evaluation/browser/native-addon execution follows from them.
+
+## 🧠 Key Insights
+Archive integrity, installed-data equivalence, source/loader review and actual execution are distinct gates. Passing data comparison permits the selected source pass, not arbitrary package execution.
+The missing import evidence is actual close/reopen durability and parenting for the existing empty-home scenario. One backend test can close that gap without rerunning148 selected checks or waiting on a browser.
+A cacheDir setting does not contain all Vite writes. Actual config loader, plugin, native and child-process behavior needs explicit owned paths.
+
+## 📌 Decisions Made
+Accept the installed-data independent readback within its stated evidence limits. Preserve every failed checker/auditor artifact and avoid archive/install/comparator reruns.
+Continue the narrow backend test preparation in the existing independent checkout; Root still separately admits source application, compile, artifact binding, discovery and execution. No new product/history/security requirement is selected.
+Use the canonical repository identity for supported read-only current facts without changing any source remote configuration.
+
+## ⚠️ Difficulties / Friction
+The BOM checker failure and auditor report-construction errors remained in evidence; corrected outcomes were not represented as first-attempt success.
+A tool output after compaction was truncated during delegation. Root checked live agent status and received the task acknowledgement instead of resending an uncertain operation.
+Some deliberately bounded source displays were truncated; Root recovered Goal middle/end and complete CLAUDE text separately. No new whole-corpus claim follows.
+
+## 🔧 Adjustments Made
+Kept the new import test ignored by default because it requires an explicit fresh owned root. Future qualification must run only its exact name with --ignored and require one pass, zero ignored, three case markers.
+Separated the existing Rust qualification path from the independent frontend/Vite/browser path so the latter does not unnecessarily block the former.
+Updated the hub only with closed outcomes and explicit remaining limits, preserving old checkpoint history and repository authority.
+
+## ❌ Mistakes / Risks Noted
+Installed JSON model dispositions are code-bound, not a second observer's complete JSON-body comparison. Do not inflate that assurance.
+No source review, mock fixture or backend core call establishes native interaction, password/backup callback/crash recovery, private parity or release qualification.
+A historical paused Goal-meter placeholder does not replace Ahmed's explicit current approved Goal/continuation. Root changed neither meter nor runtime mode/model.
+
+## 📍 Current Position
+Accepted1.5.1 unchanged;1.6 remains unaccepted. Original D:\Notaya, original lanes and all copied historical lanes/unique dirty work stay protected.
+Local PBS documentation622b3daa remains verified/not pushed. Later full blocks10–13 and every-block usage are retained in CONTROL for faithful adoption at the next milestone.
+N2 [Notion import fixes] production7806 retains148 selected passes; the new persistence test is reviewed, unapplied and unrun. P6c [large-table verification and focus checks] remains atddb52d9 with its two-file test proposal reviewed but unapplied/unrun. Installed data is qualified; selected executable/native startup and actual browser/runtime remain open.
+
+## 🔜 Next Steps
+Finish the bounded N2 [Notion import fixes] readmit/controller adaptation and current source/admin/tool/cache/claim checks, then apply only the reviewed one-file test and build a fresh artifact. Discover and run only the exact named ignored test, retain all synthetic effects and independently audit actual outcomes. Do not repeat148 checks without a new reason.
+Close the selected Vite/plugin/native and Playwright source recipes, qualify actual native/Chrome paths and child/output boundaries, then separately admit runtime startup/P6c [large-table verification and focus checks] final test source/scenarios.
+At the next meaningful milestone adopt later full session/usage blocks with their original cutoffs and provenance into existing owners; no generic record replacement or roadmap change.
+
+## ❓ Open Questions
+Selected native imports/Chrome/static runtime compatibility, actual startup paths and compact focus remain unqualified. The backend check's actual result is unknown until run.
+Eight Study1B amendments/HD1–12 remain open proposals absent later owner decisions; required AI/security capability, Area3 baseline before N3 [canonical Notion identity and arrangement], pre-integration private formula parity/export authority, native/whole-app/distribution gates and owner acceptance stay separate. No owner decision currently blocks this narrow qualification preparation.
+
+## 🧾 Session Outcome
+Installed-data comparison and independent readback qualified; focused N2 [Notion import fixes] test source independently reviewed and source/tool preflight preparation active. Notion progress saved/read-back. Overall1.6 Goal incomplete.
+
+## 🔍 Confidence Level
+High for closed scoped installed-data/source/map/provenance evidence. Current backend persistence test and selected startup/native/runtime gates remain pending; no product/security/private/release acceptance assurance.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra, actual backend/model/effort/provider usage unattested. Runtime Default, Root changed neither mode nor model. Root coordinates/executes/records; git_closure_review authored the minimal import test/design/recipe; generated_gate_review independently reviewed it and reads Playwright source; its non-author child independently audited installed data and reads Vite/plugin/native resolver source. Same Root app run counted once, unknown token/cache/output/cost/quota fields blank/null. No original/historical write/Git, private payload, native/browser/app execution, new tool/dependency installation, automation, roadmap adoption, external person/Fable contact, push/release or acceptance.
+
+
+---
+
+<a id="session-73"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The entire following source, including its original title, all13sections, Time/model/provenance, original EOL and cutoff, is byte-verbatim. Source `SESSION-resume-block-12.md`, SHA256 `A0A4B35CAE85FBA533E79B92FBE2602C5F7F9D32259D831192BF50D2761CC101`. Local anchor/index/provenance do not rewrite its earlier pending states or imply a separate billed run or owner acceptance.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Archive-map closure and installed-data preflight recovery
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root coordinates and executes in the same app run. New ended-work-block continuation after block11; not a new billable run. Adopted transfer of blocks10–12 is pending a later bounded milestone; committed PBS79 bodies preserve their older cutoff.
+
+## 🕒 Time
+After block11 cutoff2026-11-12T03:52:12.8943013Z through 2026-11-12T04:52:07.0719281Z, dynamic Windows UTC. Complete app duration and provider counters unknown. Cairo November12.
+
+## 🎯 Session Goal
+Close actual archive mapping and local documentation identity, preserve a requirement/evidence map for responsible continuation, and qualify fresh installed tool outputs as data before any package/native/app execution. Continue existing1.6 Goal; keep originals, all historical lanes and unique work protected.
+
+## 🛠️ Actions Taken
+Final local documentation closureC4BC5EAAD541763F8D0D5D4271A54DBF0B7D4DF02201B98C5B9B2E75EB3961C5 passed: commit622b3daac386cea8f90d39ba34a3f36bd1318aab, soleparentf94ee6155e26bcc9ad584bea7e5285eb265ad513. Actual957B commit payload rehashed to that OID; direct root5ff461c684820a50a0bde1367ce000d8e0b89bbc equals the independently reconstructed complete672-entry index/96-tree Merkle root, first checked against prior known670-index root. All96physical tree objects were not individually reopened. Actual author/committer are chosen local Codex<codex@localhost>, not a verified human identity. Exact B97message/footer, seven-document diff/clean status and source/admin/N2/SDK protections closed; nothing pushed.
+Root separately admitted real public-cache RawTarMapOnly using exact3FFwrapper/832Dcore, static323Breview, independent04Dsynthetic and B4conditional resource disposition. Native78413 closed0/no timeout/empty stderr. Parent9B0E4F4EF375F2BEF90B6D50FCD7CBEFA30CAF51E56BCC46986946E485D46652; actual4A2DBD0326B779DD38C1D43BDBC43B5B6A399E397C0ED42C2E10D6C25562D284. All317archives97133021compressed bytes mapped in91754ms,402747904tar bytes,0holds/unknown/failure/closure failure,0extraction/installed payload reads/source writes.
+Independent actual map auditABDD8C8F10D5622083AFB87075C0088C0B0F3082A2A112FD6B4251B064D74504 joins322artifact hashes/323file namespace, both1645-row cache native closures,317locked/SRI/native refs,22469expected files,137585event records and23162embedded raw headers. Payload384674985B, zero member padding6213975B,634literal-zero end headers,59filtered directories,0links/unknown/PAX/GNU metadata/holds. Real corpus covers ordinary mapping; PAX/GNU edge behavior remains synthetic-scoped. Expected-file map74F37C9970720FFF87A965D497D72D0ED3AE15155C8BDC5AA6473FE6225AA580 is closed and qualified, not installed-byte equality.
+The reviewer retained634 erroneous controls expecting null for the known end-header checksum; exact reviewed parser emits sentinel-1. Narrow source-bound correction preserved every failed assertion/report, proved exactly those634zero headers and no other failed check, with no producer/archive/source rerun.
+Root updated only owned Notion current-progress timestamp/paragraphs for local docs/synthetic qualification and produced raw mapping. Page edit2026-11-12T04:03:44.804Z. Initial exact-content expectation differed by exactly one LF inserted by native formatting before the owned closing callout; bounded comparison proved every other character/body segment unchanged. No mutation retry. ReceiptFCDA07C387BCEA50B8ADBBBCCA86E67BCF80521A99AA69DA653D2A244F3105FC records the actual formatting normalization rather than claiming initial byte equality. Dated page still marked raw audit under way then; later audit closure is separate.
+CONTROL-only WP01–19 requirement/evidence proposal0E99788D23429099E847BD6D30AE8ABBDCA9DE1BB4662D3B6FC12A34E4674521 and coverage9F5429D0990B5AFE6A4B90E9A2B00578322C3B9C307F9FC1885F07DE5ECBFC11 were produced and read back. Root read all232lines in two complete bounded passes. Worker new direct coverage32files/2109deduplicated lines/6whole plus explicitly retained/projection evidence; not a new corpus-total claim. WP15 is outstanding PC qualification, batch.run refusal remains missing required capability, actual Mohamed sign-in/About remain his disposition. Current44L approved Goal49E hash is authoritative; all8Study1B amendments and HD1–12 stay proposals/open absent explicit owner evidence. Separate adopted per-ID mapping remains unlocated; this does not stop current technical qualification or approve affected architecture.
+A targeted public SDK policy addendum read703/2884lines across8exact qualified files(4whole/4partial),144current-vs-frozen native-field comparisons,0SDK rehash/vendor execution; metadata-reader helpers compiled only. It establishes hidden rows from original locked/actualTree node metadata through Node.syncNormalize and Shrinkwrap.metaFromNode, not raw tar package.json/projection alone. Row omissions, licence.type, conditional names, flags/registry and array types are explicit; unsupported/recalculated flag variances hold.
+Root made exactly2small CONTROL copies from known qualified active public full locks, never historical pointers. Fresh pinnedNoProfile parentD5E1B7158A3E0CB37AC07F4EFA5FA3729F4400FFDDE41CE13015C77A290AAB92 closed0/no timeout/empty stderr. Manifest3DD0A2E1ED593DDCFC4670DB1646FBEC6907E995469A2D655728870403FCE911: frontend220067B/A1D780607B0D3154DF1D2A49628FBA73D5A19C7C1040FE20E0EC02704F8645C0 and tools692B/168951FFDA33E4D197B488FAB7D1B0ABBA981D76AAD6EFABE6C601400A9F88D2. Metadata-first source native9 before/after equals650C/87D4frozen proof; source stream hash, two independent destination readbacks, distinct physical IDs/Links1/ADS0/read-only final attributes. Read-only/hash binding is operational, not ACL immutability.
+Independent CONTROL input readback9789EC14F02839EB67687670EBA43770AB52BA3EEDDA1D16BA713BCC46A3E61B joined381full lock rows/317selected to frozen projection without opening source/historical pointers. Complete metadata fields absent from4468projection, including licence/bin/funding, now have full inputs. Actual installed package.json supplies a separate later name/version check.
+Comparator4FB(92L)/owned C# policyCA03533D(59L) passed non-author static82A34509660C10E885AE615F1763AA5F58CF1AC5E829014D2FDA5511CB4A5F42. Root read both whole through bounded outputs, recovering a truncated middle explicitly. Runtime has ZERO Node/vendor/project child. Only additional host BCL System.Text.Json was queried, not the3already closed identities:14DB39261D7EC6A672617ED45CACED01C932118A76DE1B612D45B99F647ED123, imageFF440FD7D4AE3D5A6D080C1EBAAAE7D5F4145EA162AB12BF8931E92B4311F469. Four actual host identities bound; no installed graph payload by query.
+Root admitted one v4 attempt. Parent64979553F56CFE6D017237C608525E8F21DCD6622E9B3FBE0009732B8C808BAA closed childExit1/no timeout/empty stdout, retained stderr: JSON size/BOM policy held. It stopped at the first CLOSED CONTROL map row before evidenceRoot/AddType/model/installed-data access. Diagnostic:693B ASCII first row, codepoint123; culture-en-AS default StartsWith(U+FEFF) returnedtrue even for ASCII, explicitOrdinal false. This is a checker guard defect, not an installed mismatch.
+Additive v5EB0A172A9B43B1B55ED547CB7B088C9A3F05063ABDFA9133018FB147CD54272C(107L) changes BOM matching to explicitOrdinal and adds3owned preflight checks: valid non-BOM JSON accepted, actual BOM refused, exact duplicate key refused. Inverse proof recovers v4; policy/data guards remain unchanged. Independent staticCBABAC0A073BDFD51D7FA9A64F1056A6EACCB1B0018B852E7151778A1C011ACF, correction packet6D07224B76E3E9AA859CA48BFE6C043043755270141F34B610546CC442D7763F. Root read exact delta, retained all failed evidence and separately admitted ONE materially justified fresh attempt. Native77089 is STILL RUNNING at cutoff; no installed-byte, policy-selftest, package, hidden-lock or final closure result claimed.900s stage/1200s owned-parent limits are technical guards, not product performance thresholds.
+
+## 🧠 Key Insights
+Exact input archives and expected paths are meaningful qualified evidence, while ordinary installed bytes, package/hidden-lock metadata, native binding, startup and real behavior remain separate.
+The source-policy model needs full original public lock metadata; matching projection fields or raw tar package metadata would omit or misinterpret rows.
+Culture-sensitive string predicates can be unsuitable for byte-format guards. The observed failure is corrected without relaxing the BOM policy or retrying unchanged work.
+
+## 📌 Decisions Made
+Close only qualified actual archive mapping and local record identity. No product or release acceptance follows.
+Keep all8amendment/HD proposals open; record current owner-authority through Goal49E rather than infer scope from stale records or missing phrases.
+Allow the narrow SDK policy read/two220759B public CONTROL copies/additional public BCL hash needed for comparison. Make one fresh v5 attempt only after actual diagnosis, preserved failure and independent source review. No archive/restoration/148test rerun.
+
+## ⚠️ Difficulties / Friction
+Index save hit Windows command length before dispatch and a bounded range-preparation issue; both were preserved and corrected without source/qualification retry. Structured CONTROL output was read back.
+One source-display output was truncated; it was not counted whole until exact56–72recovery covered the missing section. Native Notion formatting added one verified delimiter LF; initial inequality was inspected before any further write.
+Installed-data v4 held before payload due to the BOM guard described above; no owner denial or app/data corruption is inferred.
+
+## 🔧 Adjustments Made
+Separated full locked metadata from tar package metadata, preserved typed arrays and added model/JSON constant checks before payload.
+Created a complete19item CONTROL proposal with source/implementation/historical/current/acceptance/dependency distinctions; it is not an adopted roadmap.
+N2 [Notion import fixes] closure preparation reuses existing1244-line non-author final-delta review and148actual passes. Persisted long-wrapper/ambiguity/over-skip/cancel/lock/rollback/compatibility scenarios already passed within scope, so they are not generically re-queued.
+
+## ❌ Mistakes / Risks Noted
+Do not call the guarded failed v4 attempt a dependency/product failure, install success, or completed comparison. Do not hide a failed test oracle by weakening expectations; sentinel and BOM changes have precise immutable-source/actual-data justification.
+Do not claim a source licence/flag model is universal npm equivalence. Unsupported shapes or recalculated flags must remain explicit holds.
+Do not sum overlapping SDK/project coverage or infer product/native/security correctness from source maps, mock/internal rendering, injected approval or ignored-pipe evidence.
+
+## 📍 Current Position
+Accepted baseline1.5.1 and unaccepted1.6 unchanged. Local docs622 independently closed, no push. Originals/all51historical copies/dirty unique work protected.
+N2 [Notion import fixes] exact7806 retains148selected passes and scoped final non-author review; still unmerged/unaccepted. Empty-source-home persistence/native parenting/navigation and applicable final integration gates remain.20k sibling-index test is not an import beyond existing5000-page limit.
+P6c [large-table verification and focus checks] source protected atddb52d9d473d9331e9361baa714774fe78a0ad22; no two-file test patch applied or app/table tests run. Verifier/archives/maps qualified; v5 installed data comparison pending. Compact focus unobserved.
+
+## 🔜 Next Steps
+Observe native77089 terminal and actual closed outputs before any retry or qualification claim. Independently read back every resulting scope, including3owned JSON/7model checks,23966namespace closures,22469ordinary bytes before317package/2hidden data, full locked rows and runtime/source guards. Preserve partial outcomes if it holds.
+Then selected startup/native/browser path/source qualification and exact robust5000/20000ordinary+zero tests/focus observation. Continue a minimal N2 remaining-check design from existing evidence, not a blanket test/code campaign.
+Adopt later full work blocks/usage faithfully at a reviewed milestone and update owned Notion progress with actual results. No roadmap/product design selection, original mutation, private input or external contact.
+
+## ❓ Open Questions
+Installed comparison outcome and any baseline-flag/model variance remain unknown. Native/startup/browser behavior remains unqualified.
+Separate per-amendment/HD decision mapping and security custody/readback source gaps must be reconciled before affected implementation. Existing required capabilities, private formula parity/export, native persistence/rendering, survey/distribution and owner acceptance retain their gates. No current owner decision blocks the bounded v5 attempt.
+
+## 🧾 Session Outcome
+Archive mapping/local records qualified; source-derived installed comparator prepared and first preflight failure diagnosed/preserved. Corrected fresh attempt is active. Overall1.6 Goal incomplete.
+
+## 🔍 Confidence Level
+High for closed archive/map/doc identities and controlled source inputs. Pending v5 installed comparison/runtime; no app/security/private/final acceptance assurance.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra, actual backend/effort/provider counters unattested. Runtime Default; Root changed neither mode nor model. Root executes/records; generated_gate_review authors comparator/policy and bounded SDK captures, its non-author child reviews source/actual archive evidence; git_closure_review prepares read-only requirement/N2 matrices and independently closes actual docs. Token/cache/output/cost/quota unknown blank/null, same Root app run counted once. No original/historical write/Git, private/comparison payload, vendor/project execution by these comparator phases, installs, scheduler, roadmap adoption, partner/Fable contact, push/release or acceptance.
+
+
+---
+
+<a id="session-72"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The entire following source, including its original title, all13sections, Time/model/provenance, original EOL and cutoff, is byte-verbatim. Source `SESSION-resume-block-11.md`, SHA256 `13D23BFC607CF0FD8B89BEA3033A9D9BE10D478C6BD8504594DFECB7A1437DD4`. Local anchor/index/provenance do not rewrite its earlier pending states or imply a separate billed run or owner acceptance.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Documentation commit and synthetic verifier qualification
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root coordinates/executes in the same existing app run; this is the next ended-work-block record after block10, not a new billed run. Adopted repository transfer of this and block10 is pending a later bounded milestone; frozen PBS79 bodies preserve blocks06–09 exactly.
+
+## 🕒 Time
+After block10 cutoff2026-11-12T03:07:27.2875720Z through 2026-11-12T03:52:12.8943013Z, dynamic Windows UTC. Complete app duration/provider counters unknown. Cairo November12.
+
+## 🎯 Session Goal
+Continue the existing1.6 Goal from actual evidence: finish the seven-owner local PBS documentation sequence, validate the new package verifier on synthetic data, and prepare the separately bounded public-cache comparison. Preserve originals/raw51historical lanes/unique work and current importer/source/artifact. The user's status question was answered and ongoing work continued.
+
+## 🛠️ Actions Taken
+Independent Apply readback66A1BE9A2E77110F94399DB66162C55F97ADE26CE0896870499722DC30FEF92E closed exact5M2A and unchanged source/admin/N2/SDK frames. Root separately admitted Inspect, native50912 closed0/parentstderr0/notimeout. Independent48966B8C70D9D608C518BF9169CE4831DC80D3E7C3BAF630A002EDB4448FAA65 verified all6outputs and complete closed frames. Two child commands each emitted the exact109B LF-to-CRLF notice; diff-check passed and working bytes did not change.
+Root separately admitted Stage, native79523 closed0/notimeout/parentstderr0. Eight fixed commands staged only7explicit reviewed documentation paths. Independent422CE832078CE72C028A18A89D4F2C2690AEB116D28EA9CA0670772EFA9412F6 joined all676working rows, protected N2/artifact/SDK,2890→2897admin files: only index plus7expected new loose objects. The add command had the same109B notice; other7childstderr were empty.
+Root independently calculated all7normalized blob IDs using strictUTF8, CRLF→LF only, incremental Git-header+payload SHA1 and normalized SHA256; no trim/BOM removal/Unicode rewriting. Artifact587538E0DE9DD98E8CF40FE4CBA13F6770EDD29DD502BC2831E03755618D0189. Actual ReadStaged native41526 then closed11commands0/empty stderr/no timeout. Non-author61040FE4899508411D0233F47C0CD61E10A92DA052EA75DE6E0F24E76377E6A2 parsed all672tuples against670baseline:665unchanged,5modified,2added,0deletion/mode changes. All7actual raw blobs843308B equal reviewed normalized candidates and independently recomputed OIDs.
+Root made an additive message precision change: B97CC67C98D6D6D4044A809E2A31F900F95B79D22ECB4FCB21579C90F81EB6D9 explicitly distinguishes the documents'01:57:56Z historical cutoff from later compressed SRI. Non-author message reviewDA3C24048D46D0CB50423BBBED6842C8FE78BCED7574B9FF446742838AF0560C approved exact footer/chosenAI attribution; staged document bodies unchanged.
+Root separately admitted Commit, native11484 closed0/no timeout/empty stderr. Actual local commit622b3daac386cea8f90d39ba34a3f36bd1318aab has soleparentf94ee6155e26bcc9ad584bea7e5285eb265ad513, exact7document diff names, clean reported poststatus and B97message. Partial actual audit6FC8F7B6939DF0A0A54A2570C77568B93437E2A6091FA8E372F621C548CD3D80 closed9command/protection results; admin2897→2903 changed only5approved existing metadata files and6new objects. All676working/N2/artifact/SDK frames remain unchanged. Final actual header identity/tree closure was still pending.
+The independent all672-index tree reconstruction97543475463E622B6EB4E68BC05A0063995A82CFB3F1E52AFF9A2EE909009E25 first reproduced prior known670-index/f94root9139e40f5bd09eee2e3dfe4c20b470366ee91dee, then expected new root5ff461c684820a50a0bde1367ce000d8e0b89bbc. Root admitted one additional fixed cat-file commit read through independently reviewed126L wrapper8E2D1A78E2B98546D52E397A1994E7BE0810F251005B3FA88A14332AA024716C; code/schema review1A2EDDB468F35078D9ED227B918F4C4100FE7B349D6585CC3E173462AAE003B8. Root read whole119L v1 plus the final12L NoPointers function; all13 borrowed helpers remain exact43A5. Actual one-read parent760C5967E943E8F9D4BE07A77FF636C70CB9D9229AA047DD9401FA6D4C16C838 closed0/no timeout/empty parentstderr and1command. Independent direct header/OID/identity/root proof is now under way, not claimed complete at this cutoff.
+Root updated only the Notion hub's owned current-progress timestamp and paragraphs, adding actual317-archive SRI and seven applied/readback docs. Fetch readback was exact full-content equality after exactly2unique edits; all other body content preserved, page edit2026-11-12T03:10:43.526Z. ReceiptB0B8CC8C54CBD059205D53B139C10EBE1224CDB4CC445C82DEC445CA940D2B86. That dated hub checkpoint does not yet claim the later local commit or synthetic results.
+The bounded extractor-source extension is explicitly partial: worker new1012/1404lines across7files, cumulative selected1960/8108; artifact21A39A29C36FDD7EBA4DFD05FD0DE419148B86F5CECAF02B667891CDFEE87A43. No SDK-wide reread or payload rehash. Source-backed checksum field width12 is retained; unsupported numeric/string/path forms hold/fail without a mapping claim.
+Static review found and closed tooling defects before execution: raw/partial header preservation, both metadata-size conflict directions, strict null-block distinction, independent cleanup and failure/closure reserves, correct partial-read oracles, independent complete-input SHA512/boundaries, and JS-safe hex/bin/oct size guards. All older proposals/findings remain additive. Final core832D257164D11660136AF942D9953384627DEBC414D5650699FE3E9EE3429638; suiteA891AB4FF110482E30FEB55995FBC1DF04741BA3361C800E4FE6A6CBD844D7C5; synthetic host9AD8CDDAB743682CAE0835B6D29ACFEFF3F1DEBA3EECDFC0F0772C2BFFB2CCC3; real-data wrapper3FF2204F09F64B998AC30E1EAD24AA20CA67CDBAFD9E0A07B602930302948A57; contract068FB30DF1365A63441E1D5570E459E02A8A0DAFABEFA7EA319494CD57FDA511. Separate non-author static receipts1D4DE7E13D07EDC60A9405EFDEF584BC379A8996B7E79B7C3047E14497FE2545 and323BA4279520BA152E5F73C04A5869E44E8EEA83EFD665C393F5B8519938A0D6 grant no execution authority.
+Root wholly read earlier295L core,105L suite,56L host and all final changed statements/bindings, plus whole final161L data wrapper. A separately pinned freshNoProfile read-only runtime queryC1475CC9D621A16005074372CD509C3F7F8576389EB8A6F95239BB0E412AE877 captured the3required managed BCL image identities within the installed host; no compile/parser/project/cache read. It is not SDK-wide/native-loader assurance.
+Root then separately admitted one bounded CONTROL-only synthetic invocation. Native70252 closed0/empty stderr/no timeout, parent743B140CE28BE5961090BFE9A2A4E18BCD33A90B9581F9D3F19FB53D2A90538C and actual60F0994F1CB38665AB394B905FEF5BA3D53F79F7D01833D025EB6CB691D5C2D0. C# compiled;35case groups/142variants and12cost samples completed in12512ms,2222JSONL records820762B, fixture accounting92260159B. Independent04D24D8E3B77CE074E311910271343F408C90F9CD965BDCDA2DD57C8E8160458 passed6797closed-record checks:94complete variants(57usable maps/37explicit holds),48expected errors, exact35IDs, runtime/code joins, exact partial returned counters and measured output/timing. These are verifier synthetic outcomes, not Notaya feature tests.
+Largest17.69MB random compressed sample took3675/3564ms including durable callbacks/expected-hash work; first/subsequent labels do not mean OS cold-cache or pure inflater throughput. BUDGET02 injects a callback exception after durable forwarding; BUDGET03 and real-wrapper disk/reserve/disposal/watchdog policy are static or simulated, not actual disk failure/live kill tests.
+Root resource dispositionB4E2207997B3DDC75787C264AE23DEE23A45AD740FED2909DBF1F40901C7F5EF conditionally permits a later exact317-archive/97133021B data attempt with600s internal/900s parent ceilings and existing1GiBnormal/2GiBtar/2Mrecord/explicit reserves. It requires the independent synthetic pass and NEW separate Root data admission; it opens no archive. D free75679887360B at03:46Z, sufficient for bounded evidence without another full project copy. No actual tar/cache body stage or expanded-file read has run yet.
+
+## 🧠 Key Insights
+The full record cutoff and the time of adoption/commit differ; preserving historical bodies requires explicit dates rather than silently rewriting earlier pending states.
+Exact source/native protection, staged normalized bytes, commit identity/full-tree binding, compressed SRI, synthetic correctness and real installed/runtime qualification remain distinct gates with useful scoped evidence.
+Static review caught real tool/oracle defects before data use. Runtime synthetic assertions then provided additional API/partial-read/cost evidence; neither stage proves universal parser correctness.
+
+## 📌 Decisions Made
+Create only the authorized local seven-document commit; no product source, roadmap, acceptance or remote publication change. Keep exact source owners and one-app-run unknown usage.
+Use one bounded synthetic invocation, rather than three unnecessary per-phase approvals; stop first failure and preserve every attempt. Its successful actual audit does not auto-open real archives.
+Approve only the conditional technical resource disposition; later fresh actual-data admission remains separate. No owner decision currently blocks bounded verification.
+
+## ⚠️ Difficulties / Friction
+A full-body Notion receipt shell command was rejected before process creation by Windows length limit(os206); a compact version failed PowerShell parsing due to a typographic apostrophe before file access. Structured additive patch saved the compact receipt and native readback verified its hash; no duplicate page write/retry occurred.
+Several worker control-display/accounting commands had parser/schema issues before execution or source access and were corrected additively; actual producer runs were not repeated. One diagnostic grouped reset variant numbers without case IDs and was corrected to caseId+variant.
+A displayed runtime-path double-backslash concern was checked against actual deserialized file values/codepoints. All3paths are equal byte-for-character across source/admission/producer, each separator run1; the concern was outer serialization, not a path defect. No evidence/path normalization or SDK re-query was needed.
+
+## 🔧 Adjustments Made
+Kept explicit109B normal EOL notices, rather than claiming all childstderr empty or treating them as source changes.
+Separated controller authorship, document/message authorship and Root execution. Non-author claims identify their exact scope and point to separate technical source reviews.
+The commit-object helper narrows the final read to one public Git object/five critical metadata rows, reusing qualified SDK leases and avoiding a repeated source/admin scan.
+
+## ❌ Mistakes / Risks Noted
+Do not call expected negative/held synthetic variants product failures or report all142as usable real maps. Do not convert static/simulated disk/timeout policies into runtime tests.
+Do not claim seven-doc commit header/tree identity verified until its one-read actual independent audit closes; previous clean status/parent/names alone do not provide that direct header.
+Do not weaken safe-integer/window/count oracles, bypass unsupported mapping holds, silently follow original links or activate preserved historical lanes.
+
+## 📍 Current Position
+Accepted1.5.1 remains separate from unaccepted1.6. Main has produced local documentation commit622b3daac386cea8f90d39ba34a3f36bd1318aab abovef94, exact7paths and clean reported status, final direct-header independent closure pending. Nothing pushed.
+N2 [Notion import fixes] exact7806d002fe302d3d22d97b4941590848066e4e93 retains148selected Rust passes, unmerged/unaccepted; no tests repeated here. Protected source/artifact remain unchanged.
+P6c [large-table verification and focus checks] protected3535source/admin rows remain atddb52d9d473d9331e9361baa714774fe78a0ad22. Fresh generated modules/cache exist separately; compressed SRI and verifier synthetic gates passed. Real tar map, expanded byte/hidden-lock/native/startup/browser checks and two-file test-only patch application are still pending. Compact focus remains unobserved.
+
+## 🔜 Next Steps
+Close actual commit header/identity/full672-index tree readback, then update owned Notion progress with the actual milestone.
+Separately admit the exact reviewed public-cache tar-map stage after binding all closed evidence and Root budget. Stop/retain evidence on any drift, hold or unsupported entry; no installed payload reads/extraction/vendor execution by that stage.
+After qualified raw mapping, separately compare installed bytes, package/hidden-lock graph and selected native/startup resolution; then browser/mock/test-only final-source cases and compact-focus observations. Preserve adopted records and relevant source/authority/acceptance ownership without another broad reread.
+
+## ❓ Open Questions
+No required owner decision has emerged in these bounded technical steps. Real archive/expanded/native/browser results remain unknown.
+N3 [canonical Notion rows], P7 [database query windowing], other views/AI/security reconciliation, measured polish, person-controlled private parity/export, whole-app real-executable/source-to-binary/packaging and owner acceptance remain separate. All8Study1B amendments and HD1–12/integration/history proposal decision states remain unchanged. No contact or new study reading.
+
+## 🧾 Session Outcome
+Seven-owner documentation milestone produced locally with exact staged-content/source protection; final direct header/tree readback underway. Verifier compiled and passed a bounded independently audited synthetic run. Actual public-archive mapping and overall1.6 remain incomplete.
+
+## 🔍 Confidence Level
+High for exact staged blobs, scoped actual commit outputs/protection and independently audited synthetic outcomes/runtime bindings. Pending direct commit-header closure and no real archive/installed graph/app/security/persistence/private parity/acceptance assurance.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra; actual backend/model/effort/provider usage unattested. Runtime Default; Root changed neither mode nor model. Root executes and writes message/control session records. git_closure_review authored controllers and independently audited actual document/message/runtime evidence, not document-byte author or executor. generated_gate_review authored verifier core/suite/hosts and independently reviewed Git helper; its non-author child reviewed source and actual synthetic output. Usage input/cached/output/cost/quota unknown blank/null, same root app run counted once. Originals/raw51historical copies/unique dirty and untracked work/private inputs/automation/roadmap/contacts/push/release/acceptance remain protected; all owned runtime commands are closed at this cutoff.
+
+
+---
+
+<a id="session-71"></a>
+
+**Transfer provenance (new):** Ahmed (AE0101), Gaming-PC. The entire following source, including its original title, all13sections, Time/model/provenance, original EOL and cutoff, is byte-verbatim. Source `SESSION-resume-block-10.md`, SHA256 `D2737D306CD512CBDFE2712EC39AB48C7A7548FA63FF2C3D114DAF7A407B501C`. Local anchor/index/provenance do not rewrite its earlier pending states or imply a separate billed run or owner acceptance.
+
+# 📘 Session: November 12, 2026 UTC · Ahmed · Gaming-PC · Archive integrity and seven-owner PBS application
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Root executes and coordinates. Same existing root app run, no new billable run. This is the next ended-work-block checkpoint after block09; faithful adopted transfer is pending a later bounded documentation milestone.
+
+## 🕒 Time
+After block09 cutoff2026-11-12T01:57:56.2721796Z through 2026-11-12T03:07:27.2875720Z, dynamic Windows UTC. Complete app duration/provider counters remain unknown. Cairo November12.
+
+## 🎯 Session Goal
+Continue the existing1.6 Goal: qualify the newly restored locked tools without original/private access; apply the independently reviewed seven-owner PBS update; preserve actual results, rejected proposals and incomplete gates. The user's status request steered communication and did not cancel ongoing work.
+
+## 🛠️ Actions Taken
+The metadata-first post-restoration classification closed with25614 rows per initial/final frame:23107files and2507directories across frontend, tools, cache and logs. No holds, duplicate physical IDs, reparse/EFS/offline entries, ADS or drift. Every file is ordinary single-link NTFS. The file-length sum482356569B is metadata, not a measured capacity peak or payload-read proof. Package versions and expanded bodies were not read by that pass.
+Independent metadata receiptC830B2B6E027A9A8F14753EE99D2C20D02D8FF74154A73C6E865921DFBDEB307 distinguishes the agent-owned metadata host from Root's later independently pinned host. No retroactive stronger process attestation is claimed.
+Root admitted and executed only the reviewed stream-only archive SRI stage. Native29177 closed0/no timeout/empty stderr. Actual317 compressed archives97133021B matched their locked SHA512 integrity strings; all native9 fields and1645 cache namespace rows remained stable. Cache index-entry bodies were not read. Actual summary00F2C69A06061AD25820CB024F20D2BC5DF32679FAFE1CD0386117A14D5BD10E; parent1E967FEDAF4FB99F611BB81D09D3224A4528A81F1B084AE9BA413694C2B46D14. Non-author actual readback535DE1025A3482CBFC6DA8891347B77641A517395D4E3FA2FA5063E2C0458D89 independently checked all317 references and counts/native frames. This is compressed-archive integrity, not extraction or app qualification.
+The bounded raw gzip/tar mapper proposal extended only directly relevant qualified public SDK helper reading. The proposed parser retains raw/framing/exposed fields separately, PAX/GNU state/dispositions, payload hashes and Windows/Pacote mapping. Static non-author review found malformed-checksum preservation, both metadata-size conflict directions and installer-null/literal-zero distinctions; additive v4 addresses them. Root wholly read295-line v4SHA9DF15A2374C4B0AA6A02AA0108E9D7AD32099F1B9915F9F79B141AD7B4621AFC. Compilation, synthetic validation, actual tar parsing and expanded graph reads remain NOT RUN. Wrapper/independent review remain in progress.
+The Notion hub's owned progress paragraphs were updated and exact-read back at2026-11-12T02:04:52.511Z, preserving all other body content and source ownership. Receipt1A56D75D4B58861379E786AAFA7EDA84F1DB58D73A8BFFDF9F3C94E4E405F9C4. That dated checkpoint records produced restoration and pending archive/runtime qualification; it does not yet incorporate the later SRI result.
+PBS79's final candidate manifestA9FF769E039EEDDB050C31B3BC0F7561EEE9CDFD56BFDFF521D8D68AABF3218F passed separate content/history/byte review517DFF3359673CC95617701F2C44FDCD568516026A2A1417DD7E39703D12FFA4 and current674-working/2890-admin baseline review4A7F81791F61DC2D023740C2568A1BF4CE07A074EC453AEA03923147F573925E. Old bytes, full blocks06–09, eight raw usage/segment bodies, titles and EOL remain recoverable verbatim; no duplicate billed app row.
+Controller v2 review found missing owned child profiles and immediate-CWD Git loader checks. Additive v3 includes these, pins all11 import names, and holds6SDK images/14complete aliases through commands. Independent code review6CD5A2401F855FCADA2BCDC472AC8123A3E1234EE7E4B94D9A78A921B41999E9 approved the bounded proposal without self-authorizing execution. Script43A584B3F8045C27798329B0C7B1619FC0FD2F821AE9E8F1A131CA4E8479FD46.
+Root separately admitted Apply only. Native28557 was polled to exit0/no timeout/empty stderr. Parent launcher2967806EE086E6D45CE566A2AF1A7E2BF359540F97311F8F25E3AD416B01E1A3; stage control\restricted\pbs-apply-20261112T025701Z-b98e8103\summary.json reported Apply completed6read-only Git commands and exactly5existing documentation modifications+2new files.676working rows, mainadmin unchanged21CEC4F1021E0C659D65954902CEF0EB6EA71CB2F44A2EAB4EFC08638B7A3691, index8BAFF836D78359BBCD44F6B2F2CE46A84B4353158CDDED12B3BBEE54A8B85676, HEAD6065AB2ED88D990DBA89D305253B40D06E7462A7AD2A2991F7ED5763C6758203. No stage/commit/push/product/N2/original/historical write. Actual independent Apply readback is underway, not yet approved at this cutoff.
+Root wholly reread the268-line controller across complete bounded outputs after one aggregate-output truncation and independently recomputed all7 normalized Git blob IDs. These match the controller author's expected proposal. That calculation reads candidate bytes only and is not actual staged proof.
+
+## 🧠 Key Insights
+Locked restoration, compressed SRI, exact extraction mapping, installed startup/native resolution and browser behavior are distinct useful evidence. Neither a successful install nor refusal of an unsupported tar shape qualifies the expanded graph.
+Git inspection isolation and tool execution isolation are separately qualified. Operational single-writer/source checks are not an arbitrary-code sandbox, native no-follow-write or a proof of global absence of outside writers.
+A documentation-only local milestone can preserve full PBS continuity while product work remains gated; applying docs is not staging, committing, integrating, acceptance or release.
+
+## 📌 Decisions Made
+Close only actual compressed-archive SRI; retain expanded/startup/native/browser/test gates open. Do not repeat completed restoration/SRI work.
+Continue exact seven-owner PBS milestones through separately admitted Inspect, Stage, ReadStaged and Commit only after actual independent prior-stage evidence. No automatic following stage; no owner permission request for already authorized bounded technical work.
+Retain the final two-file P6c [large-table verification and focus checks] test-only proposal unapplied until executable/tool gates pass. Observe compact focus before any product fix; no blanket repair campaign or roadmap update.
+
+## ⚠️ Difficulties / Friction
+Two clock tool calls in the preceding continuation failed before dispatch; dynamic Windows UTC is used instead of guessed timestamps.
+A completed worker's send_message did not trigger a new turn; followup_task is required. One followup was rejected by the concurrent thread limit before execution, then retried once after a slot demonstrably freed. This was a capacity outcome, not a permission/auto-review rejection or user blocker.
+Two JSON-escaped backslash readings initially appeared to imply a code defect; AST/codepoint inspection proved the actual single separator and Root withdrew those unnecessary proposed changes. No false script version was generated for that claim.
+The current Root read command used foreach directly before a pipe and received a PowerShell parser error before data access; the corrected separate bounded reads succeeded. A blob-calculation draft's literal CRLF notation was corrected before execution. Preserve these limits without claiming a process ran.
+
+## 🔧 Adjustments Made
+Use additive rejected/fixed controller/parser versions and actual readbacks rather than overwrite proposals or infer outcomes. Bound own launcher processes, profiles, environment, imported SDK aliases and source/admin rows.
+Scope non-author claims honestly: documentation byte author differs from content reviewer and Root executor; controller author may audit actual documentation results but is not independent of its own controller code. Separate controller non-author review remains pinned.
+User-facing work codes now use square-bracket explanations, for example N2 [Notion import fixes] and P6c [large-table verification and focus checks]. Existing historical source bodies stay verbatim.
+
+## ❌ Mistakes / Risks Noted
+Do not call metadata counts actual package-version verification, equate SRI with extracted-file correctness, or imply project/plugin/browser/native execution occurred. No actual tar parser has yet run.
+Do not report Apply as a local commit or the latest dated Notion checkpoint as evidence for later SRI. No staged/commit readback has yet occurred for PBS79.
+Never activate copied historical lanes, follow original pointers, read held/private inputs, prune16preserved dangling objects or discard unique dirty/untracked receipts.
+
+## 📍 Current Position
+Accepted baseline1.5.1 remains separate from unaccepted1.6. Active mainHEADf94ee6155e26bcc9ad584bea7e5285eb265ad513 plus7applied-but-unstaged PBS79 owners. Earlier f94 documentation milestone is local/not pushed.
+N2 [Notion import fixes] exact7806d002fe302d3d22d97b4941590848066e4e93 retains148distinct selected passes with0failures/ignored/timeouts/zero matches; not all785catalogued tests were run. It remains unmerged/unaccepted and source/artifact protected.
+P6c [large-table verification and focus checks] source remains exactddb52d9d473d9331e9361baa714774fe78a0ad22 with3535frozen source/admin rows. Independent Git/Node SDK/identity/produced restoration and compressed SRI gates passed; expanded/tool/browser and actual table/focus qualification remain pending. No test-only source patch applied.
+
+## 🔜 Next Steps
+Finish independent actual Apply readback, then the remaining four isolated local documentation stages and their actual readbacks. Preserve exact normalized staged blobs and final commit tree/parent/source/admin before calling the docs milestone committed.
+Finish reviewed rawtar wrapper and separately admitted synthetic validation, including measured one-byte deflate boundary cost. Only then admit actual317archives for full header/disposition/mapping proof, compare all expected expanded files and reconcile two generated hidden locks, then selected restored startup/native/installed browser gates.
+Apply/review/run the exact bounded test-only change on a qualified final source revision, including5000/20000 ordinary and zero-sum cases and clean compact-focus observations. Update adopted records and the owned Notion paragraphs at meaningful actual milestones.
+
+## ❓ Open Questions
+No owner decision currently blocks this bounded technical verification. Unclassified/unsupported actual data must be reported rather than silently omitted or called qualified.
+N3 [canonical Notion rows], P7 [database query windowing], other views/AI/security contracts, measured polish, private person-controlled formula/export parity, whole-app real-executable/source-to-binary/packaging and owner acceptance remain separate. All8Study1B amendments and HD1–12/history/integration proposals retain their existing decision states.
+
+## 🧾 Session Outcome
+Actual metadata and compressed SRI are qualified within their explicit scope. Seven reviewed adopted documentation files are applied with no staging or product mutation; independent actual Apply review pending. Ongoing tools qualification and overall1.6 remain incomplete.
+
+## 🔍 Confidence Level
+High for independently reconciled metadata/SRI and Root terminal outcomes; producer Apply summary awaits independent full readback. No assertion of full expanded-graph/app/native/security/persistence/private parity or acceptance assurance.
+
+**Models, Effort, Roles and Provenance:** Requested/inherited GPT-6.1 Sol Ultra; actual backend/effort/provider usage unattested. Runtime Default; Root changed neither mode nor model. Root executes; git_closure_review authored controller and audits actual documentation, not documentation-byte author/executor. n2_candidate_tools authored documentation and independently reviewed controller/SRI, not its own content. generated_gate_review and its read-only child prepare/review parser data-tooling; no compilation/execution yet. Provider input/cached/output/cost/quota unknown blank/null in the same existing app run. All original/raw historical lanes/private inputs/automation/roadmap/contact/push/release/acceptance boundaries remain unchanged.
+
 ---
 
 <a id="session-70"></a>
