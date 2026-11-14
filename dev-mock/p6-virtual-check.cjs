@@ -70,7 +70,7 @@ const checkSeed = (snapshot, n, fixture, prior) => {
 const digestIds = (ids) => require('node:crypto').createHash('sha256').update([...ids].sort().join('\n')).digest('hex');
 // Observe a completed saved generation; never force a save or move focus.
 const waitForSavedView = async (p, seed, collapsed, previousRevision = -1) => {
-  const handle = await p.waitForFunction(async ({ databaseId, viewId, statusId, collapsed, previousRevision }) => {
+  const observe = () => p.evaluate(async ({ databaseId, viewId, statusId, collapsed, previousRevision }) => {
     const { invoke } = await import('/dev-mock/core.ts');
     const { peekDatabase, hasUnsaved } = await import('/src/features/database/dbStore.ts');
     if (hasUnsaved(databaseId)) return false;
@@ -86,7 +86,42 @@ const waitForSavedView = async (p, seed, collapsed, previousRevision = -1) => {
     if (JSON.stringify(savedView) !== viewKey || JSON.stringify(currentView) !== viewKey) return false;
     return { databaseId, viewId, revision: saved.rev, viewKey };
   }, { databaseId: seed.databaseId, viewId: seed.viewId, statusId: seed.status.id, collapsed, previousRevision });
-  try { return await handle.jsonValue(); } finally { await handle.dispose(); }
+  const timeoutMs = seed.byId.size >= 20000 ? 120000 : 30000;
+  let stopped = false, timeout;
+  const ensureActive = () => {
+    if (stopped) throw new Error('Saved-generation observation cancelled');
+  };
+  const poll = async () => {
+    for (;;) {
+      ensureActive();
+      const completion = await observe();
+      ensureActive();
+      if (completion !== false) {
+        assert(completion && typeof completion === 'object' && !Array.isArray(completion), 'Saved generation returns a completion object');
+        assert.equal(completion.databaseId, seed.databaseId, 'Saved completion database identity');
+        assert.equal(completion.viewId, seed.viewId, 'Saved completion view identity');
+        assert(Number.isInteger(completion.revision) && completion.revision > previousRevision, 'Saved completion revision advances');
+        assert.equal(typeof completion.viewKey, 'string', 'Saved completion has an exact view key');
+        return completion;
+      }
+      // Preserve waitForFunction's default RAF cadence after an awaited false observation.
+      await p.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+      ensureActive();
+    }
+  };
+  const deadline = new Promise((_, reject) => {
+    timeout = setTimeout(() => {
+      stopped = true;
+      reject(new Error('Saved generation did not complete within ' + timeoutMs + 'ms'));
+    }, timeoutMs);
+  });
+  try {
+    // Promise.race installs rejection handlers on both branches, including late settlement.
+    return await Promise.race([poll(), deadline]);
+  } finally {
+    stopped = true;
+    clearTimeout(timeout);
+  }
 };
 const verifyGroups = async (p, table, seed, n, fixture, bounded, finishPaint, completion) => {
   const snapshot = await mockSnapshot(p);
