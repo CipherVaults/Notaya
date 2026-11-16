@@ -1,5 +1,14 @@
 # Notaya recovery manifest — 2026-11-16
 
+<a id="core-main-integration-20261116"></a>
+
+## Current recovery authority after main integration
+
+**2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** the reviewed source/PBS checkpoint is complete within its recorded selection, and the existing feature Goal has resumed under [A57](../plan/approval-and-amendments.md#a57-core-resumption-20261116). Main now contains PR133 and132 at **d23fda0b482e6e458bea8158065e9cf2f77f99e6**, tree4248d72e456be8936a5bd585d88c4e9dca28d9a4, independently HTTPS-verified. For a replacement PC clone the private repository's **main** branch, then read the newest STATUS/A57/full session and this manifest before execution. The record branch codex/integration-checkpoint-20261116 owns this closing update; its publication/merge identity belongs in the PR/remote readback. Older branch-specific recovery steps below retain their dated source-backup context and do not impose a current feature hold.
+
+[EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-main-integration-20261116) records non-author source/conflict review, source-equivalent export/checker evidence and the fresh exactf41d565 frontend build. Main integration is not release or owner acceptance. N2 remains separately recoverable at8950 and unmerged. Raw artifacts, frozen22 payloads, unique inactive histories and private material retain the previous exclusions; no complete backup of every PC byte is claimed. Source/lockfiles/setup dependencies and exact historical planning documents already in Git remain recoverable. Before next database workflow refresh all changed source/admin/runtime pins; current full workflow/native/persistence/release limits remain. No unrelated scripts, legacy automation or real vaults are authorized as tests.
+
+
 ## Verified recovery checkpoint — 2026-11-16T09:18:04.7171869+00:00 / 2026-11-16 11:18:04 +02:00 Cairo
 
 The reviewed non-frozen source and current Notaya continuity records are off-machine on [Main/PBS draft133](https://github.com/CipherVaults/Notaya/pull/133), exact tested snapshot91b8aa435ce149fe0df037c2ce8c22161ef6b226, and [database draft132](https://github.com/CipherVaults/Notaya/pull/132), exact10249768a91cd93a6bc3f0ab2459561b7573d962. The already published Notion-import checkpoint8950 is unchanged. No remote main overwrite, force push, merge or release occurred.

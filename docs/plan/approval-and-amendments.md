@@ -655,6 +655,27 @@ Ahmed explicitly delegates routine merge decisions to Notaya Dev Thread 1 after 
 
 **Effect:** the earlier planning-only hold is superseded for the bounded first checkpoint, subject to the explicit privacy, isolation, selection, conflicting-ref and verification conditions above. Frozen P16 remains excluded unless Ahmed changes that boundary; artifact destination/access/key-recovery decisions remain separate. Routine merges are delegated to Dev Thread 1 under the stated checks; release and acceptance remain separate. Authorization is not evidence of an upload, merge, restore or acceptance.
 
+
+<a id="a57-core-resumption-20261116"></a>
+
+### A57 dated supplement: resume existing feature Goal and routine reviewed integration
+
+**Recorded 2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** Owner-message timestamps are not recorded. The following owner direction relayed by Blue is trusted conversation history, verbatim:
+
+~~~text
+Blue relaying Ahmed’s latest explicit direction: the approved source/PBS checkpoint is complete. Resume the existing feature-development Goal at the appropriate safe boundary now; do not keep development held for the separate raw-asset/historical/frozen backup exclusions. Preserve frozen P16 and existing evidence. Refresh stale Git/runtime bindings as needed before the next P6c/Q1 qualification, and do not represent that still-failed/unqualified full workflow as passing.
+
+Ahmed also asks when the week’s completed work can reach main. He already delegates routine reviewed merge decisions to you; you do not need per-merge owner permission. Assess PR #133 and #132 and relevant branches on their exact current tips, using appropriate independent review, existing checks and integration suitability. Merge appropriate in-scope pieces under that authority without demanding perfection or starting broad unrelated test campaigns. If a PR mixes safe and unqualified work, identify practical separable pieces where safe; if not mergeable, report the specific blocker rather than a generic hold. Main integration is not release or Ahmed’s acceptance. No force/overwrite, frozen-work changes, public release or invented test results. Preserve privacy and ordinary reviewed GitHub checkpoints. Please acknowledge resumption and give concrete merge decisions/results or blockers as they become available.
+~~~
+
+Latest coordination request, verbatim:
+
+~~~text
+Blue here. Ahmed asks me to follow this through with you until a safe point. Please give a concise current merge/development status, practical next steps and what the next safe point will be. Keep the current work moving under your existing routine-merge authority; this is not a restart, duplicate merge request or request for extra tests. Flag only concrete blockers or owner decisions, and report the safe point when reached.
+~~~
+
+**Effective boundary:** source/PBS backup is complete for its declared selection; feature continuation is active. Root may perform routine exact-tip reviewed integrations and normal private checkpoints. Raw historical/frozen backup exclusions remain disclosed rather than development blockers. No release, public sharing, acceptance or frozen-payload change is granted. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-main-integration-20261116) records the resulting merges, not additional owner acceptance.
+
 <a id="a57-source-continuity-checkpoints-20261116"></a>
 
 ### A57 dated supplement: remaining reviewed source/PBS checkpoints and restored studies

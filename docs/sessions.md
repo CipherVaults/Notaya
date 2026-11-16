@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
 | 146 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Source and continuity checkpoints](#session-146) |
 | 145 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Ordinary GitHub connection verified](#session-145) |
 | 144 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [First direct checkpoint recovered](#session-144) |
@@ -178,6 +179,69 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
+
+
+<a id="session-147"></a>
+
+# 📘 Session: 2026-11-16 UTC · Ahmed (AE0101) · Gaming-PC · Reviewed main integration
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Root alone coordinates Git, selected source resolution and PBS/hub writes. Bounded workers independently review export, test oracles, undo, conflict resolution, actual build and stale-binding dependencies.
+
+**Models, Effort, Roles and Provenance:** lead requested GPT-6.1 Sol Ultra; review workers configured Sol xhigh, stale-binding reader Terra xhigh. Actual served models/efforts, attributable tokens/costs/quota and active labour unattested. [Usage86](ledger/usage-ledger.md#codex-usage-20261116-block86); no invented run totals.
+
+## 1. Time
+
+Recording cut **2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo**, system UTC converted to Cairo. Owner-message timestamps not recorded. Combined build ran10:02:25–10:02:39UTC. Exact API merge identities and remote verification are in EX80.
+
+## 2. Session Goal
+
+Resume the existing approved feature Goal after source continuity completion; integrate suitable reviewed work from PR133/132 without broad redundant testing. Reach verified main source plus current PBS/hub and a precise next qualification boundary.
+
+## 3. Actions Taken
+
+Read current authority and exact repository/PR state, reused prior scoped receipts and assigned independent reviews. Merged133 normally after final export evidence joins. Resolved the sole132 overlap to main's stronger state assertions, preserved every reviewed database delta, checked syntax and built the exact combined candidate in an independently fetched checkout. Merged132 and independently verified both merge trees/parents. Hash-fenced22 protected files before/after active main synchronization. Added current authority, execution, handoff, recovery and usage records; targeted hub checkpoint follows.
+
+## 4. Key Insights
+
+Reviewed checker, export, totals-oracle and undo improvements can integrate while the full natural database workflow remains failed/unqualified. The inherited toast proxy was superseded by stronger actual input/row/depth assertions. Integration and owner acceptance answer different questions.
+
+## 5. Decisions Made
+
+Ahmed explicitly resumes features, keeps raw/frozen backup exclusions separate, and delegates routine reviewed merge decisions. His supplied words are preserved once in [A57](plan/approval-and-amendments.md#a57-core-resumption-20261116). Root's engineering decision is to merge both reviewed PRs whole with one narrow conflict resolution. No new product scope, dependency, promise, release or acceptance.
+
+## 6. Difficulties / Friction
+
+P6c initially lacked950 objects for a read-only range query; a bounded approved main fetch supplied them. An unscoped whitespace check flagged preserved raw CRLF before-fixtures imported from133. The failed diagnostic remains distinct from the clean five-path database integration-delta check; fixtures were not normalized. Vite retains the ineffective dynamic-import warning and npm only advertised an update.
+
+## 7. Adjustments Made
+
+Used exact-head merges, independent HTTPS verification and source-equivalence instead of rerunning unrelated suites. Kept main's complete state assertions. Performed a fresh frontend build on exactf41d565 because it is the combined candidate. Deferred runtime rebinding until source integration stabilizes, avoiding repeated rechain work.
+
+## 8. Mistakes / Risks
+
+Merge/compile success must not be reported as complete Q1, persistence, native correctness or acceptance. The historical four-case run's enclosing catalogue FAILED and natural Q1 completed only five phases. Old runtime pins refer to earlier HEAD/config/model and cannot execute unchanged. Frozen payload and raw evidence remain outside this source checkpoint.
+
+## 9. Current Position
+
+PR133 integrated0e6bf68; PR132 integratedd23fda0, treeexactf41d565. Both independent reviews and the combined frontend build passed within scope. Active/main is synchronized with protected bytes unchanged and holds the separate current record branch. Accepted1.5.1/unaccepted1.6 remain distinct; N2's qualified8950 remains separately unmerged. Detailed evidence is [EX80](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-main-integration-20261116).
+
+## 10. Next Steps
+
+Publish/review current records and verify hub placement/readback, then report the safe point. Synchronize isolated P6c to integrated main; refresh and independently review current Git/source frame/model/binding/consumer pins before the next unchanged bounded natural workflow qualification. Preserve all previous failures and constraints; assess N2 integration separately.
+
+## 11. Open Questions
+
+No owner decision blocks routine continuation. Raw asset/history/frozen backup protection remains separately coordinated and does not hold development. Private parity, visual owner review, release qualification and owner acceptance remain separate gates.
+
+## 12. Session Outcome
+
+Reviewed code and tests are now integrated on main; the feature Goal is resumed. The closing record/private checkpoint and hub readback follow this cut. Full1.6 and its broader Goal remain incomplete.
+
+## 13. Confidence Level
+
+High for independently verified commits/trees, scoped reviews, preservation hashes and exact frontend build. Full workflow/native/persistence/release correctness remains explicitly unqualified.
+
+---
 
 <a id="session-146"></a>
 

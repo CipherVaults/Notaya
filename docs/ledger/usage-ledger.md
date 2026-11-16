@@ -1,5 +1,14 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261116-block86"></a>
+
+## Usage block86 — 2026-11-16 UTC — Ahmed (AE0101) — Gaming-PC
+
+**Recording cut: 2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo.** Lead requested Sol Ultra; export/oracle/undo/conflict/actual-build reviewers configured Sol xhigh, stale-binding reader configured Terra xhigh. Actual served models/efforts, attributable token counts, costs, quota deltas and active labour are unknown. Account-wide quota is pooled; no invented CSV run or Notaya-only quota attribution.
+
+Work: resume authority reconciliation, bounded exact-tip reviews, normal PR133/132 merges, one reviewed conflict resolution, three CJS syntax checks, one exact combined frontend build and independent remote/source/actual readbacks; frozen hash preservation, current records and targeted hub checkpoint. Existing qualification reused with limits; no broad repeated campaign. [Full147](../sessions.md#session-147)/[EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-main-integration-20261116) own chronology/results. No app, real-vault/private input, release or owner acceptance.
+
+
 
 
 
