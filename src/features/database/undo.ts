@@ -82,14 +82,19 @@ export const redoLast = (id: string) => step(id, "redo");
  * Handles Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y. Returns true when the key was taken. A text field, a select or the page editor
  * keeps its own undo (the browser's or TipTap's), and so does a dialog.
  */
-export function handleUndoKey(id: string, e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean; target: EventTarget | null; preventDefault: () => void }): boolean {
-  if (!(e.ctrlKey || e.metaKey) || e.altKey) return false;
+export function handleUndoKey(id: string, e: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean; defaultPrevented?: boolean; target: EventTarget | null; preventDefault: () => void }): boolean {
+  if (e.defaultPrevented || !(e.ctrlKey || e.metaKey) || e.altKey) return false;
   const k = e.key.toLowerCase();
   const redo = (k === "z" && e.shiftKey) || (k === "y" && !e.shiftKey);
   const undo = k === "z" && !e.shiftKey;
   if (!undo && !redo) return false;
   const t = e.target instanceof Element ? e.target : null;
-  if (t?.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),.ProseMirror,[role="dialog"]')) return false;
+  if (t?.closest('input,textarea,select,[role="dialog"]')) return false;
+  const database = t?.closest("[data-database]");
+  if (database && database.getAttribute("data-database") !== id) return false;
+  const editor = t?.closest('[contenteditable]:not([contenteditable="false"]),.ProseMirror');
+  // The containing page editor is outside this database's noneditable node view.
+  if (editor && (!database || database.contains(editor))) return false;
   e.preventDefault();
   void (redo ? redoLast(id) : undoLast(id));
   return true;
