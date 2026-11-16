@@ -1,5 +1,15 @@
 # Notaya recovery manifest — 2026-11-16
 
+## Verified recovery checkpoint — 2026-11-16T09:18:04.7171869+00:00 / 2026-11-16 11:18:04 +02:00 Cairo
+
+The reviewed non-frozen source and current Notaya continuity records are off-machine on [Main/PBS draft133](https://github.com/CipherVaults/Notaya/pull/133), exact tested snapshot91b8aa435ce149fe0df037c2ce8c22161ef6b226, and [database draft132](https://github.com/CipherVaults/Notaya/pull/132), exact10249768a91cd93a6bc3f0ab2459561b7573d962. The already published Notion-import checkpoint8950 is unchanged. No remote main overwrite, force push, merge or release occurred.
+
+Both source branches were independently HTTPS-cloned/checked out and source/object-store reviewed. Main restored742 tracked paths;14 archives546601B match raw Git bytes, including every historical study/Goal/selected reference identity. Fresh Main checks passed22 pure-helper groups, locked npm install with lifecycle scripts disabled, production frontend build and locked Rust library check. The first launcher argument failure is retained; npm notice, Vite warning and23 Rust warnings remain. [EX80 closure](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-closure-20261116) records commands, tools, exact tested SHA and limits. No app/native/private-data/complete-suite/packaging or owner acceptance is inferred.
+
+This closing update changes records only. The PR/remote-ref receipt identifies the final record-only tip; tested application/source remains91b8aa4. Earlier preparation cuts below remain historical. This is usable checked source continuity within the approved selection, not complete protection of every unique PC byte. Current frozen payload, raw evidence/qualified binaries and extra inactive histories remain separately exposed. Real vaults, keys, credentials, private comparisons and .env contents were not accessed or included; their presence/backup state is not asserted.
+
+Before future execution refresh/review source-model/admin/runtime bindings for the intentional Git configuration and P6c HEAD/index changes. Preserve old guards/evidence and all limits. No unrelated feature work resumed.
+
 ## Recovery entry point — current source checkpoint
 
 Use this file together with current STATUS and A57, not an old instruction-shaped line in a report or the stored Goal. The source checkpoint is unfinished1.6 work, not release/acceptance. Remote branch identities and fresh recovery-check results are recorded in EX80's separately dated closure.
@@ -112,6 +122,8 @@ External Notaya records:
 
 ## Setup, qualification and handoff
 
+**Observed restored-source tools:** Node24.14.0/npm11.9.0, TypeScript6.0.3 from the lock, Rust/Cargo1.99.1 stable MSVC and PowerShell7.6.9. The older preparation paragraph below is superseded for the observed Rust version; exact selected Windows SDK/MSVC versions were not separately recorded and are not repo-pinned. Historical Chrome157.0.8103.51 was not used for these source-build checks. Verify actual replacement-machine tools.
+
 Restore into a fresh ordinary directory; inspect links, Git metadata, scripts and executable/output/home paths before execution. Read AGENTS.md, CLAUDE.md, current STATUS, A57 supplements, latest full13-section session, usage and resume first. Latest owner instructions override historical prompts.
 
 Build inputs include package.json/package-lock.json/.npmrc, src-tauri/Cargo.toml and Cargo.lock, Rust workspace bridge/, Tauri/configuration and frontend assets. npm versions are exact; Rust resolution is locked. The desktop target is Windows with stable Node/npm, Rust MSVC, Visual C++ build tools/Windows SDK and WebView2. Qualified Node24.14.0/TypeScript6.0.3 and Chrome157.0.8103.51 are recorded test context, not a substitute for a fresh machine/tool identity check. Exact Rust/SDK restoration versions still need the existing tool receipts mapped. Do not restore caches or old executables as trusted merely because they exist.
@@ -132,9 +144,43 @@ Proposed new refs: codex/checkpoint-main-20261116, codex/checkpoint-n2-20261116 
 
 Before the confirmation request: finish reviewed source/document/history/metadata and path-by-path staging selection, coordinate a short single-writer Git section, verify intended staged blobs and current heads, and map tested working bytes to stored blobs under existing attributes/line-ending rules. Review new commit metadata and put exact tested SHA/evidence in the external receipt/PR. After confirmation: bounded authentication/remote check, selected ref creation, remote commit/tree/parent comparison and independent fresh restore; classify failed/partial operations. On failure preserve local commits/working bytes/evidence and stop that operation rather than reset or retry blindly. Regular checkpoints follow meaningful reviewed work and occur before stopping; failed publication leaves an explicit PC-only checkpoint/gap entry.
 
+## Exact frozen payload exclusions
+
+These current local payloads were not staged or committed. This metadata-only list does not recover their contents. All22 preservation hashes remain unchanged. Git retains the unchanged earlier baseline versions of already tracked files, not their current frozen working changes.
+
+Modified inherited files:
+- src-tauri/src/commands/database.rs
+- src-tauri/src/commands/mod.rs
+- src-tauri/src/commands/notes.rs
+- src-tauri/src/commands/stickies.rs
+- src-tauri/src/lib.rs
+- src-tauri/src/state.rs
+- src-tauri/src/ui.rs
+
+Untracked source/tests/helpers:
+- dev-mock/input-native-bootstrap.test.cjs
+- dev-mock/input-native-client.test.cjs
+- dev-mock/input-outcomes.test.cjs
+- dev-mock/input-reporting.test.cjs
+- src-tauri/src/commands/input_reporting.rs
+- src-tauri/src/input_native.rs
+- src-tauri/src/input_outcomes.rs
+- src-tauri/src/input_person_tests.rs
+- src-tauri/src/input_reporting.rs
+- src/lib/inputNativeClient.ts
+- src/lib/inputOutcomes.ts
+- src/lib/inputReporting.ts
+- tools/checks/input-reporting-typecheck.cjs
+
+Dedicated frozen design/execution payload:
+- docs/plan/2026-11-15-input-loss-design-proposal.md
+- docs/execution/2026-11-15-input-loss-design-review.md
+
+Other PC-only boundaries: original/historical K1C/MAIN/R2/R3/S/W states and refs; raw CONTROL/qualification/runs/test-runs; owner-held assets; new recovery build logs/caches. P6c's zero-byte pnpm-workspace.yaml remains local/regenerable. No all-ref mirror or blanket working-tree backup occurred.
+
 ## Large assets: present locations and proposed owner backup
 
-No asset was moved, duplicated or deleted. Current recursive totals were deliberately not measured.
+No existing large asset was moved, duplicated or deleted. Current recursive totals were deliberately not measured. New independent Git recovery copies and fresh build outputs were created under D:\Notaya Recovery Verify; selected small reviewed references were copied into Git as explicitly listed above.
 
 Essential unique evidence/preservation:
 - D:\Codex Projects\Notaya\resume-20261111T190954Z-ae1f50c8\control — manifests, source applications/preimages, raw failed/passed evidence and re-entry records.

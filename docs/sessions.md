@@ -239,6 +239,8 @@ Reviewed source is now in meaningful local commits; one additional private branc
 
 High for exact reviewed selection, current hashes and P6c Root object recovery. Main independent recovery/build and full PC-loss completeness remain unproven until their separate evidence exists.
 
+**Separately dated closure — 2026-11-16T09:18:04.7171869+00:00 / 2026-11-16 11:18:04 +02:00 Cairo:** Main91b8aa4 published09:01:54UTC and independently HTTPS-restored, with742 tracked paths,6599 reachable objects and14 raw-exact archives. P6c102497 independently restored/source-reviewed; private drafts133/132 preserve unfinished status. Fresh Main helper22/npm install/frontend build/Rust check passed, with retained first failed launcher, npm/Vite diagnostics and23 Rust warnings; independent actual log/hash/source review closed. No app/native/complete-suite/release/acceptance claim. This closing record-only commit preserves tested source trees; final remote/source-equivalence verification follows normally. [EX80 closure](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-closure-20261116) and [manifest](handoff/2026-11-16-recovery-manifest.md) own detail. Frozen22 payloads and named raw/history exclusions remain outside Git; broader1.6 Goal unfinished, no unrelated feature work resumed.
+
 ---
 
 <a id="session-145"></a>

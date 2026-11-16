@@ -1,5 +1,15 @@
 # Notaya (first named Cipherleaf): status
 
+<a id="source-continuity-closure-20261116"></a>
+
+## Continuation — reviewed source and current handoff recovered
+
+**2026-11-16T09:18:04.7171869+00:00 / 2026-11-16 11:18:04 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** private [source/PBS draft133](https://github.com/CipherVaults/Notaya/pull/133) contains tested snapshot91b8aa435ce149fe0df037c2ce8c22161ef6b226; [database draft132](https://github.com/CipherVaults/Notaya/pull/132) contains10249768a91cd93a6bc3f0ab2459561b7573d962. Both were independently HTTPS-restored and integrity/source/store reviewed. Restored Main passed22 pure helper groups, locked npm install with lifecycle scripts disabled, production frontend build and locked Rust library check; first failed launcher attempt/warnings remain preserved. No app/native/complete-suite/acceptance claim.
+
+The [recovery manifest](handoff/2026-11-16-recovery-manifest.md) is the entry point for another developer: current PBS/session/authority/handoff, four exact Fable reports, historical Goal and selected working references are included. [EX80 closing](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-closure-20261116) owns exact evidence/limits; full146/usage85 own chronology. This closing record-only update is being published and its remote tip verified; tested application/source trees stay unchanged. Ordinary reviewed publication needs no per-push approval. No N2 repeat, main overwrite, merge/release or unrelated feature resumption.
+
+Remaining PC-only exposure includes frozen22 paths, raw large evidence/qualified binaries, unique inactive histories and private material. Original/historical lanes and frozen bytes remain protected. Fresh source-model/admin/runtime bindings are needed before future database qualification because config and HEAD/index changed intentionally; old guards are not bypassed.1.5.1 remains accepted;1.6 remains unfinished/unaccepted. Older dated entries below are historical.
+
 <a id="source-continuity-checkpoints-20261116"></a>
 
 ## Continuation — current source and recovery handoff checkpoint

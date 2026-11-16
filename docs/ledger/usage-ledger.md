@@ -16,6 +16,8 @@
 
 Work: exact source/privacy/history/hash review,5 meaningful source commits, one P6c ordinary private push and independent Root HTTPS clone/checkout/integrity, recovered-study/selected-source/Goal reference copies and current PBS/handoff preparation. [Full146](../sessions.md#session-146)/[EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-checkpoints-20261116) own results. Main publication, clean restored builds and closing records remain later events, not counted as completed at this cut; no feature work or product acceptance.
 
+**Later closure — 2026-11-16T09:18:04.7171869+00:00 / 2026-11-16 11:18:04 +02:00 Cairo:** Main91b8aa4 was published and independently restored; source/archive/store and four recovered-source phases passed (helper22, locked npm install, frontend build, Rust library check), with retained first orchestration failure and diagnostics. Drafts133/132 preserve visible context. Closing record-only publication/ref verification follows normally. Token/cost/quota/active-labour attribution remains unknown; no extra CSV estimate or whole-app acceptance. [EX80 closure](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-closure-20261116).
+
 <a id="codex-usage-20261116-block84"></a>
 
 ## Usage block84 — 2026-11-16 UTC — Ahmed (AE0101) — Gaming-PC
