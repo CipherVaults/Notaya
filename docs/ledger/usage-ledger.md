@@ -1,5 +1,16 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261116-block87"></a>
+
+## Usage block87 — 2026-11-16 UTC — Ahmed (AE0101) — Gaming-PC
+
+**Recording cut 2026-11-16T11:03:29.4507806+00:00 / 2026-11-16 13:03:29 +02:00 Cairo.** Root requested Sol Ultra; three bounded preparation/review workers configured Sol xhigh. Actual served models/efforts, attributable token/cost/quota and active labour unknown. Account limits are pooled; no invented CSV run or Notaya-only attribution.
+
+Work: read current Goal/authority, preserve quiet integrated source; bounded allowlist/Native9 capture, current Git/frame readback, seven literal rebindings, typed expected-data generation/reviews and one five-source syntax operation. Own failed pre-body orchestration/source attempts and planted controls remain identified. No product edit, full app/workflow/native or acceptance result at this cut. [Full148](../sessions.md#session-148)/[EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-integrated-bindings-20261116) own evidence; later actual results will be separately dated.
+
+
+**After-cut actual outcome — 2026-11-16T11:17:10.1398697+00:00 / 2026-11-16 13:17:10 +02:00 Cairo:** one natural workflow observation closed FAILED at first-redo after six phases; independent actualEC2A and closure readback complete. No attributable usage/quota/active-labour measurement became available, no duplicate CSV row. Narrow source proposal/review remains ordinary authorized continuation; no applied product fix at this cut.
+
 <a id="codex-usage-20261116-block86"></a>
 
 ## Usage block86 — 2026-11-16 UTC — Ahmed (AE0101) — Gaming-PC
