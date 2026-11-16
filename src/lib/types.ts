@@ -204,6 +204,8 @@ export interface ExportSummary {
   charsNoFont: number;
   /** Markdown: the folder the pictures went to. */
   assetsFolder: string | null;
+  /** Unencrypted export files kept after failed cleanup or uncertain ownership. */
+  cleanupWarnings?: string[];
   /** ZIP: how many files the ZIP holds (pages and Markdown pictures). */
   files: number;
   /** True when the export is a ZIP of separate files. */
