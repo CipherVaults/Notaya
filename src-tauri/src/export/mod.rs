@@ -36,11 +36,11 @@ pub mod pdf;
 mod pdf_fonts;
 mod pdf_unicode;
 mod ttf;
+mod transaction;
 pub mod zip;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -193,6 +193,8 @@ pub struct ExportSummary {
     pub chars_no_font: usize,
     /// The folder the Markdown pictures were written to, if any.
     pub assets_folder: Option<String>,
+    /// Plaintext files kept because safe cleanup failed or ownership could not be proved.
+    pub cleanup_warnings: Vec<String>,
     /// "Separate files in a ZIP": how many files the ZIP holds (pages and Markdown pictures).
     pub files: usize,
     /// Whether the export is a ZIP of separate files.
@@ -1023,43 +1025,6 @@ pub(crate) fn checked_destination_path(dest: &Path, data_dir: &Path) -> Result<(
     Ok(())
 }
 
-/// Makes ready the `<name>.assets` folder for a Markdown export and says whether it was created
-/// here. It must not be a link that leads somewhere else, must not be inside the data folder, and
-/// an existing folder is reused only when it holds nothing but pictures of an earlier export
-/// (`image-001.png` and the like), which are then removed so none are left over.
-fn prepare_assets_dir(dir: &Path, name: &str, data_dir: &Path) -> Result<bool> {
-    let target = resolve(dir);
-    if target.starts_with(resolve(data_dir)) {
-        return Err(Error::invalid("That is the folder where Notaya keeps your notes and backups. Choose another folder for the export."));
-    }
-    let parent = dir.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
-    match fs::symlink_metadata(dir) {
-        Ok(meta) => {
-            let expected = resolve(parent).join(name);
-            if meta.file_type().is_symlink() || !meta.is_dir() || target != expected {
-                return Err(Error::invalid(format!("{name} exists and is not a plain folder. Choose another name.")));
-            }
-            let mut stale = Vec::new();
-            for entry in fs::read_dir(dir)? {
-                let entry = entry?;
-                let file = entry.file_name().to_string_lossy().into_owned();
-                if !is_export_image_name(&file) || !entry.file_type()?.is_file() {
-                    return Err(Error::invalid(format!("The folder {name} already exists and holds other files. Choose another name.")));
-                }
-                stale.push(entry.path());
-            }
-            for f in stale {
-                fs::remove_file(f)?;
-            }
-            Ok(false)
-        }
-        Err(_) => {
-            fs::create_dir(dir)?;
-            Ok(true)
-        }
-    }
-}
-
 fn is_export_image_name(file: &str) -> bool {
     let Some((stem, ext)) = file.rsplit_once('.') else { return false };
     stem.strip_prefix("image-").is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
@@ -1069,20 +1034,7 @@ fn is_export_image_name(file: &str) -> bool {
 /// Writes `bytes` to a temporary file next to `dest`, flushes it to the disk and renames it
 /// into place, so a failed export never leaves a half-written file under the chosen name.
 pub fn write_atomic(dest: &Path, bytes: &[u8]) -> Result<()> {
-    let name = dest.file_name().and_then(|n| n.to_str()).ok_or_else(|| Error::invalid("Unsupported file name."))?;
-    let tmp = dest.with_file_name(format!("{name}.{}.tmp", crate::model::now_ms()));
-    let result = (|| -> Result<()> {
-        let mut f = fs::OpenOptions::new().write(true).create_new(true).open(&tmp)?;
-        f.write_all(bytes)?;
-        f.sync_all()?;
-        drop(f);
-        fs::rename(&tmp, dest)?;
-        Ok(())
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&tmp);
-    }
-    result
+    transaction::write_atomic(dest, bytes)
 }
 
 /// Renders the document in the chosen format and writes it to `dest` (already checked with
@@ -1097,33 +1049,9 @@ pub fn write(dest: &Path, format: Format, doc: &ExportDoc, data_dir: &Path) -> R
     };
     match format {
         Format::Markdown => {
-            let stem = dest.file_stem().and_then(|s| s.to_str()).unwrap_or("export");
-            let assets_name = format!("{stem}.assets");
-            let out = markdown::render(doc, &assets_name);
-            if !out.images.is_empty() {
-                let dir = dest.with_file_name(&assets_name);
-                let created = prepare_assets_dir(&dir, &assets_name, data_dir)?;
-                // The pictures first, so the .md file never points at pictures that are not there.
-                let written = (|| -> Result<()> {
-                    for (name, bytes) in &out.images {
-                        write_atomic(&dir.join(name), bytes)?;
-                    }
-                    write_atomic(dest, out.text.as_bytes())
-                })();
-                if let Err(e) = written {
-                    // Nothing is left behind: the pictures are plaintext copies of the notes.
-                    for (name, _) in &out.images {
-                        let _ = fs::remove_file(dir.join(name));
-                    }
-                    if created {
-                        let _ = fs::remove_dir(&dir);
-                    }
-                    return Err(e);
-                }
-                summary.assets_folder = Some(dir.display().to_string());
-            } else {
-                write_atomic(dest, out.text.as_bytes())?;
-            }
+            let (folder, warnings) = transaction::write_markdown(dest, doc, data_dir)?;
+            summary.assets_folder = folder;
+            summary.cleanup_warnings = warnings;
         }
         Format::Html => write_atomic(dest, html::render(doc)?.as_bytes())?,
         Format::Docx => write_atomic(dest, &docx::render(doc)?)?,
@@ -1502,13 +1430,14 @@ pub mod tests {
         // A folder of that name inside the data folder is refused.
         assert!(write(&data.join("notes.md"), Format::Markdown, &doc, &data).is_err());
         assert!(!data.join("notes.assets").exists());
-        // Pictures of an earlier export are replaced, so none are left over.
+        // Legacy picture names do not establish ownership: preserve them and say so.
         let again = root.join("again");
         fs::create_dir_all(again.join("notes.assets")).unwrap();
         fs::write(again.join("notes.assets").join("image-099.png"), b"old").unwrap();
-        write(&again.join("notes.md"), Format::Markdown, &doc, &data).unwrap();
-        assert!(!again.join("notes.assets").join("image-099.png").exists());
-        assert!(again.join("notes.assets").join("image-001.png").is_file());
+        let summary = write(&again.join("notes.md"), Format::Markdown, &doc, &data).unwrap();
+        assert_eq!(fs::read(again.join("notes.assets").join("image-099.png")).unwrap(), b"old");
+        assert!(!summary.cleanup_warnings.is_empty());
+        assert!(PathBuf::from(summary.assets_folder.unwrap()).join("image-001.png").is_file());
         // A link that leads somewhere else is refused.
         #[cfg(unix)]
         {
@@ -1531,8 +1460,10 @@ pub mod tests {
             let s = write(&dest, format, &doc, &root.join("data")).unwrap();
             assert_eq!(s.pages, 1);
             assert_ne!(fs::read(&dest).unwrap(), b"old");
+            if format == Format::Markdown {
+                assert!(PathBuf::from(s.assets_folder.as_deref().unwrap()).join("image-001.png").is_file());
+            }
         }
-        assert!(root.join("My notes.assets").join("image-001.png").is_file());
         let leftovers: Vec<_> = fs::read_dir(&root).unwrap().filter_map(|e| e.ok()).filter(|e| e.file_name().to_string_lossy().ends_with(".tmp")).collect();
         assert!(leftovers.is_empty());
         // Sample files for a look with real tools, when asked for (see the export record).

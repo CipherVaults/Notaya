@@ -4,13 +4,18 @@
 //   node dev-mock/ribbon-ui-check.cjs [screenshot folder]
 // Prints ALL OK when every check passes.
 const { chromium } = require('playwright');
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const checks = createChecks('ribbon-ui');
 const shots = process.argv[2];
-let fail = 0;
-const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name); };
+const is = (name, got, want) => {
+  if (typeof got === 'number' || typeof want === 'number') return checks.near(name, got, want, 0);
+  return checks.check(name, got === want, JSON.stringify(got) + ' !== ' + JSON.stringify(want));
+};
 (async () => {
   const b = await chromium.launch();
+  try {
   const p = await b.newPage({ viewport: { width: 1400, height: 900 } });
-  p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
+  p.on('pageerror', (e) => checks.check('page error', false, e.message));
   await p.goto('http://127.0.0.1:1421/');
   await p.waitForTimeout(1500);
   await p.getByText('Reading list').first().click();
@@ -102,7 +107,10 @@ const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL'
   await tab('Insert').click();
   is('clicking a tab shows the ribbon again', await btn('Add an image from your PC').count(), 1);
 
-  await b.close();
-  console.log(fail ? `${fail} FAILED` : 'ALL OK');
-  process.exit(fail ? 1 : 0);
-})();
+  } catch (error) {
+    checks.check('ribbon-ui scenario', false, error.message);
+  } finally {
+    await b.close();
+    checks.finish();
+  }
+})().catch((error) => { checks.check('ribbon-ui runner', false, error.message); checks.finish(); });

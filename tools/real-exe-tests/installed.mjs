@@ -7,7 +7,12 @@
 //          <phase> is first | second | portable. LOCALAPPDATA was set to a temp folder for the app.
 // Needs:   Node 24 (global fetch and WebSocket) and a Notaya window started with the debug port.
 //          Throwaway data only; it never makes or reads a real vault.
+import graderChecks from '../checks/fail-loud.cjs';
+const checks = graderChecks.createChecks('installed');
+const check = checks.check;
+const sockets = new Set();
 const [port, phase, expectedDir] = process.argv.slice(2);
+const selected = checks.selection(Number.isInteger(Number(port)) && Number(port) >= 1 && Number(port) <= 65535 && Boolean(expectedDir) ? [phase] : [], ["first","second","portable"]);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function connectMain() {
@@ -16,6 +21,7 @@ async function connectMain() {
       const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
       for (const hit of t) {
         const ws = new WebSocket(hit.webSocketDebuggerUrl);
+        sockets.add(ws);
         await new Promise((r) => (ws.onopen = r));
         let id = 0;
         const pend = new Map();
@@ -33,7 +39,8 @@ async function connectMain() {
   }
   throw new Error("no main window");
 }
-const check = (name, ok, extra = "") => console.log(`${ok ? "PASS" : "FAIL"}  ${name} ${extra}`);
+try {
+if (selected.length) {
 const m = await connectMain();
 await sleep(1500);
 const sameDir = (a, b) => typeof a === "string" && a.replace(/\\\\\?\\/, "").toLowerCase() === b.toLowerCase();
@@ -66,4 +73,8 @@ if (phase === "first") {
 } else {
   throw new Error("phase must be first, second or portable");
 }
-process.exit(0); // the open DevTools socket would keep node (and run-installed.ps1) waiting for ever
+}
+} finally {
+  for (const socket of sockets) socket.close();
+  checks.finish();
+}

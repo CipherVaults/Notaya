@@ -1,8 +1,11 @@
 // BUG-7 / BUG-8 (V1.5.1 PC round): the cover buttons must be clickable on a page with an icon and a cover, and the Home glyph must sit above the dimmed banner. Run: npm run mock, then MOCK_URL=http://127.0.0.1:1421/ node dev-mock/page-look-layers-check.cjs <shots dir>
 const { chromium } = require('playwright');
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const checks = createChecks('page appearance layers');
+const ok = (name, condition) => checks.check(name, condition);
 (async()=>{
-  const b = await chromium.launch(); let fails=0;
-  const ok=(n,c)=>{console.log((c?'ok   ':'FAIL ')+n); if(!c) fails++;};
+  const b = await chromium.launch();
+  try {
   for (const w of [1280,1600]) {
     const p = await b.newPage({ viewport: { width: w, height: 900 } });
     await p.goto(''+(process.env.MOCK_URL||'http://127.0.0.1:1421/')+'?theme=black'); await p.waitForTimeout(1500);
@@ -31,5 +34,10 @@ const { chromium } = require('playwright');
   const cdp = await p.context().newCDPSession(p);
   const {data} = await cdp.send('Page.captureScreenshot',{format:'png'});
   require('fs').writeFileSync((process.argv[2]||'.')+'/home-black.png', Buffer.from(data,'base64'));
-  await b.close(); console.log(fails?'FAILED '+fails:'ALL OK');
-})();
+  } catch (error) {
+    checks.check('page appearance scenario', false, error.message);
+  } finally {
+    await b.close();
+    checks.finish();
+  }
+})().catch((error) => { checks.check('page appearance runner', false, error.message); checks.finish(); });

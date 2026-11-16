@@ -5,3 +5,10 @@ src-tauri/test-data/** binary
 
 # Golden query answers are compared as exact serialized bytes on every platform.
 src-tauri/src/database/golden/*.jsonl -text
+
+# Preserve reviewed historical reference and before-control bytes across restores.
+docs/reference/fable-2026-11-11/*.md -text
+docs/handoff/working-sources/q1-20261116/** -text
+docs/handoff/working-sources/goal-objective-20261115.md -text
+dev-mock/fixtures/** -text
+tools/real-exe-tests/fixtures/before-fail-loud/** -text

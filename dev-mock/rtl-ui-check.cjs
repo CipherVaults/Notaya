@@ -4,14 +4,19 @@
 //   node dev-mock/rtl-ui-check.cjs [screenshot folder]
 // Prints ALL OK when every check passes.
 const { chromium } = require('playwright');
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const checks = createChecks('rtl-ui');
 const shots = process.argv[2];
-let fail = 0;
-const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name); };
+const is = (name, got, want) => {
+  if (typeof got === 'number' || typeof want === 'number') return checks.near(name, got, want, 0);
+  return checks.check(name, got === want, JSON.stringify(got) + ' !== ' + JSON.stringify(want));
+};
 const dirOf = (loc) => loc.first().evaluate((e) => e.getAttribute('dir') + '/' + getComputedStyle(e).direction);
 (async () => {
   const b = await chromium.launch();
+  try {
   const p = await b.newPage({ viewport: { width: 1400, height: 1300 }, deviceScaleFactor: 1 });
-  p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
+  p.on('pageerror', (e) => checks.check('page error', false, e.message));
 
   // A page saved before this feature has no "dir" anywhere: it is automatic, so English stays left.
   await p.goto('http://127.0.0.1:1421/?cover=none');
@@ -119,7 +124,10 @@ const dirOf = (loc) => loc.first().evaluate((e) => e.getAttribute('dir') + '/' +
 
   // Titles and lists show Arabic right-aligned.
   is('the page title input is automatic', await p.locator('input[placeholder=Untitled]').getAttribute('dir'), 'auto');
-  await b.close();
-  console.log(fail ? `${fail} FAILED` : 'ALL OK');
-  process.exit(fail ? 1 : 0);
-})();
+  } catch (error) {
+    checks.check('rtl-ui scenario', false, error.message);
+  } finally {
+    await b.close();
+    checks.finish();
+  }
+})().catch((error) => { checks.check('rtl-ui runner', false, error.message); checks.finish(); });
