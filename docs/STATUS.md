@@ -1,5 +1,23 @@
 # Notaya (first named Cipherleaf): status
 
+<a id="core-q1-focus-loss-20261116"></a>
+
+## Continuation — six phases qualified; compact-table focus loss observed
+
+**2026-11-16T11:17:10.1398697+00:00 / 2026-11-16 13:17:10 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** The new unchanged natural database workflow at exact d9aadf64 remains **FAILED**: six phases completed through the second undo/row disappearance; phase7 first-redo timed out at its unchanged30-second deadline. After the focused row disappeared, actual focus was BODY outside the table/database/editor, with undo0/redo2. No restore write occurred in phase7; the original5,000-row identities/order, parent content and relevant stable-domain projections stayed consistent. This is observed current-browser/mock focus loss, with a strongly source-supported missed-redo mechanism; direct keydown/handler entry and native persistence were not measured.
+
+[EX80](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-focus-loss-20261116) owns exact result/readback and closure; [full148](sessions.md#session-148)/[usage87](ledger/usage-ledger.md#codex-usage-20261116-block87) preserve the earlier preparation cut and this later outcome. Syntax actual review passed. All known owned processes/readers/265 leases closed, port clear and owned profile absent. No retry, deadline/tolerance widening, product fix or permanent-loss claim. Next review a narrow row-owned focus-restoration proposal and meaningful before/after regression; preserve legitimate external focus and compact-instance ownership. The current checkout remains unchanged/clean at d9; released-version source comparison is pending. Existing ordinary-defect authority applies, no owner decision waits, and the larger Goal stays active. Accepted1.5.1/unaccepted1.6 remain distinct; older cuts are historical.
+
+
+<a id="core-q1-integrated-bindings-20261116"></a>
+
+## Continuation — integrated source bindings refreshed; syntax completed
+
+**2026-11-16T11:03:29.4507806+00:00 / 2026-11-16 13:03:29 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** The isolated database lane remains on integrated d9aadf64d8f7a18829a09d9e9401460b9c9e47cc, tracked clean with its zero-byte containment marker. Current source/Git metadata was captured and independently qualified:3,671 files/389 directories,175 fresh hashes/7,423,399 bytes and3,496 old digests reused only after all-nine metadata equality. The model, effect bindings and seven fixed literal references now identify this exact revision; independent source and expected-data reviews passed, including planted-defect calibration. No product source changed in this refresh.
+
+The separately admitted five-source Node syntax operation CLOSED/PASS, with five named results, zero output and no pending leases; non-author actual readback is being closed at this cut. The full natural database workflow remains FAILED after five phases from the earlier attempt. No new full workflow, native persistence, release or owner acceptance is claimed. [EX80](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-integrated-bindings-20261116), [full148](sessions.md#session-148) and [usage87](ledger/usage-ledger.md#codex-usage-20261116-block87) own exact inputs, failures and next action. Next close syntax actual review, then separately admit one unchanged nine-phase/5,000-row observation and independently read its actual outcome. No owner decision blocks it; current A57 resumption/ordinary private checkpoint authority continues. Accepted1.5.1/unaccepted1.6 and all original/history/private/frozen boundaries remain unchanged. Older entries below retain their dated cuts.
+
+
 <a id="core-main-integration-20261116"></a>
 
 ## Continuation — feature Goal resumed; reviewed work integrated

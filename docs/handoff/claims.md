@@ -1,5 +1,15 @@
 # Claim board
 
+<a id="core-q1-focus-loss-20261116"></a>
+
+**Current bounded core claim — 2026-11-16T11:17:10.1398697+00:00 / 2026-11-16 13:17:10 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** Root owns the narrow TableView focus-restoration/regression line after independently observed six-phase/first-redo failureEC2A. Source proposal work is confined to CONTROL; active/p6c-evidence remains unchanged at d9, all old evidence retained. Apply only after bounded proposal/source review, then focused before/after checks and exact final-source qualification; no blind full rerun. Root alone updates active/main PBS/Notion. Existing ordinary-defect authority applies; no original/history/private/frozen area or broader redesign is included. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-focus-loss-20261116) owns the measured/inferred distinction and closure.
+
+
+<a id="core-q1-integrated-bindings-20261116"></a>
+
+**Root qualification claim — 2026-11-16T11:03:29.4507806+00:00 / 2026-11-16 13:03:29 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** Root keeps active/p6c-evidence source/Git quiet at d9aadf64 through current model993D/runtime9DD8 qualification; no fetch, sync or source writes there until this attempt closes. Root alone owns the separate active/main PBS checkpoint and Notion update. Workers prepare/review only assigned CONTROL files. Capture/source/ready-data gates and one syntax operation passed within scope; full Q1 remains failed/unqualified until an actual new result is independently read. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-integrated-bindings-20261116) owns exact state. No original/history/private/frozen work is claimed or modified; no new authority, merge/release or owner acceptance is implied.
+
+
 <a id="core-main-integration-20261116"></a>
 
 **Current coordination claim — 2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** Root alone owns routine Git integration in the three approved independent active repositories, current non-frozen database qualification and changed PBS/Notion records. [A57 resumption](../plan/approval-and-amendments.md#a57-core-resumption-20261116) removes the feature hold after source checkpoint completion. PR133/132 are now integrated; record branch codex/integration-checkpoint-20261116 preserves this checkpoint. Read-only workers review exact deltas/artifacts; no other writer is assigned. Next refresh isolated P6c's changed Git/source/runtime identities before remaining Q1. Frozen22 paths and all original/historical lanes are excluded. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-main-integration-20261116) owns evidence and limits; full Q1 remains failed/unqualified, not accepted.

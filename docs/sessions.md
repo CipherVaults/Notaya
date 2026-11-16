@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
 | 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
 | 146 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Source and continuity checkpoints](#session-146) |
 | 145 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Ordinary GitHub connection verified](#session-145) |
@@ -180,6 +181,73 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
+
+
+<a id="session-148"></a>
+
+# 📘 Session: 2026-11-16 UTC · Ahmed (AE0101) · Gaming-PC · Rebind database qualification
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Root coordinates and executes; three bounded workers author/review CONTROL only. Separate active/main records do not modify the quiet active/p6c-evidence target.
+
+**Models, Effort, Roles and Provenance:** requested lead Sol Ultra; workers configured Sol xhigh. Actual served backends/efforts, attributable tokens/costs/quota and active labour unattested. [Usage87](ledger/usage-ledger.md#codex-usage-20261116-block87); no invented CSV run.
+
+## 1. Time
+
+Recording cut **2026-11-16T11:03:29.4507806+00:00 / 2026-11-16 13:03:29 +02:00 Cairo**, system UTC converted to Cairo. Capture10:31:09.8167542–10:31:23.0674450UTC; syntax operation started10:59:16UTC. Owner-message timestamp not recorded.
+
+## 2. Session Goal
+
+Continue the existing feature Goal from integrated main, refresh stale Git/source/runtime bindings and qualify the remaining natural database workflow without repeating healthy checks or changing its criteria.
+
+## 3. Actions Taken
+
+Read the stored Goal/current records and reconciled later authority. Verified quiet d9 source, reused41 unchanged startup bodies and the existing qualified tools. Prepared/reviewed a bounded namespace allowlist, ran corrected read-only capture, independently joined current Git/index/store and all metadata/hash rows. Rebound model, effects and seven literals; reviewed/created expected data and a distinct ready freeze. Ran one five-source syntax operation. Full details/pins are in [EX80](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-integrated-bindings-20261116).
+
+## 4. Key Insights
+
+Source identity changed through integration even while all41 selected startup bodies remained unchanged. Qualified physical metadata/hash reuse is different from fresh-all-payload hashing. Old755 Git objects remain ancestry evidence; current d9 is separately proved. Expected data and parsing cannot prove the nine-phase workflow.
+
+## 5. Decisions Made
+
+No new owner/product decision. Existing A57 feature resumption and delegated engineering authority apply. Reuse the still-qualified old tool host, keep source quiet, retain all caps/oracles and use separate syntax/runtime admissions. Historical Goal priorities and proposal material do not override current instructions.
+
+## 6. Difficulties / Friction
+
+Collector v1 failed pre-body on reserved PowerShell Data; Root corrected the helper name and obtained old-host parse/readback before capture. Independent review caught an unrun materializer missing-property assignment; v3 corrects it. Root's reserved false-variable setup and one bare foreach-pipeline read-only command failed before writes; corrected orchestration preserved the failures and criteria.
+
+## 7. Adjustments Made
+
+Created successors without overwriting prior scripts/data. Used175 fresh hashes and3,496 all-nine-qualified digest reuses. Seven fixed-length literal substitutions reverse exactly; no actor/oracle logic changed. Flag-only readiness freeze preserves all underlying rows and32 binary reuse declarations. CurrentDataFresh/execution remain false until their applicable later checks.
+
+## 8. Mistakes / Risks
+
+The initial source review missed a syntax defect; its failed execution is not hidden by the later pass. Calibration controls A–E exposed identity/hash/accounting faults and were rejected without execution. No hard OS sandbox, continuous whole-tree lease, full Q1/native/persistence or owner acceptance follows from these checks. Raw evidence remains PC-only under existing declared backup exclusions.
+
+## 9. Current Position
+
+Capture/current Git, source/binding and ready-data joins are independently qualified. One five-source syntax operation closed PASS with0pending leases; non-author actual readback is closing at this cut. No new full workflow run is claimed. The previous natural attempt remains FAILED after five phases. Accepted1.5.1/unaccepted1.6 unchanged.
+
+## 10. Next Steps
+
+Close syntax actual review, separately admit one unchanged nine-phase/5,000-row workflow, then inspect actual effects/ownership/resource closure with a non-author reader. Report any specific product or harness failure without widening tolerances. Keep records/hub current and checkpoint reviewed context normally; do not sync record changes into the test lane mid-qualification.
+
+## 11. Open Questions
+
+No owner decision blocks the current operation. Native/persistence, private parity, visual/Windows sign-in ownership and release/acceptance gates remain separately scoped. Raw historical/frozen backup exclusions do not hold feature work.
+
+## 12. Session Outcome
+
+The integrated revision now has reviewed current source/runtime data and one completed syntax operation. Broader qualification and the full1.6 Goal remain in progress; no feature acceptance is claimed.
+
+## 13. Confidence Level
+
+High for exact captured/reviewed identities and bounded data arithmetic. Syntax closure is Root-observed pending final non-author actual review; full natural workflow and native/persistence remain unqualified.
+
+---
+
+**Separately dated actual closure — 2026-11-16T11:17:10.1398697+00:00 / 2026-11-16 13:17:10 +02:00 Cairo:** syntax actual1F2 confirms all five named parses exited0/closed. The separately admitted unchanged natural workflow then FAILED at phase7 first-redo after six committed phases, with BODY focus after row disappearance, undo0/redo2, zero phase7 writes and stable original rows/parent content. Independent EC2A confirms this bounded result and known process/port/profile/265-lease closure. Direct keydown/handler entry, native persistence, released impact and full Q1 remain unqualified. Source558/compact-root routing strongly support focus loss; a narrow CONTROL-only repair/regression proposal is next, not yet applied. No retry, wider criteria or owner decision. [EX80 actual](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-focus-loss-20261116) owns details. Current records preserve the earlier11:03 cut rather than rewriting it.
+
+---
 
 <a id="session-147"></a>
 

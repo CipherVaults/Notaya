@@ -1,5 +1,15 @@
 # Notaya resume note: installed data and durable empty-home check — 2026-11-12 UTC
 
+<a id="core-q1-focus-loss-20261116"></a>
+
+**Actual workflow checkpoint — 2026-11-16T11:17:10.1398697+00:00 / 2026-11-16 13:17:10 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** syntax actual1F2 passed; new natural d9/model993/runtime9DD attempt remains FAILED after six committed phases. Phase7 first-redo timed out after focused-row deletion left BODY focus and redo2; no restore command was admitted, and original rows/parent content remain consistent. ActualEC2A confirms scope and known process/port/profile/265-lease closure. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-focus-loss-20261116) owns evidence and the source-supported inference. Next review the narrow row-owned focus repair/regression proposal; no fix/retry/applied source change yet. Keep the failed attempt, caps and complete oracle. Current d9 is clean; no owner question and no native/permanent-loss/acceptance claim. Earlier preparation cuts below retain their chronology.
+
+
+<a id="core-q1-integrated-bindings-20261116"></a>
+
+**Current database qualification — 2026-11-16T11:03:29.4507806+00:00 / 2026-11-16 13:03:29 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** isolated P6c is clean at integrated d9aadf64. Fresh native metadata/current Git capture is independently qualified; model993D/frameCB7/binding324F and the seven literal replacements are source-reviewed. Ready product46077/runtime9DD8/budget9B35 has independent final data reviewF54D. One five-source syntax operation closed PASS; actual review is closing. Read [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-integrated-bindings-20261116) for exact folders, pins and retained own orchestration failures. Next close syntax actual review, then one separately admitted unchanged nine-phase/5,000-row workflow. Its previous full result remains FAILED; native/persistence/owner acceptance are not qualified. [Full148](../sessions.md#session-148)/[usage87](../ledger/usage-ledger.md#codex-usage-20261116-block87). Source remains quiet for guard comparisons; do not sync this record update into P6c before qualification. A57 continuation remains active, no owner question. Earlier cuts below remain historical.
+
+
 <a id="core-main-integration-20261116"></a>
 
 **Feature continuation resumed — 2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** Current [A57](../plan/approval-and-amendments.md#a57-core-resumption-20261116) supersedes the older source-backup hold. Reviewed PR133 merged0e6bf68; PR132 mergedd23fda0b482e6e458bea8158065e9cf2f77f99e6, with independently verified parents/trees and no force. Its combined candidatef41d565 passed the fresh independent frontend build and non-author resolution review, preserving main's stronger input/row/depth checker. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-main-integration-20261116)/[full147](../sessions.md#session-147)/[usage86](../ledger/usage-ledger.md#codex-usage-20261116-block86) own exact evidence.
