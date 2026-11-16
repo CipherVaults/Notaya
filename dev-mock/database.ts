@@ -863,6 +863,16 @@ function seed() {
     r.cells[cost.id] = 100 * (i % 50) + 0.5;
     r.cells[project.id] = [pr[i % 4].id];
   }
+  // P6c TEST-ONLY: exact URL mode in a fresh mock context; default positive seed is unchanged.
+  if (params.get("p6Oracle") === "zero-sum") {
+    const fixtureRows = rowsOf(tasks.id);
+    fixtureRows.forEach((row, ordinal) => {
+      const member = Math.floor(ordinal / 4), statusOrdinal = ordinal % 4;
+      const groupCount = Math.ceil((fixtureRows.length - statusOrdinal) / 4);
+      const magnitude = [1, 2, 3, 5, 8, 13][Math.floor(member / 2) % 6];
+      row.cells[est.id] = member === groupCount - 1 && groupCount % 2 === 1 ? 0 : member % 2 === 0 ? magnitude : -magnitude;
+    });
+  }
 }
 
 // ---------------------------------------------------------------- commands
