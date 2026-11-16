@@ -3,25 +3,29 @@
 //   MOCK_URL=http://127.0.0.1:1421 node dev-mock/icons-covers-ui-check.cjs [screenshot folder]
 // Prints ALL OK when every check passes.
 const { chromium } = require('playwright');
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const checks = createChecks('icons and covers');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const BASE = process.env.MOCK_URL || 'http://127.0.0.1:1421';
 const shots = process.argv[2];
-let fail = 0;
-const is = (name, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name); };
-const truthy = (name, v, extra) => { if (!v) { fail++; console.log('FAIL', name, extra === undefined ? '' : JSON.stringify(extra)); } else console.log('ok  ', name); };
-const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= tol, { got, want });
+const is = (name, got, want) => checks.equal(name, got, want);
+const truthy = (name, value, extra) => checks.check(name,
+  (typeof value !== 'number' || Number.isFinite(value)) && !!value, JSON.stringify(extra));
+const near = (name, got, want, tol = 2) => checks.near(name, got, want, tol);
 
 (async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'covers-'));
-  const b = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
+  let b;
+  try {
+  b = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
-  p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
-  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) { fail++; console.log('FAIL console error', m.text()); } });
+  p.on('pageerror', (e) => checks.check('page error', false, e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) checks.check('console error', false, m.text()); });
   // Nothing may be fetched from outside the app.
-  p.on('request', (r) => { const u = r.url(); if (!u.startsWith(BASE) && !u.startsWith('data:') && !u.startsWith('blob:')) { fail++; console.log('FAIL outside request', u); } });
+  p.on('request', (r) => { const u = r.url(); if (!u.startsWith(BASE) && !u.startsWith('data:') && !u.startsWith('blob:')) checks.check('outside request', false, u); });
 
   const cdp = await ctx.newCDPSession(p);
   const shot = async (name) => {
@@ -197,8 +201,8 @@ const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= 
   is('with the same position', await p.getByTestId('page-cover').locator('img').evaluate((e) => Number(e.style.objectPosition.split(' ')[1].replace('%', ''))), savedY);
 
   // ----- Icon over a cover -----
-  await p.getByTestId('page-icon-row').hover();
-  await p.getByTestId('add-icon').click({ force: true });
+  await title.hover();
+  await p.getByTestId('add-icon').click();
   await p.locator('[data-emoji="📚"]').click();
   await p.waitForTimeout(300);
   const ib = await p.getByTestId('page-icon').boundingBox();
@@ -232,9 +236,40 @@ const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= 
   const nbs = p.getByTestId('home-notebooks');
   truthy('Notebooks are listed with counts', /Personal/.test(await nbs.innerText()) && /\d+ pages?/.test(await nbs.innerText()));
   await shot('06-home-sunrise');
-  await p.getByTestId('home-card').filter({ hasText: 'Trip notes' }).first().click();
+  const tripCard = p.getByTestId('home-card').filter({ hasText: 'Trip notes' });
+  if (await tripCard.count() !== 1) throw new Error('Expected exactly one Trip notes Home card');
+  const clickedTitle = (await tripCard.locator('div[dir="auto"].font-medium').innerText()).trim();
+  const beforeCardOpen = await p.evaluate((name) => {
+    const matches = [...document.querySelectorAll('[role="treeitem"]')].filter((row) => row.getAttribute('aria-label') === name);
+    return {
+      rowKeys: matches.map((row) => row.getAttribute('data-rowkey')),
+      pageReads: Array.isArray(window.__inv) ? window.__inv.filter(([cmd]) => cmd === 'get_page').length : null,
+    };
+  }, clickedTitle);
+  if (!clickedTitle || beforeCardOpen.rowKeys.length !== 1 || typeof beforeCardOpen.rowKeys[0] !== 'string'
+    || !beforeCardOpen.rowKeys[0].startsWith('p:') || !Number.isInteger(beforeCardOpen.pageReads)) {
+    throw new Error('Home-card reference identity or mock read trace is unavailable: ' + JSON.stringify(beforeCardOpen));
+  }
+  await tripCard.click();
   await p.waitForTimeout(700);
-  is('clicking a card opens that page', await title.inputValue(), 'Morning pages'); // the mock serves the sample page body for every id; the sidebar shows the real selection
+  const openedCard = await p.evaluate((beforeReads) => {
+    const editor = document.querySelector('.ProseMirror');
+    const box = editor?.getBoundingClientRect();
+    const style = editor ? getComputedStyle(editor) : null;
+    const reads = Array.isArray(window.__inv) ? window.__inv.filter(([cmd]) => cmd === 'get_page').length : null;
+    return {
+      selectedRowKeys: [...document.querySelectorAll('[role="treeitem"][aria-selected="true"]')]
+        .map((row) => row.getAttribute('data-rowkey')).filter((key) => key?.startsWith('p:')),
+      title: document.querySelector('input[placeholder="Untitled"]')?.value ?? null,
+      editorVisible: !!box && box.width > 0 && box.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+      bodyHeading: editor?.querySelector('h2')?.textContent ?? null,
+      completedPageRead: Number.isInteger(reads) && reads > beforeReads,
+    };
+  }, beforeCardOpen.pageReads);
+  // The current mock shares body content, while get_page preserves the selected
+  // metadata/title. Its timing trace proves command completion, not request args.
+  const expectedCard = { selectedRowKeys: beforeCardOpen.rowKeys, title: clickedTitle, editorVisible: true, bodyHeading: 'This week', completedPageRead: true };
+  truthy('clicking a card opens that page', JSON.stringify(openedCard) === JSON.stringify(expectedCard), { actual: openedCard, expected: expectedCard });
   await home();
 
   // ----- Every look: the banner, the buttons and Home -----
@@ -255,7 +290,7 @@ const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= 
       return Math.min(ratio(text, over(255)), ratio(text, over(0)));
     });
     truthy(`${theme}: the cover buttons are readable (contrast ${contrast.toFixed(1)})`, contrast >= 4.5, contrast);
-    await p.getByTestId('page-icon-row').hover();
+    await title.hover();
     await p.waitForTimeout(150);
     await shot(`10-page-${theme}`);
     await home();
@@ -278,8 +313,10 @@ const near = (name, got, want, tol = 2) => truthy(name, Math.abs(got - want) <= 
   await shot('13-rtl-home');
   truthy('RTL: Home has no horizontal scroll', await p.getByTestId('home').evaluate((e) => e.scrollWidth <= e.clientWidth + 1));
 
-  await b.close();
-  fs.rmSync(tmp, { recursive: true, force: true });
-  console.log(fail ? `${fail} FAILED` : 'ALL OK');
-  process.exit(fail ? 1 : 0);
-})().catch((e) => { console.log('FAIL', e); process.exit(1); });
+  } catch (error) {
+    checks.check('icons and covers scenario', false, error.message);
+  } finally {
+    try { if (b) await b.close(); }
+    finally { fs.rmSync(tmp, { recursive: true, force: true }); checks.finish(); }
+  }
+})().catch((e) => { checks.check('icons and covers runner', false, e.message); checks.finish(); });

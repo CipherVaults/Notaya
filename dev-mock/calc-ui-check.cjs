@@ -4,10 +4,15 @@
 //   node dev-mock/calc-ui-check.cjs
 // Prints ALL OK when every check passes.
 const { chromium } = require('playwright');
-let fail = 0;
-const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name); };
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const checks = createChecks('calc-ui');
+const is = (name, got, want) => {
+  if (typeof got === 'number' || typeof want === 'number') return checks.near(name, got, want, 0);
+  return checks.check(name, got === want, JSON.stringify(got) + ' !== ' + JSON.stringify(want));
+};
 (async () => {
   const b = await chromium.launch();
+  try {
   const p = await b.newPage({ viewport: { width: 360, height: 640 } });
   await p.goto('http://127.0.0.1:1421/?label=calc-1');
   await p.waitForTimeout(1500);
@@ -53,7 +58,10 @@ const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL'
   await p.getByLabel('Expression').fill('2+3');
   await click('='); await click('Deg');
   is('an answer without sin, cos or tan is left alone', await expr(), '5');
-  await b.close();
-  console.log(fail ? 'FAILURES: ' + fail : 'ALL OK');
-  process.exit(fail ? 1 : 0);
-})().catch(e => { console.error(e); process.exit(1); });
+  } catch (error) {
+    checks.check('calc-ui scenario', false, error.message);
+  } finally {
+    await b.close();
+    checks.finish();
+  }
+})().catch((error) => { checks.check('calc-ui runner', false, error.message); checks.finish(); });

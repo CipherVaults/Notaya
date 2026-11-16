@@ -1,10 +1,11 @@
 // Quick check of the mock database engine without a browser (development only):
 //   node --experimental-strip-types dev-mock/database-mock-check.mts
+import failLoud from '../tools/checks/fail-loud.cjs';
 (globalThis as unknown as { location: unknown }).location = { search: "?db=1" };
 const { databaseCommand, databaseMetas } = await import("./database.ts");
-let fail = 0;
+const checks = failLoud.createChecks('mock database');
 const is = (name: string, got: unknown, want: unknown) => {
-  if (JSON.stringify(got) !== JSON.stringify(want)) { fail++; console.log("FAIL", name, JSON.stringify(got), "!==", JSON.stringify(want)); } else console.log("ok  ", name);
+  checks.equal(name, got, want);
 };
 const call = (cmd: string, args: Record<string, unknown> = {}) => databaseCommand(cmd, args, {}) as any;
 
@@ -42,5 +43,4 @@ const pres = call("query_view", { request: { databaseId: proj.id, viewId: proj.v
 is("rollup text", typeof pres.rows[0].values[roll.id].text, "string");
 const chart = call("chart_data", { request: { databaseId: tasks.id, viewId: db.views.find((v: any) => v.kind === "chart").id } });
 is("chart labels", chart.labels.length > 0, true);
-console.log(fail ? `${fail} FAILED` : "ALL OK");
-process.exit(fail ? 1 : 0);
+checks.finish();

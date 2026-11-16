@@ -9,11 +9,18 @@
 // The build served from a page with the app's Content-Security-Policy in a meta tag (see the CSP_PAGE note
 // in the report) is checked the same way: pass that page's address. Prints ALL OK when every check passes.
 const { chromium } = require('playwright');
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const { isMermaidRuntimeResource, inspectScriptBoundary } = require('./grader-oracles.cjs');
+const checks = createChecks('mermaid-ui');
 const base = process.argv[2] || 'http://127.0.0.1:1421/';
 const shots = process.argv[3];
-let fail = 0;
-const is = (name, got, want) => { if (got !== want) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name); };
-const yes = (name, got) => is(name, !!got, true);
+// For a built page, supply only pathnames identified in its verified runtime outputs.
+const builtRuntimePaths = JSON.parse(process.env.NOTAYA_MERMAID_RUNTIME_PATHS || '[]');
+const is = (name, got, want) => {
+  if (typeof got === 'number' || typeof want === 'number') return checks.near(name, got, want, 0);
+  return checks.check(name, got === want, JSON.stringify(got) + ' !== ' + JSON.stringify(want));
+};
+const yes = (name, got) => is(name, (typeof got !== 'number' || Number.isFinite(got)) && !!got, true);
 const url = (q) => base + (base.includes('?') ? '&' : '?') + q;
 
 const HOSTILE = [
@@ -36,11 +43,12 @@ const HOSTILE_FM = '---\nconfig:\n  securityLevel: loose\n  themeCSS: "svg{backg
 
 (async () => {
   const b = await chromium.launch();
+  try {
   const p = await b.newPage({ viewport: { width: 1400, height: 1300 }, deviceScaleFactor: 1 });
   const requests = [];
   const navigations = [];
   const violations = [];
-  p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
+  p.on('pageerror', (e) => checks.check('page error', false, e.message));
   p.on('request', (r) => { const u = r.url(); if (!/^(http:\/\/127\.0\.0\.1|data:|blob:)/.test(u)) requests.push(u); });
   p.on('framenavigated', (f) => { if (f === p.mainFrame()) navigations.push(f.url()); });
   await p.addInitScript(() => {
@@ -48,7 +56,7 @@ const HOSTILE_FM = '---\nconfig:\n  securityLevel: loose\n  themeCSS: "svg{backg
     document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI));
     window.addEventListener('beforeunload', () => { window.__unloaded = true; });
   });
-  p.on('dialog', async (d) => { fail++; console.log('FAIL a dialog opened:', d.message()); await d.dismiss(); });
+  p.on('dialog', async (d) => { checks.check('a dialog opened', false, d.message()); await d.dismiss(); });
 
   await p.goto(url('cover=none'));
   await p.waitForTimeout(1500);
@@ -62,7 +70,9 @@ const HOSTILE_FM = '---\nconfig:\n  securityLevel: loose\n  themeCSS: "svg{backg
   const settle = (ms = 1500) => p.waitForTimeout(ms);
 
   // The library is not loaded until a diagram is first shown.
-  const scripts = async () => p.evaluate(() => performance.getEntriesByType('resource').map((r) => r.name).filter((n) => /mermaid|Diagram|cytoscape|elk/i.test(n)).length);
+  const shellScripts = await p.evaluateHandle(inspectScriptBoundary);
+  const scripts = async () => (await p.evaluate(() => performance.getEntriesByType('resource').map((r) => r.name)))
+    .filter((name) => isMermaidRuntimeResource(name, base, builtRuntimePaths)).length;
   is('the library is not loaded before a diagram is shown', await scripts(), 0);
 
   // 1. Insert from the "/" menu.
@@ -124,12 +134,13 @@ const HOSTILE_FM = '---\nconfig:\n  securityLevel: loose\n  themeCSS: "svg{backg
     await settle(2500);
     const r = await p.evaluate(() => ({
       pwned: window.__pwned ?? null,
-      bad: document.querySelectorAll('script:not([src]), .mermaid-block script, .mermaid-block iframe, .mermaid-block object, .mermaid-block embed, .mermaid-block img, .mermaid-block a, .mermaid-block foreignObject iframe').length,
+      bad: document.querySelectorAll('.mermaid-block script, .mermaid-block iframe, .mermaid-block object, .mermaid-block embed, .mermaid-block img, .mermaid-block a, .mermaid-block foreignObject iframe').length,
       handlers: [...document.querySelectorAll('.mermaid-out *')].filter((e) => [...e.attributes].some((a) => /^on/i.test(a.name))).length,
       hrefs: [...document.querySelectorAll('.mermaid-out *')].filter((e) => ['href', 'xlink:href', 'src'].some((n) => e.hasAttribute(n) && !(e.getAttribute(n) || '').startsWith('#'))).length,
       outside: [...document.querySelectorAll('.mermaid-out style')].filter((s) => /@import|url\(\s*['"]?(?!#)/i.test(s.textContent)).length + [...document.querySelectorAll('.mermaid-out [style]')].filter((e) => /url\(\s*['"]?(?!#)/i.test(e.getAttribute('style'))).length,
       drawn: document.querySelectorAll('.mermaid-out svg').length,
     }));
+    r.bad += await p.evaluate(inspectScriptBoundary, shellScripts);
     is(name + ': nothing ran', r.pwned, null);
     is(name + ': no script/iframe/img/link elements', r.bad, 0);
     is(name + ': no event-handler attributes', r.handlers, 0);
@@ -216,7 +227,10 @@ const HOSTILE_FM = '---\nconfig:\n  securityLevel: loose\n  themeCSS: "svg{backg
   is('no Content-Security-Policy violation was reported', csp.join(' | '), '');
   is('no request left this machine (end)', requests.join(' '), '');
 
-  await b.close();
-  console.log(fail ? `FAILED: ${fail}` : 'ALL OK');
-  process.exit(fail ? 1 : 0);
-})();
+  } catch (error) {
+    checks.check('mermaid-ui scenario', false, error.message);
+  } finally {
+    await b.close();
+    checks.finish();
+  }
+})().catch((error) => { checks.check('mermaid-ui runner', false, error.message); checks.finish(); });
