@@ -14,11 +14,14 @@
 //          p5 restart opens straight to notes again
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import graderChecks from '../checks/fail-loud.cjs';
+const checks = graderChecks.createChecks('optionalsecurity');
+const check = checks.check;
+const sockets = new Set();
 const [port, pwFile, dataDir, phase] = process.argv.slice(2);
-const password = readFileSync(pwFile, "utf8").trim();
+const selected = checks.selection(Number.isInteger(Number(port)) && Number(port) >= 1 && Number(port) <= 65535 && Boolean(pwFile) && Boolean(dataDir) ? [phase] : [], ["p1","p2","p3","p4","p5"]);
+const password = selected.length && pwFile ? readFileSync(pwFile, 'utf8').trim() : '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const results = [];
-const check = (name, ok, extra = "") => { results.push([name, ok]); console.log(`${ok ? "PASS" : "FAIL"}  ${phase} ${name} ${extra}`); };
 
 async function connectMain() {
   for (let i = 0; i < 60; i++) {
@@ -26,6 +29,7 @@ async function connectMain() {
       const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
       for (const hit of t) {
         const ws = new WebSocket(hit.webSocketDebuggerUrl);
+        sockets.add(ws);
         await new Promise((r) => (ws.onopen = r));
         let id = 0;
         const pend = new Map();
@@ -56,6 +60,8 @@ function isOpenFile(path) {
 }
 const rawHas = (path, needle) => readFileSync(path).includes(Buffer.from(needle));
 
+try {
+if (selected.length) {
 const m = await connectMain();
 await sleep(2500);
 const status = async () => (await m.inv("vault_status")).ok;
@@ -98,7 +104,7 @@ if (phase === "p2") {
   check("a refused attempt changed nothing", isOpenFile(vaultPath) && before.length === backups().length);
   const on = await m.inv("enable_security", { password, keyfile: null, removeUnprotectedCopies: true });
   console.log("enable_security:", JSON.stringify(on));
-  check("security turned on; earlier open backups were deleted", !on.err && on.ok?.removedCopies >= 1);
+  check("security turned on; earlier open backups were deleted", !on.err && Number.isFinite(on.ok?.removedCopies) && on.ok.removedCopies >= 1);
   await raiseIdle();
   st = await status();
   check("status: security on and still unlocked", st?.securityOn === true && st?.unlocked === true);
@@ -180,7 +186,8 @@ if (phase === "p5") {
   check("final restart: opens straight to notes", st?.unlocked === true && st?.securityOn === false, JSON.stringify(st));
   check("the text is still there", (await pageText()) === TEXT);
 }
-
-const failed = results.filter((r) => !r[1]);
-console.log(`${phase}: ${results.length - failed.length}/${results.length} passed` + (failed.length ? "; FAILED: " + failed.map((x) => x[0]).join("; ") : ""));
-process.exit(failed.length ? 1 : 0);
+}
+} finally {
+  for (const socket of sockets) socket.close();
+  checks.finish();
+}

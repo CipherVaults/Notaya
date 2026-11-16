@@ -11,47 +11,48 @@
               -Exe E:\path\to\Notaya.exe
   Needs   : Node 24 (global fetch and WebSocket, node:sqlite), Windows PowerShell 5.1, WebView2.
   Safety  : never touches a real vault. Everything lives in %TEMP%\clf-optsec-*; the passphrase is generated
-            fresh for each run, kept in a temp file and deleted at the end (never printed). The debug port
+            fresh for each run, kept in a file retained inside the owned run home (never printed). The debug port
             9335 is set for the child process only. The finally block stops only processes this script
-            started, then reports: port closed, env var not set, folder removed.
+            started, then reports: port closed, env var not set, run home retained.
 #>
-param([string]$Exe = (Join-Path $PSScriptRoot '..\..\src-tauri\target\release\Notaya.exe'))
+param([string]$Exe)
 
 . (Join-Path $PSScriptRoot 'common.ps1')
+$ErrorActionPreference = 'Stop'
 $port = 9335
 $Exe = Resolve-TestExe $Exe
 Assert-PortFree $port
 
-$dir = Join-Path $env:TEMP "clf-optsec-$(Get-Random)"
-New-Item -ItemType Directory $dir | Out-Null
+$dir = New-TestRunFolder $env:TEMP 'clf-optsec'
 Copy-TestExe $Exe $dir
 "exe sha256: " + (Get-FileHash "$dir\Notaya.exe" -Algorithm SHA256).Hash
-$pw = New-PassphraseFile
+$pw = New-PassphraseFile $dir
 $p = $null
-$failed = @()
 try {
   foreach ($phase in 'p1','p2','p3','p4','p5') {
     $p = Start-TestApp "$dir\Notaya.exe" $port
     Start-Sleep 6
-    node "$PSScriptRoot\optionalsecurity.mjs" $port $pw "$dir\data" $phase
-    if ($LASTEXITCODE -ne 0) { $failed += $phase }
+    Invoke-NodeCheck "$PSScriptRoot\optionalsecurity.mjs" @($port, $pw, "$dir\data", $phase)
     # Close like a person would: the window's close button, which saves, backs up and quits.
     $null = $p.CloseMainWindow()
-    if (-not $p.WaitForExit(40000)) { "$phase : the app did not exit within 40 s after the close button"; $failed += "$phase-exit" }
+    Assert-Test ($p.WaitForExit(40000)) "$phase app exited within the existing 40-second limit"
     Start-Sleep 2
-    if ((Get-ListenerCount $port) -gt 0 -and -not $p.HasExited) { break }
+    Assert-Test ((Get-ListenerCount $port) -eq 0) "$phase closed its debug listener"
   }
   "--- data folder after the test:"
   Get-ChildItem "$dir\data" -File | Select-Object Name,Length | Format-Table -AutoSize | Out-String
   "--- backups:"
   Get-ChildItem "$dir\data\backups" -File | Select-Object Name,Length | Format-Table -AutoSize | Out-String
-  "phases with failures: " + ($(if ($failed.Count) { $failed -join ', ' } else { 'none' }))
+  'All five optional-security phases completed without a failed child or exit check.'
+} catch {
+  Write-Error -ErrorRecord $_ -ErrorAction Continue
+  throw
 } finally {
-  Stop-TestApp $p $dir
-  "port $port listening after test: " + (Get-ListenerCount $port)
-  "WEBVIEW2 env var left set: " + [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
-  "Notaya processes from the temp folder remaining: " + @(Get-Process Notaya -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dir) }).Count
-  Remove-Item $pw -Force -ErrorAction SilentlyContinue
-  "temp folder removed: " + (Remove-TestFolder $dir)
-  "passphrase file removed: " + (-not (Test-Path $pw))
+  Invoke-TestCleanup { Stop-TestApp $p $dir }
+  Invoke-TestCleanup { Assert-Test ((Get-ListenerCount $port) -eq 0) 'debug listener closed' }
+  Invoke-TestCleanup { Assert-Test (-not [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS) 'debug environment is clear' }
+  Invoke-TestCleanup { Assert-Test (@(Get-NotayaProcesses | Where-Object { $_.Path -and $_.Path.StartsWith($dir.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) }).Count -eq 0) 'owned Notaya processes exited' }
+    Invoke-TestCleanup { Confirm-TestArtifactsRetained $dir }
+  Invoke-TestCleanup { Assert-Test (Test-Path -LiteralPath $pw -PathType Leaf) 'synthetic credential retained inside the owned run home' }
+  Complete-TestCleanup
 }

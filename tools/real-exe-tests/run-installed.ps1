@@ -9,23 +9,24 @@
             folder, leaves the (temp) LOCALAPPDATA alone and refuses the import command.
   Usage   : powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-installed.ps1 `
               -Exe E:\Project\Notaya\Notaya\src-tauri\target\release\Notaya.exe
-            -Exe is optional; the default is ..\..\src-tauri\target\release\Notaya.exe relative to this script.
+            -Exe is required; pass an independently verified build explicitly.
   Needs   : Node 24 (global fetch and WebSocket), Windows PowerShell 5.1, WebView2.
   Safety  : never touches a real vault or the real %LOCALAPPDATA%: that variable is changed for the child
             process only. Everything lives in %TEMP%\clf-installed-*. Debug port 9335 is set for the child
             process only. The finally block stops only the processes this script started, then reports:
-            port closed, env var not set, folder removed.
+            port closed, env var not set, run home retained.
   Not covered (needs a person or UI automation): the native folder dialog of "Import notes from a portable
             copy", and the NSIS setup itself (see docs/execution/2026-10-28-windows-installer.md).
 #>
-param([string]$Exe = (Join-Path $PSScriptRoot '..\..\src-tauri\target\release\Notaya.exe'))
+param([string]$Exe)
 
 . (Join-Path $PSScriptRoot 'common.ps1')
+$ErrorActionPreference = 'Stop'
 $port = 9335
 $Exe = Resolve-TestExe $Exe
 Assert-PortFree $port
 
-$base = Join-Path $env:TEMP "clf-installed-$(Get-Random)"
+$base = New-TestRunFolder $env:TEMP 'clf-installed'
 $prog = "$base\program"; $local = "$base\localappdata"
 $prog2 = "$base\portable"; $local2 = "$base\localappdata2"
 New-Item -ItemType Directory $prog, $local, $prog2, $local2 | Out-Null
@@ -42,30 +43,34 @@ try {
   "== installed copy, first start"
   $p = Start-TestApp "$prog\Notaya.exe" $port '' '' @{ LOCALAPPDATA = $local }
   Start-Sleep 6
-  node "$PSScriptRoot\installed.mjs" $port first "$local\Notaya Notes\data"
+  Invoke-NodeCheck "$PSScriptRoot\installed.mjs" @($port, 'first', "$local\Notaya Notes\data")
   Stop-TestApp $p $prog
-  "vault.nota under LOCALAPPDATA\Notaya Notes\data: " + (Test-Path "$local\Notaya Notes\data\vault.nota")
-  "data folder next to the exe (must be False): " + (Test-Path "$prog\data")
+  Assert-Test (Test-Path -LiteralPath "$local\Notaya Notes\data\vault.nota") 'installed notes exist under throwaway LOCALAPPDATA'
+  Assert-Test (-not (Test-Path -LiteralPath "$prog\data")) 'installed copy did not make portable data'
 
   "== installed copy, second start"
   $p = Start-TestApp "$prog\Notaya.exe" $port '' '' @{ LOCALAPPDATA = $local }
   Start-Sleep 6
-  node "$PSScriptRoot\installed.mjs" $port second "$local\Notaya Notes\data"
+  Invoke-NodeCheck "$PSScriptRoot\installed.mjs" @($port, 'second', "$local\Notaya Notes\data")
   Stop-TestApp $p $prog
-  "data folder next to the exe still absent (must be False): " + (Test-Path "$prog\data")
+  Assert-Test (-not (Test-Path -LiteralPath "$prog\data")) 'installed restart did not make portable data'
 
   "== portable copy"
   $p = Start-TestApp "$prog2\Notaya.exe" $port '' '' @{ LOCALAPPDATA = $local2 }
   Start-Sleep 6
-  node "$PSScriptRoot\installed.mjs" $port portable "$prog2\data"
+  Invoke-NodeCheck "$PSScriptRoot\installed.mjs" @($port, 'portable', "$prog2\data")
   Stop-TestApp $p $prog2
-  "vault.nota next to the portable exe: " + (Test-Path "$prog2\data\vault.nota")
-  "portable copy wrote into LOCALAPPDATA (must be 0 items; Windows own Microsoft\ cache ignored): " + @(Get-ChildItem $local2 -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'Microsoft' }).Count
+  Assert-Test (Test-Path -LiteralPath "$prog2\data\vault.nota") 'portable notes exist beside the copied executable'
+  Assert-Test (@(Get-ChildItem -LiteralPath $local2 -Force | Where-Object { $_.Name -ne 'Microsoft' }).Count -eq 0) 'portable copy did not create application data under LOCALAPPDATA'
+} catch {
+  Write-Error -ErrorRecord $_ -ErrorAction Continue
+  throw
 } finally {
-  Stop-TestApp $p $base
-  "port $port listening after test: " + (Get-ListenerCount $port)
-  "WEBVIEW2 env var left set: " + [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
-  "LOCALAPPDATA restored: " + ($env:LOCALAPPDATA -eq $realLocal)
-  "Notaya processes from the temp folder remaining: " + @(Get-Process Notaya -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($base) }).Count
-  "temp folder removed: " + (Remove-TestFolder $base)
+  Invoke-TestCleanup { Stop-TestApp $p $base }
+  Invoke-TestCleanup { Assert-Test ((Get-ListenerCount $port) -eq 0) 'debug listener closed' }
+  Invoke-TestCleanup { Assert-Test (-not [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS) 'debug environment is clear' }
+  Invoke-TestCleanup { Assert-Test ($env:LOCALAPPDATA -eq $realLocal) 'parent LOCALAPPDATA restored' }
+  Invoke-TestCleanup { Assert-Test (@(Get-NotayaProcesses | Where-Object { $_.Path -and $_.Path.StartsWith($base.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) }).Count -eq 0) 'owned Notaya processes exited' }
+  Invoke-TestCleanup { Confirm-TestArtifactsRetained $base }
+  Complete-TestCleanup
 }

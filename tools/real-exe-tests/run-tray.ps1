@@ -9,69 +9,94 @@
   Usage   : powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-tray.ps1 -Exe <path to Notaya.exe>
   Needs   : Node 24, Windows PowerShell 5.1, WebView2.
   Safety  : throwaway vaults in a temp folder (set -Root to put it elsewhere, for example the AV-excluded test folder), passphrase in a
-            temp file deleted at the end. Debug port 9337 for the child process only. It REFUSES to run if a Run value "Notaya"
+            file retained inside the owned run home. Debug port 9337 for the child process only. It REFUSES to run if a Run value "Notaya"
             already exists (a real "Start with Windows" entry of the owner); it removes the value it wrote, and only if it
             names the test exe. The tray icon and its menu are not clicked (not automated): look at them by hand.
 #>
 param(
-  [string]$Exe = (Join-Path $PSScriptRoot '..\..\src-tauri\target\release\Notaya.exe'),
+  [string]$Exe,
   [string]$Root = $env:TEMP
 )
 
 . (Join-Path $PSScriptRoot 'common.ps1')
+$ErrorActionPreference = 'Stop'
 $port = 9337
 $Exe = Resolve-TestExe $Exe
 Assert-PortFree $port
-$runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-if (Get-ItemProperty -Path $runKey -Name 'Notaya' -ErrorAction SilentlyContinue) { throw 'A Run value "Notaya" already exists (start with Windows is on for a real copy). Refusing to run.' }
+. (Join-Path $PSScriptRoot 'startup-entry-guard.ps1')
+Assert-NotayaStartupAbsent
+$startupAttemptedOn = $false
+$startupTestExe = $null
 
-function Get-VisibleWindowCount($p) { $p.Refresh(); if ($p.HasExited) { return -1 }; return [int]($p.MainWindowHandle -ne [IntPtr]::Zero) }
+function Get-VisibleWindowCount($p) {
+  $p.Refresh()
+  $exited = $p.HasExited
+  if ($exited -isnot [bool]) { throw 'Cannot establish whether the owned test process has exited' }
+  if ($exited) { return -1 }
+  $visible = @(Invoke-NodeCheck (Join-Path $PSScriptRoot 'main-window-visible.mjs') @($port))
+  if ($visible.Count -ne 1 -or $visible[0] -isnot [string] -or $visible[0] -cnotin @('true','false')) {
+    throw 'Expected exactly one boolean from the labelled main window visibility reader'
+  }
+  return [int]($visible[0] -ceq 'true')
+}
 
-$pw = New-PassphraseFile
+$runHome = New-TestRunFolder $Root 'clf-tray'
+$pw = New-PassphraseFile $runHome
 $dirs = @()
 $p = $null
 try {
   foreach ($mode in @('secure', 'open')) {
-    $dir = Join-Path $Root "clf-tray-$mode-$(Get-Random)"
+    $dir = Join-Path $runHome $mode
     $dirs += $dir
     New-Item -ItemType Directory $dir | Out-Null
+    Register-TestFolder $dir
     Copy-TestExe $Exe $dir $true
     "exe sha256: " + (Get-FileHash "$dir\Notaya.exe" -Algorithm SHA256).Hash
     "== $mode : setup"
     $p = Start-TestApp "$dir\Notaya.exe" $port; Start-Sleep 6
-    node "$PSScriptRoot\tray.mjs" $port setup $mode $pw
+    Invoke-NodeCheck "$PSScriptRoot\tray.mjs" @($port, 'setup', $mode, $pw)
     "== $mode : type, then close the window"
-    node "$PSScriptRoot\tray.mjs" $port close $mode $pw
+    Invoke-NodeCheck "$PSScriptRoot\tray.mjs" @($port, 'close', $mode, $pw)
     $p.Refresh()
-    "app still running after the close button: " + (-not $p.HasExited)
-    "visible main window after the close button (0 = hidden): " + (Get-VisibleWindowCount $p)
-    node "$PSScriptRoot\tray.mjs" $port status $mode $pw
+    Assert-Test (-not $p.HasExited) 'close-to-tray keeps the test process running'
+    Assert-Test ((Get-VisibleWindowCount $p) -eq 0) 'close-to-tray hides the main window'
+    Invoke-NodeCheck "$PSScriptRoot\tray.mjs" @($port, 'status', $mode, $pw)
     "== $mode : start the exe again (brings the window back)"
-    $null = Start-Process "$dir\Notaya.exe" -PassThru; Start-Sleep 4
-    "visible main window after the second start (1 = shown): " + (Get-VisibleWindowCount $p)
-    "Notaya processes from this folder: " + @(Get-Process Notaya -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dir) }).Count + " (1 = the second start handed over and ended)"
-    node "$PSScriptRoot\tray.mjs" $port check $mode $pw
+    $second = Start-TestApp "$dir\Notaya.exe" $port; Start-Sleep 4
+    Assert-Test ((Get-VisibleWindowCount $p) -eq 1) 'second start shows the existing main window'
+    Assert-Test (@(Get-NotayaProcesses | Where-Object { $_.Path -and $_.Path.StartsWith($dir.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) }).Count -eq 1) 'second start handed over and exited'
+    Invoke-NodeCheck "$PSScriptRoot\tray.mjs" @($port, 'check', $mode, $pw)
     if ($mode -eq 'open') {
       "== open : start with Windows on, then off"
-      node "$PSScriptRoot\tray.mjs" $port prefs on $pw
-      $v = (Get-ItemProperty -Path $runKey -Name 'Notaya' -ErrorAction SilentlyContinue).Notaya
-      "Run value while on: $v"
-      node "$PSScriptRoot\tray.mjs" $port prefs off $pw
-      "Run value after off: " + [bool](Get-ItemProperty -Path $runKey -Name 'Notaya' -ErrorAction SilentlyContinue)
+      $startupTestExe = "$dir\Notaya.exe"
+      [void](Get-NotayaStartupCommand $startupTestExe)
+      Assert-NotayaStartupAbsent
+      $startupAttemptedOn = $true
+      [Console]::Out.WriteLine('STARTUP_ENTRY_TEST_ON ' + (@{ testExe = $startupTestExe } | ConvertTo-Json -Compress))
+      [Console]::Out.Flush()
+      Invoke-NodeCheck "$PSScriptRoot\tray.mjs" @($port, 'prefs', 'on', $pw)
+      Assert-NotayaStartupOwned $startupTestExe
+      Assert-Test $true 'Start with Windows points only to the test executable'
+      Assert-NotayaStartupOwned $startupTestExe
+      Invoke-NodeCheck "$PSScriptRoot\tray.mjs" @($port, 'prefs', 'off', $pw)
+      Assert-NotayaStartupAbsent
+      Assert-Test $true 'Start with Windows entry was removed'
       "shell-prefs.json: " + (Get-Content "$dir\data\shell-prefs.json" -Raw)
     }
     Stop-TestApp $p $dir
     $p = $null
   }
+} catch {
+  Write-Error -ErrorRecord $_ -ErrorAction Continue
+  throw
 } finally {
-  Stop-TestApp $p ($dirs | Select-Object -Last 1)
-  foreach ($d in $dirs) { Get-Process Notaya -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($d) } | Stop-Process -Force }
-  $leftover = (Get-ItemProperty -Path $runKey -Name 'Notaya' -ErrorAction SilentlyContinue).Notaya
-  if ($leftover) { foreach ($d in $dirs) { if ($leftover.Contains($d)) { Remove-ItemProperty -Path $runKey -Name 'Notaya'; 'removed the test Run value' } } }
-  "Run value Notaya left behind: " + [bool](Get-ItemProperty -Path $runKey -Name 'Notaya' -ErrorAction SilentlyContinue)
-  "port $port listening after test: " + (Get-ListenerCount $port)
-  "WEBVIEW2 env var left set: " + [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
-  Remove-Item $pw -Force -ErrorAction SilentlyContinue
-  foreach ($d in $dirs) { "temp folder removed: " + (Remove-TestFolder $d) }
-  "passphrase file removed: " + (-not (Test-Path $pw))
+  Invoke-TestCleanup { Stop-TestApp $p ($dirs | Select-Object -Last 1) }
+  Invoke-TestCleanup { foreach ($d in $dirs) { Stop-TestApp $null $d } }
+  Invoke-TestCleanup { Remove-NotayaTestStartupEntry $startupTestExe $startupAttemptedOn }
+  Invoke-TestCleanup { Assert-NotayaStartupAbsent; Assert-Test $true 'no test Start-with-Windows value remains' }
+  Invoke-TestCleanup { Assert-Test ((Get-ListenerCount $port) -eq 0) 'debug listener closed' }
+  Invoke-TestCleanup { Assert-Test (-not [bool]$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS) 'debug environment is clear' }
+    Invoke-TestCleanup { Confirm-TestArtifactsRetained $runHome }
+  Invoke-TestCleanup { Assert-Test (Test-Path -LiteralPath $pw -PathType Leaf) 'synthetic credential retained inside the owned run home' }
+  Complete-TestCleanup
 }

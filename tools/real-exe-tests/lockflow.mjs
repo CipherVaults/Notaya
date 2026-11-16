@@ -11,8 +11,13 @@
 //   phase "check":  unlock and print whether the typed text was saved
 import { readFileSync } from "node:fs";
 
+import graderChecks from '../checks/fail-loud.cjs';
+const checks = graderChecks.createChecks('lockflow');
+const check = checks.check;
+const sockets = new Set();
 const [port, phase, scenario = "page", pwFile] = process.argv.slice(2);
-const password = readFileSync(pwFile, "utf8").trim();
+const selected = checks.selection(Number.isInteger(Number(port)) && Number(port) >= 1 && Number(port) <= 65535 && Boolean(pwFile) && ['page', 'sticky', 'close'].includes(scenario) ? [phase] : [], ["setup","type","check"]);
+const password = selected.length && pwFile ? readFileSync(pwFile, 'utf8').trim() : '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function connect(match) {
@@ -21,6 +26,7 @@ async function connect(match) {
       const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
       for (const hit of t) {
         const ws = new WebSocket(hit.webSocketDebuggerUrl);
+        sockets.add(ws);
         await new Promise((r) => (ws.onopen = r));
         let id = 0;
         const pend = new Map();
@@ -45,6 +51,8 @@ const isMain = (l) => l === "main";
 const isSticky = (l) => String(l).startsWith("sticky-");
 const TYPED = "FLUSHTEST-" + scenario;
 
+try {
+if (selected.length) {
 const main = await connect(isMain);
 await sleep(1500);
 
@@ -57,12 +65,12 @@ if (phase === "setup") {
   await main.ev("location.reload()");
   await sleep(4000);
   const nb = await main.inv("create_notebook", { name: "T", color: "#888888", icon: "N" });
-  if (!nb.ok) { console.log("create_notebook failed:", JSON.stringify(nb)); process.exit(1); }
+  if (!nb.ok) throw new Error('create_notebook failed');
   const sec = nb.ok.sections[0];
   const pg = await main.inv("create_page", { sectionId: sec.id, title: "Flush page" });
-  console.log("page:", pg.ok?.id ? "created" : JSON.stringify(pg));
+  check('page created', typeof pg.ok?.id === 'string');
   const st = await main.inv("create_sticky", { open: true });
-  console.log("sticky:", st.ok?.id ? "created" : JSON.stringify(st));
+  check('sticky created', typeof st.ok?.id === 'string');
   await sleep(500);
   console.log("windows:", (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page").map((x) => x.title).join(" | "));
 } else if (phase === "type") {
@@ -72,7 +80,7 @@ if (phase === "setup") {
   console.log("unlock:", JSON.stringify(await main.inv("unlock_vault", { password, keyfile: null })));
   await main.ev("location.reload()");
   await sleep(3000);
-  console.log("open page:", await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Flush page'); s?.click(); return !!s; })()`));
+  check('page opened', (await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Flush page'); s?.click(); return !!s; })()`)) === true);
   await sleep(1500);
   let sticky = null;
   if (scenario === "sticky") {
@@ -81,7 +89,7 @@ if (phase === "setup") {
   }
   const target = scenario === "sticky" ? sticky : main;
   const typed = await target.ev(`(() => { const pm=document.querySelector('.ProseMirror'); if(!pm) return 'no editor'; pm.focus(); document.execCommand('insertText', false, ${JSON.stringify(TYPED)}); return pm.textContent; })()`);
-  console.log("typed into editor:", JSON.stringify(typed));
+  check('text reached the editor', typeof typed === 'string' && typed.includes(TYPED));
   // lock or close at once, well inside the 350-500 ms save delay
   if (scenario === "close") {
     main.ev(`window.__TAURI_INTERNALS__.invoke('plugin:window|close', { label: 'main' }).catch(()=>{})`).catch(() => {});
@@ -91,7 +99,7 @@ if (phase === "setup") {
   await sleep(1500);
   if (scenario !== "close") {
     const v = await main.inv("vault_status");
-    console.log("vault locked after click:", v.ok ? !v.ok.unlocked : JSON.stringify(v));
+    check('vault locked after click', v.ok?.unlocked === false);
   }
   await sleep(2500);
 } else if (phase === "check") {
@@ -103,7 +111,11 @@ if (phase === "setup") {
   const sg = stk ? (await main.inv("get_sticky", { id: stk.id })).ok : null;
   const inPage = (pg?.text ?? "") + (pg?.content ?? "");
   const inSticky = (sg?.text ?? "") + (sg?.content ?? "");
-  console.log(`page contains "${TYPED}":`, inPage.includes(TYPED));
-  console.log(`sticky contains "${TYPED}":`, inSticky.includes(TYPED));
+  if (scenario !== 'sticky') check('page retains typed text', inPage.includes(TYPED));
+  if (scenario === 'sticky') check('sticky retains typed text', inSticky.includes(TYPED));
 }
-process.exit(0);
+}
+} finally {
+  for (const socket of sockets) socket.close();
+  checks.finish();
+}

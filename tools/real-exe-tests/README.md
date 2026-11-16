@@ -1,19 +1,19 @@
 # Real-exe tests
 
-Scripts that start a **copy of the built `Notaya.exe`** with a **throwaway vault** in a temp folder, drive it through the WebView2 debug port, print PASS/FAIL lines and clean up. They test the real program (Rust core, WebView, file system), which `cargo test` and the mock UI cannot.
+Scripts that start a **copy of the built `Notaya.exe`** with a **throwaway vault**, drive it through the WebView2 debug port, and report failing checks with a failing exit. They close owned processes and ports but retain the run data and outputs. A full run tests the real program (Rust core, WebView, file system), which `cargo test` and the mock UI cannot; synthetic grader-qualification tests do not establish those native results.
 
 ## Prerequisites
 
-- A release build: `npm run tauri build` (the default exe is `src-tauri\target\release\Notaya.exe`).
+- An independently verified release build, passed explicitly with `-Exe`; no runner chooses an executable implicitly.
 - Node 24 (global `fetch` and `WebSocket`), Windows PowerShell 5.1, WebView2.
 
 ## Safety rules
 
-- **Where on the owner's PC (rule from 2026-10-28 14:03:51 UTC):** builds, clones, test installs and throwaway vaults live only in `E:\Project\Notaya\Notaya Tests Excluded` (the owner moved the folder there on 2026-10-28; Bitdefender exclusion, path has spaces: quote it). Temp folders under `%TEMP%` had test files removed by the antivirus on 2026-10-28.
+- **Historical Mohamed-side location rule (2026-10-28 14:03:51 UTC):** builds, clones, test installs and throwaway vaults used `E:\Project\Notaya\Notaya Tests Excluded` after antivirus removed test files under `%TEMP%`. This is not permission for another partner's agent to access that drive. Use the current machine's authorized, owned outside-repository test location; quote paths containing spaces.
 
 - **Never** run these against a real vault or `E:\Project\Notaya\Cipherleaf-portable\data` (moved there on 2026-10-28) (the owner's real vault; also any future `Notaya-portable\data`). The runners copy the exe into `%TEMP%\clf-*` (with a `portable.txt` marker, via `Copy-TestExe` in `common.ps1`, so the vault stays in that folder; without the marker a bare folder counts as an installed copy and would use `%LOCALAPPDATA%`) and create a new vault there. Never test on the owner's live window.
-- The debug port is **9335**, set (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`) for the test process only, never left set. After a run, the runner prints `port 9335 listening after test: 0`. If it is not 0, find out why and close it.
-- The passphrase is generated fresh for each run from a cryptographic RNG, written to a temp file and deleted at the end. It is never printed or stored. Do not hard-code one.
+- Legacy checks use debug port **9335**, except tray checks use **9337**; the startup runner has its explicit port setting. The debug environment is child-only. Each wrapper asserts listener closure and parent-environment restoration. An unavailable listener query is a failure, not evidence of zero listeners.
+- The passphrase is generated fresh for each run from a cryptographic RNG and retained with its synthetic vault inside the owned run home, outside the repository. Its value is never printed, committed or shared. Do not hard-code one. Keep the run and credential available for diagnosis; artifact retention is separate from closing the test process and debug port.
 - Only the Notaya the script started is stopped.
 - Never commit vault data or secrets (`*.nota`, `*.clf`, `*.key`, `.devdata/`).
 - Run only after the work is approved. In `docs/STATUS.md` a paused mission means ask the owner first.
@@ -37,7 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\real-exe-tests\run-i
 
 ```
 
-The older runners below first print the **SHA-256 of the exe they test**, and at the end the cleanup lines: port closed, env var not set, no process left, temp folder and passphrase file removed. `-Exe` is optional; it defaults to the release exe relative to the scripts. The X-1 startup runner instead retains its throwaway home and reports for comparison; its commands, safety boundaries and interpretation are in [startup-minimized.md](startup-minimized.md).
+Pass `-Exe` explicitly to every runner, including X-1, using an independently verified build. No runner silently selects an old release executable. The five legacy runners propagate a failed Node check and assert process/port closure and restored parent settings; they do not turn printed failures into a successful exit. Their child processes clear inherited Notaya home overrides and use owned throwaway profile paths. All run homes and outputs are retained, including failed runs. A generated test-only credential stays inside its owned run home outside the repository and is never printed; do not commit or share it. Retention is separate from closing the owned app and debug port. The X-1 startup runner also retains its throwaway home and reports for comparison; its commands, safety boundaries and interpretation are in [startup-minimized.md](startup-minimized.md).
 
 ## What each test checks
 
@@ -48,13 +48,13 @@ list_backups works while locked, newest first; live vault has CHANGED text; abso
 
 **run-installed.ps1** (`installed.mjs`): an exe copy with no `portable.txt` and no `data` folder (what the setup installs) shows the first screen (Welcome, Start new notes, Import), keeps its notes in `<LOCALAPPDATA>\Notaya Notes\data` (a temp folder here) and not next to the exe, and opens them by itself on the second start; a copy with `portable.txt` keeps its notes in its own `data` folder, leaves LOCALAPPDATA alone and refuses the import command. Not covered: the native folder dialog of the import and the NSIS setup itself.
 
-**run-lockflow.ps1** (`lockflow.mjs`): for each scenario it prints `page contains "FLUSHTEST-<scenario>": true/false` and `sticky contains ...: true/false`. The text typed in that scenario must be saved: the page line must be true for `page` and `close`, the sticky line true for `sticky` (the other line is false by design). Scenario `close` closes the window, restarts the exe and checks again.
+**run-lockflow.ps1** (`lockflow.mjs`): the page text must survive for `page` and `close`, and the sticky text must survive for `sticky`. Only the relevant target is asserted; the other target need not contain that scenario's text. Empty or unknown scenarios fail before launch. Scenario `close` closes the window, asserts process exit, restarts the exe and checks again.
 
 ## Known quirks
 
-- **Idle auto-lock.** The app locks itself after 5 minutes of PC idle time, which breaks a test. Every script raises `idleLockMinutes` to 180 right after `create_vault` (throwaway vault only).
-- **The first setup step can be flaky.** If the run fails right at the start (connect, create vault), run it once more before investigating.
-- **A lock reloads the page**, so a script that calls the app across a lock may get `undefined` and reconnects (`connectMain`). That is expected.
+- **Idle auto-lock.** Protected-vault flows attempt to raise `idleLockMinutes` to 180 during setup on throwaway data. An earlier lock or failed setup remains a failed run to investigate, not permission to weaken the check or retry blindly.
+- **A setup failure is a failed run.** Retain and label its data, outputs and source/executable identities. Investigate and classify the failure before considering another run. A new run needs a documented relevant change and the applicable review; do not blindly repeat a failed setup until it turns green. Preserve the failed result separately from any later qualified result.
+- **A lock can replace the page context.** Undefined results or transport failures do not count as success. A test must explicitly reconnect when needed and assert the intended post-lock effect.
 - **`take_notice` is consumed by the page itself.** The UI takes the notice when it shows the toast, so a test call usually returns null.
 - Starting the exe takes a few seconds; the runners wait 6 s before connecting.
 
