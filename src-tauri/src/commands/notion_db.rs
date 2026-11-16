@@ -47,7 +47,7 @@ pub struct RowPage {
 
 pub struct Imported {
     pub items: Vec<Item>,
-    /// Page ids that became rows and must not be saved as pages.
+    /// Page ids whose content moved into rows or database descriptions.
     pub removed_pages: HashSet<String>,
     pub covered: Vec<String>,
     pub notes: Vec<String>,
@@ -127,6 +127,22 @@ pub fn read_tables(vfs: &Vfs, csv_paths: &[String]) -> (Vec<NotionTable>, Vec<St
     }
     let mut tables = Vec::new();
     let mut notes = Vec::new();
+    // Names are presentation, never database identity. Report each conflicting name once,
+    // including groups beyond the database cap; retain the existing id/path grouping.
+    let mut names: BTreeMap<String, (String, HashSet<String>)> = BTreeMap::new();
+    for key in groups.keys() {
+        let base = split_dir(key).1;
+        if let Some(id) = notion_id(base) {
+            let clean = crate::importers::doc::collapse_ws(&strip_notion_id(base));
+            let display = clean.chars().filter(|c| !c.is_control()).take(MAX_NAME).collect();
+            names.entry(clean.to_lowercase()).or_insert_with(|| (display, HashSet::new())).1.insert(id);
+        }
+    }
+    for (_, (name, ids)) in names {
+        if ids.len() > 1 {
+            notes.push(format!("Database name \"{name}\" is ambiguous: its CSV views have different source ids and were kept separate."));
+        }
+    }
     let mut covered = Vec::new();
     for (key, (plain, all, paths)) in groups {
         if tables.len() >= MAX_DATABASES {
@@ -305,12 +321,13 @@ fn parse_links(cell: &str) -> Option<Vec<(String, String)>> {
 }
 
 /// Makes the databases. `items` holds the pages of the import (rows' bodies are taken from them, and the pages
-/// that became rows are reported in `removed_pages`). `fallback_section` is used when a table has no row page.
+/// that became rows are reported in `removed_pages`). CSV source sections locate tables without row pages.
 pub fn import_databases(
     tables: &[NotionTable],
     row_pages: &[RowPage],
     items: &[Item],
-    fallback_section: &str,
+    source_sections: &HashMap<String, String>,
+    header_pages: &HashMap<String, String>,
     s: &Session,
     now: i64,
     before_first: &dyn Fn(&Session) -> Result<()>,
@@ -339,7 +356,9 @@ pub fn import_databases(
 
     for (ti, t) in tables.iter().enumerate() {
         let mine: Vec<&RowPage> = row_pages.iter().filter(|r| r.table == ti).collect();
-        let section = mine.iter().find_map(|r| page_of.get(r.page_id.as_str()).map(|p| p.section_id.clone())).unwrap_or_else(|| fallback_section.to_string());
+        let section = mine.iter().find_map(|r| page_of.get(r.page_id.as_str()).map(|p| p.section_id.clone()))
+            .or_else(|| t.paths.iter().find_map(|p| source_sections.get(p).cloned()))
+            .ok_or_else(|| Error::invalid("The database source section was not found. Nothing was imported."))?;
         let mut db = Database::new(new_id(), section, t.title.clone(), now);
         db.order = order;
         order += 1;
@@ -351,6 +370,19 @@ pub fn import_databases(
                 continue;
             }
         };
+        // Consume a plain wrapper only after its database is built. A failed/ambiguous
+        // table or an incoming page link keeps the rendered source page as a fallback.
+        if let Some(id) = t.paths.iter().find_map(|p| header_pages.get(p)) {
+            let owners = tables.iter().filter(|table| table.paths.iter().any(|p| header_pages.get(p) == Some(id))).count();
+            if owners == 1 && !has_children.contains(id.as_str()) && !content_of_others(id) {
+                // Keep the full fallback page when its text cannot fit the existing
+                // Database::sanitize description limit; never truncate it or fail the import.
+                if let Some(page) = page_of.get(id.as_str()).filter(|p| p.text.chars().take(2_001).count() <= 2_000) {
+                    built.db.description = page.text.clone();
+                    out.removed_pages.insert(id.clone());
+                }
+            }
+        }
         // Each row takes the page with its title (in order, so equal titles pair up one by one).
         let mut used = vec![false; mine.len()];
         let mut notion_ids = Vec::with_capacity(built.rows.len());

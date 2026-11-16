@@ -217,6 +217,8 @@ pub fn build(src: &str, ctl: &Control) -> El {
 pub struct HtmlDoc {
     pub title: Option<String>,
     pub blocks: Vec<Block>,
+    /// A structured Notion page, eligible for a plain database description after conversion.
+    pub database_header: bool,
     /// The page's emoji (Notion's page icon).
     pub icon: Option<String>,
     /// The cover picture (Notion's page cover), as an image index.
@@ -226,8 +228,21 @@ pub struct HtmlDoc {
 }
 
 pub fn parse_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
+    parse_document_with_view(src, ctx, false)
+}
+
+/// A CSV supplies the database view; keep the surrounding document through the same sanitizer.
+pub fn parse_database_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
+    parse_document_with_view(src, ctx, true)
+}
+
+fn parse_document_with_view(src: &str, ctx: &mut Ctx, database_view: bool) -> HtmlDoc {
     let root = build(src, ctx.ctl);
-    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0 };
+    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0, database_view };
+    c.doc.database_header = database_view && root.find(&|e| e.name == "article" && e.has_class("page")).is_some_and(|page| {
+        page.elements().any(|e| e.name == "header" && e.elements().any(|h| h.name == "h1" && h.has_class("page-title")))
+            && page.elements().any(|e| e.name == "div" && e.has_class("page-body"))
+    });
     if let Some(t) = root.find(&|e| e.name == "title") {
         let t = doc::collapse_ws(&t.text());
         if !t.is_empty() {
@@ -243,7 +258,7 @@ pub fn parse_document(src: &str, ctx: &mut Ctx) -> HtmlDoc {
 /// HTML inside a Markdown file (Notion's `<aside>` callouts, `<img>`, `<details>`...).
 pub fn parse_fragment(src: &str, ctx: &mut Ctx) -> Vec<Block> {
     let root = build(src, ctx.ctl);
-    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0 };
+    let mut c = Conv { ctx, doc: HtmlDoc::default(), depth: 0, cells: 0, database_view: false };
     let mut out = Out::default();
     c.walk(&root.children, &Marks::default(), &mut out);
     out.finish()
@@ -313,6 +328,7 @@ struct Conv<'c, 'a> {
     depth: usize,
     /// Table cells made so far on this page (the renderer keeps at most `doc::MAX_PAGE_CELLS`).
     cells: usize,
+    database_view: bool,
 }
 
 /// Bold, italic, underline and strike from a `style` attribute (Google Docs, Word HTML, Notion).
@@ -473,6 +489,11 @@ impl Conv<'_, '_> {
     fn element(&mut self, e: &El, parent: &Marks, out: &mut Out) {
         let name = e.name.as_str();
         if DROP.contains(&name) || name == "head" || name == "title" {
+            return;
+        }
+        // Notion collection tables (and plain view tables in older exports) are supplied by CSV.
+        // An explicitly marked simple-table is ordinary page content and is kept.
+        if self.database_view && name == "table" && (e.has_class("collection-content") || e.attr("class").unwrap_or("").trim().is_empty()) {
             return;
         }
         let mut m = parent.clone();
