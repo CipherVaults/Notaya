@@ -1,5 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
+<a id="core-main-integration-20261116"></a>
+
+## Continuation — feature Goal resumed; reviewed work integrated
+
+**2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** Ahmed's latest direction resumes the existing feature Goal after the completed private source/PBS checkpoint and delegates routine reviewed merges; separate raw-asset/history/frozen backup exclusions do not hold development. [A57](plan/approval-and-amendments.md#a57-core-resumption-20261116) preserves his words.
+
+[PR133](https://github.com/CipherVaults/Notaya/pull/133) merged at 0e6bf68c5b9bbee130f41548b3ff152091f06faa; [PR132](https://github.com/CipherVaults/Notaya/pull/132) merged at d23fda0b482e6e458bea8158065e9cf2f77f99e6. Independent HTTPS reads verify both merge parents and trees. Main now contains the reviewed export replacement/checkers/continuity records, complete database totals oracle and inline undo correction. Fresh non-author review covered both lines and the single conflict resolution; combined candidate f41d565 passed its frontend build. Integration is not release or owner acceptance; accepted1.5.1 and unfinished/unaccepted1.6 remain distinct.
+
+[EX80](execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-main-integration-20261116), [full147](sessions.md#session-147) and [usage86](ledger/usage-ledger.md#codex-usage-20261116-block86) own evidence and limits. The full natural database workflow remains FAILED after five completed phases; later phases, native persistence and broader release gates remain unqualified. Next synchronize the isolated database lane to the reviewed integration, then refresh/review its changed source/Git/model/runtime identities before the next bounded workflow observation. Do not bypass stale guards or repeat completed qualification. N2's separately qualified8950 branch remains unmerged; its integration assessment is separate. No owner decision currently blocks this continuation. Earlier dated entries below retain their historical cuts.
+
+
 <a id="source-continuity-closure-20261116"></a>
 
 ## Continuation — reviewed source and current handoff recovered

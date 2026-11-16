@@ -1,5 +1,35 @@
 # Notaya execution summary: installed dependency data and empty-home persistence qualification — 2026-11-12 UTC
 
+<a id="core-main-integration-20261116"></a>
+
+## Reviewed main integration and feature resumption
+
+**2026-11-16T10:06:44.7790371+00:00 / 2026-11-16 12:06:44 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** [A57 resumption](../plan/approval-and-amendments.md#a57-core-resumption-20261116) supersedes the source-backup feature hold. Root is sole Git/source/record mutator; configured Sol xhigh workers provide non-author export, oracle, undo, conflict and actual-build review; Terra xhigh provides the read-only stale-binding census. Actual served models/efforts and attributable usage remain unattested. Full147/usage86 preserve chronology.
+
+### Result and source identities
+
+- PR133 exact95076272277e6a659484ceaa28cc2b4742595c46 merged normally to main at **0e6bf68c5b9bbee130f41548b3ff152091f06faa**. Parents9977e72e46432ef975407d9d5b17913a866b307e /9507627; tree **016a77c30e769b5a6710008f8d3a3fc7af2b0426** exactly equals the reviewed head. Independent HTTPS recovery fetch confirms all identities.
+- PR132 ancestors131852/755a2cf retain the complete seeded totals/membership and awaited saved-generation tests;102497 preserves the separately non-author-reviewed undo/regression pair. The sole merge conflict in database-fixes-ui-check.cjs was resolved to main's exact blob596cc8b28d8789dcf93a115268337f884c11f6e0, keeping text-input values, every database row by ID and undo/redo depths instead of the inherited toast proxy. Independent resolution review confirms exactly five database delta files and unchanged reviewed blobs/context.
+- Combined candidate **f41d565279bdec50e9427a92a680dc3883420166**, tree **4248d72e456be8936a5bd585d88c4e9dca28d9a4**, parents10249768a91cd93a6bc3f0ab2459561b7573d962 /0e6bf68, was published normally and independently HTTPS-fetched/checked out. PR132 merged normally at **d23fda0b482e6e458bea8158065e9cf2f77f99e6**, parents0e6bf68 /f41d565, with exactly that candidate tree. Independent remote fetch verifies it. No force, branch deletion or release.
+- Active/main fast-forwarded only after frozen-path intersection and22 pre/post hash checks; all protected bytes match. It now hosts the separate record branch codex/integration-checkpoint-20261116. Original repositories and historical lanes were untouched. No frozen payload was staged or committed.
+
+### Applicable checks and honest failures
+
+PR133's non-author review independently joined148 expected/148 unique PASS export cases, zero failed/ignored and18 required cases to the qualified binary/source manifests and exact final production blobs. Fresh restored-source91 helper22/npm restoration/frontend build/Rust library checks transfer through source-equivalent950. Historical grader evidence retains its original source limits; remote CI had no exact-head runs.
+
+PR132's four 5,000/20,000 ordinary/zero-sum observations remain bounded mock evidence; its enclosing historical run remains FAILED at133 loaded versus106 eligible CJS entries. Focused undo evidence remains preimage14 pass/9 fail, candidate23/23 and TypeScript noEmit. The full natural Q1 attempt remains FAILED after five phases; phase6 partial and7–9 unqualified.
+
+Fresh integration checks: three CJS syntax checks and the five-path delta whitespace check against current main passed. Initial unscoped whitespace inspection relative102 FAILED on byte-preserved CRLF historical before-fixtures newly imported from PR133; they were not normalized or changed to obtain green. This diagnostic does not invalidate those controls or replace the scoped integration check. One earlier read-only diff query failed because950 objects had not yet been fetched; it caused no source mutation.
+
+Fresh frontend production build on independently restored exactf41d565 passed exit0, **2026-11-16T10:02:25.5345528Z–10:02:39.6285862Z**. Logs/result: D:\Notaya Recovery Verify\checks-f41d565-20261116; result SHA256 **F5E8692229D3967FA01C18E2BBF5F2AE8A6F84FD22B0E36365668ED7E36711F1**. Non-author actual readback confirms source/tree/parents/clean tracked state,4420 modules and completed bundle. Retain ineffective dynamic-import warning and npm update notice; no dependency update occurred. Temporary homes/cache/output were separate, and no app or vault was opened. This is frontend compile/bundle evidence, not native/persistence/whole-workflow/release acceptance. No new broad Rust/native campaign was necessary for these reviewed changed paths.
+
+**After-cut hub verification — 2026-11-16T10:07:45.559Z:** targeted update and exact full-body readback passed (82,158 characters). One existing progress heading/toggle remains; latest integration checkpoint is inside it, previous checkpoint explicitly superseded, and every byte outside the toggle is unchanged. Root owns the final record/private-ref readback; the broader feature Goal remains active.
+
+### Next permitted action and stop boundary
+
+Finish record/private checkpoint and targeted hub readback, reporting the verified safe point. Then synchronize the isolated database lane and refresh/review its complete current Git/source frame, model, binding and consumer identities once against the integrated source. The previous ready chain pins755/config-old/model0E1A and cannot be executed unchanged. Preserve prior attempts, caps, nine phases, complete5,000-row identities/values and all oracle criteria; do not widen tolerances or regenerate expected output. Reuse valid proofs and qualify only remaining contracts. N2 integration remains a separate exact-tip assessment. No owner decision blocks this step, and no release/owner acceptance is claimed.
+
+
 **Who and where:** Ahmed's side (`AE0101`), Gaming-PC. Root executes and coordinates; Codex workers prepare/review within stated boundaries. Proposed local record ID **EX-2026-11-12-80**, not a remotely reserved ID. Factual cutoff: **2026-11-12T06:43:56.4413857Z**, the end of full block15. Requested/inherited GPT-6.1 Sol Ultra; actual backend/effort/provider counters unattested.
 
 <a id="source-continuity-closure-20261116"></a>
