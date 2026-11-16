@@ -9,7 +9,7 @@
   Artifacts/data are kept, not deleted. Debug env belongs only to child processes.
 #>
 param(
-  [string]$Exe = 'D:\Notaya-lanes\_target_release\release\Notaya.exe',
+  [string]$Exe,
   [string]$Root = 'D:\Notaya Tests\v1-6-X1',
   [ValidateSet('Minimized', 'Normal', 'RunKey')][string]$Mode = 'Minimized',
   [ValidateRange(0, 60000)][int]$DelayPageMs = 0,

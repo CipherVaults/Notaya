@@ -1,5 +1,7 @@
 # PC automation: the heartbeat, the guard, the lanes, and what changes without Claude
 
+**Dated pause correction (2026-11-10, R3):** This file's earlier open-item, heartbeat and next-lane statements are historical. Read the [pause resume note](../2026-11-10-pause-resume-note.md) first: development, fixes, scripts and merges are paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. A55 still requires his handover acceptance. Scheduled-task removal is not verified.
+
 **Who and where:** Ahmed's side (`AE0101`). Written by Claude, cloud, 2026-11-10 about 04:30 UTC (system clock). Source: a read-only look at `D:\Notaya-lanes\heartbeat` on the Gaming-PC (file list, `README.txt`, the headers and the Claude-meter part of `heartbeat.ps1`, `events.log` and `heartbeat.log` tails at about 03:31 UTC). **Reference copies of the scripts are in `tools/heartbeat/`** (no secrets found by a pattern search; they contain Ahmed's Windows user name in a few paths). The live copies on the PC are what runs; the repository copy is a snapshot of 2026-11-10 03:3x UTC. Result state: *produced*; nothing was run.
 
 ## 1. What runs on the PC

@@ -1,5 +1,9 @@
 # Notaya migration guide: from Claude to ChatGPT Pro and Codex
 
+**Dated pause correction (2026-11-10, R3):** This file's earlier open-item, heartbeat and next-lane statements are historical. Read the [pause resume note](../2026-11-10-pause-resume-note.md) first: development, fixes, scripts and merges are paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. A55 still requires his handover acceptance. Scheduled-task removal is not verified.
+
+**Dated R2 correction (2026-11-10):** earlier state and role lines below are historical snapshots. For the later 1.6 lane state, unresolved N2 test conflict and the conditional A55 handover, read [STATUS](../../STATUS.md) Continuation and session 55. A merged lane is not partner acceptance.
+
 **Who and where:** Ahmed's side (`AE0101`). Written by Claude (Sonnet 5.5), cloud thread "Prepare full migration handoff to ChatGPT Pro", 2026-11-10 from about 03:33 UTC (system clock). Baseline commit `f5d7a55`. Source of the live numbers: the repository on `origin` and the Gaming-PC heartbeat logs read at about 03:31 UTC. Where this guide and a repository record differ, **the record wins** (`CLAUDE.md`, PBS rule 7); fix this guide with a dated correction.
 **Result state:** *produced*. Not run by ChatGPT or Codex, not accepted.
 **Reading time:** about 25 minutes. Read it in full once, then work from `docs/STATUS.md`.

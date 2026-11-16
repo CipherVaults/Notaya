@@ -4,20 +4,23 @@
 //   node dev-mock/database-ui-check.cjs [screenshot folder] [--only=name]
 // Prints ALL OK when every check passes. The data is the mock's, in memory; nothing real is touched.
 const { chromium } = require('playwright');
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const checks = createChecks('database UI');
 const args = process.argv.slice(2);
 const shots = args.find((a) => !a.startsWith('--'));
-let fail = 0;
 const is = (name, got, want) => {
-  if (got !== want) { fail++; console.log('FAIL', name, JSON.stringify(got), '!==', JSON.stringify(want)); } else console.log('ok  ', name);
+  if (typeof got === 'number' || typeof want === 'number') return checks.near(name, got, want, 0);
+  return checks.check(name, got === want, JSON.stringify(got) + ' !== ' + JSON.stringify(want));
 };
-const yes = (name, got) => is(name, !!got, true);
+const yes = (name, got) => is(name, (typeof got !== 'number' || Number.isFinite(got)) && !!got, true);
 const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
 
 (async () => {
   const b = await chromium.launch();
+  try {
   const ctx = await b.newContext({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
-  p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
+  p.on('pageerror', (e) => checks.check('page error', false, e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) console.log('console.error', m.text().slice(0, 200)); });
   const shot = async (name) => { if (shots) await p.screenshot({ path: `${shots}/ui-${name}.png`, caret: 'initial' }); }; // (Playwright's default caret hiding redraws the page's React blocks)
   const wait = (ms = 250) => p.waitForTimeout(ms);
@@ -278,7 +281,9 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   await wait(1200);
   const roll = ((await (await cellBy(0, 'Rollup')).innerText()) || '').trim();
   console.log('rollup:', roll);
-  yes('the rollup sums the Estimate of the linked rows', /^\d+(\.\d+)?$/.test(roll) && Number(roll) > 0);
+  // Independently seeded values: Design the landing page=1, Write the API=2
+  // (database.ts seed, first two names and [1,2,3,5,8,13] estimates).
+  is('the rollup sums the Estimate of the linked rows', roll, '3');
   await shot('relation-rollup-table');
 
   // ---------------------------------------------------------------- a row as a page
@@ -484,7 +489,7 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
   // ---------------------------------------------------------------- looks: dark theme, right-to-left, a 900px window
   const look = async (name, url, size, extra) => {
     const pg = await ctx.newPage();
-    pg.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
+    pg.on('pageerror', (e) => checks.check('page error', false, e.message));
     await pg.setViewportSize(size);
     await pg.goto(url);
     await pg.waitForTimeout(1200);
@@ -527,7 +532,10 @@ const URL = process.env.MOCK_URL || 'http://127.0.0.1:1421/?db=1';
     if (shots) await pg.screenshot({ path: `${shots}/ui-rtl-mirrored-filter.png`, caret: 'initial' });
     await pg.keyboard.press('Escape');
   });
-  await b.close();
-  console.log(fail ? `${fail} FAILED` : 'ALL OK');
-  process.exit(fail ? 1 : 0);
-})().catch((e) => { console.log('SCRIPT ERROR', e); process.exit(2); });
+  } catch (error) {
+    checks.check('database UI scenario', false, error.message);
+  } finally {
+    await b.close();
+    checks.finish();
+  }
+})().catch((e) => { checks.check('database UI runner', false, e.message); checks.finish(); });

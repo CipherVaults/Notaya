@@ -1,5 +1,9 @@
 # Migration to ChatGPT Pro and Codex: start here
 
+**Dated pause correction (2026-11-10, R3):** This file's earlier open-item, heartbeat and next-lane statements are historical. Read the [pause resume note](../2026-11-10-pause-resume-note.md) first: development, fixes, scripts and merges are paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. A55 still requires his handover acceptance. Scheduled-task removal is not verified.
+
+**Dated R2 correction (2026-11-10):** earlier state and role lines below are historical snapshots. For the later 1.6 lane state, unresolved N2 test conflict and the conditional A55 handover, read [STATUS](../../STATUS.md) Continuation and session 55. A merged lane is not partner acceptance.
+
 **Who and where:** Ahmed's side (`AE0101`). Written by Claude (Sonnet 5.5) in the cloud thread "Prepare full migration handoff to ChatGPT Pro", on 2026-11-10 from about 03:33 UTC (system clock). Baseline commit `f5d7a55` (`main`, PR #126). Machine: cloud, with one read of the Gaming-PC heartbeat folder.
 **Asked by:** Ahmed, project chat, 2026-11-10 03:32:47 UTC: Claude's weekly quota is almost gone, so the lead role moves to ChatGPT Pro (ChatGPT plus the Codex desktop app, GPT 6.1 Sol and Terra), with "a full proper handoff ... the context, the situation, the AI PBS, ... the artifacts, how to update them".
 **Result state:** *produced*. Nothing here has been run by ChatGPT or Codex yet, and nothing is accepted. The role change takes effect only when Ahmed says so in ChatGPT (see [A55](../../plan/approval-and-amendments.md)).

@@ -1,5 +1,7 @@
 # Start prompts: paste-ready blocks
 
+**Dated pause correction (2026-11-10, R3):** This file's earlier open-item, heartbeat and next-lane statements are historical. Read the [pause resume note](../2026-11-10-pause-resume-note.md) first: development, fixes, scripts and merges are paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. A55 still requires his handover acceptance. Scheduled-task removal is not verified.
+
 **Who and where:** Ahmed's side (`AE0101`). Written by Claude, cloud, 2026-11-10 about 04:00 UTC (system clock). Same style as [`first-session-prompt-ahmed-claude.md`](../first-session-prompt-ahmed-claude.md) (used by Ahmed on 2026-11-07 19:09:26 UTC). Result state: *produced*, not tried in ChatGPT or Codex.
 
 Four blocks: **A** goes once into the ChatGPT Project's Instructions; **B** is the first message in a chat inside that Project; **C** is the first message in the Codex desktop app; **D** is Mohamed's start message for Claude Pro. A lane brief template follows.

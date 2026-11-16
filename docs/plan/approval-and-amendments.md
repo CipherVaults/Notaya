@@ -39,6 +39,14 @@ Newest first. Later instructions narrow or pause the approved plan; they don't e
 
 | When (UTC) | Owner instruction | Effect |
 |---|---|---|
+| 2026-11-16 (owner-message time unknown; recorded 06:48:35 UTC) | **Ahmed:** [implement bounded private checkpoint, supplied wording once in A57](#a57-private-checkpoint-implementation-20261116). | Supersedes planning-only hold for scoped checkpoint; privacy, independence, conflict-refusal and verification conditions apply. |
+| 2026-11-16 (owner-message time unknown; recorded 06:08:31 UTC) | **Ahmed:** [private backup planning, supplied wording once in A57](#a57-backup-planning-20261116). | Inventory and propose a safe checkpoint; named publication/config/history changes held until plan review. |
+| 2026-11-16 (owner-message time unknown; recorded 04:55:02 UTC) | **Ahmed:** [hub presentation rule, owner wording once in A57](#a57-hub-presentation-20261116). | Preserve the native progress toggle and dated history; targeted page read/edit/readback. Presentation only; development authority and acceptance unchanged. |
+| 2026-11-15 (owner-message time unknown; recorded 19:12:48 UTC) | **Ahmed:** [standing computer availability, exact wording once in A57](#a57-standing-computer-availability-20261115). | Authorized synthetic development/native checks may continue without repeated desktop-idle approval requests; applicable computer-use skill and existing scope/product gates remain. Authority only, not app qualification. |
+| 2026-11-15 (owner-message times not recorded; evidence cut00:51:00UTC) | **Ahmed:** [fresh Dlocation choice, two messages quoted once in A57](#a57-owner-d-test-root-choice-20261115). | Root may choose a fresh short throwaway Dtest root despite earlier warning metadata; no repair/health conclusion, actual-error waiver or original/historical/global-setting change is authorized. |
+| 2026-11-14(message time not recorded; recorded22:15:09UTC, Nov15Cairo) | **Ahmed:** [computer-use permission, supplied wording once in A57](#a57-computer-use-permission-20261114). | Authorizes the computer-use skill for development inspection/testing; no actual CUA/native/visual acceptance or real-vault permission is inferred. |
+| 2026-11-14 (message time not recorded; recorded21:21:20UTC) | **Ahmed:** [fresh continuation and G fallback, quoted once in the A57 supplement](#a57-owner-resume-g-fallback-20261114). | Expressly resumes development after the recorded filesystem blocker; G is an offered alternative. Prior failure/metadata are preserved, not called repaired. Existing A57 scope and owner gates remain. |
+| 2026-11-14 (message time not recorded; recorded 18:02:41 UTC) | **Ahmed**, Notaya Dev Thread 1: [A57 owner wording, recorded once below](#a57-safety-evaluation-owner-decisions-20261114). | Authorizes the ordered safety-evaluation work beginning with the calculator grader pilot, with the explicit owner gates and preservation boundaries in A57; this is permission and fixed criteria, not evidence of completed implementation or 1.6 acceptance. |
 | 2026-11-08 16:48:18 | **Ahmed** (project chat, cited by the coordinator as a reply to its question 55, whether the empty branch `AE0101/v1-6-c4` left by the false "finished" lane can be deleted): "yes" | **Q55 = yes: the branch `AE0101/v1-6-c4` may be deleted** (one branch only; a branch deletion is on the "ask first" list). Checked before acting: its only commit merges lane B into lane C1's history, both already in `main`. Deletion from the cloud container was refused by the proxy (403); still to be done from the PC or on GitHub ([FI-08](../failure-intelligence.md)). |
 | 2026-11-08 11:48:49 | **Ahmed** (project chat, cited verbatim by the coordinator, 16:43 UTC): "use what you can from those 17% that remains, stop when you can at 5%" | **Stop line for Codex (pacing rule, within A44 item 4 and A46):** use the Codex 5-hour window until about 5% is left, then stop cleanly (commit and push what exists) and resume at the reset. Not a go to build anything new. Applied by the Build thread ([EX-2026-11-08-55](../execution/2026-11-08-v1-6-build-start.md) section 5); the first run overshot by 4 points. |
 | 2026-11-08 09:03:55 | **Ahmed** (project chat, cited verbatim by the coordinator, 16:43 UTC; his answer to question 53, whether to turn on the Claude usage reading): "Yes, obviously, we need that. We need that. Both readings for Claude and Codex should be dead accurate for our forecast, for usage ledger, for you to control the both like sides and coordination without me having to like manually do it." | **Q53 = yes. Exact usage readings, automatically (A44 item 4, A46):** the heartbeat logs both the Claude and the Codex 5-hour and weekly meters to [`docs/ledger/quota-readings.csv`](../ledger/quota-readings.csv); they drive the ledger, the forecast and the pacing (including the Claude 70% stop) with no screenshots from Ahmed. Applied 09:02 to 11:40 UTC by the Build thread; the Claude weekly reading may sit 1 point under his page (EX-55 section 5). |
@@ -379,6 +387,8 @@ Status words mean different things here. **Approved** is the owner's decision to
 | A53 | **Notion import arrangement: six visible changes approved, and Codex's quota is used up to the stop line, 2026-11-09** (Ahmed 19:31:00 UTC, project chat, relayed by the coordinator, Q66: "yes to all, and try to use as much as possible of the remaining 5h quota"; answers the six proposals in the N1 findings note [`2026-11-09-notion-import-findings.md`](2026-11-09-notion-import-findings.md), section "Visible arrangement proposals for Ahmed"). (1) **An exported home page stays above its children** when the folder name drops the id suffix, and the children do not get a second section; two folders or pages with the same clean name are not guessed: an unambiguous match is parented, an ambiguous one is reported. (2) **Each imported database row has one canonical identity and body**; page links to the old source page are redirected to the row, children stay under that row, and the loose source page is removed only after that; navigation is kept for small and large (over 3,000 pages) imports alike. (3) **A genuine source home is kept even when its body is only a title**; cleanup removes only pages the importer itself generated. (4) **A database from a CSV-only source** is placed in its own source container (a notebook and section made for it if none exist), never in the first unrelated section. (5) **A useful HTML database-view wrapper is kept as a page or as navigation on its database**, instead of being dropped because a CSV shares its id; nothing empty or duplicate is created automatically. (6) **Views with the same name but different ids are never merged**; the import warns about the conflict. Each is a visible change in how imported content is arranged, authorised here and nowhere else; nothing else about how the app looks changes. Second part: Ahmed asks that the rest of the current 5-hour Codex window be used. The coordinator's reading, adopted here: lanes may start whenever the heartbeat's stop line allows, up to the 95% stop line and never past it (A48), and Claude keeps its own turns on reviews, merges and briefs. | Changes how Notion imports are arranged (six items above); no new dependency, no crypto, storage format or permission change. The hostile-input limits of the importers stay exactly as they are (raising a limit is not part of this). | Ahmed's own words (cited above). | **Applied** (records, 2026-11-09; briefs for lanes N2 and N3 written in `docs/plan/2026-11-08-v1-6-codex-briefs.md`, update 19:35 UTC; EX-2026-11-09-70). In force on Ahmed's side. |
 | A54 | **GPT 6.1 Terra (high) for Codex lanes that do not need Sol xhigh, 2026-11-09** (Ahmed 21:27:52 UTC, project chat, relayed by the coordinator, with the model comparison page he named; amends the model choice of A50 item 2 for Codex lanes). Ahmed asks to use `gpt-6.1-terra` at high effort, which he reads as about Sonnet 5.5 quality and about 65% cheaper than Sol, for work that does not need `gpt-6.1-sol` xhigh: documentation, PBS records and first drafts, test-script and selector fixes, small polish and simple lanes. Sol xhigh stays for risky code: the vault, crypto, security and import logic, and the database speed work. **Lane assignment (Claude's reading, Ahmed may correct):** Terra high for records and Execution Summary drafts, the whole-app test-plan scripts and test-selector fixes (lane W's writing part), the lane X polish sweeps that touch only text, spacing or tests, and any small bounded lane; Sol xhigh for N2, N3, P6b, P7, P8, lane S (all areas), and any fix lane whose change reaches vault, security or importer code. Claude's own review of every diff does not change; a Terra lane's diff is read as closely as a Sol one. The first Terra lane also checks that the model name works in the installed Codex and records the real meter cost per lane, so the choice is measured, not assumed. | Quota and model policy only; no security promise changes. | Ahmed's own words (cited above). | **Applied** (records, 2026-11-09; the heartbeat's per-lane model setting is for the PC from the 22:51 UTC reset). In force on Ahmed's side. |
 | A55 | **The lead coordinator and reviewer role moves from Claude to ChatGPT Pro (ChatGPT plus the Codex desktop app), 2026-11-10** (Ahmed 03:32:47 UTC, project chat, relayed by the coordinator: Claude's weekly quota is almost used up and "this is not going to be sufficient enough for development anymore", so "I need to prepare a full migration to ChatGPT Pro ... it's going to be in ChatGPT and Codex, basically the app itself, the desktop app ... a full proper handoff, similarly to how we got the handoff directly manually from when we started this project"). (1) **What Ahmed asked for now:** a complete, self-contained migration package, prepared by Claude. It is the folder [`docs/handoff/migration-to-chatgpt/`](../handoff/migration-to-chatgpt/README.md) (guide, start prompts, standing rules with the project-memory snapshot, artifacts and rebuild, PC automation), the reference copies in `tools/heartbeat/`, `docs/artifacts/snapshots-2026-11-10/` and `docs/plan/notes-archive/`. (2) **What changes:** on Ahmed's side the mother-thread role of A37 item 2 (lead, plan, choose model and effort, steer lanes, inspect every diff, run the security review, commit, push and merge) is carried by the ChatGPT Pro coordinator instead of Claude, and Codex stays the developer hand (A44, A46, A54). **The change takes effect only when Ahmed says in ChatGPT that the handover is accepted** (his own words); until then Claude stays the coordinator of record with its small remaining quota. (3) **What does not change:** PBS v1.1 and every standing rule (security by design, no trademarked names, throwaway test data, the full-app test before every release, Codex first, the Terra/Sol split, merge on our judgment, one numbered question list, public release and licence need both partners). A review by the agent that wrote a diff is not independent; Mohamed's Claude Pro is the fallback builder and the only non-OpenAI reviewer, if he agrees. (4) **Not decided here (open for Ahmed):** whether Mohamed is asked for second opinions on risky diffs; the Daybreak access that security area 3 needs (OpenAI's cyber filter blocks it); whether the heartbeat's Claude probe is switched off (recommended) and its Codex path repointed (see `05-pc-automation.md`). | Quota and role policy only; no security promise changes. The Daybreak item is a process step, not a promise change. | Ahmed's own words (cited above); Execution Summary [EX-2026-11-10-73](../execution/2026-11-10-migration-to-chatgpt-handoff.md). | **Recorded** (records only, 2026-11-10 by Claude, cloud, Ahmed's side). In force from Ahmed's "handover accepted" in ChatGPT; before that, produced only. |
+| A56 | **Development stops on this side and is handed to Blue (ChatGPT) and Codex, 2026-11-10** (Ahmed 06:13:35 UTC, clarified 06:25:54 UTC and 06:31:31 UTC, project chat, relayed by the coordinator). Ahmed stops all development here: no fixes, merges, scripts or lane work by Claude; what is left (N2 re-review, N3, P7, P8, security areas 3 and 4, the 250-check whole-app test, the kit parts K1b and K1c, removing the heartbeat tasks) goes to Codex with ChatGPT. Claude's last quota is spent only on the handoff and the AI PBS records. The pause resume note [`2026-11-10-pause-resume-note.md`](../handoff/2026-11-10-pause-resume-note.md) holds the inventory. A55's coordinator transfer still takes effect on Ahmed's "handover accepted" in ChatGPT. | Records and process only; no security promise changes. | Ahmed's own words (cited above). | **Recorded** (2026-11-10, Claude, cloud). In force. |
+| A57 | **Safety-evaluation decisions and ordered continuation, 2026-11-14:** [Ahmed's complete wording](#a57-safety-evaluation-owner-decisions-20261114), recorded once below. | Grader validity; input-loss reporting; export replacement; bounded key derivation; reversible and permission-limited AI actions; fixed big-change and numeric criteria; pairing disclosure; existing 1.6 release gates and PBS cadence. | Ahmed's direct message in this chat; message time not recorded. Implementation, independent review, verification, integration and owner acceptance remain separate. | **Approved direction and bounded execution authority**, starting with the calculator pilot; design/integration/private-vault/release decisions retain the explicit waits below. |
 
 **Status corrections (2026-11-07, records catch-up, [EX-2026-11-07-44](../execution/2026-11-07-records-catch-up-and-usage-ledger.md)).** The rows above are not rewritten; these dated notes give the later state, with its source. **A28** (Notaya rename): merged as PR #24 on 2026-10-27 19:40:27 UTC and released in V1.2.0 (2026-10-27 22:28:04 UTC); not accepted. **A30** (Windows installer): merged as PR #23 on 2026-10-28 14:31:46 UTC and released in V1.3.0 (16:11:23 UTC); not accepted. **A31 to A33** (V1.4.0): merged as PR #39 (`452212d`, 2026-11-03 15:48:16 UTC), released as v1.4.0 and **accepted** by Mohamed on 2026-11-03 18:23:19 UTC ("i accept"). **A34** (working together): in daily use since 2026-10-29; Mohamed's confirmation of Claude's reading (STATUS question 27) was never recorded; on 2026-11-07 20:23:20 UTC Ahmed settled how the two sides' authority fits (A37 item 1). **A35** (V1.5.0): merged as PR #47 (`c27f68e`, 2026-11-04 14:24:53 UTC) and released as v1.5.0; never accepted on its own (V1.5.1, accepted, contains it). The A35 row's "50 MB (not 50 MB)" is a typo in the original; the file cap is 50 MB. **A3** (breach check over native TLS) and **A5** (EFF wordlist crate) no longer apply to the code: the breach check went with A9's P1 and the crate with A22. **A9, A10, A14, A15, A19** are superseded (A24, A25, A28). Sources: `git log` of `main`, [STATUS.md](../STATUS.md), the execution reports, and the reading digests of 2026-11-07.
 
@@ -387,6 +397,329 @@ Status words mean different things here. **Approved** is the owner's decision to
 **Dated note on A37 (2026-11-07, records PR #56, [EX-2026-11-07-46](../execution/2026-11-07-session-summary-feature-discussion.md)).** The A37 row is not rewritten; Ahmed's later messages the same evening change or add to it, on his side. **Item 9 changed (20:41:50 UTC):** the roadmap is **staged across versions** (1.6, 1.7, 1.8 and on) in the planning phase, by what is doable; "v1.6 stays one release" (20:15:35) no longer applies; quality first still does. **Order of work (21:14:10 UTC):** discuss every feature, then plan and stage, then build; nothing is built before Ahmed's go. **Know what exists first (21:00:14 UTC):** before a feature is designed or planned, check the code and the records for what already exists. **Item 4 completed (20:41:50 UTC):** no pacing cap; the coordinator watches the 5-hour and weekly limits of Claude and Codex so work is not cut off (STATUS question 28 answered). **New item, PBS for everything (21:56:54 UTC):** the AI Project Bootstrap System governs all Notaya work on Ahmed's side, every task and every thread, through the PBS skill (`pbs-start-resume-handoff`, method 1.1) and the PBS work cycle in `CLAUDE.md`. **Design principle (20:38:34 UTC):** the AI CLI is the foundation; every feature gets named AI actions from its first design; Notion parity is the long-term direction (20:51:32). The feature meanings agreed that evening are recorded in [sessions.md](../sessions.md) (entry "the whole first coordinator session"), not as amendments: none is greenlit for building.
 
 **Proposals that are not amendments (nothing built, as of 2026-10-27 16:36 UTC):** the Windows installer plan (draft [PR #23](https://github.com/AbyssWatcher2/CipherLeaf/pull/23); all 10 decisions answered as recommended on 2026-10-28 11:56:21 UTC; the owner said go at 12:24:16 UTC, so it became [A30](windows-installer-plan.md)); the native Windows app (draft [PR #11](https://github.com/AbyssWatcher2/CipherLeaf/pull/11), postponed 2026-10-24 09:19:51 UTC); the no-network plan (chat only, paused 2026-10-27 07:21:42 UTC); the PBS adoption (read-only review only, 2026-10-27 16:29:35 UTC). Each becomes an amendment only when the owner says to build it.
+
+<a id="a57-safety-evaluation-owner-decisions-20261114"></a>
+
+## A57: safety-evaluation decisions and ordered continuation — 2026-11-14
+
+**Who and where:** Ahmed (AE0101), Gaming-PC; recorded by Codex Side A at 2026-11-14 18:02:41 UTC (clock tool). The owner's message timestamp is not recorded. Requested/inherited GPT-6.1 Sol Ultra; actual backend/model effort are unattested.
+
+**Source and fidelity:** Ahmed's direct message in Notaya Dev Thread 1, quoted below once in his words. Paragraph separators, indentation and transport wrapping are normalized for this Markdown record; this is not a byte-exact transcript export. The correction assertion is preserved as the owner's wording, not relabelled as an independently demonstrated source result. Subsequent observations and any correction belong in the existing execution entry for the applicable lettered step.
+
+**Status:** Owner-approved direction, fixed criteria and bounded permission. This entry records authority only; it claims no grader proof, product fix, passing test, integration, release or owner acceptance of 1.6. A55/A56 and the earlier approved plan remain historical records; this later direct authority governs the ordered work on Ahmed's side within the boundaries stated below.
+
+```text
+Go-ahead, with one correction and my decisions on your eight points (owner: Ahmed). A second reviewer checked fifteen of your points against the source lines: fourteen hold, one does not. You may now change code and tests, and run tests, builds and the app with throwaway data. Never a real vault.
+
+1. Correction
+database-ui-check.cjs:281 does not accept infinity: its digits-only pattern rejects it. The real weakness is that any positive number passes while the test claims the sum. Assert the expected sum. Re-check your other non-finite claims the same way; each planted-defect proof must show the blind spot before you fix it.
+
+2. Decisions on your eight points
+1) Permanent deletion. AI cannot destroy content at any level. Remove bin.delete_forever and bin.empty from what AI can do in 1.6, and any other AI action whose effect cannot be brought back (check history purge). They stay available to the person in the app. The claim becomes: "After any AI change, the previous content can be brought back (bin, history or undo), and bringing it back never overwrites a person's later edits." Test every AI write action against it.
+2) Big change, fixed now, before any test; only I amend it. Compare the page before and after the request. Formatting-only differences do not count; adding content never counts. It is big when any of these is true:
+  a. it deletes a page, section, notebook, database, database property or attached file;
+  b. more than 20 existing blocks of one page are removed or have their text changed;
+  c. on a page of 10 or more blocks, more than half of the existing blocks are removed or have their text changed;
+  d. more than 2,000 characters of existing text are removed from one page;
+  e. it changes or deletes more rows or cells than the item limit.
+A picture, table or embedded item is one block; table cell text is text. For a whole-page write, an existing block counts as kept only if a block with the same text is in the new page. For d, any cheap measure that never undercounts is fine. A big change always needs the person's approval, at every level. The optional switch cannot turn it off, and the item-limit setting can be made stricter than its shipped default, never looser. If a measure cannot be computed cheaply in the core, tell me which and propose the nearest one that errs toward asking.
+3) Notebook access. Per-pairing grants are deferred out of 1.6. For 1.6, keep the global hidden-notebook list, and do not let a pairing complete until the person has seen and confirmed which notebooks AI can see. Prove the hidden rule in both directions on every path you listed: search, relations, rollups and formulas, history, inline databases, writes. If the confirm step is more than a small change to pairing, send me the cost first.
+4) Warning. Accepted with your qualification: "What this AI reads is handed to the AI app you connected. If that app uses an online service, your notes leave this computer, and Notaya cannot see or control that. Notes can contain text an AI may treat as instructions. Notaya limits only what the AI does inside Notaya." The "tested with" list stays empty until a client has a recorded run; ask me which client to qualify first when you reach it.
+5) Save before lock [P16]. Your direction is accepted: report the failure, do not wait longer. Send the design note and wait for my approval. Widen it to the whole claim, "a person's input is never lost silently": every lock trigger, quit and window close, mouse navigation without the busy guard, and the swallowed calculator-history failure. Cost one option in it: the core keeps the already-encrypted record of a failed write and retries it at the next unlock, so no plaintext is kept. Identify the affected page by its ID while locked and by title only after unlock.
+6) Export. Your candidate is accepted; proceed without another approval. The commit point is the document replacement. Nothing the old document refers to is removed before it. Old pictures are cleaned up after it. On failure, remove the new staged pictures and tell the person if any could not be removed.
+7) Key-derivation settings. Accept nothing heavier than any release has shipped: memory up to 256 MiB, passes up to 3, lanes up to 4, with the existing lower bounds. Anything heavier is refused with a message naming the settings found, and the file is left untouched. Before integration, give me a read-only command that prints only a vault header's settings; I run it on my own vaults and tell you the result.
+8) Numbers, fixed now. Money is any number shown in a currency format. Its scale is that format's decimal places, 2 if unspecified. Rounding is half away from zero, applied once to the final result, never in between. Sums, differences and rollups are exact; products, quotients and percentages are computed exactly, then rounded once. The claim holds for results below one trillion in the main unit. Other numbers must equal the independent result at 12 significant digits. A non-finite result is an error, never a number. Build the independent reference as test-only code (ask first if it needs a new dependency), run it, and report mismatches with examples. Repairing the product is a separate proposal.
+Also accepted: ui.wait_for_person is judged by its own effect; and your P7 recommendation (old results below the cap, an independent uncapped reference above it, never a regenerated golden).
+
+3. Order
+a. Graders. Pilot on the calculator as you proposed; first check whether lane W's newer runner already does this and reuse it. Then no review per script: one small shared fail-loud helper for the Node scripts and one exit pattern for PowerShell, applied in three batches (dev-mock; real-exe-tests with their wrappers and the port check; ai-smoke, where the named test must have run). For each grader: the good case passes, one planted defect fails, an empty selection fails, a non-finite value fails. One review per batch. Leave heartbeat untouched; its output is not evidence until it is fixed.
+b. Rerun the fixed graders on the current baseline. Report every newly exposed failure as product defect, wrong or stale expectation, or environment. For a product defect, say whether the same code is in 1.5.1.
+c. Export [B3].
+d. Save-before-lock design note [B2], then wait for me.
+e. Key-derivation limit [B4], then wait for my vault check.
+f. AI: remove the destructive actions; action honesty [B5]; the exhaustive test client in both directions [C], which must fail if the registry holds an action it does not cover; the big-change rule; the pairing confirm step; the warning.
+g. Numbers: the reference check and its report.
+h. Then resume the 1.6 plan where it paused, in its recorded order, under this standard.
+1.6 acceptance needs a to g in addition to the existing release gates, except what is deferred: batches, per-pairing notebook grants, heartbeat.
+
+4. Who decides
+You decide and proceed: test and grader changes; fixes for ordinary product defects the graders expose, each with a test that fails without the fix; refactors these steps need; order inside a step; how reviews are batched.
+Tell me, do not wait: the export design, the action-honesty outcomes, how the big-change measures are computed.
+Wait for me: anything that changes how notes are encrypted, stored, locked or migrated; a new dependency; a change to any promise the app makes to the person; the save-before-lock design; integrating the key-derivation limit; the pairing step if it is not small; a defect in released 1.5.1 that loses or corrupts data. For that last one, stop that line and tell me; I decide on a 1.5.2 then. Otherwise there is no 1.5.2 and the fixes ship with 1.6.
+A defect in your own new work is yours to fix, not a question for me. When you do need me, send the questions together, each with your recommendation and what you will do by default.
+
+5. Keep it light
+Record these decisions once, in the existing decision record, in my words. No new kinds of receipt; one execution entry per lettered step. A failed check is kept and labelled, never rerun into green; no tolerance is widened to pass. Keep the planted defect in each review round. If the record-keeping for a step takes longer than the step, simplify it and tell me.
+
+6. Reporting
+At the end of each lettered step: what is now true, what failed, what is next, and anything waiting on me. Plain words first, codes in brackets.
+
+Start with the calculator pilot.
+```
+
+<a id="a57-owner-resume-g-fallback-20261114"></a>
+
+### A57 dated supplement: owner resumes development with G fallback — 2026-11-14
+
+**Who and where:** Ahmed (AE0101), Gaming-PC; recorded by Codex Side A at2026-11-14T21:21:20Z /23:21:20Africa/Cairo (clock tool). The owner's message timestamp is not recorded. Source is the fresh direct owner message supplied verbatim by Root in this bounded delegation; transport wrapping is normalized, not presented as a byte-exact transcript export.
+
+The earlier filesystem failure and Windows volume metadata remain observations, not erased history or a repaired-disk claim. The owner expressly acknowledges the error and authorizes continuation, offering the quoted G location. Root chooses fresh owned G outputs/caches while retaining the independent D source/dependency read boundary; the failed D junction is not retried. This supplement does not authorize disk repair, permission changes, real-vault access, original-lane mutation or a new product promise.
+
+Owner wording, recorded once:
+```text
+ignore the error, the drive is ok, but alternatively "G:\Notaya Dev folder 2", you can use this if you can't continue working in the D, and also need plenty of space, but this is gonna be an HDD, so it might be much slower than the D which is an NVMe SSD. continue the development and work.
+```
+
+<a id="a57-computer-use-permission-20261114"></a>
+
+### A57 dated supplement: owner authorizes computer use for development
+
+**Recorded:**2026-11-14T22:15:09Z /2026-11-15 00:15:09Africa/Cairo(clock tool). Owner:Ahmed(AE0101), Gaming-PC; source is the direct chat wording supplied by Root, with the owner message timestamp not recorded. The supplied ASCII wording below is retained verbatim; only transport/paragraph wrapping is normalized, not represented as a byte-exact transcript export.
+
+This is permission to use the computer-use skill for development inspection/testing. It is not evidence that computer use occurred, that a native app was built/launched or that visual/product acceptance was obtained. Existing throwaway-data, real-vault/private-input, original/lane preservation and A57owner gates remain. Root has read the bundled Windows computer-use skill; no actual CUA interaction is claimed at this milestone.
+
+Owner wording, recorded once:
+```text
+Just as a suggestion, if you need for the development to use the computer, use skill to physically see anything, like you test the app physically or anything, that's fine. You are authorized to use the computer use skill, because that can help you in the development to see things that you wouldn't see otherwise.
+```
+
+<a id="a57-development-tools-standing-authorization-20261115"></a>
+
+### A57 dated supplement: standing authorization for necessary development tools
+
+**Recorded by Root on 2026-11-15 Africa/Cairo, Ahmed (AE0101), Gaming-PC.** Owner-message timestamps are not recorded. These later direct instructions supersede the earlier requirement to wait for permission for tools needed in development. Tool acquisition remains documented with its source, version, integrity checks, location and actual qualification; this does not select an unapproved product design or change fixed acceptance criteria. Existing storage/encryption/locking/migration, input-loss design, key-derivation integration, private-input and released-data-loss gates remain.
+
+The owner approved the concrete standalone stable Headless Shell proposal with:
+```text
+Approve standalone test browser
+```
+
+He then gave standing authorization in two direct messages, recorded once:
+```text
+you don't have to wait for my approvals for tools needed in the development from now.
+```
+```text
+get what you need
+```
+
+<a id="a57-owner-d-test-root-choice-20261115"></a>
+
+### A57 dated supplement: owner permits D again; Root chooses a fresh short throwaway test root
+
+**Recorded for the evidence cut2026-11-15T00:51:00Z /02:51Africa/Cairo.** Ahmed (AE0101), Gaming-PC; direct owner messages supplied by Root. **Owner-message timestamps are not recorded.** The cutoff is a recording/evidence clock, not either message's time. This is one fresh location-choice event under existing A57, not renewed necessary-tool approval.
+
+Owner wording, recorded once:
+~~~text
+feel free to try again using our default D folder as we were working, ignoring the Windows error for the drive
+~~~
+~~~text
+but it's your choice
+~~~
+
+Root chose a new short throwaway root, D:\Codex Projects\Notaya\test-runs, while tools/evidence and the qualified input executable remain in the owned Gboundary. Only the plain parent was created00:42:08.0882836Z after no-follow ancestor checks;62,791,032,832free bytes were observed. This is a selected bounded test location, not a drive-health or repair conclusion.
+
+The choice does not authorize modification of source/original/historical lanes, a full copy, disk repair, global/Windows security settings, real-vault/private input, or ignoring actual I/O/hash failures. Original D:\Notaya, original Notaya-lanes and all copied historical lanes remain protected. Existing product/storage/privacy/integration/private-vault/released-data-loss gates and all fixed evaluation criteria remain. Actual Dcopy/readback and subsequent observation outcomes are evidence in [EX82](../execution/2026-11-14-safety-evaluation-baseline.md#native-visible-short-d-20261115-005100), not owner acceptance.
+
+<a id="a57-temporary-startup-entry-test-20261115"></a>
+
+### A57 dated supplement: conditional temporary startup-entry test — 2026-11-15
+
+**Who and where:** Ahmed (AE0101), Gaming-PC. Recorded at **2026-11-15T05:17:35Z /07:17:35 Africa/Cairo** from the actual clock tool. The owner-message timestamp is unknown; this recording time is not assigned to the message. Source is Ahmed's latest direct answer supplied verbatim by Root in this bounded delegation.
+
+Owner wording, recorded once:
+~~~text
+Allow the temporary startup-entry test only if no Notaya entry exists; remove only the verified test entry and confirm restoration
+~~~
+
+**Authority only:** This answers the pending HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Notaya question. It conditionally permits only the named temporary Notaya value, following a fresh check that no Notaya entry exists. Remove only the exact verified test-created entry and confirm restoration of the original absence; preserve any preexisting or unmatched entry and every other registry value. This is not product acceptance or evidence that the test passed.
+
+Root's read-only preflight at 2026-11-15T05:14:24.1767930Z (64-bit view) and 2026-11-15T05:14:24.1865137Z (32-bit view) found both Run keys existing and the Notaya entry absent. No value data was read and no mutation occurred. Those observations do not replace the fresh pre-execution absence check.
+
+The guard, prefs-only three-phase fixture and blinded reviewer gate are being prepared; the authorized test is **NOT RUN**. Permission does not extend to OS sign-out/sign-in, a scheduler, other registry values, real vaults, originals/historical lanes or Git actions. Existing A57 product/privacy/storage/security gates remain. Full Session 121/usage 60 and the next EX82 continuation are held until Root supplies actual-result facts.
+
+<a id="a57-input-loss-design-approval-quit-correction-20261115"></a>
+
+### A57 dated supplement: input-loss design approved; quitting waits for confirmation
+
+**Who, where and recording time:** Ahmed (AE0101), Gaming-PC; recorded by Codex Side A at **2026-11-15T11:40:54.0550957Z /13:40:54.0550957 Cairo** from the system clock. The two owner-message timestamps are unknown; this clock is the recording time, not either message's time. Root supplied the direct wording below in chronological order. Requested/inherited Sol Ultra; actual backend/effort remain unverified.
+
+Earlier owner message, recorded once:
+~~~text
+no waiting is best if a note isn't saved already, I approve this. continue please.
+~~~
+
+Later owner correction, recorded once:
+~~~text
+no I meant that we should wait for the user to confirm quitting if there is something that isn't saved.
+~~~
+
+**Effective authority:** Ahmed approves the [report-first A input-loss design](2026-11-15-input-loss-design-proposal.md#input-loss-owner-approved-20261115), whose pre-approval body is 4B8ACD82034189C1DE40A9369F68FE1B76639F4D9C6C5091A816FE92AEDAD422. Root initially read the first message as nonblocking quit; the later correction supersedes that interpretation. Quitting with failed, unfinished or not-delivered input **waits for the person's real confirmation**, after session/key drop and plaintext-renderer clearance. A toast or attempted display is not confirmation.
+
+No additional SAVE wait or retry is approved; locking does not wait for a human ACK. Automatic encrypted retry is deferred and no new durable notice/metadata storage is approved. The selected route is report-first A with RAM-only notices and the blocking native quit acknowledgement, within the reviewed design and its tests/boundaries. Materially different encryption, storage, locking, migration, dependencies or app promises remain subject to existing A57 gates.
+
+**State at recording:** design OWNER-APPROVED; Root is preparing its bounded implementation, **NOT YET STARTED**. Permission, implementation, verification, integration and product acceptance remain separate. This is not acceptance of 1.6, a test result, release, real-vault/private-input permission, original/lane mutation or automation authorization. Earlier design/WAIT/owner-choice prose remains dated history where this explicit approval supersedes it; deferred alternatives are not silently selected.
+
+
+
+<a id="a57-standing-computer-availability-20261115"></a>
+
+### A57 dated supplement: standing computer availability for development checks
+
+**Who, where and recording time:** Ahmed (AE0101), Gaming-PC; recorded at **2026-11-15T19:12:48Z /21:12:48 Cairo**, Root's supplied clock. The direct owner-message timestamp is unknown; this is the recording time, not its message time. Root supplied the trusted wording below, recorded once:
+
+~~~text
+I will leave the computer on for you, feel free to use it, don't wait for my approval to do so.
+~~~
+
+**Effective authority:** standing computer availability and testing-coordination authorization for already-authorized synthetic development/native checks. Root may continue those checks without repeating desktop-idle/per-run approval requests. Root may use physical computer control when needed under the applicable skill; at this recording, Root has not reacquired mouse/keyboard control. Existing exact-artifact, ownership and runtime verification requirements still apply.
+
+This instruction grants no new real-vault/private-input access, original/historical-lane mutation, global system-setting changes, crypto/storage/promise changes beyond A57, new product dependencies, publication/release authority or waiver of other owner product gates. Earlier ended-idle-interval facts remain true historical observations; this later standing instruction removes the future repeated availability/idle-approval wait within the authorized scope.
+
+**Record state:** authority only. This is not an app result, native qualification, product acceptance or release. No change to A57's report-first/quit-confirmation policy or the approved product design is made by this supplement.
+
+
+<a id="a57-input-loss-parked-20261116"></a>
+
+### A57 dated supplement: park input-loss work; prioritize core 1.6
+
+**Who, where and recording time:** Ahmed (AE0101), Gaming-PC; recorded **2026-11-16T00:24:25Z /2026-11-16 02:24:25 Cairo**, Clock UTC; the four owner-message timestamps are unknown, and Root supplied their exact wording in this order, recorded once:
+
+~~~text
+you've been working on this for over 4h, and used over 20% of the weekly quota for it, is this part really worth that much to halt the main development?
+
+currently only you is working
+
+and mainly the app saves edits almost instantly, so the chance of a user closing middle of the save is almost very narrow
+
+park this part for later, while trying to keep the focus on the core main goals from now on
+~~~
+
+**Effective authority:** d/P16 input-loss work is **PARKED, unfinished**; main 1.6 Goal remains **ACTIVE** and already-approved core feature work receives priority. The historical safety order and owner wording remain verbatim; this later reprioritization controls the next work. This is no new product scope, roadmap rewrite, acceptance or waiver of other approved release requirements, which remain pending. P16 implementation/review/tests/qualification do not continue under this closeout; no P16 resumption is implied.
+
+**Provenance and preserved state:** over four hours, over 20% weekly quota, sole current worker and the narrow save/close-risk rationale are owner-reported context, not independently measured labour/billing/loss probability; a shared-current-work quota caveat no longer describes this work. Listed P16 workers are terminal and known owned controllers C6-closed with no unresolved owned PID; nine Main Rust files hold the frozen unqualified intermediate slice, with frontend wrappers/providers unwired. Preserve preimages/patches/copies and failed evidence; no reset/stash/clean/commit/move, functional-app use or silent folding into core feature work. Root recovered the queued database totals/focus checkpoint [P6c/Q1] on the existing independent active/p6c-evidence candidate and next checks live selected state/safe separation read-only before execution; no new implementation or current Git assertion is made. Original/private-vault/historical-lane protections remain. [EX84 parking](../execution/2026-11-15-input-loss-design-review.md#input-loss-parked-20261116)/[full 137](../sessions.md#session-137)/[usage 76](../ledger/usage-ledger.md#codex-usage-20261116-block76) own evidence and continuity; Root alone updates/reads back Notion.
+
+<a id="a57-hub-presentation-20261116"></a>
+
+### A57 dated supplement: preserve the Notaya hub progress layout — 2026-11-16
+
+**Who, where and recording time:** Ahmed (AE0101), Gaming-PC; recorded **2026-11-16T04:55:02Z / 06:55:02 Cairo**, system UTC. Owner-message time not recorded; Root supplied the wording unchanged:
+
+~~~text
+Blue has organized the Notaya Project Hub’s current progress updates into a native collapsible heading called **🛠️ Current progress & recent updates**:\
+[https://app.notion.com/p/411bd7ade63b813ea823db0ceb199248](https://app.notion.com/p/411bd7ade63b813ea823db0ceb199248)
+
+Please preserve this layout in future hub updates. Read the current page before editing. Keep detailed progress reports inside this existing toggle, with the latest checkpoint first; do not add long status callouts above or outside it. Keep superseded checkpoints clearly dated and historical, using the existing **🗃️ Checkpoint history** section when appropriate. Preserve their evidence and limitations rather than silently rewriting history.
+
+Keep the introduction, Start Here, board links and working pages easy to reach outside the progress toggle. Do not recreate the hub, duplicate the toggle, or change unrelated content. Make targeted updates and verify that the content remains inside the toggle afterward.
+
+This is a presentation rule only. It does not change development scope, priorities, repository authority, test results or acceptance requirements.
+~~~
+
+**Observed context:** Root read the native page at 04:49:38.002Z and updated the existing toggle, latest first. Full-body and layout readback closed at 04:53:29.757Z; outside introduction, Start Here, board links, working pages and history were preserved. Root alone handles future hub updates. This observation does not change development or acceptance.
+
+<a id="a57-backup-planning-20261116"></a>
+
+### A57 dated supplement: private backup planning at a safe checkpoint — 2026-11-16
+
+**Who, where and recording time:** Ahmed (AE0101), Gaming-PC; recorded **2026-11-16T06:08:31Z / 08:08:31 Cairo**, system UTC. Owner-message time not recorded; Root supplied the following wording unchanged:
+
+~~~text
+Blue here, coordinating Ahmed’s explicit request today: move Notaya toward local Git plus the existing private CipherVaults/Notaya GitHub repository for off-machine safety, visible progress and meaningful commit/history context. Preserve your running work and the migration-isolation safeguards.\
+\
+At a safe checkpoint, inspect the authoritative repositories/worktrees, branches and heads, local-only commits, dirty/untracked work and necessary non-Git artifacts. Compare current GitHub coverage. Distinguish protected historical originals from active authority and explain the current no-push isolation.\
+\
+Please report the actual backup gap and propose a concrete safe private checkpoint workflow: privacy/secret/history review before publication; meaningful commit subjects and rationale; explicit unfinished/unqualified status; verification that remote tips match published commits; and separate protection for necessary ignored/uncommitted artifacts. Checkpoint publication is not merge, milestone acceptance or release.\
+\
+For this first step, report the inventory, risks, exact proposed branch/publication approach and owner decisions needed. Do not change remotes or security configuration, push, rewrite history, force-push, publish releases, change visibility or touch protected originals until this plan is reviewed. This is planning coordination, not an instruction to discard or abruptly stop ongoing development.
+~~~
+
+**Effect:** inventory and propose a reviewable private checkpoint and separate artifact protection. Preserve live work, isolation and originals; do not perform the named publication, configuration, history or visibility actions before the plan is reviewed. Checkpoint publication itself would not be merge, acceptance or release. This request does not stop the active development Goal.
+
+<a id="a57-private-checkpoint-implementation-20261116"></a>
+
+### A57 dated supplement: implement the bounded private checkpoint — 2026-11-16
+
+**Who, where and recording time:** Ahmed (AE0101), Gaming-PC; recorded **2026-11-16T06:48:35Z / 08:48:35 Cairo**, system UTC. Owner-message time not recorded; Root supplied this wording unchanged:
+
+~~~text
+Blue relaying Ahmed’s latest explicit owner direction from our current call. He now wants the actionable Git/GitHub solution implemented, including a bounded first upload of reviewed source and concise project records to the existing private CipherVaults/Notaya repository. This supersedes the earlier planning-only hold for that scoped checkpoint. Preserve current work and reach a safe checkpoint without abruptly stopping development.\
+\
+Use the proposed separate standalone publisher, with independent objects and no back-pointers, alternates or shared hardlinks. Keep all active development no-network configurations and protected originals untouched. Do not change security-sensitive system/network settings without the required separate owner confirmation. Review every newly exposed commit/blob and metadata for privacy/secrets, not just the latest diff. Publish only selected safe source/project records with honest unfinished status; no blanket staging, mirror push, force/overwrite, main overwrite, visibility change or release. Keep frozen P16 untouched: no commit/move/reset/stash/clean; exclude it from this checkpoint unless Ahmed explicitly changes that boundary. Map dependencies and state any excluded dependent work honestly rather than implying a runnable or qualified result.\
+\
+Use explicit new private checkpoint refs that refuse conflicting destinations. Verify actual remote commit/tree/parent identities and an independent restore, then report exact coverage, exclusions, failed/partial operations and remaining PC-only exposure. Existing reviewed history should retain identity. Separate non-Git artifact backup remains pending the destination/access/key-recovery decisions; do not claim GitHub protects omitted receipts, raw evidence, private material or uncommitted files.\
+\
+Make history understandable: plain-language commit subjects, bodies explaining why, change, checks and what remains. Put the exact tested SHA in the PR or receipt rather than a self-referential commit body. Establish a simple meaningful checkpoint rhythm, including before stopping, with a bounded fallback when publication fails. No needless new framework or commit-count target.\
+\
+Ahmed explicitly delegates routine merge decisions to Notaya Dev Thread 1 after appropriate review, exact-tip checks and conflict resolution, without per-merge owner confirmation. Release authorization and Ahmed’s acceptance remain separate. Escalate consequential product/scope decisions and unresolved serious risks. Normal project choices are delegated. Please implement this bounded first checkpoint safely and report verified results, not just a proposal.
+~~~
+
+**Effect:** the earlier planning-only hold is superseded for the bounded first checkpoint, subject to the explicit privacy, isolation, selection, conflicting-ref and verification conditions above. Frozen P16 remains excluded unless Ahmed changes that boundary; artifact destination/access/key-recovery decisions remain separate. Routine merges are delegated to Dev Thread 1 under the stated checks; release and acceptance remain separate. Authorization is not evidence of an upload, merge, restore or acceptance.
+
+<a id="a57-source-continuity-checkpoints-20261116"></a>
+
+### A57 dated supplement: remaining reviewed source/PBS checkpoints and restored studies
+
+**Recorded 2026-11-16T08:51:36.1289600+00:00 / 2026-11-16 10:51:36 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** Owner-message timestamp not recorded. Latest supplied owner direction, verbatim:
+
+~~~text
+Blue relaying Ahmed’s continuation: the approved persistent connection is established, so proceed now with the remaining reviewed, in-scope source, Notaya AI PBS and handoff checkpoints to private CipherVaults/Notaya under the approved normal workflow. Do not stop for routine per-push approval and do not repeat the completed N2 push. The recovery goal is usable project source plus current Notaya PBS/docs and a proper handoff for another developer after PC loss, not merely the N2 test checkpoint. Use explicit reviewed selection, review newly exposed history/content for privacy and secrets, preserve frozen P16 (no commit/move/reset/stash/clean), originals and historical lanes; no blanket staging, force/overwrite, public sharing or release. Verify published remote refs/commits and appropriate independent recovery, then report exact coverage, exclusions and remaining PC-only exposure honestly. Keep feature development held until this workflow/backup checkpoint goal is achieved; do not restart unrelated feature work.
+
+The four recovered Fable studies are now restored create-only at D:\Codex Projects\Notaya\resume-20261111T190954Z-ae1f50c8\control\fable-recovered-20261116. Separate reread confirmed all four SHA-256 hashes exactly match your historical identity record: Study 1a, Study 1b, integration draft3, and history-recovery integration design. Original Drive/Library copies remain unchanged. No re-download needed. Ahmed authorized their project inclusion; review and include as appropriate in project recovery, but they remain planning material, not implementation approval, and have not yet been committed/pushed. Please proceed with this bounded continuity task and report meaningful results or concrete blockers.
+~~~
+
+**Effect:** precise reviewed source/current Notaya records, handoff and recovered studies may be checkpointed privately through the approved normal connection, without routine push approval. Selected external working references need privacy/dependency mapping; frozen payload and protected originals/history remain excluded. Study1b amendments and proposal status remain intact; no new roadmap, product mechanism, release or acceptance is approved. Feature development remains held during this continuity task. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-checkpoints-20261116) owns actual results; a selection/local commit is not remote recovery.
+
+<a id="a57-persistent-github-approved-20261116"></a>
+
+### A57 dated supplement: persistent private GitHub connection approved
+
+**Recorded 2026-11-16T08:20:29.4895304+00:00 / 2026-11-16 10:20:29 +02:00 Cairo; Ahmed (AE0101), Gaming-PC.** Owner-message timestamp not recorded. Latest owner direction, supplied by Blue verbatim:
+
+~~~text
+Blue relaying Ahmed’s explicit action-time approval just given in ChatGPT: ‘approved.’ He approved the exact proposed persistent repo-local connection for active/main, active/n2 and active/p6c-evidence: allow Git HTTPS, configure the existing private CipherVaults/Notaya remote and existing Git Credential Manager; retain other-protocol blocking, TLS verification and isolated hooks. He was explicitly told HTTPS enablement permits any HTTPS Git destination within those three repos, not a host-level restriction. Apply the exact repo-local settings you proposed, with same-name branch upstreams and ordinary reviewed in-scope GitHub use without asking per push. Verify and report the resulting settings and scope, and confirm no global/system or unrelated settings changed. Preserve frozen P16, originals and historical lanes. No public release, visibility change or broad staging is authorized. Resume this approved connectivity/checkpoint task from the paused thread; do not treat this as permission for unrelated feature changes or a duplicate N2 push.
+~~~
+
+**Effect:** the exact repo-local proposal in the [recovery manifest](../handoff/2026-11-16-recovery-manifest.md) is approved for the three named independent repositories. Ordinary reviewed in-scope GitHub use does not need per-push owner confirmation; source/history/privacy/PBS/handoff coverage, frozen-work preservation, conflict handling and honest qualification limits remain required. This scoped resume does not restart unrelated feature work or grant release/visibility/global/system-setting permission. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#git-connectivity-verified-20261116) records actual application and verification; approval alone is not publication or product acceptance.
+
+<a id="a57-n2-direct-confirmation-20261116"></a>
+
+### A57 dated supplement: exact direct N2 checkpoint confirmed; ongoing connectivity proposal requested
+
+**Recorded 2026-11-16 07:53:54 UTC, system UTC; Ahmed (AE0101), Gaming-PC.** Owner-message timestamps not recorded. The approval question was:
+
+> Approve this ONE direct Notion import [N2] checkpoint? Source: D:\Codex Projects\Notaya\resume-20261111T190954Z-ae1f50c8\active\n2, commit 8950d4dfff5138ce95b13e976c62d6371c880e74. Destination: existing private CipherVaults/Notaya, new branch codex/checkpoint-n2-20261116. Only the Git child processes would allow HTTPS, reset/select the existing Git Credential Manager for AE0101, disable prompts and HTTP redirects, and retain TLS verification and isolated hooks. Active configuration files stay unchanged. Scope: remote identity/absence check, one create-only push using --force-with-lease=refs/heads/codex/checkpoint-n2-20261116: (existing destination must be refused), and one independent no-checkout verification clone. No other push, merge, release or publisher.
+
+Ahmed's answer, verbatim:
+
+> Approve this exact N2 checkpoint
+
+**Effect:** this confirmation releases only that one operation and verification. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#n2-direct-checkpoint-verified-20261116) records the actual result; it does not broaden publication, configuration or acceptance permission.
+
+**Later owner direction supplied by Blue, verbatim:**
+
+~~~text
+Blue relaying Ahmed’s next direction after the verified first N2 checkpoint: he wants normal ongoing GitHub connectivity, not a one-time exception or per-push owner approval. Please finish recording the current receipt without repeating the push, then propose the exact persistent repo-local settings for ordinary HTTPS to the existing private CipherVaults/Notaya repository: identify the specific active repositories, remote URLs/ref behavior, credential helper/account, protocol, TLS, redirects and hooks, plus what remains unchanged. Keep it simple. This is a concrete proposal for required action-time owner confirmation of the security-sensitive configuration change; do not change persistent settings before that approval. Routine publication scope still needs reviewed source/PBS/handoff coverage, frozen P16 preservation and honest exclusions; no public release or visibility change.
+
+Separately, the four missing Fable study documents have been recovered into cloud staging. Ahmed authorizes adding them to the project. Please name a safe exact recovery destination, preferably existing control staging outside frozen active source, and any expected historical hashes for Study 1a, Study 1b, integration draft3 and history-recovery integration design. Do not interrupt current recording or start transfers yourself; I will coordinate the recovered copies once the target is clear.
+~~~
+
+**Current boundary:** persistent repo-local connectivity is a concrete proposal pending configuration confirmation; after approved setup, ordinary reviewed in-scope checkpoints should not require per-push owner approval. No persistent settings changed under this request. Adding the four studies is authorized, but Blue coordinates transfer after the destination is named. Retained historical hashes are identity references, not verification of cloud copies or approval of the studies' proposals. No roadmap/scope/release/visibility change follows.
+
+<a id="a57-direct-checkpoint-primary-20261116"></a>
+
+### A57 dated supplement: direct checkpoint first; feature work safely paused
+
+**Recorded 2026-11-16T06:55:54Z, system UTC; Ahmed (AE0101), Gaming-PC.** Owner-message timestamps not recorded. Latest supplied owner direction:
+
+~~~text
+URGENT latest priority from Ahmed, relayed by Blue: establish and execute the safe direct Git/GitHub workflow before continuing Notaya feature development. Reach a safe stopping point and pause feature development without abruptly interrupting a running operation or losing evidence. This supersedes the earlier instruction to continue unrelated feature development during the workflow comparison.\
+\
+Prioritize the bounded direct-workflow assessment and first verified reviewed source/project-document checkpoint. Do not push or change Git configuration until Ahmed gives separate action-time confirmation for the exact proposed transport/security change. Preserve frozen P16 and all privacy/history-review constraints. No separate publisher setup.\
+\
+Please report your current activity, confirm when feature development is safely paused, and provide the exact proposed Git protocol/configuration changes and scopes, credential use, and safeguards needed for that first direct checkpoint. Keep this concrete and bounded; do not build a framework. Preserve completed preparation and evidence.
+~~~
+
+**Effective scope and state:** feature development is safely PAUSED after closed Node45736 and its seven readers/logs; no new Q1 syntax, UI, app or build is running. Existing Goal remains ACTIVE with direct Git checkpoint preparation as first priority. Separate publisher setup and all pushes/merges/configuration changes are held; no publisher was initialized, no Git configuration changed, no object/ref/PR/upload/push was created. Active HEAD/index/config hashes were rechecked unchanged. Only bounded direct-workflow assessment, source/history/privacy review and explicit project-record coverage are presently permitted; actual transport/security changes require separate concrete action-time confirmation. Relevant modified/untracked PBS/handoff/execution/status documents and Notaya external working records belong in coverage review with explicit included/copy/held/excluded mappings; no blanket omission, full standalone PBS system, raw evidence or private material inclusion. Frozen P16/originals/private-data protections remain. Routine merge delegation does not override the present hold. Preserve all completed preparation and failures.
 
 ## Changing this record
 

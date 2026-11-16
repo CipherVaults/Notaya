@@ -136,6 +136,7 @@ export default function ExportDialog() {
         description: done.path,
       });
       const notes: string[] = [];
+      if (done.cleanupWarnings?.length) notes.push(...done.cleanupWarnings);
       if (done.imagesLeftOut) notes.push(`${plural(done.imagesLeftOut, "picture")} (GIF or WebP) could not be put in the PDF.`);
       if (done.missingImages) notes.push(`${plural(done.missingImages, "picture")} could not be read and ${done.missingImages === 1 ? "was" : "were"} left out.`);
       if (done.charsReplaced) notes.push("Some characters are not available in PDF and were replaced. Export to Word to keep them.");

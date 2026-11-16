@@ -1,5 +1,11 @@
 # Notaya handover guide for Mohamed (2026-11-07)
 
+**Latest repository checkpoint (prepared 2026-11-12T06:54:40.8968075Z; source cutoff 2026-11-12T06:43:56.4413857Z):** see the [new dated section19](#codex-handover-checkpoint-20261112) and [current resume note](2026-11-12-codex-import-persistence-resume-note.md). Earlier last-updated/operational/publication statements remain historical byte-verbatim. This repository update does not update the private published Artifact; that copy remains pending/not attempted in this task. [Ahmed's side]
+
+**Dated pause correction (2026-11-10, R3):** Later heartbeat, queue and next-lane statements in this historical document are snapshots. Development is paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. Read the [pause resume note](2026-11-10-pause-resume-note.md) and [STATUS](../STATUS.md) before any action; no lane restart or merge without fresh authority. A55 transfer remains conditional on Ahmed's handover acceptance.
+
+**Dated R2 correction (2026-11-10):** earlier state and role lines below are historical snapshots. For the later 1.6 lane state, unresolved N2 test conflict and the conditional A55 handover, read [STATUS](../STATUS.md) Continuation and session 55. A merged lane is not partner acceptance.
+
 **Who and where:** written for **Mohamed Sayed (`AbyssWatcher2`)** and his Claude, from **Ahmed's side (`AE0101`)**, by a Claude cloud thread in Ahmed's Claude project "Notaya" (machine: cloud). First written 2026-11-07, about 22:30 UTC (container clock), from the repository at `main` = `987bfc5` (merge of PR #56); updated 2026-11-07 about 23:56 UTC from `main` = `67b27e4` plus the manual PR #63, and again 2026-11-08 about 00:35 UTC from `main` = `c2ead6e` (PR #68) plus PR #69 (see the change log). A published page with the same content (private to Ahmed unless he shares it): <https://claude.ai/artifact/UhKn7cS38rp7Sq89YfGLyp>. This Markdown copy exists because the repository is the only memory the two Claudes share.
 
 **Living document (Ahmed, 2026-11-07 22:33:37 UTC, [A39](../plan/approval-and-amendments.md)).** This guide is kept up to date at every milestone or decision on Ahmed's side, in both copies (this file and the published page), so that when Ahmed's cycle ends Mohamed has something solid with few or no gaps. **Last updated: 2026-11-08 07:18 UTC** (the 1.6 build: lanes C1, B and D merged, section 17; the published page copy is **not yet updated** for this change, see the change log; before that (the checkpoint at 00:35 UTC, PR #69, section 16; the Notaya Manual, PR #63, and the Phase 1 decisions, PR #61). See the change log at the end.
@@ -339,12 +345,25 @@ Written 2026-11-08 about 07:18 UTC for Mohamed, so that whoever has quota left c
 
 Ahmed's Claude weekly quota is nearly used up (about 91% on 2026-11-10 03:21 UTC). On 03:32:47 UTC he asked for a full migration of the lead coordinator and reviewer role to **ChatGPT Pro plus the Codex desktop app** ([A55](../plan/approval-and-amendments.md); it takes effect on his "handover accepted" in ChatGPT). The package is [`migration-to-chatgpt/`](migration-to-chatgpt/README.md). **For Mohamed:** nothing changes on your side. You keep Claude Pro (no Codex). If you must carry on, paste block D from [`migration-to-chatgpt/02-start-prompts.md`](migration-to-chatgpt/02-start-prompts.md) as your first message; you merge, release and accept on your side, and making the repository public or adding a licence still needs both of you. Ahmed may ask you for a second opinion on a risky diff (the one non-OpenAI review), only with your agreement. Section 17 stays the 1.6 state as of 2026-11-09 12:00 UTC; the current state is in the migration guide, section 6, and in `docs/STATUS.md`.
 
+<a id="codex-handover-checkpoint-20261112"></a>
+
+## 19. Independent Codex checkpoint (2026-11-12 UTC) [Ahmed's side]
+
+This dated reading-aid addendum does not grant authority or reactivate old operational directions. Ahmed's current Goal/continuation authorises the independent derivative; older A55 conditional/pause wording is retained as history and no literal handover-acceptance quote is invented. Mohamed's independent side remains unchanged. Read [STATUS Continuation](../STATUS.md#codex-persistence-checkpoint-20261112), [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md), full [sessions71–76](../sessions.md#session-76) and the [dated resume note](2026-11-12-codex-import-persistence-resume-note.md) before acting.
+
+- Accepted1.5.1 remains; implemented1.6 is unaccepted. Originals, all51historical lanes and unique dirty work stay protected. This local records milestone is not a push, release, handoff delivery or owner acceptance.
+- Dependency archives/maps/installed public data have bounded independent evidence. One actual durable empty-home backend check passed three invented cases on production7806 plus a clearly identified uncommitted test append/new binary. Prior148selected tests remain a separate generation; no native navigation, safety-backup callback, private/full-suite/whole-app or packaging qualification is implied.
+- Continue only the relevant existing-Goal gates from the exact preserved checkpoint; no automatic scheduler or old-lane restart, product repair campaign or study/history proposal approval. The new P6c [large-table verification and focus checks] two-file test/oracle proposal remains unapplied/unrun and compact focus unobserved.
+- Six full13-section/time/model work blocks and raw usage are retained as one existing app run, not six new billed runs. The later owned Notion checkpoint was saved/exact-readback06:48:04.376Z; it changed no authority/roadmap/acceptance.
+- **A39 external-copy gap:** the private published Artifact at the original header URL was not updated/contacted; no supported editing route is established within this bounded task. Its completion is pending, not waived. Immutable snapshots stay untouched and are not substitutes. Do not send this to Mohamed without Ahmed's words. His actual Windows sign-in/About checks remain his own disposition.
+
 ## Change log
 
 Newest first. Each line: when (UTC), what changed, which side's decision it records.
 
 | When (UTC) | Change | Whose decision |
 |---|---|---|
+| 2026-11-12 06:54:40 | Dated section19/updated repository pointer: independent installed-data and one empty-home backend qualification, preserved source/test/usage identity and exact continuation. Repo copy only; private published Artifact remains PENDING/not attempted, no snapshot/contact. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md). | Ahmed's side; existing Goal/explicit documentation instruction, no new product decision |
 | 2026-11-10 04:50 | New section 18: Ahmed's side moves to ChatGPT Pro and Codex (A55); what it means for Mohamed. Repo copy only; the published page was **not** republished (the HTML snapshot in `docs/artifacts/snapshots-2026-11-10/` is the 2026-11-08 content). | Ahmed's side (03:32:47) |
 | 2026-11-09 12:00 | Section 17 updated: P1 merged, A51 (Windows-owned confirmations), live AI check passed, A52 (Notion import with real data, WP-19), silent heartbeat, security pass areas 1 and 2, lean-mode note. Repo copy only; the published page is rebuilt by the coordinator. | Ahmed's side (08:22:33, 10:42:50, 11:33, 11:52:54) |
 | 2026-11-09 07:18 | Section 17 updated: Claude 70% line lifted for 1.6, model choice by task, banked resets by Ahmed (A50). Repo copy only. | Ahmed's side |

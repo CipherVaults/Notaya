@@ -3,21 +3,20 @@
 //   npx vite --config vite.views.config.ts      (leave it running; it serves http://127.0.0.1:1423/)
 //   node dev-mock/database-views-check.cjs [screenshot folder] [only]
 // Prints ALL OK when every check passes. `only` is a view name (board, calendar, ...) to run just that part.
-const { chromium } = require('playwright');
+const { createChecks } = require('../tools/checks/fail-loud.cjs');
+const { assertFixtureLine } = require('./grader-oracles.cjs');
+const checks = createChecks('database views');
 const shots = process.argv[2] || '/mnt/project-files/notaya-build/v150-db';
 const only = process.argv[3] || '';
 const BASE = 'http://127.0.0.1:1423/dev-mock/database-views-harness.html';
-let fail = 0;
-const is = (name, got, want) => {
-  const g = JSON.stringify(got), w = JSON.stringify(want);
-  if (g !== w) { fail++; console.log('FAIL', name, g, '!==', w); } else console.log('ok  ', name);
-};
-const truthy = (name, v) => { if (!v) { fail++; console.log('FAIL', name); } else console.log('ok  ', name); };
+const is = (name, got, want) => checks.equal(name, got, want);
+const truthy = (name, value) => checks.check(name,
+  (typeof value !== 'number' || Number.isFinite(value)) && !!value);
 
 async function open(b, query, size = { width: 1280, height: 800 }) {
   const p = await b.newPage({ viewport: size, deviceScaleFactor: 1 });
-  p.on('pageerror', (e) => { fail++; console.log('FAIL page error', e.message); });
-  p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) { fail++; console.log('FAIL console error', m.text()); } });
+  p.on('pageerror', (e) => checks.check('page error', false, e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) checks.check('console error', false, m.text()); });
   await p.goto(`${BASE}?${query}`);
   await p.waitForSelector('#view-host > *');
   await p.waitForTimeout(400);
@@ -185,7 +184,9 @@ tests.calendar = async (b) => {
   await clear(p);
   const r2 = await p.evaluate(() => window.__h.row('r2').values.due.start);
   const target2 = addDays(r2, 2);
-  if (await dayCell(p, target2).count()) {
+  const timedTargetVisible = (await dayCell(p, target2).count()) > 0;
+  truthy('calendar: required timed-row drag target is visible', timedTargetVisible);
+  if (timedTargetVisible) {
     await drag(p, p.locator('[data-bar="r2"]').first(), dayCell(p, target2));
     sc = await calls(p, 'setCells');
     is('calendar: a moved row keeps its time', sc[0] && sc[0].args[1].due.start, target2 + 'T10:00');
@@ -202,7 +203,7 @@ tests.calendar = async (b) => {
     const after = await p.evaluate(() => window.__h.row('r4').values.due);
     const days = (a, c) => Math.round((Date.parse(c.slice(0, 10)) - Date.parse(a.slice(0, 10))) / 86400000);
     is('calendar: a range moved by 7 days keeps its length', [days(before.start, after.start), days(before.end, after.end)], [7, 7]);
-  } else console.log('skip calendar range drag: target week not visible');
+  } else truthy('calendar: required range-drag target is visible', false);
 
   // Drag an unscheduled row onto a day.
   await clear(p);
@@ -433,7 +434,22 @@ tests.chart = async (b) => {
   await shot(p, 'chart-stacked');
   await p.close();
   p = await open(b, 'view=chart&ck=line&cx=due&cg=prio&theme=sunrise-dark');
-  is('chart: line points (2 months x 3 series)', await p.locator('[data-point]').count(), 6);
+  const rawLineRows = await p.evaluate(() => window.__h.rows());
+  const actualLine = await p.evaluate(() => {
+    const svg = document.querySelector('svg[data-chart="line"]');
+    if (!svg) return null;
+    return {
+      months: [...svg.children].filter((el) => el.tagName.toLowerCase() === 'text').map((el) => el.textContent),
+      legend: [...svg.parentElement.querySelectorAll('[aria-label="Legend"] li')].map((el) => el.textContent.trim()),
+      series: [...svg.querySelectorAll('[data-series]')].map((el) => ({
+        index: Number(el.getAttribute('data-series')),
+        polylines: el.querySelectorAll('polyline').length,
+        points: el.querySelectorAll('[data-point]').length,
+        labels: [...el.querySelectorAll('[data-point-hit]')].map((point) => point.getAttribute('aria-label')),
+      })),
+    };
+  });
+  truthy('chart: exact months, series and ordered point values follow raw fixture rows', assertFixtureLine(rawLineRows, actualLine));
   await shot(p, 'chart-line-dark');
   await p.close();
   p = await open(b, 'view=chart&ck=donut&cx=prio&rtl=1');
@@ -546,13 +562,19 @@ tests.gallery = async (b) => {
 };
 
 (async () => {
+  const names = Object.keys(tests);
+  const selected = checks.selection(only ? [only] : names, names);
+  if (!selected.length) { checks.finish(); return; }
+  const { chromium } = require('playwright');
   const b = await chromium.launch();
-  for (const [name, fn] of Object.entries(tests)) {
-    if (only && only !== name) continue;
-    console.log('--', name);
-    try { await fn(b); } catch (e) { fail++; console.log('FAIL', name, 'threw', e.message.split('\n').slice(0, 12).join(' | ')); }
+  try {
+    for (const name of selected) {
+      console.log('--', name);
+      try { await tests[name](b); }
+      catch (e) { checks.check(name + ' threw', false, e.message.split('\n').slice(0, 12).join(' | ')); }
+    }
+  } finally {
+    await b.close();
+    checks.finish();
   }
-  await b.close();
-  console.log(fail ? `${fail} FAILED` : 'ALL OK');
-  process.exit(fail ? 1 : 0);
-})();
+})().catch((error) => { checks.check('database views runner', false, error.message); checks.finish(); });

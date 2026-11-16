@@ -8,6 +8,7 @@ param(
     [string]$TestRoot = 'D:\Notaya Tests\v1-6-C5-smoke'
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'named-tests.ps1')
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $runHome = Join-Path $testRoot ('run-' + [Guid]::NewGuid().ToString('N'))
 
@@ -24,9 +25,12 @@ function Assert-PlainPath([string]$Path) {
         $cursor = $parent
     }
 }
-function Invoke-Cargo([string[]]$CargoArgs) {
-    & cargo @CargoArgs
-    if ($LASTEXITCODE -ne 0) { throw "cargo failed (exit $LASTEXITCODE)." }
+function Invoke-Cargo([string[]]$CargoArgs, [string[]]$ExpectedTests) {
+    $output = @(& cargo @CargoArgs 2>&1 | ForEach-Object { $_.ToString() })
+    $nativeExit = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    if ($nativeExit -ne 0) { throw "cargo failed (exit $nativeExit)." }
+    Assert-NamedTests -OutputLines $output -ExpectedTests $ExpectedTests
 }
 function Send-Rpc($Message) {
     $script:bridge.StandardInput.WriteLine(($Message | ConvertTo-Json -Depth 30 -Compress))
@@ -88,9 +92,15 @@ try {
     Push-Location (Join-Path $repo 'src-tauri')
     try {
         if ($Mode -eq 'Core') {
-            Invoke-Cargo -CargoArgs @('test', '--lib', '--offline', 'ai::smoke::bridge_core_smoke', '--', '--nocapture')
+            $coreTest = 'ai::smoke::bridge_core_smoke_pair_read_confirm_refuse_person_editing_and_ordered_delivery'
+            Invoke-Cargo -CargoArgs @('test', '--color', 'never', '--lib', '--offline', $coreTest, '--', '--exact', '--show-output', '--color', 'never') -ExpectedTests @($coreTest)
             if ($NativeBridgeTests) {
-                Invoke-Cargo -CargoArgs @('test', '--offline', '-p', 'notaya-bridge', 'pipe::native::tests', '--', '--include-ignored', '--nocapture')
+                $nativeTests = @(
+                    'pipe::native::tests::windows_fake_pipe_frames_both_directions_and_verifies_server_before_auth',
+                    'pipe::native::tests::another_process_image_is_refused_without_sending_a_byte',
+                    'pipe::native::tests::current_sid_and_canonical_windows_path_produce_a_stable_isolated_name'
+                )
+                Invoke-Cargo -CargoArgs @('test', '--color', 'never', '--offline', '-p', 'notaya-bridge', 'pipe::native::tests', '--', '--include-ignored', '--show-output', '--color', 'never') -ExpectedTests $nativeTests
             }
             Write-Host 'CHECKPOINT: core smoke done'
             return

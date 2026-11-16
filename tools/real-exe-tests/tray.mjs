@@ -11,8 +11,13 @@
 //   phase "prefs":  <mode> is then on|off: set all three Windows switches, print what the app reports
 import { readFileSync } from "node:fs";
 
+import graderChecks from '../checks/fail-loud.cjs';
+const checks = graderChecks.createChecks('tray');
+const check = checks.check;
+const sockets = new Set();
 const [port, phase, mode = "secure", pwFile] = process.argv.slice(2);
-const password = pwFile ? readFileSync(pwFile, "utf8").trim() : "";
+const selected = checks.selection(Number.isInteger(Number(port)) && Number(port) >= 1 && Number(port) <= 65535 && (phase === 'prefs' ? ['on', 'off'].includes(mode) : ['secure', 'open'].includes(mode)) ? [phase] : [], ["setup","close","status","check","prefs"]);
+const password = selected.length && pwFile ? readFileSync(pwFile, 'utf8').trim() : '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const TYPED = "TRAYTEST-" + mode;
 
@@ -22,6 +27,7 @@ async function connectMain() {
       const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
       for (const hit of t) {
         const ws = new WebSocket(hit.webSocketDebuggerUrl);
+        sockets.add(ws);
         await new Promise((r) => (ws.onopen = r));
         let id = 0;
         const pend = new Map();
@@ -43,6 +49,8 @@ async function connectMain() {
   throw new Error("no main window");
 }
 
+try {
+if (selected.length) {
 const main = await connectMain();
 await sleep(1500);
 
@@ -56,9 +64,9 @@ if (phase === "setup") {
     await sleep(4000);
   }
   const nb = await main.inv("create_notebook", { name: "T", color: "#888888", icon: "N" });
-  if (!nb.ok) { console.log("create_notebook failed:", JSON.stringify(nb)); process.exit(1); }
+  if (!nb.ok) throw new Error('create_notebook failed');
   const pg = await main.inv("create_page", { sectionId: nb.ok.sections[0].id, title: "Tray page" });
-  console.log("page:", pg.ok?.id ? "created" : JSON.stringify(pg));
+  check('page created', typeof pg.ok?.id === 'string');
 } else if (phase === "close") {
   if (mode === "secure") {
     await main.ev("location.reload()");
@@ -67,26 +75,31 @@ if (phase === "setup") {
   }
   await main.ev("location.reload()");
   await sleep(3000);
-  console.log("open page:", await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Tray page'); s?.click(); return !!s; })()`));
+  check('page opened', (await main.ev(`(() => { const s=[...document.querySelectorAll('aside span')].find(s=>s.textContent==='Tray page'); s?.click(); return !!s; })()`)) === true);
   await sleep(1500);
   const typed = await main.ev(`(() => { const pm=document.querySelector('.ProseMirror'); if(!pm) return 'no editor'; pm.focus(); document.execCommand('insertText', false, ${JSON.stringify(TYPED)}); return pm.textContent; })()`);
-  console.log("typed into editor:", JSON.stringify(typed));
+  check('text reached the editor', typeof typed === 'string' && typed.includes(TYPED));
   // close at once, inside the save delay
   main.ev(`window.__TAURI_INTERNALS__.invoke('plugin:window|close', { label: 'main' }).catch(()=>{})`).catch(() => {});
   await sleep(4000);
 } else if (phase === "status") {
   const v = await main.inv("vault_status");
-  console.log("vault_status:", v.ok ? `unlocked=${v.ok.unlocked} securityOn=${v.ok.securityOn}` : JSON.stringify(v));
+  check('close keeps the expected protection state', v.ok?.unlocked === (mode === 'open') && v.ok?.securityOn === (mode === 'secure'));
 } else if (phase === "check") {
   if (mode === "secure") console.log("unlock:", JSON.stringify(await main.inv("unlock_vault", { password, keyfile: null })));
   const tree = (await main.inv("list_notes")).ok;
   const p = tree.pages.find((x) => x.title === "Tray page");
   const pg = (await main.inv("get_page", { id: p.id })).ok;
-  console.log(`page contains "${TYPED}":`, ((pg?.text ?? "") + (pg?.content ?? "")).includes(TYPED));
+  check('page retains typed text', ((pg?.text ?? '') + (pg?.content ?? '')).includes(TYPED));
 } else if (phase === "prefs") {
   const on = mode === "on";
   console.log("before:", JSON.stringify((await main.inv("get_shell_prefs")).ok));
   console.log("set:", JSON.stringify(await main.inv("set_shell_prefs", { prefs: { closeToTray: true, startWithWindows: on, startMinimized: on } })));
-  console.log("after:", JSON.stringify((await main.inv("get_shell_prefs")).ok));
+  const after = (await main.inv('get_shell_prefs')).ok;
+  check('shell preferences have their requested effects', after?.closeToTray === true && after?.startWithWindows === on && after?.startMinimized === on);
 }
-process.exit(0);
+}
+} finally {
+  for (const socket of sockets) socket.close();
+  checks.finish();
+}

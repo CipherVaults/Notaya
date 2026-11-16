@@ -8,8 +8,13 @@
 // Needs:   Node 24 (global fetch and WebSocket) and a Notaya window started with the debug port.
 //          Throwaway vault only: it creates a NEW vault, so it must never be pointed at a real one.
 import { readFileSync } from "node:fs";
+import graderChecks from '../checks/fail-loud.cjs';
+const checks = graderChecks.createChecks('restoreflow');
+const check = checks.check;
+const sockets = new Set();
 const [port, pwFile] = process.argv.slice(2);
-const password = readFileSync(pwFile, "utf8").trim();
+const selected = checks.selection(Number.isInteger(Number(port)) && Number(port) >= 1 && Number(port) <= 65535 && Boolean(pwFile) ? ['restore'] : [], ["restore"]);
+const password = selected.length && pwFile ? readFileSync(pwFile, 'utf8').trim() : '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function connectMain() {
@@ -18,6 +23,7 @@ async function connectMain() {
       const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter((x) => x.type === "page");
       for (const hit of t) {
         const ws = new WebSocket(hit.webSocketDebuggerUrl);
+        sockets.add(ws);
         await new Promise((r) => (ws.onopen = r));
         let id = 0;
         const pend = new Map();
@@ -35,10 +41,11 @@ async function connectMain() {
   }
   throw new Error("no main window");
 }
+try {
+if (selected.length) {
 const m = await connectMain();
 await sleep(1500);
 const doc = (t) => JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: t }] }] });
-const check = (name, ok, extra = "") => console.log(`${ok ? "PASS" : "FAIL"}  ${name} ${extra}`);
 const pageText = async () => {
   const tree = (await m.inv("list_notes")).ok;
   const p = tree?.pages?.find((x) => x.title === "R1");
@@ -60,7 +67,7 @@ await m.inv("save_page", { id: pg.ok.id, title: "R1", content: doc("CHANGED-AFTE
 await m.inv("lock_vault"); await sleep(3500);            // backup B (CHANGED)
 const list = (await m.inv("list_backups")).ok;
 console.log("backups listed (locked):", list?.map((b) => b.name + ":" + b.size).join(" | "));
-check("list_backups works while locked, newest first", Array.isArray(list) && list.length >= 2 && list[0].modifiedMs >= list[1].modifiedMs);
+check("list_backups works while locked, newest first", Array.isArray(list) && list.length >= 2 && Number.isFinite(list[0]?.modifiedMs) && Number.isFinite(list[1]?.modifiedMs) && list[0].modifiedMs >= list[1].modifiedMs);
 const oldest = list[list.length - 1].name, newest = list[0].name;
 
 console.log("unlock:", JSON.stringify(await m.inv("unlock_vault", { password, keyfile: null })));
@@ -92,4 +99,8 @@ await sleep(1500);
 check("second restored vault is open with the CHANGED text", (await pageText()) === "CHANGED-AFTER-BACKUP", await pageText());
 const st = (await m.inv("vault_status")).ok;
 check("vault is unlocked after restore", st?.unlocked === true);
-process.exit(0);
+}
+} finally {
+  for (const socket of sockets) socket.close();
+  checks.finish();
+}

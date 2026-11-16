@@ -1,5 +1,7 @@
 # Working together: two people, two Claudes, one repository
 
+**Dated pause correction (2026-11-10, R3):** Later heartbeat, queue and next-lane statements in this historical document are snapshots. Development is paused on Ahmed's 06:13:35 UTC words, clarified 06:25:54 UTC. Read the [pause resume note](2026-11-10-pause-resume-note.md) and [STATUS](../STATUS.md) before any action; no lane restart or merge without fresh authority. A55 transfer remains conditional on Ahmed's handover acceptance.
+
 **Status:** proposed on 2026-10-29 at the owner's request (his messages of 07:55:55 and 08:39:33 UTC, [authority table](../plan/approval-and-amendments.md)); amendment [A34](../plan/approval-and-amendments.md), "proposed" until he confirms it ([STATUS.md](../STATUS.md), question 27). His 08:39:33 message ("i want him to have the full work acess") makes the friend a full partner, so the rules below treat both people alike.
 
 **Why this file exists.** Mohamed and a friend are partners on Notaya, and each works with their own Claude. A Claude session starts cold, and the claude.ai project, its chat and its memory belong to one account, so **the repository is the only memory the two Claudes share.** Everything one Claude needs to continue what the other did must be committed and pushed. If it isn't in the repo, it doesn't exist for the other side.
