@@ -1,5 +1,22 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-document-import-20261122"></a>
+
+## Windows document import qualification — 2026-11-22 01:03 Cairo / 2026-11-21 23:03 UTC
+
+| Register case | Outcome for this batch |
+|---|---|
+| W139 UTF-8 plain text | **Passed.** Exact mixed scripts, logical text and literal markup, independently confirmed two paragraphs and two hard breaks. Saved text matched after reopen. |
+| W140 ordinary HTML import | **Partial pass.** Heading, emphasis, table and color observed. Other feature and safety variants not run. |
+| W141 Word import | **Title defect fixed and verified.** Original native failure and red regression preserved. All 12 Word importer tests passed on `fb1256a`. Native same-file import and reopen passed title and body/table/picture. **Separate observed gap:** style-defined bullet flattened. Unsupported variants not run. |
+| W143 mixed import | **Files leg passed.** One notebook, one section, three selected formats, three pages and one picture. Folder and prior-note preservation not run. |
+| W149 cancellation | **Native picker leg passed.** Cancel and close returned to empty Home. Conversion cancellation not run. |
+| W163 PDF round trip | **Failed text fidelity.** English controls and numbers matched, but both Arabic and Hebrew words had reversed character order after reopening. Actual released v1.5.1 executable applicability not checked. |
+| W150 hostile input and Q1 database redo | **Held outside this batch.** Daybreak pending, stopped operation untouched, both existing redo failures preserved. |
+| Updated build and package | **Windows development build passed.** Exact installer/portable qualification and release acceptance not run. |
+
+[Exact execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-doc-import-20261122).
+
 <a id="windows-native-pdf-zip-20261122"></a>
 
 ## Windows baseline qualification — 2026-11-22 00:31 Cairo / 2026-11-21 22:31 UTC

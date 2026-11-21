@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-document-import"></a>
+
+## Native document import follow-up — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 01:03 Cairo / 2026-11-21 23:03 UTC. Local native qualification, Word title patch and Word regression checks. Lead configured GPT-6.2 Sol Ultra. Actual attributable tokens, quota share, worker runtime and active labour are unavailable. [Session](../sessions.md#session-152) and [evidence](../execution/2026-11-15-safe-export-replacement.md#native-doc-import-20261122).
+
 <a id="codex-usage-20261122-native-windows"></a>
 
 ## Native Windows PDF/ZIP qualification — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC

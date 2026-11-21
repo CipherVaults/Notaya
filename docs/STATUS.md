@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-doc-import-20261122"></a>
+
+## Current state and continuation — native document import
+
+**2026-11-22 01:03 Cairo / 2026-11-21 23:03 UTC.** The Windows baseline at `a806ae3` preserved mixed-script plain text and line breaks, retained the tested HTML formatting, and canceled safely at the native file picker. Ordinary Word import exposed a title fallback bug. The reviewed correction at `fb1256aaf716fef80be1cb2cf5a379dc89cb2042` passed all 12 Word importer tests. Its exact Windows executable and scope are recorded in the execution evidence. Native reimport and reopen confirmed the corrected Word title, body, table and picture. Style-defined bullet formatting still flattened. The PDF plain-text round trip (W163) failed Arabic/Hebrew character order in the saved note. The original PDF retained the correct text. See the [register](plan/2026-11-09-whole-app-test-results.md#windows-document-import-20261122) and [exact execution evidence](execution/2026-11-15-safe-export-replacement.md#native-doc-import-20261122).
+
+**Continue with** the exact released Windows executable check for PDF text fidelity. Check the identical synthetic PDF against the exact published v1.5.1 portable executable in a disposable local home. Escalate the released-version repair decision to Ahmed only if the same text corruption is reproduced. Track Word style-only bullets as an independent follow-up. The 5,000-row redo gate remains open. One run completed nine phases and both redos then failed with two pending background reads at shutdown. The later run timed out before redo. Both receipts remain intact. The stopped operation was untouched. Daybreak is pending. Installer, portable package and release acceptance stay separate.
+
 <a id="native-windows-pdf-zip-20261122"></a>
 
 ## Current state and continuation — native Windows PDF and ZIP qualification

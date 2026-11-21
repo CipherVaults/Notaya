@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 152 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native document follow-up](#session-152) |
 | 151 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native PDF and ZIP qualification](#session-151) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
 | 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
@@ -183,6 +184,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-152"></a>
+
+# 📘 Session: 2026-11-21 UTC · Ahmed (AE0101) · Gaming-PC · Native document follow-up
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the qualification and fixed the Word title parser. A separate read-only worker reviewed the exact change and red receipt. **Models, Effort, Roles and Provenance.** Lead GPT-6.2 Sol Ultra configuration is from the active Goal and prior composer readback. Served worker provenance and attributable usage are unknown. [Usage](ledger/usage-ledger.md#codex-usage-20261122-document-import).
+
+## 1. Time
+
+Close 2026-11-22 01:03 Cairo / 2026-11-21 23:03 UTC. This continues the prior native PDF/ZIP checkpoint.
+
+## 2. Session Goal
+
+Qualify independent native import cases and fix any confirmed ordinary defect in the tested slice.
+
+## 3. Actions Taken
+
+Ran native cancel, a three-format import, plain-text HTML readback and reopen, and a native PDF export/import round trip. Reproduced the Word title bug with an exact regression, applied a one-arm fix, ran the Word importer suite and repeated the native import on the exact Windows build.
+
+## 4. Key Insights
+
+An empty Word title element admitted unrelated following metadata. Text PDF rendering can look correct while reimport stores a different logical character sequence.
+
+## 5. Decisions Made
+
+Keep the title fix independent of the Word list and PDF text failures. No new product scope, release decision or acceptance.
+
+## 6. Difficulties / Friction
+
+The native file picker did not expose clickable geometry in one tool call. Verified it was still open and used Escape. No fixture or product retry of the stopped operation.
+
+## 7. Adjustments Made
+
+Used parsed HTML to corroborate stored text structure and content. Reused previously built frontend inputs only after exact byte comparison.
+
+## 8. Mistakes / Risks
+
+The baseline Word and PDF results are not full-format passes. Record the distinct style-defined bullet and PDF character-order gaps. Shipped PDF behavior remains unknown until tested on the released executable.
+
+## 9. Current Position
+
+Scoped Word fix tested on `fb1256a` and recovered from GitHub. Current import results and limits are in the [test register](plan/2026-11-09-whole-app-test-results.md#windows-document-import-20261122).
+
+## 10. Next Steps
+
+Check the identical synthetic PDF against the exact published v1.5.1 portable executable in a disposable local home. Escalate the released-version repair decision to Ahmed only if the same text corruption is reproduced. Track Word style-only bullets as an independent follow-up.
+
+## 11. Open Questions
+
+Released PDF applicability needs verification. Daybreak remains pending. The redo gate and both failed receipts are open.
+
+## 12. Session Outcome
+
+Reviewed Word source and test checkpoint verified. Failures and unrun cases retain their own status. All vaults and raw materials remained on the PC.
+
+## 13. Confidence Level
+
+High for exact local Windows results, source review, and the round-trip Unicode comparison. Full format fidelity, package qualification and owner acceptance are still open.
+
+---
 
 <a id="session-151"></a>
 
