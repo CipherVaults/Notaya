@@ -1,5 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261121-block88"></a>
+
+## Usage block88 — 2026-11-21 UTC — compact-table redo checkpoint
+
+The lead and independent comparison review were recorded as GPT-6.2 Sol Ultra. Work included local restore checks and two bounded runs of the same 33-case harness, with independent result readback. Attributable token, cost and quota use remain unknown. No quota-ledger row was inferred. [EX85](../execution/2026-11-21-compact-table-redo-checkpoint.md) · [Session 149](../sessions.md#session-149)
+
+
 <a id="codex-usage-20261116-block87"></a>
 
 ## Usage block87 — 2026-11-16 UTC — Ahmed (AE0101) — Gaming-PC

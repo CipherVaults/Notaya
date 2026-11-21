@@ -39,6 +39,7 @@ Newest first. Later instructions narrow or pause the approved plan; they don't e
 
 | When (UTC) | Owner instruction | Effect |
 |---|---|---|
+| 2026-11-21 | Owner approved [local recovery and reviewed GitHub continuity](#q1-local-recovery-20261121). | Proceed from local recovery. Sync reviewed public-safe code and project records. Vaults and private material stay local. |
 | 2026-11-16 (owner-message time unknown; recorded 06:48:35 UTC) | **Ahmed:** [implement bounded private checkpoint, supplied wording once in A57](#a57-private-checkpoint-implementation-20261116). | Supersedes planning-only hold for scoped checkpoint; privacy, independence, conflict-refusal and verification conditions apply. |
 | 2026-11-16 (owner-message time unknown; recorded 06:08:31 UTC) | **Ahmed:** [private backup planning, supplied wording once in A57](#a57-backup-planning-20261116). | Inventory and propose a safe checkpoint; named publication/config/history changes held until plan review. |
 | 2026-11-16 (owner-message time unknown; recorded 04:55:02 UTC) | **Ahmed:** [hub presentation rule, owner wording once in A57](#a57-hub-presentation-20261116). | Preserve the native progress toggle and dated history; targeted page read/edit/readback. Presentation only; development authority and acceptance unchanged. |
@@ -747,3 +748,10 @@ Please report your current activity, confirm when feature development is safely 
 - Add new authority events at the top of the table.
 - Change an amendment's status only with its evidence or the owner's decision, and say where that decision was recorded.
 - Never edit the snapshot.
+
+
+<a id="q1-local-recovery-20261121"></a>
+
+## November 21, 2026 — Local recovery and reviewed GitHub continuity
+
+The project owner authorized the compact-table redo work to proceed from the verified local recovery copy. Continue development on the local machine. Keep reviewed code and public-safe AI PBS, session, progress, and handoff records recoverable through frequent Git and GitHub checkpoints. Keep vaults and any private or private-looking material local. The same-PC recovery evidence is verified and the off-machine restoration of the raw archive remains unverified. Existing review, integration, and release acceptance gates still apply.

@@ -1,5 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
+<a id="q1-local-comparison-20261121"></a>
+
+## Continuation — compact-table redo comparison failed its full gate
+
+**2026-11-21, 22:08 Cairo.** Local restoration was verified and the owner authorized proceeding locally. The unchanged test mounted the actual React table and ran all 33 cases on each source. Original **19 passed, 14 failed**. Preserved candidate **32 passed, 1 failed**, including all eight redo cases passing. Both runs failed the background-focus precondition and recorded fixture callback errors and unexpected editing calls. Independent readback confirmed the recorded process, listener and profile closure. The candidate is unqualified and unapplied. Keep the nine-phase integrated workflow and P7 pending.
+
+[EX85](execution/2026-11-21-compact-table-redo-checkpoint.md) is the handoff for the next run. [Session 149](sessions.md#session-149) and [usage block 88](ledger/usage-ledger.md#codex-usage-20261121-block88) record the work. Reviewed public-safe source and project records should be synced frequently. Vaults and raw evidence remain local.
+
+
 <a id="core-q1-focus-loss-20261116"></a>
 
 ## Continuation — six phases qualified; compact-table focus loss observed

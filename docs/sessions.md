@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 149 | 2026-11-21 | Integration lead | Local Windows | [Compact-table redo and local recovery](#session-149) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
 | 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
 | 146 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Source and continuity checkpoints](#session-146) |
@@ -182,6 +183,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-149"></a>
+
+# Session 149 — 2026-11-21 — Compact-table redo and local recovery
+
+**Models, Effort, Roles and Provenance.** The integration lead coordinated the comparison. Its recorded configuration and the configuration of the independent comparison reviewer were GPT-6.2 Sol Ultra. Other workers supported the intake and preparation. Attributable usage remains unknown.
+
+## 1. Time
+
+November 21, 2026, recorded at about 22:08 Cairo. The two comparison runs closed at 22:06 and 22:07.
+
+## 2. Session Goal
+
+Recover the prepared focus inputs and progress the first v1.6 implementation slice under the approved release plan.
+
+## 3. Actions Taken
+
+Verified the local restore, pinned dependencies and standalone browser. Ran the original and preserved candidate in the unchanged 33-case harness. Independently checked actual result identities and closure.
+
+## 4. Key Insights
+
+The original lost focus to the document body in all eight redo variants. The candidate restored the row and stack in all eight. The background observation and mock IPC boundary are separate qualification issues.
+
+## 5. Decisions Made
+
+The owner directed local continuation and continuous reviewed GitHub checkpoints for code and public-safe project records. Vaults and private material remain local.
+
+## 6. Difficulties / Friction
+
+Both runs failed the background-focus precondition and recorded two fixture callback errors and four unexpected editing calls.
+
+## 7. Adjustments Made
+
+Used the recovered execution root and pinned standalone browser. Kept the harness, cases, assertions and limits fixed.
+
+## 8. Mistakes / Risks
+
+The first wrapper setup failed before launch because of a PowerShell argument name. It was corrected before either run. Foreground success cannot establish background behavior or persistent data safety.
+
+## 9. Current Position
+
+Original 19/33, candidate 32/33. The candidate remains unapplied. [EX85](execution/2026-11-21-compact-table-redo-checkpoint.md) is the current handoff.
+
+## 10. Next Steps
+
+Establish an eligible, independently reviewed setup. Repeat both versions, qualify the exact integration revision with the nine-phase workflow, and then continue to P7.
+
+## 11. Open Questions
+
+The fixture must distinguish legitimate editing notifications from unexpected effects and must actually observe that the first document lost focus.
+
+## 12. Session Outcome
+
+Reproduced the original focus failure and verified the candidate's foreground effect on the same fixture. The full comparison remains failed.
+
+## 13. Confidence Level
+
+High for exact executed case counts and the observed foreground behavior. Background, nine-phase integration, native persistence and release acceptance remain unqualified.
+
+---
 
 <a id="session-148"></a>
 
