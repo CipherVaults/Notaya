@@ -1,5 +1,17 @@
 # Whole-app test results: X-1 addition
 
+<a id="release-pdf-and-folder-20261122"></a>
+
+## Released PDF applicability and native folder qualification — 2026-11-22 01:15 Cairo / 2026-11-21 23:15 UTC
+
+| Check | Verified outcome |
+|---|---|
+| W163 PDF text, published Windows v1.5.1 portable | **Failed.** The same synthetic development-exported PDF imported with both tested Arabic and Hebrew words reversed in the saved note. Confirmed after native reopen and actual HTML readback. English and table value controls matched. The input kept its exact hash. |
+| W143 native Folder picker | **Passed for this fixture.** One separate notebook, one section, parent and child bodies correct, and the existing note unchanged after reopening. The mixed Files result is recorded separately. |
+| Scope limits | Published-version export, hostile inputs, full package checks and the 5,000-row redo were outside this batch. The PDF repair line awaits Ahmed's release decision. |
+
+[Exact execution evidence](../execution/2026-11-15-safe-export-replacement.md#released-pdf-folder-20261122).
+
 <a id="windows-document-import-20261122"></a>
 
 ## Windows document import qualification — 2026-11-22 01:03 Cairo / 2026-11-21 23:03 UTC

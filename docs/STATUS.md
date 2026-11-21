@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="released-pdf-folder-20261122"></a>
+
+## Current state and continuation — released PDF defect and folder import
+
+**2026-11-22 01:15 Cairo / 2026-11-21 23:15 UTC.** The exact published v1.5.1 portable executable confirmed the PDF text corruption on the same synthetic input as the development check. Both Arabic and Hebrew words were stored reversed after reopening, and the original PDF was unchanged. The independent native folder import (W143) passed its nested-page and prior-note checks. See the [test register](plan/2026-11-09-whole-app-test-results.md#release-pdf-and-folder-20261122) and [exact execution evidence](execution/2026-11-15-safe-export-replacement.md#released-pdf-folder-20261122).
+
+Ahmed decides whether to open a v1.5.2 patch line or address the defect in v1.6. The PDF repair line is held under A57. Independent ordinary qualification can continue with Word list formatting (W141). The 5,000-row redo gate stays open. One run completed both redos then failed on two pending reads at shutdown. The later run timed out before redo. Its two receipts and the stopped operation were left untouched. Daybreak access is pending. Package and release acceptance gates remain open.
+
 <a id="native-doc-import-20261122"></a>
 
 ## Current state and continuation — native document import

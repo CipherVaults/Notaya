@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 153 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Released PDF verification](#session-153) |
 | 152 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native document follow-up](#session-152) |
 | 151 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native PDF and ZIP qualification](#session-151) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
@@ -184,6 +185,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-153"></a>
+
+# 📘 Session: 2026-11-21 UTC · Ahmed (AE0101) · Gaming-PC · Released PDF verification
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex executed the native checks. A separate worker read the governing rule and release identity. **Models, Effort, Roles and Provenance.** GPT-6.2 Sol Ultra is the configured lead in the active Goal. Served worker provenance and attributable usage are unknown. [Usage](ledger/usage-ledger.md#codex-usage-20261122-released-pdf).
+
+## 1. Time
+
+Qualification closed 2026-11-22 01:15 Cairo / 2026-11-21 23:15 UTC.
+
+## 2. Session Goal
+
+Check released applicability of the retained PDF failure and progress independent native work.
+
+## 3. Actions Taken
+
+Verified the published ZIP and executable identities. Imported the pinned PDF through the released portable app, reopened and parsed actual HTML. Ran the Folder picker against an independent disposable vault with a seeded prior note.
+
+## 4. Key Insights
+
+The same saved-text defect reproduced on the actual published executable. Folder import preserved ordinary nested pages and a prior note on the tested fixture.
+
+## 5. Decisions Made
+
+Recorded the released PDF defect and held its repair line as required by A57. New release scope stays with Ahmed. No product code changed.
+
+## 6. Difficulties / Friction
+
+The initial release API metadata request timed out. The official download link and published digests established identity. The Windows Folder dialog navigated to the typed path before requiring Select Folder.
+
+## 7. Adjustments Made
+
+Verified the selected path in the native dialog before confirming it. Used the previously exported fixture by exact hash.
+
+## 8. Mistakes / Risks
+
+The scoped reproduction identifies released import behavior for this file. It does not determine the state of existing notes or show what the released exporter produces.
+
+## 9. Current Position
+
+Released PDF text fidelity failed. The independent native Folder check passed. [Register](plan/2026-11-09-whole-app-test-results.md#release-pdf-and-folder-20261122).
+
+## 10. Next Steps
+
+Ahmed decides whether to open a v1.5.2 patch line or address the defect in v1.6. The PDF repair line is held under A57. Independent ordinary qualification can continue with Word list formatting (W141).
+
+## 11. Open Questions
+
+PDF repair targeting needs Ahmed's decision. Daybreak and the 5,000-row redo gate remain open.
+
+## 12. Session Outcome
+
+Released applicability resolved and independent folder behavior qualified for the observed cases. Original and disposable data artifacts stayed local.
+
+## 13. Confidence Level
+
+High for exact package-member identity, reopened text and scoped folder observations. Wider product fidelity, candidate packaging and release acceptance remain open.
+
+---
 
 <a id="session-152"></a>
 

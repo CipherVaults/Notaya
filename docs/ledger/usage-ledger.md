@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-released-pdf"></a>
+
+## Released PDF and folder verification — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 01:15 Cairo / 2026-11-21 23:15 UTC. Local download/hash verification of the published executable, native disposable PDF and folder checks, and independent source/record readback. Configured lead GPT-6.2 Sol Ultra from the Goal. Attributable tokens, worker runtime, quota share and active labour unavailable. [Session](../sessions.md#session-153) and [evidence](../execution/2026-11-15-safe-export-replacement.md#released-pdf-folder-20261122).
+
 <a id="codex-usage-20261122-document-import"></a>
 
 ## Native document import follow-up — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC
