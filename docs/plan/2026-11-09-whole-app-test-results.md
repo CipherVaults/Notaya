@@ -1,5 +1,17 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-word-styled-lists-20261122"></a>
+
+## Native Word styled-list qualification — 2026-11-22 01:40 Cairo / 2026-11-21 23:40 UTC
+
+| Register case | Verified scope |
+|---|---|
+| W141 Word import, lists defined by styles | **Passed on the candidate fixture.** Baseline flattened both lists and kept the text. The exact candidate retained two bullets, two decimal items and two plain paragraphs after reopening. Independent HTML readback confirmed the list kinds and exact text. |
+| W141 source regression | **Passed.** All 13 DOCX converter tests. The new test covers inherited nesting, direct numbering and cancellation, headings, titles and plain controls. Malformed/encrypted Word variants were not run on native Windows in this slice. |
+| Existing gates | PDF text repair held. W149 conversion cancellation remains open. The 5,000-row redo gate and package checks remain open. |
+
+[Exact execution evidence](../execution/2026-11-15-safe-export-replacement.md#word-styled-lists-20261122).
+
 <a id="release-pdf-and-folder-20261122"></a>
 
 ## Released PDF applicability and native folder qualification — 2026-11-22 01:15 Cairo / 2026-11-21 23:15 UTC

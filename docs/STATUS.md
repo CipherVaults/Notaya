@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="word-styled-lists-20261122"></a>
+
+## Current state and continuation — Word list formatting
+
+**2026-11-22 01:40 Cairo / 2026-11-21 23:40 UTC.** Word’s style-defined bullet and numbered lists persist after native import and reopen on `023134b`. The same fixture flattened both lists on the baseline. All 13 selected DOCX tests passed on the fix. See the [register](plan/2026-11-09-whole-app-test-results.md#windows-word-styled-lists-20261122) and [exact check evidence](execution/2026-11-15-safe-export-replacement.md#word-styled-lists-20261122).
+
+The next independent check is cancellation after conversion starts (W149). Its native picker leg already passed. The released PDF repair still awaits Ahmed's decision, and the 5,000-row redo gate remains open with both failed receipts preserved. Daybreak remains pending. Installer, portable package and release acceptance gates are separate.
+
 <a id="released-pdf-folder-20261122"></a>
 
 ## Current state and continuation — released PDF defect and folder import

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 154 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Word styled lists](#session-154) |
 | 153 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Released PDF verification](#session-153) |
 | 152 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native document follow-up](#session-152) |
 | 151 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native PDF and ZIP qualification](#session-151) |
@@ -185,6 +186,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-154"></a>
+
+# 📘 Session: 2026-11-21 UTC · Ahmed (AE0101) · Gaming-PC · Word styled lists
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex authored the importer change and executed verification. A read-only worker reviewed the exact candidate and red result. **Models, Effort, Roles and Provenance.** Lead configured GPT-6.2 Sol Ultra in the approved Goal. Served worker provenance and attributable usage are unknown. [Usage](ledger/usage-ledger.md#codex-usage-20261122-word-lists).
+
+## 1. Time
+
+Scoped qualification closed 2026-11-22 01:40 Cairo / 2026-11-21 23:40 UTC.
+
+## 2. Session Goal
+
+Preserve ordinary Word style-defined lists through native import and reopen.
+
+## 3. Actions Taken
+
+Reproduced baseline flattening on Windows with a synthetic Word document. Ran the failing control, added style numbering resolution, ran the suite and built the exact Windows executable. Reopened the imported note and checked the actual HTML structure independently.
+
+## 4. Key Insights
+
+Paragraph-style numbering needs the selected Word numbering definition and level association. Direct cancellation must take priority. Baseline text alone was insufficient evidence of list fidelity.
+
+## 5. Decisions Made
+
+Kept the change in the DOCX importer and preserved the existing formats and review boundaries. No product or release decision was taken for PDF.
+
+## 6. Difficulties / Friction
+
+The baseline failure was expected and is retained. Rust linking required separate bounded test and build runs.
+
+## 7. Adjustments Made
+
+Verified the original fixture hash across runs. Checked the final markup's list kind as well as the text, with passing and failing controls.
+
+## 8. Mistakes / Risks
+
+The found formatting loss was distinct from the released PDF text corruption. The evidence does not cover all Word numbering variants or package integrity.
+
+## 9. Current Position
+
+The exact development Word fix passed the scoped checks. [Test register](plan/2026-11-09-whole-app-test-results.md#windows-word-styled-lists-20261122).
+
+## 10. Next Steps
+
+Qualify conversion-time cancellation (W149) with a verified post-picker boundary. Keep the completed picker cancellation evidence separate.
+
+## 11. Open Questions
+
+Released PDF action requires Ahmed's decision. The 5,000-row redo gate and Daybreak are still held.
+
+## 12. Session Outcome
+
+Verified styled Word lists and explicit list cancellation on the synthetic case. Source and evidence are checkpointable. Raw data stayed local.
+
+## 13. Confidence Level
+
+High for the named source tests, native reopen and parsed output. Wider Word fidelity and package acceptance remain open.
+
+---
 
 <a id="session-153"></a>
 

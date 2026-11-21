@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-word-lists"></a>
+
+## Word styled-list verification — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 01:40 Cairo / 2026-11-21 23:40 UTC. Local red and green DOCX checks, release-profile development build and native synthetic import/reopen. Lead configured GPT-6.2 Sol Ultra from the Goal. Actual attributable tokens, worker runtime, quota share and active labour are unavailable. [Session](../sessions.md#session-154) and [evidence](../execution/2026-11-15-safe-export-replacement.md#word-styled-lists-20261122).
+
 <a id="codex-usage-20261122-released-pdf"></a>
 
 ## Released PDF and folder verification — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC
