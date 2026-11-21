@@ -77,6 +77,7 @@ interface Actions {
   trash: (ids: string[]) => void;
   duplicate: (id: string) => void;
   endEdit: (how: "enter" | "tab" | "blur" | "escape") => void;
+  beforeRowDetach: (row: HTMLTableRowElement, itemKey: string, dbId: string, viewId: string) => void;
 }
 
 interface RowProps {
@@ -84,6 +85,7 @@ interface RowProps {
   index: number;
   cols: Col[];
   dbId: string;
+  viewId: string;
   wrap: boolean;
   numbers: boolean;
   selected: boolean;
@@ -107,11 +109,23 @@ type TableItem =
 
 const BG = "bg-bg";
 
+// Ref detachment runs before the row leaves the DOM, while its focused cell is still known.
+function useRowRef(props: RowProps, sortableRef?: (node: HTMLTableRowElement | null) => void) {
+  const previous = useRef<HTMLTableRowElement | null>(null);
+  const { beforeRowDetach } = props.actions;
+  return useCallback((node: HTMLTableRowElement | null) => {
+    if (!node && previous.current) beforeRowDetach(previous.current, props.itemKey, props.dbId, props.viewId);
+    previous.current = node;
+    sortableRef?.(node);
+    props.measure?.(node);
+  }, [beforeRowDetach, props.itemKey, props.dbId, props.viewId, props.measure, sortableRef]);
+}
+
 // Only this small wrapper subscribes to dnd-kit. Its expensive cells have stable props and
 // remain memoized when the drag context changes on a click or selection elsewhere.
 const SortableRow = memo(function SortableRow(props: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.itemKey });
-  const measure = useCallback((node: HTMLTableRowElement | null) => { setNodeRef(node); props.measure?.(node); }, [setNodeRef, props.measure]);
+  const measure = useRowRef(props, setNodeRef);
   return (
     <tr
       ref={measure}
@@ -129,9 +143,10 @@ const SortableRow = memo(function SortableRow(props: RowProps) {
 });
 
 const RowView = memo(function RowView(props: RowProps) {
+  const measure = useRowRef(props);
   if (props.canDrag) return <SortableRow {...props} />;
   return (
-    <tr ref={props.measure} data-index={props.virtualIndex} data-row-id={props.row.id} aria-rowindex={props.ariaIndex} className={cn("group/row", props.selected ? "bg-accent-soft" : "hover:bg-surface")} aria-selected={props.selected}>
+    <tr ref={measure} data-index={props.virtualIndex} data-row-id={props.row.id} aria-rowindex={props.ariaIndex} className={cn("group/row", props.selected ? "bg-accent-soft" : "hover:bg-surface")} aria-selected={props.selected}>
       <RowGutter {...props} />
       <RowCells {...props} />
     </tr>
@@ -314,6 +329,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   const headRef = useRef<HTMLTableSectionElement>(null);
   const [headerHeight, setHeaderHeight] = useState(33);
   const pendingFocus = useRef(false);
+  const removedFocus = useRef<{ element: Element; wrap: HTMLDivElement; dbId: string; viewId: string } | null>(null);
   const instanceId = useId();
   const cellId = useCallback((rowId: string, col: number) => `${instanceId}-${rowId}-${col}`, [instanceId]);
   useLayoutEffect(() => {
@@ -457,6 +473,30 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   colsRef.current = cols;
   const virtualRef = useRef({ virtualizer, itemIndexOfRow, itemIndexOfKey, rowItemIndices, items });
   virtualRef.current = { virtualizer, itemIndexOfRow, itemIndexOfKey, rowItemIndices, items };
+  const rowScope = useRef({ dbId: db.id, viewId: view.id, itemIndexOfKey });
+  rowScope.current = { dbId: db.id, viewId: view.id, itemIndexOfKey };
+  const beforeRowDetach = useCallback((row: HTMLTableRowElement, itemKey: string, dbId: string, viewId: string) => {
+    const wrap = wrapRef.current;
+    const scope = rowScope.current;
+    const element = row.ownerDocument.activeElement;
+    if (!wrap?.isConnected || scope.dbId !== dbId || scope.viewId !== viewId ||
+        scope.itemIndexOfKey.has(itemKey) || !wrap.contains(row) || !element || !row.contains(element)) return;
+    removedFocus.current = { element, wrap, dbId, viewId };
+  }, []);
+  useLayoutEffect(() => {
+    const pending = removedFocus.current;
+    removedFocus.current = null;
+    if (!pending) return;
+    const wrap = wrapRef.current;
+    const doc = pending.wrap.ownerDocument;
+    if (wrap !== pending.wrap || !wrap.isConnected || db.id !== pending.dbId || view.id !== pending.viewId ||
+        pending.element.isConnected || doc.activeElement !== doc.body || !doc.hasFocus() ||
+        !wrap.getClientRects().length || wrap.closest('[hidden],[inert],[aria-hidden="true"]')) return;
+    // An opened modal may be waiting for its own layout/autofocus work. It keeps ownership.
+    if ([...doc.querySelectorAll<HTMLElement>('dialog[open],[role="dialog"],[role="alertdialog"]')].some((dialog) =>
+      dialog.getClientRects().length && !dialog.closest('[hidden],[inert],[aria-hidden="true"]'))) return;
+    wrap.focus({ preventScroll: true });
+  });
 
   const select = useCallback((r: number, c: number, edit = false, itemKey?: string) => {
     const row = flatRef.current[r];
@@ -521,8 +561,8 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     pendingFocus.current = true;
   }, []);
   const actions: Actions = useMemo(
-    () => ({ select, setEditing, commit, patchLocal: patchRowLocal, open: openRow, toggleSelect, trash: (ids) => void trashRows(ids), duplicate: (id) => void duplicateRow(id), endEdit }),
-    [select, commit, patchRowLocal, openRow, toggleSelect, trashRows, duplicateRow, endEdit],
+    () => ({ select, setEditing, commit, patchLocal: patchRowLocal, open: openRow, toggleSelect, trash: (ids) => void trashRows(ids), duplicate: (id) => void duplicateRow(id), endEdit, beforeRowDetach }),
+    [select, commit, patchRowLocal, openRow, toggleSelect, trashRows, duplicateRow, endEdit, beforeRowDetach],
   );
 
   // A freshly added row: edit its title.
@@ -554,8 +594,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (active && (activeIndex == null || !indexOfRow.has(active.id))) {
       setActive(null);
       setEditing(false);
-      // A filtered/deleted/collapsed row cannot remain an active descendant.
-      if (wrapRef.current?.contains(document.activeElement)) wrapRef.current.focus({ preventScroll: true });
+      // The removed row ref owns focus repair; a different connected control keeps its focus.
     }
   }, [rowById, indexOfRow, active, activeIndex]);
 
@@ -738,6 +777,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           index={idx}
           cols={cols}
           dbId={db.id}
+          viewId={view.id}
           wrap={view.wrap}
           numbers={view.rowNumbers}
           selected={selected.has(r.id)}
