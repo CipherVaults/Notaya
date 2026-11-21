@@ -1,5 +1,15 @@
 # Notaya (first named Cipherleaf): status
 
+
+<a id="native-windows-pdf-zip-20261122"></a>
+
+## Current state and continuation — native Windows PDF and ZIP qualification
+
+**2026-11-22 00:31 Cairo / 2026-11-21 22:31 UTC.** The exact `a806ae3` Windows x64 development build passed the scoped PDF and nested ZIP imports, same-vault reopen checks, PDF and Markdown ZIP exports, and larger benign import samples (24 PDF pages and 1,000 ZIP notes). The independently rendered PDF and parsed PDF/ZIP outputs matched the selected checks. No product source was changed. See the [test register results](plan/2026-11-09-whole-app-test-results.md#windows-native-pdf-zip-20261122) and [exact execution evidence](execution/2026-11-15-safe-export-replacement.md#native-windows-pdf-zip-20261122). Vaults and raw artifacts are PC-only. v1.6 is unaccepted and exact-package gates remain open.
+
+**Continue with** native UTF-8 plain-text import (W139), including mixed scripts, blank lines and literal markup. Daybreak remains pending and the stopped operation was untouched. The 5,000-row redo gate (Q1) stays open. One run reached both redos then failed with two pending background reads at shutdown. The later run timed out before redo. No clean pass is recorded. Older status entries retain their dated cuts.
+
+
 <a id="core-q1-focus-loss-20261116"></a>
 
 ## Continuation — six phases qualified; compact-table focus loss observed

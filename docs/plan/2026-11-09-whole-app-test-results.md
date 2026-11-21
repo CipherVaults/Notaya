@@ -1,5 +1,27 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-native-pdf-zip-20261122"></a>
+
+## Windows baseline qualification — 2026-11-22 00:31 Cairo / 2026-11-21 22:31 UTC
+
+See the [native PDF/ZIP evidence and exact executable](../execution/2026-11-15-safe-export-replacement.md#native-windows-pdf-zip-20261122). These are scoped Windows results at `a806ae3`. They remain separate from the historical startup evidence below and from exact-package qualification.
+
+| Register case | Outcome for this batch |
+|---|---|
+| W142 PDF import | **Passed.** Ordered text reopened correctly and the scan-only file was listed as unsupported. |
+| W144 benign nested ZIP import | **Passed for this fixture.** Two nested pages, picture and child navigation persisted. Hostile path cases remain W150. |
+| W151 import reporting/source files | **Partial pass.** Unsupported scan and five unchanged hashes. Broken links and unsupported embeds not run. |
+| W154 native export/save | **Partial pass.** One selected page with subpages through the native PDF and ZIP Save dialogs. Other scopes and cancellation not run. |
+| W158 PDF export | **Partial pass.** Pages, text, bookmarks and real rendering verified on the exported PDF. External links and broader typography not run. |
+| W159 separate-file ZIP export | **Partial pass.** Markdown, nesting, marker, assets and archive integrity. Other formats, collisions and punctuation not run. |
+| Larger benign PDF/ZIP samples | **Passed within scope.** All 24 PDF markers in order. 1,000 ZIP notes reported and the first and last bodies sampled, including the last after reopen. Does not qualify maximum size, memory or all 1,000 bodies. |
+| Executed product failures | **None observed.** The execution record retains the setup failures. |
+| W167 owner visual review | **Skipped.** Independent PDF rendering is recorded separately. |
+| W145/W146 Notion data, W149 cancel, W160 multi-format inline database export, W162 all-format document round trips, W163 PDF round trip | **Not run.** |
+| W150 hostile source/bounds | **Blocked for this batch.** Daybreak pending. No stopped operation retried. |
+| Q1 5,000-row redo | **Open from two failed runs.** Both receipts retained. Not run here. |
+
+
 Who and where: Ahmed Emara (AE0101), Codex lane X1 on Gaming-PC (Windows sandbox). **Historical run-2 provenance:** FIX RUN 2 baseline `9b64db2f85388c5d800c25926772fdc15a2c539b`; external heartbeat checkpoint `ba047062f4bd5162bf4e6f897b4228051aec8dda` contains that run's tested code, with its results addendum then uncommitted. Original baseline: `e4df9185a99fabf6002065c84c921cd8f8278e31`. Produced and locally checked, not integrated or accepted. Claude owns integration, exact candidate commit/exe hash and real-PC observations. The [FIX RUN 2](#fix-run-2-corrected-analysis-and-hand-back) and run-1 analysis/checks below are historical, superseded where contradicted by run 3.
 
 **Current addendum: [FIX RUN 3](#fix-run-3-readiness-failure-regressions).** The run-2 analysis below remains historical evidence; its status/listener success-only gate is superseded by the bounded failure path described here. Original reporter: **Mohamed Sayed (AbyssWatcher2)**, via Ahmed. Run 2 and run 3 are both **unproven** as fixes for his white-window report.

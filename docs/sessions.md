@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 151 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native PDF and ZIP qualification](#session-151) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
 | 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
 | 146 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Source and continuity checkpoints](#session-146) |
@@ -181,6 +182,67 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
+
+
+<a id="session-151"></a>
+
+# 📘 Session: 2026-11-21 UTC · Ahmed (AE0101) · Gaming-PC · Native PDF and ZIP qualification
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex led, built and exercised the native cases. Read-only workers mapped applicable cases and records. **Models, Effort, Roles and Provenance.** Lead composer showed GPT-6.2 Sol Ultra. Worker served-runtime provenance and attributable tokens are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-native-windows).
+
+## 1. Time
+
+Native qualification closed 2026-11-22 00:31 Cairo / 2026-11-21 22:31 UTC. The dated Git and Notion checkpoint follow this cut.
+
+## 2. Session Goal
+
+Continue the approved v1.6 Goal with independent native Windows import/export and real PDF rendering while the stopped operation remains held.
+
+## 3. Actions Taken
+
+Read the AI PBS, approved Goal, latest handoff and applicable test register. Verified the active branch, exact commit and tree, and protected work. Built a clean isolated Windows executable. Exercised native PDF and nested ZIP imports, exports and reopen, then ran benign larger PDF and ZIP inputs. [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-windows-pdf-zip-20261122).
+
+## 4. Key Insights
+
+The actual PDF/ZIP bytes and rendered PDF supported the tested claims. The larger ZIP count was checked against real first/last note bodies and later reopen, rather than treating the count alone as evidence for every note.
+
+## 5. Decisions Made
+
+No new product decision. Kept the test batch to benign disposable inputs and an exact baseline. Kept the redo and stopped operations outside it.
+
+## 6. Difficulties / Friction
+
+The isolated profile lacked its Desktop directory on the first picker open. An initial restart call passed a descriptor rather than a launcher path and did not launch. Both were setup friction, retained locally.
+
+## 7. Adjustments Made
+
+Prepared the owned shell folders and passed the verified launcher path. No app source or test acceptance criteria changed.
+
+## 8. Mistakes / Risks
+
+A success toast alone is insufficient for preservation. Checked durable content, file structure and actual output. A larger benign fixture is not evidence of hostile-input resistance, memory ceilings or package identity.
+
+## 9. Current Position
+
+The exact development build passed the scoped cases in the [test register](plan/2026-11-09-whole-app-test-results.md). All test windows closed. Product files and preserved work stayed out of the write path. Review/acceptance and release remain separate.
+
+## 10. Next Steps
+
+Run native plain-text import (W139) independently with a disposable UTF-8 fixture, exact line and paragraph checks, and source hash readback.
+
+## 11. Open Questions
+
+No owner decision blocks the independent import batch. Daybreak access is pending. The 5,000-row redo gate remains open under both failed receipts.
+
+## 12. Session Outcome
+
+Scoped baseline evidence verified locally. This record contains sanitized results. Vaults, fixture bytes, exports, renderings and raw evidence stay PC-only.
+
+## 13. Confidence Level
+
+High for the named machine, app identity and exercised cases. Full Notion fidelity, performance/resource ceilings, hostile inputs, packaging and owner acceptance were not established.
+
+---
 
 
 <a id="session-148"></a>

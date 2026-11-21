@@ -1,5 +1,13 @@
 # Notaya usage ledger: readings, newest first
 
+
+<a id="codex-usage-20261122-native-windows"></a>
+
+## Native Windows PDF/ZIP qualification — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 00:31 Cairo / 2026-11-21 22:31 UTC. GPT-6.2 Sol Ultra visible in the lead composer. Worker runtime provenance, attributable tokens, quota share and active labour unavailable. No separate measured CSV row. This block covered the pinned Windows build, native disposable PDF/ZIP imports and exports, independent output/render checks, and continuity records. [Full session](../sessions.md#session-151) and [execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-windows-pdf-zip-20261122).
+
+
 <a id="codex-usage-20261116-block87"></a>
 
 ## Usage block87 — 2026-11-16 UTC — Ahmed (AE0101) — Gaming-PC
