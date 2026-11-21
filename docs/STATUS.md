@@ -2,11 +2,11 @@
 
 <a id="q1-local-comparison-20261121"></a>
 
-## Continuation — compact-table redo comparison failed its full gate
+## Continuation — focused redo qualified, integration workflow pending
 
-**2026-11-21, 22:08 Cairo.** Local restoration was verified and the owner authorized proceeding locally. The unchanged test mounted the actual React table and ran all 33 cases on each source. Original **19 passed, 14 failed**. Preserved candidate **32 passed, 1 failed**, including all eight redo cases passing. Both runs failed the background-focus precondition and recorded fixture callback errors and unexpected editing calls. Independent readback confirmed the recorded process, listener and profile closure. The candidate is unqualified and unapplied. Keep the nine-phase integrated workflow and P7 pending.
+**2026-11-21, 22:33 Cairo.** Independent V7 readback confirmed all 33 cases on each source. The original passed 20 and failed 13, including all eight natural redo cases. The preserved candidate passed all 33, with real background focus observed, zero unexpected IPC or network requests, and zero page errors. The reviewed fix and standing regression are at `784973ba9bfafc705d5952989410049873398985`, tree `91a772bca234e00ee386df865475c1a0ed38043e`. TypeScript and Vite passed, and the standing regression passed 33/33 on that exact commit. An independent HTTPS restore verified the source branch. [GitHub checkpoint](https://github.com/CipherVaults/Notaya/tree/codex/compact-table-redo-20261121)
 
-[EX85](execution/2026-11-21-compact-table-redo-checkpoint.md) is the handoff for the next run. [Session 149](sessions.md#session-149) and [usage block 88](ledger/usage-ledger.md#codex-usage-20261121-block88) record the work. Reviewed public-safe source and project records should be synced frequently. Vaults and raw evidence remain local.
+Next run the unchanged nine-phase, 5,000-row workflow on that commit before merge. P7 follows the focus gate. Native persistence, owner acceptance and release remain open. [EX85 follow-up](execution/2026-11-21-compact-table-redo-checkpoint.md#q1-focused-source-20261121) · [Session 150](sessions.md#session-150) · [Usage block 89](ledger/usage-ledger.md#codex-usage-20261121-block89)
 
 
 <a id="core-q1-focus-loss-20261116"></a>

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 150 | 2026-11-21 | Integration lead | Local Windows | [Compact-table redo source and regression](#session-150) |
 | 149 | 2026-11-21 | Integration lead | Local Windows | [Compact-table redo and local recovery](#session-149) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
 | 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
@@ -183,6 +184,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-150"></a>
+
+# Session 150 — 2026-11-21 — Compact-table redo qualified on the source branch
+
+**Models, Effort, Roles and Provenance.** The integration lead coordinated testing and the source checkpoint. Non-author reviewers checked the focused results and the reviewed source. The approved Goal specifies GPT-6.2 Sol Ultra. Served settings and attributable usage for this interval are unverified.
+
+## 1. Time
+
+November 21, 2026. This follow-up was recorded at 20:33 UTC, 22:33 Cairo, after the Session 149 checkpoint.
+
+## 2. Session Goal
+
+Complete the focused before-and-after comparison, then qualify and checkpoint the small fix and regression on the clean integration source.
+
+## 3. Actions Taken
+
+Retained the failed V6 preimage evidence. Ran both inputs through the V7 fixture and independently read back the results. A non-author reviewed the fix and the standing regression. Ran TypeScript, a Vite build and the standing regression on the exact commit. Created the source branch on GitHub and verified the remote commit. [EX85 follow-up](execution/2026-11-21-compact-table-redo-checkpoint.md#q1-focused-source-20261121)
+
+## 4. Key Insights
+
+The V7 original left focus on the document body with a pending redo entry in all eight natural redo cases. The preserved candidate passed all 33 cases. The comparison also verified that a real background document loses focus and that the fixture can account for its expected editing notices.
+
+## 5. Decisions Made
+
+Keep the production change confined to TableView and carry one standing regression. Checkpoint the reviewed source on a new branch under the existing owner direction. Require nine-phase evidence on the exact proposed revision before merge.
+
+## 6. Difficulties / Friction
+
+V6 failed 14 of the original's 33 cases and did not establish genuine background focus or match the expected editing notices. No V6 candidate run took place. The Vite build completed with a mixed static and dynamic import warning.
+
+## 7. Adjustments Made
+
+V7 corrected the expected editing-notice identifiers. The pinned standalone Chrome setup observed actual focus switching between tabs. The standing regression uses the checkout's canonical TableView and caller-supplied Playwright and browser pins. The comparison and standing regression exercise the same 33 cases.
+
+## 8. Mistakes / Risks
+
+V6 assumed focus and notification behavior that its fixture did not establish. Its failed evidence remains part of the record. The focused fixture cannot establish native data persistence or complete the integrated undo/redo workflow.
+
+## 9. Current Position
+
+The exact source checkpoint is `784973ba9bfafc705d5952989410049873398985`, tree `91a772bca234e00ee386df865475c1a0ed38043e`. The standing regression passed 33/33 with verified closure. The nine-phase integration run and merge are pending. [GitHub checkpoint](https://github.com/CipherVaults/Notaya/tree/codex/compact-table-redo-20261121)
+
+## 10. Next Steps
+
+Bind the existing nine-phase runner to the exact revision, run the unchanged 5,000-row workflow, and review the closed evidence. Continue to P7 only after the focus gate clears.
+
+## 11. Open Questions
+
+Will the exact integrated revision complete all nine phases within the existing deadlines and preserve row identity, order, stack, the restore write and parent content? Native persistence and release qualification require separate evidence.
+
+## 12. Session Outcome
+
+The focused comparison and exact-source standing regression qualified. The reviewed source checkpoint was delivered and verified on GitHub. Merge, acceptance and release remain open.
+
+## 13. Confidence Level
+
+High for the independently read-back focused results, exact-commit source checks and remote identity. Evidence for the integrated nine-phase run and native persistence is pending.
+
+---
 
 <a id="session-149"></a>
 

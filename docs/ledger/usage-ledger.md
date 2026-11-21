@@ -1,5 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261121-block89"></a>
+
+## Usage block89 — 2026-11-21 UTC — compact-table redo source qualification
+
+Work covered the focused comparison, independent readback and source review, exact-commit frontend checks and standing regression, and GitHub checkpoint readback. The Goal specifies GPT-6.2 Sol Ultra. Served settings, attributable token counts, cost and quota deltas are unverified. [EX85 follow-up](../execution/2026-11-21-compact-table-redo-checkpoint.md#q1-focused-source-20261121) · [Session 150](../sessions.md#session-150)
+
+
 <a id="codex-usage-20261121-block88"></a>
 
 ## Usage block88 — 2026-11-21 UTC — compact-table redo checkpoint

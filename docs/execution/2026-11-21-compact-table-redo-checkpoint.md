@@ -27,3 +27,28 @@ The full comparison **failed**. Both versions failed the background-document pre
 The focus change has not been applied or merged. Obtain a verified setup that observes real background-tab focus and accounts for expected test-only Tauri traffic without weakening any case or safety assertion. Run both sources again under an independently reviewed common setup. Require a qualifying comparison before the unchanged nine-phase 5,000-row integration workflow, then review that exact revision before merge. Query windows and cache [P7] follow the focus gate. Native persistence, release readiness, owner acceptance and publication remain separate.
 
 [Current status](../STATUS.md#q1-local-comparison-20261121) · [Session 149](../sessions.md#session-149) · [Usage block 88](../ledger/usage-ledger.md#codex-usage-20261121-block88) · [Authority update](../plan/approval-and-amendments.md#q1-local-recovery-20261121)
+
+<a id="q1-focused-source-20261121"></a>
+
+## Follow-up — November 21, 2026, 22:33 Cairo
+
+The focused comparison qualified under V7. Independent readback confirmed the exact inputs, all 33 named cases in order, and the results below. Pinned standalone Chrome observed a real foreground-to-background transition. V7 corrected the expected editing-notice identifiers and its IPC audit distinguished those notices from unexpected operations.
+
+| Source | Results | Observation |
+| --- | --- | --- |
+| Original | 20 passed, 13 failed | All eight natural redo cases lost focus to the document body after the row disappeared. The redo entry remained pending. |
+| Preserved candidate | 33 passed | The table regained focus where required and preserved legitimate focus elsewhere. There were zero unexpected IPC or network requests and zero page errors. |
+
+The intervening V6 preimage run remains failed at 19 passed and 14 failed. It did not establish genuine background focus and its editing-notice expectations were incorrect. No V6 candidate run took place.
+
+### Exact source checkpoint
+
+The reviewed change and one standing regression were committed together as `784973ba9bfafc705d5952989410049873398985`, tree `91a772bca234e00ee386df865475c1a0ed38043e`, from parent `a806ae3e3b4a74940ee4107784a15fee7468cdf8`. A non-author reviewed the production change and the standing regression. TypeScript and the Vite build exited 0 on the exact source. Vite reported a mixed static and dynamic import warning. The committed standing regression passed all 33 cases with the browser, loopback port and temporary profile closed and no unexpected effects. The new branch was created on GitHub and an independent remote readback matched the exact SHA. [Source checkpoint](https://github.com/CipherVaults/Notaya/tree/codex/compact-table-redo-20261121)
+
+An independent HTTPS restore matched the exact commit, full tree, parent and both changed files, and passed Git object integrity. The hub mirror was read back inside the existing progress toggle with its earlier failed checkpoint preserved. Raw runs and local test inputs stay local.
+
+### Remaining gate
+
+Run the unchanged nine-phase, 5,000-row workflow on that exact revision. Keep the natural keyboard route and 30-second phase deadline. Require stable row identity and order, the expected stack and restore write, and unchanged parent content. The integrated workflow and merge are pending, and P7 follows the focus gate. Native persistence requires its own evidence. Owner acceptance and release remain open.
+
+[Current status](../STATUS.md#q1-local-comparison-20261121) · [Session 150](../sessions.md#session-150) · [Usage block 89](../ledger/usage-ledger.md#codex-usage-20261121-block89)
