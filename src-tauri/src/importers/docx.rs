@@ -46,6 +46,7 @@ struct Style {
     name: String,
     outline: Option<u8>,
     based_on: Option<String>,
+    num_id: Option<String>,
 }
 
 fn xml_of(a: &Archive, name: &str, budget: &Counter<u64>) -> Option<String> {
@@ -56,30 +57,63 @@ fn xml_of(a: &Archive, name: &str, budget: &Counter<u64>) -> Option<String> {
 fn styles(xml: &str) -> HashMap<String, Style> {
     let mut map = HashMap::new();
     let mut cur: Option<(String, Style)> = None;
+    let mut depth = 0usize;
+    let mut paragraph_style_depth = None;
+    let mut ppr_depth = None;
+    let mut numpr_depth = None;
     for t in Tokenizer::xml(xml) {
         match t {
-            Token::Start { name, attrs, .. } => match local(&name) {
-                "style" => cur = attr(&attrs, "w:styleId").filter(|_| map.len() < MAX_ENTRIES).map(|id| (id.to_string(), Style::default())),
-                "name" => {
-                    if let Some((_, s)) = cur.as_mut() {
-                        s.name = attr(&attrs, "w:val").unwrap_or("").to_ascii_lowercase();
+            Token::Start { name, attrs, self_closing } => {
+                match local(&name) {
+                    "style" if !self_closing => {
+                        cur = attr(&attrs, "w:styleId").filter(|_| map.len() < MAX_ENTRIES).map(|id| (id.to_string(), Style::default()));
+                        paragraph_style_depth = matches!(attr(&attrs, "w:type"), None | Some("paragraph")).then_some(depth + 1);
                     }
-                }
-                "outlineLvl" => {
-                    if let Some((_, s)) = cur.as_mut() {
-                        s.outline = attr(&attrs, "w:val").and_then(|v| v.parse().ok());
+                    "pPr" if paragraph_style_depth == Some(depth) && !self_closing => {
+                        ppr_depth = Some(depth + 1);
                     }
-                }
-                "basedOn" => {
-                    if let Some((_, s)) = cur.as_mut() {
-                        s.based_on = attr(&attrs, "w:val").map(str::to_string);
+                    "numPr" if ppr_depth == Some(depth) && !self_closing => {
+                        numpr_depth = Some(depth + 1);
                     }
+                    "numId" if numpr_depth == Some(depth) => {
+                        if let Some((_, style)) = cur.as_mut() {
+                            style.num_id = attr(&attrs, "w:val").filter(|id| !id.is_empty()).map(str::to_string);
+                        }
+                    }
+                    "name" => {
+                        if let Some((_, s)) = cur.as_mut() {
+                            s.name = attr(&attrs, "w:val").unwrap_or("").to_ascii_lowercase();
+                        }
+                    }
+                    "outlineLvl" => {
+                        if let Some((_, s)) = cur.as_mut() {
+                            s.outline = attr(&attrs, "w:val").and_then(|v| v.parse().ok());
+                        }
+                    }
+                    "basedOn" => {
+                        if let Some((_, s)) = cur.as_mut() {
+                            s.based_on = attr(&attrs, "w:val").map(str::to_string);
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
-            },
-            Token::End { name } if local(&name) == "style" => {
-                if let Some((id, s)) = cur.take() {
-                    map.insert(id, s);
+                depth += usize::from(!self_closing);
+            }
+            Token::End { name } => {
+                if paragraph_style_depth == Some(depth) {
+                    paragraph_style_depth = None;
+                }
+                if ppr_depth == Some(depth) {
+                    ppr_depth = None;
+                }
+                if numpr_depth == Some(depth) {
+                    numpr_depth = None;
+                }
+                depth = depth.saturating_sub(1);
+                if local(&name) == "style" {
+                    if let Some((id, s)) = cur.take() {
+                        map.insert(id, s);
+                    }
                 }
             }
             _ => {}
@@ -88,13 +122,28 @@ fn styles(xml: &str) -> HashMap<String, Style> {
     map
 }
 
-/// Levels 0 to 8 of a list: ordered (`Some(true)`), bullets (`Some(false)`) or not defined.
-type Levels = [Option<bool>; 9];
+#[derive(Default)]
+struct NumberingLevel {
+    ordered: Option<bool>,
+    paragraph_style: Option<String>,
+}
 
-/// numId -> levels.
-fn numbering(xml: &str) -> HashMap<String, Levels> {
-    let mut abstracts: HashMap<String, Levels> = HashMap::new();
-    let mut nums: HashMap<String, String> = HashMap::new();
+type Levels = [NumberingLevel; 9];
+
+#[derive(Default)]
+struct Numbering {
+    abstracts: HashMap<String, Levels>,
+    instances: HashMap<String, String>,
+}
+
+impl Numbering {
+    fn levels(&self, id: &str) -> Option<&Levels> {
+        self.abstracts.get(self.instances.get(id)?)
+    }
+}
+
+fn numbering(xml: &str) -> Numbering {
+    let mut numbering = Numbering::default();
     let mut cur_abs: Option<String> = None;
     let mut cur_lvl: Option<u32> = None;
     let mut cur_num: Option<String> = None;
@@ -103,19 +152,25 @@ fn numbering(xml: &str) -> HashMap<String, Levels> {
             Token::Start { name, attrs, .. } => match local(&name) {
                 "abstractNum" => cur_abs = attr(&attrs, "w:abstractNumId").map(str::to_string),
                 "lvl" => cur_lvl = attr(&attrs, "w:ilvl").and_then(|v| v.parse().ok()),
-                "numFmt" => {
-                    if let (Some(a), Some(l)) = (&cur_abs, cur_lvl) {
-                        let ordered = attr(&attrs, "w:val").is_some_and(|v| v != "bullet" && v != "none");
-                        if (l as usize) < 9 && (abstracts.len() < MAX_ENTRIES || abstracts.contains_key(a)) {
-                            abstracts.entry(a.clone()).or_default()[l as usize] = Some(ordered);
+                "numFmt" | "pStyle" => {
+                    if let (Some(id), Some(level)) = (&cur_abs, cur_lvl) {
+                        let abstracts = &mut numbering.abstracts;
+                        if (level as usize) < 9 && (abstracts.len() < MAX_ENTRIES || abstracts.contains_key(id)) {
+                            let entry = &mut abstracts.entry(id.clone()).or_default()[level as usize];
+                            let value = attr(&attrs, "w:val").filter(|value| !value.is_empty());
+                            if local(&name) == "numFmt" {
+                                entry.ordered = value.filter(|value| *value != "none").map(|value| value != "bullet");
+                            } else {
+                                entry.paragraph_style = value.map(str::to_string);
+                            }
                         }
                     }
                 }
                 "num" => cur_num = attr(&attrs, "w:numId").map(str::to_string),
                 "abstractNumId" => {
                     if let (Some(n), Some(v)) = (&cur_num, attr(&attrs, "w:val")) {
-                        if nums.len() < MAX_ENTRIES {
-                            nums.insert(n.clone(), v.to_string());
+                        if numbering.instances.len() < MAX_ENTRIES {
+                            numbering.instances.insert(n.clone(), v.to_string());
                         }
                     }
                 }
@@ -130,7 +185,7 @@ fn numbering(xml: &str) -> HashMap<String, Levels> {
             _ => {}
         }
     }
-    nums.into_iter().filter_map(|(n, a)| abstracts.get(&a).map(|l| (n, *l))).collect()
+    numbering
 }
 
 /// Relationship id -> (target, external?).
@@ -636,10 +691,33 @@ fn is_quote(p: &Para, styles: &HashMap<String, Style>) -> bool {
     name == "quote" || name == "intense quote"
 }
 
+fn list_number(p: &Para, styles: &HashMap<String, Style>, numbering: &Numbering) -> Option<(u32, bool)> {
+    if let Some((id, level)) = p.num.as_ref().filter(|(id, _)| !id.is_empty()) {
+        if id == "0" {
+            return None;
+        }
+        let ordered = numbering.levels(id).and_then(|levels| levels.get(*level as usize)).and_then(|level| level.ordered);
+        return Some((*level, ordered.unwrap_or(false)));
+    }
+
+    let ancestry = std::iter::successors(p.style.as_deref(), |id| styles.get(*id)?.based_on.as_deref()).take(8);
+    let id = ancestry.clone().find_map(|id| styles.get(id)?.num_id.as_deref())?;
+    if id == "0" || heading_level(p, styles).is_some() || is_caption(p, styles) || is_quote(p, styles) {
+        return None;
+    }
+    let levels = numbering.levels(id)?;
+    // A style's numbering level comes from the selected list's pStyle link, not the style's ilvl.
+    let associated_level = || ancestry.clone().find_map(|id| {
+        levels.iter().position(|level| level.paragraph_style.as_deref() == Some(id))
+    });
+    let level = p.num.as_ref().map(|(_, level)| *level as usize).or_else(associated_level).unwrap_or(0);
+    Some((level as u32, levels.get(level)?.ordered?))
+}
+
 /// Paragraph records to blocks: headings, quotes, nested lists, code blocks (consecutive code
 /// paragraphs, a new block at each of Notaya's code bookmarks), task lists (paragraphs that
 /// start with a check box) and picture captions (a "Caption" paragraph right after a picture).
-fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap<String, Levels>, title: &mut Option<String>) -> Vec<Block> {
+fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &Numbering, title: &mut Option<String>) -> Vec<Block> {
     let mut out = Vec::new();
     let mut list: Vec<(u32, bool, Vec<Inline>)> = Vec::new();
     // The code block and the task list being collected.
@@ -686,11 +764,10 @@ fn finish(items: Vec<Item>, styles: &HashMap<String, Style>, numbering: &HashMap
                     continue;
                 }
                 flush_code(&mut code, &mut out);
-                if let Some((id, lvl)) = p.num.as_ref().filter(|(id, _)| id != "0" && !id.is_empty()) {
+                if let Some((level, ordered)) = list_number(&p, styles, numbering) {
                     flush_tasks(&mut tasks, &mut out);
-                    let ordered = numbering.get(id).and_then(|l| l.get(*lvl as usize)).copied().flatten().unwrap_or(false);
                     if list.len() < 10_000 {
-                        list.push((*lvl, ordered, p.inl));
+                        list.push((level, ordered, p.inl));
                     }
                     continue;
                 }
@@ -857,6 +934,70 @@ pub(crate) mod tests {
             assert_eq!(json(&parsed.blocks)["content"][0]["content"][0]["text"], "Document body");
             assert_eq!(parsed.title.as_deref(), expected_title, "{title_xml}");
         }
+    }
+
+    #[test]
+    fn word_lists_keep_style_numbering_and_direct_overrides() {
+        let body = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+            <w:p><w:pPr><w:pStyle w:val="Titled"/></w:pPr><w:r><w:t>Preserved title</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="BulletBase"/></w:pPr><w:r><w:t>Bullet one</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="SubBullet"/></w:pPr><w:r><w:t>Nested bullet</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="BulletDerived"/></w:pPr><w:r><w:t>Bullet two</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="Head"/></w:pPr><w:r><w:t>Preserved heading</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="Decimal"/></w:pPr><w:r><w:t>Style number</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="BulletBase"/><w:numPr><w:numId w:val="0"/></w:numPr></w:pPr><w:r><w:t>Direct stop</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="BulletBase"/><w:numPr><w:numId w:val="2"/></w:numPr></w:pPr><w:r><w:t>Direct number</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="NoList"/></w:pPr><w:r><w:t>Style stop</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="Orphan"/></w:pPr><w:r><w:t>Unknown definition</w:t></w:r></w:p>
+            <w:p><w:pPr><w:pStyle w:val="Historical"/></w:pPr><w:r><w:t>Previous properties ignored</w:t></w:r></w:p>
+            <w:p><w:r><w:t>Plain text</w:t></w:r></w:p>
+        </w:body></w:document>"#;
+        let styles = r#"<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+            <w:style w:type="paragraph" w:styleId="Titled"><w:name w:val="Title"/><w:basedOn w:val="BulletBase"/></w:style>
+            <w:style w:type="paragraph" w:styleId="BulletBase"><w:pPr><w:numPr><w:ilvl w:val="8"/><w:numId w:val="1"/></w:numPr></w:pPr></w:style>
+            <w:style w:type="paragraph" w:styleId="SubBullet"><w:basedOn w:val="BulletBase"/></w:style>
+            <w:style w:type="paragraph" w:styleId="BulletDerived"><w:basedOn w:val="BulletBase"/></w:style>
+            <w:style w:type="paragraph" w:styleId="Head"><w:name w:val="heading 1"/><w:basedOn w:val="Decimal"/></w:style>
+            <w:style w:type="paragraph" w:styleId="Decimal"><w:pPr><w:numPr><w:numId w:val="2"/></w:numPr></w:pPr></w:style>
+            <w:style w:type="paragraph" w:styleId="NoList"><w:basedOn w:val="BulletBase"/><w:pPr><w:numPr><w:numId w:val="0"/></w:numPr></w:pPr></w:style>
+            <w:style w:type="paragraph" w:styleId="Orphan"><w:pPr><w:numPr><w:numId w:val="9"/></w:numPr></w:pPr></w:style>
+            <w:style w:type="paragraph" w:styleId="Historical"><w:pPr><w:pPrChange><w:pPr><w:numPr><w:numId w:val="1"/></w:numPr></w:pPr></w:pPrChange></w:pPr></w:style>
+        </w:styles>"#;
+        let numbering = r#"<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+            <w:abstractNum w:abstractNumId="10">
+                <w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:pStyle w:val="BulletBase"/></w:lvl>
+                <w:lvl w:ilvl="1"><w:numFmt w:val="bullet"/><w:pStyle w:val="SubBullet"/></w:lvl>
+            </w:abstractNum>
+            <w:abstractNum w:abstractNumId="11"><w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/></w:lvl></w:abstractNum>
+            <w:num w:numId="1"><w:abstractNumId w:val="10"/></w:num>
+            <w:num w:numId="2"><w:abstractNumId w:val="11"/></w:num>
+        </w:numbering>"#;
+        let bytes = zip::build(&[
+            ("word/document.xml", body.as_bytes()),
+            ("word/styles.xml", styles.as_bytes()),
+            ("word/numbering.xml", numbering.as_bytes()),
+        ], false);
+        let (doc, _, problems) = with_ctx(&[], |ctx| parse(bytes, ctx, "style-lists.docx").unwrap());
+        assert!(problems.is_empty(), "{problems:?}");
+        assert_eq!(doc.title.as_deref(), Some("Preserved title"));
+        let Block::Bullets(items) = &doc.blocks[0] else { panic!("style-only bullets were not kept") };
+        assert!(matches!(items.as_slice(), [first, second]
+            if matches!(first.as_slice(), [Block::Paragraph(a), Block::Bullets(nested)]
+                if doc::plain(a) == "Bullet one"
+                    && matches!(nested.as_slice(), [child]
+                        if matches!(child.as_slice(), [Block::Paragraph(text)] if doc::plain(text) == "Nested bullet")))
+                && matches!(second.as_slice(), [Block::Paragraph(b)] if doc::plain(b) == "Bullet two")));
+        assert!(matches!(&doc.blocks[1], Block::Heading(1, text) if doc::plain(text) == "Preserved heading"));
+        assert!(matches!(&doc.blocks[2], Block::Numbered(1, items) if
+            matches!(items.as_slice(), [item] if matches!(item.as_slice(), [Block::Paragraph(text)] if doc::plain(text) == "Style number"))));
+        assert!(matches!(&doc.blocks[3], Block::Paragraph(text) if doc::plain(text) == "Direct stop"));
+        assert!(matches!(&doc.blocks[4], Block::Numbered(1, items) if
+            matches!(items.as_slice(), [item] if matches!(item.as_slice(), [Block::Paragraph(text)] if doc::plain(text) == "Direct number"))));
+        let rest: Vec<_> = doc.blocks[5..].iter().map(|block| match block {
+            Block::Paragraph(text) => doc::plain(text),
+            _ => panic!("plain paragraph was incorrectly put in a list"),
+        }).collect();
+        assert_eq!(rest, ["Style stop", "Unknown definition", "Previous properties ignored", "Plain text"]);
     }
 
     #[test]
