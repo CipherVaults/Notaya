@@ -1,5 +1,14 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w158-pdf-web-link-20261122"></a>
+
+## Native Windows PDF external web link, 2026-11-22
+
+- **Passed the previously unrun external HTTPS case (W158).** One page, one link, exact destination including query and fragment. The hit rectangle overlapped the displayed label and excluded adjacent plain text. Independent rendering and URL inspection passed for the saved PDF. The destination was never opened.
+- **Scope.** This complements the earlier pages, text, bookmark and layout results. It does not extend the PDF performance, font repertoire, exact package or owner visual evidence. The test PDF, test vault and raw evidence stayed local.
+
+[Exact build and independent file readback](../execution/2026-11-15-safe-export-replacement.md#native-w158-pdf-web-link-20261122).
+
 <a id="native-w134-command-palette-20261122"></a>
 
 ## Native Windows command search and keyboard selection, 2026-11-22

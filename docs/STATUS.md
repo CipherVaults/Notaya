@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w158-pdf-web-link-20261122"></a>
+
+## Windows PDF export preserves ordinary web links
+
+**2026-11-22 13:41 Cairo / 11:41 UTC.** A one-page native Windows PDF kept the full HTTPS destination, including the query and fragment. Independent readback found one link over the displayed label and no link over its plain-text neighbor. A separate renderer showed both labels correctly. The destination was never opened. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w158-pdf-web-link-20261122).
+
+**Continuation.** The external-link part of native PDF output (W158) passed on development tree `40db056a061f8b57eef4f5f504309d0cce672bb5`, identical to GitHub main `e3f7fa2da4889a257f1e26d50b6fe68eb15153c3`. Continue the defensive importer baseline and outstanding native qualification. Resource limits, exact packages and the 5,000-row redo remain separate.
+
 <a id="native-w134-command-palette-20261122"></a>
 
 ## Typing a command now finds it in the Windows palette

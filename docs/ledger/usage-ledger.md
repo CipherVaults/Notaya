@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w158"></a>
+
+## Native Windows PDF web-link output, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One bounded native app launch and PDF Save, independent annotation and word-bound inspection, one offline render, and a separate worker's read-only acceptance-scope check. Attributable token totals and quota readings are unavailable. [Session](../sessions.md#session-183).
+
 <a id="codex-usage-20261122-w134"></a>
 
 ## Native Windows command search, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

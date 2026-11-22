@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 183 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify PDF web links](#session-183) |
 | 182 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify typing commands in the palette](#session-182) |
 | 181 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify manual backup and restore](#session-181) |
 | 180 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native ZIP link round trip](#session-180) |
@@ -214,6 +215,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-183"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify PDF web links
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead ran native export and independent file and render inspection. A separate worker located the missing assertion and verified source provenance. **Models, Effort, Roles and Provenance.** The Goal specifies GPT-6.2 Sol Ultra. Worker dispatch requested GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w158).
+
+## 1. Time
+
+Evidence cut 2026-11-22 13:41 Cairo / 11:41 UTC.
+
+## 2. Session Goal
+
+Close the unrun ordinary external web-link leg of Windows PDF output (W158) with evidence from the actual saved file.
+
+## 3. Actions Taken
+
+Imported a disposable Markdown note, verified the link and plain-text control in the editor, saved the current note to PDF and closed the app. Parsed the destination and hit rectangle separately from rendered text, and inspected the offline PNG render.
+
+## 4. Key Insights
+
+The exported file contained exactly one URI annotation. The destination preserved its query and fragment, and the clickable rectangle excluded the neighboring plain-text word.
+
+## 5. Decisions Made
+
+Use the exact independently verified main tree's existing Windows build. Keep the URL inspection offline and retain prior partial evidence at its original cutoff.
+
+## 6. Difficulties / Friction
+
+The bundled Poppler distribution had no separate word-box executable. Poppler reported missing optional display fonts while rendering the ASCII fixture.
+
+## 7. Adjustments Made
+
+Used the bundled independent offline geometry parser for the word overlap. Kept Poppler for a separate URI listing and page render.
+
+## 8. Mistakes / Risks
+
+This is a one-page ASCII link test on a development executable. It gives no evidence about the resource ceiling, platform parity or other scripts.
+
+## 9. Current Position
+
+The external HTTPS part of W158 passed. Main still matches the qualified development tree. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w158-pdf-web-link-20261122).
+
+## 10. Next Steps
+
+Continue independent Windows qualification and the defensive import baseline. Carry the unresolved 5,000-row redo and full-package gates forward.
+
+## 11. Open Questions
+
+The larger PDF resource and owner visual decisions are separate.
+
+## 12. Recommended Next Step
+
+Choose the next independent open case from the exact current test register. Keep earlier passed and failed outcomes tied to their own execution.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-182"></a>
 
