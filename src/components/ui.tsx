@@ -227,6 +227,7 @@ export const TooltipProvider = Tooltip.Provider;
 export function Modal({
   open,
   onOpenChange,
+  onCloseAutoFocus,
   title,
   description,
   children,
@@ -234,6 +235,7 @@ export function Modal({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onCloseAutoFocus?: (event: Event) => void;
   title: string;
   description?: string;
   children: React.ReactNode;
@@ -244,6 +246,7 @@ export function Modal({
       <RDialog.Portal>
         <RDialog.Overlay className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" />
         <RDialog.Content
+          onCloseAutoFocus={onCloseAutoFocus}
           style={{ width }}
           className="fixed left-1/2 top-1/2 z-50 max-h-[85vh] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-line bg-elevated p-6 shadow-float outline-none"
         >

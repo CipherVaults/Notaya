@@ -163,8 +163,21 @@ async function runCase(browser, target, name) {
     assert.equal(await row.count(), 1, 'The fixed p1 sidebar fixture must be unique');
     await row.click();
     await page.waitForFunction(() => document.querySelector('main input[placeholder="Untitled"]')?.value === 'Morning pages');
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const launcher = page.getByRole('button', { name: 'Export', exact: true });
     const dialog = page.getByRole('dialog', { name: 'Export', exact: true });
+    // Let ordinary Enter consume the current focus, so this cannot mask lost focus.
+    const launcherElement = name === 'clean-success' ? await launcher.elementHandle() : null;
+    if (launcherElement) {
+      await launcher.focus();
+      await page.keyboard.press('Enter');
+      await dialog.waitFor({ state: 'visible' });
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'hidden' });
+      await page.waitForFunction((button) => document.activeElement === button, launcherElement);
+      await page.keyboard.press('Enter');
+    } else {
+      await launcher.click();
+    }
     await dialog.waitFor({ state: 'visible' });
     await dialog.getByRole('button', { name: 'Markdown', exact: true }).click();
     const before = await page.evaluate(() => ({
@@ -185,6 +198,9 @@ async function runCase(browser, target, name) {
       });
     } else {
       await dialog.waitFor({ state: 'hidden' });
+      if (launcherElement) {
+        await page.waitForFunction((button) => document.activeElement === button, launcherElement);
+      }
     }
     const effect = await page.evaluate(() => {
       const visible = (element) => {

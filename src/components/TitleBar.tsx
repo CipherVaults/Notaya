@@ -128,9 +128,9 @@ export default function TitleBar() {
             <Upload size={14} /> Import
           </button>
           <button
-            onClick={() => {
-              if (page) openExport("page", page.id);
-              else if (exportNotebookId) openExport("notebook", exportNotebookId);
+            onClick={(event) => {
+              if (page) openExport("page", page.id, event.currentTarget);
+              else if (exportNotebookId) openExport("notebook", exportNotebookId, event.currentTarget);
             }}
             disabled={!page && !exportNotebookId}
             title={rowOpen ? exportNotebookId ? "Export the row's whole notebook" : "Export unavailable: the row's database could not be resolved" : undefined}

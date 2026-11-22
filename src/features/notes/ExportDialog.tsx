@@ -16,8 +16,10 @@ import { PageIcon } from "@/lib/pageLook";
 type Choice = "page" | "pages" | "section" | "sections" | "notebook" | "notebooks";
 type Output = "single" | "zip";
 
+let latestOpening: { target: ExportTarget; launcher?: HTMLButtonElement } | null = null;
+
 /** Opens the export dialog for a page, a section or a notebook. */
-export function openExport(kind: "page" | "section" | "notebook", id: string) {
+export function openExport(kind: "page" | "section" | "notebook", id: string, launcher?: HTMLButtonElement) {
   const { tree, setExportTarget } = useApp.getState();
   let target: ExportTarget | null = null;
   if (kind === "page") {
@@ -30,7 +32,22 @@ export function openExport(kind: "page" | "section" | "notebook", id: string) {
   } else if (tree.notebooks.some((n) => n.id === id)) {
     target = { notebookId: id, initial: "notebook" };
   }
-  if (target) setExportTarget(target);
+  if (target) {
+    latestOpening = { target, launcher };
+    setExportTarget(target);
+  }
+}
+
+function restoreLauncherFocus(event: Event, target: ExportTarget) {
+  // The close callback is deferred. A newer opening owns any later focus return.
+  if (latestOpening?.target !== target || useApp.getState().exportTarget) return;
+  const { launcher } = latestOpening;
+  latestOpening = null;
+  if (!launcher?.isConnected || launcher.disabled || !launcher.getClientRects().length) return;
+  const doc = launcher.ownerDocument;
+  if (doc.activeElement !== doc.body || doc.querySelector('[role="dialog"][data-state="open"]')) return;
+  event.preventDefault();
+  launcher.focus({ preventScroll: true });
 }
 
 const FORMATS: { value: ExportFormat; label: string }[] = [
@@ -170,8 +187,15 @@ export default function ExportDialog() {
   const pageCount = (sectionId: string) => tree.pages.filter((p) => p.sectionId === sectionId && p.trashedAt === null).length;
   const notebookPageCount = (nbId: string) => tree.sections.filter((x) => x.notebookId === nbId).reduce((n, x) => n + pageCount(x.id), 0);
 
+  if (!target) return null;
   return (
-    <Modal open={!!target} onOpenChange={(o) => !o && !busy && setTarget(null)} title="Export" width={500}>
+    <Modal
+      open
+      onOpenChange={(o) => !o && !busy && setTarget(null)}
+      onCloseAutoFocus={(event) => restoreLauncherFocus(event, target)}
+      title="Export"
+      width={500}
+    >
       <div className="space-y-5">
         <fieldset className="space-y-1.5">
           <legend className="mb-1.5 text-xs font-medium uppercase tracking-wider text-faint">What to export</legend>
