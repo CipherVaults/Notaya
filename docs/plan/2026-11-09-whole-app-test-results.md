@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w154-export-selection-20261122"></a>
+
+## Native Windows export selection and cancellation, 2026-11-22
+
+- **Passed for scope and order (W154).** In a disposable vault with three notebooks, nine sections and ten pages, selected two pages, two sections, and two notebooks in Notaya and saved through the actual Windows dialog. Four parsed HTML outputs contained the exact expected headings and body markers in sidebar order, including a matched subpages-off/on comparison. Unselected controls were absent, the empty selection disabled Export, and the unencrypted-file warning was visible.
+- **Passed for native cancellation.** The saved-note selection remained in the dialog, the preexisting sentinel kept its exact bytes, and no export artifact appeared in the output or vault data folder. Saving the retained selection then succeeded.
+- **Harness issue.** The native app exited normally, with its own saved process receipt. The enclosing shell returned code 1 because it tried to save a second receipt at that same create-only path. One WebView window-class shutdown diagnostic was retained. No app rerun was needed.
+- **Separate coverage.** Prior cases cover one selected page, one section and a whole notebook. This run added the multiple-selection and cancellation routes using HTML. Destination refusal and replacement (W165), all scope/format combinations and exact release packages were outside this run.
+
+[Exact source and output checks](../execution/2026-11-15-safe-export-replacement.md#native-w154-export-selection-20261122).
+
 <a id="native-w153-hub-word-pdf-20261122"></a>
 
 ## Notion-style hub to Word and PDF on Windows, 2026-11-22

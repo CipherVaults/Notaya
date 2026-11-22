@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w154"></a>
+
+## Native Windows export scope and cancellation, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One bounded native app launch, four saves, one Save cancellation, four independent file checks with three in-memory negative controls, and independent read-only contract reviews. App exit verified. The enclosing wrapper's duplicate receipt write failed after app shutdown. Model execution settings and attributable usage are unavailable. [Session](../sessions.md#session-178).
+
 <a id="codex-usage-20261122-w153"></a>
 
 ## Native Notion-style hub Word and PDF export, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

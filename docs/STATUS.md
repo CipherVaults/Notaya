@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w154-export-selection-20261122"></a>
+
+## Windows export selection and Save cancellation verified
+
+**2026-11-22 12:26 Cairo / 10:26 UTC.** On the v1.6 development build, native HTML export saved exactly the selected pages, sections and notebooks in sidebar order. With the same pages selected, the child appeared only when Include sub-pages was on. Cancelling Windows Save left the existing output bytes unchanged and preserved the dialog selection. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-export-selection-20261122).
+
+**Continuation.** The Windows scope and cancellation check (W154) passed with disposable notes. Next check export destination refusal and replacement in an isolated output folder (W165). Keep the exact package and 5,000-row redo (Q1) gates open.
+
 <a id="native-w153-hub-word-pdf-20261122"></a>
 
 ## Native Word and PDF exports checked on Windows

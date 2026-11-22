@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 178 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows export selection and cancellation](#session-178) |
 | 177 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check hub exports to Word and PDF](#session-177) |
 | 176 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bilingual editing](#session-176) |
 | 175 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check database scope in Windows exports](#session-175) |
@@ -209,6 +210,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-178"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify Windows export selection and cancellation
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran native Windows interaction and separate file checks. Workers read the fixture and cancellation contracts. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w154).
+
+## 1. Time
+
+Evidence cut 2026-11-22 12:26 Cairo / 10:26 UTC.
+
+## 2. Session Goal
+
+Verify actual multi-selection, subpage inclusion and native Save cancellation (W154).
+
+## 3. Actions Taken
+
+Imported a small reproducible ZIP, chose nonadjacent pages, sections and notebooks, saved four HTML files and cancelled one Windows Save dialog. Checked output order, exclusion, integrity and process shutdown.
+
+## 4. Key Insights
+
+All three multi-selection scopes followed sidebar order. The subpage switch changed only inclusion of the matching child. The cancelled Save kept its selection and the output folder unchanged.
+
+## 5. Decisions Made
+
+Record native behavior and the independent file check now. Retain the wrapper error separately and qualify destination refusal and replacement independently.
+
+## 6. Difficulties / Friction
+
+A click on a control beyond the modal viewport closed the dialog. The outer wrapper tried to save a second process receipt after the child had already exited.
+
+## 7. Adjustments Made
+
+Scrolled the modal and checked the on-screen switch. Read the authoritative runner receipt and verified reported output without a rerun.
+
+## 8. Mistakes / Risks
+
+Use only the single runner-owned receipt write next time. The run used one development executable and HTML for the added scopes.
+
+## 9. Current Position
+
+The added v1.6 Windows selection and cancellation checks passed. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-export-selection-20261122).
+
+## 10. Next Steps
+
+Qualify destination refusal and preservation of a prior export in the disposable setup (W165), reusing the scoped replacement tests as prior evidence.
+
+## 11. Open Questions
+
+The exact release packages and existing release gates are still open. This case raised no new owner decision.
+
+## 12. Recommended Next Step
+
+Bind an isolated output folder and exercise the native validation and replacement routes (W165).
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-177"></a>
 
