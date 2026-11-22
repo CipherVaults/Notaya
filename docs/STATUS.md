@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-document-roundtrips-20261122"></a>
+
+## Current state and continuation — document round trips
+
+**2026-11-22 02:35 Cairo / 00:35 UTC.** The Windows Markdown round trip failed on the saved title. The ownership comment in a picture-bearing Markdown export consumed the following heading during reimport. The reopened note used the filename as title and showed a literal heading line. Reopened HTML and Word kept the title, text, lists, table and picture, with a separate loss of the Word inline code style. [Register](plan/2026-11-09-whole-app-test-results.md#windows-document-roundtrips-20261122) · [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-document-roundtrips-20261122).
+
+Next add a failing title assertion to the existing pictured round-trip test, then fix the Markdown reader so it handles already-written marked files. Preserve the ownership marker and replacement protocol. Keep the failed PDF reimport and the database redo gate separate.
+
 <a id="native-inline-export-20261122"></a>
 
 ## Current state and continuation — inline database export

@@ -1,5 +1,19 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-document-roundtrips-20261122"></a>
+
+## Native document round trips — 2026-11-22 02:35 Cairo / 00:35 UTC
+
+| Register case | Outcome |
+|---|---|
+| W162 Markdown with picture | **Failed title preservation.** The exported heading was correct in the file. After reopening the imported note, the filename was the title and the heading appeared as literal hash-prefixed text. Body text, lists, table and picture survived. |
+| W162 HTML | **Passed for the fixture.** Reopened title, multilingual text, bold, italic, code mark, both lists, table and picture matched. |
+| W162 DOCX | **Partial pass.** Reopened title, text, bold, italic, lists, table and picture matched. The inline code token survived as plain text. The output had a code-styled Word run, which the importer did not turn back into a code mark. |
+| Direct file and source checks | **Passed for the named assertions.** The exports kept the expected structure and original PNG bytes in a Markdown sidecar or embedded in HTML and Word. The writer placed the body heading one level deeper under the synthetic title. Two exact non-PDF Rust round-trip tests passed. |
+| Limits | This fixture did not exercise PDF, exact package behavior, file replacement recovery, custom list starts, or broad document layout. The Markdown failure remains open. |
+
+[Exact execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-document-roundtrips-20261122).
+
 <a id="windows-inline-export-20261122"></a>
 
 ## Native inline database export — 2026-11-22 02:24 Cairo / 00:24 UTC

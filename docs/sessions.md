@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 158 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native document round trips](#session-158) |
 | 157 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Export an inline database on Windows](#session-157) |
 | 156 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Paired Notion export on Windows](#session-156) |
 | 155 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Cancel a running import](#session-155) |
@@ -189,6 +190,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-158"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Native document round trips
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native baseline. A separate worker traced the importer and the released source. **Models, Effort, Roles and Provenance.** The Goal names GPT-6.2 Sol Ultra. Served worker settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-document-roundtrips).
+
+## 1. Time
+
+Baseline cut at 2026-11-22 02:35 Cairo / 00:35 UTC.
+
+## 2. Session Goal
+
+Qualify the ordinary Windows Markdown, HTML and Word document round trips on the same synthetic page.
+
+## 3. Actions Taken
+
+Imported a known HTML page and local PNG. Exported it to three native formats, inspected the files independently and reimported each separately in a fresh vault. Restarted and read all three saved notes. Ran two focused non-PDF Rust controls.
+
+## 4. Key Insights
+
+The Markdown export ownership comment is adjacent to the real heading. The Markdown reader treats both as a single HTML block, which consumes the heading's syntax. The resulting note cannot use it as its title.
+
+## 5. Decisions Made
+
+Keep the exact failed artifact unchanged. Record Word inline-code formatting separately. Plan a reader regression that covers existing files without changing the replacement protocol.
+
+## 6. Difficulties / Friction
+
+The native pickers and editor settle asynchronously. The reopened page verified the Markdown failure first seen in the Home preview.
+
+## 7. Adjustments Made
+
+Read each destination with its own notebook identity. Verified four independent layers: source, exported file structure, reopened display and closed-vault attachment inventory.
+
+## 8. Mistakes / Risks
+
+Neither exact source control checked the imported title of a separately named, picture-bearing export. Their success was compatible with this native failure. The released importer shares the parser path, while its own exporter writes without this marker.
+
+## 9. Current Position
+
+The Markdown title case failed. HTML passed in scope. Word kept the content with a known inline-code styling loss. [Test register](plan/2026-11-09-whole-app-test-results.md#windows-document-roundtrips-20261122).
+
+## 10. Next Steps
+
+Add a red title assertion to the pictured round-trip case and fix the handling of a standalone closed comment immediately before Markdown. Recheck the unmodified failing export on a pinned Windows candidate.
+
+## 11. Open Questions
+
+Actual released-version behavior on the newer marked file was not tested. The outstanding PDF repair decision, package gates and database redo remain separate.
+
+## 12. Session Outcome
+
+Preserved the failed Markdown artifact and recorded results by format. Both synthetic vaults and all raw outputs stayed on the PC. All owned app processes closed.
+
+## 13. Confidence Level
+
+High for the native title failure, the file checks and the tested reopened content. Wider fidelity and final packages remain open.
+
+---
 
 <a id="session-157"></a>
 

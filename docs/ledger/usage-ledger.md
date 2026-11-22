@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-document-roundtrips"></a>
+
+## Native document round trips — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 02:35 Cairo / 00:35 UTC. Local native exports and separate reimports, direct output checks, two exact Rust tests and read-only diagnosis. The Goal names GPT-6.2 Sol Ultra. Actual served worker settings, attributable tokens, quota share and labour are unavailable. [Session](../sessions.md#session-158) · [Evidence](../execution/2026-11-15-safe-export-replacement.md#native-document-roundtrips-20261122).
+
 <a id="codex-usage-20261122-inline-export"></a>
 
 ## Inline database export qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
