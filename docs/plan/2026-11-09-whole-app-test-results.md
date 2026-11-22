@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w164-link-roundtrip-20261122"></a>
+
+## Native Markdown ZIP internal-link round trip, 2026-11-22
+
+- **Passed for original native navigation (W164).** Opened both page-link rows in the source. Created an inline link to a specific child heading in Notaya. Clicking it scrolled to the off-screen heading.
+- **Passed for export and fresh import.** Exactly two scoped pages plus the layout marker. Both included links used the same encoded relative path without a source address. The excluded page was absent and its arrow and label were plain text. After native import into an empty vault, both links opened the new child under its parent. The excluded label did not navigate. Read-only record IDs were disjoint between the two closed vaults.
+- **Documented conversion.** ZIP export retains the page destination and drops the heading fragment. The Markdown kept the heading link's label. A lone link paragraph came back as a page-link row displaying the target page title.
+- **Separate coverage.** Other formats and link layouts, any private import, and exact release packages were outside the run.
+
+[Exact source, saved ZIP identity and evidence limits](../execution/2026-11-15-safe-export-replacement.md#native-w164-link-roundtrip-20261122).
+
 <a id="native-w165-export-replacement-20261122"></a>
 
 ## Native Windows export validation and replacement, 2026-11-22

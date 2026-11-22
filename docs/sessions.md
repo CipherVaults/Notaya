@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 180 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native ZIP link round trip](#session-180) |
 | 179 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify Windows export replacement](#session-179) |
 | 178 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows export selection and cancellation](#session-178) |
 | 177 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check hub exports to Word and PDF](#session-177) |
@@ -211,6 +212,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-180"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify native ZIP link round trip
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native test and separate file and primary-key readback. Workers reviewed the link picker, archive semantics and stable identity oracle. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w164).
+
+## 1. Time
+
+Evidence cut 2026-11-22 12:50 Cairo / 10:50 UTC.
+
+## 2. Session Goal
+
+Check the native Windows Markdown ZIP internal-link round trip (W164).
+
+## 3. Actions Taken
+
+Proved original page and heading navigation, saved only the parent and child to a ZIP, inspected the actual files and imported the same archive in a separate fresh vault. Followed the two included links and verified the excluded label and persisted record identities.
+
+## 4. Key Insights
+
+The heading jump worked in the source. The ZIP kept the destination page as a relative link. Both links reached the new child on reimport, and the former heading link displayed the target page title as a page-link row.
+
+## 5. Decisions Made
+
+Record exact native coverage for this Markdown ZIP. Keep the documented anchor loss visible and distinguish it from the successful destination remapping.
+
+## 6. Difficulties / Friction
+
+The first file check expected the excluded label without a leading arrow. The exporter preserves that glyph when it removes the page-link target.
+
+## 7. Adjustments Made
+
+Kept the first failure and checked the exact arrow-plus-label text and absence of an active link in the same ZIP. Continued with the native fresh import after archive verification.
+
+## 8. Mistakes / Risks
+
+The first archive predicate conflated plain text with the absence of a decorative prefix. It never admitted the fresh test. Source data and exact packages stayed outside this scoped result.
+
+## 9. Current Position
+
+The native Markdown ZIP W164 check passed. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w164-link-roundtrip-20261122).
+
+## 10. Next Steps
+
+Check native manual backup creation and independent snapshot readback (W186).
+
+## 11. Open Questions
+
+No new owner decision for W164. Exact packages and other release gates remain open.
+
+## 12. Recommended Next Step
+
+Use a disposable populated vault to test native backup output and compare with the existing restore evidence.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-179"></a>
 

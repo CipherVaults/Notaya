@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w164-link-roundtrip-20261122"></a>
+
+## Windows internal links round-trip through a Markdown ZIP
+
+**2026-11-22 12:50 Cairo / 10:50 UTC.** On the v1.6 development build, the source links opened an included child, its off-screen heading and a page left out of the export. The ZIP held two relative links and unlinked text for the excluded target. In a fresh vault both links reached the new child, and the source and imported record IDs did not overlap. The heading anchor disappears during export as documented. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w164-link-roundtrip-20261122).
+
+**Continuation.** The native Markdown ZIP link check (W164) passed. Next verify manual backup creation and snapshot readback (W186). The 5,000-row database redo (Q1) and exact packages remain open.
+
 <a id="native-w165-export-replacement-20261122"></a>
 
 ## Windows export validation and replacement verified

@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w164"></a>
+
+## Native Windows ZIP link round trip, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two bounded native launches and imports, one native Markdown ZIP export, original and fresh link navigation, one preliminary archive-readback stop, independent archive and closed-vault primary-key readback and independent source checks. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-180).
+
 <a id="codex-usage-20261122-w165"></a>
 
 ## Native Windows export validation and replacement, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
