@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-import-cancel-20261122"></a>
+
+## Current state and continuation — cancelling a running import
+
+**2026-11-22 02:03 Cairo / 00:03 UTC.** On Windows, a synthetic folder import had staged a picture before Cancel was pressed. After cancellation there were zero attachments and the encrypted records matched the snapshot taken before import. After restarting Notaya, the one original note opened with the exact title and body. An extra whole-record checksum differed after opening the editor. The difference remains unexplained and the failed assertion is retained. [Register](plan/2026-11-09-whole-app-test-results.md#windows-import-cancel-20261122) · [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-import-cancel-20261122).
+
+Next use a disposable Notion export to check native navigation and saved row and page content (W145/W146), as part of the existing import baseline. The separately qualified Word title fix is on its own verified integration branch. Opening its pull request needs GitHub sign-in. The styled-list change awaits a long-list preservation check. PDF repair, the 5,000-row database redo, exact package qualification and owner acceptance remain separate.
+
 <a id="word-styled-lists-20261122"></a>
 
 ## Current state and continuation — Word list formatting

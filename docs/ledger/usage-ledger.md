@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-native-import-cancel"></a>
+
+## Native import cancellation — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 02:03 Cairo / 00:03 UTC. Local native qualification and two exact Rust control tests. Independent read-only review investigated cancellation boundaries. The Goal names GPT-6.2 Sol Ultra for the lead and workers. Actual served worker settings, attributable tokens, quota share and labour are unavailable. [Session](../sessions.md#session-155) and [evidence](../execution/2026-11-15-safe-export-replacement.md#native-import-cancel-20261122).
+
 <a id="codex-usage-20261122-word-lists"></a>
 
 ## Word styled-list verification — 2026-11-21 UTC / 2026-11-22 Cairo — Ahmed (AE0101) — Gaming-PC

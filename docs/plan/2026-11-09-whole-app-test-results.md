@@ -1,5 +1,18 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-import-cancel-20261122"></a>
+
+## Native cancellation after conversion — 2026-11-22 02:03 Cairo / 00:03 UTC
+
+| Register case | Outcome |
+|---|---|
+| W149 actual Cancel import | **Passed for the named fixture.** A picture was already staged. The action removed staged attachments and left vault records unchanged at the cancellation boundary. After reopening, exactly the original notebook, section and page remained, with matching title and body. The earlier picker leg is separate. |
+| W149 source controls | **Passed.** Both existing exact Rust tests ran, one for cancel/rollback and one for command registration and delivery. |
+| Supplemental checksum | **Failed.** The aggregate checksum of encrypted record rows changed after the restarted editor was opened. The row and attachment counts were unchanged. The cause was not established. |
+| Other qualification | Cancellation of other formats and lock-driven cancellation were not run here. Larger import, database redo, released PDF repair and exact package gates remain separate. |
+
+[Exact execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-import-cancel-20261122).
+
 <a id="windows-word-styled-lists-20261122"></a>
 
 ## Native Word styled-list qualification — 2026-11-22 01:40 Cairo / 2026-11-21 23:40 UTC

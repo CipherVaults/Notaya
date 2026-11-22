@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 155 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Cancel a running import](#session-155) |
 | 154 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Word styled lists](#session-154) |
 | 153 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Released PDF verification](#session-153) |
 | 152 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Native document follow-up](#session-152) |
@@ -186,6 +187,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-155"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Cancel a running import
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex executed the native check. A read-only worker independently traced cancellation and attachment staging. **Models, Effort, Roles and Provenance.** The Goal names GPT-6.2 Sol Ultra. Served worker settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-native-import-cancel).
+
+## 1. Time
+
+Qualification cut 2026-11-22 02:03 Cairo / 00:03 UTC. Folder submitted before midnight UTC and the native operation settled after it.
+
+## 2. Session Goal
+
+Check that a real Cancel action can stop an import after work starts and preserve an existing note.
+
+## 3. Actions Taken
+
+Ran the two exact Rust controls on the existing test artifact. Started the pinned native app in a disposable home. Created the control note through normal import, observed the first staged picture through a short read-only query and pressed the native Cancel button. Verified the original page after reopening and independently rehashed the fixture files.
+
+## 4. Key Insights
+
+The picker registers a cancellable operation before conversion starts. A staged attachment provides evidence that page conversion already happened and the app is preparing to save the import.
+
+## 5. Decisions Made
+
+Kept the picker result, post-conversion user outcome and supplemental checksum as distinct results. Made no application changes.
+
+## 6. Difficulties / Friction
+
+Accessibility clicks without usable geometry failed before action. Used the visible Windows controls and verified the actual native outcome. The supplemental equality check failed after the restarted editor was opened.
+
+## 7. Adjustments Made
+
+Captured the intermediate staged row separately from the app's completion text. Kept the original failed checksum and added a scoped count-and-digest readback.
+
+## 8. Mistakes / Risks
+
+The supplemental checksum used all encrypted record rows and did not localize the post-reopen difference. It cannot support byte-for-byte identity after the reopened edit session.
+
+## 9. Current Position
+
+Native cancel and preservation passed on the named fixture, backed by two source controls. [Test register](plan/2026-11-09-whole-app-test-results.md#windows-import-cancel-20261122).
+
+## 10. Next Steps
+
+Use a disposable Notion export to qualify native page navigation and canonical row and note content (W145/W146). Keep the successful Word title integration branch distinct from the longer-list issue.
+
+## 11. Open Questions
+
+The post-editor-open record hash difference is unclassified. The released PDF repair decision, GitHub sign-in for the Word title pull request and the 5,000-row database redo gate remain open.
+
+## 12. Session Outcome
+
+Actual cancellation removed the staged pictures and preserved the control note. The original fixtures and raw evidence stayed on the PC. All owned Notaya test windows closed.
+
+## 13. Confidence Level
+
+High for the observed staging, cancelled outcome, matching records immediately after cancellation and reopened note text. Whole-record identity after opening the editor and final package qualification are unproved.
+
+---
 
 <a id="session-154"></a>
 
