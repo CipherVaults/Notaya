@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="g3-w198-protected-input-20261122"></a>
+
+## Protected compatibility needs a native unlock
+
+**2026-11-22 14:44 Cairo / 12:44 UTC.** The exact Windows development app reached the expected password prompt for the disposable protected vault (G3/W198). The desktop tool could read the prompt but could not submit it. The isolated process was stopped and its copy still matched the original by SHA-256. [Scoped evidence](execution/2026-11-09-sf3-tamper-and-purge.md#g3-w198-protected-input-20261122).
+
+**Continuation.** Password-protected readback and the released reader were unrun for this fixture. The earlier security-off compatibility result remains valid within its recorded scope. Preserve this attempt. Resume the protected check when its normal native input is available and continue independent v1.6 qualification.
+
 <a id="native-w013-navigation-20261122"></a>
 
 ## Windows keyboard navigation and editing verified

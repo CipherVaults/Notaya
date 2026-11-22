@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-g3-protected"></a>
+
+## Native protected Windows compatibility precheck, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One bounded current-app launch, local input diagnosis, closed-vault hash readback and independent source review. No new product build. Attributable token counts and current serving settings are unavailable. [Session](../sessions.md#session-188).
+
 <a id="codex-usage-20261122-w013"></a>
 
 ## Native Windows navigation and editor focus, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

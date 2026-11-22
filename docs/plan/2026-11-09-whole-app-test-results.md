@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="g3-w198-protected-input-20261122"></a>
+
+## Windows password-protected compatibility precheck, 2026-11-22
+
+- **Observed:** The specified development executable loaded the protected sign-in screen for a local synthetic password-only vault.
+- **Environment blocked:** The desktop tool reported unavailable input geometry, and keyboard focus did not advance after Raise and Tab. Zero unlock and content readback assertions executed.
+- **Preservation verified:** Only the pinned, owned process was terminated. Original and closed copy hashes matched and the copy had no SQLite sidecars.
+- **Not run:** Published reader on this fixture, password-protected cross-version readback, and exact package qualification. Earlier security-off G3/W198 evidence and the separate first-upgrade safety-copy failure keep their scopes.
+
+[Artifacts, inputs and cutoff](../execution/2026-11-09-sf3-tamper-and-purge.md#g3-w198-protected-input-20261122).
+
 <a id="native-w013-navigation-20261122"></a>
 
 ## Native Windows note, database and row navigation, 2026-11-22

@@ -283,6 +283,18 @@ The first conflict (`vault/mod.rs`, `Session::open`) was resolved by keeping bot
 Flags for Ahmed: (1) this adds to the vault format (a new table and a `journalsAnchored` settings latch; no version bump; older vaults migrate silently once, and the G3 safety copy is planned but not yet built); (2) permanent delete re-links the activity chain and runs a verification on each call, so deleting a very large selection in a large vault may be slow; to be measured in the whole-app pass; (3) the visible effect is only that "Check the log" now fails on tampering it used to accept.
 
 
+<a id="g3-w198-protected-input-20261122"></a>
+
+## Native protected compatibility precheck, 2026-11-22 14:44 Cairo
+
+**Exact input and build.** The Windows x64 unbundled v1.6 release-profile app matched GitHub main `e3f7fa2da4889a257f1e26d50b6fe68eb15153c3`, tree `40db056a061f8b57eef4f5f504309d0cce672bb5`, exe SHA-256 `42d36778f3e8e7fa0baf60d2c7b6cd7420c9f5594a22f404915c3afe64079c78`. The candidate source was `33d02033051e46199bf4eb642fe11afa1c5ea2b8` at the same tree. A separate published v1.5.1 executable was pinned before the run, with tag `95ca8b203403fae701e6f60521419329b30a7145` and exe SHA-256 `be7426e9d6b5e1e81ca02779dde7cee42ee676dc006fccd64ae3907ed1ec5aca`.
+
+**Boundary and result.** A bounded launch received a closed copy of the previously generated W194 password-only synthetic fixture. The home, portable data directory and WebView profile were isolated. The current application displayed the expected password-only lock screen. The tool could read its accessibility tree and enter a fixture value through the form control. Its normal submit target had unavailable coordinate geometry, and keyboard focus stayed on the document after Raise and Tab. No unlock submission or saved-content assertion ran. The test ended before launching the released reader. The environment result neither supports nor refutes protected compatibility.
+
+**Shutdown and preservation.** The test window remained after its targeted close attempt. Cleanup verified the owned executable path, PID and start time before terminating only that process tree. The runner recorded exit and drained logs with a nonzero exit. The closed copy and input both retained SHA-256 `10c490a65288586d05b3ad4592a7e4cb8bdcfa77d4b61a927a4b6fa8ae0ff3c1`. No SQLite sidecars remained by the copy. Vaults, profiles and raw process receipts stay on the PC.
+
+**Cutoff.** Keep the capture protection. A future native check needs ordinary input at the isolated password screen, exact saved-content checks and inspection of the closed file after the released reader's separate visit. First-upgrade copy and notice (A44), the database redo (Q1) and exact packages retain their own gates.
+
 <a id="g3-w198-native-readback-20261122"></a>
 
 ### Full three-object native compatibility readback — 2026-11-22 10:50 Cairo / 08:50 UTC

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 188 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check protected vault compatibility preconditions](#session-188) |
 | 187 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows keyboard navigation](#session-187) |
 | 186 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Measure Windows startup and idle resources](#session-186) |
 | 185 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows database export formats](#session-185) |
@@ -219,6 +220,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-188"></a>
+
+# Session: 2026-11-22 UTC | Ahmed (AE0101) | Gaming-PC | Check protected vault compatibility preconditions
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead ran the isolated check. A separate read-only worker verified the scope of the prior open-vault and protected-restore evidence. **Models, effort, roles and provenance.** GPT-6.2 Sol Ultra is the Goal setting and was requested for the worker. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-g3-protected).
+
+## 1. Time
+
+Evidence cut 2026-11-22 14:44 Cairo / 12:44 UTC.
+
+## 2. Session Goal
+
+Find out whether the protected readback part of the older reader compatibility check (G3/W198) could run with a local synthetic vault.
+
+## 3. Actions Taken
+
+Verified the current source and both executable bindings, made one disposable copy of the known protected fixture, then launched the current app in its own portable home. Observed the lock screen. Verified path, process ID and start time at cleanup and checked the closed copy.
+
+## 4. Key Insights
+
+The current app reached the intended password-only screen. The desktop tool could read the form and set its fixture value. It could not activate the normal submit control.
+
+## 5. Decisions Made
+
+Classify the protected test as environment blocked and retain the scope of the historical security-off result. Leave capture protection enabled.
+
+## 6. Difficulties / Friction
+
+The desktop tool could not acquire input geometry. Walking focus via the app-level keyboard action did not reach the document controls.
+
+## 7. Adjustments Made
+
+Used the ordinary accessible form setter and observed the current target before attempting submission. Ended the run when activation remained unavailable. Verified the isolated process had exited and checked the exact closed bytes.
+
+## 8. Mistakes / Risks
+
+The cut used an owned process termination. It gives no evidence of an orderly exit or unlocked saves. The previous settings-based password restore is a separate path.
+
+## 9. Current Position
+
+The protected input and its copy matched. The published reader and protected readback assertions did not run. [Execution evidence](execution/2026-11-09-sf3-tamper-and-purge.md#g3-w198-protected-input-20261122).
+
+## 10. Next Steps
+
+Continue independent release qualification. Revisit the protected native check only when normal input at the lock screen is available.
+
+## 11. Open Questions
+
+The first-upgrade safety-copy policy and the separate-database export disposition still await Ahmed. The database redo remains open.
+
+## 12. Recommended Next Step
+
+Use the verified exact main-tree inputs and current test register. Keep the stopped operation and earlier failed receipts undisturbed.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-187"></a>
 
