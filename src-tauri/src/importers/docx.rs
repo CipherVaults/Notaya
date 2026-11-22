@@ -279,7 +279,7 @@ pub fn parse(bytes: Vec<u8>, ctx: &mut Ctx, key: &str) -> Result<DocxDoc, String
         let mut t = String::new();
         for tok in Tokenizer::xml(&x) {
             match tok {
-                Token::Start { name, .. } if local(&name) == "title" => in_title = true,
+                Token::Start { name, self_closing, .. } if local(&name) == "title" => in_title = !self_closing,
                 Token::End { name } if local(&name) == "title" => in_title = false,
                 Token::Text(s) if in_title => t.push_str(&s),
                 _ => {}
@@ -833,6 +833,30 @@ pub(crate) mod tests {
         // A table drawn right-to-left: its first text is made right-to-left so the columns run from the right.
         assert_eq!(find("First cell").as_deref(), Some("rtl"));
         assert_eq!(find("Second"), None);
+    }
+
+    #[test]
+    fn word_core_title_does_not_capture_following_metadata() {
+        let document = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+            <w:p><w:r><w:t>Document body</w:t></w:r></w:p>
+        </w:body></w:document>"#;
+        for (title_xml, expected_title) in [
+            ("<dc:title/>", None),
+            ("<dc:title></dc:title>", None),
+            ("<dc:title>Plan &amp; notes</dc:title>", Some("Plan & notes")),
+        ] {
+            let core = format!(
+                r#"<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">{title_xml}<dc:subject>Draft subject</dc:subject><dc:creator>Sample creator</dc:creator></cp:coreProperties>"#
+            );
+            let bytes = zip::build(&[
+                ("word/document.xml", document.as_bytes()),
+                ("docProps/core.xml", core.as_bytes()),
+            ], false);
+            let (parsed, _, problems) = with_ctx(&[], |ctx| parse(bytes, ctx, "notes.docx").unwrap());
+            assert!(problems.is_empty(), "{problems:?}");
+            assert_eq!(json(&parsed.blocks)["content"][0]["content"][0]["text"], "Document body");
+            assert_eq!(parsed.title.as_deref(), expected_title, "{title_xml}");
+        }
     }
 
     #[test]
