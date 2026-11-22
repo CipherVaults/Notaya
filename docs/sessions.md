@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 160 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Vault and Word list qualification](#session-160) |
 | 159 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Markdown title fix](#session-159) |
 | 158 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native document round trips](#session-158) |
 | 157 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Export an inline database on Windows](#session-157) |
@@ -191,6 +192,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-160"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Vault and Word list qualification
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native cases. Separate read-only workers reviewed compatibility, the list boundary and the first-unlock design. **Models, Effort, Roles and Provenance.** The Goal names GPT-6.2 Sol Ultra. Served settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-vault-and-word-boundaries).
+
+## 1. Time
+
+Windows runs at 03:09 to 03:16 Cairo, 01:09 to 01:16 UTC. Verification resumed at 07:34 Cairo, 05:34 UTC.
+
+## 2. Session Goal
+
+Verify old-app compatibility and the first-unlock backup against synthetic vault copies. Check the newly relevant long Word list boundary before integrating importer changes.
+
+## 3. Actions Taken
+
+Used the pinned released app and exact v1.6 development executable in separate homes. Observed the original note in the old app, checked the first-open backup after shutdown, then compared two independently generated Word list fixtures with HTML exports from the restarted apps.
+
+## 4. Key Insights
+
+The reader opened a vault containing the new journal tables without changing the file. The first unlock generated the new tables before the ordinary backup. The Word converter drops buffered list items beyond 10,000. Style recognition made that inherited limit apply to more Word documents.
+
+## 5. Decisions Made
+
+Keep the shorter check and every failing long-list result. Separate the unrelated title fixes from the list repair. Leave storage and the released data-loss repair path for Ahmed's decision.
+
+## 6. Difficulties / Friction
+
+The first supplemental SQLite comparison assumed every table has a row ID. It failed and the corrected read-only comparison used row multisets. After interruption, the already-completed released export was verified before its minimized test process was stopped.
+
+## 7. Adjustments Made
+
+Verified the file bytes independently of the app's success message. Used identical expected row markers for both Word cases. A valid control passed and a planted missing item failed.
+
+## 8. Mistakes / Risks
+
+One ordinary backup after close can look like first-unlock protection. Its schema showed it was already a copy of the upgraded vault. The literal end marker alone also survived the Word truncation, so an end-marker assertion would miss the loss.
+
+## 9. Current Position
+
+The disposable readback passed. First-unlock safety copy and both long-list tests failed. [Test register](plan/2026-11-09-whole-app-test-results.md#native-vault-compatibility-20261122).
+
+## 10. Next Steps
+
+Isolate the Word and Markdown title fixes for reviewed integration. Continue independent qualification while the two repair decisions are pending.
+
+## 11. Open Questions
+
+Ahmed decides the released Word defect's repair path and whether a failed pre-upgrade safety copy should block schema changes until retry. The final package must rerun both applicable vault gates.
+
+## 12. Session Outcome
+
+The source vaults and original documents remained intact. All owned Notaya test processes exited. No production source changed. All vaults, raw test evidence, and output files stayed on the PC.
+
+## 13. Confidence Level
+
+High for the named synthetic fixtures and exact executable identities. Password-protected compatibility, a successful first-unlock backup and installed package behavior are unverified.
+
+---
 
 <a id="session-159"></a>
 

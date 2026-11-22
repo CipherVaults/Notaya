@@ -1,5 +1,19 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-vault-compatibility-20261122"></a>
+
+## Vault compatibility and Word list limits — 2026-11-22 07:36 Cairo / 05:36 UTC
+
+| Check | Result |
+|---|---|
+| Released app opens a 1.6 vault copy (G3) | **Passed on a disposable security-off fixture.** The exact published v1.5.1 app showed the saved title, body, two lists, a table and a picture. The newer vault and its copy had identical bytes before and after the visit. |
+| One-time pre-upgrade safety copy and notice (A44) | **Failed on the development build.** On first automatic unlock it changed the disposable older vault's schema. The ordinary backup after close already held the new tables. The expected notice and a pre-upgrade copy were absent. A repeat unlock and password-protected fixture were not run. |
+| Word list defined by paragraph style (W141) | **Failed at 10,001 items on the development build.** The imported note was saved and reopened. Its HTML output retained the first 10,000 bullets and the plain tail, with item 10,001 missing. The earlier short list result remains valid. |
+| Word directly numbered list (W141) | **Failed at 10,001 items in released v1.5.1.** The exact published exe reported success. The reopened note's HTML contained the first 10,000 bullets and the plain tail. Item 10,001 was missing. |
+| Scope and limits | The development executable was an unbundled Windows x64 release-profile build. Neither result qualified a v1.6 package, a password-protected vault, or the 5,000-row redo. |
+
+[Vault evidence](../execution/2026-11-09-sf3-tamper-and-purge.md#native-vault-compatibility-20261122) · [Word evidence](../execution/2026-11-15-safe-export-replacement.md#native-word-list-boundary-20261122).
+
 <a id="markdown-title-fix-20261122"></a>
 
 ## Native Markdown title fix — 2026-11-22 03:01 Cairo / 01:01 UTC

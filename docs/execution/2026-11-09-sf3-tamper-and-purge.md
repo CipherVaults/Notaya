@@ -282,3 +282,15 @@ The first conflict (`vault/mod.rs`, `Session::open`) was resolved by keeping bot
 
 Flags for Ahmed: (1) this adds to the vault format (a new table and a `journalsAnchored` settings latch; no version bump; older vaults migrate silently once, and the G3 safety copy is planned but not yet built); (2) permanent delete re-links the activity chain and runs a verification on each call, so deleting a very large selection in a large vault may be slow; to be measured in the whole-app pass; (3) the visible effect is only that "Check the log" now fails on tampering it used to accept.
 
+
+<a id="native-vault-compatibility-20261122"></a>
+
+### Windows vault compatibility and first unlock — 2026-11-22 07:36 Cairo / 05:36 UTC
+
+**Windows identity.** Released v1.5.1 tag `95ca8b203403fae701e6f60521419329b30a7145`, portable ZIP SHA-256 `4576d5039f59708d219f9e365ff9903e5470a7a0471f324839959c811a3a28e7`, exe SHA-256 `be7426e9d6b5e1e81ca02779dde7cee42ee676dc006fccd64ae3907ed1ec5aca`. Windows x64 unbundled release-profile v1.6 development app `6c5e38cad80c76b5325b083c8d26a0123a0a4f15`, tree `f747b2e3f83a38788e75efe25a8e3ae53c1bae39`, exe SHA-256 `05572537bf6a8404ebcefb39b321f4035919fe83d6895dc588e5cf098410fc22`. Distinct portable homes, security-off synthetic data and no debug endpoint.
+
+**Released app readback (G3), passed for this fixture.** The published v1.5.1 app opened a copy of the v1.6 vault containing activity, history and journal-anchor tables. The title, body, two lists, table and picture appeared in the editor. No edits were made. The original and visited copy remained byte-identical. Both passed SQLite quick-check. A redundant schema and row comparison initially failed because the checker assumed each table had a row ID. The corrected comparison found identical rows in all six tables. This does not certify safe editing in the old app. The specification's warnings about old-app saves and visibility remain in force.
+
+**First-unlock safety copy (A44), failed for automatic unlock.** Copied a closed, locally generated released vault with header, records and attachments tables. Its older source stayed unchanged. The v1.6 candidate opened the copy and showed the saved synthetic note on Home. No first-unlock backup notice was visible. After shutdown, one ordinary backup existed. It already contained the new journal tables, as did the upgraded live copy. There was no separate pre-upgrade copy. A second unlock and password-protected path were not run. Both remain part of verification after a fix.
+
+**Design proposal awaiting Ahmed.** On both existing-vault paths, verify a dedicated local copy after successful authentication and before journal initialization. Preserve the vault's current protection, use the existing checked-copy pattern with a legacy-schema verifier, keep the copy out of automatic rotation and show the one-time notice after successful unlock. If copy verification or storage fails, recommend leaving the old vault untouched and offering a retry. Fresh vaults, failed credentials and previously upgraded vaults need explicit coverage. No storage change was made. Both inputs, copies, backups and raw records stay local.

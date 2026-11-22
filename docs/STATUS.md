@@ -1,6 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-vault-compatibility-20261122"></a>
+
+## Current state and continuation — vault compatibility and Word list limits
+
+**2026-11-22 07:36 Cairo / 05:36 UTC.** The published Windows v1.5.1 app read a disposable copy of the v1.6 vault without user edits. The source and copy remained byte-identical. The separate first-unlock safety-copy check failed on the development build. It migrated the disposable older vault without showing the expected notice. The ordinary shutdown backup already contained the new tables. [Register](plan/2026-11-09-whole-app-test-results.md#native-vault-compatibility-20261122) · [Vault evidence](execution/2026-11-09-sf3-tamper-and-purge.md#native-vault-compatibility-20261122).
+
+The development app dropped the 10,001st entry of a Word list defined by paragraph styles. The published v1.5.1 app dropped the same entry when the document used direct numbering. Both apps reported a successful import. Each original file remained intact. Pause changes to the list handling until Ahmed decides the released defect's repair path. Keep the reviewed Word and Markdown title fixes eligible for separate integration. [Word evidence](execution/2026-11-15-safe-export-replacement.md#native-word-list-boundary-20261122).
+
+Next, isolate the title corrections for exact-tip review and qualification. The safety-copy design needs Ahmed's approval before a storage change. PDF reimport, the 5,000-row redo and exact-package gates remain open.
+
 <a id="markdown-title-fix-20261122"></a>
 
 ## Current state and continuation — Markdown title preservation

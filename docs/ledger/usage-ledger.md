@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-vault-and-word-boundaries"></a>
+
+## Vault and Word list qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Native runs at 03:09 to 03:16 Cairo. Output verification and recording resumed at 07:34 Cairo. Four native cases, disposable vault copies, two controlled file comparisons and focused independent source reads. The Goal names GPT-6.2 Sol Ultra. Actual serving settings and attributable token or quota share are unavailable. [Session](../sessions.md#session-160).
+
 <a id="codex-usage-20261122-markdown-title"></a>
 
 ## Markdown title qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
