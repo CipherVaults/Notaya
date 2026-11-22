@@ -7,7 +7,9 @@
 
 **2026-11-22 13:32 Cairo / 11:32 UTC.** On the baseline, typing the exact backup command returned only the identically named note. On the v1.6 candidate, the backup action appeared first, the note stayed in Results, and Enter opened one Windows Save dialog. Partial matches still opened the ranked note, and the current-page Export shortcut worked. [Exact builds and observations](execution/2026-10-23-restore-from-backup.md#native-w134-command-palette-20261122).
 
-**Continuation.** The command-search correction (W134) is verified on Windows development source `33d02033051e46199bf4eb642fe11afa1c5ea2b8`. Reconcile integration through the exact-tip PR, then continue independent Windows qualification. The 5,000-row redo (Q1), first-unlock safety copy (A44) and exact package gates remain open.
+**Continuation.** The command-search correction (W134) is verified on Windows development source `33d02033051e46199bf4eb642fe11afa1c5ea2b8`. The 5,000-row redo (Q1), first-unlock safety copy (A44) and exact package gates remain open.
+
+**Integrated at 13:37 Cairo / 11:37 UTC.** [PR #141](https://github.com/CipherVaults/Notaya/pull/141) merged at `e3f7fa2da4889a257f1e26d50b6fe68eb15153c3`. A separate GitHub checkout verified the tested tree `40db056a061f8b57eef4f5f504309d0cce672bb5` and the two parents. Continue independent Windows qualification. This merge is a development checkpoint.
 
 <a id="native-w186-manual-backup-20261122"></a>
 
