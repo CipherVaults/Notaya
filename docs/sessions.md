@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 187 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows keyboard navigation](#session-187) |
 | 186 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Measure Windows startup and idle resources](#session-186) |
 | 185 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows database export formats](#session-185) |
 | 184 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify embedded and nested Markdown export](#session-184) |
@@ -218,6 +219,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-187"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify Windows keyboard navigation
+
+**Who and where.** Ahmed's side, Gaming-PC. Lead ran the native actions and checked the shutdown and fixture identities. **Models, Effort, Roles and Provenance.** The Goal specifies GPT-6.2 Sol Ultra. Realized runtime settings and attributable usage were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w013).
+
+## 1. Time
+
+Evidence cut 2026-11-22 14:31 Cairo / 12:31 UTC.
+
+## 2. Session Goal
+
+Verify native note, database and row history, and make sure Backspace remains an edit while a text field owns focus (W013).
+
+## 3. Actions Taken
+
+Opened the three native targets and followed four shortcuts and the two toolbar buttons. Exercised the title input and the body editor separately, waited for saving and then reopened the edited row through the new route.
+
+## 4. Key Insights
+
+Each shortcut returned to the expected object. Editing Backspace removed only the last character. The edited row reopened with both values and a cleared forward history.
+
+## 5. Decisions Made
+
+Record the keyboard and toolbar evidence at its exact development scope. Keep the physical mouse and buffer-cap cases separate.
+
+## 6. Difficulties / Friction
+
+The first accessibility read after some keys reflected the earlier page while the app was loading the next target.
+
+## 7. Adjustments Made
+
+Waited for the visible breadcrumb and exact fields to agree before performing the next action.
+
+## 8. Mistakes / Risks
+
+The run did not overflow the navigation buffer or cover a restart of the edited row. Both were outside the claimed behavior.
+
+## 9. Current Position
+
+The tested native route and focus guards passed. [Evidence](execution/2026-11-08-v1-6-build-start.md#native-w013-navigation-20261122).
+
+## 10. Next Steps
+
+Continue through the remaining independent native release register cases while the owner decisions and redo gate remain open.
+
+## 11. Open Questions
+
+Exact final packages and prescribed hardware controls require their own evidence.
+
+## 12. Recommended Next Step
+
+Use the exact prepared main tree for the next applicable qualification, and recheck scope if an owner decision arrives.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-186"></a>
 

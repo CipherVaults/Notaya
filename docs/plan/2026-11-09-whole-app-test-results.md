@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w013-navigation-20261122"></a>
+
+## Native Windows note, database and row navigation, 2026-11-22
+
+- **Passed in the tested scope (W013).** Alt+Left and Backspace navigated to the expected database and note. Shift+Backspace and Alt+Right returned to the same database and row. Toolbar Back/Forward reached the same targets. Opening a new route cleared Forward.
+- **Passed the editable-focus controls.** Backspace removed the final character when focused in the title input and in the body editor. The note stayed selected. Both remaining edits were present after reopening the row.
+- **Separate coverage.** The 100-step bound was read in the exact source. Exceeding it natively, hardware mouse actions (W223), long-session performance and the exact release packages were not exercised.
+
+[Exact route, executable and close result](../execution/2026-11-08-v1-6-build-start.md#native-w013-navigation-20261122).
+
 <a id="native-wp18-idle-baseline-20261122"></a>
 
 ## Native Windows startup and idle resource baseline, 2026-11-22

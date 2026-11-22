@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w013"></a>
+
+## Native Windows navigation and editor focus, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One isolated native app launch, direct keyboard and toolbar history, editable target controls and offline fixture integrity readback. No new product build. Attributable token totals and quota readings are unavailable. [Session](../sessions.md#session-187).
+
 <a id="codex-usage-20261122-wp18-idle"></a>
 
 ## Native Windows resource baseline, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

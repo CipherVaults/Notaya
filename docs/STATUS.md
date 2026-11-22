@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w013-navigation-20261122"></a>
+
+## Windows keyboard navigation and editing verified
+
+**2026-11-22 14:31 Cairo / 12:31 UTC.** The app followed the correct note, database and row history using the toolbar and both keyboard shortcut pairs. Backspace edited the focused title and body without leaving the row. Both edits were still present after leaving and reopening it. A new navigation cleared Forward. [Evidence and limits](execution/2026-11-08-v1-6-build-start.md#native-w013-navigation-20261122).
+
+**Continuation.** The native navigation and editor focus checks (W013) are verified on the current development executable. Source bounds the history to 100 steps, with the runtime-cap stress case and the physical mouse route (W223) separate. The record does not qualify the final packages or close the 5,000-row redo (Q1).
+
 <a id="native-wp18-idle-baseline-20261122"></a>
 
 ## Windows startup and idle resource baseline
