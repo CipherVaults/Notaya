@@ -1,6 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-word-boundary-merged-20261122"></a>
+
+## Long Word lists verified on v1.6 main
+
+**2026-11-22 08:47 Cairo / 06:47 UTC.** Word import (W141) keeps every item in direct and style-defined lists. The final source passed 24 focused tests. Windows reopened each of the two disposable long-list fixtures. An independent check of the HTML exports confirmed 10,001 bullets in order and the trailing paragraph in each. [Test register](plan/2026-11-09-whole-app-test-results.md#native-word-boundary-merged-20261122).
+
+[Pull request #138](https://github.com/CipherVaults/Notaya/pull/138) merged. Independent GitHub recovery verified main `bd5991d444195fe1fa209c319134992b5946a5f8` has the exact tested source tree. This is development integration. Exact installer and portable checks retain separate evidence requirements.
+
+Next, repair right-to-left PDF reimport (W163) on v1.6. The existing test PDF carries its logical Arabic and Hebrew text in PDF marked content, which the current reimport path ignores. Preserve the unmarked text path and measure the saved result after restart. The 5,000-row database redo (Q1) remains open.
+
 <a id="native-backup-refusal-20261122"></a>
 
 ## Native Windows restore refusal and v1.6 fix scope

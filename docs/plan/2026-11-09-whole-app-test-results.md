@@ -1,5 +1,17 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-word-boundary-merged-20261122"></a>
+
+## Word lists beyond 10,000 items — 2026-11-22
+
+- **Baseline failed (W141).** The added regression on `eeafe701` reported 10,000 direct bullet entries of 10,001. Earlier saved Windows outputs omitted the same entry.
+- **Exact-source tests passed.** `5da53a398525c2e6acfcf5ff229ea400770e4906` passed 24 selected document importer and renderer tests, including long direct and style-based bullets and numbering, and the existing oversized-page error with early list-render termination.
+- **Native Windows passed.** The two disposable long bullet lists imported separately, reopened, and exported as HTML. Independent verification matched all entries in order and the tail outside the list. The same check rejected both old incomplete outputs.
+- **Integrated.** The independently recovered main tree `5bae51cb14ca49cba8b40a0c22825c3d24405067` matched the tested tree.
+- **Not run here.** Linux native, exact Windows packages, private vaults, right-to-left PDF reimport (W163), and the 5,000-row database redo (Q1).
+
+[Execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-word-boundary-merged-20261122).
+
 <a id="native-backup-refusal-20261122"></a>
 
 ## Native backup cancellation and refusal — 2026-11-22 08:19 Cairo / 06:19 UTC

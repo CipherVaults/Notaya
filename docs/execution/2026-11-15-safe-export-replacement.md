@@ -268,6 +268,18 @@ Root read the scoped closure/current pointers and matched their hashes 10:51:25Z
 
 **Integration and limits.** This qualifies the scoped Markdown case (W162) on the exact Windows development build. Word inline-code styling, PDF reimport, database redo and release packages have separate gates. The released reader shared this parser path, while its released writer omitted the ownership marker. Released native behavior on this newer file remains untested. No vaults, fixtures, outputs or raw evidence are included in the checkpoint.
 
+<a id="native-word-boundary-merged-20261122"></a>
+
+### Native Word boundary correction and integration — 2026-11-22
+
+**Source and baseline.** The new regression on main `eeafe701344f3d8bc6bbf52f10f9634496251392` failed on its direct-bullet case (10,000 vs. 10,001). The fix reuses the style work at `023134b005fa39b090442ffa67b9059b44a43c12`, removes the silent threshold and retains the existing oversized-page handling. A non-author reviewed the reused code, boundary cases and the renderer change.
+
+**Exact source.** `5da53a398525c2e6acfcf5ff229ea400770e4906`, tree `5bae51cb14ca49cba8b40a0c22825c3d24405067`. The locked offline Windows x64 release-profile Rust run selected `importers::doc`: 24 passed, 0 failed, 0 ignored. The same clean checkout produced an unbundled Windows executable, SHA-256 `8AEB72F89ADD93AC343BCE9AA36B64F84320C05E5EF5A1FF40DD7E46279DC3F0`.
+
+**Native persistence.** Two known synthetic Word documents were imported with the real file picker into separate disposable app homes. The first uses direct numbering properties for bullets and the second uses a Word paragraph list style. Both notes reopened after normal close. An independent parser compared both native HTML exports to all ordered markers and a final paragraph outside the list. It also rejected the saved pre-fix outputs at item 10,001. A separately generated complete control passed. Both test windows closed. All vaults, fixtures, raw outputs and logs stayed local.
+
+**Git and limits.** [PR #138](https://github.com/CipherVaults/Notaya/pull/138) merged to `bd5991d444195fe1fa209c319134992b5946a5f8`. Separate GitHub readbacks verified the branch commit, main and their identical tested tree. No package, Linux runtime, private-data, performance or release acceptance result is implied.
+
 <a id="native-word-list-boundary-20261122"></a>
 
 ### Windows Word list limit — 2026-11-22 07:36 Cairo / 05:36 UTC

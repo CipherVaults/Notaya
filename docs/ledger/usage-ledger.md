@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-word-boundary-fix"></a>
+
+## Word list boundary correction — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Baseline, interim and final Windows Rust checks, one new native executable, two disposable native import/restart/export checks and scoped non-author review. Exact serving settings and attributable usage are unavailable. [Session](../sessions.md#session-165).
+
 <a id="codex-usage-20261122-native-restore-refusal"></a>
 
 ## Native backup refusal — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

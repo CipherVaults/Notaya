@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 165 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair long Word list imports](#session-165) |
 | 164 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup refusal and v1.6 fix scope](#session-164) |
 | 163 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup picker and recovery](#session-163) |
 | 162 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Separate-file ZIP qualification](#session-162) |
@@ -196,6 +197,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-165"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Repair long Word list imports
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex built and qualified the change. A non-author worker read the relevant source and tests. **Models, Effort, Roles and Provenance.** Actual serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-word-boundary-fix).
+
+## 1. Time
+
+Windows evidence cut 2026-11-22 08:47 Cairo / 06:47 UTC. Reviewed integration followed.
+
+## 2. Session Goal
+
+Remove the silent long Word list loss in v1.6 and qualify the existing style-defined list work.
+
+## 3. Actions Taken
+
+Reproduced the loss with a new regression. Reused the reviewed Word style patch and removed the count cutoff. Moved list content without cloning, and stopped the renderer when the existing byte budget was spent. Ran the exact revision and checked both disposable native outputs.
+
+## 4. Key Insights
+
+The missing item came from the collector. The renderer needed to stop building placeholders after rejecting an oversized page. The native checks confirmed that the corrected lists survived restart.
+
+## 5. Decisions Made
+
+Used the owner's v1.6-only repair direction. Merged the two-file fix after exact-source and native evidence.
+
+## 6. Difficulties / Friction
+
+The baseline silently returned a successful import. Two accessibility clicks lacked input geometry. Direct window controls and independent saved-file checks supplied the evidence.
+
+## 7. Adjustments Made
+
+Pinned and checked the correct fixture types. Both native files contain bullets. Focused source tests separately check numbered lists and the renderer's size boundary.
+
+## 8. Mistakes / Risks
+
+A complete import dialog could conceal missing content. The independent check rejected the old saved exports at item 10,001 and accepted the exact complete sequence.
+
+## 9. Current Position
+
+Word list repair (W141) merged in [PR #138](https://github.com/CipherVaults/Notaya/pull/138). The recovered main tree matched the tested tree.
+
+## 10. Next Steps
+
+Repair the right-to-left PDF reimport (W163) separately, keeping unmarked PDF text behavior intact.
+
+## 11. Open Questions
+
+Exact Windows packages, the database redo gate and owner acceptance have their own still-open checks.
+
+## 12. Recommended Next Step
+
+Use the preserved failing synthetic PDF to exercise the production exporter and importer, plus a logical-order unmarked-text control.
+
+## 13. Handoff
+
+[Current state](STATUS.md#native-word-boundary-merged-20261122), [execution](execution/2026-11-15-safe-export-replacement.md#native-word-boundary-merged-20261122), and [test register](plan/2026-11-09-whole-app-test-results.md#native-word-boundary-merged-20261122). Raw evidence stays on the test PC.
+
+---
 
 <a id="session-164"></a>
 
