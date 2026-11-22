@@ -22,36 +22,56 @@ import { PageIcon } from "@/lib/pageLook";
 import { openExport } from "@/features/notes/ExportDialog";
 import { RecentSearches, useRecentSearches } from "@/features/search/RecentSearches";
 
+type PaletteAction = {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  hint?: string;
+  requiresSecurity?: boolean;
+  execute: () => void | Promise<void>;
+};
+
+function commandText(text: string) {
+  return text.trim().toLowerCase().replace(/(?:…|\.\.\.)$/, "").trimEnd();
+}
+
 export default function CommandPalette() {
   const open = useApp((s) => s.paletteOpen);
   const securityOn = useApp((s) => s.status?.securityOn ?? false);
   const setOpen = useApp((s) => s.setPaletteOpen);
   const tree = useApp((s) => s.tree);
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [results, setResults] = useState<{ query: string; hits: SearchHit[]; failed?: boolean } | null>(null);
+  const currentResults = results?.query === query ? results : null;
+  const hits = currentResults?.hits ?? [];
+  const hasQuery = query.trim().length > 0;
   const searches = useRecentSearches(open);
 
   useEffect(() => {
     if (!open) {
       setQuery("");
-      setHits([]);
+      setResults(null);
     }
   }, [open]);
 
   useEffect(() => {
-    if (!query.trim()) {
-      setHits([]);
-      return;
-    }
+    if (!open || !hasQuery) return;
     let cancelled = false;
     const t = setTimeout(() => {
-      api.search(query).then((h) => !cancelled && setHits(h));
+      api.search(query).then(
+        (hits) => {
+          if (!cancelled) setResults({ query, hits });
+        },
+        () => {
+          if (!cancelled) setResults({ query, hits: [], failed: true });
+        },
+      );
     }, 90);
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query]);
+  }, [open, hasQuery, query]);
 
   const run = (fn: () => void | Promise<void>) => {
     setOpen(false);
@@ -101,8 +121,98 @@ export default function CommandPalette() {
     }[h.kind];
   };
 
+  const actions: PaletteAction[] = [
+    {
+      id: "new-page",
+      label: "New page",
+      icon: <FilePlus2 size={16} />,
+      execute: () => {
+        const s = useApp.getState();
+        s.setView("notes");
+        s.setIntent("new-page");
+      },
+    },
+    {
+      id: "new-sticky",
+      label: "New sticky note",
+      icon: <StickyNote size={16} />,
+      execute: async () => {
+        await api.createSticky(true);
+        useApp.getState().setStickies(await api.listStickies());
+      },
+    },
+    {
+      id: "notes",
+      label: "Go to Notes",
+      icon: <NotebookPen size={16} />,
+      execute: () => useApp.getState().setView("notes"),
+    },
+    {
+      id: "settings",
+      label: "Appearance & settings",
+      icon: <Palette size={16} />,
+      execute: () => useApp.getState().setView("settings"),
+    },
+    {
+      id: "export",
+      label: "Export…",
+      icon: <Download size={16} />,
+      execute: () => {
+        const s = useApp.getState();
+        if (s.activePageId) openExport("page", s.activePageId);
+        else if (s.activeNotebookId) openExport("notebook", s.activeNotebookId);
+        else toast("Open a page or a notebook to export it.");
+      },
+    },
+    {
+      id: "import",
+      label: "Import pages…",
+      icon: <Upload size={16} />,
+      execute: () => {
+        const s = useApp.getState();
+        s.setView("notes");
+        s.setImportOpen(true);
+      },
+    },
+    {
+      id: "backup",
+      label: "Back up vault now",
+      icon: <Settings size={16} />,
+      execute: async () => {
+        if (await api.backupNow()) toast.success("Backup saved.");
+      },
+    },
+    {
+      id: "lock",
+      label: "Lock vault",
+      icon: <Lock size={16} />,
+      hint: "Ctrl L",
+      requiresSecurity: true,
+      execute: () => api.lockVault(),
+    },
+  ];
+  const commandQuery = commandText(query);
+  const matchingActions = actions.filter((action) => {
+    if (action.requiresSecurity && !securityOn) return false;
+    if (!hasQuery) return true;
+    return commandQuery.length > 0 && commandText(action.label).includes(commandQuery);
+  });
+  const exactCommand = matchingActions.some((action) => commandText(action.label) === commandQuery);
+
   const itemClass =
     "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-fg data-[selected=true]:bg-surface-2 data-[selected=true]:text-fg";
+
+  const actionGroup = matchingActions.length > 0 && (
+    <Command.Group heading="Actions" className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint">
+      {matchingActions.map((action) => (
+        <Command.Item key={action.id} value={"action-" + action.id} onSelect={() => run(action.execute)} className={itemClass}>
+          <span className="text-muted">{action.icon}</span>
+          <span className="flex-1">{action.label}</span>
+          {action.hint && <span className="text-xs text-faint">{action.hint}</span>}
+        </Command.Item>
+      ))}
+    </Command.Group>
+  );
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -121,7 +231,24 @@ export default function CommandPalette() {
               className="h-14 w-full border-b border-line bg-transparent px-5 text-[0.95rem] text-fg outline-none placeholder:text-faint"
             />
             <Command.List className="max-h-[52vh] overflow-y-auto p-2">
-              <Command.Empty className="px-4 py-8 text-center text-sm text-muted">No matches.</Command.Empty>
+              {(!hasQuery || currentResults) && (
+                <Command.Empty className="px-4 py-8 text-center text-sm text-muted">
+                  {currentResults?.failed ? "Could not search notes." : "No matches."}
+                </Command.Empty>
+              )}
+
+              {!hasQuery && (
+                <RecentSearches
+                  recent={searches.recent}
+                  onPick={setQuery}
+                  onForget={searches.forget}
+                  onClear={searches.clear}
+                  itemClass={itemClass}
+                  headingClass="mb-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint"
+                />
+              )}
+
+              {exactCommand && actionGroup}
 
               {hits.length > 0 && (
                 <Command.Group heading="Results" className="mb-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint">
@@ -140,69 +267,11 @@ export default function CommandPalette() {
                 </Command.Group>
               )}
 
-              {!query.trim() && (
-                <RecentSearches
-                  recent={searches.recent}
-                  onPick={setQuery}
-                  onForget={searches.forget}
-                  onClear={searches.clear}
-                  itemClass={itemClass}
-                  headingClass="mb-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint"
-                />
-              )}
-
-              {!query.trim() && (
-                <Command.Group heading="Actions" className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-faint">
-                  <Action icon={<FilePlus2 size={16} />} label="New page" onSelect={() => run(() => { const s = useApp.getState(); s.setView("notes"); s.setIntent("new-page"); })} className={itemClass} />
-                  <Action icon={<StickyNote size={16} />} label="New sticky note" onSelect={() => run(async () => { await api.createSticky(true); useApp.getState().setStickies(await api.listStickies()); })} className={itemClass} />
-                  <Action icon={<NotebookPen size={16} />} label="Go to Notes" onSelect={() => run(() => useApp.getState().setView("notes"))} className={itemClass} />
-                  <Action icon={<Palette size={16} />} label="Appearance & settings" onSelect={() => run(() => useApp.getState().setView("settings"))} className={itemClass} />
-                  <Action
-                    icon={<Download size={16} />}
-                    label="Export…"
-                    onSelect={() =>
-                      run(() => {
-                        const s = useApp.getState();
-                        if (s.activePageId) openExport("page", s.activePageId);
-                        else if (s.activeNotebookId) openExport("notebook", s.activeNotebookId);
-                        else toast("Open a page or a notebook to export it.");
-                      })
-                    }
-                    className={itemClass}
-                  />
-                  <Action icon={<Upload size={16} />} label="Import pages…" onSelect={() => run(() => { const s = useApp.getState(); s.setView("notes"); s.setImportOpen(true); })} className={itemClass} />
-                  <Action icon={<Settings size={16} />} label="Back up vault now" onSelect={() => run(async () => { const p = await api.backupNow(); if (p) toast.success("Backup saved."); })} className={itemClass} />
-                  {securityOn && (
-                    <Action icon={<Lock size={16} />} label="Lock vault" hint="Ctrl L" onSelect={() => run(() => api.lockVault())} className={itemClass} />
-                  )}
-                </Command.Group>
-              )}
+              {!exactCommand && (!hasQuery || currentResults) && actionGroup}
             </Command.List>
           </Command>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function Action({
-  icon,
-  label,
-  hint,
-  onSelect,
-  className,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  hint?: string;
-  onSelect: () => void;
-  className: string;
-}) {
-  return (
-    <Command.Item value={label} onSelect={onSelect} className={className}>
-      <span className="text-muted">{icon}</span>
-      <span className="flex-1">{label}</span>
-      {hint && <span className="text-xs text-faint">{hint}</span>}
-    </Command.Item>
   );
 }
