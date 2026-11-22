@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 176 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bilingual editing](#session-176) |
 | 175 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check database scope in Windows exports](#session-175) |
 | 174 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows startup and portable-note import](#session-174) |
 | 173 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Rehearse Windows packages](#session-173) |
@@ -207,6 +208,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-176"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify Windows bilingual editing
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native disposable editor, and workers read the historical check and current contracts. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w224).
+
+## 1. Time
+
+Evidence cut 2026-11-22 12:01 Cairo / 10:01 UTC.
+
+## 2. Session Goal
+
+Verify real Windows keyboard layouts and WebView editor shortcuts while keeping the person-run qualification distinction.
+
+## 3. Actions Taken
+
+Used two native Windows keyboard switches between Shift+Enter lines. Observed line placement, find, native context menus and blocked reload behavior. Reopened and inspected an HTML export and the closed synthetic file.
+
+## 4. Key Insights
+
+The same key sequence produced both alphabets through Windows, and the direction was preserved after restart. The native edit menu included an unrelated credential-import label.
+
+## 5. Decisions Made
+
+Keep the person-run check open. Observe the unrelated menu label without using it or changing application behavior.
+
+## 6. Difficulties / Friction
+
+Find left an editor selection that initially covered part of the title with an editing toolbar.
+
+## 7. Adjustments Made
+
+Focused the unobscured title input and checked the actual editing menu and nonediting header separately.
+
+## 8. Mistakes / Risks
+
+This establishes the observed English and Arabic Windows path. It does not exercise the extra menu command, other layouts, or exact release packages.
+
+## 9. Current Position
+
+The named Windows keyboard, direction and WebView behavior is verified on the development build. The W224 person-run requirement remains open. [Evidence](execution/2026-10-28-windows-installer.md#native-w224-windows-keyboard-20261122).
+
+## 10. Next Steps
+
+Continue independent v1.6 qualification and reuse this evidence only within the recorded scope.
+
+## 11. Open Questions
+
+The required person-run sample and final package rerun are still pending. The observed extra menu label has no behavioral finding.
+
+## 12. Recommended Next Step
+
+Qualify the next remaining synthetic Hubs-like import and actual Word and PDF output case (W153), separating automated readback from the person review.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-175"></a>
 

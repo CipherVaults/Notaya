@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w224-windows-keyboard-20261122"></a>
+
+## Native Windows keyboard and WebView verification, 2026-11-22
+
+- **Passed in the native agent-driven check (W224).** The same four keys produced English, Arabic and English after two existing Windows layout switches. After two Shift+Enter breaks, the lines aligned left, right and left. The page and alignment reopened after restart. The saved HTML contained the exact Unicode lines and two hard breaks in one paragraph.
+- **Passed for observed WebView behavior.** Ctrl+F found both English lines. Right-click on the title displayed native editing commands and right-click outside the editor suppressed that browser menu. F5 and Ctrl+R preserved the live selection and the text. The text menu also included Import passwords. That item was only observed.
+- **Still open.** Required person-run confirmation, other layouts, and exact frozen-candidate checks.
+
+[Exact source, executable and evidence limits](../execution/2026-10-28-windows-installer.md#native-w224-windows-keyboard-20261122).
+
 <a id="native-w161-container-export-20261122"></a>
 
 ## Native Windows section and notebook export, 2026-11-22

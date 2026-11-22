@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w224"></a>
+
+## Native Windows bilingual editing, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two bounded native launches, two actual layout switches, editor and native menu checks, independent HTML and closed-vault inspection and scoped source review. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-176).
+
 <a id="codex-usage-20261122-w161"></a>
 
 ## Windows section and notebook export, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w224-windows-keyboard-20261122"></a>
+
+## Native Windows bilingual editing and keyboard checks verified
+
+**2026-11-22 12:01 Cairo / 10:01 UTC.** The tested v1.6 development app received the same four native key events through English, Arabic and English Windows layouts. Shift+Enter kept the three lines in one paragraph with left, right and left alignment, including after restart. The WebView find bar matched both English lines, the native text menu appeared on the title input, and F5 and Ctrl+R left the editing selection intact. [Evidence](execution/2026-10-28-windows-installer.md#native-w224-windows-keyboard-20261122).
+
+This was agent-driven native evidence (W224) on an exact development build. The register requires a person's check and final package qualification remains separate. The stock text menu also showed an unrelated Import passwords item. Its behavior was not inspected.
+
 <a id="native-w161-container-export-20261122"></a>
 
 ## Section and notebook exports preserve linked views and omit standalone databases
