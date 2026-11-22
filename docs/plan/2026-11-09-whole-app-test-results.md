@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="restore-w194-core-20261122"></a>
+
+## Backup restore validation and Windows packaging preflight — 2026-11-22
+
+- **Core passed (W194, five cases).** Correct and wrong credentials, damaged-file refusal, security-off restore, and recognition of the staged protection mode passed. The protected undo file matched its original bytes and reopened with the old password in the core test.
+- **Command guard passed (W194, test-only check).** Missing or false downgrade consent refused the backup without replacing the protected target. A test backup with damaged attachment data was also refused. With explicit consent and a valid backup, the core installed the selected bytes and retained the protected undo.
+- **Native restore open.** The Windows app started at the expected lock screen. Desktop input reached a different window. Zero native restore assertions ran. The owned locked test process exited and the original vault bytes matched.
+- **Inert packaging preflight passed.** The locked and offline invocation arguments, installer bridge placement, portable members and guide, recorded bridge hash, and exclusion of vault files passed with fixture executables. Exact installer, portable and clean-user gates remain open.
+
+[Build and evidence details](../execution/2026-10-23-restore-from-backup.md#restore-w194-core-20261122).
+
 <a id="native-omissions-20261122"></a>
 
 ## Native Windows ordinary omission reporting — 2026-11-22

@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="restore-w194-core-20261122"></a>
+
+## Backup restore core verified and Windows packaging preflight passed
+
+**2026-11-22 10:25 Cairo / 08:25 UTC.** Five existing restore tests passed, and the separate command-level test verified explicit consent before a password-protected test vault could be replaced by a security-off backup. It also verified refusal of a backup with damaged attachment data and preservation of the old protected file. The Windows app opened at the protected lock screen. Desktop input went to the Codex window, so native restore assertions remain open. [Exact evidence](execution/2026-10-23-restore-from-backup.md#restore-w194-core-20261122).
+
+The existing Windows packaging test passed with inert executables in an isolated folder. The app manifests still give `1.5.1` and the bridge gives `1.6.0`. Align release versions and lockfiles at the candidate cut. The actual installer and portable package need their own evidence. Continue the native restore once focus can be verified on the isolated window.
+
 <a id="native-omissions-20261122"></a>
 
 ## Windows import omission reporting verified on v1.6 main

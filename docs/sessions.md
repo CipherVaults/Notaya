@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 169 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify restore core and Windows packaging preflight](#session-169) |
 | 168 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair Windows import omission reporting](#session-168) |
 | 167 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Larger native import readback](#session-167) |
 | 166 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair right-to-left PDF reimport](#session-166) |
@@ -200,6 +201,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-169"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Qualify restore core and Windows packaging preflight
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex performed the tests. A separate worker read the restore contract and packaging prerequisites. **Models, Effort, Roles and Provenance.** The lead composer displayed GPT-6.2 Sol Ultra. Realized serving settings and separate worker usage attribution are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-restore-and-packaging).
+
+## 1. Time
+
+Evidence cut 2026-11-22 10:25 Cairo / 08:25 UTC.
+
+## 2. Session Goal
+
+Advance password-protected restore qualification (W194) and the independent package preflight on the verified main tree.
+
+## 3. Actions Taken
+
+Created disposable password-only and security-off inputs. Ran the existing restore tests, exercised the staging command core, checked the Windows lock screen, and ran the inert packaging fixture.
+
+## 4. Key Insights
+
+The consent guard kept the old vault intact and refused a damaged attachment before installing anything. The inert package run identified the app and bridge version difference for the final cut.
+
+## 5. Decisions Made
+
+Kept the native case open after the desktop targeted another window. Used ordinary release-version alignment as a later package step.
+
+## 6. Difficulties / Friction
+
+Desktop input exposed a different foreground window and sent a shortcut there. An initial inert-preflight script used a reserved PowerShell variable. No production source or user data changed.
+
+## 7. Adjustments Made
+
+Stopped desktop input, verified the disposable bytes and stopped the owned locked process. Corrected the lab variable and ran the existing packaging harness in the exact isolated folder.
+
+## 8. Mistakes / Risks
+
+Window discovery alone does not establish reliable desktop targeting. The successful command and fixture checks have different coverage from the native UI and actual installer.
+
+## 9. Current Position
+
+Five existing restore-core tests, one focused restore-command test, and the inert packaging preflight passed. [Detailed results](execution/2026-10-23-restore-from-backup.md#restore-w194-core-20261122).
+
+## 10. Next Steps
+
+Verify foreground identity and continue the prepared native restore with the same disposable sources.
+
+## 11. Open Questions
+
+Native restore, Windows clean-user sign-in, first-unlock copy, database redo (Q1), and exact package gates remain open.
+
+## 12. Recommended Next Step
+
+Use the existing launch binding and keep the closed-byte checks for refusal and undo. For packaging, align version sources and lockfiles when the release candidate is frozen.
+
+## 13. Handoff
+
+[Current state](STATUS.md#restore-w194-core-20261122), [test register](plan/2026-11-09-whole-app-test-results.md#restore-w194-core-20261122), and [execution evidence](execution/2026-10-23-restore-from-backup.md#restore-w194-core-20261122). All raw artifacts stay on Gaming-PC.
+
+---
 
 <a id="session-168"></a>
 

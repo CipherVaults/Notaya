@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-restore-and-packaging"></a>
+
+## Restore and package preflight — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Two fixture-sourced Rust compile runs, five existing test executions and one exact restore-command check, one owned Windows startup observation, one inert package preflight, and delegated read-only evidence review. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-169).
+
 <a id="codex-usage-20261122-native-omissions"></a>
 
 ## Windows import omission reporting — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
