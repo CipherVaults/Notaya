@@ -5,12 +5,13 @@
 //! the page tree, and runs each page's content stream (and the forms it draws) only to
 //! collect text and its position. Text is decoded with the font's ToUnicode map, its
 //! encoding (WinAnsi, MacRoman, Standard, Differences) or Latin-1. Lines become paragraphs;
-//! lines in a clearly larger font become headings.
+//! lines in a clearly larger font become headings. Inline Unicode replacement text
+//! (ActualText) on a span supplies the logical text for that span.
 //!
 //! What it cannot do, and says so: encrypted PDFs, scanned or image-only PDFs (no text to
 //! find; recognising text in pictures is not supported), and fonts without any character map
 //! (the text cannot be decoded). Pictures, tables, columns and links in a PDF are not kept:
-//! the text comes out in the order the PDF draws it.
+//! unmarked text comes out in the order the PDF draws it.
 //!
 //! Limits: decoded bytes per stream and in total, operators per file, pages, nesting.
 
@@ -34,7 +35,7 @@ const MAX_CMAP_BYTES: usize = 8 * 1024 * 1024;
 const MAX_CMAP_ENTRIES: usize = 100_000;
 /// Most form XObjects one file may draw.
 const MAX_FORMS: u32 = 20_000;
-/// Most bytes of shown text (string operands) one PDF may be asked to decode.
+/// Most bytes of shown text and logical replacements one PDF may be asked to decode.
 const MAX_TEXT_BYTES: usize = 32 * 1024 * 1024;
 /// Most objects kept from one file, and most bytes of object text (not streams) the scanner
 /// may read: a dictionary or array costs far more memory than the bytes it is written in.
@@ -938,6 +939,57 @@ struct Line {
     size: f64,
 }
 
+#[derive(Clone, Copy)]
+struct TextBounds {
+    x: f64,
+    y: f64,
+    size: f64,
+    end: f64,
+}
+
+struct Drawing {
+    text: String,
+    bounds: TextBounds,
+    chars: usize,
+    unmapped: usize,
+}
+
+struct Replacement {
+    text: String,
+    drawings: Vec<Drawing>,
+    bytes: usize,
+}
+
+fn replacement_text(args: &[Obj]) -> Option<String> {
+    let [Obj::Name(tag), Obj::Dict(properties)] = args else {
+        return None;
+    };
+    if tag.as_slice() != b"Span" {
+        return None;
+    }
+    let Some(Obj::Str(bytes)) = lookup(properties, b"ActualText") else {
+        return None;
+    };
+    let text = bytes.strip_prefix(&[0xfe, 0xff])?;
+    if text.is_empty() || text.len() % 2 != 0 {
+        return None;
+    }
+    let units = text.chunks_exact(2).map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]));
+    let mut decoded = String::new();
+    for character in char::decode_utf16(units) {
+        decoded.extend(imported_character(character.ok()?));
+    }
+    (!decoded.is_empty()).then_some(decoded)
+}
+
+fn imported_character(character: char) -> Option<char> {
+    match character {
+        '\t' | '\u{a0}' => Some(' '),
+        c if c.is_control() => None,
+        c => Some(c),
+    }
+}
+
 #[derive(Default)]
 struct Collector {
     lines: Vec<Line>,
@@ -948,9 +1000,53 @@ struct Collector {
     open: bool,
     chars: usize,
     unmapped: usize,
+    replacement: Option<Replacement>,
+    last_was_replacement: bool,
 }
 
 impl Collector {
+    fn draw(&mut self, drawing: Drawing) {
+        if let Some(replacement) = &mut self.replacement {
+            // Keep a bounded glyph fallback until the span closes. Large or unfinished
+            // spans still have the normal glyph decoding available.
+            replacement.bytes += std::mem::size_of::<Drawing>() + drawing.text.capacity();
+            if replacement.bytes <= MAX_STRING {
+                replacement.drawings.push(drawing);
+                return;
+            }
+            self.finish_replacement(false);
+        }
+        self.add_drawing(drawing);
+    }
+
+    fn add_drawing(&mut self, drawing: Drawing) {
+        self.chars += drawing.chars;
+        self.unmapped += drawing.unmapped;
+        self.add(&drawing.text, drawing.bounds, false);
+    }
+
+    fn finish_replacement(&mut self, closed: bool) {
+        let Some(replacement) = self.replacement.take() else {
+            return;
+        };
+        if closed {
+            let mut drawn = replacement.drawings.iter().filter(|drawing| drawing.chars != 0);
+            if let Some(first) = drawn.next() {
+                let mut bounds = first.bounds;
+                for drawing in drawn {
+                    bounds.x = bounds.x.min(drawing.bounds.x);
+                    bounds.end = bounds.end.max(drawing.bounds.end);
+                    bounds.size = bounds.size.max(drawing.bounds.size);
+                }
+                self.chars += replacement.text.chars().count();
+                self.add(&replacement.text, bounds, true);
+                return;
+            }
+        }
+        for drawing in replacement.drawings {
+            self.add_drawing(drawing);
+        }
+    }
     fn end_line(&mut self) {
         if self.open {
             let t = self.cur.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -962,16 +1058,22 @@ impl Collector {
         }
     }
 
-    fn add(&mut self, text: &str, x: f64, y: f64, size: f64, x_after: f64) {
+    fn add(&mut self, text: &str, bounds: TextBounds, replacement: bool) {
+        let TextBounds { x, y, size, end } = bounds;
         if text.is_empty() {
-            self.x_end = x_after;
+            self.x_end = end;
             return;
         }
         if self.open {
             let tol = 0.5 * size.max(self.size).max(0.1);
             if (y - self.y).abs() > tol {
                 self.end_line();
-            } else if (x > self.x_end + 0.15 * size || x < self.x_end - 3.0 * size) && !self.cur.ends_with(' ') && !text.starts_with(' ') {
+            // Right-to-left replacements can jump left within one logical word.
+            } else if (x > self.x_end + 0.15 * size
+                || (!replacement && !self.last_was_replacement && x < self.x_end - 3.0 * size))
+                && !self.cur.ends_with(' ')
+                && !text.starts_with(' ')
+            {
                 self.cur.push(' ');
             }
         }
@@ -982,7 +1084,8 @@ impl Collector {
         }
         self.size = self.size.max(size);
         self.cur.push_str(text);
-        self.x_end = x_after;
+        self.x_end = end;
+        self.last_was_replacement = replacement;
     }
 }
 
@@ -1019,11 +1122,14 @@ impl Pdf<'_> {
         let mut lex = Lex::new(content, 0);
         let mut args: Vec<Obj> = Vec::new();
         let mut tokens = 0u32;
+        // Track local nesting, while an outer replacement can cover text drawn by a form.
+        let mut marked_depth = 0;
+        let mut replacement_depth = None;
         while let Some(o) = lex.obj(0) {
             tokens = tokens.wrapping_add(1);
             if tokens % 65_536 == 0 && self.ctl.stopped() {
                 self.ops.set(MAX_OPS + 1);
-                return;
+                break;
             }
             let Obj::Op(op) = o else {
                 if args.len() < 64 {
@@ -1034,11 +1140,11 @@ impl Pdf<'_> {
             let n = self.ops.get() + 1;
             self.ops.set(n);
             if n > MAX_OPS {
-                return;
+                break;
             }
             if n % 1024 == 0 && self.ctl.stopped() {
                 self.ops.set(MAX_OPS + 1);
-                return;
+                break;
             }
             let num = |i: usize| args.get(i).and_then(Obj::num).unwrap_or(0.0);
             match op.as_slice() {
@@ -1054,6 +1160,25 @@ impl Pdf<'_> {
                     ts.tlm = ID;
                 }
                 b"ET" => {}
+                b"BMC" | b"BDC" => {
+                    marked_depth += 1;
+                    if op.as_slice() == b"BDC" && replacement_depth.is_none() && col.replacement.is_none() {
+                        if let Some(text) = replacement_text(&args) {
+                            if !self.charge_text(text.len()) {
+                                break;
+                            }
+                            col.replacement = Some(Replacement { text, drawings: Vec::new(), bytes: 0 });
+                            replacement_depth = Some(marked_depth);
+                        }
+                    }
+                }
+                b"EMC" if marked_depth > 0 => {
+                    if replacement_depth == Some(marked_depth) {
+                        col.finish_replacement(true);
+                        replacement_depth = None;
+                    }
+                    marked_depth -= 1;
+                }
                 b"Tf" => {
                     if let Some(Obj::Name(name)) = args.first() {
                         // A font written inline in the resources is built once per content stream.
@@ -1157,6 +1282,9 @@ impl Pdf<'_> {
             }
             args.clear();
         }
+        if replacement_depth.is_some() {
+            col.finish_replacement(false);
+        }
     }
 
     fn form(&self, name: &[u8], res: &Obj, ctm: &M, col: &mut Collector, depth: usize, seen: &mut HashSet<u32>) {
@@ -1196,13 +1324,20 @@ impl Pdf<'_> {
         }
     }
 
-    fn show(&self, s: &[u8], ts: &mut TextState, ctm: &M, col: &mut Collector) {
-        let Some(font) = ts.font.clone() else { return };
-        // All text shown is counted, however often a form is drawn again.
-        let shown = self.text.get().saturating_add(s.len());
+    fn charge_text(&self, bytes: usize) -> bool {
+        let shown = self.text.get().saturating_add(bytes);
         self.text.set(shown);
         if shown > MAX_TEXT_BYTES {
             self.ops.set(MAX_OPS + 1);
+            return false;
+        }
+        true
+    }
+
+    fn show(&self, s: &[u8], ts: &mut TextState, ctm: &M, col: &mut Collector) {
+        let Some(font) = ts.font.clone() else { return };
+        // All text shown is counted, however often a form is drawn again.
+        if !self.charge_text(s.len()) {
             return;
         }
         let m = mul(&ts.tm, ctm);
@@ -1211,22 +1346,18 @@ impl Pdf<'_> {
         let size = (ts.size.abs() * if v_scale > 0.0 { v_scale } else { 1.0 }).max(0.1);
         let mut text = String::new();
         let mut advance = 0.0;
-        for (code, t, unmapped) in font.decode(s) {
-            col.chars += 1;
-            if unmapped {
-                col.unmapped += 1;
-            }
-            let space = if t == " " && !font.composite { ts.word_spacing } else { 0.0 };
+        let mut chars = 0;
+        let mut unmapped = 0;
+        for (code, glyph, missing) in font.decode(s) {
+            let space = if glyph == " " && !font.composite { ts.word_spacing } else { 0.0 };
             advance += (font.width(code) / 1000.0 * ts.size + ts.char_spacing + space) * ts.scale;
-            for c in t.chars() {
-                if !c.is_control() || c == '\t' {
-                    text.push(if c == '\t' || c == '\u{a0}' { ' ' } else { c });
-                }
-            }
+            chars += 1;
+            unmapped += usize::from(missing);
+            text.extend(glyph.chars().filter_map(imported_character));
         }
         ts.tm = mul(&[1.0, 0.0, 0.0, 1.0, advance, 0.0], &ts.tm);
-        let after = mul(&ts.tm, ctm)[4];
-        col.add(&text, x, y, size, after);
+        let end = mul(&ts.tm, ctm)[4];
+        col.draw(Drawing { text, bounds: TextBounds { x, y, size, end }, chars, unmapped });
     }
 }
 
@@ -1639,6 +1770,88 @@ pub(crate) mod tests {
         assert_eq!(text[3], "Ét", "ToUnicode map of a composite font");
         assert_eq!(text[4], "€ﬁ", "Differences");
         assert_eq!(d.pages, 1);
+    }
+
+    fn extracted_text(bytes: &[u8]) -> String {
+        extract(bytes)
+            .unwrap()
+            .blocks
+            .iter()
+            .filter_map(|block| match block {
+                Block::Heading(_, inlines) | Block::Paragraph(inlines) => Some(super::super::doc::plain(inlines)),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn reimports_notayas_pdf_text_in_logical_order() {
+        use crate::export::{doc, pdf, tests::sample_doc};
+        use serde_json::json;
+
+        let lines = ["English control 42", "مرحبا بالعالم", "שלום עולם", "Prefix مرحبا suffix 19", "שלום(somethinglong)"];
+        let paragraphs: Vec<_> = lines
+            .iter()
+            .map(|line| json!({"type": "paragraph", "content": [{"type": "text", "text": line}]}))
+            .collect();
+        let doc = sample_doc(doc::parse(&json!({"type": "doc", "content": paragraphs}).to_string(), &|_| None));
+        let exported = pdf::render_at(&doc, 0);
+        assert_eq!(exported.chars_replaced, 0);
+        let actual = extracted_text(&exported.bytes);
+        for line in lines {
+            assert_eq!(actual.matches(line).count(), 1, "{line:?} in {actual:?}");
+        }
+    }
+
+    #[test]
+    fn unmarked_logical_order_uses_the_font_map() {
+        let cmap = "1 begincodespacerange <0000> <FFFF> endcodespacerange \
+                    4 beginbfchar <0001> <05E9> <0002> <05DC> <0003> <05D5> <0004> <05DD> endbfchar";
+        let bytes = pdf_bytes(&[
+            "<< /Type /Catalog /Pages 2 0 R >>".into(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
+            "<< /Type /Page /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".into(),
+            stream("BT /F1 12 Tf 72 700 Td <0001000200030004> Tj ET", false),
+            "<< /Type /Font /Subtype /Type0 /Encoding /Identity-H /ToUnicode 6 0 R >>".into(),
+            stream(cmap, false),
+        ]);
+        assert_eq!(extracted_text(&bytes), "שלום");
+    }
+
+    #[test]
+    fn marked_text_replaces_a_span_once_without_dropping_adjacent_text() {
+        let content = "BT /F1 12 Tf 72 700 Td (Before ) Tj \
+                       /Span << /ActualText <FEFF05E905DC05D505DD> >> BDC \
+                       (12) Tj /Span BMC [(34) -50 (56)] TJ EMC (78) Tj EMC \
+                       ( after) Tj ET \
+                       /Span << /ActualText <FEFF0041> >> BDC \
+                       BT /F1 12 Tf 72 680 Td (unfinished span stays readable) Tj ET";
+        let bytes = pdf_bytes(&[
+            "<< /Type /Catalog /Pages 2 0 R >>".into(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
+            "<< /Type /Page /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".into(),
+            stream(content, false),
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>".into(),
+        ]);
+        assert_eq!(extracted_text(&bytes), "Before שלום after unfinished span stays readable");
+    }
+
+    #[test]
+    fn marked_form_text_retains_the_space_to_a_separate_column() {
+        let content = "/Span << /ActualText <FEFF05E905DC05D505DD> >> BDC /Word Do EMC \
+                       BT /F1 12 Tf 160 700 Td (42) Tj ET";
+        let form = stream("BT /F1 12 Tf 72 700 Td (word) Tj ET", false)
+            .replacen("<<", "<< /Type /XObject /Subtype /Form /BBox [0 0 612 792]", 1);
+        let bytes = pdf_bytes(&[
+            "<< /Type /Catalog /Pages 2 0 R >>".into(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
+            "<< /Type /Page /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> /XObject << /Word 6 0 R >> >> >>".into(),
+            stream(content, false),
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>".into(),
+            form,
+        ]);
+        assert_eq!(extracted_text(&bytes), "שלום 42");
     }
 
     #[test]
