@@ -1,5 +1,17 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-volume-main-20261122"></a>
+
+## Native Windows larger ordinary PDF and ZIP — 2026-11-22
+
+- **240-page text PDF passed on the tested tree.** It imported as one note. After restart, independent HTML inspection verified 240 headers and 7,200 numbered lines in exact order, once each.
+- **1,000-note ZIP passed on the tested tree.** It imported as one notebook with one section. After restart and whole-notebook Markdown ZIP export, independent inspection verified the archive CRC, all 1,000 titles and unique note markers, and all 20,000 numbered sentences in order within their own notes. The earlier endpoint sampling remains valid for its own run.
+- **Persistence checks passed.** Both original input hashes stayed fixed and both closed disposable vaults passed SQLite quick-check. Missing-content controls were rejected by the same independent output checks.
+- **Measured once per input.** Confirmed complete on-screen after about 0.63 s for PDF and 0.68 s for ZIP. During each observation there were two complete simultaneous app/WebView samples. Highest sampled working set was 499.0/507.3 MiB and private bytes 315.6/437.6 MiB, respectively.
+- **Separate evidence remains open.** Maximum file sizes, hostile-source tests (W150), a repeated performance comparison, the earlier parser memory finding (DD1065), the 5,000-row redo and release packages.
+
+[Exact build, procedure and bounds](../execution/2026-11-15-safe-export-replacement.md#native-volume-main-20261122).
+
 <a id="native-pdf-logical-merged-20261122"></a>
 
 ## Native right-to-left PDF reimport — 2026-11-22

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 167 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Larger native import readback](#session-167) |
 | 166 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair right-to-left PDF reimport](#session-166) |
 | 165 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair long Word list imports](#session-165) |
 | 164 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup refusal and v1.6 fix scope](#session-164) |
@@ -198,6 +199,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-167"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Larger native import readback
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native checks. Separate workers read the prior receipt and the register. **Models, Effort, Roles and Provenance.** GPT-6.2 Sol Ultra was requested for delegates. Realized serving settings and usage attribution are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-native-volume-main).
+
+## 1. Time
+
+Evidence cut 2026-11-22 09:28 Cairo / 07:28 UTC.
+
+## 2. Session Goal
+
+Improve the ordinary Windows PDF and ZIP volume evidence against the current merged source tree.
+
+## 3. Actions Taken
+
+Generated and independently read a regular 240-page PDF. Imported it and the pinned 1,000-note ZIP into separate test homes. Measured native import observations. After restart exported and compared every expected marker and note body.
+
+## 4. Key Insights
+
+Full output checking adds evidence beyond the older page-marker and endpoint samples. The process-tree measurements describe two observed import windows.
+
+## 5. Decisions Made
+
+Used the same current Windows executable for both ordinary fixtures. Kept the earlier higher and lower resource guard results in their original scope.
+
+## 6. Difficulties / Friction
+
+The first ZIP oracle compared source Markdown line layout. The app serialized adjacent source lines as one paragraph, while retaining the exact sentence text.
+
+## 7. Adjustments Made
+
+Checked exact title, distinct marker and ordered body sentences across Markdown soft breaks. Ran missing-content controls against the PDF and ZIP checkers.
+
+## 8. Mistakes / Risks
+
+A sampled working-set high cannot capture every transient peak. One incomplete ZIP sample outside its import interval was excluded.
+
+## 9. Current Position
+
+Both larger ordinary Windows readbacks passed. [Test results](plan/2026-11-09-whole-app-test-results.md#native-volume-main-20261122).
+
+## 10. Next Steps
+
+Continue the ordinary native omission-report check (W151). The separate defensive import baseline stays held before the next Notion fidelity stage (N3).
+
+## 11. Open Questions
+
+The parser memory finding, repeated comparative measurements, 5,000-row database redo and release packages remain open.
+
+## 12. Recommended Next Step
+
+Use disposable files with an ordinary broken link and unsupported local embed. Verify actual content, reported omissions, unchanged input hashes and persistence. Preserve the earlier parser memory failure and the Daybreak hold.
+
+## 13. Handoff
+
+[Current state](STATUS.md#native-volume-main-20261122) and [execution evidence](execution/2026-11-15-safe-export-replacement.md#native-volume-main-20261122). Raw evidence and local fixtures remain on the test PC.
+
+---
 
 <a id="session-166"></a>
 

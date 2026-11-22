@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-native-volume-main"></a>
+
+## Larger ordinary Windows imports — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Native 240-page PDF and 1,000-note ZIP import, restart and full output comparison. Two bounded process-tree observations. Separate read-only workers checked the prior evidence and register. GPT-6.2 Sol Ultra was requested. Realized serving settings and usage attribution are unavailable. [Session](../sessions.md#session-167).
+
 <a id="codex-usage-20261122-pdf-logical-fix"></a>
 
 ## PDF logical-text correction — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

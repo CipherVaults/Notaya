@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-volume-main-20261122"></a>
+
+## Larger ordinary imports verified on Windows main
+
+**2026-11-22 09:28 Cairo / 07:28 UTC.** After restart on the exact current Windows development tree, the saved 240-page PDF held all 7,440 ordered text markers. The separate 1,000-note ZIP readback verified every title and every body, including all 20,000 numbered sentences. Both closed disposable vaults passed SQLite quick-check and both original fixture hashes matched. [Evidence and measurements](execution/2026-11-15-safe-export-replacement.md#native-volume-main-20261122).
+
+The two timings and memory samples describe these single ordinary runs. Maximum-size and comparative performance checks, the earlier parser memory finding (DD1065), and the exact package remain open. Next is the independent native omission-report case (W151), using ordinary broken links and unsupported local embeds. The required defensive import baseline remains held before the next Notion fidelity stage (N3). The 5,000-row redo workflow (Q1) still requires its own clean run.
+
 <a id="native-pdf-logical-merged-20261122"></a>
 
 ## Right-to-left PDF reimport verified on v1.6 main
