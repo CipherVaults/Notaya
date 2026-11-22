@@ -1,5 +1,18 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-zip-collisions-20261122"></a>
+
+## Separate-file ZIP collisions and punctuation — 2026-11-22 08:05 Cairo / 06:05 UTC
+
+| Check | Outcome |
+|---|---|
+| W159 native HTML, Markdown, Word and PDF ZIP output | **Passed on the four-page notebook.** The actual archives had the expected distinct safe filenames, one layout marker, four documents, correct original titles and one unique body per document. No member was overwritten. |
+| Pictures | **Passed for the two source PNGs.** Markdown links resolved to the correct sidecar bytes. HTML and DOCX held the original bytes. The independent PDF parser and render found the expected different swatches. |
+| HTML and Markdown ZIP reimport | **Passed for title, content and notebook structure.** After restarting, both notebooks had one section and four distinct notes. The closed synthetic vault had four attachments. The sidebar followed the documented name sort. |
+| Unrun or separately qualified | ZIP destination replacement, large or deep ZIPs, Word/PDF ZIP reimport, linked-page resolution, and exact package behavior were outside this check. The known PDF text reimport failure remains open. |
+
+[Exact artifact and test evidence](../execution/2026-11-15-safe-export-replacement.md#native-zip-collisions-20261122).
+
 <a id="native-import-titles-merged-20261122"></a>
 
 ## Word and Markdown title fixes integrated — 2026-11-22 07:54 Cairo / 05:54 UTC

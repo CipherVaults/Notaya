@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 162 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Separate-file ZIP qualification](#session-162) |
 | 161 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Word and Markdown titles integrated](#session-161) |
 | 160 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Vault and Word list qualification](#session-160) |
 | 159 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Markdown title fix](#session-159) |
@@ -193,6 +194,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-162"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Separate-file ZIP qualification
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native and independent output checks. A separate worker checked the archive contract against main. **Models, Effort, Roles and Provenance.** Actual serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-zip-collisions).
+
+## 1. Time
+
+Test cut 2026-11-22 08:05 Cairo / 06:05 UTC.
+
+## 2. Session Goal
+
+Verify that real Windows ZIP export preserves multiple distinct notes whose titles collide as filenames.
+
+## 3. Actions Taken
+
+Imported four synthetic notes and two local PNGs into an empty app home. Exported the same notebook to each of the four ZIP formats. Verified the actual members independently. Reimported the HTML and Markdown archives into a separate home and checked the saved notebooks after restart.
+
+## 4. Key Insights
+
+Three case and punctuation variants received separate filenames. All original titles stayed inside their respective documents. A Windows reserved name was made safe. ZIP reimport used the established name order.
+
+## 5. Decisions Made
+
+Record scoped passes for the archives and the two selected reimports. Keep the existing package and PDF reimport gates separate.
+
+## 6. Difficulties / Friction
+
+For multiple same-looking notes, the success message alone could not prove distinctness. Two different picture colors and one exact text marker per note allowed the saved output to be checked.
+
+## 7. Adjustments Made
+
+Verified CRC and exact member inventory, linked each document to its expected text and picture, and inspected independent PDF renders. Checked a known good content control and rejected planted duplicate and cross-note markers.
+
+## 8. Mistakes / Risks
+
+A reimport of a ZIP restores the notebook and section for this case but sorts pages by name. That scope is documented in the importer contract. Large archives and overwrite need their own evidence.
+
+## 9. Current Position
+
+All four archive formats passed for the fixture. HTML and Markdown reimports passed the scoped saved-state check. [Test register](plan/2026-11-09-whole-app-test-results.md#native-zip-collisions-20261122).
+
+## 10. Next Steps
+
+Continue independent native qualification from the verified main tree. Keep exact-package qualification open.
+
+## 11. Open Questions
+
+No new owner decision arose from these checks. The prior Word list repair and first-unlock decisions remain pending.
+
+## 12. Session Outcome
+
+All owned test processes closed. Archive hashes and fixture identities matched after the checks. All vaults, fixtures and raw exports stayed on the PC.
+
+## 13. Confidence Level
+
+High for the named four-file fixture on the Windows development executable. The final package, large archives and other reimport formats remain unqualified by these checks.
+
+---
 
 <a id="session-161"></a>
 

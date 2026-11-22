@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-zip-collisions-20261122"></a>
+
+## Current state and continuation — separate-file ZIP export
+
+**2026-11-22 08:05 Cairo / 06:05 UTC.** Separate-file ZIP export (W159) kept all four synthetic notes distinct in HTML, Markdown, Word and PDF. Case and punctuation collisions received separate filenames, and a Windows device name was made safe on disk. The documents preserved each original title, note body and the two pictures. The HTML and Markdown archives reopened as two notebooks with four pages per notebook. Their sidebar order followed the documented name-based import behavior. [Register](plan/2026-11-09-whole-app-test-results.md#native-zip-collisions-20261122) · [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-zip-collisions-20261122).
+
+Continue independent Windows qualification from main `eeafe701344f3d8bc6bbf52f10f9634496251392`. The next checks should use disposable data. The released Word list decision, one-time safety copy and PDF reimport remain separate. Archive replacement, large resource behavior and final packages still have their own checks.
+
 <a id="native-import-titles-merged-20261122"></a>
 
 ## Current state and continuation — import titles on main

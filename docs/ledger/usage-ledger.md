@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-zip-collisions"></a>
+
+## Separate-file ZIP qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 08:05 Cairo / 06:05 UTC. Four native exports, two native reimports, independent ZIP and document checks, and one separate source review. Actual serving settings and attributable usage are unavailable. [Session](../sessions.md#session-162).
+
 <a id="codex-usage-20261122-import-titles-integration"></a>
 
 ## Word and Markdown titles integration — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
