@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 193 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify restore rollback and prepare successor handoff](#session-193) |
 | 192 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify and merge Windows Export focus fix](#session-192) |
 | 191 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Restore and check Export launcher focus](#session-191) |
 | 190 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify keyboard export and find lost focus](#session-190) |
@@ -224,6 +225,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-193"></a>
+
+# Session: 2026-11-22 UTC | Ahmed (AE0101) | Gaming-PC | Verify restore rollback and prepare successor handoff
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead checked Git, ran Windows Rust tests and built the isolated instrumentation. Independent workers reconciled the release evidence and reviewed the fault overlay. **Models, effort, roles and provenance.** The Goal specifies GPT-6.2 Sol Ultra. The worker requests used that model and effort. Realized serving settings and attributable usage were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w195-handoff).
+
+## 1. Time
+
+Evidence cut 2026-11-22 16:10 Cairo / 14:10 UTC.
+
+## 2. Session Goal
+
+Advance an independent Windows release check, then record a safe stop and successor entry on Ahmed's request.
+
+## 3. Actions Taken
+
+Rechecked exact GitHub main and the clean matching source. Recovered the historical W test register, ran the nine relevant Rust tests, reviewed and built a separate native test executable, and pinned three local cases. Updated the existing project records and prepared the handoff.
+
+## 4. Key Insights
+
+Component rollback tests passed. The full register requires a real instrumented app, failure between renames, same-home reopen and content readback.
+
+## 5. Decisions Made
+
+Ahmed asked to defer security checks until Daybreak access is available and keep independent development moving. The previously stopped operation remains untouched. At Ahmed's subsequent request, the running build finished and the new app cases stopped at prepared state for handoff.
+
+## 6. Difficulties / Friction
+
+The current records did not include the complete historical W case; a pinned remote branch supplied it. An initial PowerShell parser error applied no changes. Requested and effective serving settings could not be reconciled from the available observations.
+
+## 7. Adjustments Made
+
+Reviewed the exact overlay and required a real old-vault set-aside before activating the fault. Used three fresh independent synthetic homes and an unchanged build for restart. Kept PC-specific details out of shareable Git records.
+
+## 8. Mistakes / Risks
+
+No native case ran, and the component checks do not establish native UI messaging, process-interruption recovery or package validity. The stopped security operation and both failed redo receipts retain their dispositions.
+
+## 9. Current Position
+
+Nine component cases passed. The local native build exited 0 and is ready. No owned process remained. [Execution](execution/2026-10-23-restore-from-backup.md#restore-w195-handoff-20261122) · [Handoff](handoff/2026-11-22-codex-v1-6-resume-note.md).
+
+## 10. Next Steps
+
+The successor verifies file access and hashes, then runs the ordinary restore control followed by the native sharing and interruption cases.
+
+## 11. Open Questions
+
+The successor and access acknowledgment are pending. The separate release, platform, scope and owner decisions remain in the handoff.
+
+## 12. Recommended Next Step
+
+Resume from the pinned local artifacts. Let the app prove actual restore and recovery behavior before recording W195 as qualified.
+
+## 13. Session Type
+
+Release qualification and prepared handoff.
+
+---
 
 <a id="session-192"></a>
 

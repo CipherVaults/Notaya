@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="restore-w195-handoff-20261122"></a>
+
+## Windows restore rollback verified and native handoff ready
+
+**2026-11-22 16:10 Cairo / 14:10 UTC.** All nine selected restore rollback tests passed on the current main tree. The separately reviewed native fault build also finished, and three disposable homes are ready. No native interruption or restart case ran. [Execution evidence](execution/2026-10-23-restore-from-backup.md#restore-w195-handoff-20261122).
+
+**Continuation.** [Read the successor handoff](handoff/2026-11-22-codex-v1-6-resume-note.md). Start with the ordinary restore control, then the Windows sharing error and interrupted rename using the pinned local artifacts. Ahmed has deferred security checks while Daybreak is unavailable. The stopped operation stays untouched and independent qualification may proceed. Preserve both failed 5,000-row redo (Q1) receipts and retain exact package and owner gates.
+
 <a id="native-w154-keyboard-focus-integrated-20261122"></a>
 
 ## Windows Export focus fix verified and merged

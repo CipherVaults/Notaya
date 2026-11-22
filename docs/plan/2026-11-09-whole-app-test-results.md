@@ -1,5 +1,13 @@
 # Whole-app test results: X-1 addition
 
+<a id="restore-w195-handoff-20261122"></a>
+
+## Restore interruption preparation, 2026-11-22
+
+- **Passed, component scope.** Nine exact Windows Rust tests exercised restore installation and rollback on current main tree `c67a85e52d1bcd71e66e6b20b3699595085445e2`.
+- **Built and reviewed.** A separate native fault executable adds a test-only Windows checkpoint after moving the old vault and before installing the checked backup.
+- **Not run (W195 native).** The ordinary control, sharing denial, interruption, same-home startup and observed recovery have no native assertions yet. [Execution evidence](../execution/2026-10-23-restore-from-backup.md#restore-w195-handoff-20261122) · [Exact register](https://github.com/CipherVaults/Notaya/blob/1ae2c047faccbf75bdb94737f68a51506f5eeb90/docs/plan/2026-11-09-whole-app-test-plan.md#L306).
+
 <a id="native-w154-keyboard-focus-integrated-20261122"></a>
 
 ## Native Windows toolbar Export focus fix, 2026-11-22

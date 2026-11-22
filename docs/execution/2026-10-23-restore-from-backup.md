@@ -133,6 +133,18 @@ The owner tries `E:\Project\Cipherleaf-portable\Cipherleaf.exe` (including a res
 
 **Do not repeat:** the review rounds, the restore design, the build.
 
+<a id="restore-w195-handoff-20261122"></a>
+
+### Windows restore interruption components and handoff, 2026-11-22 16:10 Cairo
+
+**Exact scope.** Main `0e08e5489d36fbd2db1fc3a537cdebfa66bb3ad9`, tree `c67a85e52d1bcd71e66e6b20b3699595085445e2`, equals the clean tested source `cbf0193fabe77d04cdd84f40e2560f8dd643c333`. Recovered the original W register at `1ae2c047faccbf75bdb94737f68a51506f5eeb90`. Its W195 requires a reviewed instrumented native executable, observed interruption and same-home reopen. Rust tests serve as the oracle for the native case.
+
+**Component execution.** Locked offline Windows x64 release-profile Cargo, `test --lib` with nine exact selectors and one test thread, exited 0 and printed each named case as passed. The selectors cover retaining and not overwriting undo, no previous vault, preserving the old vault and journal on failed install, stray journal rollback, the failure summary, paired rollback, keeping the journal aside when the old vault does not come back, and stopping immediately when the rename source is missing. Stdout SHA-256 `d002e0e62edf95d55836ba1dc3d16cc016475f238914461741ac986e833c78ad`. The source stayed clean and the ordinary Windows exe retained SHA-256 `2db9c2383d0ce91808d3454af1fa6351e43a419421ccd7f23e09a4a5d60fe169`.
+
+**Native build preparation.** Independently reviewed the two-file local overlay and adopted the reviewer's guard requiring an actual old-vault set-aside. Locked offline Windows x64 release build of the Windows-only, non-default test feature finished with exit 0. Overlay manifest SHA-256 `b594f57e9b4927993930c522d9708d6924b47dcf26cb1634336e4cf048d82491`, restore SHA-256 `09c8622fe7930c11a2bab0a723306504d0a5662e42de850fe8e3f0de11929af7`, exe SHA-256 `98f78be8dd8b19fab86c568c640fa57dbaa08e3c5ce221b492270ae26c358450`. No production code or version changed. A shell parsing preflight was corrected before any overlay write. The local launcher parsed successfully and all three fresh homes contain only the intended synthetic inputs.
+
+**Disposition.** Native product assertions, recovered file comparison and UI messaging are unrun. No app opened during this session. The build completed and closed before handoff. Exact inputs, launcher, overlays and raw evidence are local to the test PC. [Successor instructions](../handoff/2026-11-22-codex-v1-6-resume-note.md#first-executable-step-restore-interrupted-between-renames-w195).
+
 <a id="restore-w194-native-settings-20261122"></a>
 
 ### Native Windows Settings backup refusal and restore — 2026-11-22 10:38 Cairo / 08:38 UTC

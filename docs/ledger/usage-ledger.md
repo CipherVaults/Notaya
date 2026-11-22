@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w195-handoff"></a>
+
+## Windows restore rollback and handoff, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One exact-source Windows Rust test run with nine selected cases, one separate reviewed local instrumentation build, two read-only delegated studies, and preparation of the successor handoff. No native launch. Attributable tokens and realized serving settings unavailable. [Session](../sessions.md#session-193).
+
 <a id="codex-usage-20261122-w154-focus-native"></a>
 
 ## Windows Export focus verification and integration, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
