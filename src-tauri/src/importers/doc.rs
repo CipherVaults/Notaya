@@ -236,6 +236,18 @@ impl Renderer<'_> {
         v
     }
 
+    fn list_items(&mut self, items: &[Vec<Block>], depth: usize) -> Vec<Value> {
+        let mut rendered = Vec::new();
+        for item in items {
+            let content = self.item(item, depth);
+            if self.over {
+                break;
+            }
+            rendered.push(json!({ "type": "listItem", "content": content }));
+        }
+        rendered
+    }
+
     fn block(&mut self, b: &Block, depth: usize, out: &mut Vec<Value>) {
         if self.over {
             return;
@@ -270,16 +282,14 @@ impl Renderer<'_> {
                 if items.is_empty() {
                     return;
                 }
-                let content: Vec<Value> =
-                    items.iter().map(|i| json!({ "type": "listItem", "content": self.item(i, depth) })).collect();
+                let content = self.list_items(items, depth);
                 out.push(json!({ "type": "bulletList", "content": content }));
             }
             Block::Numbered(start, items) => {
                 if items.is_empty() {
                     return;
                 }
-                let content: Vec<Value> =
-                    items.iter().map(|i| json!({ "type": "listItem", "content": self.item(i, depth) })).collect();
+                let content = self.list_items(items, depth);
                 out.push(json!({ "type": "orderedList", "attrs": { "start": (*start).max(1), "type": null }, "content": content }));
             }
             Block::Tasks(items) => {
@@ -897,6 +907,30 @@ mod tests {
         assert!(count_nodes(&v, "tableCell") <= MAX_PAGE_CELLS + MAX_TABLE_CELLS);
         assert!(r.cut_rows > 0);
         assert!(start.elapsed().as_secs() < 120, "{:?}", start.elapsed());
+    }
+
+    #[test]
+    fn oversize_lists_stop_building_items_at_the_byte_budget() {
+        let items = || (0..20).map(|_| vec![Block::Paragraph(vec![t("small item")])]).collect();
+        for list in [Block::Bullets(items()), Block::Numbered(1, items())] {
+            let mut renderer = Renderer {
+                image: &no_images,
+                page: &|_| None,
+                text: Vec::new(),
+                used: 0,
+                limit: 500,
+                over: false,
+                cells: 0,
+                cut_rows: 0,
+            };
+            let mut rendered = Vec::new();
+            renderer.block(&list, 0, &mut rendered);
+            assert!(renderer.over);
+            let prefix = rendered[0]["content"].as_array().unwrap();
+            assert!(!prefix.is_empty());
+            assert!(prefix.len() < 20);
+            assert_eq!(render_limited(&[list], &no_images, &|_| None, 500).err(), Some(TooLarge));
+        }
     }
 
     #[test]
