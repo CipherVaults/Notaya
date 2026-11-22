@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w154-keyboard-focus-candidate-20261122"></a>
+
+## Toolbar Export keyboard focus candidate, 2026-11-22
+
+- **Original failed and candidate passed the keyboard regression (W154).** The identical browser test rejected the original at the launcher identity assertion. The candidate's four checks passed, including ordinary Enter reopening after Escape and focus return after successful export.
+- **Built the exact Windows candidate.** Normal keyboard behavior through the real Windows Save picker still needs evidence. An owned app window opened, but the desktop view was obscured. Zero native assertions ran and the disposable files kept their hashes.
+- **Status.** Source and browser scope verified. Windows behavior and integration pending. Earlier native output and the original failure remain in the record.
+
+[Exact candidate, methods and cutoff](../execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-focus-candidate-20261122).
+
 <a id="native-w154-keyboard-export-20261122"></a>
 
 ## Native Windows keyboard export and launcher focus, 2026-11-22

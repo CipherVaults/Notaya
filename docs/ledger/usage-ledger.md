@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w154-focus-candidate"></a>
+
+## Export keyboard focus candidate, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Four-file change, independent read-only review, original and candidate loopback checks, one frontend and one native release build, and one interrupted native launch. Attributable usage and actual serving settings remain unavailable. [Session](../sessions.md#session-191).
+
 <a id="codex-usage-20261122-w154-keyboard"></a>
 
 ## Native keyboard export and focus, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

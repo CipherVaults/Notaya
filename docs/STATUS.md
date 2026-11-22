@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w154-keyboard-focus-candidate-20261122"></a>
+
+## Export focus fix passed its browser checks and awaits Windows retest
+
+**2026-11-22 15:29 Cairo / 13:29 UTC.** The candidate `cbf0193fabe77d04cdd84f40e2560f8dd643c333` returns focus to the launcher of the toolbar Export dialog (W154). The exact keyboard assertion failed on the original code and the candidate passed four browser checks. The Windows executable built, but the desktop view was obscured and no native interaction assertions ran. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-focus-candidate-20261122).
+
+**Continuation.** Repeat the native toolbar Escape, Enter reopen and actual Save cancellation and file check using the pinned candidate when the test window is available. Preserve the first attempt. Windows qualification and integration remain pending. The 5,000-row redo (Q1) retains its separate gate.
+
 <a id="native-w154-keyboard-export-20261122"></a>
 
 ## Windows keyboard export works and Escape loses launcher focus

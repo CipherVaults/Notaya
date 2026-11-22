@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 191 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Restore and check Export launcher focus](#session-191) |
 | 190 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify keyboard export and find lost focus](#session-190) |
 | 189 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify long-note navigation and save](#session-189) |
 | 188 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check protected vault compatibility preconditions](#session-188) |
@@ -222,6 +223,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-191"></a>
+
+# Session: 2026-11-22 UTC | Ahmed (AE0101) | Gaming-PC | Restore and check Export launcher focus
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead authored and built the candidate. An independent non-author reviewed the diff and the regression. Other read-only work checked build prerequisites and installer test scope. **Models, effort, roles and provenance.** The Goal specifies GPT-6.2 Sol Ultra and those settings were requested for workers. Actual serving settings and attributable usage were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w154-focus-candidate).
+
+## 1. Time
+
+Evidence cut 2026-11-22 15:29 Cairo / 13:29 UTC.
+
+## 2. Session Goal
+
+Fix the observed toolbar focus loss without changing exported content or the Save interaction (W154).
+
+## 3. Actions Taken
+
+Made the candidate in a separate clean checkout. Added an exact-node keyboard regression to the existing export check and ran it against original and candidate app code. Reviewed the focus callback and source scope, built the frontend and the native executable, then started one isolated Windows attempt.
+
+## 4. Key Insights
+
+The original failed at the active-element assertion before any export call. The candidate passed all four browser checks. The native UI was unavailable for input in the attempted observation.
+
+## 5. Decisions Made
+
+Keep the positive browser evidence and leave the Windows retest and merge open. Preserve raw evidence and an exact source checkpoint.
+
+## 6. Difficulties / Friction
+
+The target Windows access tree showed only the window shell and its screenshot showed unrelated foreground content.
+
+## 7. Adjustments Made
+
+Sent no input. Ended only the owned synthetic process and verified its original/copy hashes and untouched output control.
+
+## 8. Mistakes / Risks
+
+This attempt did not exercise the candidate Windows UI. Prior verified output belongs to the baseline and is not attributed to the candidate.
+
+## 9. Current Position
+
+Browser and builds passed. Native test pending on the exact candidate. [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-focus-candidate-20261122).
+
+## 10. Next Steps
+
+Run the same toolbar and paired native Save controls when the test window is available. Apply routine integration authority after exact qualification.
+
+## 11. Open Questions
+
+Exact package checks and the 5,000-row redo retain their separate gates.
+
+## 12. Recommended Next Step
+
+Reuse the already-built pinned candidate and a fresh copy of the same synthetic fixture. Preserve the interrupted receipt and use ordinary keyboard input.
+
+## 13. Session Type
+
+Development, qualification and continuity.
 
 <a id="session-190"></a>
 

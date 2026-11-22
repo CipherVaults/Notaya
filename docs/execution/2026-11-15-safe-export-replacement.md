@@ -182,6 +182,18 @@ Root read the scoped closure/current pointers and matched their hashes 10:51:25Z
 
 **Integration and limits.** [PR #140](https://github.com/CipherVaults/Notaya/pull/140) merged at `bfc7b33842be298f346117f45a13bbae93aec2c6`. A fresh clone from GitHub matched tree `5474f85501fc69c7fa73218a8e68f50c64cc9f38`, the previous main parent and the reviewed source parent. The live PR exposed no combined status contexts or PR-triggered workflow runs for that candidate. Evidence applies to the named ordinary native case and this unbundled Windows build. Vaults, inputs and raw evidence stayed on the PC. Continue the password branch of restore validation (W194) independently.
 
+<a id="native-w154-keyboard-focus-candidate-20261122"></a>
+
+## Toolbar Export focus candidate, 2026-11-22 15:29 Cairo
+
+**Scope and review.** Candidate `cbf0193fabe77d04cdd84f40e2560f8dd643c333`, tree `c67a85e52d1bcd71e66e6b20b3699595085445e2`, from verified GitHub main `e3f7fa2da4889a257f1e26d50b6fe68eb15153c3`. Only the export launcher, the opt-in modal callback, the export dialog and the existing browser check changed. The callback matches an opening, skips an unavailable toolbar button and respects focus taken by another control or dialog. A non-author read-only reviewer found no blocking issue. Other launchers have no new focus target.
+
+**Old failure and candidate checks.** The prior Windows run reproduced focus loss on Escape. Ran the same named browser assertion using the original app code plus only the test overlay, then on the exact candidate. Both used the established guarded loopback runner and Chrome Headless Shell 157.0.8103.78. The test SHA-256 was `f0bd23dfe2a91e231c5526a5d2d1ce39bdd375af4abdc0a9b67cf81cfc71ab3f` in both runs. Original exit 1 at the active-element identity assertion immediately after Escape, with zero export requests. Candidate exit 0 with four checks, including Escape focus return, Enter reopening without refocusing, successful export focus return, existing cleanup warnings and the primary-error case. Owned loopback listeners closed. TypeScript and production Vite build passed. The exact candidate native Cargo release executable built with locked dependencies, SHA-256 `2db9c2383d0ce91808d3454af1fa6351e43a419421ccd7f23e09a4a5d60fe169`.
+
+**Native try and cutoff.** The pinned executable started in its own disposable portable home with the same W154 synthetic fixture as the baseline. Only the test app's window shell was observed. Its desktop screenshot showed unrelated foreground content before the test sent any keys. The owned process was verified and terminated, with exit observed and pipes drained. The original and closed copy retained identical hashes and the output folder retained only its sentinel. Zero native interaction assertions ran. This is an environment interruption with no candidate verdict. The original test failure and the mock pass each keep their scope.
+
+**Next exact action.** With an available target window, repeat toolbar Enter, Escape, focus ring and Enter reopening on the pinned candidate. Verify Windows Save cancellation and retry create only the selected HTML. Broad accessibility, packaged output and integration are separate evidence. Vaults, output files, raw logs and executables stay on the PC.
+
 <a id="native-w154-keyboard-export-20261122"></a>
 
 ## Native Windows keyboard export and focus return, 2026-11-22 15:05 Cairo
