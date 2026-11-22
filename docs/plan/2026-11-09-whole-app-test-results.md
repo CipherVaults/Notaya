@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w154-keyboard-export-20261122"></a>
+
+## Native Windows keyboard export and launcher focus, 2026-11-22
+
+- **Passed the keyboard-only selection, save and cancellation route (W154).** The empty selection disabled Export. A different page could be selected and saved as HTML. Native Escape left no file and preserved the selection for a successful keyboard retry. Independent readback contained only the selected heading and body.
+- **Failed launcher focus return.** With visible focus on the toolbar Export button, Enter opened the app modal. Escape closed it. Enter could no longer reactivate the launcher and Tab started again at Hide sidebar.
+- **Limits.** Pointer-assisted earlier evidence stands separately. Screen-reader announcements, other launcher return paths and exact final packages still have their own checks.
+
+[Exact source, artifact and observations](../execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-export-20261122).
+
 <a id="native-wp18-long-page-20261122"></a>
 
 ## Native Windows long-note navigation and save, 2026-11-22

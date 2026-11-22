@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 190 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify keyboard export and find lost focus](#session-190) |
 | 189 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify long-note navigation and save](#session-189) |
 | 188 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check protected vault compatibility preconditions](#session-188) |
 | 187 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows keyboard navigation](#session-187) |
@@ -221,6 +222,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-190"></a>
+
+# Session: 2026-11-22 UTC | Ahmed (AE0101) | Gaming-PC | Verify keyboard export and find lost focus
+
+**Who and where.** Ahmed's side, Gaming-PC. Lead ran the native route and verified actual output and closure. A separate read-only worker reviewed the production dialog and current evidence. **Models, effort, roles and provenance.** The Goal specifies GPT-6.2 Sol Ultra and those settings were requested for the worker. Actual runtime settings were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w154-keyboard).
+
+## 1. Time
+
+Evidence cut 2026-11-22 15:05 Cairo / 13:05 UTC.
+
+## 2. Session Goal
+
+Verify that the Windows export flow can be operated with the keyboard and test focus return (W154).
+
+## 3. Actions Taken
+
+Opened Export through the palette, exercised modal focus and selection by keyboard, cancelled native Save and retried to produce an HTML file. Parsed the actual output. Separately opened from the focused toolbar button and tested Escape and the next two keystrokes. Verified normal app close and fixture integrity.
+
+## 4. Key Insights
+
+The selected non-current page exported without any pointer input. Toolbar dismissal lost the launcher focus even though the dialog closed normally.
+
+## 5. Decisions Made
+
+Keep the positive route and failed focus assertion in the same record. Qualify a small export-specific focus return change on a separate revision.
+
+## 6. Difficulties / Friction
+
+The WebView accessibility snapshot often reported the document as focused. Some intermediate reads arrived before the state update.
+
+## 7. Adjustments Made
+
+Used visible focus rings, actual key effects and independent file content as the evidence. Kept native Save cancellation distinct from app modal dismissal.
+
+## 8. Mistakes / Risks
+
+Evidence is limited to this Windows development executable and these launcher routes. The failure does not imply missing exported data.
+
+## 9. Current Position
+
+Keyboard save and cancel passed. Toolbar Escape focus return failed. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-export-20261122).
+
+## 10. Next Steps
+
+Implement and independently review the scoped focus restoration. Repeat the failing toolbar gesture and preserve the proven native save controls.
+
+## 11. Open Questions
+
+Other launchers and screen readers require separate evidence. Exact packages and the database redo still retain their gates.
+
+## 12. Recommended Next Step
+
+Reproduce the toolbar assertion on a clean source-based test, apply the narrow focus fix and qualify the corrected interaction on Windows.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-189"></a>
 

@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w154-keyboard-export-20261122"></a>
+
+## Windows keyboard export works and Escape loses launcher focus
+
+**2026-11-22 15:05 Cairo / 13:05 UTC.** Keyboard-only selection, cancellation and saving passed on the exact Windows development build (W154). The actual HTML contained only the non-current page selected by keyboard. A separate toolbar check reproduced a focus defect. Escape dismissed Export, but Enter could not reopen it and the next Tab started at Hide sidebar. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-export-20261122).
+
+**Continuation.** Fix focus return for the toolbar launch in an isolated v1.6 checkout. Preserve native cancellation, retry and the resulting export bytes. Other entry points, screen-reader behavior and final packages require separate evidence. The 5,000-row redo (Q1) remains open.
+
 <a id="native-wp18-long-page-20261122"></a>
 
 ## Windows long-note editing and persistence verified

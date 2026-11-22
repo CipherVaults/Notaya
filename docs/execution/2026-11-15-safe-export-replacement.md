@@ -182,6 +182,18 @@ Root read the scoped closure/current pointers and matched their hashes 10:51:25Z
 
 **Integration and limits.** [PR #140](https://github.com/CipherVaults/Notaya/pull/140) merged at `bfc7b33842be298f346117f45a13bbae93aec2c6`. A fresh clone from GitHub matched tree `5474f85501fc69c7fa73218a8e68f50c64cc9f38`, the previous main parent and the reviewed source parent. The live PR exposed no combined status contexts or PR-triggered workflow runs for that candidate. Evidence applies to the named ordinary native case and this unbundled Windows build. Vaults, inputs and raw evidence stayed on the PC. Continue the password branch of restore validation (W194) independently.
 
+<a id="native-w154-keyboard-export-20261122"></a>
+
+## Native Windows keyboard export and focus return, 2026-11-22 15:05 Cairo
+
+**Identity.** Unbundled Windows x64 development executable SHA-256 `42d36778f3e8e7fa0baf60d2c7b6cd7420c9f5594a22f404915c3afe64079c78`. Source `33d02033051e46199bf4eb642fe11afa1c5ea2b8` and verified GitHub main `e3f7fa2da4889a257f1e26d50b6fe68eb15153c3` match tree `40db056a061f8b57eef4f5f504309d0cce672bb5`. The portable home and WebView profile were disposable. The existing native W154 synthetic vault was copied after integrity, hash and closed-file checks.
+
+**Keyboard-only flow passed.** The current note was Page 11. Ctrl+K, typing export and Enter opened the app dialog. Reverse and forward Tab wrapped between its closing and submit controls. Down selected Choose pages, and Tab and Space cleared its preselected current page. The empty choice disabled Export. Tab and Space selected Page 12, chose HTML and toggled Include sub-pages off. Enter opened native Windows Save. Alt+N and keyboard input supplied an explicit disposable destination. Escape cancelled that picker and retained the options. Only the original sentinel remained in the output folder. Focus was on the modal outline after cancellation. Tab and Shift+Tab returned to an enabled Export, and Enter opened Save again. The second filename was confirmed with Enter. An independent HTML parser read only the expected Page 12 heading and body. The one document was 2,296 bytes, SHA-256 `71899a6ff9af8c61fe4a31109dc1932a0eeb8dfb04766c50db4782be3ea6e002`. The source fixture and sentinel hashes matched their preimages. The owned app exited 0 and the closed copy passed read-only SQLite quick-check with 23 records.
+
+**Focus return failed on toolbar Escape.** Tab reached the visible toolbar Export button. Enter opened the app modal and placed visible focus on Close. Escape dismissed the modal. The toolbar Export focus ring did not return. Enter left the modal closed and the next Tab focused Hide sidebar. The triggerless controlled dialog has no export-specific close autofocus callback. This source reading and runtime behavior identify a narrow usability fix. Other launchers and successful focus return through them were outside this failure check.
+
+**Continuation.** Preserve and rerun the exact toolbar keyboard regression on the qualifying fix. Keep output scope and native Save cancellation behavior intact. Screen-reader use and exact packages are separate. Vaults, HTML and raw evidence stay on this PC.
+
 <a id="native-volume-main-20261122"></a>
 
 ### Larger ordinary native imports on current v1.6 main — 2026-11-22 09:28 Cairo / 07:28 UTC

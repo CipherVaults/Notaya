@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w154-keyboard"></a>
+
+## Native keyboard export and focus, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One isolated native launch, two real Windows Save dialogs, file and fixture readback, and separate source review. Attributable usage and actual serving settings are unavailable. [Session](../sessions.md#session-190).
+
 <a id="codex-usage-20261122-wp18-long-page"></a>
 
 ## Native Windows long-note navigation and save, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
