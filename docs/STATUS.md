@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="restore-w194-native-settings-20261122"></a>
+
+## Native Windows Settings backup restore verified
+
+**2026-11-22 10:38 Cairo / 08:38 UTC.** Backup restore validation (W194) passed through Settings on the verified v1.6 development build. The app refused a wrong password and a damaged attachment, recovered the protected note on same-file retry, and required explicit consent before restoring an open backup over the protected vault. The open backup reopened after restart. Both undo files were retained and all input hashes matched. [Evidence](execution/2026-10-23-restore-from-backup.md#restore-w194-native-settings-20261122).
+
+The lock-screen route remains separate. The app intentionally excludes the protected lock screen from capture. The Windows installer and portable package still need their own evidence. Next, verify a page, sticky and database across a disposable v1.6 vault and the published read-only compatibility check (G3/W198).
+
 <a id="restore-w194-core-20261122"></a>
 
 ## Backup restore core verified and Windows packaging preflight passed

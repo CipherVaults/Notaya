@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 170 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native Windows Settings restore](#session-170) |
 | 169 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify restore core and Windows packaging preflight](#session-169) |
 | 168 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair Windows import omission reporting](#session-168) |
 | 167 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Larger native import readback](#session-167) |
@@ -201,6 +202,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-170"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify native Windows Settings restore
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native checks. A separate worker read the backward-compatibility gate and artifact pins. **Models, Effort, Roles and Provenance.** The lead composer displayed GPT-6.2 Sol Ultra. Realized serving settings and worker usage attribution are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-native-settings-restore).
+
+## 1. Time
+
+Evidence cut 2026-11-22 10:38 Cairo / 08:38 UTC.
+
+## 2. Session Goal
+
+Obtain native Windows refusal and persistence evidence for backup restore (W194).
+
+## 3. Actions Taken
+
+Rechecked the protected startup window and source capture rules, then restored through Settings in the isolated Windows app. Tested wrong password, same-file retry, damaged attachment and both consent states. Restarted and verified saved content.
+
+## 4. Key Insights
+
+The protected lock screen is excluded from screenshots as designed. The native Settings case provides an independent UI route without changing capture protection.
+
+## 5. Decisions Made
+
+Used fixture-only Settings restore and kept protected startup interaction as a separate, unrun variant.
+
+## 6. Difficulties / Friction
+
+The resumed lock window was unavailable in captured pixels. The live vault was held exclusively during the wrong-password refusal.
+
+## 7. Adjustments Made
+
+Sent no input to the hidden lock screen. Used the displaced closed file for the original hash and compared every stored row for the protected undo.
+
+## 8. Mistakes / Risks
+
+The independently saved SQLite preimage can differ in physical layout. The protected undo comparison proves logical row identity.
+
+## 9. Current Position
+
+Windows Settings restore passed its named scenarios on the verified v1.6 development tree. [Evidence](execution/2026-10-23-restore-from-backup.md#restore-w194-native-settings-20261122).
+
+## 10. Next Steps
+
+Continue read-only v1.6 vault compatibility (G3/W198) with a disposable page, sticky and database.
+
+## 11. Open Questions
+
+Protected restart interaction, first-unlock copy, exact packages and the 5,000-row redo (Q1) have separate gates.
+
+## 12. Recommended Next Step
+
+Use the pinned published v1.5.1 reader on a copy, then reopen the untouched v1.6 original and verify both byte inventories.
+
+## 13. Handoff
+
+[Current state](STATUS.md#restore-w194-native-settings-20261122), [test register](plan/2026-11-09-whole-app-test-results.md#restore-w194-native-settings-20261122), and [execution evidence](execution/2026-10-23-restore-from-backup.md#restore-w194-native-settings-20261122). Native fixtures stay local.
+
+---
 
 <a id="session-169"></a>
 

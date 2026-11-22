@@ -133,6 +133,22 @@ The owner tries `E:\Project\Cipherleaf-portable\Cipherleaf.exe` (including a res
 
 **Do not repeat:** the review rounds, the restore design, the build.
 
+<a id="restore-w194-native-settings-20261122"></a>
+
+### Native Windows Settings backup refusal and restore — 2026-11-22 10:38 Cairo / 08:38 UTC
+
+**Binding and isolation.** Current v1.6 main `bfc7b33842be298f346117f45a13bbae93aec2c6`, tree `5474f85501fc69c7fa73218a8e68f50c64cc9f38`. The Windows x64 unbundled executable was built from `1c9e20d61f9cef642d524ab50fded4dd2456c0e8` with the same tree and SHA-256 `cd32e84f1f1742833750138b1bf90c4d82a9c513292e6ba79ddb1683fe4065d5`. All chosen inputs and cloned homes were disposable and local. Restarts used separate process IDs and the same isolated home.
+
+**Lock-screen observation.** The resumed locked fixture reported the password entry through accessibility while the screen capture showed the previous foreground content. In `src-tauri/src/lib.rs:134`, the application deliberately creates the protected startup window with capture exclusion. The separate resumed attempt sent zero input actions and took no restore action. Its locked vault hash and restore inventory stayed unchanged. The regular Settings route starts in an already open notes window. No privacy setting was changed to qualify it.
+
+**Password-only backup.** From the open fixture, Settings and the Windows picker chose one protected backup. The wrong password showed an inline refusal, leaving no new staging or undo. The live file was held exclusively while open, so it was not hashed at the intermediate refusal. The same selected file with the correct password opened the protected note, with its heading, text, list and picture. The now-closed previous open vault matched its original full hash as the first undo. The selected backup matched its input hash.
+
+**Damaged backup and explicit consent.** Saved a protected preimage from the app's verified backup flow before the next test. A structurally valid backup with a shortened sealed attachment was refused before replacement. The previous undo remained alone and staging was empty. A valid security-off backup prompted for explicit consent. The unchecked state kept the action disabled and created no new undo or staging. Checked consent restored that selected input. The closed newly installed file matched the selected backup byte for byte before the readback visit.
+
+**Persistence and protected undo.** The app closed, restarted without a password, and reopened the saved heading, body and list. It then exited normally. Both undo files remained. The protected undo's physical file bytes differed from the SQLite backup copy. A read-only comparison found identical schema and every row across header, records, attachments, history, activity and journal anchors. SQLite quick-check passed on the native preimage, both undo files and restored target, including the restored file after restart. Readback counted four records and one attachment. The five pinned raw inputs all matched their original hashes.
+
+**Disposition.** The W194 Settings scenarios passed on this development binary. The protected lock-screen interaction and protected restart unlock remain unrun in this native observation. The earlier core tests cover protected reopening with its fixture password, within their own scope. Keyfile, interrupted rename, exact Windows packages, the 5,000-row redo (Q1), and Daybreak keep separate dispositions. No product source or release artifact changed. Raw vaults, backups, profiles, and outputs stayed on the PC.
+
 <a id="restore-w194-core-20261122"></a>
 
 ### Password-protected restore core and Windows package preflight — 2026-11-22 10:25 Cairo / 08:25 UTC

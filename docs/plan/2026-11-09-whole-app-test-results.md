@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="restore-w194-native-settings-20261122"></a>
+
+## Native Windows Settings restore — 2026-11-22
+
+- **Wrong password and same-file retry passed (W194).** Windows refused the wrong password without creating a staging or undo file. The correct password restored the protected note without reselecting the file. Its saved body and picture were present. The displaced open vault matched its pre-test bytes.
+- **Damaged attachment and downgrade consent passed (W194).** A structurally valid SQLite input with damaged attachment data was refused. Selecting a valid security-off backup against the protected vault showed the warning and disabled the action until checked. The unchecked attempt left the undo inventory and staging unchanged. Explicit consent installed the selected backup byte for byte.
+- **Persistence and undo passed on this route.** After restart the open backup required no password and its note body reopened. The protected undo kept all stored rows from the verified native pre-downgrade backup. The two SQLite files had different physical bytes. All tested sources kept their original hashes and all four closed files passed SQLite quick-check.
+- **Separate scope.** Interaction starting at the protected lock screen, password entry after a protected restart, keyfiles, interrupted-rename fault tests (W195), and exact packages are outside this run.
+
+[Exact evidence and window-capture limits](../execution/2026-10-23-restore-from-backup.md#restore-w194-native-settings-20261122).
+
 <a id="restore-w194-core-20261122"></a>
 
 ## Backup restore validation and Windows packaging preflight — 2026-11-22

@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-native-settings-restore"></a>
+
+## Native Windows Settings restore — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+One protected startup observation with no input, one owned Settings restore sequence and restart on the pinned existing build, read-only byte and table comparison, and delegated compatibility preflight. Realized serving settings and attributable usage are unavailable. [Session](../sessions.md#session-170).
+
 <a id="codex-usage-20261122-restore-and-packaging"></a>
 
 ## Restore and package preflight — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
