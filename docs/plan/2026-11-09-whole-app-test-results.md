@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-portable-import-w217-w218-20261122"></a>
+
+## Windows installed paths and portable-note import, 2026-11-22
+
+- **Installed and portable paths passed (W217).** The established runner passed 11 assertions across new installed notes, installed restart and portable startup. It verified first-start options, exact data roots, reopening, and refusal of the installed-only import command in portable mode. Filesystem and cleanup checks passed; the local test listener closed.
+- **Native first-start portable import passed in the tested scope (W218).** Cancelling and choosing an empty folder left no vault or staging file. Choosing the valid disposable source copied the notes and exactly one backup into isolated LocalAppData. The page and its saved body reopened after restart. The source files remained byte-identical, the destination matched, and the vaults passed SQLite integrity checks.
+- **Core import passed.** 14 tests included existing vault and backup no-overwrite, open-source refusal, portable/data-folder selection, protected-vault preservation and backup retention. The direct already-open command in an installed window was not run. Setup execution and exact candidate remain separate.
+
+[Source and executable bindings](../execution/2026-10-28-windows-installer.md#windows-portable-import-w217-w218-20261122).
+
 <a id="windows-packages-rehearsal-20261122"></a>
 
 ## Windows installer and portable development rehearsal, 2026-11-22

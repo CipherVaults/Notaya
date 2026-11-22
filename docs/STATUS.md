@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="windows-portable-import-w217-w218-20261122"></a>
+
+## Installed Windows startup and portable-note import verified
+
+**2026-11-22 11:32 Cairo / 09:32 UTC.** The app extracted from the current Windows setup passed the installed and portable path checks (W217). Its native folder picker cancelled and rejected an empty folder without creating notes, then copied the valid disposable note and one backup (W218). The note reopened after restart, and original and destination bytes matched. Fourteen core tests passed, including refusing to replace an existing vault or backup. [Exact evidence](execution/2026-10-28-windows-installer.md#windows-portable-import-w217-w218-20261122).
+
+This was the exact extracted development executable in an isolated installed layout. Clean-account setup, upgrade and uninstall (W220) still need a run. The final package and the 5,000-row redo (Q1) and first-unlock safety copy (A44) keep their existing gates.
+
 <a id="windows-packages-rehearsal-20261122"></a>
 
 ## Windows development packages built and independently inspected

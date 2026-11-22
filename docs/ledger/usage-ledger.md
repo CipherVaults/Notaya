@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-windows-portable-import"></a>
+
+## Windows startup and portable-note import, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two native installed-layout runs, 14 focused core tests, one completed three-phase path runner and two runner pre-assertion stops. Independent read-only contract review. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-174).
+
 <a id="codex-usage-20261122-windows-packages"></a>
 
 ## Windows development packages, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

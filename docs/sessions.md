@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 174 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows startup and portable-note import](#session-174) |
 | 173 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Rehearse Windows packages](#session-173) |
 | 172 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bridge and startup behavior](#session-172) |
 | 171 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native read-only vault compatibility](#session-171) |
@@ -205,6 +206,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-174"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify Windows startup and portable-note import
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex executed the native and core checks. An independent worker read the native command, core and fixture contract. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-windows-portable-import).
+
+## 1. Time
+
+Evidence cut 2026-11-22 11:32 Cairo / 09:32 UTC.
+
+## 2. Session Goal
+
+Verify installed and portable first-start paths and prove Windows portable-note import copies and preserves the original.
+
+## 3. Actions Taken
+
+Executed the real picker cancel, unsupported and valid-folder paths, restarted with the copied notes, checked closed-file hashes and ran the existing path and core import tests.
+
+## 4. Key Insights
+
+A successful portable import copied the notes and backup exactly into isolated LocalAppData. The page reopened and neither source copy changed.
+
+## 5. Decisions Made
+
+Used the app extracted from the verified installer and synthetic profiles. Treated installer run, upgrades and the final v1.6 binary as separate qualification.
+
+## 6. Difficulties / Friction
+
+Fresh test Desktop was missing. The path runner also needed native Windows PowerShell module and executable lookup in its minimal child environment.
+
+## 7. Adjustments Made
+
+Created an empty test Desktop. Kept the two failed runner invocations and corrected only the child environment. The run used the existing unmodified checker.
+
+## 8. Mistakes / Risks
+
+The first core test preflight pointed at the wrong Cargo.lock and did not launch tests. The successful core result and native first-run assertions do not cover a direct call against an already-open installed app.
+
+## 9. Current Position
+
+Installed and portable startup paths (W217), the recorded native portable import (W218), and 14 scoped core import checks passed. [Evidence](execution/2026-10-28-windows-installer.md#windows-portable-import-w217-w218-20261122).
+
+## 10. Next Steps
+
+Continue independent candidate qualification. Rerun applicable package checks on the final artifact and preserve the active redo and first-unlock gates.
+
+## 11. Open Questions
+
+Clean Windows environment for W220, the exact candidate, the 5,000-row redo (Q1), and first-unlock safety copy (A44).
+
+## 12. Recommended Next Step
+
+Check whether real Windows section and notebook exports preserve both standalone and embedded databases (W161), with a disposable scope control.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-173"></a>
 
