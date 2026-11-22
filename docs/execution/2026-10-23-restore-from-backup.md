@@ -133,6 +133,16 @@ The owner tries `E:\Project\Cipherleaf-portable\Cipherleaf.exe` (including a res
 
 **Do not repeat:** the review rounds, the restore design, the build.
 
+<a id="native-backup-refusal-20261122"></a>
+
+### Native Windows backup refusal — 2026-11-22 08:19 Cairo / 06:19 UTC
+
+**Binding.** Windows x64 unbundled development executable from `c72e51a79ecb696f105f88b9696650713a86fd95`, tree `ad2dddb0c82ca0d67acd9eff29edadf31c32ef3a`, SHA-256 `66100c99dd876880933e56de4296f9ed0c185b77b1941ccc63d48150542b6345`. Only an owned app home, a security-off disposable two-note vault and a 55-byte plain-text file with a backup filename were used.
+
+**Observed.** Cancel returned to the restore dialog without a selected backup and kept the replace button disabled. The separate unreadable-file attempt showed “The vault file is damaged or has been tampered with.” The dialog stayed open. After normal close, the active vault, fixture source and selected file matched their prelaunch hashes. No restore-undo or temporary check file existed. The same executable reopened both pre-existing notes, including the Word body and table value. Its test process exited and the closed vault hash still matched after restart.
+
+**Limits.** The earlier positive picker run is separate. This check covers the ordinary unreadable-file and cancellation paths. It supplies no password, keyfile, first-unlock, power-loss or packaging qualification. All fixtures and raw output stayed on the test PC.
+
 <a id="native-backup-picker-20261122"></a>
 
 ### Native Windows file-picker closeout — 2026-11-22 08:13 Cairo / 06:13 UTC

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 164 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup refusal and v1.6 fix scope](#session-164) |
 | 163 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup picker and recovery](#session-163) |
 | 162 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Separate-file ZIP qualification](#session-162) |
 | 161 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Word and Markdown titles integrated](#session-161) |
@@ -195,6 +196,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-164"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Native backup refusal and v1.6 fix scope
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the Windows check. An independent read-only worker traced the restore and error paths. **Models, Effort, Roles and Provenance.** Actual serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-native-restore-refusal).
+
+## 1. Time
+
+Native evidence cut 2026-11-22 08:19 Cairo / 06:19 UTC. Scope updated afterward from the owner's development-chat instruction.
+
+## 2. Session Goal
+
+Qualify cancellation and ordinary unreadable-file refusal through the Windows picker. Confirm the current vault survives.
+
+## 3. Actions Taken
+
+Canceled once, then chose an owned nonempty plain-text file through the Windows picker and tried Restore. Closed the app, checked fixture bytes, reopened and checked the two prior notes, then closed and hashed again.
+
+## 4. Key Insights
+
+The cancel state and refusal message had the expected native effects. The unchanged file and reopened notes independently support preservation.
+
+## 5. Decisions Made
+
+Ahmed set v1.6 as the destination for fixes and improvements. [Decision record](plan/approval-and-amendments.md#v16-only-fixes-20261122).
+
+## 6. Difficulties / Friction
+
+The live app held the vault file. File verification relied on closed snapshots and prelaunch hashes.
+
+## 7. Adjustments Made
+
+Kept good-restore and refusal evidence as separate cases. Used a separate disposable home for this negative check.
+
+## 8. Mistakes / Risks
+
+The visible damage message alone cannot prove that the vault survived. The closed hash and restart addressed that for this input.
+
+## 9. Current Position
+
+The picker cancellation and ordinary refusal passed on the named development executable. [Test register](plan/2026-11-09-whole-app-test-results.md#native-backup-refusal-20261122).
+
+## 10. Next Steps
+
+Fix and qualify the Word list loss on v1.6. Keep the right-to-left PDF reimport change separate.
+
+## 11. Open Questions
+
+Password, keyfile, exact Windows package and first-unlock checks remain separate. The five-thousand-row redo gate is open.
+
+## 12. Recommended Next Step
+
+Use the preserved 10,001-item Word fixture and require the exact sequence and trailing paragraph after import and reopen.
+
+## 13. Handoff
+
+[Execution evidence](execution/2026-10-23-restore-from-backup.md#native-backup-refusal-20261122) and [current state](STATUS.md#native-backup-refusal-20261122). Fixtures, vaults and raw output are PC-only.
+
+---
 
 <a id="session-163"></a>
 

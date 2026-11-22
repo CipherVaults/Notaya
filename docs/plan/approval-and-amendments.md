@@ -742,6 +742,16 @@ Please report your current activity, confirm when feature development is safely 
 
 **Effective scope and state:** feature development is safely PAUSED after closed Node45736 and its seven readers/logs; no new Q1 syntax, UI, app or build is running. Existing Goal remains ACTIVE with direct Git checkpoint preparation as first priority. Separate publisher setup and all pushes/merges/configuration changes are held; no publisher was initialized, no Git configuration changed, no object/ref/PR/upload/push was created. Active HEAD/index/config hashes were rechecked unchanged. Only bounded direct-workflow assessment, source/history/privacy review and explicit project-record coverage are presently permitted; actual transport/security changes require separate concrete action-time confirmation. Relevant modified/untracked PBS/handoff/execution/status documents and Notaya external working records belong in coverage review with explicit included/copy/held/excluded mappings; no blanket omission, full standalone PBS system, raw evidence or private material inclusion. Frozen P16/originals/private-data protections remain. Routine merge delegation does not override the present hold. Preserve all completed preparation and failures.
 
+<a id="v16-only-fixes-20261122"></a>
+
+### A57 dated supplement — Fixes and improvements go into v1.6, 2026-11-22
+
+Ahmed, in the development chat:
+
+> Forget 1.5.1 patching we need to focus all of the bug fixes, optimizations, bug fixes, new features in 1.6.
+
+Apply the confirmed Word list-tail loss (W141) and right-to-left PDF reimport defect (W163) to the v1.6 work line. The released v1.5.1 remains as published. This settles the repair destination. The existing v1.6 scope, test gates, separate storage-design approvals and owner acceptance still apply.
+
 ## Changing this record
 
 - Add new authority events at the top of the table.

@@ -1,6 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-backup-refusal-20261122"></a>
+
+## Native Windows restore refusal and v1.6 fix scope
+
+**2026-11-22 08:19 Cairo / 06:19 UTC.** The file picker could be canceled. Selecting an unreadable disposable backup produced a damage message without replacing the open vault. The closed vault and both input files matched their pre-test bytes. After restart the two original notes reopened. [Test register](plan/2026-11-09-whole-app-test-results.md#native-backup-refusal-20261122).
+
+Ahmed directed all fixes and improvements to v1.6. The known Word list tail loss (W141) is next on current v1.6 source. The PDF right-to-left reimport defect (W163) also belongs in v1.6. The prior failure evidence remains applicable. The corresponding fixes still need qualification. [Owner decision](plan/approval-and-amendments.md#v16-only-fixes-20261122).
+
+Password and keyfile restores and the exact installer need separate checks. The first-unlock safety copy (A44) still needs its separate design decision. The 5,000-row database redo workflow (Q1) is open.
+
 <a id="native-backup-picker-20261122"></a>
 
 ## Current state and continuation — native backup picker

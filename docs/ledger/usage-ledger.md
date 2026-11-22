@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-native-restore-refusal"></a>
+
+## Native backup refusal — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 08:19 Cairo / 06:19 UTC. Native picker cancellation, unreadable-file refusal, two closed-file checks and restart readback. A separate worker inspected the command and restore boundaries. Serving settings and attributable usage are unavailable. [Session](../sessions.md#session-164).
+
 <a id="codex-usage-20261122-native-restore"></a>
 
 ## Native backup picker qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

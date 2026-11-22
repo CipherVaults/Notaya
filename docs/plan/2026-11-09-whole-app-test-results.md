@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-backup-refusal-20261122"></a>
+
+## Native backup cancellation and refusal — 2026-11-22 08:19 Cairo / 06:19 UTC
+
+- **Passed.** Canceling the native file picker returned to Restore with replacement disabled.
+- **Passed.** Selecting a nonempty ordinary text file as a disposable unreadable backup enabled the attempt and produced a damage message. Restore remained open. The current vault and both source files kept their bytes. No undo or staged restore file was left. Restart reopened the two pre-existing notes, including the verified Word body and table.
+- **Not run.** Password, keyfile, interruption, first-unlock copy and exact-package checks.
+
+[Exact evidence](../execution/2026-10-23-restore-from-backup.md#native-backup-refusal-20261122).
+
 <a id="native-backup-picker-20261122"></a>
 
 ## Native file-picker backup restore — 2026-11-22 08:13 Cairo / 06:13 UTC
