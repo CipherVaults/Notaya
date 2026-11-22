@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 166 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair right-to-left PDF reimport](#session-166) |
 | 165 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair long Word list imports](#session-165) |
 | 164 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup refusal and v1.6 fix scope](#session-164) |
 | 163 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup picker and recovery](#session-163) |
@@ -197,6 +198,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-166"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Repair right-to-left PDF reimport
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex built and exercised the native import path. Separate read-only workers reviewed the reader and the existing redo evidence. **Models, Effort, Roles and Provenance.** GPT-6.2 Sol Ultra was requested for delegates. Realized serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-pdf-logical-fix).
+
+## 1. Time
+
+Native evidence cut 2026-11-22 09:13 Cairo / 07:13 UTC. Reviewed integration followed.
+
+## 2. Session Goal
+
+Correct and verify the right-to-left PDF text that Notaya saves in v1.6.
+
+## 3. Actions Taken
+
+Reproduced the reversal in source tests, implemented marked replacement text with bounded fallback, built the exact candidate, and independently checked saved output after Windows restart. Reviewed and merged the one-file change.
+
+## 4. Key Insights
+
+The exporter already held logical text. The reader needed to consume it once per complete span while retaining glyph fallback and spaces between distinct columns.
+
+## 5. Decisions Made
+
+Kept the repair in v1.6 and selected six ordinary, named PDF checks. Native reimport used the exact existing synthetic failure input.
+
+## 6. Difficulties / Friction
+
+A superseded compile was stopped before its tests ran. The final run had an exact allowlist. The old HTML output still fails the independent text oracle.
+
+## 7. Adjustments Made
+
+Non-author review found lost spacing beside right-to-left text. Restored forward gaps and added an exact Form and column control. Unclosed spans retain their original glyph text.
+
+## 8. Mistakes / Risks
+
+A text check after restart is necessary. A PDF export or import success message cannot establish the stored Unicode order.
+
+## 9. Current Position
+
+The PDF repair (W163) merged in [PR #139](https://github.com/CipherVaults/Notaya/pull/139). An independent GitHub readback matched the precise tested source tree.
+
+## 10. Next Steps
+
+Check PDF resource evidence against the current release register. Keep the defensive import baseline separate from the next Notion fidelity changes (N3).
+
+## 11. Open Questions
+
+The 5,000-row redo remains open. A separate failed rehearsal has zero pending reads but exceeds the existing 16 MiB receipt bound from duplicated evidence. The two owner-named failures remain preserved. No redo run or held operation was retried.
+
+## 12. Recommended Next Step
+
+Continue independent Windows qualification. For an eligible later redo run, review removing the duplicate browser evidence from the success summary while preserving the complete canonical evidence and all assertions, limits and deadlines.
+
+## 13. Handoff
+
+[Current state](STATUS.md#native-pdf-logical-merged-20261122), [test register](plan/2026-11-09-whole-app-test-results.md#native-pdf-logical-merged-20261122), and [execution](execution/2026-11-15-safe-export-replacement.md#native-pdf-logical-merged-20261122). All vaults and raw material remain local.
+
+---
 
 <a id="session-165"></a>
 

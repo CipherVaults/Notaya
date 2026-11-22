@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-pdf-logical-fix"></a>
+
+## PDF logical-text correction — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Baseline and final Windows Rust checks, one exact-build native import/restart/export check, non-author source review and an independent read-only redo-receipt check. GPT-6.2 Sol Ultra was requested for the read-only workers. Realized serving settings and usage attribution are unavailable. [Session](../sessions.md#session-166).
+
 <a id="codex-usage-20261122-word-boundary-fix"></a>
 
 ## Word list boundary correction — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

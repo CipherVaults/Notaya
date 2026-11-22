@@ -1,6 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-pdf-logical-merged-20261122"></a>
+
+## Right-to-left PDF reimport verified on v1.6 main
+
+**2026-11-22 09:13 Cairo / 07:13 UTC, then integrated.** PDF text reimport (W163) preserves the logical Arabic and Hebrew text in the preserved Windows fixture. The exact candidate passed six focused tests. After restart, an independent HTML parser matched all 14 expected text items, including English and table values. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-pdf-logical-merged-20261122).
+
+[Pull request #139](https://github.com/CipherVaults/Notaya/pull/139) merged. Independent GitHub recovery verified main `ff24129f7327958e24525b1b78b827e65f2c924a` and the exact tested tree. Continue the remaining Windows PDF resource checks against the approved register, then the defensive import baseline before the next Notion fidelity stage (N3). Exact Windows packages remain open.
+
+The 5,000-row database redo (Q1) remains open. Both original failed receipts stand. A separate rehearsal reached shutdown with zero pending reads but failed its 16 MiB receipt writer. Its successful-case report duplicated a large browser record already present in the canonical evidence. No redo operation was rerun in this session.
+
 <a id="native-word-boundary-merged-20261122"></a>
 
 ## Long Word lists verified on v1.6 main

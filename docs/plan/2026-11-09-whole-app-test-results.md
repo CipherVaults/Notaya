@@ -1,5 +1,17 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-pdf-logical-merged-20261122"></a>
+
+## Native right-to-left PDF reimport — 2026-11-22
+
+- **Baseline failed (W163).** The real exporter-to-importer regression on `bd5991d` reproduced reversed Arabic and Hebrew strings. The earlier native failure remains recorded.
+- **Exact-source tests passed.** `316008dd74cf65b7a891a51a3c288fbe0a7cdc44` passed all six selected tests. Controls covered unmarked glyph decoding, mixed-direction punctuation, a nested span, normal glyph fallback for an unclosed span, a marked Form followed by a separate column, and ordinary refusals.
+- **Native Windows passed.** The pinned synthetic PDF imported into a disposable vault and reopened. An independent check matched all 14 expected HTML text items, including exact Arabic and Hebrew characters, English controls and numeric table values. The PDF hash remained unchanged.
+- **Integrated.** Independent main recovery matched the tested tree `581274b0715d074778b3251509ee05aa559c9d07`.
+- **Not run here.** Larger PDF resource limits, visual layout reproduction, Linux, exact installer and portable packages, or the 5,000-row database redo.
+
+[Execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-pdf-logical-merged-20261122).
+
 <a id="native-word-boundary-merged-20261122"></a>
 
 ## Word lists beyond 10,000 items — 2026-11-22

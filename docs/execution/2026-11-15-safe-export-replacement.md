@@ -182,6 +182,18 @@ Root read the scoped closure/current pointers and matched their hashes 10:51:25Z
 
 **Continuation.** Check the identical synthetic PDF against the exact published v1.5.1 portable executable in a disposable local home. Escalate the released-version repair decision to Ahmed only if the same text corruption is reproduced. Track Word style-only bullets as an independent follow-up. The 5,000-row redo gate remains open. One run completed nine phases and both redos then failed with two pending background reads at shutdown. The later run timed out before redo. Both receipts remain intact. The stopped operation was untouched. Daybreak is pending. The focused source commit was independently reviewed and restored via GitHub. All data artifacts stay PC-only. Qualification evidence here is scoped to the named checks and development binaries. Release and owner acceptance remain open.
 
+<a id="native-pdf-logical-merged-20261122"></a>
+
+### Right-to-left PDF reimport correction and integration — 2026-11-22
+
+**Red evidence and scope.** The new regression against v1.6 main `bd5991d444195fe1fa209c319134992b5946a5f8` exited 101 and showed reversed Arabic and Hebrew from the production exporter and importer. The reader now uses a complete inline Unicode replacement span once. Glyph fallback covers unmarked, unsupported, oversized or unfinished spans. The change keeps time and text bounds and the forward gaps between separate text positions. An independent source review caught a spacing regression before the final focused run. The superseded compile was stopped before it ran tests.
+
+**Exact candidate.** `316008dd74cf65b7a891a51a3c288fbe0a7cdc44`, tree `581274b0715d074778b3251509ee05aa559c9d07`. The locked offline Windows x64 release-profile Rust run selected six tests by name. Six passed, zero failed, zero ignored. The unbundled native development executable came from that same source tree and had SHA-256 `85062c88a0ebb837ac6527c54b99565fea1b5c32abd6ffc8047ed926b3295ad7`.
+
+**Native evidence.** The Windows Files picker imported the previous synthetic two-page PDF, SHA-256 `e463949d21e9d346b976fff0ed609622ab2e7b091a9f5060dfecc3e3c865753c`. Reopened the saved note after normal process exit. An independent HTML parser verified the exact 14 expected text items and rejected the old output at the mixed-script line. The current HTML SHA-256 was `4c515f0c282237843375630ba829981c3cae482ba7333d9f40afc2a7978fd107`. The input PDF stayed unchanged and both owned windows closed. Vaults, fixtures, outputs and raw evidence stayed on the test PC.
+
+**Integration and limits.** [PR #139](https://github.com/CipherVaults/Notaya/pull/139) merged to `ff24129f7327958e24525b1b78b827e65f2c924a`. Independent GitHub recovery checked the merge parents and the tested tree. This covers the indicated text round trip and focused source cases. Large-file resource measurements, visual layout, Linux, the release package and owner acceptance have separate gates.
+
 <a id="released-pdf-folder-20261122"></a>
 
 ### Published PDF importer and independent folder qualification — 2026-11-22 01:15 Cairo / 2026-11-21 23:15 UTC
