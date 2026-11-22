@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="g3-w198-native-readback-20261122"></a>
+
+## Native Windows read-only vault compatibility — 2026-11-22
+
+- **Scoped G3/W198 passed.** On the released v1.5.1 executable, the separate copy showed the full ordinary page body, the stored short sticky in its board preview, and the table row with Number value `1729`. Navigation and viewing only.
+- **Old visit kept both files byte-identical.** The untouched original and the visited copy both matched the closed v1.6 fixture hash. The fixture contained the history, activity and journal-anchor tables.
+- **Current reopen passed.** v1.6 showed the same page, sticky and number. Closed integrity checks passed. Only the reserved settings record changed among ordinary records during the later v1.6 navigation, with corresponding activity and anchor updates. No stored table IDs disappeared and all existing history rows matched.
+- **Separate scope.** Security-on compatibility, edits in the old app, first-unlock safety copy (A44), large or new database constructs, and the exact Windows candidate.
+
+[Build bindings and preserved evidence](../execution/2026-11-09-sf3-tamper-and-purge.md#g3-w198-native-readback-20261122).
+
 <a id="restore-w194-native-settings-20261122"></a>
 
 ## Native Windows Settings restore — 2026-11-22

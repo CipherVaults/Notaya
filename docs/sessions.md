@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 171 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native read-only vault compatibility](#session-171) |
 | 170 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native Windows Settings restore](#session-170) |
 | 169 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify restore core and Windows packaging preflight](#session-169) |
 | 168 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair Windows import omission reporting](#session-168) |
@@ -202,6 +203,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-171"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify native read-only vault compatibility
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native test. A separate worker inspected the old reader's write paths and the release record. **Models, Effort, Roles and Provenance.** The lead composer displayed GPT-6.2 Sol Ultra in the prior native capture. Realized serving settings and attributed usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-g3-w198).
+
+## 1. Time
+
+Evidence cut 2026-11-22 10:50 Cairo / 08:50 UTC.
+
+## 2. Session Goal
+
+Read a page, sticky and database in the released v1.5.1 reader using a disposable v1.6 copy (G3/W198), then reopen the original.
+
+## 3. Actions Taken
+
+Prepared the single-page, single-sticky and one-row table fixture, closed and hashed it, visited only a separate copy in the published app and rechecked both hashes. Reopened and read the original in v1.6.
+
+## 4. Key Insights
+
+The published navigation left the whole vault unchanged. The later v1.6 navigation updated saved settings and journal metadata while preserving existing history and content.
+
+## 5. Decisions Made
+
+Used a plain security-off fixture and read the sticky preview without opening its window. Kept first-unlock safety copy (A44) separate from the first-database notice.
+
+## 6. Difficulties / Friction
+
+The first assertion expected activity ciphertext to stay identical after the later v1.6 navigation. It failed.
+
+## 7. Adjustments Made
+
+Kept the failure. Compared raw table IDs, the reserved settings row, unchanged history, and the two closed hashes from the older-app boundary.
+
+## 8. Mistakes / Risks
+
+The comparison does not authorize editing a v1.6 vault in an older app. The exact candidate still needs its own qualification.
+
+## 9. Current Position
+
+The named G3/W198 Windows readback passed. [Evidence](execution/2026-11-09-sf3-tamper-and-purge.md#g3-w198-native-readback-20261122).
+
+## 10. Next Steps
+
+Trace the pre-write point for the separate first-unlock safety copy and clarify failure behavior before a migration change.
+
+## 11. Open Questions
+
+First-unlock copy (A44), actual package qualification and the 5,000-row redo (Q1) remain open.
+
+## 12. Recommended Next Step
+
+Keep the previously failed safety-copy result and identify the smallest change that can produce the approved pre-upgrade copy with a clear notice.
+
+## 13. Handoff
+
+[Current state](STATUS.md#g3-w198-native-readback-20261122), [test register](plan/2026-11-09-whole-app-test-results.md#g3-w198-native-readback-20261122), and [execution evidence](execution/2026-11-09-sf3-tamper-and-purge.md#g3-w198-native-readback-20261122). All disposable vaults and raw data stay local.
+
+---
 
 <a id="session-170"></a>
 

@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="g3-w198-native-readback-20261122"></a>
+
+## Native backward compatibility verified for the disposable v1.6 vault
+
+**2026-11-22 10:50 Cairo / 08:50 UTC.** The published v1.5.1 executable read the page body, stored sticky and the numeric cell in a disposable copy (G3/W198). Both the copy and original kept their exact hashes during the older app visit. The original then reopened in v1.6 and all three were readable again. [Exact evidence](execution/2026-11-09-sf3-tamper-and-purge.md#g3-w198-native-readback-20261122).
+
+The first-upgrade safety copy (A44) has a separate failed result. The database-creation notice observed here belongs to an earlier format gate. Review the pre-write boundary and the failure behavior for the first unlock before making any migration change. Exact Windows packages and the 5,000-row redo (Q1) retain their own gates.
+
 <a id="restore-w194-native-settings-20261122"></a>
 
 ## Native Windows Settings backup restore verified

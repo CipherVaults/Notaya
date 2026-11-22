@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-g3-w198"></a>
+
+## Read-only vault compatibility — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Three isolated native app launches, one cross-version synthetic fixture, exact closed-byte and read-only table comparison, and delegated source review. Realized serving settings and attributable usage are unavailable. [Session](../sessions.md#session-171).
+
 <a id="codex-usage-20261122-native-settings-restore"></a>
 
 ## Native Windows Settings restore — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
