@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-import-titles-integration"></a>
+
+## Word and Markdown titles integration — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 07:54 Cairo / 05:54 UTC. Scoped source separation, one independent review, 30 Rust tests, locked offline Windows build, native import and restart, and verified GitHub integration. Actual serving settings, attributable tokens and quota share are unavailable. [Session](../sessions.md#session-161).
+
 <a id="codex-usage-20261122-vault-and-word-boundaries"></a>
 
 ## Vault and Word list qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

@@ -279,3 +279,13 @@ Root read the scoped closure/current pointers and matched their hashes 10:51:25Z
 **Independent output check.** Parsed the fixture OOXML and all ordered HTML row markers and list membership. The oracle accepted the exact full list and rejected a planted omission. Both actual comparisons exited 1. The source explains the omission: the 10,000-entry buffer skips later numbered paragraphs. The style-list patch makes more paragraphs use that path. Reuse the successful short-fixture evidence only at its original scope.
 
 **Stop point.** The released data-loss rule requires Ahmed to decide this repair path. Do not integrate the style-defined-list candidate with this failure. The two title fixes can be reviewed separately. No code, release or private data changed. All fixture and output bytes stayed on the PC.
+
+<a id="native-import-titles-merged-20261122"></a>
+
+### Word and Markdown title fixes on main — 2026-11-22 07:54 Cairo / 05:54 UTC
+
+**Integration boundary.** [PR #137](https://github.com/CipherVaults/Notaya/pull/137) applied only `fb1256aaf716fef80be1cb2cf5a379dc89cb2042` and `6c5e38cad80c76b5325b083c8d26a0123a0a4f15` onto `a806ae3e3b4a74940ee4107784a15fee7468cdf8`. A non-author verified the three source and test blobs and the absence of the failing style-list patch. Exact source `c72e51a79ecb696f105f88b9696650713a86fd95`, tree `ad2dddb0c82ca0d67acd9eff29edadf31c32ef3a`.
+
+**Testing.** Exact tip passed 16 Markdown, 12 Word and two one-test round trips for pictures, formatting, titles and mixed-script direction. The four runs used the same Rust binary, SHA-256 `55f59e4c315dc436ec9dba46d261018ae41f16f1c90673f38dfd95c5e8fe5773`. Locked offline Windows x64 release-profile build produced a fresh unbundled executable, 17,224,192 bytes, SHA-256 `66100c99dd876880933e56de4296f9ed0c185b77b1941ccc63d48150542b6345`. The native Files picker accepted both byte-identical fixture copies in a fresh test home. After restarting the exact exe, both reopened with the expected title, body, table and picture. No source files changed during the run. No hosted check runs were present on the head.
+
+**Remote verification and limits.** GitHub main `eeafe701344f3d8bc6bbf52f10f9634496251392` had the exact tested tree. The remote ref, merge parents, independent clone and full Git integrity check all matched. The [Word list failure](#native-word-list-boundary-20261122) remains on its own path. These checks did not qualify the installer, portable package or owner acceptance. No vault, raw fixture or output left the PC.

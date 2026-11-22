@@ -1,5 +1,18 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-import-titles-merged-20261122"></a>
+
+## Word and Markdown title fixes integrated — 2026-11-22 07:54 Cairo / 05:54 UTC
+
+| Check | Outcome |
+|---|---|
+| Exact title candidate | **Passed.** 16 Markdown parser tests, 12 Word importer tests and two focused round trips on `c72e51a79ecb696f105f88b9696650713a86fd95`. |
+| Saved-page native check (W141 and W162) | **Passed for both title fixtures.** The exact Windows development build imported both files through Windows Files. After restarting, the app showed both correct titles, body text, tables and pictures. Original fixture hashes matched. |
+| Integration | **Merged.** [PR #137](https://github.com/CipherVaults/Notaya/pull/137). Independent recovery from main found identical bytes to the tested tree. Hosted checks were absent. |
+| Limits | The Word long-list failure, Word inline code, PDF text reimport, vault backup design and package checks remain separate. |
+
+[Exact build and merge evidence](../execution/2026-11-15-safe-export-replacement.md#native-import-titles-merged-20261122).
+
 <a id="native-vault-compatibility-20261122"></a>
 
 ## Vault compatibility and Word list limits — 2026-11-22 07:36 Cairo / 05:36 UTC

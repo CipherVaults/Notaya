@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-import-titles-merged-20261122"></a>
+
+## Current state and continuation — import titles on main
+
+**2026-11-22 07:54 Cairo / 05:54 UTC.** [PR #137](https://github.com/CipherVaults/Notaya/pull/137) merged the Word and Markdown title fixes at `eeafe701344f3d8bc6bbf52f10f9634496251392`. A fresh GitHub clone confirmed the merge has the exact tested tree. The isolated candidate passed all 30 focused tests. Both notes reopened with the expected title, body, table and picture on its Windows build. [Test register](plan/2026-11-09-whole-app-test-results.md#native-import-titles-merged-20261122) · [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-import-titles-merged-20261122).
+
+The long-list change stays separate. The released Word list repair and first-unlock backup failure await Ahmed's decisions. Use verified main for the next independent native qualification case. Final packages, PDF reimport and the 5,000-row redo remain open.
+
 <a id="native-vault-compatibility-20261122"></a>
 
 ## Current state and continuation — vault compatibility and Word list limits

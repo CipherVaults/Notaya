@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 161 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Word and Markdown titles integrated](#session-161) |
 | 160 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Vault and Word list qualification](#session-160) |
 | 159 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Markdown title fix](#session-159) |
 | 158 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native document round trips](#session-158) |
@@ -192,6 +193,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-161"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Word and Markdown titles integrated
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex isolated, tested and merged the title fixes. A separate worker reviewed the exact two-commit candidate. **Models, Effort, Roles and Provenance.** Actual serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-import-titles-integration).
+
+## 1. Time
+
+Integration verified 2026-11-22 07:54 Cairo / 05:54 UTC.
+
+## 2. Session Goal
+
+Get both verified title fixes into v1.6 main while leaving the long-list failure available for its own repair decision.
+
+## 3. Actions Taken
+
+Started from verified main in an independent checkout. Applied only the Word and Markdown title commits, ran the 30 focused tests, built the exact app and reopened both original fixtures. Created and merged PR #137. Independently recovered main.
+
+## 4. Key Insights
+
+The combined title-only tree reproduced both successful Windows checks without carrying the Word list candidate.
+
+## 5. Decisions Made
+
+Integrated the two title corrections under the existing routine-merge authority. The app's package and release gates are still separate.
+
+## 6. Difficulties / Friction
+
+Git metadata needed explicit hidden-file inspection during preflight. The staged Markdown sidecar also contained the ownership marker, so the local fixture copy preserved it with the picture.
+
+## 7. Adjustments Made
+
+Compared the exact three blobs to the individually reviewed fixes. Rechecked both saved titles and pictures after restart on the combined executable.
+
+## 8. Mistakes / Risks
+
+The prior combined development branch contains the failing list fix. Only the isolated title branch went to main. No hosted CI checks were reported on its exact head.
+
+## 9. Current Position
+
+Main is `eeafe701344f3d8bc6bbf52f10f9634496251392`, with the exact tree tested on Windows. [Register](plan/2026-11-09-whole-app-test-results.md#native-import-titles-merged-20261122).
+
+## 10. Next Steps
+
+Use the recovered main for independent native qualification. Keep the released Word loss and first-unlock backup on their existing owner decision paths.
+
+## 11. Open Questions
+
+The separate repair pathway, database redo, exact Windows packages and owner acceptance remain open.
+
+## 12. Session Outcome
+
+The Word and Markdown title fixes reached main. The disposable fixtures and raw evidence stayed on the PC. Both owned native processes exited.
+
+## 13. Confidence Level
+
+High for the exact merged tree and the two tested title cases. Other import cases and package qualification retain their own evidence.
+
+---
 
 <a id="session-160"></a>
 
