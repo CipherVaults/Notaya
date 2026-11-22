@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w161-format-matrix-20261122"></a>
+
+## Windows section and notebook database export matrix
+
+**2026-11-22 14:13 Cairo / 12:13 UTC.** Eight additional native files extended the Markdown result to HTML, Word, PDF and separate Markdown ZIPs. Both scopes preserved the table created inside the note and the separate linked view. Only notebook outputs kept the neighboring section. All eight omitted the standalone and separately nested full-page databases. A section with one populated database and zero pages refused export before opening Save. [Exact source and file checks](execution/2026-11-15-safe-export-replacement.md#native-w161-format-matrix-20261122).
+
+**Continuation.** The Windows development matrix (W161) has positive evidence for inline tables and boundaries, and confirmed omissions for separate databases. A v1.6 disposition remains open. HTML, Word and PDF ZIP variants on this expanded fixture, exact final packages and owner acceptance have separate gates. The 5,000-row redo (Q1) stays open.
+
 <a id="native-w161-owned-markdown-20261122"></a>
 
 ## Windows Markdown export keeps embedded tables and omits separate nested databases

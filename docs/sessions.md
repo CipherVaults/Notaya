@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 185 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows database export formats](#session-185) |
 | 184 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify embedded and nested Markdown export](#session-184) |
 | 183 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify PDF web links](#session-183) |
 | 182 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify typing commands in the palette](#session-182) |
@@ -216,6 +217,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-185"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify Windows database export formats
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead ran the native saves, independent content comparison and render review. Separate workers examined previous file checks and the release gate. **Models, Effort, Roles and Provenance.** The Goal and worker dispatch specify GPT-6.2 Sol Ultra. Realized runtime settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w161-matrix).
+
+## 1. Time
+
+Evidence cut 2026-11-22 14:13 Cairo / 12:13 UTC.
+
+## 2. Session Goal
+
+Complete the expanded section and notebook database export checks in HTML, Word, PDF and Markdown ZIP, and observe the database-only boundary (W161).
+
+## 3. Actions Taken
+
+Reopened the previous closed synthetic fixture in a new owned home. Saved both export scopes in the four additional paths. Witnessed a populated database-only section and inspected the app's export refusal. Compared structures, content, PDF renders and archive data.
+
+## 4. Key Insights
+
+Both embedded tables retain their values in every output, and the neighboring section only appears for the notebook. Separate standalone and nested database contents are omitted. The app stops before Save when there are no pages.
+
+## 5. Decisions Made
+
+Tie the new findings to their precise development tree and preserve the earlier Markdown receipts. Leave the product disposition for separate databases open.
+
+## 6. Difficulties / Friction
+
+The desktop bridge reached its interaction limit during archive setup. Poppler reported missing optional display fonts.
+
+## 7. Adjustments Made
+
+Rebound the same existing app, cancelled the single-file dialog and verified ZIP mode. Inspected the actual PDF pages that contained the table.
+
+## 8. Mistakes / Risks
+
+The expanded ZIP matrix used Markdown members. The offline render verifies these pages and does not substitute for owner visual acceptance or installed-package checks.
+
+## 9. Current Position
+
+The expanded Windows development matrix has eight verified output files. The standalone and nested omissions remain open as a product decision. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w161-format-matrix-20261122).
+
+## 10. Next Steps
+
+Continue independent qualification. Review the recorded 5,000-row redo evidence and the success summary's duplication without retrying the stopped operation.
+
+## 11. Open Questions
+
+Whether to extend section and notebook export to separate databases in v1.6 remains an owner decision.
+
+## 12. Recommended Next Step
+
+Keep the redo acceptance assertions and deadlines fixed. Confirm the scope and identity of any preparatory receipt review before further execution.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-184"></a>
 

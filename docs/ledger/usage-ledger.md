@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w161-matrix"></a>
+
+## Native Windows database export matrix, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One bounded native launch, eight output saves and one populated database-only scope check. Independent inspection covered structure, values, render and archive inventory. Separate workers checked reuse of verification sources and release dependencies. Attributable token totals and quota readings are unavailable. [Session](../sessions.md#session-185).
+
 <a id="codex-usage-20261122-w161-owned"></a>
 
 ## Native Windows embedded and nested database export, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

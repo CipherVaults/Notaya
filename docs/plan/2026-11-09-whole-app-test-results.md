@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w161-format-matrix-20261122"></a>
+
+## Native Windows database export matrix and database-only selection, 2026-11-22
+
+- **Passed for inline data and container boundary (W161).** For section and notebook, independently verified HTML and Word table structures, PDF logical text and table layout, and separate Markdown ZIP members and data. The owned table and linked view each retained the exact header and row at the right point in the note. Neighboring content was present only in notebook exports.
+- **Omissions confirmed.** The standalone property and row and the separately nested database title and row remained absent from all eight files. A section containing a populated database and zero pages returned “There is nothing to export” and opened no Save dialog.
+- **Separate coverage.** The same fixture's two Markdown single-file results were independently rechecked by hash. Other ZIP formats, owner disposition and exact packages remain separate.
+
+[Native route, eight exact output hashes and guard](../execution/2026-11-15-safe-export-replacement.md#native-w161-format-matrix-20261122).
+
 <a id="native-w161-owned-markdown-20261122"></a>
 
 ## Native Windows embedded and nested database export, 2026-11-22
