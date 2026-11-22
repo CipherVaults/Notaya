@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-native-omissions"></a>
+
+## Windows import omission reporting — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Exact-tree baseline and final Rust checks, two candidate builds, one native baseline and one final import/restart readback, non-author code review, and a read-only restore handoff check. Realized serving settings and attributable usage are unavailable. [Session](../sessions.md#session-168).
+
 <a id="codex-usage-20261122-native-volume-main"></a>
 
 ## Larger ordinary Windows imports — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

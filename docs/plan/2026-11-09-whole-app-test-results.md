@@ -1,5 +1,17 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-omissions-20261122"></a>
+
+## Native Windows ordinary omission reporting — 2026-11-22
+
+- **Baseline failed (W151).** The native Files picker imported two pages in one section. The report listed the unsupported audio and omitted the missing linked page. The new Rust control failed with no missing-link entry.
+- **Final-tree tests passed.** Seven exact selected importer and round-trip tests passed. An independent review verified the nested path and fragment correction. One build preflight was blocked by a transient Git index lock before Cargo started. The bounded retry and final build finished.
+- **Native Windows case passed.** The reviewed app gave exactly two omission entries, including the missing linked page and its source. The original ZIP hash matched. After restart both pages and surrounding text were present. Clicking the valid link opened the saved child. The missing link label was plain text. The closed vault had five records, zero attachments, and returned `ok` from SQLite quick-check.
+- **Integrated.** [PR #140](https://github.com/CipherVaults/Notaya/pull/140) and independent main readback matched the tested tree `5474f85501fc69c7fa73218a8e68f50c64cc9f38`.
+- **Outside this run.** Dedicated Notion page-link figures, targets present in the source but later dropped, other unsupported embed formats, native Linux and exact Windows packages.
+
+[Exact sources, binary and failure evidence](../execution/2026-11-15-safe-export-replacement.md#native-omissions-20261122).
+
 <a id="native-volume-main-20261122"></a>
 
 ## Native Windows larger ordinary PDF and ZIP — 2026-11-22

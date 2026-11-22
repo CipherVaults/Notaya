@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-omissions-20261122"></a>
+
+## Windows import omission reporting verified on v1.6 main
+
+**2026-11-22 09:59 Cairo / 07:59 UTC, then integrated.** Notaya reported both the missing linked page and the unsupported audio in the ordinary ZIP case (W151). After restart both notes reopened, the missing link label stayed as text, and the working link opened the saved target. The original ZIP bytes matched and the closed test vault passed its integrity check. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-omissions-20261122).
+
+[Pull request #140](https://github.com/CipherVaults/Notaya/pull/140) merged. Independent GitHub recovery verified main `bfc7b33842be298f346117f45a13bbae93aec2c6` and the exact tested tree. Continue the password branch of Windows restore validation (W194). The separate downgrade restore, the 5,000-row database redo (Q1), and exact Windows packages retain their own gates.
+
 <a id="native-volume-main-20261122"></a>
 
 ## Larger ordinary imports verified on Windows main

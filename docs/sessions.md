@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 168 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair Windows import omission reporting](#session-168) |
 | 167 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Larger native import readback](#session-167) |
 | 166 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair right-to-left PDF reimport](#session-166) |
 | 165 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Repair long Word list imports](#session-165) |
@@ -199,6 +200,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-168"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Repair Windows import omission reporting
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native and exact-tree checks. A separate worker independently reviewed the patch. Another worker reconciled the next restore case. **Models, Effort, Roles and Provenance.** GPT-6.2 Sol Ultra was requested for the earlier delegation. Realized serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-native-omissions).
+
+## 1. Time
+
+Native evidence cut 2026-11-22 09:59 Cairo / 07:59 UTC, followed by GitHub integration.
+
+## 2. Session Goal
+
+Check ordinary native import reporting (W151) and correct a confirmed omission on v1.6.
+
+## 3. Actions Taken
+
+Imported the pinned synthetic ZIP, reproduced the missed report entry, corrected the shared converter and verified the final native import and restart.
+
+## 4. Key Insights
+
+A saved label can survive even when the missing target is absent from the report. The resolved source path identifies that target without confusing it with the fragment.
+
+## 5. Decisions Made
+
+Kept the fix in v1.6 under Ahmed's existing direction. Applied the diagnostic to eligible missing relative page files in the existing source lookup.
+
+## 6. Difficulties / Friction
+
+The red regression exited 101 at the expected assertion. The first candidate build preflight encountered a transient local Git index lock before Cargo. The first candidate also had a fragment-dependent diagnostic error found by independent review.
+
+## 7. Adjustments Made
+
+Retained the first results, used a separate build retry receipt, and used the resolved target path in the final candidate. The seven exact final-tree checks and the native case passed.
+
+## 8. Mistakes / Risks
+
+The checked result covers ordinary missing files. A dedicated Notion page-link figure or an existing source file that later produces no page follows another path.
+
+## 9. Current Position
+
+[PR #140](https://github.com/CipherVaults/Notaya/pull/140) is merged. A fresh GitHub readback matched main and the exact tested tree.
+
+## 10. Next Steps
+
+Qualify password-protected backup refusal and restore (W194), using disposable local data.
+
+## 11. Open Questions
+
+The explicit backup downgrade variant, the 5,000-row database redo (Q1), and exact Windows packages remain open. The defensive import baseline remains held before the next Notion fidelity stage (N3).
+
+## 12. Recommended Next Step
+
+Use the verified main tree for wrong-password refusal, same-file correct retry, restart, and the retained undo copy. Keep credential and vault bytes local.
+
+## 13. Handoff
+
+[Current state](STATUS.md#native-omissions-20261122), [test register](plan/2026-11-09-whole-app-test-results.md#native-omissions-20261122), and [execution evidence](execution/2026-11-15-safe-export-replacement.md#native-omissions-20261122).
+
+---
 
 <a id="session-167"></a>
 
