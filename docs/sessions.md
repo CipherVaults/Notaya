@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 179 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify Windows export replacement](#session-179) |
 | 178 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows export selection and cancellation](#session-178) |
 | 177 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check hub exports to Word and PDF](#session-177) |
 | 176 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bilingual editing](#session-176) |
@@ -210,6 +211,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-179"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Qualify Windows export replacement
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the native disposable copy, bounded file-handle test and independent readback. Workers reviewed expected guard and replacement behavior and traced the remaining packaging gate. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w165).
+
+## 1. Time
+
+Evidence cut 2026-11-22 12:38 Cairo / 10:38 UTC.
+
+## 2. Session Goal
+
+Verify native scope, destination and failed replacement behavior (W165).
+
+## 3. Actions Taken
+
+Reused the verified synthetic vault in an owned copy, tested an empty section and protected destination, captured ordinary Windows replacement denial, then completed the same Save after releasing the owned handle. Verified file contents, watcher events, app shutdown and vault integrity.
+
+## 4. Key Insights
+
+The protected directory and empty section received different application errors. The denied overwrite staged and removed a temporary sibling while preserving the original bytes. The permitted overwrite changed exactly the target file.
+
+## 5. Decisions Made
+
+Record the native HTML behavior on this development build. Keep other formats, the full fault matrix and exact packages separately evidenced.
+
+## 6. Difficulties / Friction
+
+An off-screen button dismissed the modal before Save. The first locked-file notice expired before its text was captured.
+
+## 7. Adjustments Made
+
+Scrolled to the visible Export control. Retained the first blocked attempt and repeated it once under the same lock to capture the application error.
+
+## 8. Mistakes / Risks
+
+One early desktop action used a control below the viewport. File events show staging and cleanup. They do not establish an instrumented operating-system call trace.
+
+## 9. Current Position
+
+The W165 native validation and HTML replacement check passed. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w165-export-replacement-20261122).
+
+## 10. Next Steps
+
+Verify fresh native ZIP reimport of internal page, child and heading links (W164).
+
+## 11. Open Questions
+
+No new owner decision for W165. Clean-account setup (W220) and all final-package gates remain separate.
+
+## 12. Recommended Next Step
+
+Use an isolated source notebook and a fresh destination, with both included and deliberately excluded targets (W164).
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-178"></a>
 

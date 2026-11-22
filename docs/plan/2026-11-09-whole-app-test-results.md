@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w165-export-replacement-20261122"></a>
+
+## Native Windows export validation and replacement, 2026-11-22
+
+- **Passed for validation (W165).** The actual Windows picker submitted a harmless filename under the copied app's data folder. Notaya rejected it and no file was created. An empty section gave the no-pages error before native Save.
+- **Passed for preservation on failure.** With an already exported HTML document held open, Windows accepted the overwrite confirmation and Notaya reported access denied. The old document matched its original hash. Each attempted overwrite created and removed a temporary sibling, and the output folder contained only the original file before release.
+- **Passed for the permitted replacement.** After closing the test handle, the same Save replaced the previous file. Independent HTML parsing matched the exact new title and body. The underlying disposable vault passed a read-only integrity check and the app exited normally.
+- **Separate coverage.** Other formats and injected failures belong to earlier scoped checks. Exact release packages were outside this run.
+
+[Exact build, old and new output identities and limits](../execution/2026-11-15-safe-export-replacement.md#native-w165-export-replacement-20261122).
+
 <a id="native-w154-export-selection-20261122"></a>
 
 ## Native Windows export selection and cancellation, 2026-11-22

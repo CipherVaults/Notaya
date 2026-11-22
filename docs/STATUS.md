@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w165-export-replacement-20261122"></a>
+
+## Windows export validation and replacement verified
+
+**2026-11-22 12:38 Cairo / 10:38 UTC.** The v1.6 development build refused to export an empty section or write inside its disposable data folder. Windows denied replacement while the existing HTML file was held open. The original bytes stayed intact and each temporary file was removed. The same Save succeeded after the handle was released and contained only the new page. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w165-export-replacement-20261122).
+
+**Continuation.** The native validation and HTML replacement check (W165) passed. Next verify internal page, child and heading links through ZIP export and fresh reimport (W164). The 5,000-row database redo (Q1) and exact packages remain open.
+
 <a id="native-w154-export-selection-20261122"></a>
 
 ## Windows export selection and Save cancellation verified

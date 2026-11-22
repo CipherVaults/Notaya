@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w165"></a>
+
+## Native Windows export validation and replacement, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One bounded native app launch, empty-scope and protected-directory checks, two blocked Windows overwrites, one successful replacement after releasing the test handle, independent file and process readback, and independent source and gate review. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-179).
+
 <a id="codex-usage-20261122-w154"></a>
 
 ## Native Windows export scope and cancellation, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
