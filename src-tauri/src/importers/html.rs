@@ -997,7 +997,9 @@ x++;</code></pre>
         assert_eq!(d.icon.as_deref(), Some("🚀"));
         assert_eq!(d.cover, Some(0));
         assert_eq!(images.list.len(), 2);
-        assert!(problems.is_empty(), "{problems:?}");
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert_eq!(problems[0].item, "Link to Other page 0123456789abcdef0123456789abcdef.html (test)");
+        assert_eq!(problems[0].reason, "The linked page file was not found in this import.");
         let v = json(&d.blocks);
         let s = v.to_string();
         let c = v["content"].as_array().unwrap();
@@ -1022,7 +1024,8 @@ x++;</code></pre>
             assert!(s.contains(&format!(r#""type":"{mark}""#)), "{mark}");
         }
         assert!(s.contains("https://notion.so"));
-        assert!(!s.contains("Other%20page"), "relative links lose the link but keep the text");
+        assert!(s.contains("internal"), "the missing link label stays");
+        assert!(!s.contains("Other%20page") && !s.contains("notaya-src:"), "the missing link has no address");
         // Blocks.
         let types: Vec<&str> = c.iter().map(|b| b["type"].as_str().unwrap()).collect();
         for t in ["callout", "toggle", "taskList", "bulletList", "orderedList", "blockquote", "codeBlock", "mathBlock", "columns", "pageLink", "image", "table", "horizontalRule"] {

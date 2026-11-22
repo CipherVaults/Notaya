@@ -1322,13 +1322,35 @@ mod tests {
         ];
         let v = vfs(&all);
         let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
-        let (items, _) = finish(&mut plan, &v);
+        let (items, summary) = finish(&mut plan, &v);
         let two = page(&items, "Two").id.clone();
         let one = page(&items, "One").content.clone();
         assert!(one.contains(&format!("\"href\":\"notaya:page/{two}\"")), "{one}");
         assert!(one.contains("https://example.com/x"));
         assert!(!one.contains("notaya-src") && !one.contains("Nope.md"), "no marker or dead link is left: {one}");
         assert!(one.contains("a missing one"), "the text stays");
+        let omissions: Vec<_> = summary.skipped.iter().map(|item| item.item.as_str()).collect();
+        assert_eq!(omissions, ["Link to Nope.md (One.md)"]);
+    }
+
+    #[test]
+    fn a_missing_html_page_link_is_reported_with_its_source_page() {
+        let html = br#"<!doctype html><html><head><title>Parent</title></head><body>
+            <h1>Parent</h1>
+            <p>Read <a href="Supporting%20note.md">the supporting note</a>
+            or <a href="Drafts/Missing%20note.html#section/details">the missing note</a>.</p></body></html>"#;
+        let files = vfs(&[("Parent.html", html), ("Supporting note.md", b"# Supporting note\n\nPresent.")]);
+        let mut plan = build(&files, &Control::standard(), None, NOW).unwrap();
+        let (items, summary) = finish(&mut plan, &files);
+
+        assert_eq!(summary.pages, 2);
+        let parent = page(&items, "Parent");
+        let linked_id = &page(&items, "Supporting note").id;
+        assert!(parent.content.contains(&format!("\"href\":\"notaya:page/{linked_id}\"")));
+        assert!(parent.text.contains("the missing note"));
+        assert!(!parent.content.contains("Missing note.html") && !parent.content.contains("notaya-src:"));
+        let omissions: Vec<_> = summary.skipped.iter().map(|item| item.item.as_str()).collect();
+        assert_eq!(omissions, ["Link to Drafts/Missing note.html (Parent.html)"]);
     }
 
     fn marker(layout: &str) -> String {

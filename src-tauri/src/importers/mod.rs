@@ -260,12 +260,20 @@ pub fn is_page_address(href: &str) -> bool {
 }
 
 impl Ctx<'_> {
-    pub fn page_href(&self, href: &str) -> Option<String> {
+    pub fn page_href(&mut self, href: &str) -> Option<String> {
         if !is_page_address(href) {
             return None;
         }
-        let path = resolve_rel(&self.dir, href).and_then(|p| self.vfs.find(&p))?;
-        Some(format!("{PAGE_HREF}{path}"))
+        let path = resolve_rel(&self.dir, href)?;
+        let Some(target) = self.vfs.find(&path) else {
+            let display_path: String = path.chars().take(160).collect();
+            self.problem(
+                format!("Link to {display_path}"),
+                "The linked page file was not found in this import.",
+            );
+            return None;
+        };
+        Some(format!("{PAGE_HREF}{target}"))
     }
 }
 
