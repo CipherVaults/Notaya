@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 159 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Markdown title fix](#session-159) |
 | 158 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native document round trips](#session-158) |
 | 157 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Export an inline database on Windows](#session-157) |
 | 156 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Paired Notion export on Windows](#session-156) |
@@ -190,6 +191,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-159"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Markdown title fix
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex implemented and qualified the candidate. A separate worker reviewed the source and regression evidence. **Models, Effort, Roles and Provenance.** The Goal names GPT-6.2 Sol Ultra. Actual serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-markdown-title).
+
+## 1. Time
+
+Qualification cut 2026-11-22 03:01 Cairo / 01:01 UTC.
+
+## 2. Session Goal
+
+Preserve the actual title when Notaya reopens a previously exported Markdown page with a picture.
+
+## 3. Actions Taken
+
+Strengthened the pictured round-trip test, ran it on the old reader, patched the reader, and ran the parser and targeted round-trip tests. A separate worker reviewed the patch. Built and used the exact Windows candidate to reimport the original failing file. Verified the saved page after restart.
+
+## 4. Key Insights
+
+A closed one-line comment can precede a heading without belonging to its paragraph. The fix belongs in the reader so existing exports work while the writer's ownership marker stays intact.
+
+## 5. Decisions Made
+
+Carry the reviewed Markdown title fix and the earlier relevant Word fixes toward v1.6 integration. Keep the original failure and Word inline-code limitation in the register.
+
+## 6. Difficulties / Friction
+
+The first test failed as expected and reported the filename as the title. The Windows file picker and reopened editor were checked directly.
+
+## 7. Adjustments Made
+
+The regression now asserts the persisted page title and rejects a copied literal title heading, while retaining the existing body and picture assertions.
+
+## 8. Mistakes / Risks
+
+The initial round-trip test could pass with the wrong saved title. The strengthened test caught it. Attachment ownership, generated output and package qualification retain their existing boundaries.
+
+## 9. Current Position
+
+The candidate passed the scoped Windows reimport. [Test register](plan/2026-11-09-whole-app-test-results.md#markdown-title-fix-20261122) · [Build and test identities](execution/2026-11-15-safe-export-replacement.md#markdown-title-fix-20261122).
+
+## 10. Next Steps
+
+Reconcile the three document fixes for reviewed integration. Continue independent native qualification with the approved vault compatibility and first-unlock safety-copy checks.
+
+## 11. Open Questions
+
+Word inline code, PDF reimport and the database redo each retain separate evidence and status. The final installer and portable package need their own qualification.
+
+## 12. Session Outcome
+
+The original Markdown and PNG hashes matched after the test. Both owned app instances closed. Vaults, fixtures and raw evidence stayed on the PC.
+
+## 13. Confidence Level
+
+High for the named regression and reproduced Windows fixture. Release readiness still depends on reviewed main integration and the required package gates.
+
+---
 
 <a id="session-158"></a>
 

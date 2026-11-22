@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="markdown-title-fix-20261122"></a>
+
+## Current state and continuation — Markdown title preservation
+
+**2026-11-22 03:01 Cairo / 01:01 UTC.** The Windows candidate reopened the exact picture-bearing Markdown file that failed earlier. The original title, multilingual text, lists, table and picture were visible after restart. The reader skips a standalone closed comment and preserves the export ownership marker on disk. The strengthened test reproduced the failure before the fix. Sixteen parser tests and two targeted round-trip tests passed with the fix. [Register](plan/2026-11-09-whole-app-test-results.md#markdown-title-fix-20261122) · [Execution evidence](execution/2026-11-15-safe-export-replacement.md#markdown-title-fix-20261122).
+
+**v1.6 integration.** The Word title, Word style-defined lists and Markdown title fixes are release candidates for reviewed main integration. Keep their source, checks and limitations tied to their commits. The separate Word inline-code loss remains visible in the register. Next check candidate integration and the disposable vault compatibility and first-unlock safety-copy gates. Keep the PDF reimport failure, 5,000-row redo and exact-package qualification open.
+
 <a id="native-document-roundtrips-20261122"></a>
 
 ## Current state and continuation — document round trips

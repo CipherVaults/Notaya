@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-markdown-title"></a>
+
+## Markdown title qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 03:01 Cairo / 01:01 UTC. Source regression, independent review, 18 passing focused Rust tests, release-profile Windows build and reopened native fixture. One earlier expected Rust failure was retained. The Goal names GPT-6.2 Sol Ultra. Actual serving settings, attributable usage and quota share are unavailable. [Session](../sessions.md#session-159) · [Evidence](../execution/2026-11-15-safe-export-replacement.md#markdown-title-fix-20261122).
+
 <a id="codex-usage-20261122-document-roundtrips"></a>
 
 ## Native document round trips — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="markdown-title-fix-20261122"></a>
+
+## Native Markdown title fix — 2026-11-22 03:01 Cairo / 01:01 UTC
+
+| Register case | Outcome |
+|---|---|
+| Picture-bearing Markdown round trip (W162) | **Passed on the Windows development candidate.** Imported the original file that failed on the baseline. After restart the editor showed the correct title, no literal title heading, the expected text and styling, two lists, the table and picture. |
+| Regression control | **Expected failure preserved.** The strengthened pictured round-trip test ran once on the old reader, reported the title `page` and exited 101. With the fix, 16 parser tests and both targeted round-trip tests passed. |
+| Input and build identity | Both source files retained their original hashes. The release-profile Windows x64 executable was built from the exact candidate. [Trace and limits](../execution/2026-11-15-safe-export-replacement.md#markdown-title-fix-20261122). |
+| Separate qualification | Word's inline-code loss remains open. This check did not rerun PDF import, test an installer or portable ZIP, qualify large resources, or clear database redo. |
+
 <a id="windows-document-roundtrips-20261122"></a>
 
 ## Native document round trips — 2026-11-22 02:35 Cairo / 00:35 UTC
