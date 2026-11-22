@@ -1,5 +1,18 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-backup-picker-20261122"></a>
+
+## Native file-picker backup restore — 2026-11-22 08:13 Cairo / 06:13 UTC
+
+| Check | Outcome |
+|---|---|
+| Settings → Restore from a backup → Choose another backup file (A18) | **Passed with security off.** The native picker selected an owned backup outside the app data folder. The replacement opened immediately and showed the same four notes after restart. An opened note showed the body and its expected blue picture. |
+| Previous vault retained | **Passed.** Exactly one new undo file matched the displaced preimage byte for byte. An independent native app home opened a copy with the original two notes and verified the original title, table and picture. |
+| Input and staged files | **Passed.** Selected backup, external source snapshots and retained undo stayed byte-identical. Immediately after restore the active file matched the selected backup. After opening a note, only the app settings record differed in the compared records. Note, notebook, section, header and attachment rows matched. The staging file was gone. |
+| Limits | This check did not exercise a password or keyfile, the failed-file or cancellation path, power loss, first-unlock safety copy (A44), or the installer. |
+
+[Exact evidence](../execution/2026-10-23-restore-from-backup.md#native-backup-picker-20261122).
+
 <a id="native-zip-collisions-20261122"></a>
 
 ## Separate-file ZIP collisions and punctuation — 2026-11-22 08:05 Cairo / 06:05 UTC

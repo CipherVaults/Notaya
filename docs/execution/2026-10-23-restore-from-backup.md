@@ -132,3 +132,15 @@ The readable passphrase and the in-app restore are committed (`1273093`) and che
 The owner tries `E:\Project\Cipherleaf-portable\Cipherleaf.exe` (including a restore), replaces the older ZIP copies, and says what to change or which backlog items come next. Anything that changes security behavior, adds a dependency, makes the repository public or adds a license waits for the owner.
 
 **Do not repeat:** the review rounds, the restore design, the build.
+
+<a id="native-backup-picker-20261122"></a>
+
+### Native Windows file-picker closeout — 2026-11-22 08:13 Cairo / 06:13 UTC
+
+**Scope and exact build.** This closes the file-picker route for a security-off disposable vault, separate from the earlier restore-by-name result. Windows x64 unbundled development executable from `c72e51a79ecb696f105f88b9696650713a86fd95`, SHA-256 `66100c99dd876880933e56de4296f9ed0c185b77b1941ccc63d48150542b6345`. Tree `ad2dddb0c82ca0d67acd9eff29edadf31c32ef3a` matched independently recovered main `eeafe701344f3d8bc6bbf52f10f9634496251392`. The current disposable vault held two pages and two attachments. The other known synthetic vault's ordinary backup held four pages and two attachments.
+
+**Native execution and persisted result.** From Settings chose Restore from a backup, then Choose another backup file. Selected the pinned external backup through the Windows picker and restored with its empty password field. The app displayed the name of the file holding the old vault. Restart showed the correct four titles and note bodies. One note opened with the expected picture. The status receipt matched the actual file inventory, with one new file beginning `restore-undo-` and no staging file.
+
+**Independent recovery and consistency.** The old vault was retained byte-for-byte. An independent app home opened a copy of that file and displayed the previous two notes, including the original note, table and picture. The restored file matched the selected backup before the post-restore readback. After a note visit, closed SQLite verification matched every non-settings row and all header and attachment rows to the backup. The changed row was the reserved app-settings identifier. The selected backup, original snapshots and retained copy matched throughout. Quick-check passed for all inspected closed files.
+
+**Limits.** Real data, password-protected backups, keyfiles, failed selection, malformed-file refusal, crash rollback and installer operation were outside this case. This result says nothing about the separate first-unlock safety copy (A44). All raw materials stay local. The failed attempt to hash an open, exclusively held test vault was retained in the local execution trace.

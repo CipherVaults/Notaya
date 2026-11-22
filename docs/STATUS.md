@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-backup-picker-20261122"></a>
+
+## Current state and continuation — native backup picker
+
+**2026-11-22 08:13 Cairo / 06:13 UTC.** The native backup picker (A18) restored a security-off disposable backup. After restart four notes and the tested picture reopened. The app retained an exact copy of the displaced vault, and its separate readback reopened the original notes. All source snapshots matched. [Register](plan/2026-11-09-whole-app-test-results.md#native-backup-picker-20261122) · [Execution evidence](execution/2026-10-23-restore-from-backup.md#native-backup-picker-20261122).
+
+Next check how the native restore path refuses an unreadable disposable backup, without changing the current vault. Password and keyfile restores, first-unlock safety copy (A44), and exact packages retain separate evidence requirements.
+
 <a id="native-zip-collisions-20261122"></a>
 
 ## Current state and continuation — separate-file ZIP export

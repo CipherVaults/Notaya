@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 163 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Native backup picker and recovery](#session-163) |
 | 162 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Separate-file ZIP qualification](#session-162) |
 | 161 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Word and Markdown titles integrated](#session-161) |
 | 160 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Vault and Word list qualification](#session-160) |
@@ -194,6 +195,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-163"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Native backup picker and recovery
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the Windows checks. A separate read-only worker traced the missing picker case in the restore contract. **Models, Effort, Roles and Provenance.** Actual serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-native-restore).
+
+## 1. Time
+
+Test cut 2026-11-22 08:13 Cairo / 06:13 UTC.
+
+## 2. Session Goal
+
+Fill the native backup picker evidence gap and prove the copy the app retains is recoverable.
+
+## 3. Actions Taken
+
+Copied two proven synthetic snapshots into isolated locations. Used Settings and the file picker to restore the external backup. Reopened the restored app. In another isolated app home, started a copy of the file the restore command retained.
+
+## 4. Key Insights
+
+Both vault states remained usable. The chosen backup and held original matched their snapshots. Only the settings record changed after navigating in the restored vault.
+
+## 5. Decisions Made
+
+Record the scoped security-off picker check. Keep protection, refusal, rollback interruption and first-unlock evidence separate.
+
+## 6. Difficulties / Friction
+
+The live vault held an exclusive file handle. The first attempt to hash it while open was refused. Used the prelaunch hash and compared it to the retained file after the test.
+
+## 7. Adjustments Made
+
+Compared the retained file independently and opened a copy instead of loading the evidence file as the live vault. Identified the changed post-visit record using the known settings identifier.
+
+## 8. Mistakes / Risks
+
+A success dialog alone cannot establish that the restored notes are usable or that the displaced file survives. The two independent opens and closed-file checks address those risks on this fixture.
+
+## 9. Current Position
+
+Native file-picker restore passed for the two disposable vault states. [Register](plan/2026-11-09-whole-app-test-results.md#native-backup-picker-20261122).
+
+## 10. Next Steps
+
+Check refusal of an unreadable disposable backup. Compare the current vault before and after. Continue work separately from the pending first-unlock design.
+
+## 11. Open Questions
+
+Password, keyfile, interruption and package qualification remain separate. No new owner decision arose.
+
+## 12. Session Outcome
+
+All owned app processes closed. Test data and raw evidence stayed on the PC.
+
+## 13. Confidence Level
+
+High for this Windows development executable and the tested security-off picker route. Package and other restore routes still need their own proof.
+
+---
 
 <a id="session-162"></a>
 

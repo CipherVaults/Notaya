@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-native-restore"></a>
+
+## Native backup picker qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 08:13 Cairo / 06:13 UTC. Scoped Windows picker restore, restart and independent native undo-file readback. Compared closed disposable snapshots with read-only SQLite. Actual serving settings and attributable usage are unavailable. [Session](../sessions.md#session-163).
+
 <a id="codex-usage-20261122-zip-collisions"></a>
 
 ## Separate-file ZIP qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
