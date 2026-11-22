@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-wp18-long-page-20261122"></a>
+
+## Windows long-note editing and persistence verified
+
+**2026-11-22 14:55 Cairo / 12:55 UTC.** The exact Windows development app reached both ends of a synthetic 22,320-word note with the keyboard (WP-18), saved a new final paragraph, and reopened it after an app restart. The native editor and independent HTML readback both matched all 7,440 original markers and the new paragraph. [Evidence and observation bounds](execution/2026-11-08-v1-6-build-start.md#native-wp18-long-page-20261122).
+
+**Continuation.** This gives one long text-page result on this machine. Comparative repeated runs, broader accessibility and the exact package retain separate checks. Next, qualify keyboard operation of the native export flow. The 5,000-row redo (Q1) and the separate upgrade-copy and export-scope decisions remain open.
+
 <a id="g3-w198-protected-input-20261122"></a>
 
 ## Protected compatibility needs a native unlock

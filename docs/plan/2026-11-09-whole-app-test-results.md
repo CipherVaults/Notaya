@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-wp18-long-page-20261122"></a>
+
+## Native Windows long-note navigation and save, 2026-11-22
+
+- **Passed for the tested long text note (WP-18).** Ctrl+Home and Ctrl+End brought the exact first and last markers into view. One added final paragraph survived leaving the editor and a clean app restart.
+- **Verified actual content.** The independently parsed HTML and fresh-process native editor matched all 240 original paragraphs (7,440 markers) plus the new paragraph. The closed copied vault passed SQLite quick-check and both app runs exited 0.
+- **Measured, no threshold.** The first and last marker jumps were observed within 520 and 555 ms including the observer. First reopen observation at 240 ms still lacked the editor. The next complete observation only establishes an upper bound and includes time between observations. This one workload does not qualify the 8 GB machine floor, whole-process memory, broad accessibility or final release packages.
+
+[Exact executable, method and numbers](../execution/2026-11-08-v1-6-build-start.md#native-wp18-long-page-20261122).
+
 <a id="g3-w198-protected-input-20261122"></a>
 
 ## Windows password-protected compatibility precheck, 2026-11-22

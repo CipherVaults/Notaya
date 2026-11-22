@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-wp18-long-page"></a>
+
+## Native Windows long-note navigation and save, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two isolated launches of the existing executable, one native edit and HTML export, ordered readback after restart, and an independent read-only fixture review. Attributable token counts and realized serving settings are unavailable. [Session](../sessions.md#session-189).
+
 <a id="codex-usage-20261122-g3-protected"></a>
 
 ## Native protected Windows compatibility precheck, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

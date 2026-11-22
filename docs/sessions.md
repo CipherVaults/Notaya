@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 189 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify long-note navigation and save](#session-189) |
 | 188 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check protected vault compatibility preconditions](#session-188) |
 | 187 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows keyboard navigation](#session-187) |
 | 186 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Measure Windows startup and idle resources](#session-186) |
@@ -220,6 +221,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-189"></a>
+
+# Session: 2026-11-22 UTC | Ahmed (AE0101) | Gaming-PC | Verify long-note navigation and save
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead exercised the app and checked the closed copy. An independent read-only worker inspected the fixture and editor source. **Models, effort, roles and provenance.** GPT-6.2 Sol Ultra is the Goal setting and was requested for the worker. Realized serving settings were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-wp18-long-page).
+
+## 1. Time
+
+Evidence cut 2026-11-22 14:55 Cairo / 12:55 UTC.
+
+## 2. Session Goal
+
+Check real Windows keyboard navigation, edit persistence and output on an imported 22,320-word synthetic note (WP-18).
+
+## 3. Actions Taken
+
+Opened an isolated fixture, moved to both ends of the editor, appended one paragraph and waited for save. Left through Home and reopened the note. Exported HTML, independently checked text and then restarted to verify persisted content. Checked both process exits and vault bytes.
+
+## 4. Key Insights
+
+All original text and the one new paragraph matched after export and restart. The original synthetic fixture hash matched its preimage.
+
+## 5. Decisions Made
+
+Record the timing observations as single-run bounds and keep the low-end and package checks separate.
+
+## 6. Difficulties / Friction
+
+Some element-index clicks reported unavailable geometry. The first reread after choosing the recent note showed the transition view before the editor loaded.
+
+## 7. Adjustments Made
+
+Used the corresponding visible screenshot targets. Verified the exact local destination and timed only known observation bounds.
+
+## 8. Mistakes / Risks
+
+The later complete reopen observation includes time between reads. Main executable memory alone omits the WebView process family.
+
+## 9. Current Position
+
+Long-note keyboard navigation, exact readback and persistence passed for this fixture and build. [Evidence](execution/2026-11-08-v1-6-build-start.md#native-wp18-long-page-20261122).
+
+## 10. Next Steps
+
+Continue the requirement for keyboard operation in Windows export. Keep the redo and exact package gates open.
+
+## 11. Open Questions
+
+The 8 GB floor needs its own evidence. The first-upgrade and separate-database export decisions retain their prior state.
+
+## 12. Recommended Next Step
+
+Reuse the pinned Windows development build and disposable inputs for the next applicable native check.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-188"></a>
 

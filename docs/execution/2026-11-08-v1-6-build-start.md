@@ -86,6 +86,16 @@
 - **Independent 5,000-row redo preparation (Q1).** A read-only review confirmed the prior coordinator writes the whole browser result and duplicates three of its fields in a successful-case summary. An offline serializer control exercised 3, 9 and 17 MiB of synthetic material with the existing 16 MiB bound. The middle case fit after a reference replaced the duplicate while preserving the complete top-level browser result and six case labels. The oversized canonical case still failed the bound. The real receipt's fit stays unknown. No pinned runner changed or was executed. The previous failures and stopped operation were preserved. Local control receipt SHA-256 `B1BC2016D017DBA3AA46BFA8922DEC941232448D31B4E6DD5D782D8E88722F77`.
 
 
+<a id="native-wp18-long-page-20261122"></a>
+
+## Native Windows long-note navigation and persistence, 2026-11-22 14:55 Cairo
+
+**Identity.** Windows x64 unbundled development executable SHA-256 `42d36778f3e8e7fa0baf60d2c7b6cd7420c9f5594a22f404915c3afe64079c78`. Local source `33d02033051e46199bf4eb642fe11afa1c5ea2b8` and verified GitHub main `e3f7fa2da4889a257f1e26d50b6fe68eb15153c3` share tree `40db056a061f8b57eef4f5f504309d0cce672bb5`. A new portable test home used a pinned closed copy of the existing 240-page ordinary synthetic import, with 240 paragraphs and 22,320 words. Both processes used the same copied executable and test vault and separate WebView profiles.
+
+**Behavior and file evidence.** Ctrl+End reached the final expected marker and showed the caret after it. Ctrl+Home reached the first marker. Ctrl+End, Enter and typing appended one test paragraph. Waited for Saved on this drive, left for Home and reopened the note. Saved a single-page HTML file through the Windows Save dialog. An independent HTML parser compared the exact title and all ordered body paragraphs against a formula for the original synthetic text plus the new paragraph. All 7,440 original markers and the edit matched. HTML SHA-256 `f750dbd98c39c7cd4ee618025e54b94a94fb09b7b7c6e1f32cdbdca10e428bf3`. After a normal exit, a fresh process rendered the same 241 paragraphs in exact order through the native editor. Both owned processes exited 0 and drained their logs. Offline SQLite quick-check on the edited closed copy returned ok with four records and no sidecars. The source fixture kept its exact SHA-256.
+
+**Observed timing and limits.** Ctrl+End and Ctrl+Home targets were visible within 555 and 520 ms. The edited line was visible within 315 ms of sending its text. These one-run bounds include tool and screenshot overhead. On same-session reopen, the first accessibility read still lacked the editor at 240 ms and a later read showed it complete at 6,482 ms. The latter includes the interval between observations and cannot serve as the load time. The main executable's OS peak working-set counter reached 91.8 MiB during interaction and 49.8 MiB during the fresh reopen. These numbers exclude WebView children. This run establishes scoped functionality and descriptive observations. Repeated platform comparisons, the 8 GB reference floor, wider document workloads and exact package evidence remain open. The synthetic fixture, export and raw observations stay on the PC.
+
 <a id="native-w013-navigation-20261122"></a>
 
 ## Native Windows note, database and row history with editable focus
