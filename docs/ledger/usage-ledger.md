@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w134"></a>
+
+## Native Windows command search, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two isolated Windows test launches, the exact frontend and fresh native candidate builds, a same-fixture command regression comparison, and independent source and evidence review. The first launch watcher expired before candidate compilation completed and launched no app. Attributable token totals and quota readings are unavailable. [Session](../sessions.md#session-182).
+
 <a id="codex-usage-20261122-w186"></a>
 
 ## Native Windows manual backup and restore, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

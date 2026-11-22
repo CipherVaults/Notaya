@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w134-command-palette-20261122"></a>
+
+## Typing a command now finds it in the Windows palette
+
+**2026-11-22 13:32 Cairo / 11:32 UTC.** On the baseline, typing the exact backup command returned only the identically named note. On the v1.6 candidate, the backup action appeared first, the note stayed in Results, and Enter opened one Windows Save dialog. Partial matches still opened the ranked note, and the current-page Export shortcut worked. [Exact builds and observations](execution/2026-10-23-restore-from-backup.md#native-w134-command-palette-20261122).
+
+**Continuation.** The command-search correction (W134) is verified on Windows development source `33d02033051e46199bf4eb642fe11afa1c5ea2b8`. Reconcile integration through the exact-tip PR, then continue independent Windows qualification. The 5,000-row redo (Q1), first-unlock safety copy (A44) and exact package gates remain open.
+
 <a id="native-w186-manual-backup-20261122"></a>
 
 ## Windows manual backup and restore verified

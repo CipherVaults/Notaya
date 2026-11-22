@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 182 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify typing commands in the palette](#session-182) |
 | 181 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify manual backup and restore](#session-181) |
 | 180 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native ZIP link round trip](#session-180) |
 | 179 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify Windows export replacement](#session-179) |
@@ -213,6 +214,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-182"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify typing commands in the palette
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead made the correction and ran the Windows comparison. Separate workers reviewed the source and mapped the evidence to existing records. **Models, Effort, Roles and Provenance.** The Goal specifies GPT-6.2 Sol Ultra. Worker dispatch requested GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w134).
+
+## 1. Time
+
+Evidence cut 2026-11-22 13:32 Cairo / 11:32 UTC.
+
+## 2. Session Goal
+
+Verify the v1.6 palette correction against the inherited command discovery failure (W134), keeping the note search usable.
+
+## 3. Actions Taken
+
+Compared the baseline and candidate on the same three synthetic notes. Verified the exact visible backup query, the keyboard path to native Save, note search, recent searches, partial query ordering, the no-hit state, Export and Lock eligibility. Both closed SQLite files passed quick-check.
+
+## 4. Key Insights
+
+On the baseline an identically named note could be found while its command was absent. The corrected exact command takes priority with the note still available. Partial text continues to prioritize the note.
+
+## 5. Decisions Made
+
+Keep the correction in v1.6. Use the same native fixture to verify the behavioral difference and its search controls. Preserve the historical W186 finding.
+
+## 6. Difficulties / Friction
+
+The first checkout path exceeded the Windows pathname limit. The candidate launch watcher timed out before compilation completed. Some actions needed fresh window geometry.
+
+## 7. Adjustments Made
+
+Used a shorter independent checkout, waited for the owned compiler to finish, then verified the executable and used the native window's actual controls. Scoped notes and commands by the active query after independent review.
+
+## 8. Mistakes / Risks
+
+The tray and installer were outside the test. The no-hit check observed settled behavior and did not measure rendering latency. The paired comparison is a development-build check.
+
+## 9. Current Position
+
+Windows command search passed on `33d02033051e46199bf4eb642fe11afa1c5ea2b8`. The exact-tip PR owns integration disposition. [Evidence](execution/2026-10-23-restore-from-backup.md#native-w134-command-palette-20261122).
+
+## 10. Next Steps
+
+Close the scoped integration review and continue independent native qualification. Keep the failed 5,000-row redo receipts and first-unlock copy gate open.
+
+## 11. Open Questions
+
+Exact package qualification, applicable owner checks and final acceptance remain open.
+
+## 12. Recommended Next Step
+
+Continue with the next independent Windows resource or output case while mandatory redo dependencies remain open.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-181"></a>
 

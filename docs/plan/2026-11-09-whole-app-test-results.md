@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w134-command-palette-20261122"></a>
+
+## Native Windows command search and keyboard selection, 2026-11-22
+
+- **Baseline regression reproduced (W134).** The exact backup query returned the matching note and omitted the command after results settled.
+- **Candidate passed the matching scenario.** The exact command appeared before the matching note. One Enter opened one native Save dialog. Cancelling closed it with no new file in the picker directory.
+- **Candidate passed the controls.** Normal note search and recent search worked. Matching notes came first for a partial query. A no-hit query stopped offering the previous result. Lock stayed unavailable with security off. Typed Export opened the current-page export dialog.
+- **Not run in this batch.** Password-enabled lock, forced search failure, exact release packages and the full whole-app register. Both app processes exited 0 and the two closed disposable databases passed SQLite quick-check.
+
+[Exact source, executable and native procedure](../execution/2026-10-23-restore-from-backup.md#native-w134-command-palette-20261122).
+
 <a id="native-w186-manual-backup-20261122"></a>
 
 ## Native Windows manual backup and restore, 2026-11-22
