@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 173 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Rehearse Windows packages](#session-173) |
 | 172 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bridge and startup behavior](#session-172) |
 | 171 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native read-only vault compatibility](#session-171) |
 | 170 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native Windows Settings restore](#session-170) |
@@ -204,6 +205,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-173"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Rehearse Windows packages
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex produced and checked the packages and ran the native portable test. Workers reviewed the official installer route and independently read back archive and launch identities. **Models, Effort, Roles and Provenance.** The lead composer had previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-windows-packages).
+
+## 1. Time
+
+Evidence cut 2026-11-22 11:20 Cairo / 09:20 UTC.
+
+## 2. Session Goal
+
+Prove the current development binaries can be delivered in the Windows layout and that the portable archive can save and reopen a note.
+
+## 3. Actions Taken
+
+Created and independently extracted a real portable archive from the two pinned binaries. Used disposable native Notaya windows to save and reopen a note across relocation. Built an NSIS setup and independently extracted and checked its product payload.
+
+## 4. Key Insights
+
+The portable marker was sufficient to select the adjacent data folder. In setup, the companion stayed byte-identical and the app had only the known three-byte Tauri bundle marker change.
+
+## 5. Decisions Made
+
+Used an owned project-local tool cache and the exact locked Tauri binding for the setup rehearsal. Kept both outputs as local development evidence. No product source changed.
+
+## 6. Difficulties / Friction
+
+The first preflight saw more than one Node candidate. The vendor loader's embedded optional version check then rejected the lockfile-matching native module. The independent NSIS verification initially selected the wrong tool file for one upstream digest.
+
+## 7. Adjustments Made
+
+Pinned the Node path, fetched the two lockfile-verified archives and selected the pinned native module in the child process. Checked the correct upstream NSIS digest targets. Preserved the first attempts.
+
+## 8. Mistakes / Risks
+
+The native portable result covers a security-off synthetic note. Setup extraction does not exercise installer side effects, upgrade, shortcuts or uninstall. A new app build is required for final version metadata.
+
+## 9. Current Position
+
+Portable and setup rehearsal outputs are locally verified to the recorded scope. [Evidence](execution/2026-10-23-restore-from-backup.md#windows-packages-rehearsal-20261122).
+
+## 10. Next Steps
+
+Continue remaining independent native or release checks while the redo and first-unlock gates are open. Rerun package qualification on the frozen candidate.
+
+## 11. Open Questions
+
+Clean Windows environment for actual setup testing and full candidate readiness remain open.
+
+## 12. Recommended Next Step
+
+Keep exact packaging tool identities and reviewed environment settings for the candidate; qualify real install and upgrade only in a clean Windows environment.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-172"></a>
 

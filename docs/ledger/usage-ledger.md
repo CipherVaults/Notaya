@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-windows-packages"></a>
+
+## Windows development packages, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One portable archive and member verification, two native portable launches, one failed setup launch before bundling, one successful bounded Windows setup build, and independent source and archive reviews. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-173).
+
 <a id="codex-usage-20261122-windows-bridge-startup"></a>
 
 ## Windows bridge and startup qualification, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

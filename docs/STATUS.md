@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="windows-packages-rehearsal-20261122"></a>
+
+## Windows development packages built and independently inspected
+
+**2026-11-22 11:20 Cairo / 09:20 UTC.** The real x64 portable ZIP and NSIS setup were built from the current v1.6 development tree. The portable build saved a note beside its executable and reopened the same content from a second local location. The setup contained the verified x64 app and bridge side by side. [Package evidence](execution/2026-10-23-restore-from-backup.md#windows-packages-rehearsal-20261122).
+
+Native first start and relocation are verified for this portable rehearsal (W001 and portable portion of W217). The setup remains unrun. Clean-account install, upgrade and uninstall (W220), installed portable import (W218), final version metadata and exact candidate qualification still need evidence. The 5,000-row database redo (Q1) and first-unlock safety copy (A44) keep their existing gates.
+
 <a id="windows-bridge-startup-20261122"></a>
 
 ## Windows bridge and startup checks advanced for v1.6

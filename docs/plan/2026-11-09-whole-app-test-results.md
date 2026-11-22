@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-packages-rehearsal-20261122"></a>
+
+## Windows installer and portable development rehearsal, 2026-11-22
+
+- **Portable first start and relocation passed (W001, portable portion of W217).** Native Windows opened the exact extracted app without a password. A newly saved notebook, page and body reopened from a second path. The original was unchanged. Both vaults passed a read-only SQLite integrity check. The app created its vault beside the executable, with both home overrides absent.
+- **Setup build and payload inspection passed.** A real unsigned NSIS setup was generated. Its top-level app and companion extracted independently, the companion matched the input, and the only app delta was the three-byte Tauri NSIS marker. The setup and ZIP member inventories contained no vault or profile.
+- **Not run on these artifacts.** Setup execution, per-user install, upgrade and uninstall (W220), installed-mode imports (W218), separate sign-in (W222), and live bridge pairing. Final v1.6 packages and acceptance remain separate.
+
+[Exact identities and verification limits](../execution/2026-10-23-restore-from-backup.md#windows-packages-rehearsal-20261122).
+
 <a id="windows-bridge-startup-20261122"></a>
 
 ## Native Windows startup and bridge preflight, 2026-11-22
