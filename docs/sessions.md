@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 157 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Export an inline database on Windows](#session-157) |
 | 156 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Paired Notion export on Windows](#session-156) |
 | 155 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Cancel a running import](#session-155) |
 | 154 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Word styled lists](#session-154) |
@@ -188,6 +189,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-157"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Export an inline database
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran native export and file checks. A read-only worker reviewed the converter and the output expectations. **Models, Effort, Roles and Provenance.** The Goal names GPT-6.2 Sol Ultra. Served worker settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-inline-export).
+
+## 1. Time
+
+Qualification cut at 2026-11-22 02:24 Cairo / 00:24 UTC.
+
+## 2. Session Goal
+
+Verify that four native document writers preserve the contents and scope of an inline database in its surrounding page.
+
+## 3. Actions Taken
+
+Copied the earlier synthetic vault to a separate disposable app home. Added a linked Projects view on a new page, filtered it to Alpha and hid Budget. Exported the page through the native Save dialog in four formats. Read each actual file, rendered the PDF and ran five exact Rust controls.
+
+## 4. Key Insights
+
+A linked view can present different rows and columns from its underlying database. The export covers the chosen view. A file-exists check would miss the wrong scope.
+
+## 5. Decisions Made
+
+Compare exact visible headers, the one row, and both surrounding paragraphs. Reject any reference to excluded Beta or Budget. Leave production code unchanged.
+
+## 6. Difficulties / Friction
+
+System Python lacked the PDF parser. The packaged Python and pypdf read the same file. Poppler warned about two display fonts but rendered the full expected Latin table.
+
+## 7. Adjustments Made
+
+The readback checker rejected an added filtered-row sentinel before checking the actual outputs. Ran a separate full DOCX CRC assertion.
+
+## 8. Mistakes / Risks
+
+A one-row native view cannot prove sorting. Source-level ordering evidence is separate from native behavior. The Latin PDF sample cannot close the earlier right-to-left PDF import failure.
+
+## 9. Current Position
+
+All four outputs match the named saved-view fixture. [Test register](plan/2026-11-09-whole-app-test-results.md#windows-inline-export-20261122).
+
+## 10. Next Steps
+
+Run the ordinary native Markdown, HTML and Word document round trips (W162) with disposable fixtures and direct saved-output checks.
+
+## 11. Open Questions
+
+The PDF import repair decision, long Word lists, Word title pull request access, database redo and package qualification remain separate.
+
+## 12. Session Outcome
+
+Verified four native outputs, one independent PDF render and five focused Rust checks. Both the source synthetic vault and the new test data stayed local. The owned Notaya process closed.
+
+## 13. Confidence Level
+
+High for the selected filtered view, actual output tables and surrounding text. Wider layout, multiple rows, real user data and release packages remain outside scope.
+
+---
 
 <a id="session-156"></a>
 

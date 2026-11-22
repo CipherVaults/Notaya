@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-inline-export-20261122"></a>
+
+## Current state and continuation — inline database export
+
+**2026-11-22 02:24 Cairo / 00:24 UTC.** The exact Windows development app exported the same filtered inline view to Markdown, HTML, Word and PDF. Direct output checks found Alpha, the saved status, progress and relation labels, and the surrounding paragraphs in every file. All four excluded filtered-out Beta and hidden Budget. The PDF rendered correctly for this fixture, and five exact Rust tests passed. [Register](plan/2026-11-09-whole-app-test-results.md#windows-inline-export-20261122) · [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-inline-export-20261122).
+
+Next verify ordinary native Markdown, HTML and Word round trips with disposable page fixtures (W162). The separate PDF text round trip remains a failed qualification. Package qualification and the database redo gate remain open.
+
 <a id="native-notion-paired-import-20261122"></a>
 
 ## Current state and continuation — paired Notion export

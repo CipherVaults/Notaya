@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-inline-export"></a>
+
+## Inline database export qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 02:24 Cairo / 00:24 UTC. Native export, independent file parsing and PDF rendering, five exact Rust checks and read-only review. The Goal names GPT-6.2 Sol Ultra. Actual served worker settings, attributable tokens, quota share and labour are unavailable. [Session](../sessions.md#session-157) · [Evidence](../execution/2026-11-15-safe-export-replacement.md#native-inline-export-20261122).
+
 <a id="codex-usage-20261122-notion-paired-import"></a>
 
 ## Paired Notion export qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

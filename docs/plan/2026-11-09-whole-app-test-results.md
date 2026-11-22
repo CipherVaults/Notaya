@@ -1,5 +1,18 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-inline-export-20261122"></a>
+
+## Native inline database export — 2026-11-22 02:24 Cairo / 00:24 UTC
+
+| Register case | Outcome |
+|---|---|
+| W160 Markdown, HTML, DOCX, PDF | **Passed for the linked-view fixture.** All four actual files contain the exact four visible columns, Alpha's status, 60% and both task labels. Beta and Budget are absent. The table sits between the opening and closing paragraphs. |
+| Output inspection | **Passed.** Markdown has the database reference. HTML and DOCX have one matching table. The DOCX archive passed CRC verification. An independent PDF extractor and the rendered page matched the table and surrounding text. |
+| Focused source checks | **Passed.** Four writer tests and the saved-view filter, sort and hidden-column test ran by exact name. Native sorting is untested in the one-row view. |
+| Limits | Synthetic local data only. The fixture does not qualify large tables, RTL output across formats, export replacement recovery, database redo, PDF reimport or final packages. |
+
+[Exact execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-inline-export-20261122).
+
 <a id="windows-notion-paired-import-20261122"></a>
 
 ## Native paired Notion export — 2026-11-22 02:13 Cairo / 00:13 UTC
