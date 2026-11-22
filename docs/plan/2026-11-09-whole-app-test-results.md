@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w161-owned-markdown-20261122"></a>
+
+## Native Windows embedded and nested database export, 2026-11-22
+
+- **Passed for embedded data and scope (W161, Markdown).** Both saved files contained the owned inline table's exact header and row once between the surrounding paragraphs. The separate linked-view row remained. Only the whole-notebook file contained the neighboring section's page and body.
+- **Omissions confirmed (W161, Markdown).** The full-page database created as a child of the anchor page was visible and populated in Notaya. Neither its title nor its marked row appeared in either file, with Include sub-pages on. The earlier standalone-only row and property also remained absent.
+- **Unrun on this expanded fixture.** HTML, Word, PDF, ZIP options, database-only selection and exact release packages. Keep the earlier linked-view export results and standalone omission at their own scope.
+
+[Exact source, native setup and saved-file checks](../execution/2026-11-15-safe-export-replacement.md#native-w161-owned-markdown-20261122).
+
 <a id="native-w158-pdf-web-link-20261122"></a>
 
 ## Native Windows PDF external web link, 2026-11-22

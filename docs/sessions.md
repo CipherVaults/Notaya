@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 184 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify embedded and nested Markdown export](#session-184) |
 | 183 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify PDF web links](#session-183) |
 | 182 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify typing commands in the palette](#session-182) |
 | 181 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify manual backup and restore](#session-181) |
@@ -215,6 +216,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-184"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify embedded and nested Markdown export
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead ran the native setup, exports and offline file readback. Two independent workers reviewed the acceptance scope, fixture and output checks. **Models, Effort, Roles and Provenance.** The Goal specifies GPT-6.2 Sol Ultra. Worker dispatch requested GPT-6.2 Sol Ultra. Realized settings and attributable usage were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w161-owned).
+
+## 1. Time
+
+Evidence cut 2026-11-22 14:01 Cairo / 12:01 UTC.
+
+## 2. Session Goal
+
+Distinguish the export of a database embedded in an ordinary page from a full-page database nested beneath it, under native notebook and section scope (W161).
+
+## 3. Actions Taken
+
+Added two distinct databases and unique saved rows in a closed synthetic fixture copy. Exported its section and notebook to Markdown. Independently checked both files and the prior fixture hash.
+
+## 4. Key Insights
+
+The embedded table retained its marked row and page position. The separately nested database remained visible in Notaya and was omitted from both output files. The neighboring section stayed out of the section-only export and appeared in the notebook.
+
+## 5. Decisions Made
+
+Preserve the earlier standalone failure. Keep the two current omissions separate from the passed inline behavior. Retain the approved WP-07 scope.
+
+## 6. Difficulties / Friction
+
+Two desktop calls hit the tool interaction-round limit while they were changing the disposable note or opening Save. Observation took longer than expected.
+
+## 7. Adjustments Made
+
+Rebound the same live window, observed the already-applied steps and finished the two selected files. Reserved the remaining formats for a new bounded run against the same local synthetic fixture.
+
+## 8. Mistakes / Risks
+
+The expanded fixture covers only Markdown with eligible pages present. The equivalent behavior in other formats and the empty-page error are static inferences until measured natively.
+
+## 9. Current Position
+
+Scoped embedded data and boundary assertions passed. The standalone and separately nested full-page database omissions are open. [Exact readback](execution/2026-11-15-safe-export-replacement.md#native-w161-owned-markdown-20261122).
+
+## 10. Next Steps
+
+Check remaining required format and container scope in the test register. Keep the earlier output and readback intact.
+
+## 11. Open Questions
+
+Ahmed owns the product disposition for separate databases in section and notebook exports under the current v1.6 scope boundary.
+
+## 12. Recommended Next Step
+
+Reuse a new copy of the expanded synthetic fixture for the unrun native format cases. Continue other independent release work around owner and redo gates.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-183"></a>
 

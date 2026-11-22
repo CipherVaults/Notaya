@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w161-owned"></a>
+
+## Native Windows embedded and nested database export, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One bounded native app launch, two Markdown exports, separate closed-file checks and two read-only workers for scope and fixture review. The desktop bridge interrupted two observations and the original owned window was recovered. Attributable token totals and quota readings are unavailable. [Session](../sessions.md#session-184).
+
 <a id="codex-usage-20261122-w158"></a>
 
 ## Native Windows PDF web-link output, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

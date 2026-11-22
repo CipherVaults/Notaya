@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w161-owned-markdown-20261122"></a>
+
+## Windows Markdown export keeps embedded tables and omits separate nested databases
+
+**2026-11-22 14:01 Cairo / 12:01 UTC.** Section and whole-notebook exports each preserved the table created inside the note, including its saved row between the two surrounding paragraphs. The notebook alone kept the neighboring section. The separate database nested under the note was visible in Notaya, with a saved row, and absent from both exported files even with Include sub-pages on. The earlier standalone omission was reproduced in these Markdown files. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w161-owned-markdown-20261122).
+
+**Continuation.** The native Markdown cases (W161) pass for embedded content and document scope. The standalone and nested full-page database omissions need a v1.6 product disposition. The approved embedded-database fix (WP-07) has narrower scope. HTML, Word, PDF, ZIP and database-only selection are unrun on the expanded fixture. Preserve the existing launch, redo and exact-package gates.
+
 <a id="native-w158-pdf-web-link-20261122"></a>
 
 ## Windows PDF export preserves ordinary web links
