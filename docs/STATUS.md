@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-wp18-idle-baseline-20261122"></a>
+
+## Windows startup and idle resource baseline
+
+**2026-11-22 14:24 Cairo / 12:24 UTC.** The same Windows development executable rendered an empty workspace and reopened a disposable 1,000-note workspace. Median sampled working-set sums were 409 and 630 MiB respectively. Both runs measured the app and its six owned WebView processes. The populated run had an early CPU burst; the other intervals were lower. These are single-run development measurements, with no performance threshold or final-package claim. [Method and exact source](execution/2026-11-08-v1-6-build-start.md#native-wp18-idle-baseline-20261122).
+
+**Continuation.** The startup and idle baseline (WP-18) is recorded. Repeat with a fixed observation delay and independent launches before interpreting differences as a regression. The first-upgrade safety copy (A44), separate-database export scope (W161), 5,000-row redo (Q1) and exact package gates remain open.
+
 <a id="native-w161-format-matrix-20261122"></a>
 
 ## Windows section and notebook database export matrix

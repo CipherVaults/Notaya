@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 186 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Measure Windows startup and idle resources](#session-186) |
 | 185 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows database export formats](#session-185) |
 | 184 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify embedded and nested Markdown export](#session-184) |
 | 183 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify PDF web links](#session-183) |
@@ -217,6 +218,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-186"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Measure Windows startup and idle resources
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead ran both native launch and teardown sequences, process-tree sampling and offline readback. Independent workers reviewed the scope and the Linux and first-upgrade dependencies. **Models, Effort, Roles and Provenance.** Goal and worker dispatch specify GPT-6.2 Sol Ultra. Realized runtime settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-wp18-idle).
+
+## 1. Time
+
+Evidence cut 2026-11-22 14:24 Cairo / 12:24 UTC.
+
+## 2. Session Goal
+
+Get a current Windows startup and steady resource baseline for empty and populated ordinary workspace shapes (WP-18).
+
+## 3. Actions Taken
+
+Launched the same verified Windows build twice with distinct fresh profiles. Confirmed the actual rendered workspace, waited five seconds, then sampled the owned app and WebView descendant processes over three measured intervals. Closed both and checked their storage readback. Reviewed the separate upgrade and platform gates without executing them.
+
+## 4. Key Insights
+
+The populated workspace kept more private memory and showed higher early idle CPU in this sample. The later intervals were lower. An observed native window does not establish the time to usable content.
+
+## 5. Decisions Made
+
+Record descriptive measurements on the exact executable. Keep the observed burst as evidence for a controlled repeat without labeling it a regression. Ask Ahmed to resolve the held upgrade and separate-database export decisions.
+
+## 6. Difficulties / Friction
+
+The manual readback time includes observation overhead. Neither OS cache state nor background host load was fixed.
+
+## 7. Adjustments Made
+
+Separated the native handle timing and the rendered-state witness. Used exact owner process identities and monotonic wall-time intervals.
+
+## 8. Mistakes / Risks
+
+Single runs on this host provide no low-end or before/after evidence. The desktop accessibility observation may influence the earlier idle interval.
+
+## 9. Current Position
+
+The native baseline and Q1 serializer-only proof are recorded. Prior redo outcomes and migration behavior are unchanged. [Evidence](execution/2026-11-08-v1-6-build-start.md#native-wp18-idle-baseline-20261122).
+
+## 10. Next Steps
+
+Continue an independent native release check. Keep the first-upgrade storage change and separate-database export behavior pending explicit owner decisions.
+
+## 11. Open Questions
+
+The first-upgrade failure policy (A44) and separate-database scope (W161) are with Ahmed. Exact package, low-end and Linux-hosted evidence remain separate.
+
+## 12. Recommended Next Step
+
+Reconcile the next exact native package dependency and keep any resource repeat scoped to a stated performance question.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-185"></a>
 

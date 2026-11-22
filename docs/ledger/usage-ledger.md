@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-wp18-idle"></a>
+
+## Native Windows resource baseline, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two isolated native launches with complete process-tree samples, offline receipt readback, and separate review of resource, platform and upgrade requirements. No new product build. Attributable token totals and quota readings are unavailable. [Session](../sessions.md#session-186).
+
 <a id="codex-usage-20261122-w161-matrix"></a>
 
 ## Native Windows database export matrix, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

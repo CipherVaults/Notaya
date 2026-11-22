@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-wp18-idle-baseline-20261122"></a>
+
+## Native Windows startup and idle resource baseline, 2026-11-22
+
+- **Observed on the exact development executable.** An empty workspace opened without a password prompt, and a closed 1,000-note synthetic copy reopened its saved page and body. Both processes later exited 0, drained their output and left structurally valid disposable vaults.
+- **Measured after UI observation and a five-second settle.** Empty versus populated median summed working set was 409.1 versus 629.8 MiB. Median private memory was 305.2 versus 467.6 MiB. All 28 samples per case contained the same app and six WebView processes. Three roughly ten-second intervals measured 1.83–3.18% of one logical CPU for empty and 0.15–29.50% for populated. These are descriptive samples without a pass/fail threshold.
+- **Limits.** First native window is a startup proxy. Manual confirmation supplies only a bound for render readiness. This run does not compare builds, establish cause for the populated burst, measure long-page interaction, qualify an 8 GB machine or verify the final package.
+
+[Exact executable, fixture, measurements and limits](../execution/2026-11-08-v1-6-build-start.md#native-wp18-idle-baseline-20261122).
+
 <a id="native-w161-format-matrix-20261122"></a>
 
 ## Native Windows database export matrix and database-only selection, 2026-11-22
