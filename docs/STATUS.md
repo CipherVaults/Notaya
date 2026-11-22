@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="windows-bridge-startup-20261122"></a>
+
+## Windows bridge and startup checks advanced for v1.6
+
+**2026-11-22 11:07 Cairo / 09:07 UTC.** The Windows x64 bridge built from the current v1.6 tree with locked dependencies and passed help, a local standard-input handshake, and the invalid-option check. The native startup test (W225) reported an unusable data folder and exited with code 1 without creating a vault. On a writable copy, the same v1.6 app opened Home without a password, and its closed disposable vault passed the integrity check. [Exact evidence](execution/2026-11-08-v1-6-build-start.md#windows-bridge-startup-20261122).
+
+Ahmed directed that fixes, optimizations and new features go into v1.6. The released build remains a compatibility reference. Live bridge pairing, WebView construction failure and exact package qualification are separate. The 5,000-row redo (Q1) and first-unlock safety copy (A44) remain open.
+
 <a id="g3-w198-native-readback-20261122"></a>
 
 ## Native backward compatibility verified for the disposable v1.6 vault

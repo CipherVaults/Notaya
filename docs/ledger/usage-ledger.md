@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-windows-bridge-startup"></a>
+
+## Windows bridge and startup qualification, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One isolated locked offline bridge build (27.53 s), three bounded bridge calls, two native startup controls and one same-instance reactivation. Independent read-only source review. Realized serving settings and attributable usage are unavailable. [Session](../sessions.md#session-172).
+
 <a id="codex-usage-20261122-g3-w198"></a>
 
 ## Read-only vault compatibility — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

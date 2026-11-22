@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 172 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bridge and startup behavior](#session-172) |
 | 171 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native read-only vault compatibility](#session-171) |
 | 170 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native Windows Settings restore](#session-170) |
 | 169 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify restore core and Windows packaging preflight](#session-169) |
@@ -203,6 +204,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-172"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify Windows bridge and startup behavior
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex executed the checks. A separate worker reviewed the source and the scope of the native startup case without running it. **Models, Effort, Roles and Provenance.** The previously observed lead composer displayed GPT-6.2 Sol Ultra. Realized serving settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-windows-bridge-startup).
+
+## 1. Time
+
+Evidence cut 2026-11-22 11:07 Cairo / 09:07 UTC.
+
+## 2. Session Goal
+
+Qualify independent Windows packaging inputs and startup behavior while larger release gates remain open.
+
+## 3. Actions Taken
+
+Built the Windows bridge offline and exercised its standard-input boundary. Ran the two native startup controls with the exact same app build. Observed the real windows and checked the stopped processes and disposable vault.
+
+## 4. Key Insights
+
+An unusable data root produces a clear native dialog and no empty vault. A writable first start opens without asking for a password. The bridge answers initialization without needing a live pairing.
+
+## 5. Decisions Made
+
+Ahmed directed that fixes, optimizations and new features go into v1.6. Continue Windows candidate qualification on that line. The released v1.5.1 binary remains a read-only compatibility reference within the approved goal.
+
+## 6. Difficulties / Friction
+
+The positive control's default close hid it to the tray. Desktop accessibility element clicks had no input geometry. A strict process check initially compared a parsed timestamp with the recorded string and stopped before touching preferences.
+
+## 7. Adjustments Made
+
+Used focused keyboard input after reading the test window. Compared ownership against the raw recorded UTC time, then changed only the writable fixture's close-to-tray preference and let its original process close normally.
+
+## 8. Mistakes / Risks
+
+The benign bridge startup has a narrower boundary than a live paired client. The data-root fixture covers neither damaged WebView setup nor the final package.
+
+## 9. Current Position
+
+The bridge build and bounded smoke and both W225 data-root controls are verified against the current tree. [Execution](execution/2026-11-08-v1-6-build-start.md#windows-bridge-startup-20261122).
+
+## 10. Next Steps
+
+Use the verified bindings to advance the Windows installer and portable qualification that can proceed before a candidate freeze.
+
+## 11. Open Questions
+
+The separate WebView failure, live native bridge route, exact package, first-unlock safety copy (A44), and full 5,000-row redo (Q1) remain open.
+
+## 12. Recommended Next Step
+
+Identify the exact Windows packaging tools and output checks required for a candidate without widening the release or fixture scope.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-171"></a>
 

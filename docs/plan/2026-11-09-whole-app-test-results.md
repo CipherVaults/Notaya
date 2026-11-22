@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-bridge-startup-20261122"></a>
+
+## Native Windows startup and bridge preflight, 2026-11-22
+
+- **Startup failure and writable control (W225), development artifact.** A test file occupied the data-directory path. The native dialog reported the exact path and Windows error 183 with recovery guidance. Dismissing it gave exit 1, left the file byte-identical and created no vault. With a fresh writable directory, the same executable opened Home without a password. The fresh vault passed a read-only SQLite integrity check after normal process exit.
+- **Bridge development executable passed a bounded Windows smoke.** The bridge ran help, replied to a benign JSON-RPC initialization and exited at end of input, and refused an unrecognized option with exit 1. No live companion pipe was opened.
+- **Still open.** The WebView construction-failure variant, native live pairing and approvals, and exact-package reruns. No other Windows or release gate changed state.
+
+[Exact inputs and evidence limits](../execution/2026-11-08-v1-6-build-start.md#windows-bridge-startup-20261122).
+
 <a id="g3-w198-native-readback-20261122"></a>
 
 ## Native Windows read-only vault compatibility — 2026-11-22
