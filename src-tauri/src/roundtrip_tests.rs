@@ -234,10 +234,14 @@ fn colors_code_tasks_captions_and_shelves_come_back() {
             continue;
         }
         let pages: Vec<Page> = dst.with(|s| Ok(s.items().filter_map(|i| if let Item::Page(p) = i { Some(p.clone()) } else { None }).collect())).unwrap();
-        let Some(v) = pages.iter().map(|p| serde_json::from_str::<Value>(&p.content).unwrap()).find(|v| v.to_string().contains("tc0")) else {
+        let Some(page) = pages.iter().find(|page| page.content.contains("tc0")) else {
             failures.push(format!("{label}: the page did not come back"));
             continue;
         };
+        if page.title != "Round trip" || page.text.contains("# Round trip") {
+            failures.push(format!("{label}: expected the original title and no literal title heading, got title {:?}", page.title));
+        }
+        let v = serde_json::from_str::<Value>(&page.content).unwrap();
         let marks_of = |word: &str| -> (Option<String>, Option<String>) {
             let Some(node) = find(&v, &|n| n["type"] == "text" && n["text"] == word) else { return (None, Some("missing".into())) };
             let mut out = (None, None);

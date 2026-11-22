@@ -430,6 +430,15 @@ impl Parser<'_, '_> {
                 continue;
             }
             if para.is_empty() && html_block(l) {
+                // A closed comment on its own line must leave the next Markdown block intact.
+                let standalone_comment = l.trim_start()
+                    .strip_prefix("<!--")
+                    .and_then(|comment| comment.split_once("-->"))
+                    .is_some_and(|(_, rest)| rest.trim().is_empty());
+                if standalone_comment {
+                    i += 1;
+                    continue;
+                }
                 let mut html_lines = Vec::new();
                 // A toggle (<details>) goes on past blank lines until it is closed, so its
                 // content stays inside it (Notion writes toggles this way).
@@ -1278,6 +1287,24 @@ mod tests {
         assert_eq!(c[10]["content"][2]["content"].as_array().unwrap().len(), 2, "short rows are padded");
         let (d, _, _) = with_ctx(&[], |ctx| parse("---\ntitle: \"Front\"\n---\nx", ctx));
         assert_eq!(d.title.as_deref(), Some("Front"));
+    }
+
+    #[test]
+    fn standalone_comment_leaves_the_next_markdown_block_intact() {
+        let titled = md("<!-- export ownership -->\n# Original title\n\nPage body.");
+        let content = titled["content"].as_array().unwrap();
+        assert_eq!(content.len(), 2);
+        assert_eq!(content[0]["type"], "heading");
+        assert_eq!(content[0]["attrs"]["level"], 1);
+        assert_eq!(content[0]["content"][0]["text"], "Original title");
+        assert_eq!(content[1]["content"][0]["text"], "Page body.");
+
+        let trailing = md("<!-- comment --> Keep this -->\n\n# Heading");
+        assert!(trailing.to_string().contains("Keep this -->"));
+
+        let literal = md("    <!-- code example -->\n\n# Heading");
+        assert_eq!(literal["content"][0]["type"], "codeBlock");
+        assert_eq!(literal["content"][0]["content"][0]["text"], "<!-- code example -->");
     }
 
     #[test]
