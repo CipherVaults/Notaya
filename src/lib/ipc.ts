@@ -179,8 +179,8 @@ export const api = {
   importPortableNotes: () => invoke<ImportSummary | null>("import_portable_notes"),
   // Start over (only while locked): sets the vault aside and returns its new file name.
   startOver: () => invoke<string>("start_over"),
-  // A message the backend wants shown once (for example after a backup failed)
-  takeNotice: () => invoke<string | null>("take_notice"),
+  pendingNotice: () => invoke<{ id: string; text: string } | null>("pending_notice"),
+  acknowledgeNotice: (id: string) => invoke<void>("acknowledge_notice", { id }),
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
   setBackdrop: (kind: string, dark: boolean) => invoke<boolean>("set_backdrop", { kind, dark }),

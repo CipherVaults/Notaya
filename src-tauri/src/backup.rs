@@ -178,7 +178,7 @@ fn clean_strays(dir: &Path) {
 
 /// Flushes the file to disk. Opening it can fail for a moment when an antivirus or a sync tool
 /// is looking at the copy just written, so it is tried again like the rename (about a second).
-fn sync_to_disk(path: &Path) -> io::Result<()> {
+pub(crate) fn sync_to_disk(path: &Path) -> io::Result<()> {
     let mut last = None;
     for attempt in 0..RENAME_TRIES {
         if attempt > 0 {

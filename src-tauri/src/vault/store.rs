@@ -2,12 +2,35 @@
 //! encrypted blobs. Row ids are random, and titles, types and timestamps all
 //! sit inside the encrypted payloads.
 
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 
 use super::header::Header;
 use crate::error::{Error, Result};
+
+pub(super) fn is_hot_journal(error: &rusqlite::Error) -> bool {
+    error.sqlite_error().is_some_and(|code| {
+        code.extended_code == rusqlite::ffi::SQLITE_READONLY_ROLLBACK
+    })
+}
+
+pub(crate) fn check_rollback_journal(path: &Path) -> Result<()> {
+    let mut journal = File::open(path)?;
+    // Notaya uses one database. SQLite can follow the external path in a
+    // super-journal trailer, even when opening a disposable recovery copy.
+    if journal.metadata()?.len() >= 16 {
+        let mut trailer_magic = [0; 8];
+        journal.seek(SeekFrom::End(-8))?;
+        journal.read_exact(&mut trailer_magic)?;
+        if trailer_magic == [0xd9, 0xd5, 0x05, 0xf9, 0x20, 0xa1, 0x63, 0xd7] {
+            return Err(Error::Corrupt);
+        }
+    }
+    Ok(())
+}
 
 pub type RowId = [u8; 16];
 
@@ -38,6 +61,15 @@ impl Store {
         Self::connect(path)
     }
 
+    pub(super) fn open_read_only(path: &Path) -> Result<Store> {
+        if !path.try_exists()? {
+            return Err(Error::NoVault);
+        }
+        let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        conn.execute_batch("PRAGMA temp_store = MEMORY;")?;
+        Ok(Store { conn })
+    }
+
     fn connect(path: &Path) -> Result<Store> {
         let conn = Connection::open(path)?;
         // DELETE journal + FULL sync: every write reaches the disk before it is
@@ -57,7 +89,13 @@ impl Store {
             .conn
             .query_row("SELECT data FROM header WHERE id = 1", [], |r| r.get(0))
             .optional()
-            .map_err(|_| Error::Corrupt)?;
+            .map_err(|error| {
+                if is_hot_journal(&error) {
+                    Error::Db(error)
+                } else {
+                    Error::Corrupt
+                }
+            })?;
         Header::from_bytes(&data.ok_or(Error::Corrupt)?)
     }
 
@@ -151,6 +189,11 @@ impl Store {
         if dest.exists() {
             std::fs::remove_file(dest)?;
         }
+        self.copy_into(dest)
+    }
+
+    /// Copies the database into a new or empty destination without replacing a file.
+    pub(super) fn copy_into(&self, dest: &Path) -> Result<()> {
         let dest = dest.to_str().ok_or_else(|| Error::invalid("Unsupported backup path."))?;
         self.conn.execute("VACUUM INTO ?1", params![dest])?;
         Ok(())

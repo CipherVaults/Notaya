@@ -115,10 +115,10 @@ fn import_portable_notes_person(app: AppHandle, state: State<'_, AppState>) -> R
 /// not touched. Returns the set-aside file's name.
 #[tauri::command(async)]
 pub fn start_over(state: State<'_, AppState>) -> Result<String> {
-    start_over_person(state)
+    start_over_core(&state)
 }
 
-fn start_over_person(state: State<'_, AppState>) -> Result<String> {
+pub(crate) fn start_over_core(state: &AppState) -> Result<String> {
     if state.is_unlocked() {
         return Err(Error::invalid("Lock the vault first."));
     }
@@ -228,18 +228,9 @@ fn install_and_open(
     password: &str,
     kf: Option<&[u8; 32]>,
 ) -> Result<Option<String>> {
-    let undo = match restore::install(&state.paths, crate::model::now_ms().max(0) as u64) {
-        Ok(u) => {
-            // The chosen file has been used. Until this point (for example after a wrong
-            // password) the pick is kept, so the owner can simply try again.
-            state.clear_picked_backup();
-            u
-        }
-        Err(e) => {
-            restore::remove_temp(&state.paths);
-            return Err(e);
-        }
-    };
+    let undo = restore::install(&state.paths, crate::model::now_ms().max(0) as u64)?;
+    // Keep the selected file available for retries until installation succeeds.
+    state.clear_picked_backup();
 
     match Session::unlock_any(&state.paths.vault, password, kf) {
         Ok(mut session) => {

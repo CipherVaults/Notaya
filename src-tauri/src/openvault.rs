@@ -3,14 +3,15 @@
 //!
 //! "Earlier copies" are the automatic and safety backups (`data/backups/vault-*.nota` (and `.clf`), which
 //! includes `vault-predelete-*.nota`, the copy made before a notebook or section is deleted) and the
-//! old vaults a restore keeps (`data/restore-undo-*.nota`) and the vaults "Start over"
-//! sets aside (`data/set-aside-*.nota`).
+//! old vaults a restore keeps (`data/restore-undo-*.nota`), the vaults "Start over"
+//! sets aside (`data/set-aside-*.nota`), and the pre-upgrade copies beside the live vault.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::portable::Paths;
 use crate::restore::{is_backup_name, SET_ASIDE_PREFIX, UNDO_PREFIX};
+use crate::vault::backup::{is_before_1_6_name, remove_preflight_dir, unprotected_preflight_dirs};
 use crate::vault::Session;
 
 fn names_in(dir: &Path, wanted: fn(&str) -> bool) -> Vec<PathBuf> {
@@ -55,6 +56,7 @@ pub fn earlier_copies(paths: &Paths) -> Vec<PathBuf> {
     all.extend(names_in(&paths.data, is_undo_name));
     all.extend(names_in(&paths.data, is_set_aside_name));
     all.extend(names_in(&paths.data, is_before_notaya_name));
+    all.extend(names_in(&paths.data, is_before_1_6_name));
     all.extend(left_over_old_vault(paths));
     all
 }
@@ -65,25 +67,32 @@ pub fn has_earlier_copies(paths: &Paths) -> bool {
     !earlier_copies(paths).is_empty()
 }
 
-/// The backups (automatic and `vault-predelete-*`, and the `vault-before-notaya` file) whose header says "security off": anyone with the file can read them.
-/// A file whose header can't be read is left out (it is never touched). The old vaults a
-/// restore keeps (`restore-undo-*.clf`) are NOT included: they hold notes that exist nowhere
-/// else, so the app never deletes them.
+/// The automatic, pre-delete and pre-upgrade backups whose header says "security off": anyone with the file can read them.
+/// Unreadable headers are left out. Preflight copies must authenticate as open vaults.
+/// Restore undo files are kept as they may hold notes that exist nowhere else.
 pub fn unprotected_copies(paths: &Paths) -> Vec<PathBuf> {
     let mut all = names_in(&paths.backups, is_backup_name);
     // The copy of the notes as V1.3.0 left them is as readable as an unprotected backup, if security was off.
     all.extend(names_in(&paths.data, is_before_notaya_name));
+    all.extend(names_in(&paths.data, is_before_1_6_name));
     all.extend(left_over_old_vault(paths));
     all.into_iter()
         .filter(|p| matches!(Session::read_header(p), Ok(h) if h.open))
+        .chain(unprotected_preflight_dirs(&paths.data))
         .collect()
 }
 
 /// Deletes the unprotected backups, safety backups included (and their `-journal` files) and returns how
-/// many were removed. Protected backups, restore-undo files and anything unreadable stay.
+/// many were removed. Protected backups, restore undo files and unreadable copies stay.
 pub fn delete_unprotected(paths: &Paths) -> usize {
     let mut removed = 0;
     for path in unprotected_copies(paths) {
+        if path.is_dir() {
+            if remove_preflight_dir(&path).is_ok() {
+                removed += 1;
+            }
+            continue;
+        }
         let mut journal = path.clone().into_os_string();
         journal.push("-journal");
         let _ = fs::remove_file(PathBuf::from(journal));
@@ -126,6 +135,31 @@ mod tests {
         assert!(paths.backups.join("vault-3.clf").exists(), "an unreadable file stays");
         assert!(paths.backups.join("notes.txt").exists());
         assert_eq!(delete_unprotected(&paths), 0);
+    }
+
+    #[test]
+    fn only_verified_open_preflight_copies_are_deleted() {
+        let paths = paths();
+        let open = paths.data.join(format!("preflight-{}", new_id()));
+        let protected = paths.data.join(format!("preflight-{}", new_id()));
+        let partial = paths.data.join(format!("preflight-{}", new_id()));
+        let unrelated = paths.data.join("preflight-not-a-generated-name");
+        for dir in [&open, &protected, &partial, &unrelated] {
+            fs::create_dir(dir).unwrap();
+        }
+        drop(Session::create_open(&open.join("vault.tmp")).unwrap());
+        drop(Session::create(&protected.join("vault.tmp"), "pw", None, FAST).unwrap());
+        fs::write(partial.join("vault.tmp"), b"interrupted copy").unwrap();
+        fs::write(partial.join("vault.tmp-journal"), b"interrupted journal").unwrap();
+        fs::write(unrelated.join("vault.tmp"), b"other file").unwrap();
+
+        assert_eq!(unprotected_copies(&paths), vec![open.clone()]);
+        assert_eq!(delete_unprotected(&paths), 1);
+        assert!(!open.exists());
+        assert!(protected.join("vault.tmp").exists());
+        assert_eq!(fs::read(partial.join("vault.tmp")).unwrap(), b"interrupted copy");
+        assert_eq!(fs::read(partial.join("vault.tmp-journal")).unwrap(), b"interrupted journal");
+        assert_eq!(fs::read(unrelated.join("vault.tmp")).unwrap(), b"other file");
     }
 
     #[test]

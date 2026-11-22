@@ -8,6 +8,7 @@ import ts from "typescript";
 
 const source = readFileSync(new URL("../../src/lib/startup.ts", import.meta.url), "utf8");
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+const document = { hidden: false, addEventListener() {}, removeEventListener() {} };
 
 function harness() {
   const tasks = [];
@@ -98,7 +99,8 @@ test("pending native backdrop cannot prevent status request or lock-listener reg
   const events = [];
   const cleanup = vm.runInNewContext(hookBody("useEffect", "applyAppearance"), {
     startupMark() {}, sessionStorage: { getItem: () => null },
-    toast: { error() {}, info() {} }, api: { takeNotice: () => Promise.resolve(null) },
+    document, toast: { error() {}, info() {} },
+    api: { pendingNotice: () => new Promise(() => {}) },
     applyAppearance: () => new Promise(() => {}), cachedAppearance: () => ({}),
     refreshStatus: () => { refreshed++; return Promise.resolve(); },
     listen: (event) => { events.push(event); return Promise.resolve(() => {}); },
@@ -108,6 +110,7 @@ test("pending native backdrop cannot prevent status request or lock-listener reg
   });
   assert.equal(refreshed, 1);
   assert.ok(events.includes("vault-locking"));
+  assert.ok(events.includes("app-notice"));
   await new Promise(setImmediate); assert.equal(listenerReady, true);
   assert.equal(h.timers.size, 0); cleanup();
 });
@@ -142,8 +145,11 @@ function appHarness({ status = () => Promise.resolve(), listeners = {}, noticeFa
   const context = vm.createContext({
     startupMark() {}, hasStatus: false, lockListenerReady: false, startupFailed: false,
     readySent: { current: false }, scheduleWindowReady: h.schedule, watchStartupInitialization: h.watch,
-    sessionStorage: { getItem: () => null }, toast: { error() {}, info() {} },
-    api: { takeNotice: () => Promise.resolve(null), windowReady: () => { ready++; return Promise.resolve(); } },
+    document, sessionStorage: { getItem: () => null }, toast: { error() {}, info() {} },
+    api: {
+      pendingNotice: () => Promise.resolve(null),
+      windowReady: () => { ready++; return Promise.resolve(); },
+    },
     // The backdrop never resolves in these tests: it must not gate readiness.
     applyAppearance: () => new Promise(() => {}), cachedAppearance: () => ({}),
     refreshStatus: async () => {
@@ -269,6 +275,7 @@ test("late rejection after timeout is handled without a retry or duplicate readi
 test("notice-listener rejection does not disrupt readiness or produce an unhandled cleanup rejection", async () => {
   const h = appHarness({ noticeFails: true });
   await h.settle(); assert.equal(h.ready(), 1); assert.equal(h.context.startupFailed, false);
+  assert.ok(h.events.includes("app-notice"));
   h.cleanup(); await h.settle();
   assert.deepEqual(h.disposed.sort(), ["vault-locked", "vault-locking"]);
 });

@@ -131,6 +131,7 @@ pub fn run() {
                 report_startup_failure(app.handle().clone(), data_folder_message(&paths, &e));
                 return Ok(());
             }
+            vault::backup::clean_stale_preflight(&paths.data);
             // Hidden from screenshots only if the vault has a master password: its lock screen
             // comes first. A vault with security off, or none yet, is never hidden (A21).
             let protect = paths.vault.exists()
@@ -186,8 +187,6 @@ pub fn run() {
                                 // The close button works again before the message box is shown (it waits for a click).
                                 drop(guard);
                                 if let Some(text) = failure {
-                                    // Told now; the stored copy would show up as a stale toast later.
-                                    let _ = state.take_notice();
                                     state::show_backup_failure(&app, &text);
                                 }
                             } else {
@@ -227,7 +226,8 @@ pub fn run() {
             vault_cmd::window_ready,
             vault_cmd::flush_done,
             vault_cmd::quit_app,
-            vault_cmd::take_notice,
+            vault_cmd::pending_notice,
+            vault_cmd::acknowledge_notice,
             vault_cmd::open_data_folder,
             errorlog::log_frontend_error,
             errorlog::log_info,

@@ -113,6 +113,12 @@ impl ChangeQueue {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct AppNotice {
+    pub id: String,
+    pub text: String,
+}
+
 pub struct AppState {
     pub ai: crate::ai::Runtime,
     pub paths: Paths,
@@ -130,12 +136,10 @@ pub struct AppState {
     /// path). `restore_vault` accepts an absolute path only if it is this one.
     picked_backup: Mutex<Option<PathBuf>>,
     /// A message for the owner that the UI shows once (for example after a backup
-    /// failed). Kept here as well as sent as an event, because a lock
-    /// reloads the window and a live event could be missed.
-    notice: Mutex<Option<String>>,
-    /// Held while the app opens or creates a vault that has security off, and while a
-    /// restore swaps the vault file, so two windows asking at once can't both create one
-    /// and nothing starts a new vault in the middle of a restore.
+    /// failed). Keep these in display order until the main window acknowledges them.
+    notices: Mutex<VecDeque<AppNotice>>,
+    /// Serializes live-vault open, unlock, creation, and restore. Held from the
+    /// read-only upgrade preflight through publishing the unlocked session.
     open_gate: Mutex<()>,
     /// A quit is in progress: nothing may reopen a vault that has security off meanwhile.
     quitting: AtomicBool,
@@ -170,7 +174,7 @@ impl AppState {
             flush_cv: Condvar::new(),
             flush_gate: Mutex::new(()),
             picked_backup: Mutex::new(None),
-            notice: Mutex::new(None),
+            notices: Mutex::new(VecDeque::new()),
             open_gate: Mutex::new(()),
             quitting: AtomicBool::new(false),
             tray_ready: AtomicBool::new(false),
@@ -207,14 +211,25 @@ impl AppState {
         self.quitting.store(on, Ordering::SeqCst);
     }
 
-    /// Keeps `text` for the UI to show once.
+    /// Repeated reports of a pending notice share its place in the queue.
     pub fn set_notice(&self, text: String) {
-        *guard(&self.notice) = Some(text);
+        let mut notices = guard(&self.notices);
+        if !notices.iter().any(|notice| notice.text == text) {
+            notices.push_back(AppNotice { id: crate::model::new_id(), text });
+        }
     }
 
-    /// The pending notice, if any. It is returned once and then forgotten.
-    pub fn take_notice(&self) -> Option<String> {
-        guard(&self.notice).take()
+    /// Reading does not consume the head: the window can reload before rendering it.
+    pub fn pending_notice(&self) -> Option<AppNotice> {
+        guard(&self.notices).front().cloned()
+    }
+
+    /// A late or repeated acknowledgement must never consume the next notice.
+    pub fn acknowledge_notice(&self, id: &str) {
+        let mut notices = guard(&self.notices);
+        if notices.front().is_some_and(|notice| notice.id == id) {
+            notices.pop_front();
+        }
     }
 
     /// Remembers the file the user just chose in the backup dialog.
@@ -480,9 +495,8 @@ pub fn flush_windows(app: &AppHandle) {
 /// Waits for the windows, so call it only from a thread other than the main
 /// one (an `async` command, the monitor thread, the close handler's thread).
 ///
-/// Returns the failure notice if the backup made on locking failed (it has been reported
-/// already as a notice and an event); a quit uses it, because the window is gone before
-/// anyone could read the notice. `None` when nothing failed.
+/// Returns a backup warning for a close/quit dialog. Other failures go to the
+/// in-window queue, including when the drive holding the vault was removed.
 pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     let state = app.state::<AppState>();
     // A vault with security off never locks by itself or by a button. Only a quit and a
@@ -509,10 +523,16 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     }
     // Slow parts after that.
     let made = session.as_ref().filter(|s| s.dirty).map(|s| backup::make_backup(&state.paths, s));
-    let mut backup_failure = None;
-    if let Some(Err(e)) = made {
-        backup_failure = Some(report_backup_failure(app, &state, &e));
-    }
+    let backup_failure = if let Some(Err(e)) = made {
+        if matches!(reason, "quit" | "tray") {
+            close_backup_failure(app, &state, &e)
+        } else {
+            report_backup_failure(app, &state, &e);
+            None
+        }
+    } else {
+        None
+    };
     drop(session); // zeroizes the data key and all items
     backup_failure
 }
@@ -592,7 +612,7 @@ fn backup_open_vault(app: &AppHandle, state: &AppState) -> Option<String> {
     });
     match result {
         Err(Error::Locked) | Ok(()) => None,
-        Err(e) => Some(report_backup_failure(app, state, &e)),
+        Err(e) => close_backup_failure(app, state, &e),
     }
 }
 
@@ -609,17 +629,26 @@ pub(crate) fn show_backup_failure(app: &AppHandle, text: &str) {
 }
 
 /// Tells the owner that an automatic backup could not be made (the release exe has no
-/// console, so a message on stderr would never be seen). The notice is kept as well as
-/// sent as an event, because a lock reloads the window and a live event could be
-/// missed. The vault file itself is not affected. Returns the text.
-pub(crate) fn report_backup_failure(app: &AppHandle, state: &AppState, e: &Error) -> String {
+/// console, so a message on stderr would never be seen). The event wakes the
+/// main window, and the queue covers a missed event during reload.
+pub(crate) fn report_backup_failure(app: &AppHandle, state: &AppState, e: &Error) {
+    let text = backup_failure_text(e, state.paths.vault.exists());
+    state.set_notice(text);
+    let _ = app.emit_to("main", "app-notice", ());
+}
+
+fn close_backup_failure(app: &AppHandle, state: &AppState, e: &Error) -> Option<String> {
+    if state.paths.vault.exists() {
+        Some(backup_failure_text(e, true))
+    } else {
+        report_backup_failure(app, state, e);
+        None
+    }
+}
+
+fn backup_failure_text(e: &Error, vault_exists: bool) -> String {
     eprintln!("backup failed: {e}");
-    // What the notice says about the notes depends on the cause (and on whether the vault
-    // file is still there: it is not when the drive was removed).
-    let text = backup::failure_notice(e, state.paths.vault.exists());
-    state.set_notice(text.clone());
-    let _ = app.emit("app-notice", text.clone());
-    text
+    backup::failure_notice(e, vault_exists)
 }
 
 /// A backup of an open vault (security off) while it is running: it never locks, so
@@ -812,14 +841,28 @@ mod tests {
     }
 
     #[test]
-    fn a_notice_is_returned_once() {
+    fn upgrade_and_backup_notices_survive_reads_and_drain_in_order() {
         let root = std::env::temp_dir().join(format!("notaya-state-{}", crate::model::new_id()));
         let state = AppState::new(Paths::at(&root));
-        assert_eq!(state.take_notice(), None);
-        state.set_notice("first".into());
-        state.set_notice("second".into());
-        assert_eq!(state.take_notice().as_deref(), Some("second"));
-        assert_eq!(state.take_notice(), None, "gone after the first read");
+        assert_eq!(state.pending_notice(), None);
+        let upgrade = "Notaya saved vault-before-1.6.nota in your data folder before upgrading this vault to 1.6.";
+        let failure = backup::failure_notice(&Error::Corrupt, true);
+        state.set_notice(upgrade.into());
+        let first = state.pending_notice().unwrap();
+        assert_eq!(first.text, upgrade);
+
+        // A backup can fail while the window is preparing the first toast.
+        state.set_notice(failure.clone());
+        state.set_notice(upgrade.into());
+        state.set_notice(failure.clone());
+        assert_eq!(state.pending_notice(), Some(first.clone()), "still available after reload");
+        state.acknowledge_notice(&first.id);
+        let second = state.pending_notice().unwrap();
+        assert_eq!(second.text, failure);
+        state.acknowledge_notice(&first.id);
+        assert_eq!(state.pending_notice(), Some(second.clone()), "stale ack leaves the next notice");
+        state.acknowledge_notice(&second.id);
+        assert_eq!(state.pending_notice(), None, "both notices were drained exactly once");
     }
 
     #[test]
