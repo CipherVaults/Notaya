@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w153"></a>
+
+## Native Notion-style hub Word and PDF export, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One bounded native app launch and two native exports, independent Word XML and PDF parser readback, one two-page raster render, one preliminary vault-selection readback failure, and independent read-only fixture and contract reviews. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-177).
+
 <a id="codex-usage-20261122-w224"></a>
 
 ## Native Windows bilingual editing, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

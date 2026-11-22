@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w153-hub-word-pdf-20261122"></a>
+
+## Native Word and PDF exports checked on Windows
+
+**2026-11-22 12:14 Cairo / 10:14 UTC.** Windows imported a disposable hub with a parent, nested page and two related databases. After adding a linked table view to the parent, native Word and PDF exports preserved both page bodies, the exact Arabic and Hebrew sample lines, and both rows and all five columns in that view. The PDF's two pages rendered independently. The Word package and document content were checked directly. [Evidence and file identities](execution/2026-11-15-safe-export-replacement.md#native-w153-hub-word-pdf-20261122).
+
+**Continuation.** The agent-driven content check passed. The person-open part of the Hubs case (W153) still needs both files opened and assessed. The next independent case is native multi-selection and Save cancellation (W154). Keep the 5,000-row redo (Q1) and exact package gates open.
+
 <a id="native-w224-windows-keyboard-20261122"></a>
 
 ## Native Windows bilingual editing and keyboard checks verified

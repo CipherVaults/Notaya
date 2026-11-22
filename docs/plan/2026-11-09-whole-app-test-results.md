@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w153-hub-word-pdf-20261122"></a>
+
+## Notion-style hub to Word and PDF on Windows, 2026-11-22
+
+- **Passed for the native synthetic route (W153).** Imported a parent and nested page and the two related databases. Added a linked view of one imported database to the parent, then used the native Save dialogs for Word and PDF with subpages selected.
+- **Passed for file content.** The Word archive passed its CRC check. Its document XML and the PDF's logical text held the expected parent and child bodies, exact Arabic and Hebrew controls and both rows with all five table columns. Both PDF pages rendered and their content was visually inspected.
+- **Environment notes.** Poppler reported two display-font warnings. The tested lines and table remained visible. An initial readback assumed the app folder had just one SQLite file and stopped on the backup copies. The direct read-only check then verified the actual closed primary vault. The app itself was run once.
+- **Not run.** Word visual rendering, the required person opening both files, real Notion account exports, other database scopes and exact release packages. This leaves W153 open for the person check. Standalone database inclusion (W161) remains separate.
+
+[Exact source, file identities and evidence limits](../execution/2026-11-15-safe-export-replacement.md#native-w153-hub-word-pdf-20261122).
+
 <a id="native-w224-windows-keyboard-20261122"></a>
 
 ## Native Windows keyboard and WebView verification, 2026-11-22

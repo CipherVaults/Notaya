@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 177 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check hub exports to Word and PDF](#session-177) |
 | 176 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bilingual editing](#session-176) |
 | 175 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check database scope in Windows exports](#session-175) |
 | 174 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows startup and portable-note import](#session-174) |
@@ -208,6 +209,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-177"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Check hub exports to Word and PDF
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran native Windows and independent file checks. Workers reviewed the fixture and register contract. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w153).
+
+## 1. Time
+
+Evidence cut 2026-11-22 12:14 Cairo / 10:14 UTC.
+
+## 2. Session Goal
+
+Check a synthetic Notion-style hub in actual Windows Word and PDF exports (W153).
+
+## 3. Actions Taken
+
+Imported the disposable hierarchy, opened its parent and child, inspected the related databases, added a linked view and saved Word and PDF. Verified source bytes, the saved Word structure and PDF text, both rendered PDF pages and the closed disposable vault.
+
+## 4. Key Insights
+
+Both formats kept the sampled linked table and page content. The PDF's logical extraction preserved the Arabic and Hebrew controls and the raster showed them right aligned.
+
+## 5. Decisions Made
+
+Use two clearly scoped results, the agent-driven artifact check and the required person-open check. Keep the latter pending.
+
+## 6. Difficulties / Friction
+
+The first file readback included backups in its primary-vault search. The desktop response after saving Word was truncated, and the PDF renderer reported two display-font warnings.
+
+## 7. Adjustments Made
+
+Verified the Word file existed before continuing, checked the exact primary vault read-only and inspected the PDF's two rendered pages.
+
+## 8. Mistakes / Risks
+
+The linked view was created manually after import. This provides evidence for one supported export route. Word visual rendering, standalone database export and exact release packages are still separate.
+
+## 9. Current Position
+
+The native synthetic content check passed. The required person must still open both saved file types. [Evidence](execution/2026-11-15-safe-export-replacement.md#native-w153-hub-word-pdf-20261122).
+
+## 10. Next Steps
+
+Continue with the native multi-selection and Save cancellation coverage (W154), reusing earlier single-page and section checks within their recorded limits.
+
+## 11. Open Questions
+
+The person-open checks and exact candidate verification remain pending.
+
+## 12. Recommended Next Step
+
+Check selected pages and sections and an explicit cancellation through the real Windows Save dialog (W154).
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-176"></a>
 
