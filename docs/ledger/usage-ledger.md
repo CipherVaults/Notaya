@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w161"></a>
+
+## Windows section and notebook export, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two native test app sessions, eight single-document exports, two Markdown ZIPs, file inspections, two PDF image checks, and independent read-only source review. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-175).
+
 <a id="codex-usage-20261122-windows-portable-import"></a>
 
 ## Windows startup and portable-note import, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

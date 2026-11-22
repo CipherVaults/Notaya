@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w161-container-export-20261122"></a>
+
+## Native Windows section and notebook export, 2026-11-22
+
+- **Passed for linked view and section boundary (W161).** Native Save produced section and notebook files in Markdown, HTML, Word and PDF plus both Markdown ZIPs. The four intended linked-view columns and the one filtered row appeared in every output. Only notebook exports contained the neighboring section's page and body.
+- **Failed for standalone database inclusion (W161).** The standalone Projects database was under the exported section and had an extra row and Budget property. All ten exported outputs omitted both. The shared selector in released v1.5.1 already selected pages only. This remains an inherited limitation and unresolved scope decision, separate from the approved inline export fix (WP-07).
+- **Separate coverage.** Selection with databases only, other ZIP document types, an owned inline database rather than the tested linked view, and the final release candidate were outside this run.
+
+[Exact executable, file evidence and findings](../execution/2026-11-15-safe-export-replacement.md#native-w161-container-export-20261122).
+
 <a id="windows-portable-import-w217-w218-20261122"></a>
 
 ## Windows installed paths and portable-note import, 2026-11-22

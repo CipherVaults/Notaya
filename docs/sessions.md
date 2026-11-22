@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 175 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Check database scope in Windows exports](#session-175) |
 | 174 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows startup and portable-note import](#session-174) |
 | 173 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Rehearse Windows packages](#session-173) |
 | 172 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows bridge and startup behavior](#session-172) |
@@ -206,6 +207,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-175"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Check database scope in Windows exports
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran native tests. Independent workers reviewed the prior fixture and source scope. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w161).
+
+## 1. Time
+
+Evidence cut 2026-11-22 11:52 Cairo / 09:52 UTC.
+
+## 2. Session Goal
+
+Verify whether real section and notebook exports preserve linked and standalone database content (W161).
+
+## 3. Actions Taken
+
+Prepared a disposable same-section standalone table and linked view plus a neighboring page. Exported both scopes in all four document formats and as Markdown ZIPs. Independently inspected saved content and rendered the PDF table.
+
+## 4. Key Insights
+
+All ten outputs preserved the linked rows and section boundary. All ten omitted the in-scope standalone table's distinguishing content. The source comparison established this omission predates v1.6.
+
+## 5. Decisions Made
+
+Record the standalone inclusion failure explicitly. Keep the product behavior decision with Ahmed because the approved fix covers embedded tables inside pages.
+
+## 6. Difficulties / Friction
+
+One multi-call desktop observation exceeded the tool's budget. Its setup outcome initially remained uncertain.
+
+## 7. Adjustments Made
+
+Confirmed the current process and reopened the existing dialog binding before resuming. Continued with shorter calls and distinct file names.
+
+## 8. Mistakes / Risks
+
+The first grouped desktop interaction was too large. The evidence does not cover other ZIP format variants or demonstrate a database-only section export.
+
+## 9. Current Position
+
+Linked view and scope checks passed. Standalone inclusion remains open. [Exact evidence](execution/2026-11-15-safe-export-replacement.md#native-w161-container-export-20261122).
+
+## 10. Next Steps
+
+Continue independent qualification. Keep exact candidate gates and report the standalone scope decision separately.
+
+## 11. Open Questions
+
+Whether to include standalone databases in section and notebook exports for v1.6 or document the separate export path.
+
+## 12. Recommended Next Step
+
+Run the remaining native Windows keyboard and right-to-left editor checks (W224) while the export decision is open.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-174"></a>
 

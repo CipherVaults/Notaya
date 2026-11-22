@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w161-container-export-20261122"></a>
+
+## Section and notebook exports preserve linked views and omit standalone databases
+
+**2026-11-22 11:52 Cairo / 09:52 UTC.** Windows container export (W161) produced eight documents and two Markdown ZIPs. Direct file inspection found the expected linked table and a correct section boundary in all ten. A standalone database in the same section had extra content visible in the app, yet its row and property were omitted from every file. W161 remains open for standalone inclusion. [Exact receipts](execution/2026-11-15-safe-export-replacement.md#native-w161-container-export-20261122).
+
+The approved inline scope (WP-07) passed for the tested linked view. The page-only selector also exists in released v1.5.1. Adding standalone databases to container exports is a v1.6 scope decision for Ahmed. For now the separate database-view export is the existing route. Continue independent candidate qualification.
+
 <a id="windows-portable-import-w217-w218-20261122"></a>
 
 ## Installed Windows startup and portable-note import verified
