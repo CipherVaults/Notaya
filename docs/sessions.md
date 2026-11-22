@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 156 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Paired Notion export on Windows](#session-156) |
 | 155 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Cancel a running import](#session-155) |
 | 154 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Word styled lists](#session-154) |
 | 153 | 2026-11-21 | Ahmed (AE0101) | Gaming-PC | [Released PDF verification](#session-153) |
@@ -187,6 +188,66 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-156"></a>
+
+# 📘 Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Paired Notion export on Windows
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran native qualification and exact source checks. A read-only worker reviewed the fixture and the expected conversion behavior. **Models, Effort, Roles and Provenance.** The Goal names GPT-6.2 Sol Ultra. Served worker settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-notion-paired-import).
+
+## 1. Time
+
+Qualification cut at 2026-11-22 02:13 Cairo / 00:13 UTC.
+
+## 2. Session Goal
+
+Verify native Windows import, saving and navigation using a synthetic export with paired HTML, Markdown and CSV.
+
+## 3. Actions Taken
+
+Imported eleven source files through the actual Folder picker in a fresh app home. Restarted and inspected both pages, both databases and all four row bodies. Followed the imported page link and database relations. Independently rehashed all source files and ran three exact Rust controls.
+
+## 4. Key Insights
+
+The full CSV supplies canonical row data, same-ID HTML supplies the formatted body, and Markdown remains useful for rows with no HTML. The app reconstructed a child page link and the observed two-way relation.
+
+## 5. Decisions Made
+
+Use reopened page editors and actual table rows as the oracle. Treat the import summary as supporting evidence. Make no production source change.
+
+## 6. Difficulties / Friction
+
+Native navigation updates were asynchronous. Fresh window reads confirmed the actual destination before the next action.
+
+## 7. Adjustments Made
+
+Kept the Handbook link separate from database row links, because a row with external inbound page links may intentionally remain a standalone page.
+
+## 8. Mistakes / Risks
+
+The small fixture does not represent every export shape or establish behavior on a person's real workspace.
+
+## 9. Current Position
+
+The named native paired-import fixture passed, including persistence and navigation. [Test register](plan/2026-11-09-whole-app-test-results.md#windows-notion-paired-import-20261122).
+
+## 10. Next Steps
+
+Qualify inline database export (W160) by reading actual files from a disposable fixture. Keep the V1.6 package gates separate.
+
+## 11. Open Questions
+
+The PDF repair decision, long styled Word lists, Word title pull request access and the 5,000-row database redo remain separate. The earlier supplemental reopen checksum difference remains unclassified.
+
+## 12. Session Outcome
+
+All named fixture contents were verified after restart. Both owned Notaya sessions closed. Vaults, fixtures and raw evidence remained on the PC.
+
+## 13. Confidence Level
+
+High for the named fixture, observed native navigation and hash readback. Wider Notion fidelity, backup restore and acceptance remain open.
+
+---
 
 <a id="session-155"></a>
 

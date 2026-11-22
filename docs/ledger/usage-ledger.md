@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-notion-paired-import"></a>
+
+## Paired Notion export qualification — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC
+
+Cut 2026-11-22 02:13 Cairo / 00:13 UTC. Local fixture generation, native import and reopened navigation, three exact Rust checks and read-only source review. The Goal names GPT-6.2 Sol Ultra. Actual served worker settings, attributable tokens, quota share and labour are unavailable. [Session](../sessions.md#session-156) · [Evidence](../execution/2026-11-15-safe-export-replacement.md#native-notion-paired-import-20261122).
+
 <a id="codex-usage-20261122-native-import-cancel"></a>
 
 ## Native import cancellation — 2026-11-22 UTC / Cairo — Ahmed (AE0101) — Gaming-PC

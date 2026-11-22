@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-notion-paired-import-20261122"></a>
+
+## Current state and continuation — paired Notion export
+
+**2026-11-22 02:13 Cairo / 00:13 UTC.** A synthetic Notion export imported as two related databases, four rows and two ordinary pages on Windows. After restart, the app showed canonical CSV values, the preferred HTML body and highlight, the HTML-only row body and both Markdown task bodies. The imported child link opened the saved Details page under Handbook. A task relation and its reverse opened the correct rows. [Register](plan/2026-11-09-whole-app-test-results.md#windows-notion-paired-import-20261122) · [Execution evidence](execution/2026-11-15-safe-export-replacement.md#native-notion-paired-import-20261122).
+
+Next check actual exported files for an inline database (W160) with a disposable fixture. This small import does not qualify production Notion workspaces, first-database backup recovery, the 5,000-row redo or the exact release package.
+
 <a id="native-import-cancel-20261122"></a>
 
 ## Current state and continuation — cancelling a running import

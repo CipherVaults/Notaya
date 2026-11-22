@@ -1,5 +1,18 @@
 # Whole-app test results: X-1 addition
 
+<a id="windows-notion-paired-import-20261122"></a>
+
+## Native paired Notion export — 2026-11-22 02:13 Cairo / 00:13 UTC
+
+| Register case | Outcome |
+|---|---|
+| W145 canonical pages and navigation | **Passed for the fixture.** One notebook contained two ordinary pages. Handbook used its HTML body and opened Details through the imported link after restart. The breadcrumb and sidebar showed Details under Handbook. The accented and Arabic text persisted. |
+| W146 canonical database and rows | **Passed for the fixture.** Projects and Tasks had two rows each. The full CSV supplied the rows, statuses, currency, percentages and estimates. No filtered sentinel or loose row duplicate appeared. Alpha used its highlighted HTML body, Beta kept its HTML-only body, and both task bodies persisted. Native relation navigation opened both tasks and returned from First task to Alpha. |
+| Focused source checks | **Passed.** Three exact Rust tests covered selection of the full CSV, typed values and reciprocal relations, and pairing Markdown, CSV and HTML. |
+| Limits | Backup restore, broader export shapes, private data parity, the 5,000-row redo and final packages were outside this fixture. |
+
+[Exact execution evidence](../execution/2026-11-15-safe-export-replacement.md#native-notion-paired-import-20261122).
+
 <a id="windows-import-cancel-20261122"></a>
 
 ## Native cancellation after conversion — 2026-11-22 02:03 Cairo / 00:03 UTC
