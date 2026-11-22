@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="restore-w195-native-passed-20261122"></a>
+
+## W195 native restore interruption passed and Wave 1 audits complete
+
+**2026-11-22 23:03 Cairo / 21:03 UTC.** Antigravity assumed coordination on Gaming-PC under Ahmed's updated direction ([A57 supplement](plan/approval-and-amendments.md#a57-antigravity-coordination-20261122)): heavy non-security work runs in parallel local Codex CLI lanes (`gpt-6.2-sol`, `xhigh`), while Antigravity owns Security Areas 3 and 4 (keeping the stopped Codex Daybreak operation untouched) plus local desktop QA. All three **W195** native Windows restore interruption scenarios (`control`, `sharing`, `exit` + `-Restart` recovery) **passed** on main tree `c67a85e52d1bcd71e66e6b20b3699595085445e2` ([Execution evidence](execution/2026-10-23-restore-from-backup.md#restore-w195-native-passed-20261122)). Wave 1 read-only audits completed across Q1 (identified 16 MiB receipt-writer duplication bug in `coordinator.Q1.bound.cjs`), A57 numeric contract (documented `f64`/currency-rounding/non-finite gaps and minimal `Fraction` harness design), and Security Area 3 (identified 3 High and 5 Medium import/export hardening items + 7 missing hostile-input tests).
+
+**Continuation.** Next (Wave 2): run the Q1 16 MiB receipt-writer fix and 9-phase 5,000-row rerun plus A57 numeric reference harness and A44 open-vault safety-copy audit in parallel Codex CLI lanes (`gpt-6.2-sol`, `xhigh`), while Antigravity executes Security Area 3 hardening and hostile-input tests in an isolated branch to unblock N3. Preserve both original failed Q1 receipts, P7/P8 ordering, W161 deferral to v1.9, and final Windows package/owner acceptance gates.
+
 <a id="restore-w195-handoff-20261122"></a>
 
 ## Windows restore rollback verified and native handoff ready

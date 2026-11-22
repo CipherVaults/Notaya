@@ -39,6 +39,7 @@ Newest first. Later instructions narrow or pause the approved plan; they don't e
 
 | When (UTC) | Owner instruction | Effect |
 |---|---|---|
+| 2026-11-22 20:41 & 20:56 UTC (22:41 & 22:56 Cairo) | **Ahmed:** [Antigravity coordinator takeover, Codex CLI non-security lanes, Antigravity-owned Security Areas 3/4, public-repo checkpointing, W161 deferral to v1.9, A44 fix in v1.6, and computer-use permission on Notaya](#a57-antigravity-coordination-20261122). | Sets coordinator & model/security split; authorizes resuming Security Area 3/4 hardening and testing on Antigravity (never Codex); authorizes sanitized public GitHub pushes; approves fixing A44 open-vault safety copy in v1.6 (no format raise); keeps W161 container DB export in v1.9; permits native desktop testing on disposable fixtures. |
 | 2026-11-16 (owner-message time unknown; recorded 06:48:35 UTC) | **Ahmed:** [implement bounded private checkpoint, supplied wording once in A57](#a57-private-checkpoint-implementation-20261116). | Supersedes planning-only hold for scoped checkpoint; privacy, independence, conflict-refusal and verification conditions apply. |
 | 2026-11-16 (owner-message time unknown; recorded 06:08:31 UTC) | **Ahmed:** [private backup planning, supplied wording once in A57](#a57-backup-planning-20261116). | Inventory and propose a safe checkpoint; named publication/config/history changes held until plan review. |
 | 2026-11-16 (owner-message time unknown; recorded 04:55:02 UTC) | **Ahmed:** [hub presentation rule, owner wording once in A57](#a57-hub-presentation-20261116). | Preserve the native progress toggle and dated history; targeted page read/edit/readback. Presentation only; development authority and acceptance unchanged. |
@@ -751,6 +752,18 @@ Ahmed, in the development chat:
 > Forget 1.5.1 patching we need to focus all of the bug fixes, optimizations, bug fixes, new features in 1.6.
 
 Apply the confirmed Word list-tail loss (W141) and right-to-left PDF reimport defect (W163) to the v1.6 work line. The released v1.5.1 remains as published. This settles the repair destination. The existing v1.6 scope, test gates, separate storage-design approvals and owner acceptance still apply.
+
+<a id="a57-antigravity-coordination-20261122"></a>
+
+### A57 dated supplement — Antigravity coordination, security ownership, and v1.6 scope decisions, 2026-11-22
+
+**Who and where:** Ahmed (`AE0101`), Gaming-PC, in the Antigravity coordinator chat on `2026-11-22` at `22:12` / `22:32` / `22:41` / `22:56 Cairo` (`20:12` / `20:32` / `20:41` / `20:56 UTC`).
+
+- **Coordinator and model split:** Antigravity takes over coordination and integration on Gaming-PC (focusing on Gemini 4 Neon Low/Medium/High and Hydrogen at worst; avoiding Extra High; no Carbon). Heavy non-security code, test-harness, and review work runs in parallel local Codex CLI lanes (`gpt-6.2-sol`, `xhigh`, ChatGPT Pro 10x).
+- **Security ownership (Daybreak workaround):** Because Codex's Daybreak approval gate can halt security-related work, all security hardening, security testing, and security reviews — including Security Area 3 (import/export defensive baseline prerequisite to N3), Security Area 4, and any discovered security issues — are owned and executed by Antigravity. Never send security/crypto/hardening/hostile-input tasks to Codex CLI; leave the earlier stopped Codex Daybreak operation untouched.
+- **Public repository & data boundaries:** Continuing sanitized commits and record pushes on the public `CipherVaults/Notaya` repository is authorized, subject to strict pre-push staged-diff/blob/metadata review. All real and synthetic vaults, fixtures, raw evidence, and screenshots remain strictly PC-local on Gaming-PC.
+- **v1.6 scope decisions:** Fix the A44 open-vault first-upgrade safety copy and notice in v1.6 while preserving G3 (no vault format change). Keep standalone and nested full-page database inclusion in section/notebook container exports (W161) out of v1.6 and deferred to v1.9 (`1.9-6`).
+- **Native desktop testing:** Authorized to use computer-use / desktop UI automation on Gaming-PC to test Notaya using disposable local fixtures (`22:56 Cairo` / `20:56 UTC`). Version acceptance and public release remain with Ahmed.
 
 ## Changing this record
 

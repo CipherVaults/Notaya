@@ -1,5 +1,13 @@
 # Whole-app test results: X-1 addition
 
+<a id="restore-w195-native-passed-20261122"></a>
+
+## Native Windows restore interruption verified (W195), 2026-11-22
+
+- **Passed on Windows development binary (W195).** All three native scenarios (`control`, `sharing`, `exit`) plus their normal-binary `-Restart` reopen and preserved-vault recovery launches (`6/6` launches) passed on main tree `c67a85e52d1bcd71e66e6b20b3699595085445e2`.
+- **Verified behaviors.** Positive restore replaced `vault.nota` with the checked backup (`6EB6F4E5…`) and kept the old vault as `restore-undo-*` (`B99297D3…`); sharing failure hit `W195 stage: holding checked file after set-aside`, surfaced `"The vault file is in use by another program..."`, rolled back `vault.nota` byte-for-byte (`B99297D3…`), and reopened cleanly; controlled exit `86` hit `W195 stage: exiting after set-aside and before install`, left `vault.nota` absent with `restore-undo-*` (`B99297D3…`) and `restore-check.tmp` (`6EB6F4E5…`) intact, triggered `<StartCard />` ("No notes found here") with no silent empty vault on restart, and recovered `W154-BODY-11` cleanly through the native file picker.
+- **Limits.** Controlled process exit (`86`) on the development binary is distinct from hardware power loss and from final packaged NSIS/portable release qualification. Exact pins, logs, and screenshots remain PC-local. [Execution evidence](../execution/2026-10-23-restore-from-backup.md#restore-w195-native-passed-20261122).
+
 <a id="restore-w195-handoff-20261122"></a>
 
 ## Restore interruption preparation, 2026-11-22

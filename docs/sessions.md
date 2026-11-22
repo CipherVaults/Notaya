@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 194 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native W195 restore interruption and complete Wave 1 audits](#session-194) |
 | 193 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify restore rollback and prepare successor handoff](#session-193) |
 | 192 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify and merge Windows Export focus fix](#session-192) |
 | 191 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Restore and check Export launcher focus](#session-191) |
@@ -225,6 +226,77 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-194"></a>
+
+# Session: 2026-11-22 UTC | Ahmed (AE0101) | Gaming-PC | Verify native W195 restore interruption and complete Wave 1 audits
+
+**Who and where.** Ahmed's side (`AE0101`), Gaming-PC. Antigravity coordinator took over from Session 193's prepared handoff, drove the native W195 qualification locally, and orchestrated parallel read-only audit lanes. **Models, effort, roles and provenance.** Coordinator: Gemini 4 Neon (High). Antigravity read-only swarm bees (4 bees: `authority-evidence`, `arch-ux-tracer`, `roadmap-fable`, `sec-area3-audit`): Gemini 4 Neon (Medium). Local Codex CLI (`0.171.0-alpha.13`, `-m gpt-6.2-sol -c model_reasoning_effort="xhigh"`): Lane 1 Q1 audit (`183,294` tokens observed), Lane 2 A57 numeric audit (`129,538` tokens observed). Antigravity token totals and backend billing metrics were unavailable. [Usage](ledger/usage-ledger.md#antigravity-usage-20261122-w195-wave1).
+
+## 1. Time
+
+2026-11-22 22:12–23:05 Cairo (`20:12–21:05 UTC`).
+
+## 2. Session Goal
+
+Assume coordination of Notaya v1.6 on Gaming-PC under the approved Goal and roadmap, execute the prepared native Windows restore interruption check (**W195**), establish the Antigravity + Codex CLI parallel operating split, and complete Wave 1 baseline audits for Q1, A57 numeric parity, and Security Area 3.
+
+## 3. Actions Taken
+
+1. Verified host (`GAMING-PC`, `SessionId 1`), live `expfocus-20261122` (`cbf0193f…`, tree `c67a85e5…`), GitHub `main` (`0e08e548…`, `PUBLIC`), `record-source` (`ec05c7e5…`, matching `Start Here` 91/91), all W195 SHA-256 pins, Notion Hub/Board/Recovery/Benchmark pages, and local `pwsh.exe` / `codex.exe` paths.
+2. Ran three parallel discovery bees (`authority-evidence`, `arch-ux-tracer`, `roadmap-fable`) to map v1.5.1 vs v1.6 architecture, trace three cross-boundary user journeys, and reconcile v1.6–v2.5 roadmap + Fable studies against enacted owner decisions.
+3. Received Ahmed's owner decisions (`22:41` / `22:56 Cairo`): route heavy non-security work to parallel Codex CLI (`gpt-6.2-sol`, `xhigh`) lanes, assign Security Areas 3/4 and desktop QA to Antigravity (avoiding Codex Daybreak triggers and leaving the stopped operation untouched), continue sanitized public-repo commits, fix A44 open-vault safety copy in v1.6 (no format raise), keep W161 standalone DBs out of container exports until v1.9, and use computer-use / UI automation on disposable local fixtures.
+4. Executed Wave 1 read-only audits: Antigravity `sec-area3-audit` (Security Area 3 import/export baseline), Codex Lane 1 (Q1 16 MiB receipt-writer + V5/V7 rehearsal audit), and Codex Lane 2 (A57 numeric/currency contract audit).
+5. Executed all 3 native Windows **W195** scenarios (`control`, `sharing`, `exit`) plus normal-binary `-Restart` and preserved-vault recovery (`6/6` clean launches) using an isolated local UIA/Win32 driver (`Drive-W195Case.ps1` outside the repo) driving `Start-W195Local.ps1`.
+6. Updated `approval-and-amendments.md`, `2026-10-23-restore-from-backup.md`, `2026-11-09-whole-app-test-results.md`, `STATUS.md`, `sessions.md`, and `usage-ledger.md`.
+
+## 4. Key Insights
+
+- Every `run_command` invocation in Antigravity executes in its own isolated Win32 desktop (`WinSta0\exebox-*`); running `Start-W195Local.ps1` and the pure-UIA/Win32 driver inside the same `run_command` session and rendering via `PrintWindow` keeps desktop inputs 100% isolated from the user's screen and avoids focus-stealing.
+- Q1's 16 MiB receipt failure was caused by `coordinator.Q1.bound.cjs:94-95` serializing `observer`, `contexts`, and `commandAudit` twice (`result.browser` and `cases[].facts`, ~21.2 MB > 16 MiB); replacing the embedded `facts` copy with `{evidencePath:'$.browser'}` preserves full evidence without hitting the cap.
+- Security Area 3 requires 4 targeted hardening fixes (PDF heap/loop caps for DD1065, nested ZIP/ratio caps, atomic `export_csv` + checked `import_csv`, `export::resolve` / `Vfs::from_files` symlink & prefix hygiene) and 7 hostile-input regression tests before N3 begins.
+
+## 5. Decisions Made
+
+- Confirmed by Ahmed (`2026-11-22 22:41` & `22:56 Cairo`): Antigravity coordinates and owns Security Areas 3/4 + desktop QA; Codex CLI (`gpt-6.2-sol`, `xhigh`) runs parallel non-security lanes; public `CipherVaults/Notaya` pushes continue with sanitized diffs; A44 open-vault safety copy fixed in v1.6; W161 container DB inclusion stays in v1.9; computer use authorized for Notaya QA.
+- Coordinator operating choice: avoid Extra High (`XHigh`) and Carbon in Antigravity per Ahmed's budget rule, reserving `Gemini 4 Neon High` for coordination/integration and `Neon Medium` for bounded parallel reads/audits.
+
+## 6. Difficulties / Friction
+
+- `pwsh.exe` and `codex.exe` were absent from default system `PATH` and had to be bound by full local path (`C:\Users\Ahmed\.cache\codex-runtimes\...` and `WindowsApps\OpenAI.Codex_...\codex.exe`).
+- Earlier W195 driver scaffolding attempts hit per-command `exebox-*` isolation, a `RadioButton` null-name selector bug, and `#32770` matching `SearchEditBox` instead of `ComboBoxEx32 -> ComboBox -> Edit`. All aborted directories were preserved locally outside the repo and baselines re-pinned before each clean run.
+
+## 7. Adjustments Made
+
+- Shifted from cross-command UIA attachment to single-session `Drive-W195Case.ps1` with `PrintWindow` capture and `ComboBoxEx32` HWND targeting, enabling zero-interference headless-desktop native UI testing and recovery verification.
+
+## 8. Mistakes / Risks Noted
+
+- Controlled process exit (`86`) on the W195 development binary does not prove physical power-loss NTFS crash behavior or final NSIS/portable package readiness.
+- Codex Lane 2 confirmed Notaya currently fails the A57 currency/numeric contract (`f64` arithmetic without final half-away-from-zero rounding; non-finite intermediates silently succeeding) — held as a baseline audit pending harness qualification and fix.
+
+## 9. Current Position
+
+**W195 native Windows restore interruption: PASSED** (`control`, `sharing`, `exit` + `-Restart` recovery, all `6/6` launches verified on tree `c67a85e5…`). Wave 1 Q1, A57 numeric, and Security Area 3 read-only audits are complete. `0` Notaya processes active; all vaults, fixtures, and screenshots kept strictly on Gaming-PC.
+
+## 10. Next Steps
+
+1. Run Wave 2 in parallel: Q1 16 MiB receipt-writer fix + 9-phase rerun (Codex Lane 1), A57 `Fraction` reference harness + mismatch run (Codex Lane 2), A44 open-vault safety-copy root-cause audit (Codex Lane 3), and Security Area 3 hardening + 7 hostile-input tests in an isolated Antigravity branch to unblock N3.
+2. Do not repeat W195 unless the product source changes before final candidate package testing.
+
+## 11. Open Questions
+
+None blocking Wave 2; final release acceptance, private parity runs (formulas & WP-19), Mohamed's W222/About checks, and P16 disposition remain with their owners at release readiness.
+
+## 12. Recommended Next Step
+
+Execute Wave 2 lanes cleanly against isolated copies of `c67a85e5…` and advance Q1 → P7 → P8 and Security Area 3 → N3 under the 15-minute progress cadence.
+
+## 13. Session Type
+
+Coordinator takeover, native Windows qualification (W195), and Wave 1 parallel discovery/audits.
+
+---
 
 <a id="session-193"></a>
 

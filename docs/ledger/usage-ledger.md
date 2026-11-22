@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="antigravity-usage-20261122-w195-wave1"></a>
+
+## W195 native qualification and Wave 1 audits, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Coordinator: Gemini 4 Neon (High). Antigravity read-only swarm bees (`authority-evidence`, `arch-ux-tracer`, `roadmap-fable`, `sec-area3-audit`): Gemini 4 Neon (Medium). Antigravity token counts and billing totals were unavailable. Local Codex CLI (`0.171.0-alpha.13`, `-m gpt-6.2-sol -c model_reasoning_effort="xhigh"`): Lane 1 Q1 receipt-writer & rehearsal audit `183,294` tokens observed; Lane 2 A57 numeric/currency audit `129,538` tokens observed. Local desktop runs: W195 native restore interruption (`6/6` clean launches across `control`, `sharing`, `exit` + `-Restart` recovery, plus earlier preserved driver attempts). [Session](../sessions.md#session-194).
+
 <a id="codex-usage-20261122-w195-handoff"></a>
 
 ## Windows restore rollback and handoff, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
