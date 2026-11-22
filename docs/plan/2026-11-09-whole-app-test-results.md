@@ -1,5 +1,16 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w186-manual-backup-20261122"></a>
+
+## Native Windows manual backup and restore, 2026-11-22
+
+- **Passed for backup creation and restore (W186).** Settings and the command palette each saved a native backup. Both files and the closed restored vault matched byte for byte. Full SQLite schema and sealed rows matched the closed source, including the attachment, history, activity and journal anchors. The note and picture displayed after restore and Version history reopened.
+- **Passed for cancellation and live-file refusal.** The cancelled Save created nothing. Notaya refused its own live destination after Windows accepted the overwrite prompt. No temporary sibling remained. The live file was unavailable to hash while open. Closed readback confirmed all saved rows. Explorer opened the exact disposable app data directory.
+- **Separate palette finding (W134).** Entering the complete displayed backup action label returned “No matches.” The action worked after clearing the query. Released v1.5.1 source also shows actions only for an empty query. This check used the visible action and recorded the search issue for a v1.6 fix.
+- **Separate coverage.** The populated fixture had security off. Its body marker was absent from raw file bytes, and the backup opened without a password. Protected backup scenarios have separate evidence. Exact release packages remain unrun.
+
+[Exact native routes, snapshot identity and readback](../execution/2026-10-23-restore-from-backup.md#native-w186-manual-backup-20261122).
+
 <a id="native-w164-link-roundtrip-20261122"></a>
 
 ## Native Markdown ZIP internal-link round trip, 2026-11-22

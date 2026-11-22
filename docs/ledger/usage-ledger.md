@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w186"></a>
+
+## Native Windows manual backup and restore, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+Two bounded native launches, two backup Saves, one cancellation, one refused live destination, one actual picked-file restore, Explorer and document readback, and independent source and sealed-row checks. Early readback stopped on a wrong table name. Realized settings and attributable usage are unavailable. [Session](../sessions.md#session-181).
+
 <a id="codex-usage-20261122-w164"></a>
 
 ## Native Windows ZIP link round trip, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

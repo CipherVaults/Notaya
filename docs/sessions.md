@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 181 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify manual backup and restore](#session-181) |
 | 180 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native ZIP link round trip](#session-180) |
 | 179 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Qualify Windows export replacement](#session-179) |
 | 178 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify Windows export selection and cancellation](#session-178) |
@@ -212,6 +213,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-181"></a>
+
+# Session: 2026-11-22 UTC · Ahmed (AE0101) · Gaming-PC · Verify manual backup and restore
+
+**Who and where.** Ahmed's side, Gaming-PC. Codex ran the two native test homes, output and schema readback. Workers traced the producer and restore controls and verified prior fixture provenance. **Models, Effort, Roles and Provenance.** The lead composer previously displayed GPT-6.2 Sol Ultra. Realized settings and attributable usage are unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w186).
+
+## 1. Time
+
+Evidence cut 2026-11-22 13:04 Cairo / 11:04 UTC.
+
+## 2. Session Goal
+
+Verify native Windows manual backup through Settings and the palette, cancellation, live destination refusal and fresh restore (W186).
+
+## 3. Actions Taken
+
+Saved two backups from the populated synthetic copy, cancelled a third Save, tested the live destination guard and opened the test data folder. Restored the palette-produced file in a blank home. Compared both saved files and the restored vault with the sealed rows of the closed source.
+
+## 4. Key Insights
+
+Both manual files were byte-identical, and the restored vault matched. The closed source had the same sealed schema and every row. Its file was held while open. The backup action worked from the unfiltered palette and was absent when the visible label was typed.
+
+## 5. Decisions Made
+
+Record the W186 synthetic backup result. Track command filtering under the existing palette case (W134) and direct any correction to v1.6.
+
+## 6. Difficulties / Friction
+
+The first palette click had no geometry. The typed label gave No matches. An early SQLite readback assumed the wrong spelling of the journal anchor table.
+
+## 7. Adjustments Made
+
+Cleared the palette query and selected the visible action. Corrected the readback to the actual table and verified the original outputs without a repeat backup.
+
+## 8. Mistakes / Risks
+
+The fixture had security off. Its body marker was absent from raw output bytes, with no password claim for this file. The open source hash was unavailable, so the closed vault comparison used all sealed rows.
+
+## 9. Current Position
+
+Native manual backup and restore (W186) passed. Palette command search remains open. [Evidence](execution/2026-10-23-restore-from-backup.md#native-w186-manual-backup-20261122).
+
+## 10. Next Steps
+
+Correct the inherited exact-label command search issue within the established v1.6 palette check (W134).
+
+## 11. Open Questions
+
+Exact packages and owner release gates remain separate.
+
+## 12. Recommended Next Step
+
+Verify command discovery, existing note search, keyboard selection and the resulting action once on the v1.6 correction.
+
+## 13. Session Type
+
+Development qualification and continuity.
 
 <a id="session-180"></a>
 

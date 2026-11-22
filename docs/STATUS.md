@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w186-manual-backup-20261122"></a>
+
+## Windows manual backup and restore verified
+
+**2026-11-22 13:04 Cairo / 11:04 UTC.** Settings and the command palette produced byte-identical backups of the saved disposable vault. A fresh test home restored one, showed the note and tiny picture, and opened the Version history panel. Both backup copies and the restored file matched every sealed row of the closed source. Save cancellation, refusal to replace the live vault and opening the test data folder passed. [Evidence](execution/2026-10-23-restore-from-backup.md#native-w186-manual-backup-20261122).
+
+**Continuation.** The Windows manual backup check (W186) passed. Typing the visible backup command returned “No matches.” The action worked from the unfiltered list. Verify and address the inherited command search issue on v1.6 under the palette check (W134).
+
 <a id="native-w164-link-roundtrip-20261122"></a>
 
 ## Windows internal links round-trip through a Markdown ZIP
