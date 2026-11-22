@@ -153,9 +153,12 @@ pub fn parse(text: &str) -> Result<Table, String> {
     Ok(Table { header, rows: records })
 }
 
-/// A text that a spreadsheet would run as a formula starts with one of these.
+/// A text that a spreadsheet would run as a formula starts with one of these (even after leading
+/// whitespace or newlines).
 fn risky(s: &str) -> bool {
+    let trimmed = s.trim_start_matches(|c: char| matches!(c, ' ' | '\t' | '\r' | '\n'));
     matches!(s.chars().next(), Some('=' | '+' | '-' | '@' | '\t' | '\r'))
+        || matches!(trimmed.chars().next(), Some('=' | '+' | '-' | '@'))
 }
 
 /// Makes a text safe to open in a spreadsheet: a leading `'` stops it being read as a formula.
@@ -528,8 +531,14 @@ mod tests {
         assert_eq!(safe_cell("=HYPERLINK(\"x\")", false), "'=HYPERLINK(\"x\")");
         assert_eq!(safe_cell("-5", true), "-5");
         assert_eq!(safe_cell("+1 555", false), "'+1 555");
+        assert_eq!(safe_cell("\n=1+1", false), "'\n=1+1");
+        assert_eq!(safe_cell("  =CMD()", false), "'  =CMD()");
+        assert_eq!(safe_cell("\r\n+2+2", false), "'\r\n+2+2");
+        assert_eq!(safe_cell("\nmultiline", false), "\nmultiline");
         assert_eq!(safe_cell("hello", false), "hello");
         assert_eq!(unsafe_cell("'=1+1"), "=1+1");
+        assert_eq!(unsafe_cell("'\n=1+1"), "\n=1+1");
+        assert_eq!(unsafe_cell("'  =CMD()"), "  =CMD()");
         assert_eq!(unsafe_cell("'quoted"), "'quoted");
     }
 
