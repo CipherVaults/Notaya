@@ -182,6 +182,18 @@ Root read the scoped closure/current pointers and matched their hashes 10:51:25Z
 
 **Integration and limits.** [PR #140](https://github.com/CipherVaults/Notaya/pull/140) merged at `bfc7b33842be298f346117f45a13bbae93aec2c6`. A fresh clone from GitHub matched tree `5474f85501fc69c7fa73218a8e68f50c64cc9f38`, the previous main parent and the reviewed source parent. The live PR exposed no combined status contexts or PR-triggered workflow runs for that candidate. Evidence applies to the named ordinary native case and this unbundled Windows build. Vaults, inputs and raw evidence stayed on the PC. Continue the password branch of restore validation (W194) independently.
 
+<a id="native-w154-keyboard-focus-integrated-20261122"></a>
+
+## Native Export focus retest and integration, 2026-11-22 15:44 Cairo
+
+**Binding.** Exact candidate `cbf0193fabe77d04cdd84f40e2560f8dd643c333`, tree `c67a85e52d1bcd71e66e6b20b3699595085445e2`, native Windows x64 executable SHA-256 `2db9c2383d0ce91808d3454af1fa6351e43a419421ccd7f23e09a4a5d60fe169`. After Ahmed confirmed the desktop was available, started a fresh portable home with the same pinned W154 synthetic fixture. A desktop control reset interrupted observation partway through the selector. Reattached to the same verified process and read actual focus and settings before continuing. Earlier obscured attempt remains dated separately.
+
+**Verified native keyboard behavior.** Tab focused toolbar Export. Enter opened it and Escape returned its visible focus ring. Enter alone reopened it. Select Pages by keyboard correctly disabled Export when empty. Selected only a different page, chose single-file HTML and turned off subpages. In the real Windows picker, Escape wrote no file and retained the choice. Keyboard retry saved only Page 12. Successful Save closed the modal, visibly returned focus to the toolbar Export button, and plain Enter reopened it again.
+
+**Verified file and shutdown.** The nominated cancellation file was absent. Only the expected HTML and the unchanged control were present. The saved 2,296-byte HTML had the exact previously parsed Page 12 heading and body by byte comparison, SHA-256 `71899a6ff9af8c61fe4a31109dc1932a0eeb8dfb04766c50db4782be3ea6e002`. The source fixture hash was unchanged. The edited copy closed with 23 records, zero SQLite sidecars and a passing read-only SQLite quick-check. The owned application exited 0 and drained output.
+
+**Integration.** The non-author review and the original failing and candidate passing browser runs remain bound to the same source. [PR #142](https://github.com/CipherVaults/Notaya/pull/142) merged at 15:43:26 Cairo. Checked the proposed GitHub merge tree before integration, then independently fetched and checked actual main `0e08e5489d36fbd2db1fc3a537cdebfa66bb3ad9`: same exact tested tree, with the reviewed base and head as parents. The Windows check applies to the unbundled artifact. All fixtures, HTML and raw logs stay local. Whole-app accessibility, final package and owner acceptance remain separate.
+
 <a id="native-w154-keyboard-focus-candidate-20261122"></a>
 
 ## Toolbar Export focus candidate, 2026-11-22 15:29 Cairo

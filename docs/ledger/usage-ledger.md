@@ -1,6 +1,12 @@
 # Notaya usage ledger: readings, newest first
 
 
+<a id="codex-usage-20261122-w154-focus-native"></a>
+
+## Windows Export focus verification and integration, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC
+
+One local executable retest with two native Save dialogs, independent byte and integrity checks, one routine merge and exact main readback. Attribution and realized serving settings unavailable. [Session](../sessions.md#session-192).
+
 <a id="codex-usage-20261122-w154-focus-candidate"></a>
 
 ## Export keyboard focus candidate, 2026-11-22 UTC / Cairo, Ahmed (AE0101), Gaming-PC

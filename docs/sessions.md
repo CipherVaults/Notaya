@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 192 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify and merge Windows Export focus fix](#session-192) |
 | 191 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Restore and check Export launcher focus](#session-191) |
 | 190 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify keyboard export and find lost focus](#session-190) |
 | 189 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify long-note navigation and save](#session-189) |
@@ -223,6 +224,64 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-192"></a>
+
+# Session: 2026-11-22 UTC | Ahmed (AE0101) | Gaming-PC | Verify and merge Windows Export focus fix
+
+**Who and where.** Ahmed's side, Gaming-PC. The lead ran the native interaction and integration. The earlier non-author review applies to the unchanged tip. **Models, effort, roles and provenance.** The Goal specifies GPT-6.2 Sol Ultra. Actual serving settings and attributable usage were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261122-w154-focus-native).
+
+## 1. Time
+
+Evidence cut 2026-11-22 15:44 Cairo / 13:44 UTC.
+
+## 2. Session Goal
+
+Retest the exact Windows toolbar focus fix and complete its routine integration if it passes (W154).
+
+## 3. Actions Taken
+
+After Ahmed confirmed Windows was idle, opened the pinned candidate in a new synthetic home. Dismissed and reopened Export by keyboard, checked native Save cancellation and retry, compared output bytes and closed the app. Verified the proposed merge tree, merged and independently recovered actual GitHub main.
+
+## 4. Key Insights
+
+Escape and successful Save restored the visible toolbar focus. Plain Enter reopened the dialog. The HTML remained byte-identical to the separately parsed baseline.
+
+## 5. Decisions Made
+
+Merge the exact reviewed and qualified four-file change. Keep earlier failed and interrupted evidence.
+
+## 6. Difficulties / Friction
+
+The desktop tool reset during selector navigation. An observation had arrived before its preceding action settled.
+
+## 7. Adjustments Made
+
+Reattached to the same owned live process and inspected the actual selection and focus before sending further keys. Used the expected file hash and output inventory as separate checks.
+
+## 8. Mistakes / Risks
+
+The retest covers the real toolbar path and one representative HTML export. Screen-reader, other launchers and exact package remain separate.
+
+## 9. Current Position
+
+[PR #142](https://github.com/CipherVaults/Notaya/pull/142) is merged and the main tree matches the tested candidate. [Native and Git evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-focus-integrated-20261122).
+
+## 10. Next Steps
+
+Continue the outstanding independent release checks on reconciled main. Preserve the database redo gate.
+
+## 11. Open Questions
+
+The clean-account installer and package-specific gates still need their exact environments and inputs.
+
+## 12. Recommended Next Step
+
+Reconcile the next available native case against current main and confirm what genuinely requires a separate Windows login.
+
+## 13. Session Type
+
+Development qualification and integration.
 
 <a id="session-191"></a>
 

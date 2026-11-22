@@ -1,5 +1,15 @@
 # Whole-app test results: X-1 addition
 
+<a id="native-w154-keyboard-focus-integrated-20261122"></a>
+
+## Native Windows toolbar Export focus fix, 2026-11-22
+
+- **Passed on the exact candidate (W154).** Escape and successful export returned focus to toolbar Export. Enter alone reopened it after either action. The empty selection disabled Export.
+- **Passed real Save cancellation and retry.** Cancellation wrote nothing. The unchanged selection then exported only Page 12. The actual HTML matched the independently read earlier output byte for byte. Normal app exit and the local fixture integrity check passed.
+- **Integrated.** Verified the main tree after [PR #142](https://github.com/CipherVaults/Notaya/pull/142) equals the exact tested tree. Earlier failing and interrupted evidence remains. Other launchers, full screen-reader use and final package are outside this case.
+
+[Exact source, executable and output evidence](../execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-focus-integrated-20261122).
+
 <a id="native-w154-keyboard-focus-candidate-20261122"></a>
 
 ## Toolbar Export keyboard focus candidate, 2026-11-22

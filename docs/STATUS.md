@@ -1,6 +1,14 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="native-w154-keyboard-focus-integrated-20261122"></a>
+
+## Windows Export focus fix verified and merged
+
+**2026-11-22 15:44 Cairo / 13:44 UTC.** On the exact Windows development candidate (W154), Escape and successful Save returned focus to the toolbar Export button. Enter alone reopened the dialog both times. Cancelling Windows Save created no file; retry produced the selected page with exactly the baseline HTML bytes. [Native evidence](execution/2026-11-15-safe-export-replacement.md#native-w154-keyboard-focus-integrated-20261122).
+
+**Continuation.** [PR #142](https://github.com/CipherVaults/Notaya/pull/142) merged and independent GitHub recovery verified main `0e08e5489d36fbd2db1fc3a537cdebfa66bb3ad9` against the tested tree. Continue independent release qualification. Other launchers, full screen-reader use, final Windows packages and the 5,000-row redo (Q1) retain separate gates.
+
 <a id="native-w154-keyboard-focus-candidate-20261122"></a>
 
 ## Export focus fix passed its browser checks and awaits Windows retest
