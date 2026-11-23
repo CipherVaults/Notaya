@@ -41,7 +41,12 @@ const MAX_TEXT_BYTES: usize = 32 * 1024 * 1024;
 /// may read: a dictionary or array costs far more memory than the bytes it is written in.
 const MAX_OBJECTS: usize = 1_000_000;
 const MAX_OBJECT_TEXT: usize = 48 * 1024 * 1024;
+/// Most total AST/value nodes lexed into memory across scan + compressed object streams.
+const MAX_OBJECT_NODES: usize = 2_000_000;
 const MAX_TRAILERS: usize = 256;
+const MAX_FILTERS: usize = 8;
+const MAX_FONT_CACHE: usize = 4_096;
+const MAX_TOTAL_FONT_BYTES: usize = 32 * 1024 * 1024;
 
 type Dict = Vec<(Vec<u8>, Obj)>;
 
@@ -91,11 +96,17 @@ fn is_delim(c: u8) -> bool {
 struct Lex<'a> {
     b: &'a [u8],
     pos: usize,
+    nodes: usize,
+    max_nodes: usize,
 }
 
 impl<'a> Lex<'a> {
     fn new(b: &'a [u8], pos: usize) -> Self {
-        Lex { b, pos: pos.min(b.len()) }
+        Lex { b, pos: pos.min(b.len()), nodes: 0, max_nodes: usize::MAX }
+    }
+
+    fn bounded(b: &'a [u8], pos: usize, max_nodes: usize) -> Self {
+        Lex { b, pos: pos.min(b.len()), nodes: 0, max_nodes }
     }
 
     fn skip_ws(&mut self) {
@@ -130,8 +141,12 @@ impl<'a> Lex<'a> {
         s.trim_start_matches('+').parse::<f64>().ok().or_else(|| s.replace("--", "-").parse().ok()).filter(|n: &f64| n.is_finite())
     }
 
-    /// Reads one object (or an operator keyword). `None` at the end.
+    /// Reads one object (or an operator keyword). `None` at the end or when the node budget ends.
     fn obj(&mut self, depth: usize) -> Option<Obj> {
+        if self.nodes >= self.max_nodes {
+            return None;
+        }
+        self.nodes += 1;
         self.skip_ws();
         let b = self.b;
         let c = *b.get(self.pos)?;
@@ -350,6 +365,7 @@ struct Pdf<'a> {
     text: Cell<usize>,
     ops: Cell<u64>,
     fonts: std::cell::RefCell<HashMap<u32, Rc<Font>>>,
+    font_bytes: Cell<usize>,
 }
 
 impl<'a> Pdf<'a> {
@@ -372,30 +388,67 @@ impl<'a> Pdf<'a> {
     }
 
     fn stream(&self, o: &Obj) -> Option<Vec<u8>> {
+        if self.ctl.stopped() {
+            return None;
+        }
         let Obj::Stream(d, start, end) = self.get(o) else { return None };
         let raw = self.data.get(*start..*end)?;
+        if raw.len() > MAX_STREAM {
+            return None;
+        }
         let filters: Vec<Vec<u8>> = match self.key(d, b"Filter") {
+            Obj::Null => Vec::new(),
             Obj::Name(n) => vec![n.clone()],
-            Obj::Arr(a) => a.iter().filter_map(|x| self.get(x).name().map(<[u8]>::to_vec)).collect(),
-            _ => Vec::new(),
+            Obj::Arr(a) => {
+                if a.len() > MAX_FILTERS {
+                    return None;
+                }
+                let mut out = Vec::with_capacity(a.len());
+                for x in a {
+                    out.push(self.get(x).name()?.to_vec());
+                }
+                out
+            }
+            _ => return None,
         };
-        let mut buf = raw.to_vec();
-        for f in filters {
-            let limit = MAX_STREAM.min(self.budget.get() as usize).min(self.shared.get() as usize);
-            buf = match f.as_slice() {
-                b"FlateDecode" | b"Fl" => inflate(&buf, limit)?,
-                b"ASCIIHexDecode" | b"AHx" => ascii_hex(&buf, limit),
-                b"ASCII85Decode" | b"A85" => ascii85(&buf, limit),
-                b"LZWDecode" | b"LZW" => lzw(&buf, limit),
-                b"RunLengthDecode" | b"RL" => run_length(&buf, limit),
-                _ => return None,
-            };
-            if buf.len() >= limit && limit < MAX_STREAM {
+        if filters.is_empty() {
+            if (raw.len() as u64) > self.budget.get().min(self.shared.get()) {
                 return None;
             }
+            self.budget.set(self.budget.get().saturating_sub(raw.len() as u64));
+            self.shared.set(self.shared.get().saturating_sub(raw.len() as u64));
+            return Some(raw.to_vec());
         }
-        self.budget.set(self.budget.get().saturating_sub(buf.len() as u64));
-        self.shared.set(self.shared.get().saturating_sub(buf.len() as u64));
+        let mut buf = raw.to_vec();
+        for f in filters {
+            if self.ctl.stopped() {
+                return None;
+            }
+            let limit = MAX_STREAM.min(self.budget.get() as usize).min(self.shared.get() as usize);
+            if limit == 0 {
+                return None;
+            }
+            let next = match f.as_slice() {
+                b"FlateDecode" | b"Fl" => inflate(&buf, limit),
+                b"ASCIIHexDecode" | b"AHx" => Some(ascii_hex(&buf, limit)),
+                b"ASCII85Decode" | b"A85" => Some(ascii85(&buf, limit)),
+                b"LZWDecode" | b"LZW" => Some(lzw(&buf, limit)),
+                b"RunLengthDecode" | b"RL" => Some(run_length(&buf, limit)),
+                _ => return None,
+            };
+            let Some(next) = next else {
+                // Debit attempted limit so repeated failing filter-chain probes cannot bypass budget.
+                self.budget.set(self.budget.get().saturating_sub(limit as u64));
+                self.shared.set(self.shared.get().saturating_sub(limit as u64));
+                return None;
+            };
+            self.budget.set(self.budget.get().saturating_sub(next.len() as u64));
+            self.shared.set(self.shared.get().saturating_sub(next.len() as u64));
+            if next.len() >= limit && limit < MAX_STREAM {
+                return None;
+            }
+            buf = next;
+        }
         Some(buf)
     }
 }
@@ -558,6 +611,17 @@ struct Font {
 }
 
 impl Font {
+    fn empty() -> Self {
+        Font { map: HashMap::new(), lens: Vec::new(), composite: false, enc: [None; 256], widths: HashMap::new(), default_width: 500.0 }
+    }
+
+    fn approx_bytes(&self) -> usize {
+        2048usize
+            .saturating_add(self.map.len().saturating_mul(64))
+            .saturating_add(self.map.values().map(String::len).sum())
+            .saturating_add(self.widths.len().saturating_mul(24))
+    }
+
     /// Splits the bytes into codes and decodes them: (code, text, unmapped?).
     fn decode(&self, bytes: &[u8]) -> Vec<(u32, String, bool)> {
         let mut out = Vec::new();
@@ -609,17 +673,22 @@ fn utf16be(b: &[u8]) -> String {
     String::from_utf16_lossy(&units)
 }
 
+#[cfg(test)]
 fn parse_cmap(data: &[u8]) -> (HashMap<u32, String>, Vec<usize>) {
+    parse_cmap_with(data, &Control::standard())
+}
+
+fn parse_cmap_with(data: &[u8], ctl: &Control) -> (HashMap<u32, String>, Vec<usize>) {
     let mut map = HashMap::new();
     let mut lens: Vec<usize> = Vec::new();
-    let mut lex = Lex::new(data, 0);
+    let mut lex = Lex::bounded(data, 0, MAX_OBJECT_NODES);
     let mut mode = 0u8; // 1 codespace, 2 bfchar, 3 bfrange
     let mut pending: Vec<Obj> = Vec::new();
     let mut guard = 0;
     let mut bytes = 0usize;
     while let Some(o) = lex.obj(0) {
         guard += 1;
-        if guard > 2_000_000 || map.len() > MAX_CMAP_ENTRIES || bytes >= MAX_CMAP_BYTES {
+        if guard > 2_000_000 || map.len() > MAX_CMAP_ENTRIES || bytes >= MAX_CMAP_BYTES || ctl.stopped() {
             break;
         }
         match &o {
@@ -681,7 +750,7 @@ fn parse_cmap(data: &[u8]) -> (HashMap<u32, String>, Vec<usize>) {
                                 }
                                 Obj::Arr(a) => {
                                     for (k, d) in a.iter().enumerate() {
-                                        if map.len() >= MAX_CMAP_ENTRIES || bytes >= MAX_CMAP_BYTES {
+                                        if map.len() >= MAX_CMAP_ENTRIES || bytes >= MAX_CMAP_BYTES || (k % 1024 == 0 && ctl.stopped()) {
                                             break;
                                         }
                                         if let Obj::Str(d) = d {
@@ -808,9 +877,17 @@ impl Pdf<'_> {
                 return f.clone();
             }
         }
-        let f = Rc::new(self.build_font(self.get(o)));
+        if self.fonts.borrow().len() >= MAX_FONT_CACHE || self.font_bytes.get() >= MAX_TOTAL_FONT_BYTES {
+            return Rc::new(Font::empty());
+        }
+        let built = self.build_font(self.get(o));
+        let cost = built.approx_bytes();
+        self.font_bytes.set(self.font_bytes.get().saturating_add(cost));
+        let f = Rc::new(built);
         if let Obj::Ref(n) = o {
-            self.fonts.borrow_mut().insert(*n, f.clone());
+            if self.fonts.borrow().len() < MAX_FONT_CACHE && self.font_bytes.get() <= MAX_TOTAL_FONT_BYTES {
+                self.fonts.borrow_mut().insert(*n, f.clone());
+            }
         }
         f
     }
@@ -819,10 +896,10 @@ impl Pdf<'_> {
         let empty = Vec::new();
         let d = o.dict().unwrap_or(&empty);
         let composite = self.key(d, b"Subtype").name() == Some(b"Type0");
-        let (map, mut lens) = self.stream(lookup(d, b"ToUnicode").unwrap_or(&Obj::Null)).map(|s| parse_cmap(&s)).unwrap_or_default();
+        let (map, mut lens) = self.stream(lookup(d, b"ToUnicode").unwrap_or(&Obj::Null)).map(|s| parse_cmap_with(&s, self.ctl)).unwrap_or_default();
         if composite && lens.is_empty() {
             if let Some(s) = self.stream(lookup(d, b"Encoding").unwrap_or(&Obj::Null)) {
-                lens = parse_cmap(&s).1;
+                lens = parse_cmap_with(&s, self.ctl).1;
             }
         }
         // Simple fonts: base encoding, then Differences.
@@ -1363,18 +1440,35 @@ impl Pdf<'_> {
 
 // ---------------- reading the file ----------------
 
+struct ScanState {
+    lexed: usize,
+    nodes: usize,
+}
+
+impl ScanState {
+    fn new() -> Self {
+        ScanState { lexed: 0, nodes: 0 }
+    }
+    fn nodes_left(&self) -> usize {
+        MAX_OBJECT_NODES.saturating_sub(self.nodes)
+    }
+    fn exhausted(&self) -> bool {
+        self.lexed > MAX_OBJECT_TEXT || self.nodes >= MAX_OBJECT_NODES
+    }
+}
+
 /// Finds the objects by scanning for `N G obj`. Each object is read once at most; the total
-/// bytes read as object text are budgeted, so a file that is nothing but unclosed strings and
-/// arrays cannot make the scan quadratic.
-fn scan(data: &[u8], ctl: &Control) -> (HashMap<u32, Obj>, Vec<Dict>) {
+/// bytes read as object text and total AST nodes are budgeted, so a file that is nothing but
+/// unclosed strings, arrays, or huge flat `[0 0 ...]` lists cannot exhaust CPU or heap.
+fn scan(data: &[u8], ctl: &Control) -> (HashMap<u32, Obj>, Vec<Dict>, ScanState) {
     let mut objs = HashMap::new();
     let mut trailers = Vec::new();
-    let mut lexed = 0usize;
+    let mut budget = ScanState::new();
     let soft_budget = data.len().saturating_mul(4).max(1 << 20);
     let mut i = 0;
     while let Some(off) = find(data, i, b"obj") {
         i = off + 3;
-        if ctl.stopped() || objs.len() >= MAX_OBJECTS || lexed > MAX_OBJECT_TEXT {
+        if ctl.stopped() || objs.len() >= MAX_OBJECTS || budget.exhausted() {
             break;
         }
         if data.get(off + 3).is_some_and(|c| !is_ws(*c) && !is_delim(*c)) {
@@ -1404,10 +1498,11 @@ fn scan(data: &[u8], ctl: &Control) -> (HashMap<u32, Obj>, Vec<Dict>) {
             continue;
         }
         let Some(num) = std::str::from_utf8(&data[j..num_end]).ok().and_then(|s| s.parse::<u32>().ok()) else { continue };
-        let mut lex = Lex::new(data, off + 3);
+        let mut lex = Lex::bounded(data, off + 3, budget.nodes_left());
         let Some(mut o) = lex.obj(0) else { break };
-        lexed = lexed.saturating_add(lex.pos.saturating_sub(off + 3));
-        if lexed > soft_budget {
+        budget.nodes = budget.nodes.saturating_add(lex.nodes);
+        budget.lexed = budget.lexed.saturating_add(lex.pos.saturating_sub(off + 3));
+        if budget.lexed > soft_budget {
             // Too much object text already: what an object swallowed is not searched again.
             i = i.max(lex.pos);
         }
@@ -1452,20 +1547,21 @@ fn scan(data: &[u8], ctl: &Control) -> (HashMap<u32, Obj>, Vec<Dict>) {
     let mut t = 0;
     while let Some(off) = find(data, t, b"trailer") {
         t = off + 7;
-        if ctl.stopped() || trailers.len() >= MAX_TRAILERS || lexed > MAX_OBJECT_TEXT {
+        if ctl.stopped() || trailers.len() >= MAX_TRAILERS || budget.exhausted() {
             break;
         }
-        let mut lex = Lex::new(data, off + 7);
+        let mut lex = Lex::bounded(data, off + 7, budget.nodes_left());
         let o = lex.obj(0);
-        lexed = lexed.saturating_add(lex.pos.saturating_sub(off + 7));
-        if lexed > soft_budget {
+        budget.nodes = budget.nodes.saturating_add(lex.nodes);
+        budget.lexed = budget.lexed.saturating_add(lex.pos.saturating_sub(off + 7));
+        if budget.lexed > soft_budget {
             t = t.max(lex.pos);
         }
         if let Some(Obj::Dict(d)) = o {
             trailers.push(d);
         }
     }
-    (objs, trailers)
+    (objs, trailers, budget)
 }
 
 /// A PDF read on its own (tests): the normal time limit and a private decoding allowance.
@@ -1480,11 +1576,11 @@ pub fn extract_with(data: &[u8], ctl: &Control, shared: &Cell<u64>) -> Result<Pd
     if find(&data[..data.len().min(1024)], 0, b"%PDF-").is_none() {
         return Err("This is not a PDF file, or it is damaged.".into());
     }
-    let (objs, mut trailers) = scan(data, ctl);
+    let (objs, mut trailers, mut scan_budget) = scan(data, ctl);
     if ctl.stop_now().is_some() {
         return Err(STOPPED.into());
     }
-    let mut pdf = Pdf { data, objs, budget: Cell::new(MAX_DECODED_TOTAL), shared, ctl, forms: Cell::new(0), text: Cell::new(0), ops: Cell::new(0), fonts: Default::default() };
+    let mut pdf = Pdf { data, objs, budget: Cell::new(MAX_DECODED_TOTAL), shared, ctl, forms: Cell::new(0), text: Cell::new(0), ops: Cell::new(0), fonts: Default::default(), font_bytes: Cell::new(0) };
     // Cross-reference streams carry the trailer keys too.
     for o in pdf.objs.values() {
         if let Obj::Stream(d, _, _) = o {
@@ -1496,7 +1592,7 @@ pub fn extract_with(data: &[u8], ctl: &Control, shared: &Cell<u64>) -> Result<Pd
     if trailers.iter().any(|t| lookup(t, b"Encrypt").is_some_and(|e| !matches!(e, Obj::Null))) {
         return Err("This PDF is encrypted (protected with a password or restricted), so its text cannot be read. Remove the protection, for example by printing it to a new PDF, and import that.".into());
     }
-    // Objects inside compressed object streams.
+    // Objects inside compressed object streams share the single unified object/text/node budget.
     let objstms: Vec<u32> = pdf
         .objs
         .iter()
@@ -1504,9 +1600,8 @@ pub fn extract_with(data: &[u8], ctl: &Control, shared: &Cell<u64>) -> Result<Pd
         .map(|(n, _)| *n)
         .collect();
     let mut extra = Vec::new();
-    let mut obj_text = 0usize;
     for n in objstms {
-        if ctl.stopped() {
+        if ctl.stopped() || pdf.objs.len() + extra.len() >= MAX_OBJECTS || scan_budget.exhausted() {
             break;
         }
         let r = Obj::Ref(n);
@@ -1514,23 +1609,30 @@ pub fn extract_with(data: &[u8], ctl: &Control, shared: &Cell<u64>) -> Result<Pd
         let Some(buf) = pdf.stream(&r) else { continue };
         let count = pdf.key(&d, b"N").num().unwrap_or(0.0).clamp(0.0, 100_000.0) as usize;
         let first = pdf.key(&d, b"First").num().unwrap_or(0.0).max(0.0) as usize;
-        let mut lex = Lex::new(&buf, 0);
+        let mut lex = Lex::bounded(&buf, 0, scan_budget.nodes_left());
         let mut heads = Vec::new();
-        for _ in 0..count {
+        for k in 0..count {
+            if (k % 1024 == 0 && ctl.stopped()) || scan_budget.exhausted() {
+                break;
+            }
             match (lex.obj(0), lex.obj(0)) {
                 (Some(Obj::Num(num)), Some(Obj::Num(off))) => heads.push((num as u32, off.max(0.0) as usize)),
                 _ => break,
             }
         }
+        scan_budget.nodes = scan_budget.nodes.saturating_add(lex.nodes);
+        scan_budget.lexed = scan_budget.lexed.saturating_add(lex.pos);
         for (num, off) in heads {
-            // Many entries can point at the same unclosed array: the text read is budgeted.
-            if ctl.stopped() || extra.len() >= MAX_OBJECTS || obj_text > MAX_OBJECT_TEXT {
+            // Many entries can point at the same array or string: total objects, text and nodes share one budget.
+            if ctl.stopped() || pdf.objs.len() + extra.len() >= MAX_OBJECTS || scan_budget.exhausted() {
                 break;
             }
             let at = first.saturating_add(off).min(buf.len());
-            let mut l = Lex::new(&buf, at);
-            if let Some(o) = l.obj(0) {
-                obj_text = obj_text.saturating_add(l.pos.saturating_sub(at));
+            let mut l = Lex::bounded(&buf, at, scan_budget.nodes_left());
+            let parsed = l.obj(0);
+            scan_budget.nodes = scan_budget.nodes.saturating_add(l.nodes);
+            scan_budget.lexed = scan_budget.lexed.saturating_add(l.pos.saturating_sub(at));
+            if let Some(o) = parsed {
                 extra.push((num, o));
             }
         }
@@ -2088,9 +2190,81 @@ pub(crate) mod tests {
         assert!(extract_with(&sample_pdf(), &Control::standard(), &Cell::new(MAX_DECODED_TOTAL)).is_ok());
         // With nothing left in the shared allowance the compressed page cannot be read.
         assert!(extract_with(&sample_pdf(), &Control::standard(), &Cell::new(0)).is_err());
-        // And a good read spends from it.
+        // A good read spends from it.
         let shared = Cell::new(MAX_DECODED_TOTAL);
         extract_with(&sample_pdf(), &Control::standard(), &shared).unwrap();
         assert!(shared.get() < MAX_DECODED_TOTAL);
+    }
+
+    #[test]
+    fn hostile_pdf_node_amplification_filter_chains_and_fonts_are_bounded() {
+        let _heavy = crate::importers::heavy();
+        // 1. Flat `[0 0 ...]` amplification across `scan` AND `ObjStm` stops at MAX_OBJECT_NODES.
+        let many_zeros = "0 ".repeat(100_000);
+        let arr = format!("[{many_zeros}]");
+        let objstm_body = format!("10 0 {arr}");
+        let objstm = format!("<< /Type /ObjStm /N 1 /First 5 /Length {} >>\nstream\n{objstm_body}\nendstream", objstm_body.len());
+        let objs: Vec<String> = vec![
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+            "<< /Type /Pages /Kids [] >>".to_string(),
+            objstm,
+        ]
+        .into_iter()
+        .chain((0..25).map(|_| arr.clone()))
+        .collect();
+        let data = pdf_bytes(&objs);
+        let err = within(500, "flat zero arrays + objstm", || extract(&data)).err().unwrap();
+        assert!(err.contains("No pages") || err.contains("stopped"), "{err}");
+
+        // 2. Filter-chain / invalid-Filter / uncompressed-over-budget checks in Pdf::stream.
+        let chain: String = std::iter::repeat("/FlateDecode ").take(12).collect();
+        let raw_payload = b"hello uncompressed stream payload";
+        let shared = Cell::new(100u64);
+        let mut map = HashMap::new();
+        map.insert(1, Obj::Stream(vec![(b"Filter".to_vec(), Obj::Arr(vec![Obj::Name(b"FlateDecode".to_vec()); 12]))], 0, 4));
+        map.insert(2, Obj::Stream(vec![(b"Filter".to_vec(), Obj::Arr(vec![Obj::Num(123.0)]))], 0, 4));
+        map.insert(3, Obj::Stream(Vec::new(), 0, raw_payload.len()));
+        map.insert(4, Obj::Stream(vec![(b"ToUnicode".to_vec(), Obj::Ref(5))], 0, 0));
+        let cmap = b"1 begincodespacerange <00> <FF> endcodespacerange\n1 beginbfchar <41> <005A> endbfchar\n";
+        let font_dict = Obj::Dict(vec![
+            (b"Subtype".to_vec(), Obj::Name(b"Type0".to_vec())),
+            (b"ToUnicode".to_vec(), Obj::Ref(5)),
+        ]);
+        let mut combined = raw_payload.to_vec();
+        let cmap_start = combined.len();
+        combined.extend_from_slice(cmap);
+        map.insert(5, Obj::Stream(Vec::new(), cmap_start, combined.len()));
+        map.insert(10, font_dict);
+        let _ = chain;
+        let pdf = Pdf {
+            data: &combined,
+            objs: map,
+            budget: Cell::new(MAX_DECODED_TOTAL),
+            shared: &shared,
+            ctl: &Control::standard(),
+            forms: Cell::new(0),
+            text: Cell::new(0),
+            ops: Cell::new(0),
+            fonts: Default::default(),
+            font_bytes: Cell::new(0),
+        };
+        assert!(pdf.stream(&Obj::Ref(1)).is_none(), "deep filter chain must fail");
+        assert!(pdf.stream(&Obj::Ref(2)).is_none(), "non-Name /Filter element must fail instead of falling back to uncompressed");
+        assert!(pdf.stream(&Obj::Ref(3)).is_some(), "uncompressed stream within budget reads and spends");
+        assert!(pdf.stream(&Obj::Ref(3)).is_some());
+        assert!(pdf.stream(&Obj::Ref(3)).is_some());
+        assert!(pdf.stream(&Obj::Ref(3)).is_none(), "uncompressed stream beyond remaining shared budget must fail");
+
+        // 3. Cached font budget stops unbounded font allocations once MAX_TOTAL_FONT_BYTES is reached.
+        pdf.shared.set(MAX_DECODED_TOTAL);
+        let f_ok = pdf.font(&Obj::Ref(10));
+        assert_eq!(f_ok.map.get(&0x41).map(String::as_str), Some("Z"));
+        assert!(pdf.font_bytes.get() >= 2048);
+        pdf.font_bytes.set(MAX_TOTAL_FONT_BYTES);
+        let mut objs2 = pdf.objs.clone();
+        objs2.insert(11, objs2.get(&10).unwrap().clone());
+        let pdf2 = Pdf { data: pdf.data, objs: objs2, budget: Cell::new(MAX_DECODED_TOTAL), shared: &shared, ctl: pdf.ctl, forms: Cell::new(0), text: Cell::new(0), ops: Cell::new(0), fonts: Default::default(), font_bytes: Cell::new(MAX_TOTAL_FONT_BYTES) };
+        let f_capped = pdf2.font(&Obj::Ref(11));
+        assert!(f_capped.map.is_empty() && f_capped.widths.is_empty(), "real populated font bypassed when font budget exhausted");
     }
 }

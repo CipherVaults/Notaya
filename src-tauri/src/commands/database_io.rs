@@ -247,13 +247,44 @@ pub fn build_from_table_with(mut db: Database, table: &csv::Table, existing_rows
     Ok(Built { db, rows, skipped, bad_cells })
 }
 
-/// Reads a file chosen with a dialog (at most 2 GB).
-fn read_picked(path: &PathBuf) -> Result<String> {
-    let meta = std::fs::metadata(path).map_err(|_| Error::invalid("That file could not be read."))?;
+/// Reads a CSV file chosen with a dialog (at most 2 GB), refusing vault files, data_dir paths,
+/// and symlinks/reparse points.
+fn read_picked(path: &PathBuf, data_dir: &std::path::Path) -> Result<String> {
+    use std::io::Read;
+    crate::commands::import_notes::check_sources(std::slice::from_ref(path), data_dir, false)?;
+    let meta = std::fs::symlink_metadata(path).map_err(|_| Error::invalid("That file could not be read."))?;
+    #[cfg(windows)]
+    let reparse = |m: &std::fs::Metadata| { use std::os::windows::fs::MetadataExt; m.file_attributes() & 0x400 != 0 };
+    #[cfg(not(windows))]
+    let reparse = |_m: &std::fs::Metadata| false;
+    if !meta.is_file() || meta.file_type().is_symlink() || reparse(&meta) {
+        return Err(Error::invalid("A link, junction or folder cannot be imported."));
+    }
     if meta.len() > csv::MAX_BYTES {
         return Err(Error::invalid("That file is larger than 2 GB."));
     }
-    let bytes = std::fs::read(path).map_err(|_| Error::invalid("That file could not be read."))?;
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(0x0020_0000);
+    }
+    let file = options.open(path).map_err(|_| Error::invalid("That file could not be read."))?;
+    let fmeta = file.metadata().map_err(|_| Error::invalid("That file could not be read."))?;
+    if !fmeta.is_file() || fmeta.file_type().is_symlink() || reparse(&fmeta) {
+        return Err(Error::invalid("A link, junction or folder cannot be imported."));
+    }
+    if fmeta.len() != meta.len() || fmeta.len() > csv::MAX_BYTES {
+        return Err(Error::invalid("That file is larger than 2 GB."));
+    }
+    let mut bytes = Vec::new();
+    file.take(csv::MAX_BYTES.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|_| Error::invalid("That file could not be read."))?;
+    if bytes.len() as u64 > csv::MAX_BYTES {
+        return Err(Error::invalid("That file is larger than 2 GB."));
+    }
     Ok(csv::decode(&bytes))
 }
 
@@ -281,7 +312,7 @@ fn import_csv_person(app: AppHandle, state: State<'_, AppState>, database_id: Op
     else {
         return Ok(None);
     };
-    let text = read_picked(&path)?;
+    let text = read_picked(&path, &state.paths.data)?;
     let table = csv::parse(&text).map_err(Error::invalid)?;
     let stem: String = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default().chars().filter(|c| !c.is_control()).take(MAX_NAME).collect();
     state.with_mut(|s| {
@@ -440,12 +471,12 @@ fn export_database_person(app: AppHandle, state: State<'_, AppState>, database_i
     if lines.len() > 20_001 {
         return Err(Error::invalid("This view has too many rows for a document. Export it as CSV, or add a filter."));
     }
-    let safe: String = title.chars().map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c }).collect();
+    let safe = export::safe_file_name(&title);
     let Some(chosen) = app
         .dialog()
         .file()
         .set_title("Export")
-        .set_file_name(format!("{}.{}", if safe.trim().is_empty() { "Database" } else { safe.trim() }, format.ext()))
+        .set_file_name(format!("{safe}.{}", format.ext()))
         .add_filter(format.label(), &[format.ext()])
         .blocking_save_file()
         .and_then(|f| f.into_path().ok())
@@ -464,12 +495,12 @@ pub fn export_csv(app: AppHandle, state: State<'_, AppState>, database_id: Strin
 
 fn export_csv_person(app: AppHandle, state: State<'_, AppState>, database_id: String, view_id: Option<String>) -> Result<Option<CsvExported>> {
     let (lines, title) = state.with(|s| Ok((export_lines(s, &database_id, view_id.as_deref(), true)?, dbc::database(s, &database_id)?.title.clone())))?;
-    let safe: String = title.chars().map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c }).collect();
+    let safe = crate::export::safe_file_name(&title);
     let Some(chosen) = app
         .dialog()
         .file()
         .set_title("Export as CSV")
-        .set_file_name(format!("{}.csv", if safe.trim().is_empty() { "Database" } else { safe.trim() }))
+        .set_file_name(format!("{safe}.csv"))
         .add_filter("CSV", &["csv"])
         .blocking_save_file()
         .and_then(|f| f.into_path().ok())
@@ -478,7 +509,7 @@ fn export_csv_person(app: AppHandle, state: State<'_, AppState>, database_id: St
     };
     let dest = checked_destination(&chosen, "csv", &state.paths.data)?;
     let columns = lines.first().map_or(0, |l| l.len());
-    std::fs::write(&dest, csv::write(&lines)).map_err(|e| Error::Other(format!("The file could not be saved: {e}")))?;
+    crate::export::write_atomic(&dest, &csv::write(&lines))?;
     Ok(Some(CsvExported { path: dest.display().to_string(), file_name: dest.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(), rows: lines.len().saturating_sub(1), columns }))
 }
 
@@ -658,7 +689,7 @@ fn save_row_file(chosen: &std::path::Path, ext: &str, data_dir: &std::path::Path
     } else {
         checked_destination(chosen, ext, data_dir)?
     };
-    std::fs::write(&dest, bytes).map_err(|e| Error::Other(format!("The file could not be saved: {e}")))?;
+    crate::export::write_atomic(&dest, bytes)?;
     Ok(dest)
 }
 
@@ -1014,5 +1045,35 @@ mod tests {
         assert_eq!(cell_text(&Val::Bool(true), &Property::default()).0, "Yes");
         let d = Val::Date(value::DateVal { start: value::from_parts(2026, 1, 2, 0, 0), end: Some(value::from_parts(2026, 1, 4, 0, 0)), has_time: false });
         assert_eq!(cell_text(&d, &Property::default()).0, "2026-01-02 → 2026-01-04");
+    }
+
+    #[test]
+    fn csv_import_refuses_vault_files_data_folder_and_reserved_names_use_safe_file_name() {
+        let dir = std::env::temp_dir().join(format!("notaya-csv-sec-{}", new_id()));
+        let data = dir.join("data");
+        std::fs::create_dir_all(&data).unwrap();
+        let vault_csv = dir.join("vault.nota");
+        std::fs::write(&vault_csv, b"not-a-csv").unwrap();
+        assert!(read_picked(&vault_csv, &data).is_err());
+
+        let inside_data = data.join("notes.csv");
+        std::fs::write(&inside_data, b"A,B\n1,2\n").unwrap();
+        assert!(read_picked(&inside_data, &data).is_err());
+
+        let ok_csv = dir.join("valid.csv");
+        std::fs::write(&ok_csv, b"A,B\n1,2\n").unwrap();
+        assert_eq!(read_picked(&ok_csv, &data).unwrap(), "A,B\n1,2\n");
+
+        // Directory / reparse junction passed to read_picked is refused cleanly.
+        let folder = dir.join("not-a-file");
+        std::fs::create_dir_all(&folder).unwrap();
+        assert!(read_picked(&folder, &data).is_err());
+
+        // Atomic CSV write works for normal destination and sanitizes Windows reserved titles.
+        let csv_out = dir.join("out.csv");
+        crate::export::write_atomic(&csv_out, b"A,B\r\n1,2\r\n").unwrap();
+        assert_eq!(std::fs::read(&csv_out).unwrap(), b"A,B\r\n1,2\r\n");
+        assert_eq!(crate::export::safe_file_name("CON"), "CON_");
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

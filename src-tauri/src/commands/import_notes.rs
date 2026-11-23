@@ -1008,6 +1008,43 @@ mod tests {
     }
 
     #[test]
+    fn stay_locked_during_import_leaves_no_committed_items_and_unlock_collects_held_orphans() {
+        /// Locks on and after call `lock_on`, leaving previously stored pictures in SQLite.
+        struct LockedAfter<'a> {
+            inner: &'a Test,
+            calls: std::sync::atomic::AtomicUsize,
+            lock_on: usize,
+        }
+        impl VaultAccess for LockedAfter<'_> {
+            fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> {
+                self.inner.with(f)
+            }
+            fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
+                let n = self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                if n >= self.lock_on {
+                    return Err(Error::Locked);
+                }
+                self.inner.with_mut(f)
+            }
+        }
+        let root = temp();
+        let file = two_picture_source(&root);
+        let data = root.join("data");
+        let v = vault(&data);
+        let before = count(&v);
+        let locked = LockedAfter { inner: &v, calls: 0.into(), lock_on: 2 };
+        let err = import_from(&locked, &[file], false, &data, 1, &Control::standard()).unwrap_err();
+        assert!(matches!(err, Error::Locked) || err.to_string().contains("locked"), "{err}");
+        assert_eq!(count(&v), before);
+        // Simulate re-unlocking a fresh session: the aborted import's orphaned attachment is no
+        // longer held, so `collect_garbage` removes it cleanly and leaves 0 orphans afterward.
+        *v.session.lock().unwrap() = Session::unlock_open(&data.join("vault.nota")).unwrap();
+        assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 1);
+        assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn a_document_cannot_pull_pictures_out_of_the_data_folder() {
         let root = temp();
         let data = root.join("data");

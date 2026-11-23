@@ -973,16 +973,40 @@ pub fn safe_file_name(title: &str) -> String {
     s
 }
 
-/// The path with symbolic links and `..` resolved; a file that does not exist yet is
-/// resolved through its folder.
+/// The path with symbolic links and `..` resolved; missing leaves resolve through the deepest
+/// existing ancestor so prefix checks stay normalized (`\\?\` on Windows) instead of failing open,
+/// including paths with trailing `..` segments after nonexistent directories.
 pub(crate) fn resolve(p: &Path) -> PathBuf {
-    fs::canonicalize(p)
-        .or_else(|_| {
-            let dir = p.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
-            let name = p.file_name().ok_or_else(|| std::io::Error::from(std::io::ErrorKind::NotFound))?;
-            fs::canonicalize(dir).map(|d| d.join(name))
-        })
-        .unwrap_or_else(|_| p.to_path_buf())
+    if let Ok(real) = fs::canonicalize(p) {
+        return real;
+    }
+    use std::path::Component;
+    let mut comps: Vec<Component<'_>> = p.components().collect();
+    let mut tail: Vec<Component<'_>> = Vec::new();
+    while !comps.is_empty() {
+        let prefix: PathBuf = comps.iter().collect();
+        if !prefix.as_os_str().is_empty() {
+            if let Ok(mut base) = fs::canonicalize(&prefix) {
+                for c in tail.into_iter().rev() {
+                    match c {
+                        Component::ParentDir => {
+                            base = fs::canonicalize(base.join("..")).unwrap_or_else(|_| {
+                                base.pop();
+                                base
+                            });
+                        }
+                        Component::Normal(s) => base.push(s),
+                        Component::CurDir | Component::RootDir | Component::Prefix(_) => {}
+                    }
+                }
+                return base;
+            }
+        }
+        if let Some(last) = comps.pop() {
+            tail.push(last);
+        }
+    }
+    p.to_path_buf()
 }
 
 /// Checks the place the person chose. The file gets the extension `ext` (the format's, or `zip`; added when the
@@ -998,7 +1022,7 @@ pub fn checked_destination(chosen: &Path, ext: &str, data_dir: &Path) -> Result<
         name.push(".");
         name.push(ext);
         let longer = chosen.with_file_name(name);
-        if longer.exists() {
+        if fs::symlink_metadata(&longer).is_ok() {
             return Err(Error::invalid(format!(
                 "A file named {} already exists. Choose another name.",
                 longer.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
@@ -1012,6 +1036,15 @@ pub fn checked_destination(chosen: &Path, ext: &str, data_dir: &Path) -> Result<
 
 /// Validate a final path independently of extension handling, including extensionless row files.
 pub(crate) fn checked_destination_path(dest: &Path, data_dir: &Path) -> Result<()> {
+    if let Ok(meta) = fs::symlink_metadata(dest) {
+        #[cfg(windows)]
+        let reparse = { use std::os::windows::fs::MetadataExt; meta.file_attributes() & 0x400 != 0 };
+        #[cfg(not(windows))]
+        let reparse = false;
+        if meta.file_type().is_symlink() || reparse {
+            return Err(Error::invalid("Linked export paths are refused."));
+        }
+    }
     let data = resolve(data_dir);
     let target = resolve(dest);
     if target.starts_with(&data) || crate::filenames::path_has_vault_ext(dest) {
@@ -2025,6 +2058,54 @@ pub mod tests {
         let html = fs::read_to_string(&dest).unwrap();
         assert!(html.starts_with("<!DOCTYPE html>") && html.contains("data:image/png;base64,"));
         assert!(!root.join("page.assets").exists(), "pictures are inside the file");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn missing_subfolder_in_data_dir_and_dangling_symlink_are_refused() {
+        let root = temp_dir();
+        let data = root.join("data");
+        fs::create_dir_all(&data).unwrap();
+        // Missing intermediate dirs AND trailing `..` after nonexistent dirs still resolve under `\\?\` and refuse.
+        let deep = data.join("nonexistent-sub").join("sub2").join("out.pdf");
+        let with_parent = data.join("nonexistent-sub").join("sub2").join("..").join("out.pdf");
+        let into_data_via_parent = root.join("nonexistent-sib").join("..").join("data").join("sub").join("out.pdf");
+        for bad in [&deep, &with_parent, &into_data_via_parent] {
+            assert!(checked_destination(bad, "pdf", &data).is_err(), "{bad:?}");
+        }
+
+        // Unprivileged directory junction (reparse point) as `dest` or pointing into `data` is always refused.
+        let data_junction = root.join("data-junction");
+        #[cfg(windows)]
+        let j_ok = std::process::Command::new("cmd")
+            .args(["/d", "/c", "mklink", "/J"])
+            .arg(&data_junction)
+            .arg(&data)
+            .output()
+            .is_ok_and(|o| o.status.success());
+        #[cfg(not(windows))]
+        let j_ok = std::os::unix::fs::symlink(&data, &data_junction).is_ok();
+        assert!(j_ok, "junction/symlink helper must work");
+        assert!(checked_destination(&data_junction.join("x.csv"), "csv", &data).is_err());
+        assert!(checked_destination_path(&data_junction, &data).is_err());
+
+        // File symlink / dangling symlink when privilege allows.
+        let outside = root.join("outside.txt");
+        fs::write(&outside, b"real").unwrap();
+        let sym_dest = root.join("sym-dest.csv");
+        let dangling_longer = root.join("chosen.csv");
+        #[cfg(windows)]
+        let linked = std::os::windows::fs::symlink_file(&outside, &sym_dest).is_ok()
+            && std::os::windows::fs::symlink_file(root.join("missing.csv"), &dangling_longer).is_ok();
+        #[cfg(not(windows))]
+        let linked = std::os::unix::fs::symlink(&outside, &sym_dest).is_ok()
+            && std::os::unix::fs::symlink(root.join("missing.csv"), &dangling_longer).is_ok();
+        if linked {
+            assert!(checked_destination(&sym_dest, "csv", &data).is_err());
+            assert!(write_atomic(&sym_dest, b"x").is_err());
+            assert_eq!(fs::read(&outside).unwrap(), b"real");
+            assert!(checked_destination(&root.join("chosen"), "csv", &data).is_err(), "dangling symlink on extended path refused");
+        }
         let _ = fs::remove_dir_all(root);
     }
 }

@@ -13,9 +13,14 @@ use std::cell::Cell;
 pub const MAX_ENTRIES: usize = 50_000;
 /// Largest single entry, as declared and as inflated.
 pub const MAX_ENTRY: u64 = 2 * 1024 * 1024 * 1024;
-/// Entries above this size must not be compressed more than `MAX_RATIO` to 1.
+/// Deflated entries above this size must not be compressed more than `MAX_RATIO` to 1;
+/// sub-megabyte entries (256 KiB–1 MiB) also enforce `MAX_SMALL_RATIO` to 1, and a single
+/// archive's accepted entries are capped at `MAX_ARCHIVE_UNPACKED` declared bytes.
 const RATIO_FLOOR: u64 = 1024 * 1024;
+const SMALL_RATIO_FLOOR: u64 = 256 * 1024;
 const MAX_RATIO: u64 = 100;
+const MAX_SMALL_RATIO: u64 = 100;
+const MAX_ARCHIVE_UNPACKED: u64 = 4 * 1024 * 1024 * 1024;
 
 pub struct Entry {
     /// Cleaned path, `/` separated, no empty, `.` or `..` parts.
@@ -108,6 +113,7 @@ impl Archive {
         }
         let mut entries = Vec::new();
         let mut rejected = Vec::new();
+        let mut declared_total: u64 = 0;
         let mut at = start;
         for _ in 0..count {
             if u32_at(b, at) != Some(0x0201_4b50) {
@@ -159,10 +165,15 @@ impl Archive {
                 Some("This compression method is not supported.")
             } else if size > MAX_ENTRY {
                 Some("Too large.")
-            } else if method == 8 && size > RATIO_FLOOR && size / comp_size.max(1) > MAX_RATIO {
+            } else if method == 8
+                && ((size > RATIO_FLOOR && size / comp_size.max(1) > MAX_RATIO)
+                    || (size > SMALL_RATIO_FLOOR && size / comp_size.max(1) > MAX_SMALL_RATIO))
+            {
                 Some("Compressed suspiciously well (possible ZIP bomb); refused.")
             } else if method == 0 && comp_size != size {
                 Some("Damaged entry.")
+            } else if declared_total.saturating_add(size) > MAX_ARCHIVE_UNPACKED {
+                Some("The archive declares more than 4 GB of content; refused.")
             } else {
                 None
             };
@@ -170,6 +181,7 @@ impl Archive {
                 rejected.push((name, r.into()));
                 continue;
             }
+            declared_total = declared_total.saturating_add(size);
             entries.push(Entry { name, method, crc, comp_size, size, local_offset });
         }
         Ok(Archive { data, entries, rejected })
@@ -398,5 +410,14 @@ mod tests {
         if let Ok(a) = Archive::open(z) {
             let _ = a.read(0, u64::MAX, &Cell::new(u64::MAX));
         }
+    }
+
+    #[test]
+    fn refuses_sub_megabyte_zip_bomb_ratios() {
+        let zeros = vec![0u8; 512 * 1024];
+        let z = build(&[("small_bomb.md", &zeros)], true);
+        let a = Archive::open(z).unwrap();
+        assert!(a.entries.is_empty(), "512 KB of zeros compresses >100:1 and must be refused");
+        assert!(a.rejected.iter().any(|(n, r)| n == "small_bomb.md" && r.contains("ZIP bomb")));
     }
 }

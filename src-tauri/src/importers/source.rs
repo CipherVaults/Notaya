@@ -13,6 +13,7 @@
 
 use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use super::zip::Archive;
@@ -24,6 +25,8 @@ pub const MAX_TOTAL: u64 = 4 * 1024 * 1024 * 1024;
 /// Most files looked at in a folder.
 const MAX_WALK: usize = 50_000;
 const MAX_DEPTH: usize = 24;
+const MAX_ARCHIVES: usize = 64;
+const MAX_REFUSED: usize = 10_000;
 /// Largest ZIP file read into memory.
 pub const MAX_ZIP_FILE: u64 = 2 * 1024 * 1024 * 1024;
 
@@ -41,6 +44,8 @@ pub struct Vfs {
     budget: Cell<u64>,
     /// Bytes of the picked ZIP files held in memory so far.
     zip_total: u64,
+    /// Total archive entries inspected across mounted ZIPs (prevents hidden/nested bypasses).
+    mounted_entries: usize,
     /// Notaya's data folder (canonical): nothing inside it is read as a picture.
     protected: Option<PathBuf>,
     /// Entries or files that were refused while listing, with the reason.
@@ -58,7 +63,13 @@ fn is_hidden(name: &str) -> bool {
 
 impl Vfs {
     fn empty() -> Vfs {
-        Vfs { files: BTreeMap::new(), lower: HashMap::new(), lazy_root: None, archives: Vec::new(), budget: Cell::new(MAX_TOTAL), zip_total: 0, protected: None, refused: Vec::new() }
+        Vfs { files: BTreeMap::new(), lower: HashMap::new(), lazy_root: None, archives: Vec::new(), budget: Cell::new(MAX_TOTAL), zip_total: 0, mounted_entries: 0, protected: None, refused: Vec::new() }
+    }
+
+    fn push_refused(&mut self, name: String, reason: String) {
+        if self.refused.len() < MAX_REFUSED {
+            self.refused.push((name, reason));
+        }
     }
 
     fn add(&mut self, path: String, origin: Origin) {
@@ -77,6 +88,14 @@ impl Vfs {
         let mut first_doc: Option<&Path> = None;
         for p in paths {
             let name = p.file_name().and_then(|n| n.to_str()).ok_or("A file name could not be read.")?.to_string();
+            let meta = std::fs::symlink_metadata(p).map_err(|e| format!("The file could not be read ({e})."))?;
+            if !meta.is_file() || meta.file_type().is_symlink() || is_reparse_point(&meta) {
+                if is_zip_name(&name) {
+                    return Err("A link, junction or folder cannot be opened as a ZIP file.".into());
+                }
+                v.refused.push((name, "A link or junction (not followed).".into()));
+                continue;
+            }
             if is_zip_name(&name) {
                 v.mount_zip_file(p)?;
                 continue;
@@ -95,11 +114,9 @@ impl Vfs {
     }
 
     fn mount_zip_file(&mut self, p: &Path) -> Result<(), String> {
-        let len = std::fs::metadata(p).map_err(|e| format!("The file could not be read ({e}).")).map(|m| m.len())?;
-        self.charge_zip(len)?;
-        let data = std::fs::read(p).map_err(|e| format!("The file could not be read ({e})."))?;
-        // The file may have grown since it was measured.
-        self.charge_zip((data.len() as u64).saturating_sub(len))?;
+        let room = MAX_ZIP_FILE.saturating_sub(self.zip_total);
+        let data = read_plain_bounded(p, room, "The ZIP files chosen are larger than 2 GB together.", self.protected.as_deref())?;
+        self.charge_zip(data.len() as u64)?;
         self.mount(Archive::open(data)?, true)
     }
 
@@ -178,12 +195,21 @@ impl Vfs {
     }
 
     fn mount(&mut self, archive: Archive, nested_ok: bool) -> Result<(), String> {
+        if self.archives.len() >= MAX_ARCHIVES {
+            self.push_refused("archive.zip".into(), format!("More than {MAX_ARCHIVES} ZIP archives (not opened)."));
+            return Ok(());
+        }
         let idx = self.archives.len();
         let mut inner = Vec::new();
         for (name, reason) in &archive.rejected {
-            self.refused.push((name.clone(), reason.clone()));
+            self.push_refused(name.clone(), reason.clone());
         }
         for (i, e) in archive.entries.iter().enumerate() {
+            self.mounted_entries += 1;
+            if self.mounted_entries > MAX_WALK || self.files.len() >= MAX_WALK {
+                self.push_refused(e.name.clone(), format!("More than {MAX_WALK} files across the chosen archives."));
+                continue;
+            }
             if e.name.split('/').any(is_hidden) {
                 continue;
             }
@@ -191,7 +217,7 @@ impl Vfs {
                 if nested_ok {
                     inner.push(i);
                 } else {
-                    self.refused.push((e.name.clone(), "A ZIP file inside a ZIP file inside a ZIP file (not opened).".into()));
+                    self.push_refused(e.name.clone(), "A ZIP file inside a ZIP file inside a ZIP file (not opened).".into());
                 }
                 continue;
             }
@@ -199,9 +225,17 @@ impl Vfs {
         }
         let mut nested = Vec::new();
         for i in inner {
-            match archive.read(i, MAX_ZIP_FILE, &self.budget).and_then(Archive::open) {
-                Ok(a) => nested.push(a),
-                Err(e) => self.refused.push((archive.entries[i].name.clone(), e)),
+            if self.mounted_entries >= MAX_WALK || self.files.len() >= MAX_WALK || self.archives.len() + nested.len() + 1 >= MAX_ARCHIVES {
+                self.push_refused(archive.entries[i].name.clone(), "Archive limit reached across chosen archives.".into());
+                continue;
+            }
+            let room = MAX_ZIP_FILE.saturating_sub(self.zip_total);
+            match archive.read(i, room, &self.budget) {
+                Ok(bytes) => match self.charge_zip(bytes.len() as u64).and_then(|_| Archive::open(bytes)) {
+                    Ok(a) => nested.push(a),
+                    Err(e) => self.push_refused(archive.entries[i].name.clone(), e),
+                },
+                Err(e) => self.push_refused(archive.entries[i].name.clone(), e),
             }
         }
         self.archives.push(archive);
@@ -251,17 +285,13 @@ impl Vfs {
     /// Reads a file, refused when larger than `max` or beyond the total budget.
     pub fn read(&self, path: &str, max: u64) -> Result<Vec<u8>, String> {
         let disk = |p: &Path| -> Result<Vec<u8>, String> {
-            let len = std::fs::metadata(p).map_err(|e| format!("Could not be read ({e}).")).map(|m| m.len())?;
-            if len > max {
-                return Err(format!("Too large (the limit is {} MB).", max / (1024 * 1024)));
-            }
-            if len > self.budget.get() {
-                return Err("The import is too large in total (more than 4 GB of content).".into());
-            }
-            let data = std::fs::read(p).map_err(|e| format!("Could not be read ({e})."))?;
-            if data.len() as u64 > max {
-                return Err("Too large.".into());
-            }
+            let limit = max.min(self.budget.get());
+            let too_large = if limit < max {
+                "The import is too large in total (more than 4 GB of content).".to_string()
+            } else {
+                format!("Too large (the limit is {} MB).", max / (1024 * 1024))
+            };
+            let data = read_plain_bounded(p, limit, &too_large, self.protected.as_deref())?;
             self.budget.set(self.budget.get().saturating_sub(data.len() as u64));
             Ok(data)
         };
@@ -287,6 +317,51 @@ fn is_reparse_point(meta: &std::fs::Metadata) -> bool {
 #[cfg(not(windows))]
 fn is_reparse_point(_meta: &std::fs::Metadata) -> bool {
     false
+}
+
+/// Reads a plain disk file (never a symlink/junction or anything under `protected`) up to `max` bytes.
+fn read_plain_bounded(p: &Path, max: u64, too_large_err: &str, protected: Option<&Path>) -> Result<Vec<u8>, String> {
+    let meta = std::fs::symlink_metadata(p).map_err(|e| format!("Could not be read ({e})."))?;
+    if !meta.is_file() || meta.file_type().is_symlink() || is_reparse_point(&meta) {
+        return Err("A link or junction (not followed).".into());
+    }
+    if let Some(root) = protected {
+        let real = std::fs::canonicalize(p).map_err(|e| format!("Could not be read ({e})."))?;
+        if real.starts_with(root) {
+            return Err("Refused (inside Notaya's data folder).".into());
+        }
+    }
+    if meta.len() > max {
+        return Err(too_large_err.into());
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(0x0020_0000);
+    }
+    let file = options.open(p).map_err(|e| format!("Could not be read ({e})."))?;
+    let fmeta = file.metadata().map_err(|e| format!("Could not be read ({e})."))?;
+    if !fmeta.is_file() || fmeta.file_type().is_symlink() || is_reparse_point(&fmeta) {
+        return Err("A link or junction (not followed).".into());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if (fmeta.dev(), fmeta.ino()) != (meta.dev(), meta.ino()) {
+            return Err("A link or junction (not followed).".into());
+        }
+    }
+    if fmeta.len() != meta.len() || fmeta.len() > max {
+        return Err(too_large_err.into());
+    }
+    let mut data = Vec::new();
+    file.take(max.saturating_add(1)).read_to_end(&mut data).map_err(|e| format!("Could not be read ({e})."))?;
+    if data.len() as u64 > max {
+        return Err(too_large_err.into());
+    }
+    Ok(data)
 }
 
 #[cfg(test)]
@@ -381,5 +456,80 @@ mod tests {
         let v = Vfs::from_files(&[d.join("one.zip"), d.join("two.zip")]).unwrap();
         assert_eq!(v.zip_total, 2 * z.len() as u64);
         assert!(v.budget().get() <= MAX_TOTAL);
+    }
+
+    #[test]
+    fn nested_zip_charges_zip_total_and_caps_global_entries() {
+        // Nested archive is counted against `zip_total` so nested ZIPs cannot bypass MAX_ZIP_FILE.
+        let inner = zip::build(&[("inner.md", b"# Hello from inside nested zip")], true);
+        let outer = zip::build(&[("part-1.zip", &inner)], false);
+        let mut v = Vfs::empty();
+        let before = outer.len() as u64;
+        v.charge_zip(before).unwrap();
+        v.mount(Archive::open(outer).unwrap(), true).unwrap();
+        assert_eq!(v.zip_total, before + inner.len() as u64);
+        assert_eq!(v.find("inner.md").as_deref(), Some("inner.md"));
+
+        // Pushing `zip_total` near MAX_ZIP_FILE refuses mounting an oversized nested archive.
+        let inner2 = zip::build(&[("too-big.md", b"exceeds remaining zip_total budget")], false);
+        let outer2 = zip::build(&[("part-2.zip", &inner2)], false);
+        let mut v2 = Vfs::empty();
+        v2.zip_total = MAX_ZIP_FILE - 4;
+        v2.mount(Archive::open(outer2).unwrap(), true).unwrap();
+        assert_eq!(v2.find("too-big.md"), None);
+        assert!(v2.refused.iter().any(|(n, _)| n == "part-2.zip"));
+
+        // Global MAX_WALK cap holds across multiple mounted archives (entries beyond MAX_WALK refused).
+        let mut v3 = Vfs::empty();
+        v3.mounted_entries = MAX_WALK - 1;
+        let z_extra = zip::build(&[("kept.md", b"1"), ("overflow.md", b"2")], false);
+        v3.mount(Archive::open(z_extra).unwrap(), true).unwrap();
+        assert_eq!(v3.find("kept.md").as_deref(), Some("kept.md"));
+        assert_eq!(v3.find("overflow.md"), None);
+        assert!(v3.refused.iter().any(|(n, _)| n == "overflow.md"));
+    }
+
+    #[test]
+    fn from_files_and_read_refuse_links_and_junctions() {
+        let d = temp();
+        let real = d.join("target.md");
+        std::fs::write(&real, b"hello").unwrap();
+        let link_md = d.join("linked.md");
+        let link_dir = d.join("dir_link");
+        let target_dir = d.join("real_dir");
+        std::fs::create_dir_all(&target_dir).unwrap();
+        std::fs::write(target_dir.join("note.md"), b"ok").unwrap();
+
+        #[cfg(windows)]
+        let dir_linked = std::process::Command::new("cmd")
+            .args(["/d", "/c", "mklink", "/J"])
+            .arg(&link_dir)
+            .arg(&target_dir)
+            .output()
+            .is_ok_and(|o| o.status.success());
+        #[cfg(not(windows))]
+        let dir_linked = std::os::unix::fs::symlink(&target_dir, &link_dir).is_ok();
+
+        #[cfg(windows)]
+        let file_linked = std::os::windows::fs::symlink_file(&real, &link_md).is_ok();
+        #[cfg(not(windows))]
+        let file_linked = std::os::unix::fs::symlink(&real, &link_md).is_ok();
+
+        if file_linked {
+            let v = Vfs::from_files(&[link_md]).unwrap();
+            assert!(v.refused.iter().any(|(n, r)| n == "linked.md" && r.contains("link or junction")));
+            assert_eq!(v.find("linked.md"), None);
+        }
+        assert!(dir_linked, "directory junction/symlink must work");
+        let v_folder = Vfs::from_folder(&d).unwrap();
+        assert!(v_folder.refused.iter().any(|(n, r)| n == "dir_link" && r.contains("link or junction")));
+        assert_eq!(v_folder.find("dir_link/note.md"), None);
+        // Folder/junction passed as picked ZIP/file and read_plain_bounded size cap are always enforced.
+        assert!(Vfs::from_files(&[d.join("bad.zip")]).is_err());
+        let big = d.join("big.md");
+        std::fs::write(&big, vec![b'a'; 64]).unwrap();
+        let v_pick = Vfs::from_files(&[big.clone()]).unwrap();
+        assert!(v_pick.read("big.md", 16).unwrap_err().contains("Too large"));
+        assert_eq!(read_plain_bounded(&link_dir, 100, "big", None).unwrap_err(), "A link or junction (not followed).");
     }
 }

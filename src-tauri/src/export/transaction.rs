@@ -189,6 +189,9 @@ fn commit(temp: &Path, dest: &Path, files: &[OwnedFile], dirs: &[OwnedDir], prev
     if previous.is_some_and(|old| !unchanged_document(dest, old)) || dirs.iter().any(|d| !same_directory(&d.path, &d.identity)) {
         return Err(invalid("An export path changed. The previous document was not replaced."));
     }
+    if fs::symlink_metadata(dest).is_ok() {
+        plain(dest)?;
+    }
     if files.iter().any(|f| !f.snapshot.as_ref().is_some_and(Snapshot::matches)) {
         return Err(invalid("A staged export file changed; the previous document was not replaced."));
     }
