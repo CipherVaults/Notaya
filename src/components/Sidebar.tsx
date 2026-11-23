@@ -306,7 +306,7 @@ export default function Sidebar() {
         />
         {tree.notebooks.length === 0 && (
           <button onClick={() => useApp.getState().setImportOpen(true)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted hover:bg-surface-2 hover:text-fg">
-            <Upload size={15} /> Import pages from another app
+            <Download size={15} /> Import pages from another app
           </button>
         )}
         {tree.notebooks.length > 0 && (
@@ -350,7 +350,7 @@ export default function Sidebar() {
                             Move down
                           </MenuItem>
                         )}
-                        <MenuItem icon={<Download size={14} />} onSelect={() => openExport("notebook", nb.id)}>
+                        <MenuItem icon={<Upload size={14} />} onSelect={() => openExport("notebook", nb.id)}>
                           Export…
                         </MenuItem>
                         <MenuSeparator />
@@ -601,7 +601,7 @@ function GroupHeader({
             aria-label={secondAction.label}
             className="grid h-5 w-5 place-items-center rounded text-faint opacity-0 hover:bg-surface-2 hover:text-fg focus-visible:opacity-100 group-hover/gh:opacity-100"
           >
-            <Upload size={13} />
+            <Download size={13} />
           </button>
         )}
         {action && (
@@ -926,7 +926,7 @@ function SectionBlock({
                   Move down
                 </MenuItem>
               )}
-              <MenuItem icon={<Download size={14} />} onSelect={() => openExport("section", section.id)}>
+              <MenuItem icon={<Upload size={14} />} onSelect={() => openExport("section", section.id)}>
                 Export…
               </MenuItem>
               <MenuSeparator />
@@ -1166,7 +1166,7 @@ function PageItem({
               );
             })}
           <MenuSeparator />
-          <MenuItem icon={<Download size={14} />} onSelect={() => openExport("page", page.id)}>
+          <MenuItem icon={<Upload size={14} />} onSelect={() => openExport("page", page.id)}>
             Export…
           </MenuItem>
           <MenuItem

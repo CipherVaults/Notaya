@@ -4,8 +4,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, Popover } from "radix-ui";
 import {
-  AlertTriangle, ArrowUpDown, ChevronDown, Copy, Download, ExternalLink, FileUp, Filter as FilterIcon, GitBranch, Group, ListTree, Loader2, Lock, LockOpen,
-  MoreHorizontal, Plus, Search, SlidersHorizontal, Table as TableIcon, Trash2, X, Settings2, LayoutTemplate, Zap,
+  AlertTriangle, ArrowUpDown, ChevronDown, Copy, ExternalLink, FileDown, Filter as FilterIcon, GitBranch, Group, ListTree, Loader2, Lock, LockOpen,
+  MoreHorizontal, Plus, Search, SlidersHorizontal, Table as TableIcon, Trash2, Upload, X, Settings2, LayoutTemplate, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -784,12 +784,12 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           <MenuItem icon={<LayoutTemplate size={15} />} onSelect={() => setTemplates(true)}>Templates…</MenuItem>
           <MenuItem icon={<Zap size={15} />} onSelect={() => setAutomations(true)}>Automations…</MenuItem>
           <MenuSeparator />
-          <MenuItem icon={<FileUp size={15} />} onSelect={importCsv}>Import CSV…</MenuItem>
-          <MenuItem icon={<Download size={15} />} onSelect={exportCsv}>Export CSV (this view)…</MenuItem>
-          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("markdown")}>Export Markdown (this view)…</MenuItem>
-          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("html")}>Export HTML (this view)…</MenuItem>
-          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("docx")}>Export Word (this view)…</MenuItem>
-          <MenuItem icon={<Download size={15} />} onSelect={() => exportAs("pdf")}>Export PDF (this view)…</MenuItem>
+          <MenuItem icon={<FileDown size={15} />} onSelect={importCsv}>Import CSV…</MenuItem>
+          <MenuItem icon={<Upload size={15} />} onSelect={exportCsv}>Export CSV (this view)…</MenuItem>
+          <MenuItem icon={<Upload size={15} />} onSelect={() => exportAs("markdown")}>Export Markdown (this view)…</MenuItem>
+          <MenuItem icon={<Upload size={15} />} onSelect={() => exportAs("html")}>Export HTML (this view)…</MenuItem>
+          <MenuItem icon={<Upload size={15} />} onSelect={() => exportAs("docx")}>Export Word (this view)…</MenuItem>
+          <MenuItem icon={<Upload size={15} />} onSelect={() => exportAs("pdf")}>Export PDF (this view)…</MenuItem>
           {!locked && !db.subParentProp && <MenuItem icon={<ListTree size={15} />} onSelect={() => enable("sub")}>Turn on sub-items</MenuItem>}
           {!locked && !db.blockedByProp && <MenuItem icon={<GitBranch size={15} />} onSelect={() => enable("deps")}>Turn on dependencies</MenuItem>}
           {compact && <MenuItem icon={<ExternalLink size={15} />} onSelect={() => openDatabase(db.id)}>Open as page</MenuItem>}

@@ -144,10 +144,18 @@ async function stickyImageChecks(page, editor) {
 async function findChecks(page) {
   await open(page, "?db=1");
   await page.getByRole("main").getByRole("heading", { level: 1 }).waitFor();
+  checks.equal("Title bar Import uses a down arrow",
+    await page.getByRole("button", { name: "Import", exact: true }).locator("svg.lucide-download").count(), 1);
+  checks.equal("Title bar Export uses an up arrow",
+    await page.getByRole("button", { name: "Export", exact: true }).locator("svg.lucide-upload").count(), 1);
   const ctrl = { ctrlKey: true };
   checks.equal("Home cancels browser Find", await dispatchKey(page, "f", ctrl), true);
   await palette(page).waitFor();
   checks.check("Home opens Search", await palette(page).isVisible());
+  checks.equal("Command palette Import uses a down arrow",
+    await palette(page).getByRole("option", { name: "Import pages…", exact: true }).locator("svg.lucide-download").count(), 1);
+  checks.equal("Command palette Export uses an up arrow",
+    await palette(page).getByRole("option", { name: "Export…", exact: true }).locator("svg.lucide-upload").count(), 1);
   await page.keyboard.press("Escape");
   await palette(page).waitFor({ state: "hidden" });
 

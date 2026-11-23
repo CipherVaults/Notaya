@@ -156,7 +156,7 @@ export default function CommandPalette() {
     {
       id: "export",
       label: "Export…",
-      icon: <Download size={16} />,
+      icon: <Upload size={16} />,
       execute: () => {
         const s = useApp.getState();
         if (s.activePageId) openExport("page", s.activePageId);
@@ -167,7 +167,7 @@ export default function CommandPalette() {
     {
       id: "import",
       label: "Import pages…",
-      icon: <Upload size={16} />,
+      icon: <Download size={16} />,
       execute: () => {
         const s = useApp.getState();
         s.setView("notes");

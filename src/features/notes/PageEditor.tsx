@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, Extension, useEditor, type Editor } from "@tiptap/react";
 import { Plugin } from "@tiptap/pm/state";
-import { Check, ChevronRight, Download, LayoutTemplate, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
+import { Check, ChevronRight, LayoutTemplate, Loader2, MoreHorizontal, Star, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush, trackSave } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
@@ -448,7 +448,7 @@ function LoadedEditor({ page, embedded, onOpenChild, onBodyEscape }: {
                   })}
                 <MenuSeparator />
                 {!isRow && (
-                  <MenuItem icon={<Download size={15} />} onSelect={() => openExport("page", page.id)}>
+                  <MenuItem icon={<Upload size={15} />} onSelect={() => openExport("page", page.id)}>
                     Export…
                   </MenuItem>
                 )}

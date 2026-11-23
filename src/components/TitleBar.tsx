@@ -125,7 +125,7 @@ export default function TitleBar() {
             onClick={() => useApp.getState().setImportOpen(true)}
             className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg"
           >
-            <Upload size={14} /> Import
+            <Download size={14} /> Import
           </button>
           <button
             onClick={(event) => {
@@ -136,7 +136,7 @@ export default function TitleBar() {
             title={rowOpen ? exportNotebookId ? "Export the row's whole notebook" : "Export unavailable: the row's database could not be resolved" : undefined}
             className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-40"
           >
-            <Download size={14} /> Export
+            <Upload size={14} /> Export
           </button>
         </div>
       )}

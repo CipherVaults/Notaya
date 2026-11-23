@@ -1,7 +1,7 @@
 // "New database": a name and a starter (blank, tasks, reading list, projects), or a new database from a CSV file.
 
 import { useState } from "react";
-import { BookOpen, CheckSquare, FileUp, FolderKanban, Table as TableIcon } from "lucide-react";
+import { BookOpen, CheckSquare, FileDown, FolderKanban, Table as TableIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
 import { cn } from "@/lib/utils";
@@ -99,7 +99,7 @@ export default function NewDatabaseDialog({ target, onClose }: { target: NewData
         />
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={fromCsv} disabled={busy}>
-            <FileUp size={14} /> From a CSV file…
+            <FileDown size={14} /> From a CSV file…
           </Button>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
