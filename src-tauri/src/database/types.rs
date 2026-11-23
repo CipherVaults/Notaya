@@ -13,6 +13,7 @@ use crate::error::{Error, Result};
 
 pub const MAX_PROPERTIES: usize = 100;
 pub const MAX_VIEWS: usize = 50;
+pub const MAX_ROWS_PER_DATABASE: usize = 200_000;
 pub const MAX_TEMPLATES: usize = 100;
 pub const MAX_OPTIONS: usize = 500;
 pub const MAX_NAME: usize = 120;

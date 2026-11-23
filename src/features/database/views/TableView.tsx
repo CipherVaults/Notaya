@@ -102,7 +102,7 @@ interface RowProps {
 }
 
 type TableItem =
-  | { kind: "row"; key: string; row: DbRow; rowIndex: number }
+  | { kind: "row"; key: string; id: string; rowIndex: number }
   | { kind: "group"; key: string; groupKey: string; group: GroupOut; level: number }
   | { kind: "add"; key: string; cells: Record<string, unknown> }
   | { kind: "footer"; key: string; calcs: Record<string, string> };
@@ -314,7 +314,7 @@ function HeaderCell({ c, ci, onResize, onOpen, locked, wrapTitle }: { c: Col; ci
   );
 }
 
-export default function TableView({ db, view, result, locked, openRow, setCells, setTitle, createRow, updateView, reorderRows }: ViewProps) {
+export default function TableView({ db, view, result, rowById, tableRowIds, loadTableRows, locked, openRow, setCells, setTitle, createRow, updateView, reorderRows }: ViewProps) {
   const shell = useDbShell();
   const { editDb, editView, trashRows, duplicateRow, openProp, focusRowId, clearFocusRow, patchRowLocal } = shell;
   const [liveWidths, setLiveWidths] = useState<Record<string, number>>({});
@@ -361,22 +361,9 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
 
   // ----- the rows in the order they are shown
   const groups = result.groups;
-  const rowById = useMemo(() => new Map(result.rows.map((r) => [r.id, r])), [result.rows]);
+  const orderedIds = useMemo(() => tableRowIds ?? result.rows.map((r) => r.id), [tableRowIds, tableRowIds ? undefined : result.rows]);
+  const allIds = useMemo(() => new Set(orderedIds), [orderedIds]);
   const collapsed = useMemo(() => new Set(view.group?.collapsed ?? []), [view.group]);
-  const flat: DbRow[] = useMemo(() => {
-    if (!groups) return result.rows;
-    const out: DbRow[] = [];
-    for (const g of groups) {
-      if (collapsed.has(g.key)) continue;
-      const lists = g.subs.length ? g.subs.filter((s) => !collapsed.has(g.key + "/" + s.key)).map((s) => s.rows) : [g.rows];
-      for (const ids of lists) for (const id of ids) {
-        const r = rowById.get(id);
-        if (r) out.push(r);
-      }
-    }
-    return out;
-  }, [groups, result.rows, rowById, collapsed]);
-  const indexOfRow = useMemo(() => new Map(flat.map((r, i) => [r.id, i])), [flat]);
   // Build lightweight descriptors once per result/view change, never React cells for
   // the full result. Headers, New lines and group totals occupy real scroll space.
   const items = useMemo(() => {
@@ -384,12 +371,11 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     let rowIndex = 0;
     const rows = (ids: string[], prefix: string) => {
       for (const id of ids) {
-        const row = rowById.get(id);
-        if (row) out.push({ kind: "row", key: `${prefix}:row:${id}`, row, rowIndex: rowIndex++ });
+        if (allIds.has(id)) out.push({ kind: "row", key: `${prefix}:row:${id}`, id, rowIndex: rowIndex++ });
       }
     };
     if (!groups) {
-      for (let i = 0; i < result.rows.length; i++) out.push({ kind: "row", key: `row:${result.rows[i].id}`, row: result.rows[i], rowIndex: i });
+      for (const id of orderedIds) out.push({ kind: "row", key: `row:${id}`, id, rowIndex: rowIndex++ });
       out.push({ kind: "add", key: "add:end", cells: {} });
     } else {
       const groupProp = db.props.find((p) => p.id === view.group?.prop);
@@ -414,10 +400,12 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       }
     }
     return out;
-  }, [groups, result.rows, rowById, indexOfRow, collapsed, db.props, view.group, view.subGroup, view.calcs]);
+  }, [groups, orderedIds, allIds, collapsed, db.props, view.group, view.subGroup, view.calcs]);
+  const flat = useMemo(() => items.flatMap((item) => item.kind === "row" ? [item.id] : []), [items]);
+  const indexOfRow = useMemo(() => new Map(flat.map((id, i) => [id, i])), [flat]);
   const itemIndexOfRow = useMemo(() => {
     const map = new Map<string, number>();
-    items.forEach((item, i) => { if (item.kind === "row") map.set(item.row.id, i); });
+    items.forEach((item, i) => { if (item.kind === "row") map.set(item.id, i); });
     return map;
   }, [items]);
   const itemIndexOfKey = useMemo(() => new Map(items.map((item, i) => [item.key, i])), [items]);
@@ -452,6 +440,18 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (view.wrap) wrapRef.current?.querySelectorAll<HTMLTableRowElement>("tr[data-index]").forEach(virtualizer.measureElement);
   }, [virtualizer, cols, view.wrap]);
   const virtualRows = virtualizer.getVirtualItems();
+  // Membership, not the loaded data, drives requests. This includes pinned
+  // focus/drag rows and deduplicates rows shown in more than one group.
+  const windowKey = loadTableRows ? JSON.stringify([...new Set(virtualRows.flatMap(({ index }) => {
+    const item = items[index];
+    return item?.kind === "row" ? [item.id] : [];
+  }))]) : "";
+  useEffect(() => {
+    if (!loadTableRows) return;
+    let current = true;
+    loadTableRows(JSON.parse(windowKey) as string[], () => current);
+    return () => { current = false; };
+  }, [loadTableRows, windowKey]);
   const canDrag = view.sorts.length === 0;
   // dnd-kit measures only mounted rows; drop resolution below uses virtual offsets
   // so an auto-scroll can target any row, including one not mounted at pickup.
@@ -499,11 +499,11 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   });
 
   const select = useCallback((r: number, c: number, edit = false, itemKey?: string) => {
-    const row = flatRef.current[r];
-    if (!row) return;
+    const id = flatRef.current[r];
+    if (!id) return;
     const current = virtualRef.current;
     const index = itemKey ? current.itemIndexOfKey.get(itemKey) : current.rowItemIndices[r];
-    setActive({ id: row.id, c, key: index == null ? undefined : current.items[index].key });
+    setActive({ id, c, key: index == null ? undefined : current.items[index].key });
     setEditing(edit);
     setSeed(undefined);
     pendingFocus.current = true;
@@ -532,15 +532,16 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (!editing) cell.focus({ preventScroll: true });
   });
   const toggleSelect = useCallback((id: string, shift: boolean) => {
+    const anchor = lastSelected.current;
+    lastSelected.current = id;
     setSelected((prev) => {
       const next = new Set(prev);
-      if (shift && lastSelected.current) {
-        const a = flatRef.current.findIndex((r) => r.id === lastSelected.current);
-        const b = flatRef.current.findIndex((r) => r.id === id);
-        if (a >= 0 && b >= 0) for (let i = Math.min(a, b); i <= Math.max(a, b); i++) next.add(flatRef.current[i].id);
+      if (shift && anchor) {
+        const a = flatRef.current.indexOf(anchor);
+        const b = flatRef.current.indexOf(id);
+        if (a >= 0 && b >= 0) for (let i = Math.min(a, b); i <= Math.max(a, b); i++) next.add(flatRef.current[i]);
       } else if (next.has(id)) next.delete(id);
       else next.add(id);
-      lastSelected.current = id;
       return next;
     });
   }, []);
@@ -556,7 +557,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       const nextRow = how === "enter" || a.c + 1 >= colsRef.current.length;
       const nextIndex = current.rowItemIndices[Math.min(flatRef.current.length - 1, r + (nextRow ? 1 : 0))];
       const next = current.items[nextIndex];
-      return next?.kind === "row" ? { id: next.row.id, key: next.key, c: how === "enter" ? a.c : nextRow ? 0 : a.c + 1 } : null;
+      return next?.kind === "row" ? { id: next.id, key: next.key, c: how === "enter" ? a.c : nextRow ? 0 : a.c + 1 } : null;
     });
     pendingFocus.current = true;
   }, []);
@@ -588,7 +589,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   // Keep the selection to rows that still exist.
   useEffect(() => {
     setSelected((s) => {
-      const keep = new Set([...s].filter((id) => rowById.has(id)));
+      const keep = new Set([...s].filter((id) => allIds.has(id)));
       return keep.size === s.size ? s : keep;
     });
     if (active && (activeIndex == null || !indexOfRow.has(active.id))) {
@@ -596,7 +597,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       setEditing(false);
       // The removed row ref owns focus repair; a different connected control keeps its focus.
     }
-  }, [rowById, indexOfRow, active, activeIndex]);
+  }, [allIds, indexOfRow, active, activeIndex]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (editing || !active) return;
@@ -605,8 +606,8 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     const activeItem = activeIndex == null ? undefined : items[activeIndex];
     const r = activeItem?.kind === "row" ? activeItem.rowIndex : -1;
     const col = cols[c];
-    const row = flat[r];
-    if (!col || !row) return;
+    const row = rowById.get(flat[r]);
+    if (!col || r < 0) return;
     const move = (dr: number, dc: number) => {
       e.preventDefault();
       select(Math.max(0, Math.min(flat.length - 1, r + dr)), Math.max(0, Math.min(cols.length - 1, c + dc)));
@@ -645,7 +646,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       case "Enter":
       case "F2":
         e.preventDefault();
-        if (col.prop.kind === "checkbox") commit(row, col.prop, row.values[col.prop.id] !== true);
+        if (row && col.prop.kind === "checkbox") commit(row, col.prop, row.values[col.prop.id] !== true);
         else if (!isComputedKind(col.prop.kind)) {
           setEditing(true);
           setSeed(undefined);
@@ -654,7 +655,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
       case " ":
         if (col.prop.kind === "checkbox") {
           e.preventDefault();
-          commit(row, col.prop, row.values[col.prop.id] !== true);
+          if (row) commit(row, col.prop, row.values[col.prop.id] !== true);
         } else if (!isComputedKind(col.prop.kind) && !["title", "text", "number", "url", "email", "phone"].includes(col.prop.kind)) {
           e.preventDefault();
           setEditing(true);
@@ -665,7 +666,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
         if (selected.size > 0 && !e.metaKey) {
           e.preventDefault();
           void trashRows([...selected]);
-        } else if (col.prop.kind !== "title" && !isComputedKind(col.prop.kind)) {
+        } else if (row && col.prop.kind !== "title" && !isComputedKind(col.prop.kind)) {
           e.preventDefault();
           commit(row, col.prop, null);
         }
@@ -708,7 +709,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     const source = items[itemIndexOfKey.get(String(e.active.id)) ?? -1];
     if (source?.kind !== "row") return;
     const over = items[itemIndexOfKey.get(String(e.over?.id)) ?? -1];
-    let target = over?.kind === "row" ? over.row.id : null;
+    let target = over?.kind === "row" ? over.id : null;
     const rect = e.active.rect.current.translated;
     const wrap = wrapRef.current;
     if (rect && wrap) {
@@ -721,13 +722,13 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           const before = items[hit.index - distance];
           const after = items[hit.index + distance];
           const item = after?.kind === "row" ? after : before?.kind === "row" ? before : null;
-          if (item?.kind === "row") { target = item.row.id; break; }
+          if (item?.kind === "row") { target = item.id; break; }
         }
       }
     }
-    if (!target || source.row.id === target) return;
-    const ids = result.rows.map((r) => r.id);
-    const from = ids.indexOf(source.row.id);
+    if (!target || source.id === target) return;
+    const ids = orderedIds;
+    const from = ids.indexOf(source.id);
     const to = ids.indexOf(target);
     if (from < 0 || to < 0) return;
     const next = [...ids];
@@ -767,8 +768,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
     if (row) shell.focusRow(row.id); // the table starts editing its title once the row is on screen
   };
 
-  const renderRow = (item: Extract<TableItem, { kind: "row" }>, virtualIndex: number) => {
-      const r = item.row;
+  const renderRow = (item: Extract<TableItem, { kind: "row" }>, r: DbRow, virtualIndex: number) => {
       const idx = item.rowIndex;
       return (
         <RowView
@@ -886,7 +886,10 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
   for (const v of virtualRows) {
     const item = items[v.index];
     body.push(spacer(v.start - headerHeight - previousEnd, `space:${item.key}`));
-    if (item.kind === "row") body.push(renderRow(item, v.index));
+    if (item.kind === "row") {
+      const row = rowById.get(item.id);
+      body.push(row ? renderRow(item, row, v.index) : spacer(v.size, item.key));
+    }
     else if (item.kind === "group") body.push(groupHeader(item.group, item.groupKey, item.level ? subProp : groupProp, item.level ? view.subGroup : view.group, item.level, v.index, item.key));
     else if (item.kind === "add") body.push(addLine(item.cells, item.key, v.index));
     else body.push(footerRow(item.calcs, item.key, v.index));
@@ -924,7 +927,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
                       role="checkbox"
                       aria-checked={selected.size > 0 && selected.size === flat.length}
                       aria-label="Select all rows"
-                      onClick={() => setSelected(selected.size === flat.length ? new Set() : new Set(flat.map((r) => r.id)))}
+                      onClick={() => setSelected(selected.size === flat.length ? new Set() : new Set(flat))}
                       className={cn("rounded", selected.size > 0 ? "" : "opacity-0 focus-visible:opacity-100 [table:hover_&]:opacity-60")}
                     >
                       <CheckBox checked={selected.size > 0 && selected.size === flat.length} />
@@ -962,7 +965,7 @@ export default function TableView({ db, view, result, locked, openRow, setCells,
           </table>
         </DndContext>
       </div>
-      {result.rows.length === 0 && !groups && (
+      {orderedIds.length === 0 && !groups && (
         <p className="shrink-0 px-4 py-3 text-sm text-faint">This table has no rows yet.</p>
       )}
       <span className="sr-only" aria-live="polite">{selected.size > 0 ? `${selected.size} rows selected` : ""}</span>

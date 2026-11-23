@@ -328,6 +328,17 @@ export interface QueryRequest {
   view?: View;
 }
 
+export interface ViewWindow extends Omit<ViewResult, "rows"> {
+  rowIds: string[];
+  generation: string;
+  matchingIds?: string[];
+}
+
+export interface RowRange {
+  start: number;
+  count: number;
+}
+
 export interface RowHit {
   id: string;
   title: string;

@@ -3,8 +3,9 @@
 // Seed data (a Tasks and a Projects database) is added when the URL has ?db=1.
 
 import type {
-  ChartData, Cond, Database, DbRow, Filter, GroupBy, GroupOut, Property, PropKind, Template, View, ViewResult,
+  ChartData, Cond, Database, DbRow, Filter, GroupBy, GroupOut, Property, PropKind, RowRange, Template, View, ViewResult,
 } from "../src/lib/database-types";
+import { rowMatchesFind } from "../src/features/database/model.ts";
 
 const params = new URLSearchParams(location.search);
 const now0 = Date.now();
@@ -27,6 +28,18 @@ const dbs: Database[] = [];
 const rows: MRow[] = [];
 let rowOrder = 0;
 const files = new Map<string, { name: string; mime: string; size: number }>();
+const windows = new Map<string, { databaseId: string; viewId: string; generation: string; result: ViewResult }>();
+
+export function clearViewWindows() {
+  windows.clear();
+}
+
+const writes = new Set([
+  "create_database", "save_database", "create_row", "press_button", "set_cells", "duplicate_row", "reorder_rows",
+  "set_database_look", "move_database", "enable_sub_items", "enable_dependencies", "trash_page", "restore_page",
+  "delete_page", "save_page", "set_page_look", "set_page_favorite", "move_page", "empty_trash", "import_csv",
+  "attach_file", "remove_file",
+]);
 
 // ---------------------------------------------------------------- values
 
@@ -952,6 +965,7 @@ function fireAuto(d: Database, row: MRow, ev: "added" | "changed", changed: stri
 }
 
 export function databaseCommand(cmd: string, args: A, base: Record<string, unknown>, options?: { headers?: Record<string, string> }): unknown {
+  if (writes.has(cmd)) clearViewWindows();
   switch (cmd) {
     case "list_notes": return treeNow(base);
     case "create_database": {
@@ -1000,9 +1014,32 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       const req = args.request as { databaseId: string; viewId: string; view?: View };
       const d = dbFull(req.databaseId);
       const v = req.view ?? d.views.find((x) => x.id === req.viewId) ?? d.views[0];
-      const { _rows, ...res } = runView(d, v);
-      void _rows;
-      return res;
+      if (!args.windowed) {
+        const { _rows, ...result } = runView(d, v);
+        return result;
+      }
+      const withoutCollapse = (group: GroupBy | null) => group && { ...group, collapsed: [] };
+      const key = JSON.stringify([req.databaseId, req.viewId, v.filter, v.sorts, withoutCollapse(v.group), withoutCollapse(v.subGroup), v.calcs]);
+      let entry = windows.get(key);
+      if (!entry) {
+        const { _rows, ...result } = runView(d, v);
+        entry = { databaseId: req.databaseId, viewId: req.viewId, generation: nid(), result };
+      }
+      windows.delete(key);
+      windows.set(key, entry);
+      while (windows.size > 8) windows.delete(windows.keys().next().value!);
+      const { rows, ...metadata } = entry.result;
+      const find = String(args.find ?? "").trim().toLowerCase();
+      const matchingIds = find ? rows.filter((row) => rowMatchesFind(d.props, row, find)).map((row) => row.id) : undefined;
+      return { ...metadata, generation: entry.generation, rowIds: rows.map((row) => row.id), matchingIds };
+    }
+    case "view_rows": {
+      const req = args.request as { databaseId: string; viewId: string; generation: string; ranges?: RowRange[] } & RowRange;
+      const ranges = req.ranges ?? [{ start: req.start, count: req.count }];
+      if (ranges.length > 256 || ranges.some(({ start, count }) => !Number.isSafeInteger(start) || start < 0 || !Number.isSafeInteger(count) || count < 0)
+          || ranges.reduce((n, range) => n + range.count, 0) > 256) throw "Too many rows requested for a table window.";
+      const entry = [...windows.values()].find((w) => w.databaseId === req.databaseId && w.viewId === req.viewId && w.generation === req.generation);
+      return entry ? clone(ranges.flatMap(({ start, count }) => entry.result.rows.slice(start, start + count))) : null;
     }
     case "chart_data": {
       const req = args.request as { databaseId: string; viewId: string; view?: View };
@@ -1068,7 +1105,16 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       memo.clear();
       return { row: rowOut(d, r) };
     }
-    case "reorder_rows": { (args.ids as string[]).forEach((id, i) => { const r = rowById(id); if (r) r.order = i + 1; }); rowOrder = Math.max(rowOrder, (args.ids as string[]).length); return null; }
+    case "reorder_rows": {
+      const ids = args.ids as string[];
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      ids.forEach((id, i) => {
+        const row = byId.get(id);
+        if (row) row.order = i + 1;
+      });
+      rowOrder = Math.max(rowOrder, ids.length);
+      return null;
+    }
     case "search_rows": {
       const q = String(args.query ?? "").toLowerCase();
       return rowsOf(String(args.databaseId)).filter((r) => r.title.toLowerCase().includes(q)).slice(0, Number(args.limitN ?? 50)).map((r) => ({ id: r.id, title: r.title, icon: r.icon }));
@@ -1219,6 +1265,7 @@ if (params.get("db") === "1") { seed(); firstDb = false; }
 // C2's mock uses the same hierarchy for inherited bins and container cleanup.
 export function coordinationItems() { return [...dbs.map((d) => ({ ...d, kind: "database" })), ...rows.map((r) => ({ ...r, kind: "row" }))]; }
 export function removeCoordinatedItems(ids: Set<string>) {
+  clearViewWindows();
   for (let i = dbs.length - 1; i >= 0; i--) if (ids.has(dbs[i].id)) dbs.splice(i, 1);
   for (let i = rows.length - 1; i >= 0; i--) if (ids.has(rows[i].id)) rows.splice(i, 1);
 }

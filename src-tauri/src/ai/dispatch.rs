@@ -4,7 +4,7 @@ use crate::{
     actions::{registry::ACTIONS, ActionSpec, Actor, Confirm, Level as Required},
     blocks,
     commands::{self, calculator, database as db, notes, stickies},
-    database::{engine::Ctx, saves, types::*},
+    database::{engine::{Ctx, GroupOut, ViewResult}, saves, types::*},
     error::{Error, Result},
     model::{Item, SourceTag},
     portable::Paths,
@@ -18,6 +18,9 @@ use std::{
     collections::{BTreeMap, HashSet},
     sync::atomic::Ordering,
 };
+use zeroize::{Zeroize, Zeroizing};
+
+const MAX_AI_GROUPS_BYTES: usize = 16 * 1024 * 1024;
 
 fn invalid() -> Error {
     Error::invalid("invalid")
@@ -758,6 +761,65 @@ fn execute_approved(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, a
     s.atomic_action(backup, |s| execute_inner(s, p, r, paths, approval))
 }
 
+fn retain_group_page_rows(group: &mut GroupOut, page_ids: &HashSet<&str>) {
+    group.rows.retain_mut(|id| {
+        let keep = page_ids.contains(id.as_str());
+        if !keep {
+            id.zeroize();
+        }
+        keep
+    });
+    for sub in &mut group.subs {
+        retain_group_page_rows(sub, page_ids);
+    }
+}
+
+fn page_db_query(mut result: ViewResult, q: &Value) -> Result<Value> {
+    let offset = q["offset"].as_u64().unwrap_or(0) as usize;
+    let limit = q["limit"].as_u64().unwrap_or(200) as usize;
+    result.rows = std::mem::take(&mut result.rows).into_iter().skip(offset).take(limit).collect();
+
+    let Some(all_groups) = result.groups.take() else {
+        return value(result);
+    };
+    let groups_total = all_groups.len();
+    let group_offset = q["groupOffset"].as_u64().unwrap_or(0) as usize;
+    let group_limit = q["groupLimit"].as_u64().unwrap_or(200) as usize;
+    let sub_offset = q["subGroupOffset"].as_u64().unwrap_or(0) as usize;
+    let sub_limit = q["subGroupLimit"].as_u64().unwrap_or(200) as usize;
+    let page_ids = result.rows.iter().map(|row| row.id.as_str()).collect();
+    let mut kept_groups = Vec::new();
+    let mut any_subs_truncated = false;
+    let mut byte_capped = false;
+    // Include the JSON array brackets and separators in the group budget.
+    let mut groups_bytes = 2;
+    for mut group in all_groups.into_iter().skip(group_offset).take(group_limit) {
+        if !group.subs.is_empty() {
+            any_subs_truncated |= sub_offset > 0 || group.subs.len().saturating_sub(sub_offset) > sub_limit;
+            group.subs = std::mem::take(&mut group.subs).into_iter().skip(sub_offset).take(sub_limit).collect();
+        }
+        retain_group_page_rows(&mut group, &page_ids);
+        let encoded = Zeroizing::new(serde_json::to_vec(&group).map_err(|_| invalid())?);
+        let next_bytes = groups_bytes + usize::from(!kept_groups.is_empty()) + encoded.len();
+        if next_bytes > MAX_AI_GROUPS_BYTES {
+            if kept_groups.is_empty() {
+                return Err(code("too_big"));
+            }
+            byte_capped = true;
+            break;
+        }
+        groups_bytes = next_bytes;
+        kept_groups.push(group);
+    }
+    let groups_truncated = groups_total > kept_groups.len() || any_subs_truncated || group_offset > 0 || byte_capped;
+    result.groups = Some(kept_groups);
+    let mut response = value(result)?;
+    let object = response.as_object_mut().ok_or_else(invalid)?;
+    object.insert("groupsTotal".into(), json!(groups_total));
+    object.insert("groupsTruncated".into(), json!(groups_truncated));
+    Ok(response)
+}
+
 fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, approval: Option<&mut Approval>) -> Result<Value> {
     let a = actor(p);
     let q = &r.params;
@@ -801,9 +863,7 @@ fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, appr
             "db.query"=>{
                 let d=db::database(s,&text(q,"databaseId"))?;
                 let view=q["viewId"].as_str().and_then(|id|d.view(id)).or_else(||d.views.first()).ok_or_else(invalid)?;
-                let mut result=context(s).run_view(&d,view);
-                let offset=q["offset"].as_u64().unwrap_or(0) as usize;let limit=q["limit"].as_u64().unwrap_or(200) as usize;
-                result.rows=result.rows.into_iter().skip(offset).take(limit).collect();value(result)
+                page_db_query(context(s).run_view(&d, view), q)
             }
             "db.row.get"=>{let row=db::row(s,&id)?;let d=db::database(s,&row.db)?;value(context(s).row_out_pub(&d,&row))}
             "db.row_titles"=>out!(db::row_titles_core(s,&a,ids(q,"ids")?)),
@@ -1168,6 +1228,229 @@ mod tests {
     fn make_row(s: &mut Session, id: &str) -> String {
         let created = value(db::create_row_core(s, &Actor::Person, id.into(), "Test row".into(), "{}".into(), String::new()).unwrap()).unwrap();
         created["row"]["id"].as_str().unwrap().into()
+    }
+
+    #[test]
+    fn grouped_db_query_pages_membership_but_keeps_counts_and_calculations() {
+        let (state, pairing, section, _) = fixture();
+        let row_id = |i: usize| format!("a{i:031x}");
+        let database_id = state.with_mut(|s| {
+            let id = make_db(s, &state.paths, &section);
+            let mut database = db::database(s, &id)?;
+            for (prop, kind) in [
+                ("group", PropKind::Checkbox),
+                ("subgroup", PropKind::Checkbox),
+                ("amount", PropKind::Number),
+            ] {
+                database.props.push(Property { id: prop.into(), name: prop.into(), kind, ..Default::default() });
+            }
+            let view = &mut database.views[0];
+            view.group = Some(GroupBy { prop: "group".into(), ..Default::default() });
+            view.sub_group = Some(GroupBy { prop: "subgroup".into(), ..Default::default() });
+            view.calcs = vec![ColCalc { prop: "amount".into(), calc: "sum".into() }];
+            s.put(Item::Database(database))?;
+            s.put_many((0..2_000).map(|i| {
+                let mut row = Row::new(row_id(i), &id, "Test row".into(), 100);
+                row.order = i as i64;
+                row.number = i as i64 + 1;
+                row.cells = json!({"group": i >= 1_000, "subgroup": i % 2 == 1, "amount": 2}).to_string();
+                Item::Row(row)
+            }).collect())?;
+            Ok(id)
+        }).unwrap();
+
+        let result = call(
+            &state, &pairing, "db.query",
+            json!({"databaseId": database_id, "offset": 100, "limit": 200}),
+            false, || false, || {},
+        ).unwrap();
+        let page_ids: Vec<_> = (100..300).map(row_id).collect();
+        let rows = result["rows"].as_array().unwrap();
+        assert_eq!(rows.iter().map(|row| row["id"].as_str().unwrap()).collect::<Vec<_>>(), page_ids);
+        assert_eq!(result["total"], 2_000);
+        assert_eq!(result["filtered"], 2_000);
+        assert_eq!(result["calcs"]["amount"], "4000");
+
+        let groups = result["groups"].as_array().unwrap();
+        assert_eq!(groups.len(), 2);
+        assert_eq!(result["groupsTotal"], 2);
+        assert_eq!(result["groupsTruncated"], false);
+        for (index, group) in groups.iter().enumerate() {
+            let has_page = index == 0;
+            assert_eq!(group["key"], if has_page { "false" } else { "true" });
+            assert_eq!(group["count"], 1_000);
+            assert_eq!(group["calcs"]["amount"], "2000");
+            let expected = if has_page { json!(page_ids) } else { json!([]) };
+            assert_eq!(group["rows"], expected);
+            let subgroups = group["subs"].as_array().unwrap();
+            assert_eq!(subgroups.len(), 2);
+            for (parity, subgroup) in subgroups.iter().enumerate() {
+                assert_eq!(subgroup["key"], if parity == 0 { "false" } else { "true" });
+                assert_eq!(subgroup["count"], 500);
+                assert_eq!(subgroup["calcs"]["amount"], "1000");
+                let expected: Vec<_> = if has_page {
+                    page_ids.iter().skip(parity).step_by(2).collect()
+                } else {
+                    Vec::new()
+                };
+                assert_eq!(subgroup["rows"], json!(expected));
+            }
+        }
+        let bytes = serde_json::to_vec(&result).unwrap().len();
+        assert!(bytes < 128 * 1024, "200-row grouped page was {bytes} bytes");
+    }
+
+    fn distinct_group_key(index: usize) -> String {
+        format!("{index:06}{}", "x".repeat(74))
+    }
+
+    fn distinct_group_row_id(index: usize) -> String {
+        format!("d{index:031x}")
+    }
+
+    fn distinct_group_db(state: &AppState, section: &str, rows: usize) -> (String, String) {
+        state.with_mut(|s| {
+            let id = make_db(s, &state.paths, section);
+            let mut database = db::database(s, &id)?;
+            for (prop, kind) in [
+                ("bucket", PropKind::Text),
+                ("half", PropKind::Checkbox),
+                ("amount", PropKind::Number),
+            ] {
+                database.props.push(Property {
+                    id: prop.into(), name: prop.into(), kind, ..Default::default()
+                });
+            }
+            let view = &mut database.views[0];
+            view.group = Some(GroupBy { prop: "bucket".into(), ..Default::default() });
+            view.calcs = vec![ColCalc { prop: "amount".into(), calc: "sum".into() }];
+            let mut nested = view.clone();
+            nested.id = crate::model::new_id();
+            nested.group = Some(GroupBy { prop: "half".into(), ..Default::default() });
+            nested.sub_group = view.group.clone();
+            let nested_id = nested.id.clone();
+            database.views.push(nested);
+            s.put(Item::Database(database))?;
+            s.put_many((0..rows).map(|index| {
+                let mut row = Row::new(distinct_group_row_id(index), &id, "Synthetic row".into(), 100);
+                row.order = index as i64;
+                row.cells = json!({
+                    "bucket": distinct_group_key(index), "half": index >= rows / 2, "amount": 2,
+                }).to_string();
+                Item::Row(row)
+            }).collect())?;
+            Ok((id, nested_id))
+        }).unwrap()
+    }
+
+    #[test]
+    fn db_query_200k_distinct_text_groups_fit_the_wire() {
+        use super::super::wire::{write_frame, ServerMessage, MAX_RESPONSE};
+
+        let (state, pairing, section, _) = fixture();
+        let seed_started = std::time::Instant::now();
+        let (id, _) = distinct_group_db(&state, &section, 200_000);
+        let seed_elapsed = seed_started.elapsed();
+        let query_started = std::time::Instant::now();
+        let result = call(&state, &pairing, "db.query", json!({"databaseId": id, "limit": 1}),
+            false, || false, || {}).unwrap();
+        let query_elapsed = query_started.elapsed();
+        let groups = result["groups"].as_array().unwrap();
+        assert_eq!(result["groupsTotal"], 200_000);
+        assert_eq!(result["groupsTruncated"], true);
+        assert_eq!(result["calcs"]["amount"], "400000");
+        assert_eq!(result["rows"].as_array().unwrap().len(), 1);
+        assert_eq!(groups.len(), 200);
+        for (index, group) in groups.iter().enumerate() {
+            assert_eq!(group["key"], distinct_group_key(index));
+            assert_eq!(group["count"], 1);
+            assert_eq!(group["calcs"]["amount"], "2");
+            let expected = if index == 0 { json!([distinct_group_row_id(0)]) } else { json!([]) };
+            assert_eq!(group["rows"], expected);
+        }
+
+        let message = ServerMessage::Result { id: 1, ok: true, value: result, rev: None };
+        let mut frame = Vec::new();
+        write_frame(&mut frame, &message, MAX_RESPONSE).unwrap();
+        let payload_bytes = frame.len() - 4;
+        assert!(payload_bytes < 128 * 1024, "Grouped response was {payload_bytes} bytes");
+        println!("200,000 distinct groups: seed {seed_elapsed:?}, query {query_elapsed:?}, wire payload {payload_bytes} bytes");
+    }
+
+    #[test]
+    fn db_query_pages_groups_and_subgroups_in_view_order() {
+        let (state, pairing, section, _) = fixture();
+        let (id, nested_id) = distinct_group_db(&state, &section, 1_000);
+        let query = |params| call(&state, &pairing, "db.query", params, false, || false, || {}).unwrap();
+        let page = query(json!({"databaseId": id, "offset": 200, "limit": 1, "groupOffset": 200, "groupLimit": 2}));
+        assert_eq!(page["groupsTotal"], 1_000);
+        assert_eq!(page["groupsTruncated"], true);
+        let groups = page["groups"].as_array().unwrap();
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0]["key"], distinct_group_key(200));
+        assert_eq!(groups[0]["rows"], json!([distinct_group_row_id(200)]));
+        assert_eq!(groups[1]["key"], distinct_group_key(201));
+        assert_eq!(groups[1]["rows"], json!([]));
+
+        let tail = query(json!({"databaseId": id, "limit": 1, "groupOffset": 999}));
+        assert_eq!(tail["groups"].as_array().unwrap().len(), 1);
+        assert_eq!(tail["groups"][0]["key"], distinct_group_key(999));
+        assert_eq!(tail["groupsTruncated"], true);
+        let past_end = query(json!({"databaseId": id, "limit": 1, "groupOffset": u64::MAX}));
+        assert_eq!(past_end["groups"], json!([]));
+        assert_eq!(past_end["groupsTotal"], 1_000);
+        assert_eq!(past_end["groupsTruncated"], true);
+
+        let defaults = query(json!({"databaseId": id, "viewId": nested_id, "limit": 1}));
+        assert_eq!(defaults["groupsTruncated"], true);
+        assert_eq!(defaults["groups"][0]["subs"].as_array().unwrap().len(), 200);
+        assert_eq!(defaults["groups"][1]["subs"].as_array().unwrap().len(), 200);
+
+        let nested = query(json!({
+            "databaseId": id, "viewId": nested_id, "offset": 250, "limit": 1,
+            "subGroupOffset": 249, "subGroupLimit": 2,
+        }));
+        assert_eq!(nested["groupsTotal"], 2);
+        assert_eq!(nested["groupsTruncated"], true);
+        let groups = nested["groups"].as_array().unwrap();
+        assert_eq!(groups.len(), 2);
+        for (half, group) in groups.iter().enumerate() {
+            assert_eq!(group["count"], 500);
+            assert_eq!(group["calcs"]["amount"], "1000");
+            let subs = group["subs"].as_array().unwrap();
+            assert_eq!(subs.len(), 2);
+            for (position, sub) in subs.iter().enumerate() {
+                let index = half * 500 + 249 + position;
+                assert_eq!(sub["key"], distinct_group_key(index));
+                assert_eq!(sub["count"], 1);
+                assert_eq!(sub["calcs"]["amount"], "2");
+                let expected = if index == 250 { json!([distinct_group_row_id(250)]) } else { json!([]) };
+                assert_eq!(sub["rows"], expected);
+            }
+        }
+    }
+
+    #[test]
+    fn db_query_caps_serialized_group_bytes() {
+        let group = |label: String| GroupOut {
+            key: String::new(), label, color: String::new(), count: 0,
+            rows: Vec::new(), subs: Vec::new(), calcs: serde_json::Map::new(),
+        };
+        let result = |groups| ViewResult {
+            rows: Vec::new(), total: 0, filtered: 0, truncated: false,
+            groups: Some(groups), calcs: serde_json::Map::new(),
+        };
+        // Escaping newlines doubles their serialized length.
+        let large_group = || group("\n".repeat(MAX_AI_GROUPS_BYTES / 3));
+        let page = page_db_query(result(vec![large_group(), large_group()]), &json!({})).unwrap();
+        assert_eq!(page["groupsTotal"], 2);
+        assert_eq!(page["groupsTruncated"], true);
+        assert_eq!(page["groups"].as_array().unwrap().len(), 1);
+        assert!(serde_json::to_vec(&page["groups"]).unwrap().len() <= MAX_AI_GROUPS_BYTES);
+
+        let too_large = group("\n".repeat(MAX_AI_GROUPS_BYTES / 2));
+        let error = page_db_query(result(vec![too_large]), &json!({})).unwrap_err();
+        assert_eq!(error_code(&error), "too_big");
     }
 
     #[test]

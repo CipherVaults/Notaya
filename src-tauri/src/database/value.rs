@@ -255,7 +255,11 @@ pub fn num_str(n: f64) -> String {
 
 fn group_digits(int_part: &str) -> String {
     let neg = int_part.starts_with('-');
-    let digits: Vec<char> = int_part.trim_start_matches('-').chars().collect();
+    let digits = int_part.strip_prefix('-').unwrap_or(int_part);
+    if !digits.bytes().all(|digit| digit.is_ascii_digit()) {
+        return int_part.to_owned();
+    }
+    let digits: Vec<char> = digits.chars().collect();
     let mut out = String::new();
     for (i, c) in digits.iter().enumerate() {
         if i > 0 && (digits.len() - i) % 3 == 0 {
@@ -271,17 +275,46 @@ fn group_digits(int_part: &str) -> String {
 }
 
 pub fn format_number(n: f64, format: &str) -> String {
-    let base = num_str(n);
+    format_number_with(n, format, num_str)
+}
+
+/// Stored numbers in the table search follow the frontend's Math.round and
+/// Number-to-string rules. Computed text already comes from format_number.
+pub(super) fn format_table_number(n: f64, format: &str) -> String {
+    format_number_with(n, format, |n| {
+        let scaled = n * 1e9;
+        let floor = scaled.floor();
+        let rounded = if scaled - floor >= 0.5 { floor + 1.0 } else { floor } / 1e9;
+        if rounded.is_infinite() {
+            (if rounded < 0.0 { "-Infinity" } else { "Infinity" }).into()
+        } else if rounded == 0.0 {
+            "0".into()
+        } else if rounded.abs() >= 1e21 {
+            let scientific = format!("{rounded:e}");
+            scientific.replace('e', "e+")
+        } else if rounded.abs() < 1e-6 {
+            format!("{rounded:e}")
+        } else {
+            rounded.to_string()
+        }
+    })
+}
+
+fn format_number_with(n: f64, format: &str, text: impl Fn(f64) -> String) -> String {
+    let base = text(n);
     let with_commas = |s: &str| -> String {
+        if s.contains('e') || s.contains('E') {
+            return s.to_owned();
+        }
         match s.split_once('.') {
             Some((i, f)) => format!("{}.{f}", group_digits(i)),
             None => group_digits(s),
         }
     };
-    let money = |sym: &str| format!("{}{}", if n < 0.0 { "-" } else { "" }, format!("{sym}{}", with_commas(&num_str(n.abs()))));
+    let money = |sym: &str| format!("{}{}", if n < 0.0 { "-" } else { "" }, format!("{sym}{}", with_commas(&text(n.abs()))));
     match format {
         "numberWithCommas" => with_commas(&base),
-        "percent" => format!("{}%", num_str(n * 100.0)),
+        "percent" => format!("{}%", text(n * 100.0)),
         "dollar" => money("$"),
         "euro" => money("€"),
         "pound" => money("£"),
@@ -625,6 +658,36 @@ mod tests {
         assert_eq!(format_number(1234567.5, "numberWithCommas"), "1,234,567.5");
         assert_eq!(format_number(0.256, "percent"), "25.6%");
         assert_eq!(format_number(-1234.0, "dollar"), "-$1,234");
+    }
+
+    #[test]
+    fn table_find_preserves_formatted_scientific_notation() {
+        use crate::{
+            database::{types::{Database, PropKind, Property, Row}, windows::QueryCache},
+            model::Item,
+        };
+
+        let format = "numberWithCommas";
+        assert_eq!(format_table_number(0.0000001, format), "1e-7");
+        assert_eq!(format_table_number(1.2e21, format), "1.2e+21");
+        assert_eq!(format_table_number(-1234.5, format), "-1,234.5");
+        assert_eq!(format_table_number(1e308, format), "Infinity");
+
+        let mut db = Database::new("db".into(), "sec".into(), "Test database".into(), 0);
+        db.props.push(Property {
+            id: "amount".into(),
+            kind: PropKind::Number,
+            number_format: format.into(),
+            ..Property::default()
+        });
+        let mut row = Row::new("r1".into(), &db.id, "Test row".into(), 0);
+        row.cells = r#"{"amount":0.0000001}"#.into();
+        let items = [Item::Database(db.clone()), Item::Row(row)];
+        let mut cache = QueryCache::default();
+        let view = &db.views[0];
+        let snapshot = cache.query(items.iter(), &db, &view.id, view.clone(), (0, 0));
+        assert_eq!(snapshot.metadata(&db, "1e-7").matching_ids, Some(vec!["r1".into()]));
+        assert_eq!(snapshot.metadata(&db, "1,e-7").matching_ids, Some(vec![]));
     }
 
     #[test]

@@ -4,7 +4,7 @@ import { emit } from "./event";
 // the UI in a plain browser with fake data. Never part of the shipped app.
 
 import { aiCommand, aiLock } from "./ai";
-import { databaseCommand, databaseMetas, reorderDatabases, NOT_HANDLED, coordinationItems, removeCoordinatedItems } from "./database";
+import { databaseCommand, databaseMetas, reorderDatabases, NOT_HANDLED, coordinationItems, removeCoordinatedItems, clearViewWindows } from "./database";
 
 const params = new URLSearchParams(location.search);
 // app = notes with security off | secure = security on, unlocked | lock = security on, locked
@@ -152,6 +152,7 @@ type Args = Record<string, unknown>;
 async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
+  if ((cmd === "query_view" || cmd === "view_rows") && !unlocked) throw "The vault is locked.";
   if (cmd.startsWith("ai_")) return ok(aiCommand(cmd, args));
   if (!["list_notes", "search", "list_bin", "restore_bin_item", "restore_page", "delete_page", "empty_trash"].includes(cmd)) {
     const dbr = databaseCommand(cmd, args, tree, options);
@@ -201,10 +202,12 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
       aiLock(false);
       return ok(null);
     case "start_over":
+      clearViewWindows();
       exists = false;
       return ok("set-aside-1792700000000.nota");
     case "lock_vault":
       if (!securityOn) return ok(null);
+      clearViewWindows();
       unlocked = false;
       aiLock(true);
       return ok(null);
@@ -219,6 +222,7 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
       if (args.password === "wrong") throw "That password (or keyfile) doesn't open this backup.";
     {
       const undoFile = exists ? "restore-undo-1792700000000.nota" : null;
+      clearViewWindows();
       exists = true;
       unlocked = true;
       securityOn = !!args.password;
@@ -593,7 +597,13 @@ export async function invoke<T = unknown>(cmd: string, args: Args = {}, options?
   const ids = cmd === "activity_undo" ? ["p1"] : (args.ids as string[] | undefined) ?? [String(args.pageId ?? args.id ?? args.rowId ?? (cmd === "save_database" ? JSON.parse(String(args.databaseJson)).id : ""))];
   if (write) {
     for (const id of ids.filter(Boolean)) revs.set(id, (revs.get(id) ?? 0) + 1);
-    await emit("items-changed", { ids: ids.filter(Boolean), kinds: ids.map((id) => String(mockItems().find((x) => x.id === id)?.kind ?? "page")), tree: true, by: "person", revs: Object.fromEntries(revs) });
+    const items = mockItems();
+    const kinds = ids.length > 1 ? new Map(items.map((item) => [item.id, item.kind])) : null;
+    await emit("items-changed", {
+      ids: ids.filter(Boolean),
+      kinds: ids.map((id) => String((kinds ? kinds.get(id) : items.find((x) => x.id === id)?.kind) ?? "page")),
+      tree: true, by: "person", revs: Object.fromEntries(revs),
+    });
   }
   if (cmd === "save_sticky") return (revs.get(String(args.id)) ?? 0) as T;
   if (value && typeof value === "object" && !Array.isArray(value) && ["get_page", "save_page", "get_database", "save_database", "get_sticky"].includes(cmd)) {

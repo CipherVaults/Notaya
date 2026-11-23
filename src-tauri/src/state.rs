@@ -272,6 +272,7 @@ impl AppState {
             }
         }
         session.drain_changes(); // creation/unlock is followed by a complete window load
+        session.clear_query_cache();
         let mut current = guard(&self.session);
         guard(&self.changes).new_session();
         *current = Some(session);
@@ -295,7 +296,10 @@ impl AppState {
         // Messages of automations hold row titles: they do not outlive the unlocked session.
         crate::commands::automation::clear_notices();
         let mut session = guard(&self.session);
-        if let Some(s) = session.as_mut() { self.ai.flush_reads(s, None); }
+        if let Some(s) = session.as_mut() {
+            self.ai.flush_reads(s, None);
+            s.clear_query_cache();
+        }
         guard(&self.changes).new_session();
         session.take()
     }

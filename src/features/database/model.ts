@@ -2,7 +2,7 @@
 // Values are computed in Rust; this file only knows how to show them and how to build the objects the UI edits.
 
 import type {
-  ChartConfig, Cond, Database, DateCell, Filter, GroupBy, OptionColor, PropKind, Property, SelectOption, View, ViewKind,
+  ChartConfig, Cond, Database, DateCell, DbRow, Filter, GroupBy, OptionColor, PropKind, Property, SelectOption, View, ViewKind,
 } from "@/lib/database-types";
 
 /** A 32-character hex id, like the ones the backend makes. */
@@ -309,4 +309,15 @@ export function cellText(p: Property, v: unknown): string {
   if (typeof v === "number") return formatNumber(v, p.numberFormat);
   if (typeof v === "boolean") return v ? "Yes" : "No";
   return "";
+}
+
+export function rowMatchesFind(props: Property[], row: DbRow, query: string): boolean {
+  const has = (s: string) => s.toLowerCase().includes(query);
+  return has(row.title) || props.some((p) => {
+    if (p.kind === "title") return false;
+    const value = row.values[p.id];
+    if (has(cellText(p, value))) return true;
+    const name = (p.kind === "select" || p.kind === "status") && p.options.find((o) => o.id === value)?.name;
+    return typeof name === "string" && has(name);
+  });
 }

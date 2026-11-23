@@ -10,7 +10,9 @@ pub mod formula;
 // The query benchmark supplies a fixed clock to Ctx; the OS clock module is unused.
 #[path = "../../../src-tauri/src/database/engine.rs"]
 pub mod engine;
+#[path = "../../../src-tauri/src/database/windows.rs"]
+pub mod windows;
 
 #[cfg(test)]
-#[path = "../../../src-tauri/src/database/golden/mod.rs"]
-mod golden;
+#[path = "../../../src-tauri/src/database/golden_compat.rs"]
+mod golden_compat;

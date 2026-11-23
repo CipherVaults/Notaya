@@ -35,8 +35,10 @@ import type {
   DbRow,
   FileCell,
   QueryRequest,
+  RowRange,
   RowHit,
   ViewResult,
+  ViewWindow,
 } from "./database-types";
 
 /** What a CSV import did (the backend asks for the file). */
@@ -255,6 +257,9 @@ export const api = {
   /** The whole database definition as JSON text (properties, views, templates). */
   saveDatabase: (database: Database, baseRev?: number) => invoke<Revisioned<Database>>("save_database", { databaseJson: JSON.stringify(database), baseRev }),
   queryView: (request: QueryRequest) => invoke<ViewResult>("query_view", { request }),
+  queryViewWindow: (request: QueryRequest, find: string) => invoke<ViewWindow>("query_view", { request, windowed: true, find }),
+  viewRows: (databaseId: string, viewId: string, generation: string, ranges: RowRange[]) =>
+    invoke<DbRow[] | null>("view_rows", { request: { databaseId, viewId, generation, ranges } }),
   createRow: (databaseId: string, title: string, cells: Record<string, unknown>, templateId = "") =>
     invoke<{ row: DbRow }>("create_row", { databaseId, title, cells: JSON.stringify(cells), templateId }),
   setCells: (rowId: string, title: string | null, patch: Record<string, unknown>) =>

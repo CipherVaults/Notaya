@@ -13,6 +13,7 @@ pub(crate) mod relations;
 pub mod saves;
 pub mod types;
 pub mod value;
+pub mod windows;
 
 #[cfg(test)]
-mod golden;
+mod golden_compat;

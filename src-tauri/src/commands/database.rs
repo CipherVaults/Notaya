@@ -16,12 +16,13 @@ use crate::database::clock;
 use crate::database::engine::{Ctx, RowOut, ViewResult};
 use crate::database::types::*;
 use crate::database::value::{self, parse_date};
+use crate::database::windows::{RowRange, ViewWindow};
 use crate::error::{Error, Result};
 use crate::model::{new_id, now_ms, Item, Page};
 use crate::state::AppState;
 use crate::vault::Session;
 
-pub const MAX_ROWS_PER_DATABASE: usize = 200_000;
+pub use crate::database::types::MAX_ROWS_PER_DATABASE;
 const MAX_CELL_TEXT: usize = 100_000;
 
 // ---------------------------------------------------------------- lookups
@@ -558,9 +559,26 @@ pub struct QueryRequest {
     pub view: Option<View>,
 }
 
-#[tauri::command]
-pub fn query_view(state: State<'_, AppState>, request: QueryRequest) -> Result<ViewResult> {
-    query_view_person(&state, request)
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum QueryResponse {
+    Full(ViewResult),
+    Window(ViewWindow),
+}
+
+#[tauri::command(async)]
+pub fn query_view(
+    state: State<'_, AppState>,
+    request: QueryRequest,
+    windowed: Option<bool>,
+    find: Option<String>,
+) -> Result<QueryResponse> {
+    if windowed.unwrap_or(false) {
+        let find = find.as_deref().unwrap_or_default();
+        state.with(|s| query_view_window(s, request, find)).map(QueryResponse::Window)
+    } else {
+        query_view_person(&state, request).map(QueryResponse::Full)
+    }
 }
 
 fn query_view_person(state: &AppState, request: QueryRequest) -> Result<ViewResult> {
@@ -568,6 +586,13 @@ fn query_view_person(state: &AppState, request: QueryRequest) -> Result<ViewResu
 }
 
 pub(crate) fn query_view_core(s: &Session, _actor: &Actor, request: QueryRequest) -> Result<ViewResult> {
+    let (db, view) = resolve_query_view(s, request)?;
+    let ctx = ctx_of(s);
+    let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
+    Ok(ctx.run_view(dbref, &view))
+}
+
+fn resolve_query_view(s: &Session, request: QueryRequest) -> Result<(Database, View)> {
     let db = database(s, &request.database_id)?;
     let view = match request.view {
         Some(mut v) => {
@@ -584,9 +609,62 @@ pub(crate) fn query_view_core(s: &Session, _actor: &Actor, request: QueryRequest
         }
         None => db.view(&request.view_id).cloned().ok_or(Error::NotFound)?,
     };
-    let ctx = ctx_of(s);
-    let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
-    Ok(ctx.run_view(dbref, &view))
+    Ok((db, view))
+}
+
+fn query_view_window(s: &Session, request: QueryRequest, find: &str) -> Result<ViewWindow> {
+    let view_id = request.view_id.clone();
+    let (db, view) = resolve_query_view(s, request)?;
+    let mut cache = s.query_cache.borrow_mut();
+    let entry = cache.query(s.items(), &db, &view_id, view, clock::local_now());
+    #[cfg(debug_assertions)]
+    if std::env::var_os("NOTAYA_DB_SHADOW").is_some() {
+        entry.check_shadow(s.items(), &db);
+    }
+    Ok(entry.metadata(&db, find))
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum WindowSelection {
+    Contiguous(RowRange),
+    Ranges { ranges: Vec<RowRange> },
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewRowsRequest {
+    database_id: String,
+    view_id: String,
+    generation: String,
+    #[serde(flatten)]
+    selection: WindowSelection,
+}
+
+/// Null means the snapshot expired. The caller must ask for new metadata
+/// before requesting indexes again, as those indexes may now mean other rows.
+#[tauri::command(async)]
+pub fn view_rows(state: State<'_, AppState>, request: ViewRowsRequest) -> Result<Option<Vec<RowOut>>> {
+    state.with(|s| view_rows_core(s, request))
+}
+
+fn view_rows_core(s: &Session, request: ViewRowsRequest) -> Result<Option<Vec<RowOut>>> {
+    let ranges = match &request.selection {
+        WindowSelection::Contiguous(range) => std::slice::from_ref(range),
+        WindowSelection::Ranges { ranges } => ranges.as_slice(),
+    };
+    if !RowRange::valid(ranges) {
+        return Err(Error::invalid("Too many rows requested for a table window."));
+    }
+    let mut cache = s.query_cache.borrow_mut();
+    let Some(entry) = cache.get(&request.database_id, &request.view_id, &request.generation) else {
+        return Ok(None);
+    };
+    #[cfg(debug_assertions)]
+    if std::env::var_os("NOTAYA_DB_SHADOW").is_some() {
+        entry.check_shadow(s.items(), &database(s, &request.database_id)?);
+    }
+    Ok(Some(entry.rows(ranges)))
 }
 
 
@@ -1383,6 +1461,118 @@ mod tests {
         s.put(Item::Row(r)).unwrap();
         s.put(Item::Database(db.clone())).unwrap();
         id
+    }
+
+    #[test]
+    fn table_windows_shadow_edits_and_reject_stale_sessions() {
+        let (mut s, paths) = crate::changes::tests::fixture();
+        let mut main = make_db(&mut s, "Window test");
+        let related = make_db(&mut s, "Window relation");
+        let mut target = Row::new(new_id(), &related.id, "Related".into(), 0);
+        target.cells = json!({"n": 7}).to_string();
+        s.put(Item::Row(target.clone())).unwrap();
+        main.props.extend([
+            Property { id: "rel".into(), name: "Relation".into(), kind: PropKind::Relation, relation_db: related.id.clone(), ..Default::default() },
+            Property { id: "roll".into(), name: "Rollup".into(), kind: PropKind::Rollup,
+                rollup_relation: "rel".into(), rollup_prop: "n".into(), rollup_calc: "sum".into(), ..Default::default() },
+            Property { id: "fx".into(), name: "Formula".into(), kind: PropKind::Formula, formula: "prop(\"Qty\") + 2".into(), ..Default::default() },
+        ]);
+        main.views[0].sorts = vec![Sort { prop: "fx".into(), descending: true }];
+        main.views[0].calcs = vec![ColCalc { prop: "roll".into(), calc: "sum".into() }];
+        main.sanitize().unwrap();
+        s.put(Item::Database(main.clone())).unwrap();
+        let first = add_row(&mut s, &mut main, "First", &json!({"n": 2, "rel": [target.id]}).to_string());
+        let view_id = main.views[0].id.clone();
+        let request = || QueryRequest { database_id: main.id.clone(), view_id: view_id.clone(), view: None };
+        let window_request = |generation: &str| {
+            serde_json::from_value::<ViewRowsRequest>(json!({
+                "databaseId": main.id, "viewId": view_id, "generation": generation,
+                "ranges": [{"start": 0, "count": 1}, {"start": 1, "count": 30}]
+            })).unwrap()
+        };
+        let state = AppState::new(paths);
+        state.set_session(s);
+        let mut seed = 47u64;
+        let mut added = Vec::new();
+        let mut prior = None;
+        for step in 0..36 {
+            let metadata = state.with(|s| query_view_window(s, request(), "")).unwrap();
+            if let Some(previous) = prior.replace(metadata.generation.clone()) {
+                assert_ne!(previous, metadata.generation);
+                assert!(state.with(|s| view_rows_core(s, window_request(&previous))).unwrap().is_none());
+            }
+            state.with(|s| {
+                let core = query_view_core(s, &Actor::Person, request())?;
+                let rows = view_rows_core(s, window_request(&metadata.generation))?.unwrap();
+                assert!(serde_json::to_vec(&core.rows).unwrap() == serde_json::to_vec(&rows).unwrap());
+                assert_eq!(metadata.filtered, rows.len());
+                assert_eq!(metadata.total, core.total);
+                assert_eq!(metadata.calcs, core.calcs);
+                let mut other = window_request(&metadata.generation);
+                other.database_id = related.id.clone();
+                assert!(view_rows_core(s, other)?.is_none());
+                let mut other = window_request(&metadata.generation);
+                other.view_id = new_id();
+                assert!(view_rows_core(s, other)?.is_none());
+                Ok(())
+            }).unwrap();
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            let value = (seed >> 32) % 91;
+            state.with_mut(|s| {
+                match step % 6 {
+                    0 => {
+                        let mut changed = row(s, &first)?;
+                        changed.cells = json!({"n": value, "rel": [target.id]}).to_string();
+                        s.put(Item::Row(changed))
+                    }
+                    1 => {
+                        let mut new = Row::new(new_id(), &main.id, "Added".into(), step);
+                        new.order = step;
+                        new.cells = json!({"n": value}).to_string();
+                        added.push(new.id.clone());
+                        s.put(Item::Row(new))
+                    }
+                    2 => s.remove_many(&[added.pop().unwrap()]),
+                    3 => {
+                        target.cells = json!({"n": value}).to_string();
+                        s.put(Item::Row(target.clone()))
+                    }
+                    4 => {
+                        let mut changed = database(s, &main.id)?;
+                        changed.props.iter_mut().find(|p| p.id == "fx").unwrap().formula = format!("prop(\"Qty\") + {value}");
+                        s.put(Item::Database(changed))
+                    }
+                    _ => {
+                        let mut changed = row(s, &first)?;
+                        changed.cells = json!({"n": value, "rel": []}).to_string();
+                        s.put(Item::Row(changed))
+                    }
+                }
+            }).unwrap();
+        }
+
+        let metadata = state.with(|s| query_view_window(s, request(), "first")).unwrap();
+        assert_eq!(metadata.matching_ids, Some(vec![first.clone()]));
+        let mut old_session = state.take_session().unwrap();
+        let token = &metadata.generation;
+        assert!(matches!(state.with(|s| view_rows_core(s, window_request(token))), Err(Error::Locked)));
+        assert!(view_rows_core(&old_session, window_request(token)).unwrap().is_none());
+
+        // Even a populated Session passed back into AppState begins a new generation.
+        let detached = query_view_window(&old_session, request(), "").unwrap();
+        old_session.drain_changes();
+        state.set_session(old_session);
+        assert!(state.with(|s| view_rows_core(s, window_request(&detached.generation))).unwrap().is_none());
+        let next = state.with(|s| query_view_window(s, request(), "")).unwrap();
+        assert_ne!(next.generation, detached.generation);
+        let single: ViewRowsRequest = serde_json::from_value(json!({
+            "databaseId": main.id, "viewId": view_id, "generation": next.generation,
+            "start": 0, "count": 1
+        })).unwrap();
+        assert_eq!(state.with(|s| view_rows_core(s, single)).unwrap().unwrap()[0].id, first);
+        let mut oversize = window_request(&next.generation);
+        oversize.selection = WindowSelection::Contiguous(RowRange { start: 0, count: usize::MAX });
+        assert!(state.with(|s| view_rows_core(s, oversize)).is_err());
     }
 
     #[test]

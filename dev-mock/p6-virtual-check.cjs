@@ -167,7 +167,10 @@ const verifyGroups = async (p, table, seed, n, fixture, bounded, finishPaint, co
     assert.equal(await add.getByRole('button', { name: 'New', exact: true }).count(), 1);
     if (expectedIds.length) {
       const lastId = group.rows.at(-1);
-      assert.equal(await table.locator('tbody tr[data-row-id="' + lastId + '"][data-index="' + (addIndex - 1) + '"]').count(), 1);
+      const last = table.locator('tbody tr[data-row-id="' + lastId + '"][data-index="' + (addIndex - 1) + '"]');
+      // A group footer has metadata on hand; its preceding row arrives via IPC.
+      await last.waitFor({ state: 'attached' });
+      assert.equal(await last.count(), 1);
     } else assert.equal(footerIndex, headerIndex + 2, 'Empty header/New/zero footer');
     const button = footer.getByRole('button', { name: 'Calculate Estimate', exact: true });
     assert.equal(await button.count(), 1);

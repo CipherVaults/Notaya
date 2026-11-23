@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
-import type { Database, DbRow, Filter, GroupOut, Property, View, ViewKind, ViewResult } from "@/lib/database-types";
+import type { Database, DbRow, Filter, GroupOut, Property, RowRange, View, ViewKind, ViewResult, ViewWindow } from "@/lib/database-types";
 import { PAGE_EMOJIS } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app";
@@ -17,7 +17,7 @@ import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } f
 import { DbShellContext, type DbShell } from "./context";
 import { editDatabase, loadDatabase, setDatabase, useDatabase, useSaveCount } from "./dbStore";
 import { ViewIcon } from "./icons";
-import { VIEW_KINDS, blankView, cellText, countConds, emptyFilter, filterIsEmpty, reorderList } from "./model";
+import { VIEW_KINDS, blankView, countConds, emptyFilter, filterIsEmpty, reorderList, rowMatchesFind } from "./model";
 import { saveCells } from "./ops";
 import { afterRowChange } from "./notices";
 import { dropUndo, handleUndoKey, pushUndo, retainUndo } from "./undo";
@@ -49,6 +49,13 @@ function filterGroups(gs: GroupOut[] | null, keep: Set<string>): GroupOut[] | nu
   });
 }
 
+type ShellResult = ViewResult & {
+  window?: ViewWindow;
+  windowQuery?: { viewKey: string; find: string };
+  rowsGeneration?: string;
+  pendingRowIds?: string[];
+};
+
 const ghostBtn = "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[0.8rem] text-muted transition-colors hover:bg-surface-2 hover:text-fg data-[state=open]:bg-surface-2 data-[state=open]:text-fg";
 
 export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewChange, compact = false }: DatabaseViewProps) {
@@ -63,7 +70,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const [localViewId, setViewId] = useState<string | undefined>(viewIdProp);
   // Full-page navigation is controlled by the vault-backed store; linked blocks own their view.
   const viewId = onViewChange ? viewIdProp : localViewId;
-  const [result, setResult] = useState<ViewResult | null>(null);
+  const [result, setResult] = useState<ShellResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [search, setSearch] = useState("");
@@ -93,6 +100,8 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const propsKey = useMemo(() => JSON.stringify(db?.props ?? []), [db?.props]);
   const locked = !!db?.locked;
   const automationsOn = !!db?.automations?.some((a) => a.enabled);
+  const tableFind = view?.kind === "table" ? search.trim() : "";
+  const windowQuery = useMemo(() => ({ viewKey, find: tableFind }), [viewKey, tableFind]);
 
   const requery = useCallback(() => {
     clearTimeout(requeryTimer.current);
@@ -105,11 +114,19 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     if (!db || !view) return;
     const my = ++reqRef.current;
     const t = setTimeout(() => {
-      api
-        .queryView({ databaseId: db.id, viewId: view.id, view })
+      const request = { databaseId: db.id, viewId: view.id, view };
+      const run = view.kind === "table"
+        ? api.queryViewWindow(request, windowQuery.find)
+        : api.queryView(request);
+      run
         .then((r) => {
           if (reqRef.current !== my) return;
-          setResult(r);
+          if ("rowIds" in r) {
+            setResult((prior) => {
+              const rows = prior?.window ? prior.rows : [];
+              return { ...r, window: r, windowQuery, rows, rowsGeneration: prior?.rowsGeneration };
+            });
+          } else setResult(r);
           setQueryError(null);
         })
         .catch((e) => {
@@ -117,13 +134,65 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           setQueryError(errorText(e));
         });
     }, 60);
-    return () => clearTimeout(t);
+    return () => {
+      ++reqRef.current;
+      clearTimeout(t);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db?.id, viewKey, propsKey, tick, saveCount]);
+  }, [db?.id, windowQuery, propsKey, tick, saveCount]);
 
-  const rowById = useMemo(() => new Map((result?.rows ?? []).map((r) => [r.id, r])), [result]);
+  const tableWindow = result?.window;
+  const positions = useMemo(() => new Map(tableWindow?.rowIds.map((id, i) => [id, i])), [tableWindow]);
+  const pendingRowIds = result?.pendingRowIds;
+  const orderedTableIds = useMemo(() => {
+    if (!tableWindow) return undefined;
+    return pendingRowIds ? [...tableWindow.rowIds, ...pendingRowIds] : tableWindow.rowIds;
+  }, [tableWindow, pendingRowIds]);
   const resultRef = useRef(result);
   resultRef.current = result;
+  const loadTableRows = useCallback((ids: readonly string[], isCurrent: () => boolean) => {
+    if (!tableWindow || !view) return;
+    const current = resultRef.current;
+    const loaded = new Set(current?.rowsGeneration === tableWindow.generation ? current.rows.map((row) => row.id) : []);
+    const indices = ids.flatMap((id) => {
+      const position = positions.get(id);
+      return position === undefined || loaded.has(id) ? [] : [position];
+    }).sort((a, b) => a - b);
+    const batches: RowRange[][] = [];
+    for (let offset = 0; offset < indices.length; offset += 256) {
+      const ranges: RowRange[] = [];
+      for (const start of indices.slice(offset, offset + 256)) {
+        const last = ranges[ranges.length - 1];
+        if (last && last.start + last.count === start) last.count++;
+        else ranges.push({ start, count: 1 });
+      }
+      batches.push(ranges);
+    }
+    void Promise.all(batches.map((ranges) => api.viewRows(databaseId, view.id, tableWindow.generation, ranges))).then((windows) => {
+      if (!isCurrent()) return;
+      if (windows.some((rows) => rows === null)) {
+        requery();
+        return;
+      }
+      setResult((prior) => {
+        if (prior?.window !== tableWindow) return prior;
+        const received = new Map(windows.flatMap((rows) => rows ?? []).map((row) => [row.id, row]));
+        const keep = new Set(ids);
+        // Keep newly created rows until metadata catches up, even if they
+        // haven't scrolled into the range where their editor will take focus.
+        for (const id of prior.pendingRowIds ?? []) keep.add(id);
+        for (const row of prior.rows) {
+          if (keep.has(row.id) && !received.has(row.id)) received.set(row.id, row);
+        }
+        if (windows.length === 0 && received.size === prior.rows.length) return prior;
+        return { ...prior, rows: [...received.values()], rowsGeneration: tableWindow.generation };
+      });
+    }).catch((e) => {
+      if (isCurrent()) toast.error(errorText(e));
+    });
+  }, [databaseId, view?.id, positions, tableWindow, requery]);
+
+  const rowById = useMemo(() => new Map((result?.rows ?? []).map((r) => [r.id, r])), [result]);
   const dbRef = useRef(db);
   dbRef.current = db;
 
@@ -245,7 +314,17 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     async (cells: Record<string, unknown> = {}, title = "", templateId = ""): Promise<DbRow | null> => {
       try {
         const { row } = await api.createRow(databaseId, title, cells, templateId);
-        setResult((r) => (r ? { ...r, rows: [...r.rows, row], total: r.total + 1, filtered: r.filtered + 1 } : r));
+        ++reqRef.current;
+        setResult((r) => {
+          if (!r || r.window?.rowIds.includes(row.id) || r.rows.some((x) => x.id === row.id)) return r;
+          return {
+            ...r,
+            rows: [...r.rows, row],
+            total: r.total + 1,
+            filtered: r.filtered + 1,
+            pendingRowIds: r.window ? [...(r.pendingRowIds ?? []), row.id] : undefined,
+          };
+        });
         requery();
         afterRowChange(automationsOn);
         void api.listNotes().then(setTree).catch(() => undefined);
@@ -260,7 +339,10 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   );
   const reorderRows = useCallback(
     async (ids: string[]) => {
-      const before = resultRef.current?.rows.map((r) => r.id);
+      const current = resultRef.current;
+      const before = current?.window
+        ? [...current.window.rowIds, ...(current.pendingRowIds ?? [])]
+        : current?.rows.map((r) => r.id);
       const send = async (list: string[]) => {
         await api.reorderRows(list);
         requery();
@@ -343,17 +425,21 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
   // ----- search (on the rows we have)
 
-  const shown: ViewResult | null = useMemo(() => {
+  const shown: ShellResult | null = useMemo(() => {
     if (!result || !db) return result;
+    if (result.window) return result;
     const q = search.trim().toLowerCase();
     if (!q) return result;
     const keep = new Set(
       result.rows
-        .filter((r) => r.title.toLowerCase().includes(q) || db.props.some((p) => p.kind !== "title" && cellText(p, r.values[p.id]).toLowerCase().includes(q)) || db.props.some((p) => (p.kind === "select" || p.kind === "status") && p.options.find((o) => o.id === r.values[p.id])?.name.toLowerCase().includes(q)))
+        .filter((row) => rowMatchesFind(db.props, row, q))
         .map((r) => r.id),
     );
     return { ...result, rows: result.rows.filter((r) => keep.has(r.id)), filtered: keep.size, groups: filterGroups(result.groups, keep) };
   }, [result, search, db]);
+  const matchingIds = tableWindow?.matchingIds;
+  const tableGroups = useMemo(() => matchingIds && tableWindow
+    ? filterGroups(tableWindow.groups, new Set(matchingIds)) : tableWindow?.groups, [matchingIds, tableWindow]);
 
   // ----- title, icon, lock
 
@@ -500,7 +586,9 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
   const viewProps: ViewProps | null = shown
     ? {
-        db, view, result: shown, rowById, locked, openRow, setCells, setTitle, createRow: (c, t) => createRow(c, t),
+        db, view, result: tableWindow && matchingIds ? { ...shown, filtered: matchingIds.length, groups: tableGroups ?? null } : shown,
+        rowById, tableRowIds: matchingIds ?? orderedTableIds, loadTableRows: tableWindow ? loadTableRows : undefined,
+        locked, openRow, setCells, setTitle, createRow: (c, t) => createRow(c, t),
         updateView: (patch) => editView((v) => ({ ...v, ...patch })), reorderRows,
       }
     : null;
@@ -511,6 +599,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const editingProp = propMenu ? db.props.find((p) => p.id === propMenu) : undefined;
   const sortable = view.kind !== "chart";
   const isEmpty = result && result.total === 0;
+  const hasCurrentMatchCount = view.kind !== "table" || result?.windowQuery === windowQuery;
 
   const toolbar = (
     <div className="flex min-w-0 items-center gap-0.5">
@@ -799,7 +888,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
         {result?.truncated && (
           <div className="flex items-center gap-2 border-b border-line bg-warn/10 px-6 py-1.5 text-xs" role="status">
-            <AlertTriangle size={13} className="text-warn-icon" /> View limit reached: only the first {result.rows.length.toLocaleString()} matching rows are included. This database has {result.total.toLocaleString()} rows in total. Add a filter to narrow it down.
+            <AlertTriangle size={13} className="text-warn-icon" /> View limit reached: only the first {(orderedTableIds?.length ?? result.filtered ?? result.rows.length).toLocaleString()} matching rows are included. This database has {result.total.toLocaleString()} rows in total. Add a filter to narrow it down.
           </div>
         )}
         {queryError && (
@@ -822,7 +911,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
               ) : (
                 <ViewBody {...viewProps} />
               )}
-              {!isEmpty && viewProps.result.rows.length === 0 && (hasFilter || search) && (
+              {!isEmpty && hasCurrentMatchCount && viewProps.result.filtered === 0 && (hasFilter || search) && (
                 <div className="shrink-0 px-6 py-10 text-center text-sm text-muted">
                   No rows match.{" "}
                   <button type="button" className="underline" onClick={() => (setSearch(""), editView((v) => ({ ...v, filter: emptyFilter() })))}>Clear the filter and search</button>

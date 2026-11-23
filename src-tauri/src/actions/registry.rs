@@ -188,7 +188,7 @@ pub static ACTIONS: &[ActionSpec] = &[
         Look,
         None,
         None,
-        r#"{"type":"object","properties":{"databaseId":{"type":"string"},"viewId":{"type":"string"},"offset":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1,"maximum":200}},"required":["databaseId"],"additionalProperties":false}"#,
+        r#"{"type":"object","properties":{"databaseId":{"type":"string"},"viewId":{"type":"string"},"offset":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1,"maximum":200},"groupOffset":{"type":"integer","minimum":0},"groupLimit":{"type":"integer","minimum":1,"maximum":200},"subGroupOffset":{"type":"integer","minimum":0},"subGroupLimit":{"type":"integer","minimum":1,"maximum":200}},"required":["databaseId"],"additionalProperties":false}"#,
         "Db query",
         "Table2",
         ["query_view", "search_rows"]

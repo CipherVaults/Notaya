@@ -12,6 +12,9 @@ export interface ViewProps {
   result: ViewResult;
   /** Quick lookup of the rows in `result`. */
   rowById: Map<string, DbRow>;
+  /** The table knows the full order, even when only a few rows have values loaded. */
+  tableRowIds?: string[];
+  loadTableRows?: (ids: readonly string[], isCurrent: () => boolean) => void;
   /** True when the database is locked: rows can change, the properties and views cannot. */
   locked: boolean;
   /** Opens a row the way the view says (full page, side peek or center peek). */

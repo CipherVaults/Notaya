@@ -17,16 +17,19 @@ pub mod model {
     pub fn now_ms() -> i64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64 }
     pub fn new_id() -> String { use std::sync::atomic::*; static N: AtomicU64 = AtomicU64::new(1); format!("{:032x}", N.fetch_add(1, Ordering::Relaxed)) }
     #[derive(Clone, serde::Serialize, serde::Deserialize)]
-    #[serde(rename_all = "camelCase")]
+    #[serde(tag = "kind", rename_all = "camelCase")]
     pub enum Item {
         Database(crate::database::types::Database),
         Row(crate::database::types::Row),
-        Other(String),
+        Other { id: String },
     }
-    impl Item { pub fn id(&self) -> &str { match self { Item::Database(d) => &d.id, Item::Row(r) => &r.id, Item::Other(s) => s } } }
+    impl Item { pub fn id(&self) -> &str { match self { Item::Database(d) => &d.id, Item::Row(r) => &r.id, Item::Other { id } => id } } }
 }
 pub mod database;
+#[cfg(test)]
+mod accuracy;
 use database::{engine::Ctx, types::*};
+use database::windows::{QueryCache, RowRange};
 use model::Item;
 
 fn lcg(s: &mut u64) -> u64 { *s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407); *s >> 33 }
@@ -84,6 +87,12 @@ fn main() {
     if std::env::args().nth(1).as_deref() == Some("parse") { parse_micro(); return; }
     if std::env::args().nth(1).as_deref() == Some("search") { search_micro(); return; }
     if std::env::args().nth(1).as_deref() == Some("load") { load_micro(); return; }
+    if std::env::args().nth(1).as_deref() == Some("windows") {
+        for size in std::env::args().skip(2) {
+            window_bench(size.parse().unwrap());
+        }
+        return;
+    }
     let sizes: Vec<usize> = std::env::args().skip(1).map(|a| a.parse().unwrap()).collect();
     for n in sizes {
         println!("==== {n} rows ====");
@@ -137,6 +146,34 @@ fn main() {
             let _ = dbref;
         }
     }
+}
+
+fn window_bench(n: usize) {
+    let mut items = build(n, true, true, 2000);
+    for (i, item) in items[2002..].iter_mut().enumerate() {
+        if let Item::Row(row) = item {
+            // Use the same ID width as rows crossing the real IPC boundary.
+            row.id = format!("{i:032x}");
+        }
+    }
+    let Item::Database(db) = &items[2001] else { unreachable!() };
+    let view = View::default();
+    let mut cache = QueryCache::default();
+    let t = Instant::now();
+    let entry = cache.query(items.iter(), db, "table", view, (0, 0));
+    let compute = ms(t);
+    let t = Instant::now();
+    let metadata = entry.metadata(db, "");
+    let metadata_bytes = serde_json::to_vec(&metadata).unwrap().len();
+    let metadata_ms = ms(t);
+    let range = RowRange { start: n / 2, count: 40 };
+    let t = Instant::now();
+    let mut window_bytes = 0;
+    for _ in 0..100 {
+        let entry = cache.get(&db.id, "table", &metadata.generation).unwrap();
+        window_bytes = serde_json::to_vec(&entry.rows(&[range])).unwrap().len();
+    }
+    println!("{n} rows | cold cache {compute:.1} ms | metadata {metadata_ms:.1} ms {metadata_bytes} bytes | 40 cached rows {:.3} ms {window_bytes} bytes (mean of 100)", ms(t) / 100.0);
 }
 
 #[allow(dead_code)]

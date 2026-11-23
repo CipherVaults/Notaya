@@ -16,7 +16,7 @@ const truthy = (name, value) => checks.check(name,
 async function open(b, query, size = { width: 1280, height: 800 }) {
   const p = await b.newPage({ viewport: size, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => checks.check('page error', false, e.message));
-  p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) checks.check('console error', false, m.text()); });
+  p.on('console', (m) => { if (m.type() === 'error' && !/favicon\.ico$/.test(m.location().url)) checks.check('console error', false, m.text()); });
   await p.goto(`${BASE}?${query}`);
   await p.waitForSelector('#view-host > *');
   await p.waitForTimeout(400);

@@ -38,6 +38,9 @@ pub struct Session {
     vault_id: [u8; 16],
     store: Store,
     items: HashMap<String, Item>,
+    // Dropped with the session. Interior mutability is serialized by AppState's
+    // session mutex, alongside item reads, writes and session replacement.
+    pub(crate) query_cache: std::cell::RefCell<crate::database::windows::QueryCache>,
     /// Security is off (amendment A21): the data key is wrapped under the built-in key.
     open: bool,
     /// True once anything changed since unlock; triggers a backup on lock.
@@ -117,6 +120,7 @@ impl Session {
             other => other,
         };
         self.store.rollback_action();
+        self.clear_query_cache();
         (self.items, self.dirty, self.hourly_due, self.held, self.revs, self.pending,
             self.coordination, self.actor, self.ai_writers, self.replacement,
             self.history_index, self.change_set, self.request_ai, self.action_name,
@@ -157,7 +161,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
+            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -177,7 +181,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
+            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -211,7 +215,7 @@ impl Session {
             dirty: true,
             hourly_due: true,
             held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
+            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
         Ok(session)
@@ -248,7 +252,7 @@ impl Session {
         }
         store.ensure_journal_tables()?;
         let mut session = Session { native_session_id: crypto::random_bytes(), format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
+            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
         session.load_history()?;
         session.load_activity_head()?;
         session.load_anchor()?;
@@ -597,7 +601,14 @@ impl Session {
         result
     }
 
+    pub(crate) fn clear_query_cache(&mut self) {
+        self.query_cache.get_mut().invalidate();
+    }
+
     fn record_change(&mut self, item: &Item, actor: &Actor) {
+        // Use the vault-wide write boundary. Relations can span several
+        // databases, and item-map changes can reorder rows tied on manual order.
+        self.clear_query_cache();
         let id = item.id().to_string();
         *self.revs.entry(id.clone()).or_default() += 1;
         let kind = match item { Item::Notebook(_) => "notebook", Item::Section(_) => "section",
@@ -858,6 +869,7 @@ impl Session {
         self.vault_id = new_id;
         self.format = header.format;
         self.open = open_after;
+        self.clear_query_cache();
         self.changed();
         Ok(())
     }
@@ -1636,5 +1648,50 @@ mod tests {
         assert!(Session::unlock(&path, "Fixture-Pass-2", None).is_err());
         let s = Session::unlock(&path, "Fixture-Pass-2", Some(&kf)).unwrap();
         assert!(matches!(s.get(PAGE_ID), Some(Item::Page(p)) if p.text == "keyfile fixture page"));
+    }
+
+    #[test]
+    fn query_cache_clears_across_writes_rekey_rollback_and_clear() {
+        use crate::database::types::{Database, View, ViewKind};
+
+        let path = temp_vault();
+        let mut s = Session::create_open(&path).unwrap();
+        let db_id = new_id();
+        let view_id = new_id();
+        let mut db = Database::new(db_id.clone(), new_id(), "Cache DB".into(), 0);
+        db.views = vec![View { id: view_id.clone(), name: "Table".into(), kind: ViewKind::Table, ..View::default() }];
+        s.put(Item::Database(db.clone())).unwrap();
+
+        let seed_cache = |session: &Session| -> String {
+            let mut cache = session.query_cache.borrow_mut();
+            let entry = cache.query(session.items(), &db, &view_id, db.views[0].clone(), (1000, 0));
+            entry.metadata(&db, "").generation
+        };
+
+        let gen1 = seed_cache(&s);
+        let p = page("new-page");
+        let pid = p.id().to_string();
+        s.put_many(vec![p]).unwrap();
+        assert!(s.query_cache.borrow_mut().get(&db_id, &view_id, &gen1).is_none(), "put_many must clear query_cache");
+
+        let gen2 = seed_cache(&s);
+        s.remove_many(&[pid]).unwrap();
+        assert!(s.query_cache.borrow_mut().get(&db_id, &view_id, &gen2).is_none(), "remove_many must clear query_cache");
+
+        let gen3 = seed_cache(&s);
+        s.make_protected("Secret-Pass-1", None, FAST).unwrap();
+        assert!(s.query_cache.borrow_mut().get(&db_id, &view_id, &gen3).is_none(), "rekey must clear query_cache");
+
+        let gen4 = seed_cache(&s);
+        let err = s.atomic_action(false, |sess| {
+            sess.put(page("rolled-back"))?;
+            Err::<(), Error>(Error::invalid("forced rollback"))
+        });
+        assert!(err.is_err());
+        assert!(s.query_cache.borrow_mut().get(&db_id, &view_id, &gen4).is_none(), "atomic_action rollback must clear query_cache");
+
+        let gen5 = seed_cache(&s);
+        s.clear_query_cache();
+        assert!(s.query_cache.borrow_mut().get(&db_id, &view_id, &gen5).is_none(), "clear_query_cache must invalidate");
     }
 }

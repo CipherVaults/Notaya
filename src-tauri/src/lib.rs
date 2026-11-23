@@ -274,6 +274,7 @@ pub fn run() {
             database_cmd::get_database,
             database_cmd::save_database,
             database_cmd::query_view,
+            database_cmd::view_rows,
             database_cmd::create_row,
             database_cmd::set_cells,
             database_cmd::press_button,

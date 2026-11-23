@@ -8,13 +8,12 @@ use std::rc::Rc;
 
 use serde::Serialize;
 use serde_json::{json, Map, Value};
+use zeroize::Zeroize;
 
 use super::formula;
 use super::types::*;
 use super::value::*;
 use crate::model::Item;
-
-const MAX_ROWS_OUT: usize = 50_000;
 
 /// Everything a query needs: the databases and their (not trashed) rows, the clock and the
 /// caches. Built from the vault's items for one call and then dropped.
@@ -667,12 +666,23 @@ impl<'a> Ctx<'a> {
 
     /// Runs a view: filter, sort, group, calculations.
     pub fn run_view(&self, db: &Database, view: &View) -> ViewResult {
+        self.run_view_with_limit(db, view, MAX_ROWS_PER_DATABASE)
+    }
+
+    // The frozen large fixture includes truncated groups and footers. It checks
+    // the engine with the historical limit at the same point in the pipeline.
+    #[cfg(test)]
+    pub(crate) fn run_view_with_old_limit(&self, db: &Database, view: &View) -> ViewResult {
+        self.run_view_with_limit(db, view, 50_000)
+    }
+
+    fn run_view_with_limit(&self, db: &Database, view: &View, limit: usize) -> ViewResult {
         let all = self.rows_of(&db.id);
         let filtered: Vec<&Row> = all.iter().copied().filter(|r| view.filter.is_empty() || self.matches(db, r, &view.filter)).collect();
-        let sorted = self.sorted(db, filtered, &view.sorts);
+        let mut sorted = self.sorted(db, filtered, &view.sorts);
         let total = all.len();
-        let truncated = sorted.len() > MAX_ROWS_OUT;
-        let sorted: Vec<&Row> = sorted.into_iter().take(MAX_ROWS_OUT).collect();
+        let truncated = sorted.len() > limit;
+        sorted.truncate(limit);
         let rows: Vec<RowOut> = sorted.iter().map(|r| self.row_out(db, r)).collect();
         let calcs = self.footer(db, &view.calcs, &sorted);
         let groups = view.group.as_ref().map(|g| {
@@ -778,4 +788,92 @@ pub struct ViewResult {
     pub truncated: bool,
     pub groups: Option<Vec<GroupOut>>,
     pub calcs: Map<String, Value>,
+}
+
+pub(crate) fn zeroize_json_value(v: &mut Value) {
+    match v {
+        Value::Null => {}
+        Value::Bool(_) | Value::Number(_) => {
+            *v = Value::Null;
+        }
+        Value::String(s) => {
+            s.zeroize();
+            *v = Value::Null;
+        }
+        Value::Array(items) => {
+            for item in items.iter_mut() {
+                zeroize_json_value(item);
+            }
+            items.clear();
+            *v = Value::Null;
+        }
+        Value::Object(map) => {
+            zeroize_json_map(map);
+            *v = Value::Null;
+        }
+    }
+}
+
+pub(crate) fn zeroize_json_map(map: &mut Map<String, Value>) {
+    for (mut k, mut v) in std::mem::take(map) {
+        k.zeroize();
+        zeroize_json_value(&mut v);
+    }
+}
+
+impl Zeroize for RowOut {
+    fn zeroize(&mut self) {
+        self.id.zeroize();
+        self.title.zeroize();
+        self.icon.zeroize();
+        self.number.zeroize();
+        self.created.zeroize();
+        self.updated.zeroize();
+        self.favorite.zeroize();
+        zeroize_json_map(&mut self.values);
+    }
+}
+
+impl Drop for RowOut {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl Zeroize for GroupOut {
+    fn zeroize(&mut self) {
+        self.key.zeroize();
+        self.label.zeroize();
+        self.color.zeroize();
+        self.count.zeroize();
+        self.rows.zeroize();
+        self.subs.zeroize();
+        zeroize_json_map(&mut self.calcs);
+    }
+}
+
+impl Drop for GroupOut {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl Zeroize for ViewResult {
+    fn zeroize(&mut self) {
+        self.rows.zeroize();
+        self.total.zeroize();
+        self.filtered.zeroize();
+        self.truncated.zeroize();
+        if let Some(groups) = &mut self.groups {
+            groups.zeroize();
+        }
+        self.groups = None;
+        zeroize_json_map(&mut self.calcs);
+    }
+}
+
+impl Drop for ViewResult {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
 }
