@@ -41,6 +41,9 @@ pub struct Session {
     vault_id: [u8; 16],
     store: Store,
     items: HashMap<String, Item>,
+    // An opened vault may predate hierarchy validation. Check its full graph
+    // before the first write, then only consider edges changed by later writes.
+    hierarchy_validated: bool,
     // Dropped with the session. Interior mutability is serialized by AppState's
     // session mutex, alongside item reads, writes and session replacement.
     pub(crate) query_cache: std::cell::RefCell<crate::database::windows::QueryCache>,
@@ -133,6 +136,7 @@ impl Session {
         };
         self.store.rollback_action();
         self.clear_query_cache();
+        self.hierarchy_validated = false;
         (self.items, self.dirty, self.hourly_due, self.revs, self.pending,
             self.coordination, self.actor, self.ai_writers, self.replacement,
             self.history_index, self.change_set, self.request_ai, self.action_name,
@@ -169,6 +173,7 @@ impl Session {
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
+            hierarchy_validated: true,
             open: false,
             dirty: true,
             hourly_due: true,
@@ -189,6 +194,7 @@ impl Session {
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
+            hierarchy_validated: true,
             open: true,
             dirty: true,
             hourly_due: true,
@@ -223,6 +229,7 @@ impl Session {
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
+            hierarchy_validated: true,
             open,
             dirty: true,
             hourly_due: true,
@@ -320,7 +327,7 @@ impl Session {
         }
         store.ensure_journal_tables()?;
         let mut session = Session { native_session_id: crypto::random_bytes(), format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
+            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false, hierarchy_validated: false };
         session.load_history()?;
         session.load_activity_head()?;
         session.load_anchor()?;
@@ -409,6 +416,7 @@ impl Session {
                 self.coordination.check(&actor, |other| self.is_within(parent, other))?;
             }
         }
+        self.validate_hierarchy(&items)?;
         let replacing = self.replacement.as_ref().is_some_and(|r| items.iter().any(|i| i.id() == r.id));
         if replacing {
             let mut settings = self.settings();
@@ -471,6 +479,7 @@ impl Session {
             self.record_change(&item, &actor);
             self.items.insert(item.id().to_string(), item);
         }
+        self.hierarchy_validated = true;
         if replacing { self.replacement = None; }
         self.changed();
         Ok(())
@@ -561,6 +570,7 @@ impl Session {
             self.note_change(&item, &actor);
             self.items.insert(item.id().into(), item);
         }
+        self.hierarchy_validated = false;
         self.changed();
         Ok(())
     }
@@ -586,6 +596,39 @@ impl Session {
             Item::Database(x) => Some(if x.parent.is_empty() { &x.section_id } else { &x.parent }),
             Item::Row(x) => Some(&x.db), _ => None,
         }
+    }
+
+    fn validate_hierarchy(&self, items: &[Item]) -> Result<()> {
+        use std::collections::hash_map::Entry;
+
+        let proposed: HashMap<_, _> = items.iter().filter_map(|item| {
+            let id = item.id();
+            let parent = Self::parent_of(item);
+            (parent != self.get(id).and_then(Self::parent_of)).then_some((id, parent))
+        }).collect();
+        let existing = (!self.hierarchy_validated).then_some(self.items.keys());
+        let roots = proposed.keys().copied().chain(existing.into_iter().flatten().map(String::as_str));
+
+        // An unchanged graph cannot acquire a cycle. Every new cycle must
+        // include a changed edge, and each walk can reuse earlier walks.
+        let mut visited = HashMap::new();
+        for (walk, root) in roots.enumerate() {
+            let mut current = Some(root);
+            while let Some(id) = current {
+                match visited.entry(id) {
+                    Entry::Occupied(entry) if *entry.get() == walk => {
+                        return Err(Error::invalid("An item cannot be contained in its own descendants."));
+                    }
+                    Entry::Occupied(_) => break,
+                    Entry::Vacant(entry) => {
+                        entry.insert(walk);
+                        current = proposed.get(id).copied()
+                            .unwrap_or_else(|| self.get(id).and_then(Self::parent_of));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Authorize both existing locations and the actual prospective ancestry.
@@ -1158,6 +1201,50 @@ mod tests {
             created: now_ms(),
             updated: now_ms(),
         })
+    }
+
+    #[test]
+    fn person_put_many_rejects_mixed_hierarchy_cycles_atomically() {
+        use crate::database::types::{Database, Row};
+
+        let path = temp_vault();
+        let mut session = Session::create_open(&path).unwrap();
+        let mut first = page("First page");
+        let second = page("Second page");
+        let first_id = first.id().to_string();
+        session.put(first.clone()).unwrap();
+
+        let records = |s: &Session| -> HashMap<_, _> {
+            s.store.all(Table::Records).unwrap().into_iter().collect()
+        };
+        let before = records(&session);
+        let Item::Page(first_page) = &mut first else { unreachable!() };
+        first_page.parent = second.id().to_string();
+        let Item::Page(mut second) = second else { unreachable!() };
+        second.parent.clone_from(&first_id);
+        let second_id = second.id.clone();
+        let attempt = session.run_as(&Actor::Person, |s| s.put_many(vec![first, Item::Page(second)]));
+        assert!(matches!(attempt, Err(Error::Invalid(_))));
+        assert!(matches!(session.get(&first_id), Some(Item::Page(p)) if p.parent.is_empty()));
+        assert!(session.get(&second_id).is_none());
+        assert_eq!(records(&session), before);
+
+        let Item::Page(mut child) = page("Child page") else { unreachable!() };
+        let mut db = Database::new(new_id(), child.section_id.clone(), "Trial database".into(), 1);
+        let row = Row::new(new_id(), &db.id, "Trial row".into(), 1);
+        child.parent.clone_from(&row.id);
+        db.parent.clone_from(&child.id);
+        let (db_id, row_id, child_id) = (db.id.clone(), row.id.clone(), child.id.clone());
+        let attempt = session.run_as(&Actor::Person, |s| {
+            s.put_many(vec![Item::Database(db), Item::Row(row), Item::Page(child)])
+        });
+        assert!(matches!(attempt, Err(Error::Invalid(_))));
+        for id in [db_id, row_id, child_id] {
+            assert!(session.get(&id).is_none());
+        }
+        assert_eq!(records(&session), before);
+        drop(session);
+        assert_eq!(records(&Session::unlock_open(&path).unwrap()), before);
     }
 
     fn sticky(text: &str) -> Item {

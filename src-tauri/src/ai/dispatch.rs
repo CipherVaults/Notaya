@@ -676,7 +676,7 @@ fn doc(p: &Value) -> Result<Value> {
         return Ok(v);
     }
     use crate::importers::{self, source::Vfs, Control, Images};
-    let vfs = Vfs::from_files(&[]).map_err(|_| invalid())?;
+    let vfs = Vfs::empty();
     let ctl = Control::new(std::time::Duration::from_secs(10), Default::default());
     let mut images = Images::default();
     let mut problems = vec![];

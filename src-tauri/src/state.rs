@@ -43,8 +43,53 @@ fn open_backup_timing() -> (Duration, Duration, u64) {
     }
 }
 
-/// How long a lock waits for the windows to save their pending edits.
+/// How long a lock waits for window acknowledgements once the session is ready.
 const FLUSH_TIMEOUT: Duration = Duration::from_secs(2);
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum SessionPhase {
+    #[default]
+    Running,
+    Draining,
+    Flushing,
+    Sealed,
+}
+
+#[derive(Default)]
+struct SessionAdmission {
+    phase: SessionPhase,
+    prior_saves: usize,
+    flush_saves: usize,
+}
+
+struct PendingSave<'a> {
+    state: &'a AppState,
+    during_flush: bool,
+}
+
+impl Drop for PendingSave<'_> {
+    fn drop(&mut self) {
+        let mut admission = guard(&self.state.admission);
+        let count = if self.during_flush {
+            &mut admission.flush_saves
+        } else {
+            &mut admission.prior_saves
+        };
+        *count -= 1;
+        if *count == 0 {
+            self.state.saves_cv.notify_all();
+        }
+    }
+}
+
+/// The lock thread owns this until it has detached the session.
+struct SessionDrain<'a>(&'a AppState);
+
+impl Drop for SessionDrain<'_> {
+    fn drop(&mut self) {
+        guard(&self.0.admission).phase = SessionPhase::Running;
+    }
+}
 
 struct Attempts {
     failures: u32,
@@ -125,6 +170,10 @@ pub struct AppState {
     change_sink: Mutex<Option<ChangeSink>>,
     changes: Mutex<ChangeQueue>,
     session: Mutex<Option<Session>>,
+    admission: Mutex<SessionAdmission>,
+    saves_cv: Condvar,
+    /// Serializes graceful drain, flush and session removal.
+    close_gate: Mutex<()>,
     attempts: Mutex<Attempts>,
     /// Labels of windows that have called `window_ready` (they listen for `vault-locking`).
     ready: Mutex<HashSet<String>>,
@@ -168,6 +217,9 @@ impl AppState {
             change_sink: Mutex::new(None),
             changes: Mutex::new(ChangeQueue::default()),
             session: Mutex::new(None),
+            admission: Mutex::new(SessionAdmission::default()),
+            saves_cv: Condvar::new(),
+            close_gate: Mutex::new(()),
             attempts: Mutex::new(Attempts { failures: 0, wait_until: None }),
             ready: Mutex::new(HashSet::new()),
             flush: Mutex::new(Flush::default()),
@@ -328,8 +380,69 @@ impl AppState {
         session.take()
     }
 
+    fn accepts_background(&self) -> bool {
+        guard(&self.admission).phase == SessionPhase::Running
+    }
+
+    fn background_session(&self) -> Result<MutexGuard<'_, Option<Session>>> {
+        if !self.accepts_background() {
+            return Err(Error::Locked);
+        }
+        let session = guard(&self.session);
+        // An operation already queued when shutdown began must also yield.
+        if !self.accepts_background() {
+            return Err(Error::Locked);
+        }
+        Ok(session)
+    }
+
+    fn register_save(&self) -> Result<PendingSave<'_>> {
+        let mut admission = guard(&self.admission);
+        if admission.phase == SessionPhase::Sealed {
+            return Err(Error::Locked);
+        }
+        let during_flush = admission.phase == SessionPhase::Flushing;
+        if during_flush {
+            admission.flush_saves += 1;
+        } else {
+            admission.prior_saves += 1;
+        }
+        Ok(PendingSave { state: self, during_flush })
+    }
+
+    fn advance_drain(&self, phase: SessionPhase) {
+        let mut admission = guard(&self.admission);
+        admission.phase = phase;
+        // New saves during the window round get a separate count. They can't
+        // keep postponing its start, and sealing admission still drains them.
+        while admission.prior_saves != 0
+            || (phase == SessionPhase::Sealed && admission.flush_saves != 0)
+        {
+            admission = self.saves_cv.wait(admission).unwrap_or_else(|e| e.into_inner());
+        }
+    }
+
+    /// Stops new background operations before waiting for the current session holder.
+    /// All admitted saves complete before the session is detached, even if a window doesn't ack.
+    fn close_after_flushing(&self, allow_open: bool, flush: impl FnOnce()) -> Option<Option<Session>> {
+        let _close = guard(&self.close_gate);
+        guard(&self.admission).phase = SessionPhase::Draining;
+        let _drain = SessionDrain(self);
+        {
+            let session = guard(&self.session);
+            if !allow_open && session.as_ref().is_some_and(Session::is_open) {
+                return None;
+            }
+        }
+        self.advance_drain(SessionPhase::Flushing);
+        flush();
+        // The window deadline never preempts a write Rust already admitted.
+        self.advance_drain(SessionPhase::Sealed);
+        Some(self.take_session())
+    }
+
     pub fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> {
-        match guard(&self.session).as_ref() {
+        match self.background_session()?.as_ref() {
             Some(s) => f(s),
             None => Err(Error::Locked),
         }
@@ -340,7 +453,26 @@ impl AppState {
     }
 
     pub fn with_actor<T>(&self, actor: &crate::actions::Actor, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
-        let mut session = guard(&self.session);
+        self.write_session(actor, None, f)
+    }
+
+    /// The editor and its flush hooks can save during a graceful drain.
+    pub(crate) fn with_save<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
+        let pending = self.register_save()?;
+        self.write_session(&crate::actions::Actor::Person, Some(pending), f)
+    }
+
+    fn write_session<T>(
+        &self,
+        actor: &crate::actions::Actor,
+        pending: Option<PendingSave<'_>>,
+        f: impl FnOnce(&mut Session) -> Result<T>,
+    ) -> Result<T> {
+        let mut session = if pending.is_some() {
+            guard(&self.session)
+        } else {
+            self.background_session()?
+        };
         let s = session.as_mut().ok_or(Error::Locked)?;
         let result = s.run_as(actor, f);
         // Some old cores perform several transactions. Publish durable partial writes even
@@ -356,6 +488,8 @@ impl AppState {
             queue.pending.push_back(ChangeDelivery { generation, changes: Some(changes), close });
         }
         drop(session);
+        // Event callbacks may themselves access or lock the vault.
+        drop(pending);
         self.dispatch_changes();
         result
     }
@@ -446,14 +580,20 @@ impl AppState {
 
 /// Emits `vault-locking` (payload: the round number, a `u64`) and waits until
 /// every ready window that still exists has answered with `flush_done` for that
-/// round, or until `timeout` passes. Does nothing when no window is expected to
+/// round, or until the deadline passes. Does nothing when no window is expected to
 /// answer.
 ///
 /// Never call this on the main (event-loop) thread: the windows' `flush_done`
 /// calls need that thread to be free.
-pub fn request_flush(app: &AppHandle, timeout: Duration) {
+fn request_flush(app: &AppHandle, for_close: bool) {
     let state = app.state::<AppState>();
+    if !for_close && !state.accepts_background() {
+        return;
+    }
     let _gate = guard(&state.flush_gate);
+    if !for_close && !state.accepts_background() {
+        return; // the closing thread will flush the windows
+    }
     if !state.is_unlocked() {
         return; // another lock already finished while we waited for the gate
     }
@@ -469,7 +609,7 @@ pub fn request_flush(app: &AppHandle, timeout: Duration) {
         guard(&state.flush).begin(ready.clone())
     };
     let _ = app.emit("vault-locking", round);
-    let deadline = Instant::now() + timeout;
+    let deadline = Instant::now() + FLUSH_TIMEOUT;
     let mut f = guard(&state.flush);
     while !f.is_done() {
         let Some(left) = deadline.checked_duration_since(Instant::now()) else {
@@ -507,7 +647,7 @@ fn hide_main(app: &AppHandle, state: &AppState, quit: bool) -> bool {
 /// Asks every window to write its pending edits, then waits (up to the usual lock time). Used before
 /// closing sticky notes without locking ("Close all"). Same rule as `request_flush`: not on the main thread.
 pub fn flush_windows(app: &AppHandle) {
-    request_flush(app, FLUSH_TIMEOUT);
+    request_flush(app, false);
 }
 
 /// Locks the vault: first lets every window save its pending edits (unless the
@@ -518,22 +658,31 @@ pub fn flush_windows(app: &AppHandle) {
 /// Waits for the windows, so call it only from a thread other than the main
 /// one (an `async` command, the monitor thread, the close handler's thread).
 ///
-/// Returns a backup warning for a close/quit dialog. Other failures go to the
-/// in-window queue, including when the drive holding the vault was removed.
-pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
+pub fn lock(app: &AppHandle, reason: &str) {
+    let _ = lock_with_notice(app, reason);
+}
+
+fn lock_with_notice(app: &AppHandle, reason: &str) -> Option<crate::native_confirm::NativePrompt> {
     let state = app.state::<AppState>();
     // A vault with security off never locks by itself or by a button. Only a quit and a
     // restore close it (they have to, to save and to swap the file).
-    if !matches!(reason, "quit" | "restore") && state.with(|s| Ok(s.is_open())).unwrap_or(false) {
-        return None;
-    }
-    // An import in progress stops at once: it must not go on reading and converting files for
-    // minutes after the notes were locked (it ends as a failure and adds nothing).
-    crate::commands::import_notes::cancel_running();
-    if reason != "drive-removed" {
-        request_flush(app, FLUSH_TIMEOUT);
-    }
-    let session = state.take_session();
+    let session = if reason == "drive-removed" {
+        if guard(&state.session).as_ref().is_some_and(Session::is_open) {
+            return None;
+        }
+        crate::commands::import_notes::cancel_running();
+        state.take_session()
+    } else {
+        let allow_open = matches!(reason, "quit" | "restore");
+        if allow_open {
+            crate::commands::import_notes::cancel_running();
+        }
+        state.close_after_flushing(allow_open, || {
+            // An import in progress must stop reading and converting files as the vault closes.
+            crate::commands::import_notes::cancel_running();
+            request_flush(app, true);
+        })?
+    };
     if session.is_some() {
         crate::logging::locked_event(reason);
     }
@@ -550,7 +699,10 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     let made = session.as_ref().filter(|s| s.dirty).map(|s| backup::make_backup(&state.paths, s));
     let backup_failure = if let Some(Err(e)) = made {
         if reason == "quit" {
-            close_backup_failure(app, &state, &e)
+            close_backup_failure(app, &state, &e).map(|text| {
+                let appearance = session.as_ref().map(|s| s.settings().into());
+                crate::native_confirm::NativePrompt::backup_failure(text, appearance)
+            })
         } else {
             report_backup_failure(app, &state, &e);
             None
@@ -572,11 +724,9 @@ pub fn quit(app: &AppHandle) -> bool {
     if !state.begin_quit() {
         return true;
     }
-    let appearance = state.with(|s| Ok(s.settings().into())).ok();
     // Whatever fails or panics here, the exit must still happen.
-    let backup_failure = catch_unwind(AssertUnwindSafe(|| lock(app, "quit"))).ok().flatten();
-    if let Some(text) = backup_failure.filter(|_| state.paths.vault.exists()) {
-        let prompt = crate::native_confirm::NativePrompt::backup_failure(text, appearance);
+    let backup_failure = catch_unwind(AssertUnwindSafe(|| lock_with_notice(app, "quit"))).ok().flatten();
+    if let Some(prompt) = backup_failure.filter(|_| state.paths.vault.exists()) {
         let _ = catch_unwind(AssertUnwindSafe(|| state.ai.native.show_notice(prompt)));
     }
     app.exit(0);
@@ -597,7 +747,7 @@ pub fn hide_to_tray(app: &AppHandle) {
         if protected {
             lock(app, "tray");
         } else {
-            request_flush(app, FLUSH_TIMEOUT);
+            flush_windows(app);
             hide_main(app, &state, false);
             backup_open_vault(app, &state);
         }
@@ -768,6 +918,120 @@ mod tests {
 
     fn labels(l: &[&str]) -> HashSet<String> {
         l.iter().map(|s| s.to_string()).collect()
+    }
+
+    fn wait_for_admission(state: &AppState, reached: impl Fn(&SessionAdmission) -> bool) {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !reached(&guard(&state.admission)) {
+            assert!(Instant::now() < deadline, "session admission did not reach the expected state");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    #[test]
+    fn shutdown_drains_a_long_vault_operation_before_flushing_a_pending_editor_save() {
+        use crate::{actions::Actor, model::Item};
+        use std::sync::mpsc;
+
+        let (session, paths) = crate::changes::tests::fixture();
+        let page_id = session.items().find(|item| matches!(item, Item::Page(_))).unwrap().id().to_owned();
+        let base = session.rev(&page_id);
+        let state = AppState::new(paths);
+        state.set_session(session);
+        let (holding, held) = mpsc::channel();
+        let (release, released) = mpsc::channel();
+        let (emitting, emitted) = mpsc::channel();
+        let limit = Duration::from_secs(5);
+
+        std::thread::scope(|threads| {
+            let state_ref = &state;
+            let page = &page_id;
+            let long_op = threads.spawn(move || state_ref.with_mut(|_| {
+                holding.send(()).unwrap();
+                released.recv_timeout(limit).unwrap();
+                Ok(())
+            }));
+            held.recv_timeout(limit).unwrap();
+
+            let save = threads.spawn(move || state_ref.with_save(|s| s.person_save(page, Some(base), |s| {
+                crate::commands::notes::save_page_core(
+                    s, &Actor::Person, page.to_owned(), "Saved draft".into(),
+                    String::new(), "Edited while busy".into(),
+                )?;
+                Ok(())
+            })));
+            wait_for_admission(&state, |a| a.prior_saves == 1);
+            let close = threads.spawn(move || state_ref.close_after_flushing(false, || {
+                let session = guard(&state_ref.session);
+                let Some(Item::Page(saved)) = session.as_ref().unwrap().get(page) else {
+                    panic!("missing saved page");
+                };
+                assert_eq!(saved.text, "Edited while busy", "save committed before the UI round");
+                emitting.send(()).unwrap();
+            }).unwrap().unwrap());
+            wait_for_admission(&state, |a| a.phase == SessionPhase::Draining);
+            assert!(matches!(state.with(|_| Ok(())), Err(Error::Locked)));
+            assert!(matches!(state.with_mut(|_| Ok(())), Err(Error::Locked)));
+            assert!(matches!(emitted.try_recv(), Err(mpsc::TryRecvError::Empty)));
+
+            release.send(()).unwrap();
+            emitted.recv_timeout(limit).unwrap();
+            long_op.join().unwrap().unwrap();
+            let detached = close.join().unwrap();
+            save.join().unwrap().unwrap();
+            let Some(Item::Page(saved)) = detached.get(&page_id) else { panic!("missing saved page") };
+            assert_eq!(saved.text, "Edited while busy");
+            drop(detached);
+            assert!(!state.is_unlocked());
+
+            let reopened = Session::unlock(&state.paths.vault, "throwaway", None).unwrap();
+            let Some(Item::Page(saved)) = reopened.get(&page_id) else { panic!("missing reopened page") };
+            assert_eq!(saved.text, "Edited while busy");
+        });
+    }
+
+    #[test]
+    fn a_save_admitted_during_flush_finishes_without_a_window_acknowledgement() {
+        use crate::{actions::Actor, model::Item};
+        use std::sync::mpsc;
+
+        let (session, paths) = crate::changes::tests::fixture();
+        let page_id = session.items().find(|item| matches!(item, Item::Page(_))).unwrap().id().to_owned();
+        let state = AppState::new(paths);
+        state.set_session(session);
+        let (run_save, may_save) = mpsc::channel();
+        let (admitted, registered) = mpsc::channel();
+        let (release, released) = mpsc::channel();
+        let limit = Duration::from_secs(5);
+
+        std::thread::scope(|threads| {
+            let state_ref = &state;
+            let page = &page_id;
+            let save = threads.spawn(move || {
+                may_save.recv_timeout(limit).unwrap();
+                let pending = state_ref.register_save().unwrap();
+                admitted.send(()).unwrap();
+                released.recv_timeout(limit).unwrap();
+                state_ref.write_session(&Actor::Person, Some(pending), |s| {
+                    let Item::Page(mut updated) = s.get(page).unwrap().clone() else { panic!("missing page") };
+                    updated.text = "Saved before the vault closed".into();
+                    s.put(Item::Page(updated))
+                })
+            });
+            let close = threads.spawn(move || state_ref.close_after_flushing(false, || {
+                run_save.send(()).unwrap();
+                registered.recv_timeout(limit).unwrap();
+                // The window stopped responding after Rust admitted its write.
+            }).unwrap().unwrap());
+            wait_for_admission(&state, |a| a.phase == SessionPhase::Sealed);
+            assert!(matches!(state.with_save(|_| Ok(())), Err(Error::Locked)));
+
+            release.send(()).unwrap();
+            let detached = close.join().unwrap();
+            save.join().unwrap().unwrap();
+            let Some(Item::Page(saved)) = detached.get(&page_id) else { panic!("missing saved page") };
+            assert_eq!(saved.text, "Saved before the vault closed");
+        });
     }
 
     #[test]

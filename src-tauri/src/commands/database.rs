@@ -598,7 +598,7 @@ pub fn save_database(state: State<'_, AppState>, database_json: String, base_rev
     if database_json.len() > 30_000_000 { return Err(Error::invalid("This database definition is too large.")); }
     let incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
     let id = incoming.id.clone();
-    state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
+    state.with_save(|s| s.person_save(&id.clone(), base_rev, |s| {
         let db = save_database_core(s, &Actor::Person, database_json)?;
         Ok(s.revisioned(&id, db))
     }))
@@ -884,7 +884,7 @@ fn set_cells_person(state: &AppState, row_id: String, title: Option<String>, pat
     }
     let given = parse_given(&patch)?;
     let _ = &given;
-    state.with_mut(|s| set_cells_core(s, &Actor::Person, row_id, title, patch))
+    state.with_save(|s| set_cells_core(s, &Actor::Person, row_id, title, patch))
 }
 
 pub(crate) fn set_cells_core(

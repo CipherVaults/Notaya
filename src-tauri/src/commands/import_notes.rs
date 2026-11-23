@@ -194,7 +194,7 @@ pub fn import_from_with<V: VaultAccess>(
         ctl.progress(ImportPhase::ReadingSource, 0, 0);
         plan::check(ctl).map_err(Error::invalid)?;
         let mut pictures = vault.with(|s| Ok(ImportPictures::new(s)))?;
-        let mut vfs = if folder { Vfs::from_folder(&paths[0]) } else { Vfs::from_files(paths) }.map_err(Error::invalid)?;
+        let mut vfs = if folder { Vfs::from_folder(&paths[0]) } else { Vfs::from_files(paths, ctl) }.map_err(Error::invalid)?;
         // A picture is never read from Notaya's own data folder, whatever a document points at.
         vfs.protect(&crate::export::resolve(data_dir));
         let mut plan = plan::build(&vfs, ctl, hint.as_deref(), now).map_err(Error::invalid)?;
@@ -216,7 +216,7 @@ pub fn import_from_with<V: VaultAccess>(
         let (mut items, mut summary) = plan.items(ctl, &urls, now, order, &made.row_targets).map_err(Error::invalid)?;
         if made.databases > 0 {
             let gone = made.move_bodies(&mut items, ctl)?;
-            drop_row_pages(&mut items, &gone, &plan.generated_page_ids());
+            drop_row_pages(&mut items, &gone, &plan.generated_page_ids(), &made.items);
             summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
         }
         summary.notes.extend(table_notes);
@@ -285,7 +285,12 @@ pub fn import_from_with<V: VaultAccess>(
 
 /// Takes out the pages explicitly moved into rows, then only empty generated folder parents.
 /// An empty source document is still a genuine page and must survive ancestor cleanup.
-fn drop_row_pages(items: &mut Vec<Item>, gone: &std::collections::HashSet<String>, generated: &std::collections::HashSet<String>) {
+fn drop_row_pages(
+    items: &mut Vec<Item>,
+    gone: &std::collections::HashSet<String>,
+    generated: &std::collections::HashSet<String>,
+    databases: &[Item],
+) {
     use std::collections::HashSet;
     let mut held: HashSet<String> = items
         .iter()
@@ -296,11 +301,15 @@ fn drop_row_pages(items: &mut Vec<Item>, gone: &std::collections::HashSet<String
         .collect();
     items.retain(|i| !matches!(i, Item::Page(p) if gone.contains(&p.id)));
     for _ in 0..8 {
-        let parents: HashSet<String> = items.iter().filter_map(|i| if let Item::Page(p) = i { Some(p.parent.clone()) } else { None }).filter(|p| !p.is_empty()).collect();
+        let parents: HashSet<_> = items.iter().chain(databases).filter_map(|item| match item {
+            Item::Page(p) => Some(p.parent.as_str()),
+            Item::Database(db) => Some(db.parent.as_str()),
+            _ => None,
+        }).filter(|p| !p.is_empty()).collect();
         let empty: HashSet<String> = items
             .iter()
             .filter_map(|i| match i {
-                Item::Page(p) if generated.contains(&p.id) && held.contains(&p.id) && p.text.trim().is_empty() && !parents.contains(&p.id) => Some(p.id.clone()),
+                Item::Page(p) if generated.contains(&p.id) && held.contains(&p.id) && p.text.trim().is_empty() && !parents.contains(p.id.as_str()) => Some(p.id.clone()),
                 _ => None,
             })
             .collect();
@@ -446,6 +455,71 @@ mod tests {
         assert!(!summary.skipped.iter().any(|k| k.item.ends_with(".csv")), "{:?}", summary.skipped);
         assert!(summary.notes.iter().any(|n| n.contains("Database \"Projects\": 3 rows")), "{:?}", summary.notes);
         assert!(!pages(&v).is_empty());
+    }
+
+    #[test]
+    fn a_database_home_below_its_own_row_stays_reachable_after_import() {
+        const TABLE: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        const ROW: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        const ANCHOR: &str = "cccccccccccccccccccccccccccccccc";
+
+        for has_ancestor in [false, true] {
+            let root = temp();
+            let archive = root.join("fixture.zip");
+            let ancestor = format!("Trial shelf {ANCHOR}");
+            let prefix = if has_ancestor { format!("{ancestor}/") } else { String::new() };
+            let mut files: Vec<(String, &[u8])> = vec![
+                (format!("{prefix}Trial records {TABLE}_all.csv"), b"Name,Status\nTrial card,Open\n"),
+                (format!("{prefix}Trial card {ROW}.md"), b"# Trial card\n\nStatus: Open\n\nInvented row body.\n"),
+                (format!("{prefix}Trial card {ROW}/Trial records {TABLE}.md"), b"# Trial home\n\nInvented home body.\n"),
+            ];
+            if has_ancestor {
+                files.push((format!("{ancestor}.md"), b"# Trial shelf\n\nInvented ancestor body.\n"));
+            }
+            let entries: Vec<_> = files.iter().map(|(path, data)| (path.as_str(), *data)).collect();
+            std::fs::write(&archive, zip::build(&entries, true)).unwrap();
+            let data = root.join("data");
+            let v = vault(&data);
+            let summary = import_from_with(&v, &[archive], false, &data, 1, &Control::standard(), &|_| Ok(())).unwrap();
+            assert_eq!(summary.pages, if has_ancestor { 2 } else { 1 });
+            drop(v);
+            let session = Session::unlock_open(&data.join("vault.nota")).unwrap();
+
+            let db = session.items().find_map(|item| match item {
+                Item::Database(db) => Some(db),
+                _ => None,
+            }).expect("imported database");
+            let row = session.items().find_map(|item| match item {
+                Item::Row(row) => Some(row),
+                _ => None,
+            }).expect("folded row");
+            let home = session.items().find_map(|item| match item {
+                Item::Page(page) if page.title == "Trial home" => Some(page),
+                _ => None,
+            }).expect("retained home");
+            assert_eq!(row.db, db.id);
+            assert!(row.text.contains("Invented row body."));
+            assert_eq!(home.parent, row.id);
+            assert_eq!(home.section_id, db.section_id);
+            if has_ancestor {
+                assert!(matches!(session.get(&db.parent), Some(Item::Page(p)) if p.title == "Trial shelf"));
+            } else {
+                assert!(db.parent.is_empty());
+            }
+            for start in [home.id.as_str(), db.id.as_str()] {
+                let mut current = start;
+                let mut seen = std::collections::HashSet::new();
+                loop {
+                    assert!(seen.insert(current), "imported parent cycle");
+                    let item = session.get(current).expect("reachable parent");
+                    if let Item::Section(section) = item {
+                        assert_eq!(section.id, db.section_id);
+                        break;
+                    }
+                    current = Session::parent_of(item).expect("section ancestor");
+                }
+            }
+        }
     }
 
     #[test]

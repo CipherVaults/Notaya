@@ -257,8 +257,19 @@ impl Huffman {
 /// Decodes raw DEFLATE data. Refuses to produce more than `max_out` bytes (a guard against
 /// pictures that would expand without limit).
 pub fn inflate_raw(data: &[u8], max_out: usize) -> Result<Vec<u8>> {
+    inflate_raw_into(data, max_out, Vec::new())
+}
+
+/// A ZIP entry supplies a checked output size. Reserve it exactly so growing the buffer
+/// cannot allocate past the entry cap.
+pub(crate) fn inflate_raw_sized(data: &[u8], size: usize) -> Result<Vec<u8>> {
+    let mut out = Vec::new();
+    out.try_reserve_exact(size).map_err(|_| bad())?;
+    inflate_raw_into(data, size, out)
+}
+
+fn inflate_raw_into(data: &[u8], max_out: usize, mut out: Vec<u8>) -> Result<Vec<u8>> {
     let mut r = BitReader { data, pos: 0, acc: 0, n: 0 };
-    let mut out: Vec<u8> = Vec::new();
     loop {
         let last = r.bits(1)?;
         match r.bits(2)? {

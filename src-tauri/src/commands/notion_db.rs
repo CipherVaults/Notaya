@@ -22,6 +22,7 @@ use crate::importers::plan::{self, Plan, PlanPage, RowTarget};
 use crate::importers::source::Vfs;
 use crate::importers::{notion_source_id, percent_decode, strip_notion_id, Control, ImportPhase};
 use crate::model::{new_id, Item, SourceTag};
+use crate::vault::Session;
 
 const MAX_DATABASES: usize = 200;
 const MAX_IDLESS_COMPARISON: u64 = 16 * 1024 * 1024;
@@ -48,6 +49,7 @@ pub struct Imported {
     pub row_targets: HashMap<String, RowTarget>,
     row_indexes: HashMap<String, usize>,
     header_indexes: HashMap<String, usize>,
+    parent_candidates: Vec<(usize, Vec<String>)>,
     pub covered: Vec<String>,
     pub notes: Vec<String>,
     pub databases: usize,
@@ -195,16 +197,22 @@ pub fn read_tables(vfs: &Vfs, plan: &Plan, ctl: &Control) -> Result<(Vec<NotionT
         let (_, base) = split_dir(&key);
         let title: String = strip_notion_id(base).chars().filter(|c| !c.is_control()).take(MAX_NAME).collect();
         let title = if title.trim().is_empty() { "Imported table".to_string() } else { title };
-        let read_table = |path| vfs.read(path, csv::MAX_BYTES).and_then(|b| csv::parse(&csv::decode(&b)));
+        let parse_table = |bytes: Vec<u8>| csv::parse(&csv::decode(&bytes));
+        let read_table = |path| vfs.read(path, csv::MAX_BYTES).and_then(parse_table);
         let table = read_table(&path).or_else(|original| {
-            let Some(path) = alternate.get(&key) else { return Err(original) };
-            match read_table(path) {
-                Ok(table) => {
-                    notes.push(format!("The Markdown & CSV copy of \"{title}\" could not be read. The HTML export's CSV was used: {original}"));
-                    Ok(table)
+            let exact = || vfs.read_csv_fallback(&path, csv::MAX_BYTES).map(|data| data.and_then(parse_table));
+            let relocated = || alternate.get(&key).map(|path| read_table(path));
+            let mut error = original.clone();
+            for fallback in std::iter::once_with(exact).chain(std::iter::once_with(relocated)).flatten() {
+                match fallback {
+                    Ok(table) => {
+                        notes.push(format!("The Markdown & CSV copy of \"{title}\" could not be read. The HTML export's CSV was used: {original}"));
+                        return Ok(table);
+                    }
+                    Err(second) => error.push_str(&format!(" The HTML export's CSV also failed: {second}")),
                 }
-                Err(second) => Err(format!("{original} The HTML export's CSV also failed: {second}")),
             }
+            Err(error)
         });
         match table {
             Ok(table) => {
@@ -479,7 +487,7 @@ pub fn import_databases(
     now: i64,
     ctl: &Control,
 ) -> Result<Imported> {
-    let mut out = Imported { items: Vec::new(), row_targets: HashMap::new(), row_indexes: HashMap::new(), header_indexes: HashMap::new(), covered: Vec::new(), notes: Vec::new(), databases: 0 };
+    let mut out = Imported { items: Vec::new(), row_targets: HashMap::new(), row_indexes: HashMap::new(), header_indexes: HashMap::new(), parent_candidates: Vec::new(), covered: Vec::new(), notes: Vec::new(), databases: 0 };
     if tables.is_empty() {
         return Ok(out);
     }
@@ -708,15 +716,13 @@ pub fn import_databases(
     for (ti, m) in made.into_iter().enumerate() {
         check()?;
         if let Some(mut m) = m {
-            let mut parent = m.parent;
-            while let Some(index) = parent {
-                let page = &plan.pages[index];
-                if !page.generated && !out.row_targets.contains_key(&page.id) {
-                    m.built.db.parent = page.id.clone();
-                    break;
-                }
-                parent = page.parent;
-            }
+            // Save the source ancestry before rendering. Some pages will be
+            // skipped or become rows, so only the rendered graph can place the database.
+            let candidates: Vec<_> = std::iter::successors(m.parent, |&index| plan.pages[index].parent)
+                .map(|index| &plan.pages[index])
+                .filter(|page| !out.row_targets.contains_key(&page.id))
+                .map(|page| page.id.clone())
+                .collect();
             m.built.db.sanitize().map_err(|e| Error::invalid(e.to_string()))?;
             for (row, source) in m.built.rows.into_iter().zip(m.source_pages) {
                 if let Some(source) = source {
@@ -729,6 +735,9 @@ pub fn import_databases(
                 if owners == 1 {
                     out.header_indexes.insert(id.clone(), out.items.len());
                 }
+            }
+            if !candidates.is_empty() {
+                out.parent_candidates.push((out.items.len(), candidates));
             }
             out.items.push(Item::Database(m.built.db));
             out.databases += 1;
@@ -766,18 +775,7 @@ impl Imported {
                 removed.insert(page.id.clone());
             }
         }
-        let live_pages: HashMap<&str, &str> = items.iter().filter_map(|item| match item {
-            Item::Page(p) if !removed.contains(&p.id) => Some((p.id.as_str(), p.section_id.as_str())),
-            _ => None,
-        }).collect();
-        for item in &mut self.items {
-            if let Item::Database(db) = item {
-                match live_pages.get(db.parent.as_str()) {
-                    Some(section) => db.section_id = (*section).to_string(),
-                    None => db.parent.clear(),
-                }
-            }
-        }
+        self.place_database_parents(items, &removed, ctl)?;
         // A plain wrapper is optional. Preserve it when it has incoming links, children,
         // or text that cannot fit the database's existing description limit.
         for (id, index) in &self.header_indexes {
@@ -799,6 +797,58 @@ impl Imported {
             }
         }
         Ok(removed)
+    }
+
+    fn place_database_parents(&mut self, items: &[Item], removed: &HashSet<String>, ctl: &Control) -> Result<()> {
+        if self.parent_candidates.is_empty() {
+            return Ok(());
+        }
+        let mut placements = Vec::with_capacity(self.parent_candidates.len());
+        let mut parents = HashMap::new();
+        let mut page_sections = HashMap::new();
+        for item in items.iter().chain(&self.items) {
+            plan::check(ctl).map_err(Error::invalid)?;
+            if removed.contains(item.id()) {
+                continue;
+            }
+            if let Some(parent) = Session::parent_of(item) {
+                parents.insert(item.id(), parent);
+            }
+            if let Item::Page(page) = item {
+                page_sections.insert(page.id.as_str(), page.section_id.as_str());
+            }
+        }
+        // Initially every database is at its section root. Keep each placement
+        // only if it remains reachable, accounting for earlier placements and
+        // row-to-database edges as well as ordinary page parents.
+        for (index, candidates) in &self.parent_candidates {
+            let Item::Database(db) = &self.items[*index] else { unreachable!("database index") };
+            let section = db.section_id.as_str();
+            let mut selected = "";
+            for candidate in candidates.iter().map(String::as_str) {
+                if page_sections.get(candidate) != Some(&section) {
+                    continue;
+                }
+                let mut current = candidate;
+                let mut seen = HashSet::new();
+                while current != section && current != db.id && seen.insert(current) {
+                    plan::check(ctl).map_err(Error::invalid)?;
+                    let Some(&parent) = parents.get(current) else { break };
+                    current = parent;
+                }
+                if current == section {
+                    selected = candidate;
+                    parents.insert(&db.id, candidate);
+                    break;
+                }
+            }
+            placements.push((*index, selected));
+        }
+        for (index, parent) in placements {
+            let Item::Database(db) = &mut self.items[index] else { unreachable!("database index") };
+            db.parent = parent.to_string();
+        }
+        Ok(())
     }
 }
 

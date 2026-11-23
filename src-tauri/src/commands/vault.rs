@@ -545,15 +545,16 @@ pub(crate) fn get_settings_core(s: &Session, _actor: &Actor) -> Result<Settings>
 
 #[tauri::command(async)]
 pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> Result<Settings> {
-    let protect = save_settings_person(&state, settings)?;
+    let (protect, settings) = save_settings_person(&state, settings)?;
     ui::set_capture_protection(&app, protect);
-    get_settings(state)
+    Ok(settings)
 }
 
-fn save_settings_person(state: &AppState, settings: Settings) -> Result<bool> {
-    let settings = settings.sanitized();
-    // Keep sanitization before the session check, as in the original adapter.
-    state.with_mut(|s| save_settings_core(s, &Actor::Person, settings))
+fn save_settings_person(state: &AppState, settings: Settings) -> Result<(bool, Settings)> {
+    state.with_save(|s| {
+        let protect = save_settings_core(s, &Actor::Person, settings)?;
+        Ok((protect, get_settings_core(s, &Actor::Person)?))
+    })
 }
 
 pub(crate) fn save_settings_core(s: &mut Session, _actor: &Actor, settings: Settings) -> Result<bool> {
@@ -578,7 +579,7 @@ pub fn set_last_place(state: State<'_, AppState>, last_place: Option<LastPlace>)
 }
 
 fn set_last_place_person(state: &AppState, last_place: Option<LastPlace>) -> Result<()> {
-    state.with_mut(|s| set_last_place_core(s, &Actor::Person, last_place))
+    state.with_save(|s| set_last_place_core(s, &Actor::Person, last_place))
 }
 
 pub(crate) fn set_last_place_core(s: &mut Session, _actor: &Actor, last_place: Option<LastPlace>) -> Result<()> {
@@ -731,7 +732,10 @@ mod action_parity_tests {
         let input = || Settings { theme: "unknown".into(), calc_history: vec![], search_history: vec![], ..Settings::default() };
         compare(
             |state| save_settings_person(state, input()),
-            |s, _| save_settings_core(s, &Actor::Person, input()),
+            |s, _| {
+                let protect = save_settings_core(s, &Actor::Person, input())?;
+                Ok((protect, get_settings_core(s, &Actor::Person)?))
+            },
         );
     }
 

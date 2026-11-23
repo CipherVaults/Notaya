@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 158 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix four RC4 audit findings](#session-158) |
 | 157 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix RC4 deletion and close](#session-157) |
 | 156 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Recover a stalled startup retry](#session-156) |
 | 155 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Distinguish waiting from a startup error](#session-155) |
@@ -191,6 +192,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-158"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Fix four RC4 audit findings
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Codex coordinated and verified local work.
+
+**Models, Effort, Roles and Provenance:** Three workers covered hierarchy, archive and CSV handling, and shutdown. The external audit supplied the four findings. Exact model, effort, token totals and quota readings were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc4-wave3b).
+
+## 1. Time
+
+The checkout claim was recorded at 2026-11-23T23:25:39Z (system UTC). The owner's message timestamp was unavailable.
+
+## 2. Session Goal
+
+Resolve all four RC4 findings and deliver a verified local checkpoint from `cd89e79aa61c5f8b8b2284912e273470cab5ca3e`.
+
+## 3. Actions Taken
+
+Changed database placement, added the shared vault cycle check, bounded and accounted for ZIP reads, retained colliding HTML CSV copies, and ordered vault shutdown after admitted editor saves.
+
+## 4. Key Insights
+
+Row-to-database edges can reconnect what looks like a valid page parent to its own database. ZIP failures can consume processing even when no bytes are returned. An editor write can be queued in Rust after the window timeout starts.
+
+## 5. Decisions Made
+
+Use the first live ancestor with a complete path to the section. Limit each deflated buffer to 128 MiB. Begin the window deadline after the previous vault operation releases the session.
+
+## 6. Difficulties / Friction
+
+The requested checkout was linked to Git metadata in a directory excluded by the owner. The initial Node run loaded React twice because the command used a different directory casing from the file path returned by Windows.
+
+## 7. Adjustments Made
+
+Used standalone Git metadata for the RC checkout and preserved its prior link. Ran Node with the actual directory casing and kept dependencies in scratch.
+
+## 8. Mistakes / Risks
+
+The first bridge command used the requested path, which has no manifest in this checkout. The existing bridge manifest and an explicit throwaway home were used for the suite.
+
+## 9. Current Position
+
+The [execution summary](execution/2026-11-23-v1-6-rc4-wave3b.md) and the local receipt carry the result and verification scope.
+
+## 10. Next Steps
+
+Review the local candidate and verification receipt.
+
+## 11. Open Questions
+
+Owner acceptance and any partner PR review remain pending.
+
+## 12. Session Outcome
+
+The four fixes and their synthetic regressions are in the local RC checkpoint.
+
+## 13. Confidence Level
+
+The receipt distinguishes Rust persistence and ordering, mock browser checks, archive compatibility coverage, and measured native behavior.
+
+---
 
 <a id="session-157"></a>
 

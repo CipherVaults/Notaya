@@ -15,8 +15,10 @@ use std::io::{Read, Seek, SeekFrom};
 use std::sync::{Arc, Mutex};
 
 pub const MAX_ENTRIES: usize = 50_000;
-/// Largest single payload entry, as declared and as inflated.
-pub const MAX_ENTRY: u64 = 2 * 1024 * 1024 * 1024;
+/// Largest input or output buffer for an individual deflated entry.
+const MAX_ENTRY: u64 = 128 * 1024 * 1024;
+/// Stored payloads retain their prior limit. A stored export part can be larger because it is opened by range.
+const MAX_STORED_ENTRY: u64 = 2 * 1024 * 1024 * 1024;
 /// Deflated entries above this size must not be compressed more than `MAX_RATIO` to 1;
 /// sub-megabyte entries (256 KiB–1 MiB) also enforce `MAX_SMALL_RATIO` to 1, and a single
 /// archive's accepted entries are capped at `MAX_ARCHIVE_UNPACKED` declared bytes.
@@ -124,6 +126,7 @@ fn u64_at(b: &[u8], at: usize) -> Option<u64> {
 const NOT_ZIP: &str = "This is not a ZIP file, or it is damaged.";
 const SPLIT_ZIP: &str = "ZIP files split over several disks are not supported.";
 const DAMAGED_ENTRY: &str = "Damaged entry.";
+const CHECKSUM_CHUNK: usize = 64 * 1024;
 
 /// Notion wraps exports as `Part-N.zip` or `Export-…-Part-N.zip`.
 pub(super) fn is_export_part(path: &str) -> bool {
@@ -288,7 +291,9 @@ impl Archive {
                 Some("Encrypted entries are not supported.")
             } else if method != 0 && method != 8 {
                 Some("This compression method is not supported.")
-            } else if size > MAX_ENTRY && !(method == 0 && is_export_part(&name) && size <= MAX_ARCHIVE_UNPACKED) {
+            } else if method == 8 && size.max(comp_size) > MAX_ENTRY {
+                Some("A compressed ZIP entry is larger than 128 MiB.")
+            } else if method == 0 && size > MAX_STORED_ENTRY && !(is_export_part(&name) && size <= MAX_ARCHIVE_UNPACKED) {
                 Some("Too large.")
             } else if method == 8
                 && ((size > RATIO_FLOOR && size / comp_size.max(1) > MAX_RATIO)
@@ -317,21 +322,22 @@ impl Archive {
         self.entries.iter().position(|e| e.name == name)
     }
 
-    /// Inflates one entry. Refused if it is larger than `max`, or if the shared `budget`
-    /// (bytes still allowed for this import) would run out.
+    /// Inflates one entry. Both the declared output and the bytes read must fit the shared
+    /// budget. A failed read, decode or checksum still consumes its allowance.
     pub fn read(&self, index: usize, max: u64, budget: &Cell<u64>) -> Result<Vec<u8>, String> {
         let e = self.entries.get(index).ok_or("Missing entry.")?;
         if e.size > max {
             return Err("Too large.".into());
-        }
-        if e.size > budget.get() {
-            return Err("The import is too large in total (more than 4 GB of content).".into());
         }
         // Valid compressed data can be slightly larger than its output. Bound the allocation
         // independently of the output limit in case the directory declares an absurd input size.
         if e.comp_size > e.size.saturating_add(e.size / 8).saturating_add(64 * 1024) {
             return Err("Damaged entry (invalid compressed size).".into());
         }
+        let cost = e.size.max(e.comp_size);
+        let remaining = budget.get().checked_sub(cost)
+            .ok_or("The import is too large in total (more than 4 GB of content).")?;
+        budget.set(remaining);
         let source = self.entry_source(e)?;
         let out = if e.method == 0 {
             source.read(0, source.len).ok_or(DAMAGED_ENTRY)?
@@ -339,7 +345,7 @@ impl Archive {
             // The declared size is the limit, so a lying header cannot inflate further.
             let limit = usize::try_from(e.size).map_err(|_| "Too large.")?;
             let raw = source.bytes().ok_or(DAMAGED_ENTRY)?;
-            crate::export::deflate::inflate_raw(&raw, limit).map_err(|_| "Damaged or oversized entry.".to_string())?
+            crate::export::deflate::inflate_raw_sized(&raw, limit).map_err(|_| "Damaged or oversized entry.".to_string())?
         };
         if out.len() as u64 != e.size {
             return Err("Damaged entry (wrong size).".into());
@@ -347,7 +353,6 @@ impl Archive {
         if crc32(&out) != e.crc {
             return Err("Damaged entry (checksum mismatch).".into());
         }
-        budget.set(budget.get() - e.size);
         Ok(out)
     }
 
@@ -369,19 +374,27 @@ impl Archive {
         self.source.subrange(start, entry.comp_size).ok_or_else(|| DAMAGED_ENTRY.into())
     }
 
-    /// Containers do not spend the payload budget. Stored wrappers share their parent's backing,
-    /// and the caller separately bounds all wrapper I/O and the memory held by deflated wrappers.
-    pub(super) fn open_part(&self, index: usize, max_in_memory: u64) -> Result<(Archive, u64), String> {
+    /// Stored wrappers share their parent's backing and use the caller's wrapper I/O limit.
+    /// Deflated wrappers also spend the shared payload budget and count toward retained memory.
+    pub(super) fn open_part(
+        &self,
+        index: usize,
+        max_in_memory: u64,
+        budget: &Cell<u64>,
+        check: &dyn Fn() -> Result<(), String>,
+    ) -> Result<(Archive, u64), String> {
+        check()?;
         let e = self.entries.get(index).ok_or("Missing entry.")?;
         if e.method != 0 {
             if e.size > max_in_memory {
                 return Err("Compressed export parts exceed the memory allowance; choose the part ZIPs directly.".into());
             }
-            let bytes = self.read(index, max_in_memory, &Cell::new(max_in_memory))?;
+            let bytes = self.read(index, max_in_memory, budget)?;
+            check()?;
             return Ok((Self::open(bytes)?, e.size));
         }
         let source = self.entry_source(e)?;
-        let mut chunk = vec![0; 64 * 1024];
+        let mut chunk = vec![0; CHECKSUM_CHUNK];
         let mut offset = 0;
         let mut crc = u32::MAX;
         while offset < source.len {
@@ -389,6 +402,7 @@ impl Archive {
             source.read_exact(offset, &mut chunk[..n]).ok_or(DAMAGED_ENTRY)?;
             crc = update_crc32(crc, &chunk[..n]);
             offset += n as u64;
+            check()?;
         }
         if !crc != e.crc {
             return Err("Damaged entry (checksum mismatch).".into());
@@ -487,8 +501,9 @@ mod tests {
             let a = Archive::open(z).unwrap();
             assert_eq!(a.entries.len(), 2, "folders are not entries");
             let budget = Cell::new(1000);
-            assert_eq!(a.read(a.find("a/b.md").unwrap(), 100, &budget).unwrap(), b"# Hi");
-            assert_eq!(budget.get(), 996, "the budget is spent");
+            let i = a.find("a/b.md").unwrap();
+            assert_eq!(a.read(i, 100, &budget).unwrap(), b"# Hi");
+            assert_eq!(budget.get(), 1000 - a.entries[i].size.max(a.entries[i].comp_size));
             assert_eq!(a.read(a.find("c.txt").unwrap(), 5, &budget).unwrap_err(), "Too large.");
         }
     }
@@ -500,7 +515,8 @@ mod tests {
         let path = std::env::temp_dir().join(format!("notaya-zip-{}.zip", crate::model::new_id()));
         std::fs::write(&path, &outer).unwrap();
         let archive = Archive::open_file(File::open(&path).unwrap(), outer.len() as u64).unwrap();
-        let (part, memory) = archive.open_part(0, 0).unwrap();
+        let budget = Cell::new(0);
+        let (part, memory) = archive.open_part(0, 0, &budget, &|| Ok(())).unwrap();
         assert_eq!(memory, 0);
         assert!(Arc::ptr_eq(&archive.source.backing, &part.source.backing));
         assert_eq!(part.read(0, 100, &Cell::new(100)).unwrap(), b"# Example");
@@ -510,7 +526,86 @@ mod tests {
         let start = 30 + "Export-Part-1.zip".len();
         outer[start] ^= 0xff;
         let archive = Archive::open(outer).unwrap();
-        assert!(archive.open_part(0, 0).err().unwrap().contains("checksum"));
+        assert!(archive.open_part(0, 0, &budget, &|| Ok(())).err().unwrap().contains("checksum"));
+    }
+
+    #[test]
+    fn corrupt_deflated_part_spends_the_shared_budget() {
+        let inner = build(&[("Example.md", b"# Example")], false);
+        let part = "Part-1.zip";
+        let mut outer = build(&[(part, &inner)], true);
+        let directory = outer.len() - 22 - 46 - part.len();
+        outer[directory + 16] ^= 0xff;
+        let archive = Archive::open(outer).unwrap();
+        let entry = &archive.entries[0];
+        let budget = Cell::new(entry.size.max(entry.comp_size));
+        assert!(archive.open_part(0, MAX_ENTRY, &budget, &|| Ok(())).err().unwrap().contains("checksum"));
+        assert_eq!(budget.get(), 0);
+        assert!(archive.open_part(0, MAX_ENTRY, &budget, &|| Ok(())).err().unwrap().contains("too large in total"));
+    }
+
+    #[test]
+    fn stored_part_checksum_stops_at_the_next_cancellation_check() {
+        let bytes = vec![b'x'; 3 * CHECKSUM_CHUNK];
+        let inner = build(&[("Example.md", &bytes)], false);
+        let part = "Part-1.zip";
+        let outer = build(&[(part, &inner)], false);
+        let path = std::env::temp_dir().join(format!("notaya-zip-{}.zip", crate::model::new_id()));
+        std::fs::write(&path, &outer).unwrap();
+        let archive = Archive::open_file(File::open(&path).unwrap(), outer.len() as u64).unwrap();
+        let checks = Cell::new(0);
+        let check = || {
+            checks.set(checks.get() + 1);
+            if checks.get() == 2 { Err("Cancelled during scan".into()) } else { Ok(()) }
+        };
+        assert_eq!(archive.open_part(0, 0, &Cell::new(0), &check).err().as_deref(), Some("Cancelled during scan"));
+        assert_eq!(checks.get(), 2, "one check before reading and one after the first chunk");
+        let Backing::Disk(file) = archive.source.backing.as_ref() else { unreachable!() };
+        assert_eq!(file.lock().unwrap().stream_position().unwrap(), (30 + part.len() + CHECKSUM_CHUNK) as u64);
+        drop(archive);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn rejects_oversized_deflated_input_and_output_before_reading() {
+        let original = build(&[("Example.md", b"# Example")], true);
+        let directory = (original.len() - 22) - (46 + "Example.md".len());
+        for field in [20, 24] {
+            let mut bytes = original.clone();
+            bytes[directory + field..directory + field + 4].copy_from_slice(&(MAX_ENTRY as u32 + 1).to_le_bytes());
+            let archive = Archive::open(bytes).unwrap();
+            assert!(archive.entries.is_empty());
+            assert_eq!(archive.rejected.as_slice(), &[("Example.md".to_string(), "A compressed ZIP entry is larger than 128 MiB.".to_string())]);
+        }
+    }
+
+    #[test]
+    fn failed_deflated_reads_exhaust_the_shared_payload_budget() {
+        let original = build(&[("Example.md", b"# Example")], true);
+        let directory = (original.len() - 22) - (46 + "Example.md".len());
+        let compressed = u64::from(u32_at(&original, directory + 20).unwrap());
+        let declared = u64::from(u32_at(&original, directory + 24).unwrap());
+        let allowance = 2 * compressed.max(declared) + compressed.max(declared + 1);
+        let budget = Cell::new(allowance);
+
+        let mut wrong_crc = original.clone();
+        wrong_crc[directory + 16] ^= 0xff;
+        let mut wrong_length = original.clone();
+        wrong_length[directory + 24..directory + 28].copy_from_slice(&((declared + 1) as u32).to_le_bytes());
+        let mut bad_encoding = original;
+        bad_encoding[30 + "Example.md".len()] = 0xff;
+
+        let mut spent = 0;
+        for (bytes, expected) in [(wrong_crc, "checksum mismatch"), (wrong_length, "wrong size"), (bad_encoding, "Damaged or oversized")] {
+            let archive = Archive::open(bytes).unwrap();
+            spent += archive.entries[0].size.max(compressed);
+            assert!(archive.read(0, MAX_ENTRY, &budget).unwrap_err().contains(expected));
+            assert_eq!(budget.get(), allowance - spent);
+            if budget.get() == 0 {
+                assert!(archive.read(0, MAX_ENTRY, &budget).unwrap_err().contains("too large in total"));
+            }
+        }
+        assert_eq!(budget.get(), 0);
     }
 
     #[test]

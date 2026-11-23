@@ -1738,7 +1738,7 @@ mod tests {
             (&html_child, b"<h1>HTML Child</h1><p>Child only in HTML.</p>"),
             (&html_root_page, b"<h1>Loose Page</h1>"),
         ], true)).unwrap();
-        let v = Vfs::from_files(&[md_zip.clone(), html_zip.clone()]).unwrap();
+        let v = Vfs::from_files(&[md_zip.clone(), html_zip.clone()], &Control::standard()).unwrap();
         let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
         let home_index = plan.pages.iter().position(|page| page.title == "Home").unwrap();
         assert_eq!(plan.csv_parents.get(&csv), Some(&home_index));

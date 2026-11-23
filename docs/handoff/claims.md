@@ -1,5 +1,7 @@
 # Claim board
 
+**Local RC4 Wave 3B, Ahmed (AE0101), Gaming-PC.** Ahmed authorized the four audit fixes and isolated checks from `cd89e79aa61c5f8b8b2284912e273470cab5ca3e` on `AE0101/v1-6-rc`. The claim was recorded at 2026-11-23T23:25:39Z (system UTC). The owner's message timestamp was unavailable. Work ends at the local commit and verification receipt. [Resume note](2026-11-23-v1-6-rc4-wave3b-resume-note.md).
+
 **Local RC4 Wave 1 claim, 2026-11-23T21:52:07.8734720Z, Ahmed (AE0101), Gaming-PC.** Ahmed's direct request covers four RC3 defects and a bounded sibling sweep from `9e8c88734bd4dea4ffc9d55d477d3e4baa4d616f` on `AE0101/v1-6-rc`. Source and checks are isolated. Work stops at the local commit, verified bundle, designated checkout sync and receipt. [Resume note](2026-11-23-v1-6-rc4-wave1-resume-note.md).
 
 **Local RC3 stalled retry and squash, 2026-11-23 UTC, Ahmed (AE0101), Gaming-PC.** Ahmed authorized this follow-up at 2026-11-23T18:14:13.554Z from 7b4b687a4bc17e5f912bb7f5c98ab6d3868fde96 on AE0101/v1-6-rc. The scope is the startup watcher, retry button, focused tests and RC3 records in scratch, then one local commit directly on 0afaacf3072101b9ac46bc810abcd268dbc79e5f. Handoff ends with the verified bundle and checkout readback. [RC3 resume note](2026-11-23-v1-6-rc3-blackscreen-resume-note.md#stalled-automatic-retry).

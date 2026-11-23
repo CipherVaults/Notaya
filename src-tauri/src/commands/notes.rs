@@ -413,7 +413,7 @@ pub fn get_page_link_target(state: State<'_, AppState>, id: String) -> Result<Op
 
 #[tauri::command(async)]
 pub fn save_page(state: State<'_, AppState>, id: String, title: String, content: String, text: String, base_rev: Option<u64>) -> Result<crate::changes::Revisioned<PageMeta>> {
-    state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
+    state.with_save(|s| s.person_save(&id.clone(), base_rev, |s| {
         let meta = save_page_core(s, &Actor::Person, id.clone(), title, content, text)?;
         Ok(s.revisioned(&id, meta))
     }))

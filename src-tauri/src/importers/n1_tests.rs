@@ -22,7 +22,7 @@ fn finish(vfs: &Vfs, p: &mut plan::Plan) -> Vec<Item> {
     let mut made = notion_db::import_databases(&tables, &rows, p, 1, &ctl).unwrap();
     let (mut items, _) = p.items(&ctl, &[], 1, 0, &made.row_targets).unwrap();
     let gone = made.move_bodies(&mut items, &ctl).unwrap();
-    super::drop_row_pages(&mut items, &gone, &p.generated_page_ids());
+    super::drop_row_pages(&mut items, &gone, &p.generated_page_ids(), &made.items);
     items.extend(made.items);
     items
 }
@@ -120,7 +120,7 @@ fn combined_zip_keeps_one_database_and_uses_markdown_csv_values() {
         (&md_csv, b"Name\nCSV value\n"),
     ], true)).unwrap();
     for paths in [[html.clone(), markdown.clone()], [markdown, html]] {
-        let v = Vfs::from_files(&paths).unwrap();
+        let v = Vfs::from_files(&paths, &Control::standard()).unwrap();
         let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
         let items = finish(&v, &mut p);
         assert_eq!(items.iter().filter(|item| matches!(item, Item::Database(_))).count(), 1);
@@ -135,8 +135,8 @@ fn combined_zip_keeps_one_database_and_uses_markdown_csv_values() {
         (&md_home, b"# Overview"),
         (&md_csv, b"Name\n\"unclosed"),
     ], true)).unwrap();
-    let v = Vfs::from_files(&[html, markdown.clone()]).unwrap();
     let ctl = Control::standard();
+    let v = Vfs::from_files(&[html, markdown.clone()], &ctl).unwrap();
     let plan = plan::build(&v, &ctl, None, 1).unwrap();
     let (tables, _, notes) = notion_db::read_tables(&v, &plan, &ctl).unwrap();
     assert_eq!(tables.len(), 1);
@@ -150,10 +150,38 @@ fn combined_zip_keeps_one_database_and_uses_markdown_csv_values() {
         (&md_home, b"# Overview"),
         (&md_csv, b"Name\nCSV value\n"),
     ], true)).unwrap();
-    let v = Vfs::from_files(&[csv_only, markdown]).unwrap();
+    let v = Vfs::from_files(&[csv_only, markdown], &ctl).unwrap();
     let plan = plan::build(&v, &ctl, None, 1).unwrap();
     let (tables, _, _) = notion_db::read_tables(&v, &plan, &ctl).unwrap();
     assert_eq!(tables.len(), 2, "a CSV-only archive does not establish an HTML counterpart");
+}
+
+#[test]
+fn exact_csv_collision_imports_html_when_markdown_parse_or_checksum_fails_in_either_order() {
+    let csv = "Collection_all.csv";
+    let html = zip::build(&[
+        ("Overview.html", b"<h1>Overview</h1><p>Example body</p>"),
+        (csv, b"Name\nHTML value\n"),
+    ], true);
+    let bad_csv = zip::build(&[("Overview.md", b"# Overview"), (csv, b"Name\n\"unclosed")], true);
+    let mut bad_crc = zip::build(&[("Overview.md", b"# Overview"), (csv, b"Name\nMarkdown value\n")], true);
+    // The last central-directory entry describes the CSV.
+    let directory_entry = bad_crc.len() - 22 - 46 - csv.len();
+    bad_crc[directory_entry + 16] ^= 0xff;
+
+    for (markdown, reason) in [(bad_csv, "quoted value"), (bad_crc, "checksum mismatch")] {
+        let markdown = markdown.as_slice();
+        for picks in [[html.as_slice(), markdown], [markdown, html.as_slice()]] {
+            let (summary, items) = persist_archive_fixtures(&picks);
+            assert_eq!(items.iter().filter(|item| matches!(item, Item::Database(_))).count(), 1);
+            let rows: Vec<_> = items.iter().filter_map(|item| match item {
+                Item::Row(row) => Some(row.title.as_str()),
+                _ => None,
+            }).collect();
+            assert_eq!(rows, ["HTML value"]);
+            assert!(summary.notes.iter().any(|note| note.contains("HTML export's CSV was used") && note.contains(reason)));
+        }
+    }
 }
 
 #[test]
@@ -172,8 +200,8 @@ fn idless_csv_copies_pair_only_when_logical_path_and_bytes_agree() {
         (&format!("Export B {CARD}/Items.csv"), b"Name\nSame\n"),
         (&format!("Export B {CARD}/Different.csv"), b"Name\nMarkdown only\n"),
     ], true)).unwrap();
-    let v = Vfs::from_files(&[html, markdown]).unwrap();
     let ctl = Control::standard();
+    let v = Vfs::from_files(&[html, markdown], &ctl).unwrap();
     let plan = plan::build(&v, &ctl, None, 1).unwrap();
     let (tables, _, _) = notion_db::read_tables(&v, &plan, &ctl).unwrap();
     assert_eq!(tables.iter().filter(|t| t.title == "Items" && t.paths.len() == 2).count(), 1);
@@ -726,6 +754,11 @@ fn n2_conflicting_csv_names_warn_once_and_never_merge_by_name() {
 }
 
 fn persist_fixture(files: Vec<(String, Vec<u8>)>) -> (plan::ImportSummary, Vec<Item>) {
+    let refs: Vec<_> = files.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+    persist_archive_fixtures(&[&zip::build(&refs, false)])
+}
+
+fn persist_archive_fixtures(archives: &[&[u8]]) -> (plan::ImportSummary, Vec<Item>) {
     struct InventedVault(Mutex<Session>);
     impl VaultAccess for InventedVault {
         fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> { f(&self.0.lock().unwrap()) }
@@ -734,12 +767,19 @@ fn persist_fixture(files: Vec<(String, Vec<u8>)>) -> (plan::ImportSummary, Vec<I
     let root = std::env::temp_dir().join(format!("notaya-n2-invented-{}", crate::model::new_id()));
     let data = root.join("data");
     std::fs::create_dir_all(&data).unwrap();
-    let source = root.join("invented.zip");
-    let refs: Vec<_> = files.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
-    std::fs::write(&source, zip::build(&refs, false)).unwrap();
-    let vault = InventedVault(Mutex::new(Session::create_open(&data.join("vault.nota")).unwrap()));
-    let summary = super::import_from(&vault, &[source], false, &data, 1, &Control::standard()).unwrap();
-    let items = vault.with(|s| Ok(s.items().cloned().collect())).unwrap();
+    let paths: Vec<_> = archives.iter().enumerate().map(|(index, bytes)| {
+        let path = root.join(format!("pick-{index}.zip"));
+        std::fs::write(&path, bytes).unwrap();
+        path
+    }).collect();
+    let path = data.join("vault.nota");
+    let vault = InventedVault(Mutex::new(Session::create_open(&path).unwrap()));
+    let summary = super::import_from(&vault, &paths, false, &data, 1, &Control::standard()).unwrap();
+    drop(vault);
+    let reopened = Session::unlock_open(&path).unwrap();
+    let items = reopened.items().cloned().collect();
+    drop(reopened);
+    std::fs::remove_dir_all(root).unwrap();
     (summary, items)
 }
 
@@ -800,7 +840,7 @@ fn n1_private_count_probe() {
         let vf = if mode == "zip" {
             let mut paths = vec![source];
             if let Some(second) = std::env::var_os("N1_SOURCE_2") { paths.push(PathBuf::from(second)); }
-            Vfs::from_files(&paths)
+            Vfs::from_files(&paths, &ctl)
         } else { Vfs::from_folder(&source) };
         let v = match vf { Ok(v) => v, Err(e) => { println!("N1_COUNTS {}", json!({"error":error_kind(&e),"phase":"vfs","ms":start.elapsed().as_millis()})); return } };
         let mut extensions = BTreeMap::<String, usize>::new();
@@ -830,7 +870,7 @@ fn n1_private_count_probe() {
         let (mut items, summary) = p.items(&ctl, &urls, 1, 0, &made.row_targets).expect("render failed");
         let removed_pages = made.move_bodies(&mut items, &ctl).expect("move failed");
         let moved = removed_pages.len();
-        super::drop_row_pages(&mut items, &removed_pages, &p.generated_page_ids());
+    super::drop_row_pages(&mut items, &removed_pages, &p.generated_page_ids(), &made.items);
         let source_docs_removed = docs.iter().filter(|id| !removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
         let top_removed = top.iter().filter(|id| !removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
         items.extend(made.items);

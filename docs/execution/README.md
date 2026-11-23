@@ -1,5 +1,7 @@
 # Cipherleaf: execution index
 
+**2026-11-23, local RC4 Wave 3B.** The [execution summary](2026-11-23-v1-6-rc4-wave3b.md) records the four audit findings, remediation, and verification scope.
+
 **2026-11-23, local RC4 Wave 1** — [Execution summary](2026-11-23-v1-6-rc4-wave1.md) records the editor, confirmation, deletion, and close changes and their isolated checks.
 
 **Verified source recovery — 2026-11-16T09:18:04.7171869+00:00 / 2026-11-16 11:18:04 +02:00 Cairo:** [EX80 closure](2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-closure-20261116) records private drafts133/132, independent source/store recoveries, restored Main91b8aa4 helper22/npm/frontend/Rust check passes, retained failure/warnings and exact PC-only exclusions. The closing record-only tip needs its final remote readback; application/source trees stay at the tested snapshot. Full146/usage85 retain the at-cut history plus dated closure.

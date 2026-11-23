@@ -74,7 +74,7 @@ pub(crate) fn get_sticky_core(s: &Session, _actor: &Actor, id: String) -> Result
 
 #[tauri::command(async)]
 pub fn save_sticky(state: State<'_, AppState>, id: String, content: String, text: String, base_rev: Option<u64>) -> Result<u64> {
-    state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
+    state.with_save(|s| s.person_save(&id.clone(), base_rev, |s| {
         save_sticky_core(s, &Actor::Person, id.clone(), content, text)?;
         Ok(s.rev(&id))
     }))
@@ -322,7 +322,7 @@ fn set_sticky_geometry_person(state: &AppState, id: String, x: f64, y: f64, w: f
     if ![x, y, w, h].iter().all(|v| v.is_finite()) {
         return Ok(());
     }
-    state.with_mut(|s| set_sticky_geometry_core(s, &Actor::Person, id.clone(), x, y, w, h))
+    state.with_save(|s| set_sticky_geometry_core(s, &Actor::Person, id.clone(), x, y, w, h))
 }
 
 

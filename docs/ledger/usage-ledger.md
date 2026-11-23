@@ -1,5 +1,11 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261123-rc4-wave3b"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+Codex coordinated three scoped workers for hierarchy, archive and CSV handling, and shutdown. Exact model, effort, token totals and before/after quota readings were unavailable to the run. [Session 158](../sessions.md#session-158).
+
 <a id="codex-usage-20261123-rc4-wave1"></a>
 
 ## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
