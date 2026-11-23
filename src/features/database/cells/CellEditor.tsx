@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Popover } from "radix-ui";
+import { toast } from "sonner";
 import type { DateCell, DbRow, FileCell, PlaceCell, Property } from "@/lib/database-types";
 import { cn } from "@/lib/utils";
 import { isComputedKind } from "../model";
 import CellDisplay, { CheckBox } from "./CellDisplay";
 import { DateEditor } from "./DatePicker";
+import { decimalInput } from "./decimalInput";
 import { FilesPicker, OptionPicker, PersonPicker, PlacePicker, RelationPicker } from "./pickers";
 
 export interface EditableCellProps {
@@ -112,10 +114,11 @@ function TextInput({ prop, row, value, setEditing, commit, seed, onEnd }: Editab
   const start = (() => {
     if (seed !== undefined) return seed;
     if (prop.kind === "title") return row.title;
-    if (prop.kind === "number") return typeof value === "number" ? String(value) : "";
+    if (prop.kind === "number") return row.numberInput?.[prop.id] ?? (typeof value === "number" ? String(value) : "");
     return typeof value === "string" ? value : "";
   })();
   const [text, setText] = useState(start);
+  const [error, setError] = useState(false);
   const done = useRef(false);
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -129,12 +132,20 @@ function TextInput({ prop, row, value, setEditing, commit, seed, onEnd }: Editab
 
   const finish = (save: boolean, how: "enter" | "tab" | "blur" | "escape") => {
     if (done.current) return;
+    let token: string | null = null;
+    if (save && prop.kind === "number") {
+      try {
+        token = decimalInput(text);
+      } catch (e) {
+        if (!error && e instanceof Error) toast.error(e.message);
+        setError(true);
+        return;
+      }
+    }
     done.current = true;
     if (save) {
       if (prop.kind === "number") {
-        const t = text.trim().replace(/,/g, "");
-        if (t === "") commit(null);
-        else if (!Number.isNaN(Number(t))) commit(Number(t));
+        if (seed !== undefined || token !== (start || null)) commit(token);
       } else if (prop.kind === "title") {
         if (text !== row.title) commit(text);
       } else {
@@ -152,8 +163,12 @@ function TextInput({ prop, row, value, setEditing, commit, seed, onEnd }: Editab
       value={text}
       dir="auto"
       aria-label={prop.name}
+      aria-invalid={error || undefined}
       inputMode={prop.kind === "number" ? "decimal" : undefined}
-      onChange={(e) => setText(e.target.value)}
+      onChange={(e) => {
+        setText(e.target.value);
+        setError(false);
+      }}
       onClick={(e) => e.stopPropagation()}
       onBlur={() => finish(true, "blur")}
       onKeyDown={(e) => {

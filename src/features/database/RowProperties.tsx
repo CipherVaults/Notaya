@@ -49,7 +49,7 @@ export default function RowProperties({ dbId, rowId, title, readOnly }: Props) {
   const commit = useCallback(
     async (p: Property, value: unknown) => {
       setRow((r) => {
-        if (!r) return r;
+        if (!r || p.kind === "number") return r;
         const values = { ...r.values };
         if (value == null) delete values[p.id];
         else values[p.id] = value;

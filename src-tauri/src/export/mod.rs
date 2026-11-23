@@ -502,13 +502,9 @@ fn database_table(ctx: &Ctx<'_>, id: &str, view_id: &str) -> Option<doc::Databas
     for row in result.rows.iter().take(MAX_DATABASE_ROWS) {
         let r = ctx.by_id.get(row.id.as_str())?;
         rows.push(props.iter().map(|p| {
-            let text = match ctx.value(db, r, p) {
-                Ok(Val::Num(n)) => value::format_number(n, &p.number_format),
-                Ok(Val::Date(d)) => value::format_date(&d, &p.date_format),
-                Ok(Val::Bool(b)) => if b { "Yes" } else { "No" }.into(),
-                Ok(v) => v.text(),
-                Err(_) => "(value not available)".into(),
-            };
+            let text = ctx.value(db, r, p)
+                .and_then(|v| database_cell_text(&v, p))
+                .unwrap_or_else(|e| format!("Error: {e}"));
             cell(text, false)
         }).collect());
     }
@@ -520,6 +516,16 @@ fn database_table(ctx: &Ctx<'_>, id: &str, view_id: &str) -> Option<doc::Databas
         result.filtered
     };
     Some(doc::DatabaseTable { title: if db.title.is_empty() { "Untitled database".into() } else { db.title.clone() }, more: count.saturating_sub(MAX_DATABASE_ROWS), rows })
+}
+
+fn database_cell_text(v: &Val, p: &crate::database::types::Property) -> std::result::Result<String, String> {
+    match v {
+        Val::Num(n) => value::format_number(n, &p.number_format),
+        Val::Date(d) => Ok(value::format_date(d, &p.date_format)),
+        Val::Bool(b) => Ok(if *b { "Yes" } else { "No" }.into()),
+        Val::List(list) => Ok(list.iter().map(|v| database_cell_text(v, p)).collect::<std::result::Result<Vec<_>, _>>()?.join(", ")),
+        _ => Ok(v.text()),
+    }
 }
 
 /// Builds the document for an export. `attachment` reads one picture from the vault.
@@ -1118,6 +1124,29 @@ pub mod tests {
     fn cell_string(c: &Cell) -> String {
         let Block::Paragraph { content, .. } = &c.blocks[0] else { panic!("cell text") };
         doc::inline_text(content)
+    }
+
+    #[test]
+    fn embedded_export_formats_exact_currency_and_surfaces_computed_errors() {
+        let mut items = inline_database_items();
+        let Item::Database(db) = items.last_mut().unwrap() else { panic!("database") };
+        db.props.iter_mut().find(|p| p.id == "amount").unwrap().number_format = "dollar".into();
+        db.props.iter_mut().find(|p| p.id == "double").unwrap().formula = "ln(-1e-400)".into();
+        db.props.extend([
+            Property { id: "link".into(), name: "Link".into(), kind: PropKind::Relation, relation_db: db.id.clone(), ..Default::default() },
+            Property { id: "rollup".into(), name: "Rollup".into(), kind: PropKind::Rollup, rollup_relation: "link".into(), rollup_prop: "double".into(), rollup_calc: "sum".into(), ..Default::default() },
+        ]);
+        db.views[0].columns.push(Column { prop: "rollup".into(), visible: true, width: 0 });
+        let row = items.iter_mut().find_map(|i| match i {
+            Item::Row(r) if r.id == "row0" => Some(r),
+            _ => None,
+        }).unwrap();
+        row.cells = r#"{"amount":999999999999.98499,"link":["row1"]}"#.into();
+        let doc = collect_inline(&items);
+        let cells = &inline_table(&doc).rows[1];
+        assert_eq!(cell_string(&cells[2]), "$999,999,999,999.98");
+        assert_eq!(cell_string(&cells[3]), "Error: Not a real number");
+        assert_eq!(cell_string(&cells[4]), "Error: Not a real number");
     }
 
     #[test]

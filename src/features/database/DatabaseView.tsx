@@ -172,6 +172,8 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
                 if (x.id !== rowId) return x;
                 const values = { ...x.values };
                 for (const [k, v] of Object.entries(patch)) {
+                  // Wait for the exact display and editor token from the save response.
+                  if (dbRef.current?.props.some((p) => p.id === k && p.kind === "number")) continue;
                   if (v === null) delete values[k];
                   else values[k] = v;
                 }
@@ -203,7 +205,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       const row = resultRef.current?.rows.find((x) => x.id === rowId);
       if (row) {
         const prev: Record<string, unknown> = {};
-        for (const k of Object.keys(patch)) prev[k] = row.values[k] ?? null;
+        for (const k of Object.keys(patch)) prev[k] = row.numberInput?.[k] ?? row.values[k] ?? null;
         if (Object.keys(patch).some((k) => !same(patch[k], prev[k]))) {
           const names = Object.keys(patch).map((k) => dbRef.current?.props.find((p) => p.id === k)?.name ?? "a value");
           const clear = Object.values(patch).every((v) => v == null);
@@ -349,7 +351,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     if (!q) return result;
     const keep = new Set(
       result.rows
-        .filter((r) => r.title.toLowerCase().includes(q) || db.props.some((p) => p.kind !== "title" && cellText(p, r.values[p.id]).toLowerCase().includes(q)) || db.props.some((p) => (p.kind === "select" || p.kind === "status") && p.options.find((o) => o.id === r.values[p.id])?.name.toLowerCase().includes(q)))
+        .filter((r) => r.title.toLowerCase().includes(q) || db.props.some((p) => p.kind !== "title" && cellText(p, r.values[p.id], r.numberText?.[p.id]).toLowerCase().includes(q)) || db.props.some((p) => (p.kind === "select" || p.kind === "status") && p.options.find((o) => o.id === r.values[p.id])?.name.toLowerCase().includes(q)))
         .map((r) => r.id),
     );
     return { ...result, rows: result.rows.filter((r) => keep.has(r.id)), filtered: keep.size, groups: filterGroups(result.groups, keep) };

@@ -297,6 +297,8 @@ export interface DbRow {
   updated: number;
   favorite: boolean;
   values: Record<string, unknown>;
+  numberText?: Record<string, string>;
+  numberInput?: Record<string, string>;
 }
 
 export interface GroupOut {
@@ -351,6 +353,7 @@ export interface ChartSeries {
   name: string;
   color: string;
   points: ChartPoint[];
+  donutSlice?: ChartPoint;
 }
 
 export interface ChartData {

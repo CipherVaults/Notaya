@@ -1,0 +1,1981 @@
+{
+  "commit": "cbf0193fabe77d04cdd84f40e2560f8dd643c333",
+  "tree": "c67a85e52d1bcd71e66e6b20b3699595085445e2",
+  "control": null,
+  "passed": 35,
+  "failed": 87,
+  "results": [
+    {
+      "id": "plain-cancellation",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "plain-cancellation",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "0"
+      },
+      "failures": [
+        "raw value: observed '0', expected 1",
+        "display: observed '0', expected 1"
+      ]
+    },
+    {
+      "id": "sticky-percentage",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "220"
+      },
+      "observed": {
+        "id": "sticky-percentage",
+        "target": "sticky.evaluate",
+        "raw": "220",
+        "text": "220"
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-division",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0.333333333333"
+      },
+      "observed": {
+        "id": "plain-division",
+        "target": "sticky.evaluate",
+        "raw": "0.3333333333333333",
+        "text": "0.333333333333"
+      },
+      "failures": []
+    },
+    {
+      "id": "small-scientific",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789123e-10"
+      },
+      "observed": {
+        "id": "small-scientific",
+        "target": "sticky.evaluate",
+        "raw": "1.23456789123e-10",
+        "text": "1.23456789e-10"
+      },
+      "failures": [
+        "display: observed '1.23456789e-10', expected 1.23456789123e-10"
+      ]
+    },
+    {
+      "id": "large-scientific",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789123e16"
+      },
+      "observed": {
+        "id": "large-scientific",
+        "target": "sticky.evaluate",
+        "raw": "12345678912300000",
+        "text": "1.23456789e16"
+      },
+      "failures": [
+        "display: observed '1.23456789e16', expected 1.23456789123e16"
+      ]
+    },
+    {
+      "id": "tiny-sine-degrees",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.74532925199e-15"
+      },
+      "observed": {
+        "id": "tiny-sine-degrees",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "0"
+      },
+      "failures": [
+        "raw value: observed '0', expected 1.74532925199e-15",
+        "display: observed '0', expected 1.74532925199e-15"
+      ]
+    },
+    {
+      "id": "divide-by-zero",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "division-by-zero"
+      },
+      "observed": {
+        "id": "divide-by-zero",
+        "target": "sticky.evaluate",
+        "error": "Can't divide by zero"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "sqrt-negative",
+        "target": "sticky.evaluate",
+        "error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "exp-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "exp-overflow",
+        "target": "sticky.evaluate",
+        "error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "ln-zero",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "ln-zero",
+        "target": "sticky.evaluate",
+        "error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "masked-exp-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "masked-exp-overflow",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "0"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "masked-product-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "masked-product-overflow",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "0"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "ans-nan",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "ans-nan",
+        "target": "sticky.evaluate",
+        "error": "Not a number"
+      },
+      "failures": []
+    },
+    {
+      "id": "format-nan",
+      "target": "sticky.format",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "format-nan",
+        "target": "sticky.format",
+        "text": "NaN"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "ans-positive-infinity",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "ans-positive-infinity",
+        "target": "sticky.evaluate",
+        "error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "format-positive-infinity",
+      "target": "sticky.format",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "format-positive-infinity",
+        "target": "sticky.format",
+        "text": "Infinity"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "ans-negative-infinity",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "ans-negative-infinity",
+        "target": "sticky.evaluate",
+        "error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "format-negative-infinity",
+      "target": "sticky.format",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "format-negative-infinity",
+        "target": "sticky.format",
+        "text": "-Infinity"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "cent-below-positive",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "cent-below-positive",
+        "raw": "0.004999",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-below-positive",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.004999",
+          "v": "0.004999"
+        },
+        "id": "cent-below-positive",
+        "raw": "0.004999",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '$0.004999', expected 0"
+      ]
+    },
+    {
+      "id": "cent-below-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "cent-below-negative",
+        "raw": "-0.004999",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-below-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.004999",
+          "v": "-0.004999"
+        },
+        "id": "cent-below-negative",
+        "raw": "-0.004999",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '-$0.004999', expected 0"
+      ]
+    },
+    {
+      "id": "cent-at-positive",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "cent-at-positive",
+        "raw": "0.005",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-at-positive",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.005",
+          "v": "0.005"
+        },
+        "id": "cent-at-positive",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '$0.005', expected 0.01"
+      ]
+    },
+    {
+      "id": "cent-at-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "cent-at-negative",
+        "raw": "-0.005",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-at-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.005",
+          "v": "-0.005"
+        },
+        "id": "cent-at-negative",
+        "raw": "-0.005",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '-$0.005', expected -0.01"
+      ]
+    },
+    {
+      "id": "cent-above-positive",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "cent-above-positive",
+        "raw": "0.005001",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-above-positive",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.005001",
+          "v": "0.005001"
+        },
+        "id": "cent-above-positive",
+        "raw": "0.005001",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '$0.005001', expected 0.01"
+      ]
+    },
+    {
+      "id": "cent-above-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "cent-above-negative",
+        "raw": "-0.005001",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-above-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.005001",
+          "v": "-0.005001"
+        },
+        "id": "cent-above-negative",
+        "raw": "-0.005001",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '-$0.005001', expected -0.01"
+      ]
+    },
+    {
+      "id": "sub-cent-sum",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "sub-cent-sum",
+        "raw": "0.008",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "sub-cent-sum",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.008",
+          "v": "0.008"
+        },
+        "id": "sub-cent-sum",
+        "raw": "0.008",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '$0.008', expected 0.01"
+      ]
+    },
+    {
+      "id": "division-percentage",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.07"
+      },
+      "observed": {
+        "id": "division-percentage",
+        "raw": "0.07285714285712",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "division-percentage",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.07"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.07285714285712",
+          "v": "0.07285714285712"
+        },
+        "id": "division-percentage",
+        "raw": "0.07285714285712",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed display: observed '$0.07285714285712', expected 0.07"
+      ]
+    },
+    {
+      "id": "division-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "division-cancellation",
+        "raw": "-0.004994506835938",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "raw value: observed '-0.004994506835938', expected 0.01"
+      ]
+    },
+    {
+      "id": "division-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.004994506835938",
+          "v": "-0.004994506835938"
+        },
+        "id": "division-cancellation",
+        "raw": "-0.004994506835938",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed JSON value: observed '-0.004994506835938', expected 0.01",
+        "computed display: observed '-$0.004994506835938', expected 0.01"
+      ]
+    },
+    {
+      "id": "currency-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "currency-cancellation",
+        "raw": "0",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "raw value: observed '0', expected 0.01"
+      ]
+    },
+    {
+      "id": "currency-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0",
+          "v": "0.0"
+        },
+        "id": "currency-cancellation",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed JSON value: observed '0.0', expected 0.01",
+        "computed display: observed '$0', expected 0.01"
+      ]
+    },
+    {
+      "id": "near-trillion",
+      "target": "rust.formula",
+      "expected": {
+        "value": "999999999999.99"
+      },
+      "observed": {
+        "id": "near-trillion",
+        "raw": "1000000000000",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "raw value: observed '1000000000000', expected 999999999999.99"
+      ]
+    },
+    {
+      "id": "near-trillion",
+      "target": "rust.computed",
+      "expected": {
+        "value": "999999999999.99"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$1,000,000,000,000",
+          "v": "1000000000000.0"
+        },
+        "id": "near-trillion",
+        "raw": "1000000000000",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed JSON value: observed '1000000000000.0', expected 999999999999.99",
+        "computed display: observed '$1,000,000,000,000', expected 999999999999.99"
+      ]
+    },
+    {
+      "id": "plain-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "plain-cancellation",
+        "raw": "0",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "raw value: observed '0', expected 1"
+      ]
+    },
+    {
+      "id": "plain-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "plain-cancellation",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "computed JSON value: observed '0.0', expected 1",
+        "computed display: observed '0', expected 1"
+      ]
+    },
+    {
+      "id": "plain-division",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.333333333333"
+      },
+      "observed": {
+        "id": "plain-division",
+        "raw": "0.3333333333333",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-division",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.333333333333"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0.3333333333333",
+          "v": "0.3333333333333"
+        },
+        "id": "plain-division",
+        "raw": "0.3333333333333",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "small-scientific",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789123e-10"
+      },
+      "observed": {
+        "id": "small-scientific",
+        "raw": "0.000000000123456789123",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "small-scientific",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789123e-10"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0.000000000123456789123",
+          "v": "1.23456789123E-10"
+        },
+        "id": "small-scientific",
+        "raw": "0.000000000123456789123",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "large-scientific",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789123e16"
+      },
+      "observed": {
+        "id": "large-scientific",
+        "raw": "12345678912300000",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "large-scientific",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789123e16"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "12345678912300000",
+          "v": "1.23456789123E+16"
+        },
+        "id": "large-scientific",
+        "raw": "12345678912300000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "divide-by-zero",
+      "target": "rust.formula",
+      "expected": {
+        "error": "division-by-zero"
+      },
+      "observed": {
+        "error": "Division by zero",
+        "id": "divide-by-zero",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "divide-by-zero",
+      "target": "rust.computed",
+      "expected": {
+        "error": "division-by-zero"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Division by zero",
+          "v": null
+        },
+        "id": "divide-by-zero",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "sqrt-negative",
+        "raw": "NaN",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (domain)"
+      ]
+    },
+    {
+      "id": "sqrt-negative",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "NaN",
+          "v": null
+        },
+        "id": "sqrt-negative",
+        "raw": "NaN",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (domain)"
+      ]
+    },
+    {
+      "id": "exp-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "exp-overflow",
+        "raw": "inf",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "exp-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "\u221e",
+          "v": null
+        },
+        "id": "exp-overflow",
+        "raw": "inf",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "ln-zero",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "ln-zero",
+        "raw": "-inf",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (domain)"
+      ]
+    },
+    {
+      "id": "ln-zero",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-\u221e",
+          "v": null
+        },
+        "id": "ln-zero",
+        "raw": "-inf",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (domain)"
+      ]
+    },
+    {
+      "id": "masked-exp-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "masked-exp-overflow",
+        "raw": "0",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "masked-exp-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "masked-exp-overflow",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "masked-product-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "masked-product-overflow",
+        "raw": "0",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "masked-product-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "masked-product-overflow",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "nested-computed-list",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "list",
+          "text": "1, NaN",
+          "v": [
+            "1.0",
+            [
+              null
+            ]
+          ]
+        },
+        "id": "nested-computed-list",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (domain)"
+      ]
+    },
+    {
+      "id": "direct-nan",
+      "target": "rust.formula",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "direct-nan",
+        "raw": "NaN",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "direct-nan",
+      "target": "rust.computed",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "NaN",
+          "v": null
+        },
+        "id": "direct-nan",
+        "raw": "NaN",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "NaN",
+          "v": null
+        },
+        "id": "nested-nan",
+        "raw": "NaN",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-nan",
+        "target": "rust.view-footer",
+        "text": "NaN"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-nan",
+        "target": "rust.group-footer",
+        "text": "NaN"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-nan",
+        "target": "rust.subgroup-footer",
+        "text": "NaN"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-nan",
+        "raw": "NaN",
+        "target": "rust.chart-total",
+        "text": "NaN"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "direct-positive-infinity",
+      "target": "rust.formula",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "direct-positive-infinity",
+        "raw": "inf",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "direct-positive-infinity",
+      "target": "rust.computed",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "\u221e",
+          "v": null
+        },
+        "id": "direct-positive-infinity",
+        "raw": "inf",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "\u221e",
+          "v": null
+        },
+        "id": "nested-positive-infinity",
+        "raw": "inf",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-positive-infinity",
+        "target": "rust.view-footer",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-positive-infinity",
+        "target": "rust.group-footer",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-positive-infinity",
+        "target": "rust.subgroup-footer",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-positive-infinity",
+        "raw": "inf",
+        "target": "rust.chart-total",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "direct-negative-infinity",
+      "target": "rust.formula",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "direct-negative-infinity",
+        "raw": "-inf",
+        "target": "rust.formula"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "direct-negative-infinity",
+      "target": "rust.computed",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-\u221e",
+          "v": null
+        },
+        "id": "direct-negative-infinity",
+        "raw": "-inf",
+        "target": "rust.computed"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-\u221e",
+          "v": null
+        },
+        "id": "nested-negative-infinity",
+        "raw": "-inf",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-negative-infinity",
+        "target": "rust.view-footer",
+        "text": "-\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-negative-infinity",
+        "target": "rust.group-footer",
+        "text": "-\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-negative-infinity",
+        "target": "rust.subgroup-footer",
+        "text": "-\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-negative-infinity",
+        "raw": "-inf",
+        "target": "rust.chart-total",
+        "text": "-\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (non-finite)"
+      ]
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.008",
+          "v": "0.008"
+        },
+        "id": "aggregate-sub-cent",
+        "raw": "0.008",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "computed display: observed '$0.008', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "target": "rust.view-footer",
+        "text": "$0.008"
+      },
+      "failures": [
+        "display: observed '$0.008', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "target": "rust.group-footer",
+        "text": "$0.008"
+      },
+      "failures": [
+        "display: observed '$0.008', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "target": "rust.subgroup-footer",
+        "text": "$0.008"
+      },
+      "failures": [
+        "display: observed '$0.008', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "raw": "0.008",
+        "target": "rust.chart-total",
+        "text": "$0.008"
+      },
+      "failures": [
+        "display: observed '$0.008', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.005",
+          "v": "0.005"
+        },
+        "id": "aggregate-even-median",
+        "raw": "0.005",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "computed display: observed '$0.005', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "target": "rust.view-footer",
+        "text": "$0.005"
+      },
+      "failures": [
+        "display: observed '$0.005', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "target": "rust.group-footer",
+        "text": "$0.005"
+      },
+      "failures": [
+        "display: observed '$0.005', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "target": "rust.subgroup-footer",
+        "text": "$0.005"
+      },
+      "failures": [
+        "display: observed '$0.005', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "raw": "0.005",
+        "target": "rust.chart-total",
+        "text": "$0.005"
+      },
+      "failures": [
+        "display: observed '$0.005', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.005",
+          "v": "-0.005"
+        },
+        "id": "aggregate-even-average",
+        "raw": "-0.005",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "computed display: observed '-$0.005', expected -0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "target": "rust.view-footer",
+        "text": "-$0.005"
+      },
+      "failures": [
+        "display: observed '-$0.005', expected -0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "target": "rust.group-footer",
+        "text": "-$0.005"
+      },
+      "failures": [
+        "display: observed '-$0.005', expected -0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "target": "rust.subgroup-footer",
+        "text": "-$0.005"
+      },
+      "failures": [
+        "display: observed '-$0.005', expected -0.01"
+      ]
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "raw": "-0.005",
+        "target": "rust.chart-total",
+        "text": "-$0.005"
+      },
+      "failures": [
+        "display: observed '-$0.005', expected -0.01"
+      ]
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "3",
+          "v": "3.0"
+        },
+        "id": "aggregate-plain-median",
+        "raw": "3",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "target": "rust.view-footer",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "target": "rust.group-footer",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "target": "rust.subgroup-footer",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "raw": "3",
+        "target": "rust.chart-total",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.666666666667",
+          "v": "1.666666666667"
+        },
+        "id": "aggregate-plain-average",
+        "raw": "1.666666666667",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "target": "rust.view-footer",
+        "text": "1.666666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "target": "rust.group-footer",
+        "text": "1.666666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "target": "rust.subgroup-footer",
+        "text": "1.666666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "raw": "1.666666666667",
+        "target": "rust.chart-total",
+        "text": "1.666666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.0050048828125",
+          "v": "0.0050048828125"
+        },
+        "id": "aggregate-currency-cancellation",
+        "raw": "0.0050048828125",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "computed display: observed '$0.0050048828125', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "target": "rust.view-footer",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "display: observed '$0.0050048828125', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "target": "rust.group-footer",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "display: observed '$0.0050048828125', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "target": "rust.subgroup-footer",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "display: observed '$0.0050048828125', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "raw": "0.0050048828125",
+        "target": "rust.chart-total",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "display: observed '$0.0050048828125', expected 0.01"
+      ]
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.0050048828125",
+          "v": "0.0050048828125"
+        },
+        "id": "aggregate-below-cent-cancellation",
+        "raw": "0.0050048828125",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "computed JSON value: observed '0.0050048828125', expected 0",
+        "computed display: observed '$0.0050048828125', expected 0"
+      ]
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "target": "rust.view-footer",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "display: observed '$0.0050048828125', expected 0"
+      ]
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "target": "rust.group-footer",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "display: observed '$0.0050048828125', expected 0"
+      ]
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "target": "rust.subgroup-footer",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "display: observed '$0.0050048828125', expected 0"
+      ]
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "raw": "0.0050048828125",
+        "target": "rust.chart-total",
+        "text": "$0.0050048828125"
+      },
+      "failures": [
+        "raw value: observed '0.0050048828125', expected 0",
+        "display: observed '$0.0050048828125', expected 0"
+      ]
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "\u221e",
+          "v": null
+        },
+        "id": "aggregate-average-overflow",
+        "raw": "inf",
+        "target": "rust.rollup"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "aggregate-average-overflow",
+        "target": "rust.view-footer",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "aggregate-average-overflow",
+        "target": "rust.group-footer",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "aggregate-average-overflow",
+        "target": "rust.subgroup-footer",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "aggregate-average-overflow",
+        "raw": "inf",
+        "target": "rust.chart-total",
+        "text": "\u221e"
+      },
+      "failures": [
+        "Expected explicit numeric error (overflow)"
+      ]
+    }
+  ]
+}

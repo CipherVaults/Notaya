@@ -151,7 +151,7 @@ const ListRow = memo(function ListRow({ row, lead, rest, titles, openRow, toggle
           if (p.kind === "checkbox") {
             return <CheckBox key={p.id} checked={row.values[p.id] === true} label={`${p.name}: ${row.title || "Untitled"}`} onToggle={() => toggle(row, p)} small />;
           }
-          const node = valueNode(p, row.values[p.id], titles);
+          const node = valueNode(p, row.values[p.id], titles, row.numberText?.[p.id]);
           return node ? (
             <span key={p.id} className="min-w-0 max-w-[12rem] truncate" title={p.name} data-prop={p.id}>
               {node}

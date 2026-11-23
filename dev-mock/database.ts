@@ -661,12 +661,17 @@ function chartData(db: Database, view: View): ChartData {
   };
   const series = skeys.map(([gk, gl], i) => {
     const color = gp?.options.find((o) => o.id === gk)?.color || palette[i % palette.length];
+    const points = xkeys.map(([xk, xl]) => {
+      const v = value(buckets.get(xk)?.get(gk) ?? []);
+      return { label: xl, value: v, text: yp ? fmtNum(v, yp.numberFormat) : numStr(v), color: xp?.options.find((o) => o.id === xk)?.color || color };
+    });
+    const subtotal = c.kind === "donut" && skeys.length > 1
+      ? points.reduce((a, p) => a + Math.max(0, p.value), 0)
+      : undefined;
     return {
       name: gl, color,
-      points: xkeys.map(([xk, xl]) => {
-        const v = value(buckets.get(xk)?.get(gk) ?? []);
-        return { label: xl, value: v, text: yp ? fmtNum(v, yp.numberFormat) : numStr(v), color: xp?.options.find((o) => o.id === xk)?.color || color };
-      }),
+      points,
+      donutSlice: subtotal === undefined ? undefined : { label: gl, value: subtotal, text: yp ? fmtNum(subtotal, yp.numberFormat) : numStr(subtotal), color },
     };
   });
   const total = c.kind === "number" ? (yp ? fmtNum(value(res._rows), yp.numberFormat) : numStr(value(res._rows))) : null;

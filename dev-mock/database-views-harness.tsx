@@ -231,15 +231,18 @@ function chartData(v: View): ChartData {
   const names = gp ? gp.options.map((o) => o.name) : [c.title || "Count"];
   const sKey = (r: DbRow) => (gp ? gp.options.find((o) => o.id === r.values[gp.id])?.name ?? "" : names[0]);
   const keepIdx = labels.map((l, i) => (c.hideEmpty && !rows.some((r) => keyOf(r).split("|").includes(l)) ? -1 : i)).filter((i) => i >= 0);
-  const series = names.map((name, si) => ({
-    name,
-    color: gp ? col(gp.options[si].color, si) : col(c.color, 0),
-    points: keepIdx.map((li) => {
+  const series = names.map((name, si) => {
+    const color = gp ? col(gp.options[si].color, si) : col(c.color, 0);
+    const points = keepIdx.map((li) => {
       const label = labels[li];
       const r = calc(rows.filter((x) => keyOf(x).split("|").includes(label) && sKey(x) === name));
       return { label, value: r.value, text: r.text, color: gp ? col(gp.options[si].color, si) : c.kind === "donut" || colors[li] ? col(colors[li], li) : col(c.color, 0) };
-    }),
-  }));
+    });
+    const subtotal = c.kind === "donut" && names.length > 1
+      ? points.reduce((a, p) => a + Math.max(0, p.value), 0)
+      : undefined;
+    return { name, color, points, donutSlice: subtotal === undefined ? undefined : { label: name, value: subtotal, text: String(subtotal), color } };
+  });
   return { labels: keepIdx.map((i) => labels[i]), series, total: c.kind === "donut" ? calc(rows).text : null, rows: rows.length };
 }
 

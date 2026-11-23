@@ -330,11 +330,11 @@ pub struct CsvExported {
     pub columns: usize,
 }
 
-fn cell_text(v: &Val, p: &Property) -> (String, bool) {
-    match v {
+fn cell_text(v: &Val, p: &Property) -> std::result::Result<(String, bool), String> {
+    Ok(match v {
         Val::Null => (String::new(), false),
         Val::Bool(b) => ((if *b { "Yes" } else { "No" }).into(), false),
-        Val::Num(n) => (value::num_str(*n), true),
+        Val::Num(n) => (value::format_number(n, &p.number_format)?, true),
         Val::Str(s) => (s.clone(), false),
         Val::Date(d) => {
             let a = value::format_iso(d.start, d.has_time);
@@ -343,8 +343,8 @@ fn cell_text(v: &Val, p: &Property) -> (String, bool) {
                 None => (a, false),
             }
         }
-        Val::List(l) => (l.iter().map(|x| cell_text(x, p).0).collect::<Vec<_>>().join(", "), false),
-    }
+        Val::List(l) => (l.iter().map(|x| cell_text(x, p).map(|(text, _)| text)).collect::<std::result::Result<Vec<_>, _>>()?.join(", "), false),
+    })
 }
 
 /// The rows of a view (or all rows) as CSV lines. Used by the command and by tests.
@@ -393,10 +393,9 @@ pub fn export_lines(s: &crate::vault::Session, database_id: &str, view_id: Optio
                     let names: Vec<String> = cells.get(&p.id).and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|f| f.get("name").and_then(|n| n.as_str())).map(String::from).collect()).unwrap_or_default();
                     (names.join(", "), false)
                 }
-                _ => match ctx.value(dbref, r, p) {
-                    Ok(v) => cell_text(&v, p),
-                    Err(_) => (String::new(), false),
-                },
+                _ => ctx.value(dbref, r, p)
+                    .and_then(|v| cell_text(&v, p))
+                    .map_err(|e| Error::invalid(format!("Could not export property \"{}\": {e}", p.name)))?,
             };
             line.push(guard(&text, num));
         }
@@ -1009,10 +1008,10 @@ mod tests {
 
     #[test]
     fn export_text_is_safe_and_readable() {
-        let (t, n) = cell_text(&Val::Num(2.5), &Property::default());
+        let (t, n) = cell_text(&Val::from_float(2.5).unwrap(), &Property::default()).unwrap();
         assert_eq!((t.as_str(), n), ("2.5", true));
-        assert_eq!(cell_text(&Val::Bool(true), &Property::default()).0, "Yes");
+        assert_eq!(cell_text(&Val::Bool(true), &Property::default()).unwrap().0, "Yes");
         let d = Val::Date(value::DateVal { start: value::from_parts(2026, 1, 2, 0, 0), end: Some(value::from_parts(2026, 1, 4, 0, 0)), has_time: false });
-        assert_eq!(cell_text(&d, &Property::default()).0, "2026-01-02 → 2026-01-04");
+        assert_eq!(cell_text(&d, &Property::default()).unwrap().0, "2026-01-02 → 2026-01-04");
     }
 }

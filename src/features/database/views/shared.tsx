@@ -6,6 +6,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { Check, Paperclip, Plus } from "lucide-react";
 import type { Database, DateCell, DbRow, FileCell, GroupBy, GroupOut, OptionColor, Property, SelectOption, View } from "@/lib/database-types";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "../model";
 
 /* ---------- Colors ---------- */
 
@@ -86,15 +87,6 @@ export function rowColor(row: DbRow, p: Property | undefined): string {
 
 export function isComputed(v: unknown): v is { t: string; v: unknown; text: string } {
   return !!v && typeof v === "object" && !Array.isArray(v) && "t" in v && "text" in v;
-}
-
-const CURRENCY: Record<string, string> = { dollar: "$", euro: "€", pound: "£", yen: "¥", rupee: "₹", won: "₩", yuan: "CN¥", rial: "﷼" };
-
-export function formatNumber(n: number, fmt: string): string {
-  const max = (x: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: x });
-  if (fmt === "percent") return `${max(2).format(n * 100)}%`;
-  if (CURRENCY[fmt]) return `${CURRENCY[fmt]}${max(2).format(n)}`;
-  return fmt === "numberWithCommas" ? max(6).format(n) : String(Math.round(n * 1e6) / 1e6);
 }
 
 /* ---------- Dates ---------- */
@@ -225,7 +217,7 @@ export function firstImage(row: DbRow, propId: string): FileCell | null {
 /* ---------- Value display (compact) ---------- */
 
 /** One value of a property as a small inline piece; null when empty. */
-export function valueNode(prop: Property, value: unknown, titles?: Map<string, string>): ReactNode {
+export function valueNode(prop: Property, value: unknown, titles?: Map<string, string>, numberText?: string): ReactNode {
   if (value === undefined || value === null || value === "") return null;
   if (isComputed(value)) {
     if (value.t === "null" || !value.text) return null;
@@ -239,7 +231,7 @@ export function valueNode(prop: Property, value: unknown, titles?: Map<string, s
     case "phone":
       return typeof value === "string" ? <span dir="auto" className="block truncate">{value}</span> : null;
     case "number":
-      return typeof value === "number" ? <span className="tabular-nums">{formatNumber(value, prop.numberFormat)}</span> : null;
+      return typeof value === "number" ? <span className="tabular-nums">{numberText ?? formatNumber(value, prop.numberFormat)}</span> : null;
     case "select":
     case "status": {
       const o = optionOf(prop, value);
@@ -281,7 +273,7 @@ export function valueNode(prop: Property, value: unknown, titles?: Map<string, s
 
 /** The properties of a row as small lines for a card; empty values are left out. */
 export function PropLines({ row, props, compact, titles }: { row: DbRow; props: Property[]; compact?: boolean; titles?: Map<string, string> }) {
-  const lines = props.map((p) => ({ p, node: valueNode(p, row.values[p.id], titles) })).filter((x) => x.node !== null);
+  const lines = props.map((p) => ({ p, node: valueNode(p, row.values[p.id], titles, row.numberText?.[p.id]) })).filter((x) => x.node !== null);
   if (!lines.length) return null;
   return (
     <div className={cn("flex min-w-0 flex-col text-[0.78rem] text-muted", compact ? "gap-0.5" : "gap-1")}>

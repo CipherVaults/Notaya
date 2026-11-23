@@ -24,6 +24,8 @@ pub struct ChartSeries {
     pub name: String,
     pub color: String,
     pub points: Vec<ChartPoint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub donut_slice: Option<ChartPoint>,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -45,37 +47,33 @@ fn pick_color(color: &str, i: usize) -> String {
     }
 }
 
-fn y_value(ctx: &Ctx, db: &Database, rows: &[&Row], cfg: &ChartConfig) -> (f64, String) {
-    let calc_name = if cfg.y_calc.is_empty() { "countAll" } else { cfg.y_calc.as_str() };
-    let prop = db.prop(&cfg.y_prop);
-    let vals: Vec<Val> = match prop {
-        Some(p) => rows.iter().map(|r| ctx.value(db, r, p).unwrap_or(Val::Null)).collect(),
-        None => rows.iter().map(|_| Val::Bool(true)).collect(),
-    };
-    let res = calc(if prop.is_none() && !matches!(calc_name, "countAll" | "count") { "countAll" } else { calc_name }, &vals);
-    let n = match &res {
-        Val::Num(n) => *n,
-        _ => 0.0,
-    };
-    let text = match (&res, prop) {
-        (Val::Num(n), Some(p)) if matches!(calc_name, "sum" | "avg" | "median" | "min" | "max" | "range") => format_number(*n, &p.number_format),
-        _ => calc_display(calc_name, &res),
-    };
-    (n, text)
+fn calculation(cfg: &ChartConfig) -> &str {
+    if cfg.y_calc.is_empty() { "countAll" } else { &cfg.y_calc }
 }
 
-pub fn chart_data(ctx: &Ctx, db: &Database, view: &View) -> ChartData {
+fn y_value(ctx: &Ctx, db: &Database, rows: &[&Row], cfg: &ChartConfig) -> Result<(Number, String), String> {
+    let name = calculation(cfg);
+    let Some(prop) = db.prop(&cfg.y_prop) else {
+        return Ok((Number::integer(rows.len()), rows.len().to_string()));
+    };
+    let res = ctx.calculate(db, rows, prop, name)?;
+    let text = calc_property_display(name, &res, prop)?;
+    let n = if let Val::Num(n) = res { n } else { Number::integer(0) };
+    Ok((n, text))
+}
+
+pub fn chart_data(ctx: &Ctx, db: &Database, view: &View) -> Result<ChartData, String> {
     let cfg = &view.chart;
     let all = ctx.rows_of(&db.id);
     let rows: Vec<&Row> = all.iter().copied().filter(|r| view.filter.is_empty() || ctx.matches(db, r, &view.filter)).collect();
     if cfg.kind == "number" || db.prop(&cfg.x_prop).is_none() {
-        let (n, text) = y_value(ctx, db, &rows, cfg);
-        return ChartData {
+        let (n, text) = y_value(ctx, db, &rows, cfg)?;
+        return Ok(ChartData {
             labels: vec![],
-            series: vec![ChartSeries { name: cfg.title.clone(), color: pick_color(&cfg.color, 0), points: vec![ChartPoint { label: String::new(), value: n, text: text.clone(), color: pick_color(&cfg.color, 0) }] }],
+            series: vec![ChartSeries { name: cfg.title.clone(), color: pick_color(&cfg.color, 0), points: vec![ChartPoint { label: String::new(), value: n.try_as_f64()?, text: text.clone(), color: pick_color(&cfg.color, 0) }], donut_slice: None }],
             total: Some(text),
             rows: rows.len(),
-        };
+        });
     }
     let xg = GroupBy { prop: cfg.x_prop.clone(), sort: if cfg.x_sort.is_empty() { "manual".into() } else { cfg.x_sort.clone() }, date_by: cfg.x_by.clone(), number_step: cfg.x_step, hide_empty: cfg.hide_empty, ..GroupBy::default() };
     let groups = ctx.build_groups(db, &rows, &xg);
@@ -87,46 +85,57 @@ pub fn chart_data(ctx: &Ctx, db: &Database, view: &View) -> ChartData {
     let series = if let Some(gp) = db.prop(&cfg.group_prop) {
         let sg = GroupBy { prop: gp.id.clone(), sort: "manual".into(), ..GroupBy::default() };
         let subs = ctx.build_groups(db, &rows, &sg);
+        let grouped_donut = cfg.kind == "donut" && subs.len() > 1;
         subs.iter()
             .enumerate()
             .map(|(si, sub)| {
                 let color = pick_color(&sub.color, si);
                 let sub_ids: std::collections::HashSet<&String> = sub.rows.iter().collect();
-                ChartSeries {
-                    name: sub.label.clone(),
-                    color: color.clone(),
-                    points: groups
-                        .iter()
-                        .map(|g| {
-                            let m: Vec<String> = g.rows.iter().filter(|id| sub_ids.contains(id)).cloned().collect();
-                            let (n, text) = y_value(ctx, db, &members(&m), cfg);
-                            ChartPoint { label: g.label.clone(), value: n, text, color: color.clone() }
-                        })
-                        .collect(),
-                }
+                let mut subtotal = Number::integer(0);
+                let points = groups.iter().map(|g| {
+                    let m: Vec<String> = g.rows.iter().filter(|id| sub_ids.contains(id)).cloned().collect();
+                    let (n, text) = y_value(ctx, db, &members(&m), cfg)?;
+                    if grouped_donut && !n.try_is_negative()? {
+                        subtotal = subtotal.add(&n)?;
+                    }
+                    Ok(ChartPoint { label: g.label.clone(), value: n.try_as_f64()?, text, color: color.clone() })
+                }).collect::<Result<_, String>>()?;
+                let donut_slice = if grouped_donut {
+                    let value = subtotal.try_as_f64()?;
+                    let subtotal = Val::Num(subtotal);
+                    let text = match db.prop(&cfg.y_prop) {
+                        Some(p) => calc_property_display(calculation(cfg), &subtotal, p)?,
+                        None => subtotal.try_text()?,
+                    };
+                    Some(ChartPoint { label: sub.label.clone(), value, text, color: color.clone() })
+                } else {
+                    None
+                };
+                Ok(ChartSeries { name: sub.label.clone(), color, points, donut_slice })
             })
-            .collect()
+            .collect::<Result<_, String>>()?
     } else {
         vec![ChartSeries {
             name: if cfg.title.is_empty() { db.prop(&cfg.y_prop).map_or("Count".to_string(), |p| p.name.clone()) } else { cfg.title.clone() },
             color: pick_color(&cfg.color, 0),
+            donut_slice: None,
             points: groups
                 .iter()
                 .enumerate()
                 .map(|(i, g)| {
-                    let (n, text) = y_value(ctx, db, &members(&g.rows), cfg);
+                    let (n, text) = y_value(ctx, db, &members(&g.rows), cfg)?;
                     // A donut colors each slice; a bar chart uses one color unless the axis has option colors.
                     let color = if cfg.kind == "donut" || !g.color.is_empty() { pick_color(&g.color, i) } else { pick_color(&cfg.color, 0) };
-                    ChartPoint { label: g.label.clone(), value: n, text, color }
+                    Ok(ChartPoint { label: g.label.clone(), value: n.try_as_f64()?, text, color })
                 })
-                .collect(),
+                .collect::<Result<_, String>>()?,
         }]
     };
     let total = if cfg.kind == "donut" {
-        let (_, text) = y_value(ctx, db, &rows, cfg);
+        let (_, text) = y_value(ctx, db, &rows, cfg)?;
         Some(text)
     } else {
         None
     };
-    ChartData { labels, series, total, rows: rows.len() }
+    Ok(ChartData { labels, series, total, rows: rows.len() })
 }
