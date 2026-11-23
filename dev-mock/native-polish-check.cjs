@@ -13,6 +13,7 @@ if (!["dev", "desktop-dev", "production"].includes(mode) || !["127.0.0.1", "loca
 const checks = createChecks(`native polish: ${mode}`);
 const native = mode !== "dev";
 const palette = (page) => page.getByRole("dialog", { name: "Command palette" });
+const noteFind = (scope) => scope.getByRole("searchbox", { name: "Find in note" });
 const read = (name) => fs.readFileSync(path.join(__dirname, "..", name), "utf8");
 
 function versionChecks() {
@@ -43,6 +44,49 @@ async function open(page, query) {
   await page.goto(new URL(query, base).href);
 }
 
+async function openNote(page) {
+  const note = page.getByRole("tree", { name: "Favorites" }).getByRole("treeitem", { name: "Morning pages" });
+  await note.click();
+  return note;
+}
+
+async function editorShortcutChecks(page) {
+  for (const [name, query, selector] of [
+    ["Page", "?db=1", ".ProseMirror"],
+    ["Sticky", "?label=sticky-k1", ".sticky-editor .ProseMirror"],
+  ]) {
+    await open(page, query);
+    if (name === "Page") await openNote(page);
+    const editor = page.locator(selector);
+    const sample = "Keyboard formatting sample";
+    await editor.focus();
+    const selected = await editor.evaluate((el, text) => {
+      el.editor.chain()
+        .setContent({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] }, { emitUpdate: false })
+        .setTextSelection({ from: 1, to: text.length + 1 })
+        .run();
+      const { doc, selection } = el.editor.state;
+      return doc.textBetween(selection.from, selection.to);
+    }, sample);
+    checks.equal(`${name} shortcut sample is selected`, selected, sample);
+    for (const [shortcut, tag] of [["Control+u", "u"], ["Control+Shift+S", "s"], ["Control+Shift+H", "mark"]]) {
+      const mark = editor.locator(tag).filter({ hasText: sample });
+      await page.keyboard.press(shortcut);
+      checks.equal(`${name} ${shortcut} adds <${tag}>`, await mark.count(), 1);
+      await page.keyboard.press(shortcut);
+      checks.equal(`${name} ${shortcut} removes <${tag}>`, await mark.count(), 0);
+    }
+    if (name === "Page") {
+      const block = editor.getByText(sample, { exact: true });
+      for (const [key, alignment] of [["J", "justify"], ["R", "right"]]) {
+        await page.keyboard.press(`Control+Shift+${key}`);
+        checks.equal(`Page Ctrl+Shift+${key} aligns text ${alignment}`,
+          await block.evaluate((el) => el.style.textAlign), alignment);
+      }
+    }
+  }
+}
+
 async function findChecks(page) {
   await open(page, "?db=1");
   await page.getByRole("main").getByRole("heading", { level: 1 }).waitFor();
@@ -53,11 +97,10 @@ async function findChecks(page) {
   await page.keyboard.press("Escape");
   await palette(page).waitFor({ state: "hidden" });
 
-  const note = page.getByRole("tree", { name: "Favorites" }).getByRole("treeitem", { name: "Morning pages" });
-  await note.click();
+  const note = await openNote(page);
   const editor = page.locator(".ProseMirror");
   await editor.waitFor();
-  const find = page.getByRole("searchbox", { name: "Find in note" });
+  const find = noteFind(page);
   await editor.focus();
   const text = await editor.innerText();
   checks.equal("Note cancels browser Find", await dispatchKey(page, "f", ctrl), true);
@@ -72,6 +115,8 @@ async function findChecks(page) {
   await find.press("Shift+Enter");
   await page.getByText("1 of 2", { exact: true }).waitFor();
   checks.check("Previous match goes back", await page.getByText("1 of 2", { exact: true }).isVisible());
+  checks.equal("Note Find leaves composing Escape available", await dispatchKey(page, "Escape", { isComposing: true }), false);
+  checks.check("Note Find stays open while composing", await find.isVisible());
   await find.press("Escape");
   await find.waitFor({ state: "hidden" });
   checks.equal("Note text survives Find", await editor.innerText(), text);
@@ -89,7 +134,16 @@ async function findChecks(page) {
   await editor.blur();
   checks.equal("Note owns Find when the page background has focus", await dispatchKey(page, "f", ctrl), true);
   await find.waitFor();
-  await find.press("Escape");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const foreground = palette(page);
+  await foreground.getByPlaceholder("Search notes and sticky notes, or type a command").waitFor();
+  checks.check("Search takes focus over Note Find", await foreground.evaluate((el) => el.contains(document.activeElement)));
+  await page.keyboard.press("Escape");
+  await foreground.waitFor({ state: "hidden" });
+  checks.check("Escape closes Search and leaves the background Note Find open", await find.isVisible());
+  await editor.press("Escape");
+  await find.waitFor({ state: "hidden" });
+  checks.check("Escape in the full-page editor closes its Find", await editor.isVisible());
   await note.focus();
   checks.equal("Sidebar uses the Shell Find fallback", await dispatchKey(page, "f", ctrl), true);
   await palette(page).waitFor();
@@ -113,6 +167,41 @@ async function findChecks(page) {
   await rows.waitFor();
 }
 
+async function rowPeekFindChecks(page) {
+  await open(page, "?db=1");
+  await page.getByRole("treeitem", { name: "Tasks" }).click();
+  const table = page.getByRole("application", { name: "Table" });
+  const title = "Design the landing page";
+  const row = table.getByRole("row").filter({ hasText: title });
+  for (const [peekMode, role] of [["Center peek", "dialog"], ["Side peek", "complementary"]]) {
+    await page.getByRole("button", { name: "View settings" }).click();
+    const openIn = page.getByLabel("Open rows in");
+    await openIn.selectOption({ label: peekMode });
+    await page.keyboard.press("Escape");
+    await openIn.waitFor({ state: "hidden" });
+
+    const peek = page.getByRole(role, { name: "Row" });
+    const editor = peek.locator(".ProseMirror");
+    const find = noteFind(peek);
+    for (const focus of ["Find input", "row editor"]) {
+      await row.getByText(title, { exact: true }).hover();
+      await row.getByRole("button", { name: "Open row" }).click();
+      await editor.press("Control+f");
+      await find.waitFor();
+      await (focus === "row editor" ? editor : find).focus();
+      await page.keyboard.press("Escape");
+      await find.waitFor({ state: "hidden" });
+      const staysOpen = await peek.isVisible();
+      checks.check(`${peekMode} first Escape from ${focus} closes only Find`, staysOpen);
+      if (staysOpen) {
+        await page.keyboard.press("Escape");
+        await peek.waitFor({ state: "hidden" });
+        checks.check(`${peekMode} second Escape after ${focus} closes the row`, !(await peek.isVisible()));
+      }
+    }
+  }
+}
+
 async function browserChecks(page) {
   await open(page, "?s=lock");
   const password = page.getByLabel("Master password", { exact: true });
@@ -121,7 +210,7 @@ async function browserChecks(page) {
   for (const key of ["f", "g", "h", "j", "o", "p", "r", "s", "u", "+", "=", "-", "_", "0"]) {
     checks.equal(`Ctrl+${key} browser default`, await dispatchKey(page, key, { ctrlKey: true }), native);
   }
-  for (const key of ["g", "i", "j", "c", "r"]) {
+  for (const key of ["g", "h", "i", "j", "c", "r", "s"]) {
     checks.equal(`Ctrl+Shift+${key} browser default`, await dispatchKey(page, key, { ctrlKey: true, shiftKey: true }), native);
   }
   for (const key of ["F3", "F5", "F7", "F12"]) {
@@ -186,6 +275,8 @@ async function browserChecks(page) {
       await page.addInitScript(() => { window.__TAURI_INTERNALS__ = {}; });
     }
     page.on("pageerror", (error) => checks.check("Uncaught page error", false, error.message));
+    await editorShortcutChecks(page);
+    await rowPeekFindChecks(page);
     await findChecks(page);
     await browserChecks(page);
   } finally {

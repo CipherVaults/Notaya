@@ -1,5 +1,7 @@
 # Claim board
 
+**Local RC audit-fix claim, 2026-11-23T13:44:19Z (system UTC), Ahmed (AE0101), Gaming-PC.** Ahmed authorized the two keyboard fixes and browser regressions from `0536631f733d801ad77f5e5ee10cab2dd543a124`. Work is confined to the isolated scratch checkout, the verification receipt and bundle, and the source/test sync to the named RC worktree. Owner-message timestamp unavailable. Local handoff and follow-up are in the [RC keyboard fixes resume note](2026-11-23-v1-6-rc-polish-fix-resume-note.md).
+
 **Local RC claim, 2026-11-23T12:49:17Z (system UTC), Ahmed (AE0101), Gaming-PC.** Step 1 native desktop polish on `AE0101/v1-6-rc` from `94f48841eacab0c2e61fd4d52b651eb1a9e9f63a`. Scope includes the three WebView2 window builders, shortcut routing, desktop interaction styles, version metadata, regression checks and this handoff. Ahmed authorized the local commit and held publication for Step 3 independent review. [Step 1 resume note](2026-11-23-v1-6-rc-polish-resume-note.md).
 
 <a id="core-q1-focus-loss-20261116"></a>

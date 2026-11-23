@@ -1,5 +1,11 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261123-rc-polish-fix"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+One Codex session implemented the keyboard fixes, expanded the Chromium regression suite, and ran isolated verification. Confirmed model variant, reasoning effort, attributable token counts, and before/after quota readings were unavailable. [RC keyboard-fix session](../sessions.md#session-150).
+
 <a id="codex-usage-20261123-rc-polish"></a>
 
 ## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC

@@ -1,4 +1,4 @@
-import { useEffect, type Ref } from "react";
+import { useEffect, useRef, type Ref } from "react";
 import { Extension, useEditorState, type Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
@@ -91,6 +91,7 @@ export default function NoteFind({ editor, inputRef, onClose }: {
   inputRef: Ref<HTMLInputElement>;
   onClose: () => void;
 }) {
+  const findBarRef = useRef<HTMLDivElement>(null);
   const { query, count, index } = useEditorState({ editor, selector: ({ editor }) => {
     const find = findKey.getState(editor.state);
     return { query: find?.query ?? "", count: find?.matches.length ?? 0, index: find?.index ?? 0 };
@@ -100,13 +101,25 @@ export default function NoteFind({ editor, inputRef, onClose }: {
     editor.view.dom.querySelector('[data-note-find-match="active"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [editor, query, count, index]);
 
+  useEffect(() => {
+    // Radix dismisses dialogs during document capture. Let the owning Find close first.
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.isComposing || !(e.target instanceof Element)) return;
+      const target = e.target;
+      const bar = findBarRef.current;
+      if (!bar || (!bar.contains(target) && !editor.view.dom.contains(target))) return;
+      const scope = '[data-note-editor], [data-database-view], [role="dialog"]';
+      if (target.closest(scope) !== bar.closest(scope)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onEscape, { capture: true });
+    return () => window.removeEventListener("keydown", onEscape, { capture: true });
+  }, [editor, onClose]);
+
   return (
-    <div role="search" aria-label="Note find" className="flex shrink-0 items-center justify-end gap-1 border-b border-line px-3 py-1.5"
-      onKeyDown={(e) => {
-        if (e.key !== "Escape") return;
-        e.preventDefault();
-        onClose();
-      }}>
+    <div ref={findBarRef} role="search" aria-label="Note find" className="flex shrink-0 items-center justify-end gap-1 border-b border-line px-3 py-1.5">
       <input
         ref={inputRef}
         autoFocus

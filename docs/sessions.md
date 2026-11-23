@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 150 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC keyboard regressions](#session-150) |
 | 149 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Polish the 1.6 desktop candidate](#session-149) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
 | 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
@@ -183,6 +184,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-150"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Fix the 1.6 RC keyboard regressions
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. One Codex session authored the fixes and ran qualification.
+
+**Models, Effort, Roles and Provenance:** Confirmed model variant, effort, attributable tokens and quota readings were unavailable. The audit of the baseline came from an independent session. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc-polish-fix).
+
+## 1. Time
+
+Local claim recorded at 13:44:19 UTC on 2026-11-23, from the system clock. Owner-message timestamp unavailable.
+
+## 2. Session Goal
+
+Fix the two blocking keyboard findings from `0536631f733d801ad77f5e5ee10cab2dd543a124`. Deliver isolated regression evidence, a local branch commit and bundle, and source/test copies in the designated checkout.
+
+## 3. Actions Taken
+
+Compared the audit to the locked editor and dialog implementations. Updated keyboard routing and expanded the Playwright checks. Installed cached test tools in scratch and ran the requested frontend, browser and Node checks.
+
+## 4. Key Insights
+
+TextAlign also registers Ctrl+Shift+J and Ctrl+Shift+R in full-page notes. ProseMirror prevents Escape in the editor even when Find is closed, so the side peek needed to handle its own Escape earlier.
+
+## 5. Decisions Made
+
+Moved the two shifted alignment keys to the same browser fallback as the formatting shortcuts. Used scope checks for the Find and side peek handlers so foreground dialogs and nested editors keep their own key events.
+
+## 6. Difficulties / Friction
+
+Early formatting fixtures selected different text depending on editor timing. The first Q1 run passed the 33 candidate cases but its cleanup check reported a Chrome process still exiting. The first database UI run timed out before the peek cases.
+
+## 7. Adjustments Made
+
+Set the regression fixture's document and selection in one Tiptap transaction, then used Playwright keyboard events to apply and remove the marks. Preserved both failures and reran Q1 and database UI separately.
+
+## 8. Mistakes / Risks
+
+The initial Git status refreshed the designated worktree's index in the shared Git directory. Subsequent target inspection used optional locks disabled. The commit and replay took place in independent Git repositories.
+
+## 9. Current Position
+
+The local candidate and its diagnostic evidence are described in the [resume note](handoff/2026-11-23-v1-6-rc-polish-fix-resume-note.md). The external receipt pins the exact commit and test files.
+
+## 10. Next Steps
+
+Use the verified bundle and receipt for independent review of the exact candidate.
+
+## 11. Open Questions
+
+Packaged WebView2 keyboard interaction and owner acceptance remain outside this verification.
+
+## 12. Session Outcome
+
+Produced the scoped fixes and their regressions for local handoff. Publication remains held by the owner's instruction.
+
+## 13. Confidence Level
+
+The three browser mock modes passed 103 checks each. Database UI passed 68, database views passed 117, and Q1 passed all 33 candidate cases with the expected preimage failures. N3 passed 4 and Sticky interval passed 25. TypeScript and both builds passed.
+
+---
 
 <a id="session-149"></a>
 

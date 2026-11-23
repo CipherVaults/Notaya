@@ -33,14 +33,17 @@ if (import.meta.env.PROD || "__TAURI_INTERNALS__" in window) {
       k === "f7" ||
       (import.meta.env.PROD && k === "f12") ||
       (e.ctrlKey && !e.altKey && (
-        ["g", "h", "j", "o", "p", "r", "s", "u", "+", "=", "-", "_", "0"].includes(k) ||
+        ["g", "o", "p", "+", "=", "-", "_", "0"].includes(k) ||
+        (!e.shiftKey && ["h", "j", "r", "s"].includes(k)) ||
         (e.shiftKey && ["i", "c"].includes(k))
       ));
     if (blocked) e.preventDefault();
   }, { capture: true });
-  // Note/row Find and the shell run first. Auxiliary windows and the lock screen have no shell.
+  // Let editors and the shell handle Find, formatting and alignment before blocking browser actions.
   window.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === "f") e.preventDefault();
+    if (e.defaultPrevented || !e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k === "f" || k === "u" || (e.shiftKey && ["h", "j", "r", "s"].includes(k))) e.preventDefault();
   });
   window.addEventListener("wheel", (e) => {
     if (e.ctrlKey) e.preventDefault();

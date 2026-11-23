@@ -33,7 +33,14 @@ export default function RowPeek({ rowId, mode, onClose, onOpenPage }: Props) {
         role="complementary"
         aria-label="Row"
         className="absolute inset-y-0 end-0 z-30 flex w-[min(580px,100%)] flex-col border-s border-line bg-bg shadow-float"
-        onKeyDown={(e) => e.key === "Escape" && !e.defaultPrevented && onClose()}
+        onKeyDownCapture={(e) => {
+          if (e.key !== "Escape" || e.defaultPrevented || e.nativeEvent.isComposing) return;
+          if (!(e.target instanceof Element) || e.target.closest('[role="complementary"][aria-label="Row"], [role="dialog"]') !== e.currentTarget) return;
+          // Find handles Escape at window capture. ProseMirror cancels it at the editor.
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }}
       >
         {bar}
         <div className="min-h-0 flex-1">
