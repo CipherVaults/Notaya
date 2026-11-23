@@ -6,6 +6,7 @@ pub mod store;
 pub mod history;
 pub mod activity;
 mod anchor;
+pub(crate) mod backup;
 #[cfg(test)]
 mod security_tests;
 
@@ -222,7 +223,63 @@ impl Session {
     }
 
     pub fn read_header(path: &Path) -> Result<Header> {
-        Store::open(path)?.read_header()
+        Store::open_read_only(path)?.read_header()
+    }
+
+    /// Reads the live header for the lock screen without recovering the live vault.
+    pub(crate) fn read_live_header(paths: &crate::portable::Paths) -> Result<Header> {
+        backup::with_preflight(&paths.data, &paths.vault, |_, header, _| Ok(header))
+    }
+
+    /// Both live-vault entry points call this while holding AppState's open gate.
+    /// Authenticate and finish the safety copy before opening the writable store.
+    pub(crate) fn unlock_live(
+        paths: &crate::portable::Paths,
+        credentials: Option<(&str, Option<&[u8; 32]>)>,
+    ) -> Result<Option<(Session, Option<String>)>> {
+        backup::clean_stale_preflight(&paths.data);
+        let preflight = backup::with_preflight(
+            &paths.data,
+            &paths.vault,
+            |source, header, recovered| {
+                let dek = match credentials {
+                    Some((password, keyfile)) => header.unlock(password, keyfile)?,
+                    None if header.open => header.unlock_open()?,
+                    None => return Ok(None),
+                };
+                let name = if backup::needs_upgrade(&source, &header, &dek)? {
+                    Some(backup::before_upgrade(&paths.data, &source, &header, &dek)?)
+                } else {
+                    if recovered {
+                        // Validate existing records and journals before recovery
+                        // on the live file, even when no safety copy is due.
+                        Self::load(source, header.clone(), dek.clone())?;
+                    }
+                    None
+                };
+                Ok(Some((header, dek, name)))
+            },
+        )?;
+        let Some((header, dek, name)) = preflight else {
+            return Ok(None);
+        };
+
+        let store = Store::open(&paths.vault)?;
+        if name.is_some() {
+            // DDL, the anchor and settings latch, and the legacy re-key must all
+            // roll back together. A failed attempt leaves the saved copy reusable.
+            store.begin_action()?;
+        }
+        if store.read_header()?.to_bytes() != header.to_bytes() {
+            return Err(Error::Corrupt);
+        }
+        let mut session = Self::load(store, header, dek)?;
+        if name.is_some() {
+            let (password, keyfile) = credentials.unwrap_or(("", None));
+            session.upgrade_format(password, keyfile)?;
+            session.store.commit_action()?;
+        }
+        Ok(Some((session, name)))
     }
 
     pub fn unlock(path: &Path, password: &str, keyfile: Option<&[u8; 32]>) -> Result<Session> {
@@ -926,24 +983,13 @@ impl Session {
     /// authenticates with this session's data key. It needs no password, and it reads one
     /// row at a time. A backup is counted as made only after this passes.
     pub fn verify_copy(&self, path: &Path) -> Result<()> {
-        let copy = Store::open(path)?;
-        if copy.read_header()?.to_bytes() != self.store.read_header()?.to_bytes() {
-            return Err(Error::Corrupt);
+        let copy = Store::open_read_only(path)?;
+        let header = self.store.read_header()?;
+        if backup::matches_source(&self.store, &copy, &header, &self.dek, false)? {
+            Ok(())
+        } else {
+            Err(Error::Corrupt)
         }
-        for table in [Table::Records, Table::Attachments, Table::History, Table::Activity, Table::Anchor] {
-            if !copy.exists(table)? { return Err(Error::Corrupt); }
-            let ids = copy.ids(table)?;
-            if ids.len() != self.store.ids(table)?.len() {
-                return Err(Error::Corrupt);
-            }
-            for id in ids {
-                let sealed = copy.get(table, &id)?.ok_or(Error::Corrupt)?;
-                if self.store.get(table, &id)?.as_ref() != Some(&sealed) { return Err(Error::Corrupt); }
-                let plain = crypto::open(&self.dek, &aad(self.format, &self.vault_id, table, &id), &sealed)?;
-                crypto::unpad(&plain)?;
-            }
-        }
-        Ok(())
     }
 }
 

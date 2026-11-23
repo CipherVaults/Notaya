@@ -44,43 +44,63 @@ pub struct VaultStatus {
 /// so Notaya starts straight in the notes (A21). A vault with a master password is
 /// left alone for the lock screen. Returns why a vault with security off could not be opened.
 fn auto_open(app: &AppHandle, state: &AppState) -> Option<String> {
+    match auto_open_core(state) {
+        Ok((opened, notice)) => {
+            if opened {
+                after_live_open(app, state, notice);
+            }
+            None
+        }
+        Err(e) => Some(e.to_string()),
+    }
+}
+
+pub(crate) fn auto_open_core(state: &AppState) -> Result<(bool, Option<String>)> {
     let _gate = state.open_gate();
     // A quit in progress must not bring the notes back to life.
     if state.is_unlocked() || state.is_quitting() {
-        return None;
+        return Ok((false, None));
     }
     if !state.paths.vault.exists() {
         // Earlier copies without a vault look like lost notes: ask first, never start empty.
         // An installed copy also asks on its first start, so the notes of a portable copy can
         // be brought in before an empty vault takes their place.
         if state.paths.installed || openvault::has_earlier_copies(&state.paths) {
-            return None;
+            return Ok((false, None));
         }
-        return create_open(app, state).err().map(|e| e.to_string());
+        create_open(state)?;
+        return Ok((true, None));
     }
-    match Session::read_header(&state.paths.vault) {
-        Ok(h) if h.open => match Session::unlock_open(&state.paths.vault) {
-            Ok(mut session) => {
-                // A vault from V1.3.0 or earlier is re-encrypted in the Notaya format (no password needed).
-                session.upgrade_format_quietly("", None);
-                state.set_session(session);
-                after_unlock(app, state);
-                None
-            }
-            Err(e) => Some(e.to_string()),
-        },
-        // A master password, or a header that can't be read: the lock screen deals with it.
-        _ => None,
-    }
+    let Some((session, copy)) = Session::unlock_live(&state.paths, None)? else {
+        // A master password: the lock screen deals with it.
+        return Ok((false, None));
+    };
+    let notice = queue_upgrade_notice(state, copy);
+    state.set_session(session);
+    Ok((true, notice))
 }
 
 /// Creates a new vault with security off and opens it.
-fn create_open(app: &AppHandle, state: &AppState) -> Result<()> {
+fn create_open(state: &AppState) -> Result<()> {
     state.paths.ensure_dirs()?;
     let session = Session::create_open(&state.paths.vault)?;
     state.set_session(session);
-    after_unlock(app, state);
     Ok(())
+}
+
+fn queue_upgrade_notice(state: &AppState, copy: Option<String>) -> Option<String> {
+    copy.map(|name| {
+        let text = format!("Notaya saved {name} in your data folder before upgrading this vault to 1.6.");
+        state.set_notice(text.clone());
+        text
+    })
+}
+
+fn after_live_open(app: &AppHandle, state: &AppState, notice: Option<String>) {
+    after_unlock(app, state);
+    if notice.is_some() {
+        let _ = app.emit_to("main", "app-notice", ());
+    }
 }
 
 /// Runs on a worker thread: opening a vault also opens sticky notes (windows).
@@ -91,6 +111,8 @@ pub fn vault_status(app: AppHandle, state: State<'_, AppState>) -> Result<VaultS
 
 fn vault_status_person(app: AppHandle, state: State<'_, AppState>) -> Result<VaultStatus> {
     let open_error = auto_open(&app, &state);
+    // The status-only header probe can also create a preflight copy.
+    let _gate = state.open_gate();
     let exists = state.paths.vault.exists();
     let unlocked = state.is_unlocked();
     let (keyfile_required, security_on, header_ok) = if unlocked {
@@ -100,7 +122,7 @@ fn vault_status_person(app: AppHandle, state: State<'_, AppState>) -> Result<Vau
             Err(_) => (false, true, false),
         }
     } else if exists {
-        match Session::read_header(&state.paths.vault) {
+        match Session::read_live_header(&state.paths) {
             Ok(h) => (h.keyfile_required, !h.open, true),
             // Unreadable: treat it as protected, so it is never shown as an open vault.
             Err(_) => (false, true, false),
@@ -185,7 +207,9 @@ fn start_notes_person(app: AppHandle, state: State<'_, AppState>) -> Result<()> 
     if state.paths.vault.exists() {
         return Err(Error::VaultExists);
     }
-    create_open(&app, &state)
+    create_open(&state)?;
+    after_unlock(&app, &state);
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -222,6 +246,8 @@ fn enable_security_person(
     keyfile: Option<String>,
     remove_unprotected_copies: bool,
 ) -> Result<EnableSecurityResult> {
+    // Keep the cleanup from racing a preflight copy being opened or recovered.
+    let _gate = state.open_gate();
     enable_security_core(&state, password, keyfile)?;
     // From here on the vault is protected: the stored screenshot choice (off unless chosen) applies.
     if let Ok(protect) = state.with(|s| Ok(s.protects_capture())) {
@@ -307,11 +333,19 @@ fn unlock_vault_person(
     password: String,
     keyfile: Option<String>,
 ) -> Result<()> {
-    if unlock_vault_core(&state, password, keyfile)? { after_unlock(&app, &state); }
+    let (opened, notice) = unlock_vault_core(&state, password, keyfile)?;
+    if opened {
+        after_live_open(&app, &state, notice);
+    }
     Ok(())
 }
 
-pub(crate) fn unlock_vault_core(state: &AppState, password: String, keyfile: Option<String>) -> Result<bool> {
+pub(crate) fn unlock_vault_core(
+    state: &AppState,
+    password: String,
+    keyfile: Option<String>,
+) -> Result<(bool, Option<String>)> {
+    let _gate = state.open_gate();
     let password = Zeroizing::new(password);
     state.check_rate_limit()?;
     let kf = match read_keyfile(keyfile) {
@@ -321,15 +355,18 @@ pub(crate) fn unlock_vault_core(state: &AppState, password: String, keyfile: Opt
             return Err(e);
         }
     };
-    if state.is_unlocked() { return Ok(false); }
-    match Session::unlock(&state.paths.vault, &password, kf.as_deref()) {
-        Ok(mut session) => {
-            // A vault from V1.3.0 or earlier is re-encrypted in the Notaya format, with the same password.
-            session.upgrade_format_quietly(&password, kf.as_deref());
+    if state.is_unlocked() || state.is_quitting() {
+        return Ok((false, None));
+    }
+    match Session::unlock_live(&state.paths, Some((&password, kf.as_deref()))) {
+        Ok(Some((session, copy))) => {
+            // Keep the notice even if hiding the window interrupts opening after the upgrade.
+            let notice = queue_upgrade_notice(state, copy);
             // Refused (and the session wiped) if the window was closed to the tray meanwhile.
             state.set_session_unless_hidden(session)?;
-            Ok(true)
+            Ok((true, notice))
         }
+        Ok(None) => Err(Error::BadCredentials),
         Err(e) => {
             if matches!(e, Error::BadCredentials) {
                 state.record_failure();
@@ -660,12 +697,15 @@ pub fn quit_app(app: AppHandle) {
     state::quit(&app);
 }
 
-/// A message for the owner that the app couldn't show live, returned once. The UI
-/// calls it on startup, because a lock reloads the window and an `app-notice`
-/// event sent just before could be missed.
+/// Reads the oldest notice without removing it, including after a window reload.
 #[tauri::command]
-pub fn take_notice(state: State<'_, AppState>) -> Option<String> {
-    state.take_notice()
+pub fn pending_notice(state: State<'_, AppState>) -> Option<state::AppNotice> {
+    state.pending_notice()
+}
+
+#[tauri::command]
+pub fn acknowledge_notice(state: State<'_, AppState>, id: String) {
+    state.acknowledge_notice(&id);
 }
 
 #[tauri::command]

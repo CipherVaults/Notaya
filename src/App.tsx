@@ -38,7 +38,6 @@ export default function App() {
     return () => { startupMark("readyCleanup", true); cancel(); };
   }, [hasStatus, lockListenerReady, startupFailed]);
 
-  // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
   const unlocked = status?.unlocked ?? false;
   // Back and forward (Backspace, Alt+Left/Right, the mouse buttons): only while unlocked, in memory only.
   useEffect(() => {
@@ -52,6 +51,7 @@ export default function App() {
       stopLastPlace();
     };
   }, [unlocked]);
+  // Database reminders: shown inside Notaya, title only, once per run. Only while unlocked.
   useEffect(() => {
     if (!unlocked) return;
     let stopped = false;
@@ -79,18 +79,61 @@ export default function App() {
       // Storage may be unavailable; nothing to show then.
     }
 
-    // A message the backend wants shown once (for example after a backup failed).
-    // A failed backup is shown as an error; the other messages are information.
-    const showNotice = () =>
-      api
-        .takeNotice()
-        .then((text) => {
-          if (!text) return;
-          if (text.startsWith("Notaya could not")) toast.error(text, { duration: 15000 });
-          else toast.info(text, { duration: 15000 });
-        })
-        .catch(() => {});
-    showNotice();
+    const dismissedNoticeKey = "notaya.dismissedAppNotice";
+    let active = true;
+    let submittedId: string | undefined;
+    let dismissedId: string | null = null;
+    let checking = Promise.resolve();
+    try {
+      dismissedId = sessionStorage.getItem(dismissedNoticeKey);
+    } catch {
+      // The backend still keeps undismissed notices pending across reloads.
+    }
+    const checkNotice = () => {
+      checking = checking.then(async () => {
+        if (!active || document.hidden || submittedId) return;
+        const notice = await api.pendingNotice();
+        if (!active || document.hidden || !notice) return;
+        if (dismissedId === notice.id) {
+          await api.acknowledgeNotice(notice.id);
+          checkNotice();
+          return;
+        }
+        submittedId = notice.id;
+        const show = notice.text.startsWith("Notaya could not") ? toast.error : toast.info;
+        show(notice.text, {
+          id: notice.id,
+          duration: Infinity,
+          dismissible: false,
+          action: {
+            label: "Dismiss",
+            onClick: (event) => {
+              // A keyboard user can reach buttons behind the collapsed Sonner stack.
+              const frontToast = event.currentTarget.closest(
+                '[data-sonner-toast][data-front="true"][data-mounted="true"][data-removed="false"]',
+              );
+              if (!active || document.hidden || submittedId !== notice.id || !frontToast) {
+                event.preventDefault();
+                return;
+              }
+              submittedId = undefined;
+              dismissedId = notice.id;
+              try {
+                // Replay the acknowledgement if the WebView reloads during the IPC call.
+                sessionStorage.setItem(dismissedNoticeKey, notice.id);
+              } catch {
+                // The receipt still lives in this window until it reloads.
+              }
+              checkNotice();
+            },
+          },
+        });
+      }).catch(() => {});
+    };
+    // Register at startup, independently of window readiness and vault status.
+    const unlistenNotice = listen("app-notice", checkNotice);
+    void unlistenNotice.then(checkNotice, checkNotice);
+    document.addEventListener("visibilitychange", checkNotice);
 
     // CSS is applied synchronously. Native backdrop IPC must not hold status
     // initialization hostage while the window is hidden.
@@ -130,15 +173,11 @@ export default function App() {
       },
       () => setStartupFailed(true),
     );
-    // The backend can also send a notice while the app is running.
-    // The payload is ignored on purpose: taking the stored copy shows the message once and clears it.
-    const unlistenNotice = listen<string>("app-notice", () => {
-      showNotice();
-    });
-    // A notice set before the listener existed (while the window was reloading) would be missed: look once more now.
-    void unlistenNotice.then(() => showNotice(), () => {});
     return () => {
       stopStartup();
+      active = false;
+      document.removeEventListener("visibilitychange", checkNotice);
+      if (submittedId) toast.dismiss(submittedId);
       // Rejected registrations have no listener to remove. A registration
       // completing after cleanup still removes its listener when it arrives.
       void unlistenNotice.then((f) => f(), () => {});

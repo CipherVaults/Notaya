@@ -228,13 +228,14 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
       securityOn = !!args.password;
       return ok({ undoFile });
     }
-    case "take_notice": {
+    case "pending_notice": {
       // ?notice=<text> shows that message once, as the backend would after a failed backup.
       const text = params.get("notice");
-      if (!text || noticeTaken) return ok(null);
-      noticeTaken = true;
-      return ok(text);
+      return ok(text && !noticeTaken ? { id: `mock:${text}`, text } : null);
     }
+    case "acknowledge_notice":
+      if (args.id === `mock:${params.get("notice")}`) noticeTaken = true;
+      return ok(null);
     case "flush_done":
       return ok(null);
     case "get_settings":

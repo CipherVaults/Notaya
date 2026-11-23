@@ -20,6 +20,7 @@ use crate::error::{Error, Result};
 use crate::crypto::KdfParams;
 use crate::portable::Paths;
 use crate::vault::Session;
+use crate::vault::store::{Store, check_rollback_journal};
 
 /// Largest backup file accepted.
 pub(crate) const MAX_BACKUP_BYTES: u64 = 2 * 1024 * 1024 * 1024;
@@ -181,24 +182,39 @@ pub(crate) fn is_picked(path: &Path, picked: Option<&Path>) -> bool {
 /// Copies `from` to the new file `to` and syncs it. A fresh file, not
 /// `fs::copy`, so a read-only source doesn't make a read-only vault.
 pub(crate) fn copy_file(from: &Path, to: &Path) -> Result<()> {
+    if copy_bounded(from, to)? == 0 {
+        return Err(Error::invalid("That backup file is empty."));
+    }
+    Ok(())
+}
+
+fn copy_bounded(from: &Path, to: &Path) -> Result<u64> {
     let mut src = File::open(from)?;
     let mut dst = OpenOptions::new().write(true).create_new(true).open(to)?;
     let copied = io::copy(&mut (&mut src).take(MAX_BACKUP_BYTES + 1), &mut dst)?;
-    if copied == 0 {
-        return Err(Error::invalid("That backup file is empty."));
-    }
     if copied > MAX_BACKUP_BYTES {
         return Err(Error::invalid("That file is too large to be a Notaya backup."));
     }
     dst.sync_all()?;
-    Ok(())
+    Ok(copied)
+}
+
+fn remove_if_present(path: &Path) -> io::Result<()> {
+    match fs::remove_file(path) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        result => result,
+    }
+}
+
+fn clear_temp(tmp: &Path) -> io::Result<()> {
+    let db = remove_if_present(tmp);
+    let journal = remove_if_present(&with_suffix(tmp, "-journal"));
+    db.and(journal)
 }
 
 /// Removes the checked copy and any SQLite journal next to it. Errors are ignored.
 pub fn remove_temp(paths: &Paths) {
-    let tmp = temp_path(paths);
-    let _ = fs::remove_file(with_suffix(&tmp, "-journal"));
-    let _ = fs::remove_file(&tmp);
+    let _ = clear_temp(&temp_path(paths));
 }
 
 /// Whether the verified copy waiting to be installed is a vault with security off.
@@ -220,11 +236,40 @@ pub fn verify_and_stage(paths: &Paths, source: &Path, password: &str, keyfile: O
 
 fn stage(paths: &Paths, source: &Path, password: &str, keyfile: Option<&[u8; 32]>) -> Result<()> {
     fs::create_dir_all(&paths.data)?;
-    remove_temp(paths); // a leftover from an earlier attempt
     let tmp = temp_path(paths);
-    copy_file(source, &tmp)?;
+    clear_temp(&tmp)?;
+    let source = fs::canonicalize(source)?;
+    copy_file(&source, &tmp)?;
+    let staged_journal = with_suffix(&tmp, "-journal");
+    let source_journal = with_suffix(&source, "-journal");
+    let has_journal = match fs::symlink_metadata(&source_journal) {
+        Ok(meta) => {
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::MetadataExt;
+                if meta.file_attributes() & 0x400 != 0 {
+                    return Err(Error::Corrupt);
+                }
+            }
+            if !meta.is_file() {
+                return Err(Error::Corrupt);
+            }
+            copy_bounded(&source_journal, &staged_journal)?;
+            check_rollback_journal(&staged_journal)?;
+            true
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => false,
+        Err(error) => return Err(error.into()),
+    };
+    // SQLite rolls a hot journal back on the staging pair. Always leave the
+    // chosen backup and its journal untouched, even if credentials are wrong.
+    let header = if has_journal {
+        Store::open(&tmp).and_then(|store| store.read_header())
+    } else {
+        Session::read_header(&tmp)
+    };
     // Look at the settings before spending memory on them (unlocking runs Argon2).
-    let header = match Session::read_header(&tmp) {
+    let header = match header {
         Ok(h) => h,
         Err(Error::Db(_)) => return Err(Error::Corrupt),
         Err(e) => return Err(e),
@@ -243,6 +288,8 @@ fn stage(paths: &Paths, source: &Path, password: &str, keyfile: Option<&[u8; 32]
         }
         // Dropped here: no SQLite handle may stay open on the file before it is renamed.
     }
+    // Recovery can leave an inactive journal. Only the checked database is installed.
+    remove_if_present(&staged_journal)?;
     // Needs a write handle on Windows (FlushFileBuffers); nothing is written.
     OpenOptions::new().write(true).open(&tmp)?.sync_all()?;
     Ok(())
@@ -306,13 +353,22 @@ pub(crate) fn install_failure(e: io::Error, rollback_notes: &[String]) -> Error 
 /// to `data/restore-undo-<now_ms>.nota` (with its `-journal` file, if any) and
 /// its name is returned; if there was no vault, returns `None` (a stray journal
 /// is still moved aside, so SQLite can't apply it to the new file). If a rename
-/// fails, the old files are put back. Nothing is ever deleted.
+/// fails, the old files are put back and the disposable staging pair is removed.
 pub fn install(paths: &Paths, now_ms: u64) -> Result<Option<String>> {
-    install_with(paths, now_ms, RENAME_ATTEMPTS, RENAME_DELAY).map_err(plain_io)
+    let result = install_with(paths, now_ms, RENAME_ATTEMPTS, RENAME_DELAY).map_err(plain_io);
+    if result.is_err() {
+        remove_temp(paths);
+    }
+    result
 }
 
 fn install_with(paths: &Paths, now_ms: u64, attempts: u32, delay: Duration) -> Result<Option<String>> {
     let tmp = temp_path(paths);
+    match fs::symlink_metadata(with_suffix(&tmp, "-journal")) {
+        Ok(_) => return Err(Error::Corrupt),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
     let journal = with_suffix(&paths.vault, "-journal");
     // An error here (not just "no") stops the restore: don't guess.
     let has_vault = paths.vault.try_exists()?;
@@ -851,10 +907,26 @@ mod tests {
         let paths = temp_paths();
         make_backup(&paths, "vault-1.clf", "pw", None, "x");
         write(&temp_path(&paths), b"stale");
+        write(&with_suffix(&temp_path(&paths), "-journal"), b"stale journal");
         let source = resolve_source(&paths, "vault-1.clf", None).unwrap();
         verify_and_stage(&paths, &source, "pw", None).unwrap();
         install(&paths, 1).unwrap();
         assert!(Session::unlock(&paths.vault, "pw", None).is_ok());
+    }
+
+    #[test]
+    fn install_refuses_and_cleans_a_staged_journal_without_moving_the_live_vault() {
+        let paths = temp_paths();
+        let staged = temp_path(&paths);
+        let journal = with_suffix(&staged, "-journal");
+        write(&paths.vault, b"live");
+        write(&staged, b"staged");
+        write(&journal, b"staged journal");
+        assert!(matches!(install(&paths, 1), Err(Error::Corrupt)));
+        assert_eq!(fs::read(&paths.vault).unwrap(), b"live");
+        assert!(!staged.exists());
+        assert!(!journal.exists());
+        assert!(!paths.data.join("restore-undo-1.nota").exists());
     }
 
     #[test]
