@@ -3,6 +3,7 @@
 
 import { Extension } from "@tiptap/react";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { openBlockMenu, openRadixPopup } from "./openPopup";
 
 export interface SlashState {
   /** Document range covering the "/" and the text typed after it. */
@@ -17,8 +18,9 @@ export interface SlashState {
 
 export interface SlashOptions {
   onState: (state: SlashState | null) => void;
-  /** Called for arrow/enter/escape while the menu is open; return true if handled. */
+  /** Called for arrow/enter/tab while the menu is open; return true if handled. */
   onKey: (event: KeyboardEvent) => boolean;
+  getMenu?: () => HTMLElement | null;
 }
 
 const key = new PluginKey("slashMenu");
@@ -63,6 +65,11 @@ export const SlashCommand = Extension.create<SlashOptions>({
       return { from, to: $from.pos, query: m[1] };
     };
 
+    const dismiss = (from: number) => {
+      dismissedAt = from;
+      report(null);
+    };
+
     return [
       new Plugin({
         key,
@@ -71,15 +78,30 @@ export const SlashCommand = Extension.create<SlashOptions>({
             const found = find(view.state);
             if (!found || found.from === dismissedAt) return false;
             if (event.key === "Escape") {
-              dismissedAt = found.from;
-              report(null);
+              dismiss(found.from);
               return true;
             }
             if (["ArrowDown", "ArrowUp", "Enter", "Tab"].includes(event.key)) return options.onKey(event);
             return false;
           },
         },
-        view() {
+        view(view) {
+          const doc = view.dom.ownerDocument;
+          const onEscape = (event: KeyboardEvent) => {
+            const menu = options.getMenu?.();
+            if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || !menu || !(event.target instanceof Element)) return;
+            const owner = view.dom.closest("[data-note-editor]");
+            if (event.target.closest('[data-note-editor], [data-database-view], [role="dialog"]') !== owner && !menu.contains(event.target)) return;
+            if (doc.querySelector(`${openRadixPopup}, ${openBlockMenu}`)) return;
+            const found = find(view.state);
+            if (!found || found.from === dismissedAt) return;
+            // The centered row dialog also handles Escape in capture.
+            event.preventDefault();
+            event.stopPropagation();
+            if (menu.contains(event.target)) view.focus();
+            dismiss(found.from);
+          };
+          doc.defaultView?.addEventListener("keydown", onEscape, true);
           return {
             update(view) {
               const found = find(view.state);
@@ -92,6 +114,7 @@ export const SlashCommand = Extension.create<SlashOptions>({
               report({ ...found, left: c.left, top: c.top, bottom: c.bottom });
             },
             destroy() {
+              doc.defaultView?.removeEventListener("keydown", onEscape, true);
               report(null);
             },
           };

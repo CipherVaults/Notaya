@@ -103,7 +103,7 @@ function LoadedEditor({ page, embedded, onOpenChild, onBodyEscape }: {
   const revRef = useRef((page as Revisioned<Page>).rev ?? 0);
   const inflightRef = useRef<Promise<void> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const slashController = useRef<SlashController>({ state: null, onKey: () => false });
+  const slashController = useRef<SlashController>({ state: null, menu: null, onKey: () => false });
   const tree = useApp((s) => s.tree);
   const setTree = useApp((s) => s.setTree);
   const securityOn = useApp((s) => s.status?.securityOn ?? false);
@@ -173,7 +173,11 @@ function LoadedEditor({ page, embedded, onOpenChild, onBodyEscape }: {
   useEffect(() => { bodyEscape.current = onBodyEscape; }, [onBodyEscape]);
   const hasBodyEscape = !!onBodyEscape;
   const extensions = useMemo(() => {
-    const extensions = [...pageExtensions({ onState: setSlash, onKey: (e) => slashController.current.onKey(e) }), NoteFindExtension];
+    const extensions = [...pageExtensions({
+      onState: setSlash,
+      onKey: (e) => slashController.current.onKey(e),
+      getMenu: () => slashController.current.menu,
+    }), NoteFindExtension];
     if (hasBodyEscape) {
       // Run after editor commands and before ProseMirror's default Escape cancellation.
       extensions.push(Extension.create({

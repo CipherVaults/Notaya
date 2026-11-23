@@ -4,6 +4,7 @@ import { NodeSelection, Selection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { ArrowDown, ArrowUp, ChevronRight, Copy, GripVertical, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { TypeMenu } from "./BubbleToolbar";
+import { openRadixPopup } from "./openPopup";
 import { currentBlock } from "./turnInto";
 
 interface Target {
@@ -37,6 +38,7 @@ function blockAt(view: EditorView, hitPos: number): { pos: number; size: number 
 export default function BlockHandle({ editor, container }: { editor: Editor; container: React.RefObject<HTMLDivElement | null> }) {
   const [target, setTarget] = useState<Target | null>(null);
   const [menu, setMenu] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef(false);
   menuRef.current = menu;
   const targetRef = useRef<Target | null>(null);
@@ -64,7 +66,13 @@ export default function BlockHandle({ editor, container }: { editor: Editor; con
     const onLeave = () => {
       if (!menuRef.current) setTarget(null);
     };
-    const onKey = () => setTarget(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (menuRef.current) {
+        if (e.key === "Escape") return; // A nested popover may be dismissing.
+        setMenu(false);
+      }
+      setTarget(null);
+    };
     el.addEventListener("mousemove", onMove);
     el.addEventListener("mouseleave", onLeave);
     editor.view.dom.addEventListener("keydown", onKey);
@@ -84,15 +92,27 @@ export default function BlockHandle({ editor, container }: { editor: Editor; con
       setMenu(false);
       setTarget(null);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    const onKey = (e: KeyboardEvent) => {
+      const options = optionsRef.current;
+      if (e.key !== "Escape" || e.defaultPrevented || e.isComposing || !options || !(e.target instanceof Node)) return;
+      if (!options.closest("[data-note-editor]")?.contains(e.target)) return;
+      // Radix handles the top popover, including the nested Change type list.
+      if (options.ownerDocument.querySelector(openRadixPopup)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (options.parentElement?.contains(options.ownerDocument.activeElement)) {
+        editor.view.focus();
+      }
+      close();
+    };
     const t = setTimeout(() => window.addEventListener("mousedown", close), 0);
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
       clearTimeout(t);
       window.removeEventListener("mousedown", close);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
-  }, [menu]);
+  }, [editor, menu]);
 
   if (!target || !editor.isEditable) return null;
   const node = editor.state.doc.nodeAt(target.pos);
@@ -153,6 +173,7 @@ export default function BlockHandle({ editor, container }: { editor: Editor; con
       <button
         className="grip"
         aria-label="Drag to move, click for options"
+        aria-expanded={menu}
         title="Drag to move · click for options"
         draggable
         onDragStart={onDragStart}
@@ -173,6 +194,8 @@ export default function BlockHandle({ editor, container }: { editor: Editor; con
       </button>
       {menu && (
         <div
+          ref={optionsRef}
+          data-block-menu="open"
           className="absolute left-full top-7 z-30 w-48 rounded-xl border border-line bg-elevated p-1.5 shadow-float"
           style={{ marginLeft: -22 }}
           onMouseDown={(e) => e.stopPropagation()}
@@ -184,6 +207,8 @@ export default function BlockHandle({ editor, container }: { editor: Editor; con
               current={currentBlock(editor)}
               track={(open) => {
                 if (!open) {
+                  const options = optionsRef.current;
+                  if (options?.contains(options.ownerDocument.activeElement)) editor.view.focus();
                   setMenu(false);
                   setTarget(null);
                 }

@@ -4,6 +4,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { openEditorPopup } from "./openPopup";
 
 type Match = { from: number; to: number };
 type FindState = { query: string; matches: Match[]; index: number };
@@ -104,7 +105,7 @@ export default function NoteFind({ editor, inputRef, onClose }: {
   useEffect(() => {
     // Radix dismisses dialogs during document capture. Let the owning Find close first.
     const onEscape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.isComposing || !(e.target instanceof Element)) return;
+      if (e.key !== "Escape" || e.defaultPrevented || e.isComposing || !(e.target instanceof Element)) return;
       const target = e.target;
       const bar = findBarRef.current;
       if (!bar) return;
@@ -115,7 +116,8 @@ export default function NoteFind({ editor, inputRef, onClose }: {
       // A side peek can sit inside a database. Only property fields inside this note take priority.
       const database = target.closest("[data-database]");
       if (database && owner.contains(database) && target.closest("input, textarea, select")) return;
-      if (target.closest('[role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]')) return;
+      // Popovers can be portaled and leave focus on their trigger or in the editor.
+      if (bar.ownerDocument.querySelector(openEditorPopup)) return;
       e.preventDefault();
       e.stopPropagation();
       onClose(bar.contains(target));

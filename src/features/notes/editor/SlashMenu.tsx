@@ -71,6 +71,7 @@ const ITEMS: Item[] = [
 /** Shared with the editor: lets the slash plugin ask the menu to handle keys. */
 export interface SlashController {
   state: SlashState | null;
+  menu: HTMLDivElement | null;
   onKey: (event: KeyboardEvent) => boolean;
 }
 
@@ -191,7 +192,11 @@ export default function SlashMenu({
   let lastGroup = "";
   const menu = createPortal(
     <div
-      ref={listRef}
+      ref={(el) => {
+        listRef.current = el;
+        controller.current.menu = el;
+      }}
+      data-slash-menu="open"
       style={{ left: placement?.left ?? slash.left, top: placement?.top ?? slash.bottom + 6 }}
       className="fixed z-[80] max-h-[380px] w-[290px] overflow-y-auto rounded-xl border border-line bg-elevated p-1.5 shadow-float"
       onMouseDown={(e) => e.preventDefault()}

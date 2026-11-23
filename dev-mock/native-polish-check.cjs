@@ -221,6 +221,66 @@ async function findChecks(page) {
   await rows.waitFor();
 }
 
+async function popupFindEscapeChecks(page, scope, openEditor, layout, peek = false) {
+  const editor = scope.locator(".ProseMirror");
+  const find = noteFind(scope);
+  for (const popup of ["block type popover", "block options menu", "slash menu"]) {
+    const label = `${layout} ${popup}`;
+    await openEditor();
+    const sample = "Select this text for block options";
+    await editor.evaluate((el, text) => {
+      el.editor.commands.setContent({
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+      }, { emitUpdate: false });
+    }, sample);
+    await editor.press("Control+f");
+    await find.waitFor();
+
+    const paragraph = editor.getByText(sample, { exact: true });
+    let content;
+    let expectedFocus;
+    if (popup === "block type popover") {
+      await paragraph.click();
+      await editor.evaluate((el, length) => el.editor.commands.setTextSelection({ from: 1, to: length + 1 }), sample.length);
+      await page.getByTitle("Change what kind of block this is", { exact: true }).click();
+      content = page.locator("[data-radix-popper-content-wrapper]").filter({ has: page.getByRole("button", { name: "Large heading", exact: true }) });
+      expectedFocus = editor;
+    } else if (popup === "block options menu") {
+      await paragraph.hover();
+      const trigger = scope.getByRole("button", { name: "Drag to move, click for options" });
+      await trigger.click();
+      content = scope.locator('[data-block-menu="open"]').filter({ hasText: "Duplicate" });
+      expectedFocus = trigger;
+    } else {
+      await paragraph.click();
+      await page.keyboard.press("Home");
+      await page.keyboard.insertText("/");
+      content = page.locator('[data-slash-menu="open"]');
+      expectedFocus = editor;
+    }
+    await content.waitFor();
+    checks.check(`${label} leaves focus outside the popup`,
+      await expectedFocus.evaluate((el) => el === document.activeElement));
+    checks.check(`${label} opens while Find is visible`, await find.isVisible());
+
+    await page.keyboard.press("Escape");
+    checks.check(`${label} first Escape keeps Find open`, await find.isVisible());
+    await content.waitFor({ state: "hidden" });
+    checks.check(`${label} first Escape dismisses the popup`, !(await content.isVisible()));
+    if (peek) checks.check(`${label} first Escape keeps the row open`, await scope.isVisible());
+
+    await page.keyboard.press("Escape");
+    await find.waitFor({ state: "hidden" });
+    checks.check(`${label} second Escape closes Find and keeps the editor open`, await editor.isVisible());
+    if (peek) {
+      await page.keyboard.press("Escape");
+      await scope.waitFor({ state: "hidden" });
+      checks.check(`${label} third Escape closes the row`, !(await scope.isVisible()));
+    }
+  }
+}
+
 async function rowPeekFindChecks(page) {
   await open(page, "?db=1");
   await page.getByRole("treeitem", { name: "Tasks" }).click();
@@ -286,6 +346,8 @@ async function rowPeekFindChecks(page) {
         checks.check(`${peekMode} second Escape after ${focus} closes the row`, !(await peek.isVisible()));
       }
     }
+
+    await popupFindEscapeChecks(page, peek, openRow, peekMode, true);
 
     if (role === "complementary") {
       await openRow();
@@ -378,6 +440,10 @@ async function browserChecks(page) {
     await editorShortcutChecks(page);
     await rowPeekFindChecks(page);
     await findChecks(page);
+    await popupFindEscapeChecks(page, page.getByRole("main"), async () => {
+      await open(page, "?db=1");
+      await openNote(page);
+    }, "Full page");
     await browserChecks(page);
   } finally {
     await browser.close();

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 153 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Give open editor menus the first Escape](#session-153) |
 | 152 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix Find Escape from row titles](#session-152) |
 | 151 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC audit #2 findings](#session-151) |
 | 150 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC keyboard regressions](#session-150) |
@@ -186,6 +187,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-153"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Give open editor menus the first Escape
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. One Codex session implemented and tested the fix in scratch.
+
+**Models, Effort, Roles and Provenance:** The turn configuration recorded `gpt-6.2-sol` at `xhigh`. Audit #4 independently reviewed the predecessor. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc-polish-fix4).
+
+## 1. Time
+
+The transcript records Ahmed's instruction at 2026-11-23T14:56:17.328Z. The system clock records the local claim at 2026-11-23T14:57:39.9523024Z.
+
+## 2. Session Goal
+
+Resolve Audit #4's blocking popup Escape finding from `bc4ac5ed43097afb915e5a7ddc4a6656180f6396` on `AE0101/v1-6-rc`. Return the isolated verification receipt and incremental bundle with the designated checkout synchronized.
+
+## 3. Actions Taken
+
+Audited popup mounting and keyboard handlers across the source. Fixed the Find guard, block-options capture and slash dismissal. Extended the mock runner to exercise real triggers, retained focus and successive Escape presses in all three editor layouts.
+
+## 4. Key Insights
+
+The toolbar's type list can open while focus stays in ProseMirror. The grip can retain focus while its options are open. Radix handles a centered row at document capture, which precedes the old block menu's window bubble listener.
+
+## 5. Decisions Made
+
+Use Radix's open content state and markers present only on mounted custom menus. Keep the existing Find ownership and property-field guards. Return focus to the editor when closing the block handle removes its focused control.
+
+## 6. Difficulties / Friction
+
+Initial browser setup runs saw live reloads from evidence writes and a shared Vite optimizer cache collision. An initial SSR run hit duplicate React module resolution from Windows path casing.
+
+## 7. Adjustments Made
+
+Excluded scratch evidence from Vite's watcher, gave the database views server a separate optimizer cache and used the canonical Windows path for the SSR retry. Kept attempt logs with the final results.
+
+## 8. Mistakes / Risks
+
+The first parallel launch reused Vite's default optimizer directory. Browser regressions exercise the same editor components in Chromium mock modes. Packaged WebView2 QA remains a separate check.
+
+## 9. Current Position
+
+The local candidate and verification receipt are described in the [resume note](handoff/2026-11-23-v1-6-rc-polish-fix4-resume-note.md).
+
+## 10. Next Steps
+
+Review the local bundle independently and qualify the rebuilt Windows package before release. Publication awaits Ahmed's direction.
+
+## 11. Open Questions
+
+Independent review of this change and owner acceptance remain pending.
+
+## 12. Session Outcome
+
+The popup closes on the first Escape, Find closes on the second, and the row peek closes on the third. The full-page note stays open after Find closes.
+
+## 13. Confidence Level
+
+The dev, desktop-dev and production mock runs each passed 184 checks. The receipt binds the tested product tree to the local commit and records the protected comparison and bundle hashes.
+
+---
 
 <a id="session-152"></a>
 
