@@ -8,28 +8,26 @@
 //! The export does not say what a column is, so some kinds are guessed (see `csv::infer_notion`): a person column
 //! looks like a text column, and a formula or rollup column holds only its result. Those stay text.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 
 use serde_json::{json, Value};
 
 use super::database::{parse_cells, write_cells};
-use super::database_io::build_from_table_with;
+use super::database_io::{build_from_table_with, csv_row_title, csv_title_column};
 use crate::database::csv;
 use crate::database::types::*;
 use crate::error::{Error, Result};
 use crate::importers::doc::{Block, Cell, Inline};
-use crate::importers::plan::PlanPage;
+use crate::importers::plan::{self, Plan, PlanPage, RowTarget};
 use crate::importers::source::Vfs;
-use crate::importers::strip_notion_id;
+use crate::importers::{strip_notion_id, Control, ImportPhase};
 use crate::model::{new_id, Item};
-use crate::vault::Session;
 
 const MAX_DATABASES: usize = 200;
 
 /// One table of the export.
 pub struct NotionTable {
-    /// The folder of the CSV file, and the table's name without its id.
-    pub dir: String,
+    /// The table's display name without its id.
     pub title: String,
     pub table: csv::Table,
     /// The CSV files of this table (the plain one and the `_all` one).
@@ -39,16 +37,16 @@ pub struct NotionTable {
 /// A page of the import that sits in a table's folder: a row.
 pub struct RowPage {
     pub table: usize,
-    pub page_id: String,
-    pub title: String,
+    pub page: usize,
     /// The Notion id in the file name (32 hex characters), when it has one.
     pub notion_id: Option<String>,
 }
 
 pub struct Imported {
     pub items: Vec<Item>,
-    /// Page ids whose content moved into rows or database descriptions.
-    pub removed_pages: HashSet<String>,
+    pub row_targets: HashMap<String, RowTarget>,
+    row_indexes: HashMap<String, usize>,
+    header_indexes: HashMap<String, usize>,
     pub covered: Vec<String>,
     pub notes: Vec<String>,
     pub databases: usize,
@@ -91,9 +89,11 @@ fn percent_decode(s: &str) -> String {
 }
 
 /// Reads the tables out of the CSV files of an export (`_all` wins over the plain file).
-pub fn read_tables(vfs: &Vfs, csv_paths: &[String]) -> (Vec<NotionTable>, Vec<String>, Vec<String>) {
+pub fn read_tables(vfs: &Vfs, csv_paths: &[String], ctl: &Control) -> Result<(Vec<NotionTable>, Vec<String>, Vec<String>)> {
+    let check = || plan::check(ctl).map_err(Error::invalid);
     let mut groups: BTreeMap<String, (Option<String>, Option<String>, Vec<String>)> = BTreeMap::new();
     for p in csv_paths {
+        check()?;
         let (dir, name) = split_dir(p);
         let stem = name.get(..name.len().saturating_sub(4)).unwrap_or(name);
         let (base, is_all) = match stem.strip_suffix("_all") {
@@ -144,35 +144,94 @@ pub fn read_tables(vfs: &Vfs, csv_paths: &[String]) -> (Vec<NotionTable>, Vec<St
         }
     }
     let mut covered = Vec::new();
-    for (key, (plain, all, paths)) in groups {
+    let total = groups.len();
+    if total > 0 {
+        ctl.progress(ImportPhase::ReadingDatabases, 0, total);
+    }
+    for (index, (key, (plain, all, paths))) in groups.into_iter().enumerate() {
+        check()?;
         if tables.len() >= MAX_DATABASES {
             notes.push(format!("More than {MAX_DATABASES} databases: the rest were not imported."));
             break;
         }
         let Some(path) = all.or(plain) else { continue };
-        let (dir, base) = split_dir(&key);
+        let (_, base) = split_dir(&key);
         let title: String = strip_notion_id(base).chars().filter(|c| !c.is_control()).take(MAX_NAME).collect();
         let title = if title.trim().is_empty() { "Imported table".to_string() } else { title };
         match vfs.read(&path, csv::MAX_BYTES).map_err(|e| e.to_string()).and_then(|b| csv::parse(&csv::decode(&b))) {
             Ok(table) => {
                 covered.extend(paths.iter().cloned());
-                tables.push(NotionTable { dir: dir.to_string(), title, table, paths });
+                tables.push(NotionTable { title, table, paths });
             }
             Err(e) => notes.push(format!("The table \"{title}\" was not imported: {e}")),
         }
+        ctl.progress(ImportPhase::ReadingDatabases, index + 1, total);
     }
-    (tables, covered, notes)
+    check()?;
+    Ok((tables, covered, notes))
 }
 
-/// Which table a page belongs to as a row: the page sits in the folder `<table folder>/` next to the CSV.
-fn table_of(tables: &[NotionTable], key: &str) -> Option<usize> {
-    let (dir, _) = split_dir(key);
-    let (parent, folder) = split_dir(dir);
-    if dir.is_empty() {
-        return None;
+/// Use every discovered CSV to determine ownership, including tables that could not be imported.
+/// Plain and `_all` views of the same source count as one owner.
+#[derive(Default)]
+struct TableOwners<'a> {
+    ids: HashMap<&'a str, HashMap<String, Option<usize>>>,
+    names: HashMap<&'a str, HashMap<String, (String, Option<usize>)>>,
+    unavailable: HashSet<&'a str>,
+}
+
+impl<'a> TableOwners<'a> {
+    fn new(tables: &[NotionTable], csv_paths: &'a [String], ctl: &Control) -> Result<Self> {
+        let loaded: HashMap<&str, usize> = tables.iter().enumerate()
+            .flat_map(|(i, t)| t.paths.iter().map(move |path| (path.as_str(), i))).collect();
+        let mut owners = Self::default();
+        for path in csv_paths {
+            plan::check(ctl).map_err(Error::invalid)?;
+            let (dir, file) = split_dir(path);
+            let stem = file.rsplit_once('.').map_or(file, |(stem, _)| stem);
+            let base = stem.strip_suffix("_all").unwrap_or(stem);
+            let table = loaded.get(path.as_str()).copied();
+            if table.is_none() {
+                owners.unavailable.insert(dir);
+            }
+            let id = notion_id(base);
+            if let Some(id) = &id {
+                owners.ids.entry(dir).or_default().entry(id.clone())
+                    .and_modify(|owner| { if *owner != table { *owner = None; } })
+                    .or_insert(table);
+            }
+            let name = owner_name(base);
+            let identity = id.unwrap_or_else(|| base.to_string());
+            owners.names.entry(dir).or_default().entry(name)
+                .and_modify(|(source, owner)| {
+                    if *source != identity || *owner != table { *owner = None; }
+                })
+                .or_insert((identity, table));
+        }
+        Ok(owners)
     }
-    let folder = strip_notion_id(folder);
-    tables.iter().position(|t| t.dir == parent && t.title == folder)
+
+    /// Outer None means there is no adjacent database folder. An unresolved owner must
+    /// never fall through to the heuristic for flat exports.
+    fn folder(&self, dir: &str) -> Option<Option<usize>> {
+        if dir.is_empty() {
+            return None;
+        }
+        let (parent, folder) = split_dir(dir);
+        let name = || self.names.get(parent)?.get(&owner_name(folder));
+        if let Some(id) = notion_id(folder) {
+            if let Some(owner) = self.ids.get(parent).and_then(|ids| ids.get(&id)) {
+                return Some(*owner);
+            }
+            // A different explicit ID cannot match by display name.
+            return name().map(|_| None);
+        }
+        name().map(|(_, owner)| *owner)
+    }
+}
+
+fn owner_name(name: &str) -> String {
+    crate::importers::doc::collapse_ws(&strip_notion_id(name)).to_lowercase()
 }
 
 /// The text lines of a paragraph (a line break or a newline ends a line).
@@ -244,7 +303,7 @@ fn strip_property_lines(blocks: &mut Vec<Block>, headers: &HashSet<String>) {
 /// A flat export puts every row page next to the CSV files instead of in the table's folder. Such a page is a
 /// row of the table whose columns name all of its leading property lines (`Status: Done`) and which has a row
 /// with the page's title.
-fn flat_table_of(tables: &[NotionTable], headers: &[HashSet<String>], p: &PlanPage) -> Option<usize> {
+fn flat_table_of(candidates: &[usize], titles: &[HashSet<String>], headers: &[HashSet<String>], p: &PlanPage) -> Option<usize> {
     // Property lines (Markdown export) or a properties table (HTML export) at the top of the page.
     let (keys, majority): (Vec<String>, bool) = match p.blocks.first() {
         Some(Block::Paragraph(inl)) => {
@@ -262,28 +321,71 @@ fn flat_table_of(tables: &[NotionTable], headers: &[HashSet<String>], p: &PlanPa
         _ => return None,
     };
     let title = p.title.trim().to_lowercase();
-    headers.iter().enumerate().find_map(|(t, h)| {
+    let mut matches = candidates.iter().copied().filter(|&t| {
+        let h = &headers[t];
         let all_columns = if majority {
             let hits = keys.iter().filter(|k| h.contains(*k)).count();
             hits > 0 && hits * 2 >= keys.len()
         } else {
             keys.iter().all(|k| h.contains(k))
         };
-        (all_columns && tables[t].table.rows.iter().any(|r| r.first().is_some_and(|c| c.trim().to_lowercase() == title))).then_some(t)
-    })
+        all_columns && titles[t].contains(&title)
+    });
+    let first = matches.next()?;
+    matches.next().is_none().then_some(first)
 }
 
-/// Finds the pages that are rows of a table, takes the property lines off their top, and lists them.
-pub fn prepare_pages(tables: &[NotionTable], pages: &mut [PlanPage]) -> Vec<RowPage> {
-    let headers: Vec<HashSet<String>> = tables.iter().map(|t| t.table.header.iter().map(|h| h.trim().to_lowercase()).collect()).collect();
-    let mut rows = Vec::new();
-    for p in pages.iter_mut() {
-        let Some(t) = table_of(tables, &p.key).or_else(|| flat_table_of(tables, &headers, p)) else { continue };
-        strip_property_lines(&mut p.blocks, &headers[t]);
-        let (_, name) = split_dir(&p.key);
-        rows.push(RowPage { table: t, page_id: p.id.clone(), title: p.title.clone(), notion_id: notion_id(name) });
+/// Classifies candidate row pages. Their properties are stripped only once they have a row.
+pub fn prepare_pages(tables: &[NotionTable], plan: &Plan, ctl: &Control) -> Result<Vec<RowPage>> {
+    if tables.is_empty() {
+        return Ok(Vec::new());
     }
-    rows
+    let owners = TableOwners::new(tables, &plan.csv_paths, ctl)?;
+    let pages = &plan.pages;
+    let mut beside: HashMap<&str, Vec<usize>> = HashMap::new();
+    let headers: Vec<HashSet<String>> = tables.iter().map(|t| t.table.header.iter().map(|h| h.trim().to_lowercase()).collect()).collect();
+    let mut titles = Vec::with_capacity(tables.len());
+    for (i, table) in tables.iter().enumerate() {
+        plan::check(ctl).map_err(Error::invalid)?;
+        for path in &table.paths {
+            let candidates = beside.entry(split_dir(path).0).or_default();
+            if candidates.last() != Some(&i) {
+                candidates.push(i);
+            }
+        }
+        let title_col = csv_title_column(&table.table.header, DEFAULT_TITLE_PROP_NAME, &[]);
+        titles.push(table.table.rows.iter().map(|row| csv_row_title(row, title_col).to_lowercase()).collect());
+    }
+    let mut rows = Vec::new();
+    let mut row_ancestry = Vec::with_capacity(pages.len());
+    if !pages.is_empty() {
+        ctl.progress(ImportPhase::MatchingRows, 0, pages.len());
+    }
+    for (index, p) in pages.iter().enumerate() {
+        plan::check(ctl).map_err(Error::invalid)?;
+        let inside_row = p.parent.is_some_and(|parent| row_ancestry[parent]);
+        let table = if p.generated {
+            None
+        } else {
+            // A child of a row is an ordinary page even when its opening text resembles
+            // CSV properties. An explicit database folder can still identify a nested table.
+            let (dir, _) = split_dir(&p.key);
+            match owners.folder(dir) {
+                Some(owner) => owner,
+                None if !inside_row && !owners.unavailable.contains(dir) => {
+                    beside.get(dir).and_then(|c| flat_table_of(c, &titles, &headers, p))
+                }
+                None => None,
+            }
+        };
+        if let Some(t) = table {
+            let (_, name) = split_dir(&p.key);
+            rows.push(RowPage { table: t, page: index, notion_id: notion_id(name) });
+        }
+        row_ancestry.push(inside_row || table.is_some());
+        ctl.progress(ImportPhase::MatchingRows, index + 1, pages.len());
+    }
+    Ok(rows)
 }
 
 /// `Title (https://www.notion.so/…-<id>)` or `Title (Folder/Title <id>.md)`, separated by `, `.
@@ -320,106 +422,81 @@ fn parse_links(cell: &str) -> Option<Vec<(String, String)>> {
     if out.is_empty() { None } else { Some(out) }
 }
 
-/// Makes the databases. `items` holds the pages of the import (rows' bodies are taken from them, and the pages
-/// that became rows are reported in `removed_pages`). CSV source sections locate tables without row pages.
+/// Makes the databases and assigns canonical row IDs before the source pages are rendered.
 pub fn import_databases(
     tables: &[NotionTable],
     row_pages: &[RowPage],
-    items: &[Item],
-    source_sections: &HashMap<String, String>,
-    header_pages: &HashMap<String, String>,
-    s: &Session,
+    plan: &mut Plan,
     now: i64,
-    before_first: &dyn Fn(&Session) -> Result<()>,
+    ctl: &Control,
 ) -> Result<Imported> {
-    let mut out = Imported { items: Vec::new(), removed_pages: HashSet::new(), covered: Vec::new(), notes: Vec::new(), databases: 0 };
+    let mut out = Imported { items: Vec::new(), row_targets: HashMap::new(), row_indexes: HashMap::new(), header_indexes: HashMap::new(), covered: Vec::new(), notes: Vec::new(), databases: 0 };
     if tables.is_empty() {
         return Ok(out);
     }
-    if !s.items().any(|i| matches!(i, Item::Database(_))) {
-        before_first(s)?;
-        out.notes.push(super::database::FIRST_DATABASE_NOTICE.to_string());
-    }
-    let page_of: HashMap<&str, &crate::model::Page> = items.iter().filter_map(|i| if let Item::Page(p) = i { Some((p.id.as_str(), p)) } else { None }).collect();
-    let has_children: HashSet<&str> = page_of.values().filter(|p| !p.parent.is_empty()).map(|p| p.parent.as_str()).collect();
-    let mut order = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.order) } else { None }).max().map_or(0, |m| m + 1);
+    let header_pages = plan.database_header_ids();
+    let check = || plan::check(ctl).map_err(Error::invalid);
+    let total = 3 * tables.len();
+    ctl.progress(ImportPhase::FoldingDatabases, 0, total);
 
-    struct Made {
+    struct Made<'a> {
         built: crate::commands::database_io::Built,
-        /// For each row, the table's row index.
-        notion_ids: Vec<Option<String>>,
+        /// For each CSV row, the source page paired with it, if any.
+        source_pages: Vec<Option<&'a RowPage>>,
     }
-    let mut made: Vec<Option<Made>> = Vec::new();
-    // Row bodies are only moved over when nothing else points at the page.
-    let content_of_others = |id: &str| -> bool { page_of.values().any(|p| p.id != id && p.content.contains(id)) };
-    let few_pages = page_of.len() <= 3000;
+    let mut made: Vec<Option<Made<'_>>> = Vec::new();
 
     for (ti, t) in tables.iter().enumerate() {
+        check()?;
         let mine: Vec<&RowPage> = row_pages.iter().filter(|r| r.table == ti).collect();
-        let section = mine.iter().find_map(|r| page_of.get(r.page_id.as_str()).map(|p| p.section_id.clone()))
-            .or_else(|| t.paths.iter().find_map(|p| source_sections.get(p).cloned()))
+        let section = mine.first().map(|r| plan.pages[r.page].section)
+            .or_else(|| t.paths.iter().find_map(|p| plan.csv_sections.get(p).copied()))
             .ok_or_else(|| Error::invalid("The database source section was not found. Nothing was imported."))?;
-        let mut db = Database::new(new_id(), section, t.title.clone(), now);
-        db.order = order;
-        order += 1;
-        let mut built = match build_from_table_with(db, &t.table, 0, now, true) {
+        let db = Database::new(new_id(), plan.section_ids[section].clone(), t.title.clone(), now);
+        let built = match build_from_table_with(db, &t.table, 0, now, true, &check) {
             Ok(b) => b,
             Err(e) => {
+                check()?;
                 out.notes.push(format!("The table \"{}\" was not imported: {e}", t.title));
                 made.push(None);
+                ctl.progress(ImportPhase::FoldingDatabases, ti + 1, total);
                 continue;
             }
         };
-        // Consume a plain wrapper only after its database is built. A failed/ambiguous
-        // table or an incoming page link keeps the rendered source page as a fallback.
-        if let Some(id) = t.paths.iter().find_map(|p| header_pages.get(p)) {
-            let owners = tables.iter().filter(|table| table.paths.iter().any(|p| header_pages.get(p) == Some(id))).count();
-            if owners == 1 && !has_children.contains(id.as_str()) && !content_of_others(id) {
-                // Keep the full fallback page when its text cannot fit the existing
-                // Database::sanitize description limit; never truncate it or fail the import.
-                if let Some(page) = page_of.get(id.as_str()).filter(|p| p.text.chars().take(2_001).count() <= 2_000) {
-                    built.db.description = page.text.clone();
-                    out.removed_pages.insert(id.clone());
-                }
-            }
+        let headers: HashSet<String> = t.table.header.iter().map(|h| h.trim().to_lowercase()).collect();
+        let mut by_title: HashMap<String, VecDeque<&RowPage>> = HashMap::new();
+        for source in mine {
+            by_title.entry(plan.pages[source.page].title.trim().to_lowercase()).or_default().push_back(source);
         }
-        // Each row takes the page with its title (in order, so equal titles pair up one by one).
-        let mut used = vec![false; mine.len()];
-        let mut notion_ids = Vec::with_capacity(built.rows.len());
+        let mut source_pages = Vec::with_capacity(built.rows.len());
         let mut moved = 0usize;
-        for row in built.rows.iter_mut() {
+        for row in &built.rows {
+            check()?;
             let want = row.title.trim().to_lowercase();
-            let at = mine.iter().enumerate().position(|(i, r)| !used[i] && r.title.trim().to_lowercase() == want);
-            let Some(i) = at else {
-                notion_ids.push(None);
-                continue;
-            };
-            used[i] = true;
-            let r = mine[i];
-            notion_ids.push(r.notion_id.clone());
-            let Some(page) = page_of.get(r.page_id.as_str()) else { continue };
-            // A page with sub-pages, or one that another page links to, stays a page.
-            if has_children.contains(page.id.as_str()) || (few_pages && content_of_others(&page.id)) {
-                continue;
+            // Pair equal titles in source order, once per row and once per page.
+            let source = by_title.get_mut(&want).and_then(VecDeque::pop_front);
+            if let Some(source) = source {
+                let page = &mut plan.pages[source.page];
+                strip_property_lines(&mut page.blocks, &headers);
+                out.row_targets.insert(page.id.clone(), RowTarget { id: row.id.clone(), section });
+                moved += 1;
             }
-            row.content = page.content.clone();
-            row.text = page.text.clone();
-            row.icon = page.icon.clone();
-            row.cover = page.cover.clone();
-            out.removed_pages.insert(page.id.clone());
-            moved += 1;
+            source_pages.push(source);
         }
         out.notes.push(format!("Database \"{}\": {} rows, {} columns, {} row pages moved into the rows.", t.title, built.rows.len(), t.table.header.len(), moved));
-        made.push(Some(Made { built, notion_ids }));
+        made.push(Some(Made { built, source_pages }));
+        ctl.progress(ImportPhase::FoldingDatabases, ti + 1, total);
     }
 
     // ---- relations: a text column whose cells all point at rows of one table
     let mut by_notion_id: HashMap<String, (usize, usize)> = HashMap::new();
     let mut by_title: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
     for (ti, m) in made.iter().enumerate() {
+        check()?;
         let Some(m) = m else { continue };
         for (ri, row) in m.built.rows.iter().enumerate() {
-            if let Some(Some(id)) = m.notion_ids.get(ri) {
+            check()?;
+            if let Some(id) = m.source_pages[ri].and_then(|p| p.notion_id.as_ref()) {
                 by_notion_id.insert(id.clone(), (ti, ri));
             }
             by_title.entry(row.title.trim().to_lowercase()).or_default().push((ti, ri));
@@ -440,7 +517,11 @@ pub fn import_databases(
     // (table, property index) -> links per row: (target table, target row)
     let mut links: HashMap<(usize, usize), (usize, Vec<Vec<usize>>)> = HashMap::new();
     for (ti, m) in made.iter().enumerate() {
-        let Some(m) = m else { continue };
+        check()?;
+        let Some(m) = m else {
+            ctl.progress(ImportPhase::FoldingDatabases, tables.len() + ti + 1, total);
+            continue;
+        };
         let tbl = &tables[ti].table;
         for (pi, prop) in m.built.db.props.iter().enumerate().skip(1) {
             if prop.kind != PropKind::Text {
@@ -452,6 +533,7 @@ pub fn import_databases(
             let mut any = false;
             let mut ok = true;
             'rows: for r in &tbl.rows {
+                check()?;
                 let cell = r.get(col).map(|c| c.trim()).unwrap_or("");
                 if cell.is_empty() {
                     per_row.push(Vec::new());
@@ -484,6 +566,7 @@ pub fn import_databases(
                 }
             }
         }
+        ctl.progress(ImportPhase::FoldingDatabases, tables.len() + ti + 1, total);
     }
     // Make the properties and write the cells.
     let db_ids: Vec<Option<String>> = made.iter().map(|m| m.as_ref().map(|m| m.built.db.id.clone())).collect();
@@ -498,10 +581,12 @@ pub fn import_databases(
     // A relation and its mirror in the other table (every link has its opposite) become one two-way relation.
     let mut back: HashMap<(usize, usize), (usize, usize)> = HashMap::new();
     for (a, (ta, la)) in &links {
+        check()?;
         if back.contains_key(a) {
             continue;
         }
         for (b, (tb, lb)) in &links {
+            check()?;
             // b lives in the table a points at, and points back at a's table.
             if a == b || back.contains_key(b) || b.0 != *ta || *tb != a.0 {
                 continue;
@@ -528,6 +613,7 @@ pub fn import_databases(
         }
         let pid = m.built.db.props[*pi].id.clone();
         for (ri, row) in m.built.rows.iter_mut().enumerate() {
+            check()?;
             let mut cells = parse_cells(row);
             cells.remove(&pid);
             let ids = &per_row[ri];
@@ -540,17 +626,72 @@ pub fn import_databases(
     }
 
     for (ti, m) in made.into_iter().enumerate() {
-        let Some(mut m) = m else { continue };
-        m.built.db.sanitize().map_err(|e| Error::invalid(e.to_string()))?;
-        out.items.extend(m.built.rows.into_iter().map(Item::Row));
-        out.items.push(Item::Database(m.built.db));
-        out.databases += 1;
-        out.covered.extend(tables[ti].paths.iter().cloned());
+        check()?;
+        if let Some(mut m) = m {
+            m.built.db.sanitize().map_err(|e| Error::invalid(e.to_string()))?;
+            for (row, source) in m.built.rows.into_iter().zip(m.source_pages) {
+                if let Some(source) = source {
+                    out.row_indexes.insert(plan.pages[source.page].id.clone(), out.items.len());
+                }
+                out.items.push(Item::Row(row));
+            }
+            if let Some(id) = tables[ti].paths.iter().find_map(|p| header_pages.get(p)) {
+                let owners = tables.iter().filter(|table| table.paths.iter().any(|p| header_pages.get(p) == Some(id))).count();
+                if owners == 1 {
+                    out.header_indexes.insert(id.clone(), out.items.len());
+                }
+            }
+            out.items.push(Item::Database(m.built.db));
+            out.databases += 1;
+            out.covered.extend(tables[ti].paths.iter().cloned());
+        }
+        ctl.progress(ImportPhase::FoldingDatabases, 2 * tables.len() + ti + 1, total);
     }
     if out.databases > 0 {
         out.notes.push("Notion does not say which columns hold people, formulas or rollups, so those columns arrive as text (a formula column keeps only its last result).".into());
     }
+    check()?;
     Ok(out)
+}
+
+impl Imported {
+    /// Moves rendered bodies without copying them. The caller removes the emptied source items
+    /// and uses their former parents to prune empty generated folders.
+    pub fn move_bodies(&mut self, items: &mut [Item], ctl: &Control) -> Result<HashSet<String>> {
+        let mut removed = HashSet::new();
+        for item in items.iter_mut() {
+            plan::check(ctl).map_err(Error::invalid)?;
+            let Item::Page(page) = item else { continue };
+            if let Some(index) = self.row_indexes.get(&page.id) {
+                let Item::Row(row) = &mut self.items[*index] else { unreachable!("row index") };
+                row.content = std::mem::take(&mut page.content);
+                row.text = std::mem::take(&mut page.text);
+                row.icon = std::mem::take(&mut page.icon);
+                row.cover = std::mem::take(&mut page.cover);
+                removed.insert(page.id.clone());
+            }
+        }
+        // A plain wrapper is optional. Preserve it when it has incoming links, children,
+        // or text that cannot fit the database's existing description limit.
+        for (id, index) in &self.header_indexes {
+            plan::check(ctl).map_err(Error::invalid)?;
+            if items.iter().chain(&self.items).any(|item| match item {
+                Item::Page(p) => p.parent == *id || (p.id != *id && p.content.contains(id)),
+                Item::Row(r) => r.content.contains(id),
+                _ => false,
+            }) {
+                continue;
+            }
+            if let Some(Item::Page(page)) = items.iter_mut().find(|item| item.id() == id) {
+                if page.text.chars().take(2_001).count() <= 2_000 {
+                    let Item::Database(db) = &mut self.items[*index] else { unreachable!("database index") };
+                    db.description = std::mem::take(&mut page.text);
+                    removed.insert(id.clone());
+                }
+            }
+        }
+        Ok(removed)
+    }
 }
 
 #[cfg(test)]

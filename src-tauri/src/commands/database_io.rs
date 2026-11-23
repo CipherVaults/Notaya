@@ -154,11 +154,26 @@ pub struct Built {
 }
 
 pub fn build_from_table(db: Database, table: &csv::Table, existing_rows: usize, now: i64) -> Result<Built> {
-    build_from_table_with(db, table, existing_rows, now, false)
+    build_from_table_with(db, table, existing_rows, now, false, &|| Ok(()))
+}
+
+pub(super) fn csv_title_column(header: &[String], title_name: &str, other_props: &[Property]) -> Option<usize> {
+    header.iter().position(|h| h.eq_ignore_ascii_case(title_name))
+        .or_else(|| header.iter().position(|h| h.eq_ignore_ascii_case("title") || h.eq_ignore_ascii_case("name")))
+        .or_else(|| {
+            let first = header.first()?;
+            (!other_props.iter().any(|p| first.eq_ignore_ascii_case(&p.name))).then_some(0)
+        })
+}
+
+pub(super) fn csv_row_title(row: &[String], title_col: Option<usize>) -> String {
+    let title: String = title_col.and_then(|c| row.get(c)).map(|s| csv::unsafe_cell(s)).unwrap_or_default()
+        .chars().filter(|c| !c.is_control()).take(300).collect();
+    title.trim().to_string()
 }
 
 /// `notion`: the table comes from a Notion export, so column kinds are guessed the Notion way (see `csv::infer_notion`).
-pub fn build_from_table_with(mut db: Database, table: &csv::Table, existing_rows: usize, now: i64, notion: bool) -> Result<Built> {
+pub fn build_from_table_with(mut db: Database, table: &csv::Table, existing_rows: usize, now: i64, notion: bool, check: &dyn Fn() -> Result<()>) -> Result<Built> {
     if existing_rows + table.rows.len() > MAX_ROWS_PER_DATABASE {
         return Err(Error::invalid("That would be more rows than a database can hold."));
     }
@@ -167,14 +182,9 @@ pub fn build_from_table_with(mut db: Database, table: &csv::Table, existing_rows
     // Which property gets which column.
     let mut target: Vec<Option<usize>> = vec![None; ncols];
     let mut skipped: Vec<String> = Vec::new();
-    let title_name = db.props[0].name.to_ascii_lowercase();
-    let title_col = table
-        .header
-        .iter()
-        .position(|h| h.eq_ignore_ascii_case(&title_name))
-        .or_else(|| table.header.iter().position(|h| h.eq_ignore_ascii_case("title") || h.eq_ignore_ascii_case("name")))
-        .or_else(|| if db.props.iter().skip(1).any(|p| table.header[0].eq_ignore_ascii_case(&p.name)) { None } else { Some(0) });
+    let title_col = csv_title_column(&table.header, &db.props[0].name, &db.props[1..]);
     for (i, h) in table.header.iter().enumerate() {
+        check()?;
         if Some(i) == title_col {
             continue;
         }
@@ -215,8 +225,8 @@ pub fn build_from_table_with(mut db: Database, table: &csv::Table, existing_rows
     let mut rows: Vec<Row> = Vec::with_capacity(table.rows.len());
     let mut bad_cells = 0usize;
     for (n, r) in table.rows.iter().enumerate() {
-        let title: String = title_col.map(|c| csv::unsafe_cell(&r[c])).unwrap_or_default().chars().filter(|c| !c.is_control()).take(300).collect();
-        let mut row = Row::new(new_id(), &db.id, title.trim().to_string(), now);
+        check()?;
+        let mut row = Row::new(new_id(), &db.id, csv_row_title(r, title_col), now);
         row.order = base_order + n as i64;
         if db.props.iter().any(|p| p.kind == PropKind::Id) {
             row.number = db.next_id.max(1);

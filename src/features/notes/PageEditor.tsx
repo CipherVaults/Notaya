@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { registerFlush, trackSave } from "@/lib/flush";
 import { api, errorText } from "@/lib/ipc";
 import { watchItemChanges, type Revisioned } from "@/lib/changes";
-import type { Page } from "@/lib/types";
+import type { Page, PageMeta } from "@/lib/types";
 import { cn, debounce, formatDate } from "@/lib/utils";
-import { useApp } from "@/store/app";
+import { findPageMeta, useApp } from "@/store/app";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "@/components/ui";
 import BlockHandle from "./editor/BlockHandle";
 import BubbleToolbar from "./editor/BubbleToolbar";
@@ -23,12 +23,23 @@ import { PageIcon } from "@/lib/pageLook";
 import { openExport } from "./ExportDialog";
 import HistoryDialog from "./HistoryDialog";
 import RowProperties from "@/features/database/RowProperties";
+import RowChildPages from "./RowChildPages";
 import { loadRow, saveRowAsTemplate } from "@/features/database/rowOps";
 
 type SaveState = "saved" | "saving" | "error";
 
+function updatePageMeta(meta: PageMeta) {
+  const { tree, setTree } = useApp.getState();
+  const update = (p: PageMeta) => p.id === meta.id ? meta : p;
+  setTree({ ...tree, pages: tree.pages.map(update), rowPages: tree.rowPages.map(update) });
+}
+
 /** `embedded`: shown in a peek (no breadcrumb, no ribbon). Rows of a database open here too (their `parent` is the database). */
-export default function PageEditor({ pageId, embedded = false }: { pageId: string; embedded?: boolean }) {
+export default function PageEditor({ pageId, embedded = false, onOpenChild }: {
+  pageId: string;
+  embedded?: boolean;
+  onOpenChild?: (id: string) => void;
+}) {
   const [page, setPage] = useState<Page | null>(null);
 
   useEffect(() => {
@@ -51,10 +62,10 @@ export default function PageEditor({ pageId, embedded = false }: { pageId: strin
     );
   }
   // Remount per page so editor history never leaks between pages.
-  return <LoadedEditor key={page.id} page={page} embedded={embedded} />;
+  return <LoadedEditor key={page.id} page={page} embedded={embedded} onOpenChild={onOpenChild} />;
 }
 
-function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
+function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: boolean; onOpenChild?: (id: string) => void }) {
   const confirm = useConfirm();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [title, setTitle] = useState(page.title);
@@ -97,8 +108,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
         setTrashedAt(meta.trashedAt);
         if (editorRef.current && !editorRef.current.isDestroyed) setPageEditable(editorRef.current, meta.trashedAt == null);
         if (!dirtyRef.current && savingRef.current === 1) void api.editing(page.id, false).catch(() => {});
-        const t = useApp.getState().tree;
-        setTree({ ...t, pages: t.pages.map((p) => (p.id === meta.id ? meta : p)) });
+        updatePageMeta(meta);
         setUpdated(meta.updated);
         setWords(meta.words);
         if (!dirtyRef.current) setSaveState("saved");
@@ -200,7 +210,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
 
   const section = tree.sections.find((s) => s.id === page.sectionId);
   const notebook = tree.notebooks.find((n) => n.id === section?.notebookId);
-  const meta = tree.pages.find((p) => p.id === page.id);
+  const meta = findPageMeta(tree, page.id);
   // A row of a database is a page that is not in the tree; its `parent` is the database.
   const rowDb = !meta ? tree.databases.find((d) => d.id === page.parent) : undefined;
   const isRow = !!rowDb;
@@ -208,7 +218,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
   // The pages this one sits inside, outermost first.
   const parents: typeof tree.pages = [];
   for (let id = meta?.parent; id && parents.length < 8; ) {
-    const pp = tree.pages.find((x) => x.id === id);
+    const pp = findPageMeta(tree, id);
     if (!pp) break;
     parents.unshift(pp);
     id = pp.parent;
@@ -220,8 +230,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
     setCover(nextCover);
     try {
       const m = await api.setPageLook(page.id, nextIcon, nextCover);
-      const t = useApp.getState().tree;
-      setTree({ ...t, pages: t.pages.map((p) => (p.id === m.id ? m : p)) });
+      updatePageMeta(m);
     } catch (e) {
       setIcon(prevIcon);
       setCover(prevCover);
@@ -414,6 +423,7 @@ function LoadedEditor({ page, embedded }: { page: Page; embedded: boolean }) {
           />
           </div>
           {isRow && rowDb && <div data-database={rowDb.id}><RowProperties dbId={rowDb.id} rowId={page.id} title={title} readOnly={readOnly} /></div>}
+          {!readOnly && <RowChildPages parentId={page.id} pages={tree.rowPages} onOpen={onOpenChild ?? useApp.getState().openPage} />}
 
           <div ref={wrapRef} className={cn("relative", embedded ? "-ml-12 pl-12" : "-ml-16 pl-16")}>
             <BlockHandle editor={editor} container={wrapRef} />

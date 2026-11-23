@@ -8,7 +8,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { registerFlush, trackSave } from "@/lib/flush";
-import { useApp, type LastPlace } from "@/store/app";
+import { findPageMeta, useApp, type LastPlace } from "@/store/app";
 
 type Loc = {
   view: ReturnType<typeof useApp.getState>["view"];
@@ -55,7 +55,7 @@ function stillThere(l: Loc): boolean {
   const t = useApp.getState().tree;
   if (l.activeNotebookId && !t.notebooks.some((n) => n.id === l.activeNotebookId)) return false;
   if (l.activeSectionId && !t.sections.some((n) => n.id === l.activeSectionId)) return false;
-  if (l.activePageId && l.activeKind === "page" && !t.pages.some((p) => p.id === l.activePageId && p.trashedAt === null)) return false;
+  if (l.activePageId && l.activeKind === "page" && findPageMeta(t, l.activePageId)?.trashedAt !== null) return false;
   if (l.activePageId && l.activeKind === "database" && !t.databases.some((d) => d.id === l.activePageId && d.trashedAt === null)) return false;
   return true;
 }

@@ -237,6 +237,7 @@ export const api = {
   deleteSection: (id: string) => invoke<NotesTree>("delete_section", { id }),
   createPage: (sectionId: string, title: string) => invoke<Page>("create_page", { sectionId, title }),
   getPage: (id: string) => invoke<Revisioned<Page>>("get_page", { id }),
+  getPageLinkTarget: (id: string) => invoke<{ sectionId: string; title: string; icon: string; isRow: boolean } | null>("get_page_link_target", { id }),
   savePage: (id: string, title: string, content: string, text: string, baseRev?: number) =>
     invoke<Revisioned<PageMeta>>("save_page", { id, title, content, text, baseRev }),
   createSubpage: (parentId: string, title: string) => invoke<Page>("create_subpage", { parentId, title }),

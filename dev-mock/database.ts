@@ -1224,6 +1224,13 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       return NOT_HANDLED;
     }
     case "get_page": { const r = rowById(String(args.id)); return r ? rowAsPage(r) : NOT_HANDLED; }
+    case "get_page_link_target": {
+      const r = rowById(String(args.id));
+      if (!r) return NOT_HANDLED;
+      const db = dbById(r.db);
+      if (!db || db.trashedAt !== null || r.trashedAt !== null) return null;
+      return { sectionId: db.sectionId, title: r.title, icon: r.icon, isRow: true };
+    }
     case "save_page": {
       const r = rowById(String(args.id));
       if (!r) return NOT_HANDLED;

@@ -66,9 +66,9 @@ interface AppState {
   openNotebook: (id: string | null) => void;
   openSection: (id: string | null) => void;
   /** Opens a page, or a database when the id is one (looked up in the tree). */
-  openPage: (id: string | null) => void;
+  openPage: (id: string | null, sectionId?: string) => void;
   openDatabase: (id: string) => void;
-  openRow: (id: string) => void;
+  openRow: (id: string, sectionId?: string) => void;
   setDatabaseView: (databaseId: string, viewId: string) => void;
   setShowTrash: (v: boolean) => void;
   setPaletteOpen: (v: boolean) => void;
@@ -94,7 +94,7 @@ function saveLayout(open: boolean, width: number) {
   }
 }
 
-const EMPTY_TREE: NotesTree = { notebooks: [], sections: [], pages: [], databases: [] };
+const EMPTY_TREE: NotesTree = { notebooks: [], sections: [], pages: [], rowPages: [], databases: [] };
 
 /** One startup sweep for pre-1.6 navigation metadata; no marker or other keys are written. */
 export function cleanupLegacyDatabaseViews() {
@@ -168,14 +168,17 @@ export const useApp = create<AppState>((set, get) => ({
     set({ activeNotebookId: id, activeSectionId: first, activePageId: null, activeKind: "page", activeDatabaseViewId: null, showTrash: false });
   },
   openSection: (id) => set({ activeSectionId: id, activePageId: null, activeKind: "page", activeDatabaseViewId: null, showTrash: false }),
-  openPage: (id) =>
+  openPage: (id, sectionId) =>
     set(
       id
-        ? { ...locationParents(get().tree, id), activePageId: id, activeKind: get().tree.databases.some((d) => d.id === id) ? "database" : "page", activeDatabaseViewId: get().activePageId === id ? get().activeDatabaseViewId : null, showTrash: false, view: "notes" }
+        ? { ...(sectionId ? sectionParents(get().tree, sectionId) : locationParents(get().tree, id)), activePageId: id, activeKind: get().tree.databases.some((d) => d.id === id) ? "database" : "page", activeDatabaseViewId: get().activePageId === id ? get().activeDatabaseViewId : null, showTrash: false, view: "notes" }
         : { activePageId: null, activeKind: "page", activeDatabaseViewId: null },
     ),
   openDatabase: (id) => set({ ...locationParents(get().tree, id), activePageId: id, activeKind: "database", activeDatabaseViewId: get().activePageId === id ? get().activeDatabaseViewId : null, showTrash: false, view: "notes" }),
-  openRow: (id) => set({ activePageId: id, activeKind: "row", activeDatabaseViewId: null, showTrash: false, view: "notes" }),
+  openRow: (id, sectionId) => set({
+    ...(sectionId ? sectionParents(get().tree, sectionId) : {}),
+    activePageId: id, activeKind: "row", activeDatabaseViewId: null, showTrash: false, view: "notes",
+  }),
   setDatabaseView: (databaseId, viewId) => {
     if (get().activeKind === "database" && get().activePageId === databaseId) set({ activeDatabaseViewId: viewId });
   },
@@ -196,8 +199,39 @@ function sectionParents(tree: NotesTree, sectionId?: string) {
   return { activeNotebookId: section?.notebookId ?? null, activeSectionId: section?.id ?? null };
 }
 
+export function findPageMeta(tree: NotesTree, id: string) {
+  return tree.pages.find((p) => p.id === id) ?? tree.rowPages.find((p) => p.id === id);
+}
+
+function findNoteMeta(tree: NotesTree, id: string) {
+  return findPageMeta(tree, id) ?? tree.databases.find((d) => d.id === id);
+}
+
 function locationParents(tree: NotesTree, id: string) {
-  return sectionParents(tree, (tree.pages.find((p) => p.id === id) ?? tree.databases.find((d) => d.id === id))?.sectionId);
+  return sectionParents(tree, findNoteMeta(tree, id)?.sectionId);
+}
+
+function restoreActiveSection() {
+  const app = useApp.getState();
+  if (!app.activeSectionId || app.tree.sections.some((s) => s.id === app.activeSectionId)) return;
+  if (!app.activePageId) {
+    app.openSection(null);
+    return;
+  }
+  // The sidebar can select a section while a page from another section is still open.
+  const parents = locationParents(app.tree, app.activePageId);
+  useApp.setState(parents.activeSectionId ? parents : { activeSectionId: null });
+}
+
+export function applySectionBin(tree: NotesTree) {
+  const app = useApp.getState();
+  const id = app.activePageId;
+  // The backend omits the section's descendants from the updated tree. This also covers
+  // row children whose recorded section ID still refers to a database's former section.
+  const removed = id && findNoteMeta(app.tree, id) && !findNoteMeta(tree, id);
+  app.setTree(tree);
+  if (removed) app.openPage(null);
+  restoreActiveSection();
 }
 
 /** Rows are absent from the sidebar tree. Their parent is their containing database. */
@@ -229,7 +263,7 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
   try {
     const item = place.kind === "row"
       ? await api.getPage(place.id)
-      : place.kind === "database" ? tree.databases.find((d) => d.id === place.id) : tree.pages.find((p) => p.id === place.id) ?? await api.getPage(place.id);
+      : place.kind === "database" ? tree.databases.find((d) => d.id === place.id) : findPageMeta(tree, place.id) ?? await api.getPage(place.id);
     if (!item || item.trashedAt !== null) return home;
     const parents = sectionParents(tree, item.sectionId);
     if (!parents.activeSectionId || !tree.notebooks.some((n) => n.id === parents.activeNotebookId)) return home;
@@ -244,7 +278,7 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
     while (parent) {
       if (seen.has(parent)) return home;
       seen.add(parent);
-      const ancestor = tree.pages.find((p) => p.id === parent)
+      const ancestor = findPageMeta(tree, parent)
         ?? tree.databases.find((d) => d.id === parent)
         ?? await api.getPage(parent);
       if (ancestor.trashedAt !== null || ancestor.sectionId !== item.sectionId) return home;
@@ -279,16 +313,14 @@ onItemsChanged((change) => {
         if (!useApp.getState().status?.unlocked) return;
         useApp.setState({ tree, stickies, bin });
         const app = useApp.getState();
-        if (app.activeKind !== "row" && app.activePageId && ![...tree.pages, ...tree.databases].some((p) => p.id === app.activePageId)) app.openPage(null);
-        if (app.activeKind === "row" && app.activePageId) {
+        if (app.activePageId && !findNoteMeta(tree, app.activePageId)) {
           const id = app.activePageId;
-          try {
-            const row = await api.getPage(id);
-            if (useApp.getState().activePageId === id && (row.trashedAt != null || !tree.databases.some((db) => db.id === row.parent && db.trashedAt == null))) app.openPage(null);
-          } catch { if (useApp.getState().activePageId === id) app.openPage(null); }
+          const target = app.activeKind === "database" ? null : await api.getPageLinkTarget(id).catch(() => null);
+          if (useApp.getState().activePageId === id && (!target || target.isRow !== (app.activeKind === "row"))) app.openPage(null);
         }
-        if (app.activeSectionId && !tree.sections.some((s) => s.id === app.activeSectionId)) app.openSection(null);
-        if (app.activeNotebookId && !tree.notebooks.some((n) => n.id === app.activeNotebookId)) app.openNotebook(null);
+        restoreActiveSection();
+        const current = useApp.getState();
+        if (current.activeNotebookId && !current.tree.notebooks.some((n) => n.id === current.activeNotebookId)) current.openNotebook(null);
       }
     } catch { /* A lock can overtake a refresh; the unlock loads a fresh tree. */ }
     finally { refreshing = false; }

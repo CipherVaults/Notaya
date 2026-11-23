@@ -18,6 +18,7 @@
 //! Pictures are shown with the same address the editor uses for a pasted picture
 //! (`http://clatt.localhost/<id>`), and a page cover the same way.
 
+use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use serde::Serialize;
@@ -25,7 +26,7 @@ use serde::Serialize;
 use super::doc::{self, Block, ImageOut, Inline};
 use super::source::Vfs;
 use super::{clean_title, decode_text, docx, html, markdown, pdf, sniff, strip_notion_id, Control, Ctx, ImgSrc, Images, Skipped, Stop};
-use super::{MAX_BINARY_FILE, MAX_IMAGE, MAX_PAGES, MAX_TEXT_FILE};
+use super::{ImportPhase, MAX_BINARY_FILE, MAX_IMAGE, MAX_PAGES, MAX_TEXT_FILE};
 use crate::export::Layout;
 use crate::model::{new_id, Item, Notebook, Page, Section};
 
@@ -276,6 +277,7 @@ pub struct Plan {
     /// The new notebooks' names (one, unless a Notaya ZIP of several notebooks is imported).
     pub notebooks: Vec<String>,
     pub sections: Vec<String>,
+    pub section_ids: Vec<String>,
     /// For each section, the notebook it belongs to (an index into `notebooks`).
     pub section_notebook: Vec<usize>,
     pub pages: Vec<PlanPage>,
@@ -309,6 +311,12 @@ pub struct PlanPage {
     pub blocks: Vec<Block>,
 }
 
+/// A source page that will be stored as a database row.
+pub struct RowTarget {
+    pub id: String,
+    pub section: usize,
+}
+
 struct Builder<'a> {
     vfs: &'a Vfs,
     ctl: &'a Control,
@@ -319,6 +327,8 @@ struct Builder<'a> {
     unlisted: usize,
     /// Set when the import was cancelled or ran out of time: no more documents are read.
     stopped: Option<Stop>,
+    documents_done: usize,
+    documents_total: usize,
     pdfs: usize,
     /// Markdown file -> the HTML file of the same page (same Notion id) whose text and formatting it takes.
     twins: HashMap<String, String>,
@@ -388,7 +398,16 @@ impl Builder<'_> {
             let dirs = folders.clean.get(&clean).map(Vec::as_slice).unwrap_or(&[]);
             // A possible source home must remain a page so its folder can keep its parent.
             let has_folder = !dirs.is_empty();
-            let Some(index) = self.document(&name, &path, section, parent, has_folder) else { continue };
+            if self.stopped.is_some() {
+                break;
+            }
+            let document = self.document(&name, &path, section, parent, has_folder);
+            if self.stopped.is_some() {
+                break;
+            }
+            self.documents_done += 1;
+            self.ctl.progress(ImportPhase::Planning, self.documents_done, self.documents_total);
+            let Some(index) = document else { continue };
             let dropped_id = strip_notion_id(stem) != stem && folders.has_idless(&clean);
             let exact_matches = folders.exact.get(&exact).map(Vec::as_slice);
             let ambiguous_exact = exact_matches.is_some_and(|dirs| dirs.len() != 1 || exact_files[&exact] != 1);
@@ -718,6 +737,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     let mut html_ids: HashMap<String, Vec<&String>> = HashMap::new();
     let mut csv_ids: HashSet<String> = HashSet::new();
     for p in &paths {
+        check(ctl)?;
         let name = p.rsplit('/').next().unwrap_or(p);
         let Some(id) = notion_file_id(name) else { continue };
         match kind_of(name) {
@@ -745,6 +765,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     }
     let aliases: Vec<(String, String)> = twins.iter().map(|(m, h)| (h.clone(), m.clone())).collect();
     for path in paths {
+        check(ctl)?;
         if hidden_html.contains(path) {
             continue;
         }
@@ -803,7 +824,8 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     };
     let folder_name = |n: &str| -> String { clean_title(n, false).chars().take(MAX_NAME).collect() };
 
-    let mut b = Builder { vfs, ctl, pages: Vec::new(), database_headers: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, pdfs: 0, twins, csv_sections: HashMap::new(), arrangement_notes: Vec::new(), database_html, empty_database_pages: 0, kept_database_pages: 0, merged: 0 };
+    ctl.progress(ImportPhase::Planning, 0, docs);
+    let mut b = Builder { vfs, ctl, pages: Vec::new(), database_headers: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, documents_done: 0, documents_total: docs, pdfs: 0, twins, csv_sections: HashMap::new(), arrangement_notes: Vec::new(), database_html, empty_database_pages: 0, kept_database_pages: 0, merged: 0 };
     let mut sections: Vec<String> = Vec::new();
     let mut section_notebook: Vec<usize> = Vec::new();
     // Notebooks named after folders (the notebooks layout); otherwise one, named below.
@@ -926,7 +948,8 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     if b.unlisted > 0 {
         notes.push(format!("{} more items were not imported than the list shows.", b.unlisted));
     }
-    Ok(Plan { notebooks, sections, section_notebook, pages: b.pages, database_headers: b.database_headers, csv_paths, csv_sections: b.csv_sections, images: b.images, skipped: b.skipped, notes, aliases })
+    let section_ids = sections.iter().map(|_| new_id()).collect();
+    Ok(Plan { notebooks, sections, section_ids, section_notebook, pages: b.pages, database_headers: b.database_headers, csv_paths, csv_sections: b.csv_sections, images: b.images, skipped: b.skipped, notes, aliases })
 }
 
 /// `Err` with the message for the person when the import was cancelled or ran out of time.
@@ -954,29 +977,39 @@ impl Plan {
         self.pages.iter().filter(|p| p.generated).map(|p| p.id.clone()).collect()
     }
 
-    /// Resolves plan section indices against the sections just rendered by `items`.
-    pub fn csv_section_ids(&self, items: &[Item]) -> HashMap<String, String> {
-        let sections: Vec<&str> = items.iter().filter_map(|i| if let Item::Section(s) = i { Some(s.id.as_str()) } else { None }).collect();
-        self.csv_sections.iter().filter_map(|(path, index)| sections.get(*index).map(|id| (path.clone(), (*id).to_string()))).collect()
-    }
-
     /// Stores every picture the pages use. `put` stores one (mime type, bytes) and returns the
     /// vault's id for it; an error from it stops the import. Returns, for each picture, its
     /// editor address, or `None` when it could not be used (it is then listed as skipped).
     pub fn store_images(&mut self, vfs: &Vfs, ctl: &Control, put: &mut dyn FnMut(&str, &[u8]) -> Result<String, String>) -> Result<Vec<Option<String>>, String> {
         let mut urls = Vec::with_capacity(self.images.list.len());
         let mut total = 0u64;
-        for i in 0..self.images.list.len() {
+        let pictures = self.images.list.len();
+        if pictures > 0 {
+            ctl.progress(ImportPhase::Pictures, 0, pictures);
+        }
+        for i in 0..pictures {
             check(ctl)?;
             let label = self.images.list[i].1.clone();
             let bytes = match std::mem::replace(&mut self.images.list[i].0, ImgSrc::Bytes(Vec::new())) {
                 ImgSrc::Bytes(b) => Ok(b),
                 ImgSrc::File(path) => vfs.read(&path, MAX_IMAGE),
             };
-            let usable = bytes.and_then(|b| match sniff(&b) {
-                None => Err("Not a PNG, JPEG, GIF or WebP picture.".to_string()),
-                Some(_) if total + b.len() as u64 > MAX_IMAGE_TOTAL => Err("Too many pictures in one import (more than 2 GB).".to_string()),
-                Some(mime) => Ok((mime, b)),
+            let usable = bytes.and_then(|b| {
+                use crate::export::image::{dimensions, Kind};
+
+                // Vfs::read has already read or inflated the full file within MAX_IMAGE.
+                // Validate metadata in the writer's buffer without copying or decoding pixels.
+                let mime = sniff(&b).ok_or("Not a PNG, JPEG, GIF or WebP picture.")?;
+                if total + b.len() as u64 > MAX_IMAGE_TOTAL {
+                    return Err("Too many pictures in one import (more than 2 GB).".into());
+                }
+                let kind = Kind::from_mime(mime).unwrap();
+                if (kind == Kind::Png && b.get(8..16) != Some(b"\0\0\0\rIHDR"))
+                    || dimensions(kind, &b).is_none()
+                {
+                    return Err("The picture header or dimensions could not be read.".into());
+                }
+                Ok((mime, b))
             });
             match usable {
                 Ok((mime, b)) => {
@@ -991,13 +1024,16 @@ impl Plan {
                     urls.push(None);
                 }
             }
+            ctl.progress(ImportPhase::Pictures, i + 1, pictures);
         }
         Ok(urls)
     }
 
     /// Renders the pages and returns the new notebook, its sections and pages as vault items,
     /// with the summary. Pages too large to save are left out (their sub-pages move up).
-    pub fn items(&mut self, ctl: &Control, urls: &[Option<String>], now: i64, notebook_order: i64) -> Result<(Vec<Item>, ImportSummary), String> {
+    pub fn items(&mut self, ctl: &Control, urls: &[Option<String>], now: i64, notebook_order: i64, rows: &HashMap<String, RowTarget>) -> Result<(Vec<Item>, ImportSummary), String> {
+        check(ctl)?;
+        let mut blocks: Vec<_> = self.pages.iter_mut().chain(&mut self.database_headers).map(|p| std::mem::take(&mut p.blocks)).collect();
         // Fallbacks use the same renderer and byte/page budgets as ordinary source pages.
         let pages: Vec<&PlanPage> = self.pages.iter().chain(&self.database_headers).collect();
         let image_out = |n: usize| match urls.get(n) {
@@ -1005,40 +1041,62 @@ impl Plan {
             _ => ImageOut::Text(format!("[Picture not imported: {}]", self.images.list.get(n).map_or("picture", |x| x.1.as_str()))),
         };
         let mut dropped: HashSet<usize> = HashSet::new();
-        let mut rendered: Vec<Option<(String, String)>> = Vec::new();
+        let mut rendered: Vec<Option<doc::Rendered>> = (0..pages.len()).map(|_| None).collect();
         let mut cut_rows = 0usize;
-        for _ in 0..3 {
-            let mut ids: HashMap<&str, &str> = pages.iter().enumerate().filter(|(i, _)| !dropped.contains(i)).map(|(_, p)| (p.key.as_str(), p.id.as_str())).collect();
+        ctl.progress(ImportPhase::Rendering, 0, pages.len());
+        for pass in 0..3 {
+            if pass == 1 {
+                ctl.progress(ImportPhase::ResolvingLinks, 0, 0);
+            }
+            // A CSV row still exists if its source body was over the page limit.
+            let mut ids: HashMap<&str, (&str, bool)> = pages.iter().enumerate().filter_map(|(i, p)| {
+                let target = if let Some(row) = rows.get(&p.id) {
+                    (&row.id, false)
+                } else if !dropped.contains(&i) {
+                    (&p.id, true)
+                } else {
+                    return None;
+                };
+                Some((p.key.as_str(), (target.0.as_str(), target.1)))
+            }).collect();
             // A link that points at the HTML file of a page that was imported from its Markdown file.
             for (alias, key) in &self.aliases {
                 if let Some(id) = ids.get(key.as_str()).copied() {
                     ids.entry(alias.as_str()).or_insert(id);
                 }
             }
-            let page_id = |k: &str| ids.get(k).map(|s| s.to_string());
-            rendered = Vec::with_capacity(pages.len());
             let mut too_big: Vec<usize> = Vec::new();
             let mut total = 0usize;
             cut_rows = 0;
-            for (i, p) in pages.iter().enumerate() {
+            for (i, body) in blocks.iter_mut().enumerate() {
                 check(ctl)?;
-                if dropped.contains(&i) {
-                    rendered.push(None);
-                    continue;
-                }
-                match doc::render_limited(&p.blocks, &image_out, &page_id, doc::MAX_RENDER_BYTES) {
-                    Ok(r) if r.content.len() <= MAX_PAGE_BYTES && r.text.len() <= MAX_PAGE_BYTES => {
-                        total = total.saturating_add(r.content.len() + r.text.len());
-                        if total > MAX_TOTAL_BYTES {
-                            return Err("This import is too large (more than 2 GB of text). Import it in smaller parts.".into());
+                if !dropped.contains(&i) && (pass == 0 || !body.is_empty()) {
+                    let needs_retry = Cell::new(false);
+                    let page_id = |key: &str| ids.get(key).map(|(id, may_drop)| {
+                        needs_retry.set(needs_retry.get() || *may_drop);
+                        (*id).to_string()
+                    });
+                    rendered[i] = match doc::render_limited(body, &image_out, &page_id, doc::MAX_RENDER_BYTES) {
+                        Ok(r) if r.content.len() <= MAX_PAGE_BYTES && r.text.len() <= MAX_PAGE_BYTES => Some(r),
+                        _ => {
+                            too_big.push(i);
+                            None
                         }
-                        cut_rows += r.cut_rows;
-                        rendered.push(Some((r.content, r.text)));
+                    };
+                    // Keep decoded blocks only for pages whose links might need another pass.
+                    if rendered[i].is_none() || !needs_retry.get() || pass == 2 {
+                        *body = Vec::new();
                     }
-                    _ => {
-                        too_big.push(i);
-                        rendered.push(None);
+                }
+                if let Some(r) = &rendered[i] {
+                    total = total.saturating_add(r.content.len() + r.text.len());
+                    if total > MAX_TOTAL_BYTES {
+                        return Err("This import is too large (more than 2 GB of text). Import it in smaller parts.".into());
                     }
+                    cut_rows += r.cut_rows;
+                }
+                if pass == 0 {
+                    ctl.progress(ImportPhase::Rendering, i + 1, pages.len());
                 }
             }
             if too_big.is_empty() {
@@ -1046,6 +1104,8 @@ impl Plan {
             }
             dropped.extend(too_big);
         }
+        drop(blocks);
+        check(ctl)?;
         for i in &dropped {
             if self.skipped.len() < MAX_LISTED {
                 self.skipped.push(Skipped { item: pages[*i].title.clone(), reason: "The page is too large to store (over 20 MB of text), so it was not imported.".into() });
@@ -1071,7 +1131,7 @@ impl Plan {
                 trashed_at: None, })
             })
             .collect();
-        let section_ids: Vec<String> = self.sections.iter().map(|_| new_id()).collect();
+        let section_ids = &self.section_ids;
         let mut in_notebook = vec![0i64; notebooks.len()];
         for (i, name) in self.sections.iter().enumerate() {
             let nb = self.section_notebook.get(i).copied().unwrap_or(0).min(notebooks.len().saturating_sub(1));
@@ -1087,25 +1147,30 @@ impl Plan {
             trashed_at: None, }));
             in_notebook[nb] += 1;
         }
-        let kept = rendered.iter().filter(|r| r.is_some()).count();
+        let mut kept = 0;
+        let mut effective_sections = Vec::with_capacity(pages.len());
         for (i, p) in pages.iter().enumerate() {
-            let Some((content, text)) = rendered[i].take() else { continue };
+            check(ctl)?;
             let mut parent = p.parent;
             while let Some(q) = parent {
-                if dropped.contains(&q) { parent = pages[q].parent } else { break }
+                if dropped.contains(&q) && !rows.contains_key(&pages[q].id) { parent = pages[q].parent } else { break }
             }
+            let section = rows.get(&p.id).map_or_else(|| parent.map_or(p.section, |q| effective_sections[q]), |row| row.section);
+            effective_sections.push(section);
+            let Some(r) = rendered[i].take() else { continue };
+            kept += 1;
             items.push(Item::Page(Page {
                 source: None,
                 id: p.id.clone(),
-                section_id: section_ids[p.section].clone(),
+                section_id: section_ids[section].clone(),
                 title: p.title.clone(),
-                content,
-                text,
+                content: r.content,
+                text: r.text,
                 order: i as i64,
                 favorite: false,
                 icon: p.icon.clone(),
                 cover: p.cover.and_then(|c| urls.get(c).cloned().flatten()).unwrap_or_else(|| p.cover_look.clone()),
-                parent: parent.map(|q| pages[q].id.clone()).unwrap_or_default(),
+                parent: parent.map(|q| rows.get(&pages[q].id).map_or(&pages[q].id, |row| &row.id).clone()).unwrap_or_default(),
                 trashed_at: None,
                 created: now,
                 updated: now,
@@ -1144,7 +1209,7 @@ mod tests {
     use crate::importers::zip;
     use serde_json::Value;
 
-    const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR";
+    const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01";
     const ID: &str = "0123456789abcdef0123456789abcdef";
     const NOW: i64 = 1_700_000_000_000;
 
@@ -1164,7 +1229,7 @@ mod tests {
 
     fn finish(plan: &mut Plan, v: &Vfs) -> (Vec<Item>, ImportSummary) {
         let urls = fake_store(plan, v);
-        plan.items(&Control::standard(), &urls, NOW, 0).unwrap()
+        plan.items(&Control::standard(), &urls, NOW, 0, &HashMap::new()).unwrap()
     }
 
     fn page<'a>(items: &'a [Item], title: &str) -> &'a Page {
@@ -1378,7 +1443,7 @@ mod tests {
         assert_eq!(plan.sections, ["Ideas", "Journal", "Work"]);
         assert_eq!(plan.section_notebook, [0, 0, 1]);
         assert_eq!(plan.pages.len(), 4, "the marker is no page");
-        let (items, summary) = plan.items(&Control::standard(), &[], NOW, 7).unwrap();
+        let (items, summary) = plan.items(&Control::standard(), &[], NOW, 7, &HashMap::new()).unwrap();
         assert_eq!((summary.notebooks.len(), summary.sections, summary.pages), (2, 3, 4));
         assert_eq!(summary.notebook_name, "Alpha");
         assert_eq!(summary.notebook_id, summary.notebooks[0].id);
@@ -1408,7 +1473,7 @@ mod tests {
         let v = vfs(&[("notaya-export.txt", marker("pages").as_bytes()), ("One.md", b"# One\n\nx"), ("One/Sub.md", b"# Sub\n\ny")]);
         let mut plan = build(&v, &Control::standard(), Some("One"), NOW).unwrap();
         assert_eq!((plan.notebooks.len(), plan.sections.as_slice(), plan.pages.len()), (1, [LOOSE_SECTION.to_string()].as_slice(), 2));
-        let (items, _) = plan.items(&Control::standard(), &[], NOW, 0).unwrap();
+        let (items, _) = plan.items(&Control::standard(), &[], NOW, 0, &HashMap::new()).unwrap();
         assert_eq!(page(&items, "Sub").parent, page(&items, "One").id);
     }
 
@@ -1549,13 +1614,19 @@ mod tests {
 
     #[test]
     fn a_failed_picture_is_a_note_in_the_page_and_in_the_list() {
-        let v = vfs(&[("a.md", b"# A\n\n![ok](ok.png)\n\n![fake](fake.png)\n\n![gone](gone.png)"), ("ok.png", PNG), ("fake.png", b"GIF is a lie, this is text")]);
+        let v = vfs(&[
+            ("a.md", b"# A\n\n![ok](ok.png)\n\n![fake](fake.png)\n\n![truncated](truncated.png)\n\n![gone](gone.png)"),
+            ("ok.png", PNG),
+            ("fake.png", b"GIF is a lie, this is text"),
+            ("truncated.png", &PNG[..16]),
+        ]);
         let mut plan = build(&v, &Control::standard(), Some("a.md"), NOW).unwrap();
         let (items, summary) = finish(&mut plan, &v);
         assert_eq!(summary.images, 1);
         let p = page(&items, "A");
         assert_eq!(p.content.matches("http://clatt.localhost/").count(), 1);
         assert!(p.text.contains("[Picture not imported: fake]") && p.text.contains("[Picture not imported: gone]"), "{}", p.text);
+        assert!(p.text.contains("[Picture not imported: truncated]"));
         assert!(summary.skipped.iter().any(|s| s.item.contains("fake")) && summary.skipped.iter().any(|s| s.item.contains("gone")), "{:?}", summary.skipped);
     }
 
@@ -1595,7 +1666,7 @@ mod tests {
             let v = vfs(&[(name, data)]);
             if let Ok(mut p) = build(&v, &Control::standard(), None, NOW) {
                 let none = vec![None; p.images.list.len()];
-                let _ = p.items(&Control::standard(), &none, NOW, 0);
+                let _ = p.items(&Control::standard(), &none, NOW, 0, &HashMap::new());
             }
         };
         let samples: [(&str, &[u8]); 4] = [("f.docx", &docx), ("f.pdf", &pdf), ("f.html", html), ("f.md", md)];
@@ -1651,9 +1722,9 @@ mod tests {
         let e = plan.store_images(&v, &Control::expired(), &mut |_, _| Ok("0".repeat(32))).err().unwrap();
         assert_eq!(e, TOO_SLOW);
         let urls = fake_store(&mut plan, &v);
-        assert_eq!(plan.items(&cancelled(), &urls, NOW, 0).err().unwrap(), CANCELLED);
-        assert_eq!(plan.items(&Control::expired(), &urls, NOW, 0).err().unwrap(), TOO_SLOW);
-        assert!(plan.items(&Control::standard(), &urls, NOW, 0).is_ok());
+        assert_eq!(plan.items(&cancelled(), &urls, NOW, 0, &HashMap::new()).err().unwrap(), CANCELLED);
+        assert_eq!(plan.items(&Control::expired(), &urls, NOW, 0, &HashMap::new()).err().unwrap(), TOO_SLOW);
+        assert!(plan.items(&Control::standard(), &urls, NOW, 0, &HashMap::new()).is_ok());
     }
 
     #[test]

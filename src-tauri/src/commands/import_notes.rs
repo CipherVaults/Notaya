@@ -5,34 +5,29 @@
 //!
 //! The UI sends only which kind of source to import ("files" or "folder"). The dialog is opened
 //! here, the files are read and converted here, and the UI gets back a summary. Nothing is ever
-//! fetched from the network, links on disk are not followed, and the vault is changed in two
-//! steps: the pictures are stored first, then the notebook, its sections and pages are saved in
-//! one transaction (all or nothing). If anything fails, the pictures stored for this import are
-//! taken back and nothing else has changed.
+//! fetched from the network and links on disk are not followed. Pictures are staged in an
+//! encrypted temporary file, then saved with the notebook, sections and pages in one transaction.
 //!
 //! The person can cancel from the dialog (`import_cancel`), and locking the vault cancels too.
 //! The import also stops by itself after 15 minutes. Both are noticed inside the converters'
-//! loops (see `importers::Control`), so a cancel takes effect within moments, and ends like any
-//! other failure: the pictures stored so far are taken back and nothing is added.
-//! While the pictures wait to be attached to the new pages, the vault's cleanup
-//! (`collect_garbage`) leaves them alone.
+//! loops (see `importers::Control`). Cancellation before the final save leaves the vault unchanged.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Deserialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::error::{Error, Result};
 use crate::commands::notion_db;
 use crate::importers::plan::{self, ImportSummary};
 use crate::importers::source::Vfs;
-use crate::importers::{Control, MAX_TIME};
+use crate::importers::{Control, ImportPhase, MAX_TIME};
 use crate::model::{now_ms, Item};
 use crate::state::AppState;
-use crate::vault::Session;
+use crate::vault::{ImportPictures, Session};
 
 #[cfg(test)]
 #[path = "../importers/n1_tests.rs"]
@@ -45,7 +40,12 @@ const MAX_PICKED: usize = 5_000;
 const STACK: usize = 128 * 1024 * 1024;
 
 /// The cancel flag of the import that is running (there is at most one).
-static RUNNING: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
+static RUNNING: Mutex<Option<RunningImport>> = Mutex::new(None);
+
+struct RunningImport {
+    cancel: Arc<AtomicBool>,
+    committing: bool,
+}
 
 /// Registers the running import; unregisters it when dropped.
 struct Running(Arc<AtomicBool>);
@@ -57,8 +57,14 @@ impl Running {
             return Err(Error::invalid("Another import is still running."));
         }
         let flag = Arc::new(AtomicBool::new(false));
-        *slot = Some(flag.clone());
+        *slot = Some(RunningImport { cancel: flag.clone(), committing: false });
         Ok(Running(flag))
+    }
+
+    fn begin_commit() {
+        if let Some(import) = RUNNING.lock().unwrap_or_else(|e| e.into_inner()).as_mut() {
+            import.committing = true;
+        }
     }
 }
 
@@ -68,14 +74,14 @@ impl Drop for Running {
     }
 }
 
-/// Asks the import in progress, if there is one, to stop. True when there was one.
+/// Asks the import to stop. True while there is an import that can still be cancelled.
 pub fn cancel_running() -> bool {
     match RUNNING.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
-        Some(flag) => {
-            flag.store(true, Ordering::SeqCst);
+        Some(import) if !import.committing => {
+            import.cancel.store(true, Ordering::SeqCst);
             true
         }
-        None => false,
+        _ => false,
     }
 }
 
@@ -185,99 +191,97 @@ pub fn import_from_with<V: VaultAccess>(
     check_sources(paths, data_dir, folder)?;
     let hint = name_hint(paths, folder);
     on_big_stack(|| -> Result<ImportSummary> {
+        ctl.progress(ImportPhase::ReadingSource, 0, 0);
+        plan::check(ctl).map_err(Error::invalid)?;
+        let mut pictures = vault.with(|s| Ok(ImportPictures::new(s)))?;
         let mut vfs = if folder { Vfs::from_folder(&paths[0]) } else { Vfs::from_files(paths) }.map_err(Error::invalid)?;
         // A picture is never read from Notaya's own data folder, whatever a document points at.
         vfs.protect(&crate::export::resolve(data_dir));
         let mut plan = plan::build(&vfs, ctl, hint.as_deref(), now).map_err(Error::invalid)?;
-        // Pictures first: each is stored on its own, so the vault is not held while files are read.
-        let mut stored: Vec<String> = Vec::new();
-        let result = (|| -> Result<ImportSummary> {
-            let urls = plan
-                .store_images(&vfs, ctl, &mut |mime, bytes| {
-                    let last = stored.last().cloned();
-                    let id = vault
-                        .with_mut(|s| {
-                            // The pictures stored so far are held in this unlocked session. If a
-                            // lock came in between they are not, and the import must not go on.
-                            if last.is_some_and(|l| !s.holds(std::slice::from_ref(&l))) {
-                                return Err(Error::Other(LOCKED.into()));
-                            }
-                            let id = s.put_attachment(mime, bytes)?;
-                            s.hold_attachment(&id);
-                            Ok(id)
-                        })
-                        .map_err(|e| e.to_string())?;
-                    stored.push(id.clone());
-                    Ok(id)
-                })
-                .map_err(Error::Other)?;
-            let order = vault.with(|s| Ok(next_notebook_order(s)))?;
-            // The tables of a Notion export: each becomes a database (the pages importer leaves them out), and the
-            // row pages are folded into the rows.
-            let (tables, _, table_notes) = notion_db::read_tables(&vfs, &plan.csv_paths);
-            let row_pages = notion_db::prepare_pages(&tables, &mut plan.pages);
-            let (mut items, mut summary) = plan.items(ctl, &urls, now, order).map_err(Error::invalid)?;
-            // Pending CSV entries are replaced with final outcomes, never counted as left out.
-            summary.skipped.retain(|k| !plan.csv_paths.contains(&k.item));
-            summary.notes.extend(table_notes);
-            let mut imported_csv = Vec::new();
-            // Last chance to stop: after this the notebooks are saved in one step.
+        // Prepare picture URLs one at a time without adding anything to the live vault.
+        let urls = plan
+            .store_images(&vfs, ctl, &mut |mime, bytes| vault
+                .with(|s| pictures.stage(s, mime, bytes))
+                .map_err(|e| e.to_string()))
+            .map_err(Error::Other)?;
+        let order = vault.with(|s| Ok(next_notebook_order(s)))?;
+        // The tables of a Notion export: each becomes a database (the pages importer leaves them out), and the
+        // row pages are folded into the rows.
+        let (tables, _, table_notes) = notion_db::read_tables(&vfs, &plan.csv_paths, ctl)?;
+        drop(vfs);
+        let had_tables = !tables.is_empty();
+        let row_pages = notion_db::prepare_pages(&tables, &plan, ctl)?;
+        let mut made = notion_db::import_databases(&tables, &row_pages, &mut plan, now, ctl)?;
+        drop(tables);
+        let (mut items, mut summary) = plan.items(ctl, &urls, now, order, &made.row_targets).map_err(Error::invalid)?;
+        if made.databases > 0 {
+            let gone = made.move_bodies(&mut items, ctl)?;
+            drop_row_pages(&mut items, &gone, &plan.generated_page_ids());
+            summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
+        }
+        // Pending CSV entries are replaced with final outcomes, never counted as left out.
+        summary.skipped.retain(|k| !plan.csv_paths.contains(&k.item));
+        summary.notes.extend(table_notes);
+        if had_tables {
+            let rows = made.items.iter().filter(|i| matches!(i, Item::Row(_))).count();
+            summary.notes.push(format!("Imported {} databases and {rows} rows.", made.databases));
+            summary.notes.extend(made.notes);
+        }
+        plan::check(ctl).map_err(Error::invalid)?;
+        // The last cancel check comes before the backup and journal maintenance.
+        vault.with_mut(|s| {
+            if !pictures.matches(s) {
+                return Err(Error::Other(LOCKED.into()));
+            }
+            let last_database = s.items().filter_map(|i| if let Item::Database(d) = i { Some(d.order) } else { None }).max();
+            let first_database = made.databases > 0 && last_database.is_none();
+            let mut database_order = last_database.map_or(0, |order| order + 1);
+            for item in &mut made.items {
+                if let Item::Database(db) = item {
+                    db.order = database_order;
+                    database_order += 1;
+                }
+            }
+            items.extend(made.items);
+            // Importing the same export twice makes a second notebook; say so, so it is not mistaken for an update.
+            let existing: Vec<String> = s.items().filter_map(|i| if let Item::Notebook(n) = i { Some(n.name.trim().to_lowercase()) } else { None }).collect();
+            for it in &items {
+                if let Item::Notebook(n) = it {
+                    if existing.contains(&n.name.trim().to_lowercase()) {
+                        summary.notes.push(format!("A notebook named \"{}\" already exists. This import added another one next to it, so everything in it is now twice in your notes. Delete one of them if this was the same export.", n.name));
+                    }
+                }
+            }
             plan::check(ctl).map_err(Error::invalid)?;
-            // The notebooks, sections and pages in one transaction; the pictures are then in saved
-            // pages and no longer need holding.
-            vault.with_mut(|s| {
-                if !s.holds(&stored) {
-                    return Err(Error::Other(LOCKED.into()));
+            s.put_many_checked(items, Some(pictures), |done, total| {
+                plan::check(ctl).map_err(Error::invalid)?;
+                if done > total {
+                    ctl.progress(ImportPhase::Committing, 0, 0);
+                } else {
+                    ctl.progress(ImportPhase::Saving, done, total);
                 }
-                if !tables.is_empty() {
-                    let made = notion_db::import_databases(&tables, &row_pages, &items, &plan.csv_section_ids(&items), &plan.database_header_ids(), s, now, before_first_database)?;
-                    if made.databases > 0 {
-                        drop_row_pages(&mut items, &made.removed_pages, &plan.generated_page_ids());
-                        summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
-                    }
-                    imported_csv = made.covered;
-                    let rows = made.items.iter().filter(|i| matches!(i, Item::Row(_))).count();
-                    summary.notes.push(format!("Imported {} databases and {rows} rows.", made.databases));
-                    summary.notes.extend(made.notes);
-                    items.extend(made.items);
+                plan::check(ctl).map_err(Error::invalid)
+            }, |s| {
+                if first_database {
+                    before_first_database(s)?;
+                    summary.notes.push(super::database::FIRST_DATABASE_NOTICE.to_string());
                 }
-                // Importing the same export twice makes a second notebook; say so, so it is not mistaken for an update.
-                let existing: Vec<String> = s.items().filter_map(|i| if let Item::Notebook(n) = i { Some(n.name.trim().to_lowercase()) } else { None }).collect();
-                for it in &items {
-                    if let Item::Notebook(n) = it {
-                        if existing.contains(&n.name.trim().to_lowercase()) {
-                            summary.notes.push(format!("A notebook named \"{}\" already exists. This import added another one next to it, so everything in it is now twice in your notes. Delete one of them if this was the same export.", n.name));
-                        }
-                    }
-                }
-                s.put_many(items)?;
-                s.release_attachments(&stored);
                 Ok(())
-            })?;
-            let failed_csv: Vec<_> = plan.csv_paths.iter().filter(|p| !imported_csv.contains(p)).collect();
-            let room = plan::MAX_LISTED.saturating_sub(summary.skipped.len());
-            for path in failed_csv.iter().take(room) {
-                summary.skipped.push(crate::importers::Skipped {
-                    item: (*path).clone(),
-                    reason: "The database view could not be imported; see the import notes.".into(),
-                });
-            }
-            if failed_csv.len() > room {
-                summary.notes.push(format!("{} more database view files were not imported than the list shows.", failed_csv.len() - room));
-            }
-            Ok(summary)
-        })();
-        if result.is_err() && !stored.is_empty() {
-            // Take back exactly the pictures this import stored. (If the vault was locked
-            // meanwhile this cannot run; they are then ordinary unused pictures that the next
-            // cleanup removes.)
-            let _ = vault.with_mut(|s| {
-                let r = s.delete_attachments(&stored);
-                s.release_attachments(&stored);
-                r
+            })
+        })?;
+        let imported_csv: std::collections::HashSet<_> = made.covered.into_iter().collect();
+        let failed_csv: Vec<_> = plan.csv_paths.iter().filter(|p| !imported_csv.contains(*p)).collect();
+        let room = plan::MAX_LISTED.saturating_sub(summary.skipped.len());
+        for path in failed_csv.iter().take(room) {
+            summary.skipped.push(crate::importers::Skipped {
+                item: (*path).clone(),
+                reason: "The database view could not be imported; see the import notes.".into(),
             });
         }
-        result
+        if failed_csv.len() > room {
+            summary.notes.push(format!("{} more database view files were not imported than the list shows.", failed_csv.len() - room));
+        }
+        Ok(summary)
     })?
 }
 
@@ -342,7 +346,13 @@ fn import_notes_person(app: AppHandle, state: State<'_, AppState>, request: Impo
     if paths.is_empty() || running.0.load(Ordering::SeqCst) {
         return Ok(None);
     }
-    let ctl = Control::new(MAX_TIME, running.0.clone());
+    let progress_window = app.clone();
+    let ctl = Control::new(MAX_TIME, running.0.clone()).with_progress(move |progress| {
+        if progress.phase == ImportPhase::Committing {
+            Running::begin_commit();
+        }
+        let _ = progress_window.emit_to("main", "notes-import-progress", progress);
+    });
     let safety = |s: &Session| crate::backup::make_safety_backup(&state.paths, s).map(|_| ()).map_err(|e| crate::backup::safety_failure(&e));
     match import_from_with(&*state, &paths, folder, &state.paths.data, now_ms(), &ctl, &safety) {
         Ok(summary) => Ok(Some(summary)),
@@ -688,22 +698,30 @@ mod tests {
         let _ = std::fs::remove_dir_all(root);
     }
 
-    /// Fails the `fail_on`-th change of the vault (counting from 1), like a full disk would.
+    /// Fails the `fail_on`-th vault access (counting from 1).
     struct Failing<'a> {
         inner: &'a Test,
         calls: std::sync::atomic::AtomicUsize,
         fail_on: usize,
     }
 
-    impl VaultAccess for Failing<'_> {
-        fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> {
-            self.inner.with(f)
-        }
-        fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
+    impl Failing<'_> {
+        fn check(&self) -> Result<()> {
             let n = self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
             if n == self.fail_on {
                 return Err(Error::Other("disk full".into()));
             }
+            Ok(())
+        }
+    }
+
+    impl VaultAccess for Failing<'_> {
+        fn with<T>(&self, f: impl FnOnce(&Session) -> Result<T>) -> Result<T> {
+            self.check()?;
+            self.inner.with(f)
+        }
+        fn with_mut<T>(&self, f: impl FnOnce(&mut Session) -> Result<T>) -> Result<T> {
+            self.check()?;
             self.inner.with_mut(f)
         }
     }
@@ -718,14 +736,14 @@ mod tests {
         std::fs::write(src.join("b.png"), [PNG, b"more"].concat()).unwrap();
         let v = vault(&root.join("data"));
         let before = count(&v);
-        // Calls: 1 and 2 store the pictures, 3 saves the notebook.
-        for fail_on in [2usize, 3] {
+        // Calls: 2 and 3 stage pictures, 5 saves the notebook.
+        for fail_on in [3usize, 5] {
             let f = Failing { inner: &v, calls: 0.into(), fail_on };
             let err = import_from(&f, &[src.join("a.md")], false, &root.join("data"), 1, &Control::standard()).unwrap_err();
             assert_eq!(err.to_string(), "disk full");
             assert_eq!(count(&v), before, "no notebook, section or page when it fails (fail_on {fail_on})");
             let orphans = v.with_mut(|s| s.collect_garbage()).unwrap();
-            assert_eq!(orphans, 0, "the pictures it stored were taken back (fail_on {fail_on})");
+            assert_eq!(orphans, 0, "no staged picture was persisted (fail_on {fail_on})");
         }
         // And the same files import fine afterwards.
         let ok = import_from(&v, &[src.join("a.md")], false, &root.join("data"), 1, &Control::standard()).unwrap();
@@ -757,12 +775,12 @@ mod tests {
         let file = two_notebook_zip(&root);
         let v = vault(&root.join("data"));
         let before = count(&v);
-        // Calls: 1 stores the picture, 2 saves both notebooks in one step.
-        for fail_on in [1usize, 2] {
+        // Call 2 stages the picture and call 4 saves both notebooks in one step.
+        for fail_on in [2usize, 4] {
             let f = Failing { inner: &v, calls: 0.into(), fail_on };
             assert!(import_from(&f, &[file.clone()], false, &root.join("data"), 1, &Control::standard()).is_err());
             assert_eq!(count(&v), before, "no notebook at all when it fails (fail_on {fail_on})");
-            assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "the picture was taken back (fail_on {fail_on})");
+            assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "the picture was never persisted (fail_on {fail_on})");
         }
         // Cancelled: nothing either.
         let flag = Arc::new(AtomicBool::new(true));
@@ -916,28 +934,104 @@ mod tests {
         let err = import_from(&v, &[file.clone()], false, &root.join("data"), 1, &flag_control(&flag)).unwrap_err();
         assert_eq!(err.to_string(), plan::CANCELLED);
         assert_eq!(count(&v), before);
-        // Cancelled after the first picture was stored: it is taken back.
+        // Cancel after the first picture is staged.
         let flag = Arc::new(AtomicBool::new(false));
         let f2 = flag.clone();
-        let hooked = Hooked {
-            inner: &v,
-            calls: 0.into(),
-            hook: Box::new(move |n, _| {
-                if n == 2 {
-                    f2.store(true, Ordering::SeqCst);
-                }
-            }),
-        };
-        let err = import_from(&hooked, &[file.clone()], false, &root.join("data"), 1, &flag_control(&flag)).unwrap_err();
+        let ctl = flag_control(&flag).with_progress(move |u| {
+            if (u.phase, u.done) == (ImportPhase::Pictures, 1) {
+                f2.store(true, Ordering::SeqCst);
+            }
+        });
+        let err = import_from(&v, &[file.clone()], false, &root.join("data"), 1, &ctl).unwrap_err();
         assert_eq!(err.to_string(), plan::CANCELLED);
         assert_eq!(count(&v), before, "no notebook");
-        assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "the stored picture was taken back");
+        assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "the staged picture was never persisted");
         // The deadline ends the same way, with its own message.
         let err = import_from(&v, &[file.clone()], false, &root.join("data"), 1, &Control::expired()).unwrap_err();
         assert!(err.to_string().contains("took too long"), "{err}");
         // And a normal import afterwards works.
         let ok = import_from(&v, &[file], false, &root.join("data"), 1, &Control::standard()).unwrap();
         assert_eq!(ok.images, 2);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn n3_progress_advances_and_cancellation_rolls_back_each_stage() {
+        let root = temp();
+        let data = root.join("data");
+        let v = vault(&data);
+        let before = count(&v);
+        let vault_path = data.join("vault.nota");
+        let before_bytes = std::fs::read(&vault_path).unwrap();
+        let backup_path = root.join("before-first-database.nota");
+        let backup_calls = std::sync::atomic::AtomicUsize::new(0);
+        let backup = |s: &Session| {
+            backup_calls.fetch_add(1, Ordering::SeqCst);
+            s.backup_to(&backup_path)?;
+            s.verify_copy(&backup_path)
+        };
+        let file = root.join("Invented.zip");
+        std::fs::write(&file, zip::build(&[
+            ("Guide.md", b"# Guide\n\n![An invented picture](picture.png)"),
+            ("Notes.md", b"# Notes\n\nSomething else to import"),
+            ("picture.png", PNG),
+            ("Tasks_all.csv", b"Name,Status\nOne,Done\n"),
+            ("Tasks/One.md", b"# One\n\nStatus: Done\n\nFirst body"),
+            ("Projects_all.csv", b"Name,Status\nTwo,Ready\n"),
+            ("Projects/Two.md", b"# Two\n\nStatus: Ready\n\nSecond body"),
+        ], false)).unwrap();
+
+        for stop_at in [
+            Some((ImportPhase::Planning, 1)),
+            Some((ImportPhase::Pictures, 1)),
+            Some((ImportPhase::FoldingDatabases, 1)),
+            Some((ImportPhase::Rendering, 1)),
+            Some((ImportPhase::Saving, 1)),
+            Some((ImportPhase::Committing, 0)),
+            None,
+        ] {
+            let flag = Arc::new(AtomicBool::new(false));
+            let updates = Arc::new(Mutex::new(Vec::new()));
+            let ctl = flag_control(&flag).with_progress({
+                let updates = updates.clone();
+                move |update| {
+                    updates.lock().unwrap().push(update);
+                    if Some((update.phase, update.done)) == stop_at {
+                        flag.store(true, Ordering::SeqCst);
+                    }
+                }
+            });
+            let result = import_from_with(&v, std::slice::from_ref(&file), false, &data, 1, &ctl, &backup);
+            let updates = updates.lock().unwrap();
+            if let Some(stop) = stop_at {
+                assert_eq!(result.unwrap_err().to_string(), plan::CANCELLED);
+                let last = updates.last().unwrap();
+                assert_eq!((last.phase, last.done), stop);
+                assert_eq!(backup_calls.load(Ordering::SeqCst), 0);
+                assert!(!backup_path.exists());
+                assert_eq!(std::fs::read(&vault_path).unwrap(), before_bytes, "cancelled at {stop:?}");
+                assert_eq!(count(&v), before);
+                assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "no cancelled import left an attachment");
+                continue;
+            }
+            let summary = result.unwrap();
+            assert_eq!(backup_calls.load(Ordering::SeqCst), 1);
+            let mut backup_session = Session::unlock_open(&backup_path).unwrap();
+            assert_eq!(backup_session.items().count(), before);
+            assert_eq!(backup_session.collect_garbage().unwrap(), 0, "the backup predates the imported pictures");
+            assert_eq!((summary.pages, summary.images), (2, 1));
+            assert!(summary.notes.iter().any(|note| note == "Imported 2 databases and 2 rows."));
+            for phase in [ImportPhase::Planning, ImportPhase::FoldingDatabases, ImportPhase::Saving] {
+                let phase_updates: Vec<_> = updates.iter().filter(|u| u.phase == phase).collect();
+                let total = phase_updates[0].total;
+                assert!(total >= 2);
+                let completed: Vec<_> = phase_updates.iter().map(|u| u.done).collect();
+                assert_eq!(completed, (0..=total).collect::<Vec<_>>(), "{phase:?}");
+                assert!(phase_updates.iter().all(|u| u.total == total));
+            }
+            assert_eq!(updates.last().unwrap().phase, ImportPhase::Committing);
+        }
+        drop(v);
         let _ = std::fs::remove_dir_all(root);
     }
 
@@ -951,7 +1045,11 @@ mod tests {
         assert!(running.0.load(Ordering::SeqCst));
         drop(running);
         assert!(!cancel_running());
-        assert!(Running::start().is_ok());
+        let running = Running::start().unwrap();
+        Running::begin_commit();
+        assert!(!import_cancel());
+        assert!(!running.0.load(Ordering::SeqCst));
+        assert!(Running::start().is_err());
     }
 
     #[test]
@@ -989,13 +1087,13 @@ mod tests {
         let data = root.join("data");
         let v = vault(&data);
         let before = count(&v);
-        // Before the second change the session is replaced by a fresh one: a lock followed by an unlock.
+        // After staging and before the commit the session is replaced by a fresh one.
         let path = data.join("vault.nota");
         let hooked = Hooked {
             inner: &v,
             calls: 0.into(),
             hook: Box::new(move |n, store| {
-                if n == 2 {
+                if n == 1 {
                     *store.session.lock().unwrap() = Session::unlock_open(&path).unwrap();
                 }
             }),
@@ -1003,7 +1101,7 @@ mod tests {
         let err = import_from(&hooked, &[file], false, &data, 1, &Control::standard()).unwrap_err();
         assert!(err.to_string().contains("locked"), "{err}");
         assert_eq!(count(&v), before, "no notebook, section or page");
-        assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "the first picture was taken back");
+        assert_eq!(v.with_mut(|s| s.collect_garbage()).unwrap(), 0, "the staged pictures were never persisted");
         let _ = std::fs::remove_dir_all(root);
     }
 

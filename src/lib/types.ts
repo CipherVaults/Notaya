@@ -149,6 +149,8 @@ export interface NotesTree {
   notebooks: Notebook[];
   sections: Section[];
   pages: PageMeta[];
+  /** Pages under database rows, available to the editor and history outside the sidebar. */
+  rowPages: PageMeta[];
   /** Databases (A35). Their rows are not listed here. */
   databases: import("./database-types").DatabaseMeta[];
 }

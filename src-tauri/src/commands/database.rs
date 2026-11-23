@@ -18,7 +18,7 @@ use crate::database::types::*;
 use crate::database::value::{self, parse_date};
 use crate::database::windows::{RowRange, ViewWindow};
 use crate::error::{Error, Result};
-use crate::model::{new_id, now_ms, Item, Page};
+use crate::model::{new_id, now_ms, Item};
 use crate::state::AppState;
 use crate::vault::Session;
 
@@ -100,15 +100,25 @@ pub fn meta_list(s: &Session) -> Vec<DatabaseMeta> {
 }
 
 /// Ids of the pages inside a row (its sub-pages at any depth).
-fn row_subpages(s: &Session, row_id: &str) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    let mut frontier = vec![row_id.to_string()];
+fn row_subpages<'a>(s: &'a Session, roots: impl IntoIterator<Item = &'a str>) -> Vec<&'a str> {
+    let mut frontier: Vec<_> = roots.into_iter().collect();
+    if frontier.is_empty() {
+        return Vec::new();
+    }
+    let mut children: HashMap<&str, Vec<&str>> = HashMap::new();
+    for item in s.items() {
+        if let Item::Page(p) = item {
+            children.entry(&p.parent).or_default().push(&p.id);
+        }
+    }
+    let mut visited: HashSet<_> = frontier.iter().copied().collect();
+    let mut out = Vec::new();
     while let Some(cur) = frontier.pop() {
-        for it in s.items() {
-            if let Item::Page(p) = it {
-                if p.parent == cur && !out.contains(&p.id) {
-                    out.push(p.id.clone());
-                    frontier.push(p.id.clone());
+        if let Some(kids) = children.get(cur) {
+            for &id in kids {
+                if visited.insert(id) {
+                    out.push(id);
+                    frontier.push(id);
                 }
             }
         }
@@ -117,25 +127,9 @@ fn row_subpages(s: &Session, row_id: &str) -> Vec<String> {
 }
 
 /// Pages that sit inside a database row at any depth (hidden from the sidebar; reached from the row).
-pub fn pages_under_rows(s: &Session) -> HashSet<String> {
-    let rows: HashSet<&str> = s.items().filter_map(|i| if let Item::Row(r) = i { Some(r.id.as_str()) } else { None }).collect();
-    if rows.is_empty() {
-        return HashSet::new();
-    }
-    let mut under: HashSet<String> = HashSet::new();
-    loop {
-        let before = under.len();
-        for it in s.items() {
-            if let Item::Page(p) = it {
-                if !under.contains(&p.id) && (rows.contains(p.parent.as_str()) || under.contains(&p.parent)) {
-                    under.insert(p.id.clone());
-                }
-            }
-        }
-        if under.len() == before {
-            return under;
-        }
-    }
+pub fn pages_under_rows(s: &Session) -> HashSet<&str> {
+    let rows = s.items().filter_map(|i| if let Item::Row(r) = i { Some(r.id.as_str()) } else { None });
+    row_subpages(s, rows).into_iter().collect()
 }
 
 // ---------------------------------------------------------------- cells
@@ -1068,14 +1062,14 @@ pub fn trash_rows(s: &mut Session, ids: &[String]) -> Result<()> {
         }
         r.favorite = false;
         changed.push(Item::Row(r));
-        for pid in row_subpages(s, id) {
-            if let Some(Item::Page(p)) = s.get(&pid) {
-                let mut p = p.clone();
-                if p.trashed_at.is_none() {
-                    p.trashed_at = Some(now);
-                }
-                changed.push(Item::Page(p));
+    }
+    for pid in row_subpages(s, ids.iter().map(String::as_str)) {
+        if let Some(Item::Page(p)) = s.get(pid) {
+            let mut p = p.clone();
+            if p.trashed_at.is_none() {
+                p.trashed_at = Some(now);
             }
+            changed.push(Item::Page(p));
         }
     }
     s.put_many(changed)
@@ -1087,12 +1081,12 @@ pub fn restore_rows(s: &mut Session, ids: &[String]) -> Result<()> {
         let mut r = row(s, id)?;
         r.trashed_at = None;
         changed.push(Item::Row(r));
-        for pid in row_subpages(s, id) {
-            if let Some(Item::Page(p)) = s.get(&pid) {
-                let mut p: Page = p.clone();
-                p.trashed_at = None;
-                changed.push(Item::Page(p));
-            }
+    }
+    for pid in row_subpages(s, ids.iter().map(String::as_str)) {
+        if let Some(Item::Page(p)) = s.get(pid) {
+            let mut p = p.clone();
+            p.trashed_at = None;
+            changed.push(Item::Page(p));
         }
     }
     s.put_many(changed)
@@ -1101,12 +1095,11 @@ pub fn restore_rows(s: &mut Session, ids: &[String]) -> Result<()> {
 /// Deletes rows for good, with their sub-pages; links to them in other rows are removed.
 pub fn delete_rows(s: &mut Session, ids: &[String]) -> Result<()> {
     let doomed: HashSet<String> = ids.iter().cloned().collect();
-    let mut remove: Vec<String> = Vec::new();
     for id in ids {
         row(s, id)?;
-        remove.push(id.clone());
-        remove.extend(row_subpages(s, id));
     }
+    let mut remove = ids.to_vec();
+    remove.extend(row_subpages(s, ids.iter().map(String::as_str)).into_iter().map(str::to_owned));
     // Cut the links out of other rows.
     let relation_props: HashMap<String, Vec<String>> = s
         .items()
@@ -1198,11 +1191,8 @@ pub fn delete_database(s: &mut Session, id: &str) -> Result<()> {
         changed.push(Item::Database(d));
     }
     s.put_many(changed)?;
-    let mut remove = Vec::new();
-    for r in &rows {
-        remove.push(r.clone());
-        remove.extend(row_subpages(s, r));
-    }
+    let mut remove: Vec<_> = row_subpages(s, rows.iter().map(String::as_str)).into_iter().map(str::to_owned).collect();
+    remove.extend(rows);
     remove.push(id.to_string());
     s.remove_many(&remove)?;
     s.collect_garbage()?;
