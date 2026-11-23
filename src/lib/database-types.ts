@@ -328,10 +328,18 @@ export interface QueryRequest {
   view?: View;
 }
 
+export interface TimelineWindowMeta {
+  minDay: number | null;
+  maxDay: number | null;
+  unscheduledIds: string[];
+  subParents?: Record<string, string[]>;
+}
+
 export interface ViewWindow extends Omit<ViewResult, "rows"> {
   rowIds: string[];
   generation: string;
   matchingIds?: string[];
+  timeline?: TimelineWindowMeta;
 }
 
 export interface RowRange {

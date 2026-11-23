@@ -56,6 +56,12 @@ type ShellResult = ViewResult & {
   pendingRowIds?: string[];
 };
 
+function usesRowWindow(kind: ViewKind | undefined): boolean {
+  return kind === "table" || kind === "list" || kind === "gallery" || kind === "board" || kind === "timeline";
+}
+
+const RELATION_TITLE_LIMIT = 256;
+
 const ghostBtn = "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[0.8rem] text-muted transition-colors hover:bg-surface-2 hover:text-fg data-[state=open]:bg-surface-2 data-[state=open]:text-fg";
 
 export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewChange, compact = false }: DatabaseViewProps) {
@@ -100,8 +106,9 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const propsKey = useMemo(() => JSON.stringify(db?.props ?? []), [db?.props]);
   const locked = !!db?.locked;
   const automationsOn = !!db?.automations?.some((a) => a.enabled);
-  const tableFind = view?.kind === "table" ? search.trim() : "";
-  const windowQuery = useMemo(() => ({ viewKey, find: tableFind }), [viewKey, tableFind]);
+  const windowed = usesRowWindow(view?.kind);
+  const windowFind = windowed ? search.trim() : "";
+  const windowQuery = useMemo(() => ({ viewKey, find: windowFind }), [viewKey, windowFind]);
 
   const requery = useCallback(() => {
     clearTimeout(requeryTimer.current);
@@ -115,7 +122,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     const my = ++reqRef.current;
     const t = setTimeout(() => {
       const request = { databaseId: db.id, viewId: view.id, view };
-      const run = view.kind === "table"
+      const run = windowed
         ? api.queryViewWindow(request, windowQuery.find)
         : api.queryView(request);
       run
@@ -139,21 +146,21 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db?.id, windowQuery, propsKey, tick, saveCount]);
+  }, [db?.id, db?.subParentProp, windowQuery, propsKey, tick, saveCount]);
 
-  const tableWindow = result?.window;
-  const positions = useMemo(() => new Map(tableWindow?.rowIds.map((id, i) => [id, i])), [tableWindow]);
+  const rowWindow = result?.window;
+  const positions = useMemo(() => new Map(rowWindow?.rowIds.map((id, i) => [id, i])), [rowWindow]);
   const pendingRowIds = result?.pendingRowIds;
-  const orderedTableIds = useMemo(() => {
-    if (!tableWindow) return undefined;
-    return pendingRowIds ? [...tableWindow.rowIds, ...pendingRowIds] : tableWindow.rowIds;
-  }, [tableWindow, pendingRowIds]);
+  const orderedRowIds = useMemo(() => {
+    if (!rowWindow) return undefined;
+    return pendingRowIds ? [...rowWindow.rowIds, ...pendingRowIds] : rowWindow.rowIds;
+  }, [rowWindow, pendingRowIds]);
   const resultRef = useRef(result);
   resultRef.current = result;
   const loadTableRows = useCallback((ids: readonly string[], isCurrent: () => boolean) => {
-    if (!tableWindow || !view) return;
+    if (!rowWindow || !view) return;
     const current = resultRef.current;
-    const loaded = new Set(current?.rowsGeneration === tableWindow.generation ? current.rows.map((row) => row.id) : []);
+    const loaded = new Set(current?.rowsGeneration === rowWindow.generation ? current.rows.map((row) => row.id) : []);
     const indices = ids.flatMap((id) => {
       const position = positions.get(id);
       return position === undefined || loaded.has(id) ? [] : [position];
@@ -168,14 +175,14 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       }
       batches.push(ranges);
     }
-    void Promise.all(batches.map((ranges) => api.viewRows(databaseId, view.id, tableWindow.generation, ranges))).then((windows) => {
+    void Promise.all(batches.map((ranges) => api.viewRows(databaseId, view.id, rowWindow.generation, ranges))).then((windows) => {
       if (!isCurrent()) return;
       if (windows.some((rows) => rows === null)) {
         requery();
         return;
       }
       setResult((prior) => {
-        if (prior?.window !== tableWindow) return prior;
+        if (!isCurrent() || prior?.window !== rowWindow) return prior;
         const received = new Map(windows.flatMap((rows) => rows ?? []).map((row) => [row.id, row]));
         const keep = new Set(ids);
         // Keep newly created rows until metadata catches up, even if they
@@ -185,14 +192,50 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           if (keep.has(row.id) && !received.has(row.id)) received.set(row.id, row);
         }
         if (windows.length === 0 && received.size === prior.rows.length) return prior;
-        return { ...prior, rows: [...received.values()], rowsGeneration: tableWindow.generation };
+        return { ...prior, rows: [...received.values()], rowsGeneration: rowWindow.generation };
       });
     }).catch((e) => {
       if (isCurrent()) toast.error(errorText(e));
     });
-  }, [databaseId, view?.id, positions, tableWindow, requery]);
+  }, [databaseId, view?.id, positions, rowWindow, requery]);
 
-  const rowById = useMemo(() => new Map((result?.rows ?? []).map((r) => [r.id, r])), [result]);
+  const rowById = useMemo(() => new Map((result?.rows ?? []).map((r) => [r.id, r])), [result?.rows]);
+  // Resolve only the relation targets referenced by loaded rows. Titles for a
+  // target in this window come from its row so local edits show immediately.
+  const relationIds = useMemo(() => {
+    if (!rowWindow || !view || !windowed || view.kind === "table") return [];
+    const props = db?.props.filter((prop) => prop.kind === "relation" && view.columns.some((col) => col.prop === prop.id && col.visible)) ?? [];
+    const ids = new Set<string>();
+    for (const row of rowById.values()) {
+      for (const prop of props) {
+        const value = row.values[prop.id];
+        if (!Array.isArray(value)) continue;
+        // These values are shown as truncated labels. Bound title lookups even
+        // when a single relation links to every row in a large database.
+        for (const id of value.slice(0, 8)) {
+          if (typeof id === "string" && !rowById.has(id)) ids.add(id);
+          if (ids.size === RELATION_TITLE_LIMIT) return [...ids].sort();
+        }
+      }
+    }
+    return [...ids].sort();
+  }, [db?.props, view, rowById, rowWindow, windowed]);
+  const relationKey = JSON.stringify(relationIds);
+  const [relatedTitles, setRelatedTitles] = useState<{ key: string; titles: Map<string, string> }>();
+  useEffect(() => {
+    if (relationKey === "[]") return;
+    let current = true;
+    void api.rowTitles(JSON.parse(relationKey) as string[]).then((hits) => {
+      if (current) setRelatedTitles({ key: relationKey, titles: new Map(hits.map((hit) => [hit.id, hit.title || "Untitled"])) });
+    }).catch(() => { /* Unresolved relations display their linked count. */ });
+    return () => { current = false; };
+  }, [relationKey, rowWindow?.generation]);
+  const rowTitles = useMemo(() => {
+    if (!rowWindow || !windowed || view?.kind === "table") return undefined;
+    const titles = new Map(relatedTitles?.key === relationKey ? relatedTitles.titles : undefined);
+    for (const row of rowById.values()) titles.set(row.id, row.title || "Untitled");
+    return titles;
+  }, [relatedTitles, relationKey, rowById, rowWindow, view?.kind, windowed]);
   const dbRef = useRef(db);
   dbRef.current = db;
 
@@ -437,9 +480,8 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
     );
     return { ...result, rows: result.rows.filter((r) => keep.has(r.id)), filtered: keep.size, groups: filterGroups(result.groups, keep) };
   }, [result, search, db]);
-  const matchingIds = tableWindow?.matchingIds;
-  const tableGroups = useMemo(() => matchingIds && tableWindow
-    ? filterGroups(tableWindow.groups, new Set(matchingIds)) : tableWindow?.groups, [matchingIds, tableWindow]);
+  const matchingIds = rowWindow?.matchingIds;
+  const matchingGroups = useMemo(() => matchingIds ? filterGroups(rowWindow?.groups ?? null, new Set(matchingIds)) : null, [matchingIds, rowWindow]);
 
   // ----- title, icon, lock
 
@@ -586,8 +628,10 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
   const viewProps: ViewProps | null = shown
     ? {
-        db, view, result: tableWindow && matchingIds ? { ...shown, filtered: matchingIds.length, groups: tableGroups ?? null } : shown,
-        rowById, tableRowIds: matchingIds ?? orderedTableIds, loadTableRows: tableWindow ? loadTableRows : undefined,
+        db, view, result: matchingIds ? { ...shown, filtered: matchingIds.length, groups: matchingGroups } : shown,
+        rowById, rowTitles, tableRowIds: matchingIds ?? orderedRowIds, snapshotRowIds: matchingIds ? orderedRowIds : undefined,
+        timelineMeta: shown.window?.timeline,
+        loadTableRows: rowWindow ? loadTableRows : undefined,
         locked, openRow, setCells, setTitle, createRow: (c, t) => createRow(c, t),
         updateView: (patch) => editView((v) => ({ ...v, ...patch })), reorderRows,
       }
@@ -599,7 +643,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const editingProp = propMenu ? db.props.find((p) => p.id === propMenu) : undefined;
   const sortable = view.kind !== "chart";
   const isEmpty = result && result.total === 0;
-  const hasCurrentMatchCount = view.kind !== "table" || result?.windowQuery === windowQuery;
+  const hasCurrentMatchCount = !windowed || result?.windowQuery === windowQuery;
 
   const toolbar = (
     <div className="flex min-w-0 items-center gap-0.5">
@@ -888,7 +932,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
         {result?.truncated && (
           <div className="flex items-center gap-2 border-b border-line bg-warn/10 px-6 py-1.5 text-xs" role="status">
-            <AlertTriangle size={13} className="text-warn-icon" /> View limit reached: only the first {(orderedTableIds?.length ?? result.filtered ?? result.rows.length).toLocaleString()} matching rows are included. This database has {result.total.toLocaleString()} rows in total. Add a filter to narrow it down.
+            <AlertTriangle size={13} className="text-warn-icon" /> View limit reached: only the first {(orderedRowIds?.length ?? result.filtered ?? result.rows.length).toLocaleString()} matching rows are included. This database has {result.total.toLocaleString()} rows in total. Add a filter to narrow it down.
           </div>
         )}
         {queryError && (
@@ -909,7 +953,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
                   No rows yet. Use <span className="font-medium text-fg">New</span> to add the first one.
                 </div>
               ) : (
-                <ViewBody {...viewProps} />
+                <ViewBody key={windowed && view.kind !== "table" ? shown?.windowQuery?.find : undefined} {...viewProps} />
               )}
               {!isEmpty && hasCurrentMatchCount && viewProps.result.filtered === 0 && (hasFilter || search) && (
                 <div className="shrink-0 px-6 py-10 text-center text-sm text-muted">

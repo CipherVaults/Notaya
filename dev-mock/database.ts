@@ -3,11 +3,14 @@
 // Seed data (a Tasks and a Projects database) is added when the URL has ?db=1.
 
 import type {
-  ChartData, Cond, Database, DbRow, Filter, GroupBy, GroupOut, Property, PropKind, RowRange, Template, View, ViewResult,
+  ChartData, Cond, Database, DbRow, Filter, GroupBy, GroupOut, Property, PropKind, RowRange, Template, TimelineWindowMeta, View, ViewResult,
 } from "../src/lib/database-types";
 import { rowMatchesFind } from "../src/features/database/model.ts";
 
 const params = new URLSearchParams(location.search);
+const p8Fixture = params.get("p8") === "1";
+const p8Windows: Array<{ command: "query_view" | "view_rows"; windowed?: boolean; find?: string; generation?: string; ranges?: RowRange[] }> = [];
+if (p8Fixture) Object.assign(window, { __p8Windows: p8Windows });
 const now0 = Date.now();
 
 let idn = 0;
@@ -50,10 +53,52 @@ const DAY = 1440;
 
 function parseDate(s: unknown): DateV | null {
   if (typeof s !== "string") return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(s);
+  const m = /^(\+?\d+)-(\+?\d+)-(\+?\d+)(?:[T ](.*))?$/.exec(s.trim());
   if (!m) return null;
-  const t = Date.UTC(+m[1], +m[2] - 1, +m[3], m[4] ? +m[4] : 0, m[5] ? +m[5] : 0) / 60000;
-  return { d: true, start: t, hasTime: !!m[4] };
+  const [, y, month, day, time] = m;
+  const [hour, minute = "0"] = time === undefined ? ["0"] : time.replace(/Z+$/, "").split(":");
+  if (+y < 1 || +y > 9999 || !/^[-+]?\d+$/.test(hour) || !/^[-+]?\d+$/.test(minute)
+      || +hour < 0 || +hour > 23 || +minute < 0 || +minute > 59) return null;
+  const date = new Date(0);
+  date.setUTCFullYear(+y, +month - 1, +day);
+  if (date.getUTCFullYear() !== +y || date.getUTCMonth() !== +month - 1 || date.getUTCDate() !== +day) return null;
+  return { d: true, start: date.getTime() / 60000 + +hour * 60 + +minute, hasTime: time !== undefined };
+}
+
+function timelineSpan(value: unknown) {
+  const cell = value as { start?: unknown; end?: unknown } | undefined;
+  const date = parseDate(cell?.start);
+  if (!date) return null;
+  const start = Math.floor(date.start / DAY);
+  const end = parseDate(cell?.end);
+  return { start, end: end ? Math.max(start, Math.floor(end.start / DAY)) : start };
+}
+
+function timelineMetadata(db: Database, view: View, rows: DbRow[]): TimelineWindowMeta | undefined {
+  if (view.kind !== "timeline" || !db.props.some((p) => p.id === view.dateProp && p.kind === "date")) return;
+  const endProp = db.props.find((p) => p.kind === "date" && p.id === view.endProp && p.id !== view.dateProp);
+  const meta: TimelineWindowMeta = { minDay: null, maxDay: null, unscheduledIds: [] };
+  const subProp = view.showSubItems ? db.subParentProp : "";
+  const subParents: Record<string, string[]> | undefined = subProp ? Object.create(null) : undefined;
+  if (subParents) meta.subParents = subParents;
+  for (const row of rows) {
+    if (subParents) {
+      const links = row.values[subProp];
+      if (Array.isArray(links)) {
+        const ids = links.filter((id): id is string => typeof id === "string" && id !== row.id);
+        if (ids.length) subParents[row.id] = ids;
+      }
+    }
+    const span = timelineSpan(row.values[view.dateProp]);
+    if (!span) {
+      meta.unscheduledIds.push(row.id);
+      continue;
+    }
+    const end = endProp ? timelineSpan(row.values[endProp.id]) : null;
+    meta.minDay = Math.min(meta.minDay ?? span.start, span.start);
+    meta.maxDay = Math.max(meta.maxDay ?? span.start, span.start, end?.end ?? span.end);
+  }
+  return meta;
 }
 const pad = (n: number) => String(n).padStart(2, "0");
 function isoOf(min: number, time: boolean): string {
@@ -831,6 +876,13 @@ function seed() {
   const chart = blankView("Chart", "chart");
   chart.chart.xProp = status.id; chart.chart.groupProp = prio.id; chart.chart.kind = "bar";
   tasks.views.push(board, cal, tl, blankView("List", "list"), blankView("Gallery", "gallery"), chart);
+  if (p8Fixture) {
+    for (const view of tasks.views) {
+      if (["list", "gallery", "board", "timeline"].includes(view.kind)) view.openIn = "side";
+    }
+    board.calcs = [{ prop: est.id, calc: "sum" }];
+    tl.timelineZoom = "week";
+  }
   tasks.templates.push({ id: nid(), name: "Bug report", icon: "🐞", cells: JSON.stringify({ [prio.id]: prio.options[2].id, [tags.id]: [tags.options[2].id] }), content: "", text: "", repeat: "", repeatLast: 0 } as Template);
   projects.templates = [];
   for (const d of [projects, tasks]) { sanitize(d); dbs.push(d); }
@@ -863,7 +915,7 @@ function seed() {
     if (i === 3) r.cells[link.id] = "https://example.com/docs";
   });
   // Development only (EX-2026-11-09-65): `?rows=5000` adds generated tasks, to time big tables in the mock UI.
-  const extra = Number(new URLSearchParams(typeof location !== "undefined" ? location.search : "").get("rows") || 0);
+  const extra = Number(params.get("rows") || 0);
   for (let i = 25; i < extra; i++) {
     const r = newRow(tasks, `Task number ${i}`);
     r.created = now0 - (i % 90) * 86400000;
@@ -875,6 +927,11 @@ function seed() {
     r.cells[est.id] = [1, 2, 3, 5, 8, 13][i % 6];
     r.cells[cost.id] = 100 * (i % 50) + 0.5;
     r.cells[project.id] = [pr[i % 4].id];
+    if (p8Fixture) {
+      // One very large column and a few populated drop targets.
+      r.cells[status.id] = status.options[0].id;
+      r.cells[due.id] = { start: day(i === 25 ? -1400 : i === 26 ? 1400 : 0) };
+    }
   }
   // P6c TEST-ONLY: exact URL mode in a fresh mock context; default positive seed is unchanged.
   if (params.get("p6Oracle") === "zero-sum") {
@@ -1015,6 +1072,7 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       const d = dbFull(req.databaseId);
       const v = req.view ?? d.views.find((x) => x.id === req.viewId) ?? d.views[0];
       if (!args.windowed) {
+        if (p8Fixture) p8Windows.push({ command: "query_view", windowed: false });
         const { _rows, ...result } = runView(d, v);
         return result;
       }
@@ -1030,12 +1088,15 @@ export function databaseCommand(cmd: string, args: A, base: Record<string, unkno
       while (windows.size > 8) windows.delete(windows.keys().next().value!);
       const { rows, ...metadata } = entry.result;
       const find = String(args.find ?? "").trim().toLowerCase();
-      const matchingIds = find ? rows.filter((row) => rowMatchesFind(d.props, row, find)).map((row) => row.id) : undefined;
-      return { ...metadata, generation: entry.generation, rowIds: rows.map((row) => row.id), matchingIds };
+      const matching = find ? rows.filter((row) => rowMatchesFind(d.props, row, find)) : undefined;
+      const timeline = timelineMetadata(d, v, matching ?? rows);
+      if (p8Fixture) p8Windows.push({ command: "query_view", windowed: true, find: String(args.find ?? ""), generation: entry.generation });
+      return { ...metadata, generation: entry.generation, rowIds: rows.map((row) => row.id), matchingIds: matching?.map((row) => row.id), ...(timeline && { timeline }) };
     }
     case "view_rows": {
       const req = args.request as { databaseId: string; viewId: string; generation: string; ranges?: RowRange[] } & RowRange;
       const ranges = req.ranges ?? [{ start: req.start, count: req.count }];
+      if (p8Fixture) p8Windows.push({ command: "view_rows", generation: req.generation, ranges });
       if (ranges.length > 256 || ranges.some(({ start, count }) => !Number.isSafeInteger(start) || start < 0 || !Number.isSafeInteger(count) || count < 0)
           || ranges.reduce((n, range) => n + range.count, 0) > 256) throw "Too many rows requested for a table window.";
       const entry = [...windows.values()].find((w) => w.databaseId === req.databaseId && w.viewId === req.viewId && w.generation === req.generation);

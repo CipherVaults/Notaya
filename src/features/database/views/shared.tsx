@@ -1,11 +1,12 @@
 // Small pieces shared by the database views (board, calendar, timeline, list, gallery, chart).
 // They only display values and build the patches the shell's setCells understands.
 
-import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Check, Paperclip, Plus } from "lucide-react";
 import type { Database, DateCell, DbRow, FileCell, GroupBy, GroupOut, OptionColor, Property, SelectOption, View } from "@/lib/database-types";
 import { cn } from "@/lib/utils";
+import type { ViewProps } from "../viewTypes";
 
 /* ---------- Colors ---------- */
 
@@ -475,6 +476,17 @@ export function NewTitleInput({
 /** Row titles for relation values: a map built from the rows in view (other rows show as a count). */
 export function titleMap(rows: DbRow[]): Map<string, string> {
   return new Map(rows.map((r) => [r.id, r.title || "Untitled"]));
+}
+
+/** Request a new slice when its membership or snapshot changes, independently of loaded values. */
+export function useViewRows(load: ViewProps["loadTableRows"], ids: readonly string[]) {
+  const key = load ? JSON.stringify([...new Set(ids)]) : "";
+  useEffect(() => {
+    if (!load) return;
+    let current = true;
+    load(JSON.parse(key) as string[], () => current);
+    return () => { current = false; };
+  }, [key, load]);
 }
 
 /** Whether the click that ended a drag should be ignored (a card dropped on itself must not open). */

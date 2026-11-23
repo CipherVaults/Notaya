@@ -1,7 +1,7 @@
 // The contract between the database shell (toolbar, view tabs, panels, table) and the other views
 // (board, calendar, timeline, list, gallery, chart). Each view component is `(props: ViewProps) => JSX`.
 
-import type { Database, DbRow, View, ViewResult } from "@/lib/database-types";
+import type { Database, DbRow, TimelineWindowMeta, View, ViewResult } from "@/lib/database-types";
 
 export interface ViewProps {
   /** The database definition (properties, views). */
@@ -12,9 +12,16 @@ export interface ViewProps {
   result: ViewResult;
   /** Quick lookup of the rows in `result`. */
   rowById: Map<string, DbRow>;
-  /** The table knows the full order, even when only a few rows have values loaded. */
+  /** The ordered display IDs, even when only a few rows have values loaded. */
   tableRowIds?: string[];
+  /** Date extent and undated row IDs for the current Timeline snapshot. */
+  timelineMeta?: TimelineWindowMeta;
+  /** Order before Find, needed when rewriting a manual order from a partial display. */
+  snapshotRowIds?: string[];
+  /** Loads values for the current visible, overscan and pinned IDs. */
   loadTableRows?: (ids: readonly string[], isCurrent: () => boolean) => void;
+  /** Titles of loaded rows and relation targets referenced by them. */
+  rowTitles?: Map<string, string>;
   /** True when the database is locked: rows can change, the properties and views cannot. */
   locked: boolean;
   /** Opens a row the way the view says (full page, side peek or center peek). */

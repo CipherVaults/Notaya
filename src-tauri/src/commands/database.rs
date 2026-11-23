@@ -615,13 +615,14 @@ fn resolve_query_view(s: &Session, request: QueryRequest) -> Result<(Database, V
 fn query_view_window(s: &Session, request: QueryRequest, find: &str) -> Result<ViewWindow> {
     let view_id = request.view_id.clone();
     let (db, view) = resolve_query_view(s, request)?;
+    let meta_view = view.clone();
     let mut cache = s.query_cache.borrow_mut();
     let entry = cache.query(s.items(), &db, &view_id, view, clock::local_now());
     #[cfg(debug_assertions)]
     if std::env::var_os("NOTAYA_DB_SHADOW").is_some() {
         entry.check_shadow(s.items(), &db);
     }
-    Ok(entry.metadata(&db, find))
+    Ok(entry.metadata_for_view(&db, &meta_view, find))
 }
 
 #[derive(Deserialize)]

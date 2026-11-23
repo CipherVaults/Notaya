@@ -1,9 +1,11 @@
 // Timeline view (Gantt): a bar per row from its start date to its end date, a list of titles on the left,
 // zoom from days to years, a today line, dependency arrows and sub-item nesting. Drag a bar to move it, drag an edge to resize.
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboard, type PointerEvent as ReactPointer } from "react";
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboard, type PointerEvent as ReactPointer } from "react";
+import { defaultRangeExtractor, useVirtualizer, type Range } from "@tanstack/react-virtual";
 import { CalendarRange, ChevronDown, ChevronRight, Plus } from "lucide-react";
-import type { DbRow, GroupOut, Property, View } from "@/lib/database-types";
+import type { DbRow, GroupOut, Property } from "@/lib/database-types";
+import { DbShellContext } from "../context";
 import type { ViewProps } from "../viewTypes";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +29,7 @@ import {
   shortDate,
   spanOf,
   todayNum,
+  useViewRows,
   weekStart,
   withDays,
   ymdOf,
@@ -35,6 +38,7 @@ import {
 const LEFT_W = 244;
 const ROW_H = 34;
 const HEAD_H = 52;
+const OVERSCAN = 8;
 const ZOOMS = ["day", "week", "month", "quarter", "year"] as const;
 type Zoom = (typeof ZOOMS)[number];
 const PX: Record<Zoom, number> = { day: 44, week: 16, month: 5, quarter: 2, year: 0.7 };
@@ -47,11 +51,63 @@ interface Bounds {
 
 type Line =
   | { kind: "group"; key: string; g: GroupOut; closed: boolean }
-  | { kind: "row"; row: DbRow; depth: number; kids: number; open: boolean };
+  | { kind: "row"; id: string; group: string | null; depth: number; kids: number; open: boolean };
+
+type ParentLinks = ReadonlyMap<string, readonly string[]>;
+const noParents: ParentLinks = new Map();
+
+interface KnownTracks {
+  scope: string;
+  parents: ParentLinks;
+}
+
+function trackLines(ids: readonly string[], parents: ParentLinks, closed: ReadonlySet<string>, out: Line[], group: string | null = null) {
+  if (!parents.size) {
+    for (const id of ids) out.push({ kind: "row", id, group, depth: 0, kids: 0, open: true });
+    return;
+  }
+  const membership = new Set(ids);
+  const children = new Map<string, string[]>();
+  const nested = new Set<string>();
+  for (const id of ids) {
+    const parent = parents.get(id)?.find((p) => p !== id && membership.has(p));
+    if (!parent) continue;
+    nested.add(id);
+    const siblings = children.get(parent);
+    if (siblings) siblings.push(id);
+    else children.set(parent, [id]);
+  }
+  const seen = new Set<string>();
+  const walk = (root: string) => {
+    const stack = [{ id: root, depth: 0, visible: true }];
+    while (stack.length) {
+      const { id, depth, visible } = stack.pop()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const kids = children.get(id) ?? [];
+      const open = !closed.has(id);
+      if (visible) out.push({ kind: "row", id, group, depth, kids: kids.length, open });
+      for (let i = kids.length - 1; i >= 0; i--) {
+        stack.push({ id: kids[i], depth: depth + 1, visible: visible && open });
+      }
+    }
+  };
+  for (const id of ids) {
+    if (nested.has(id)) continue;
+    if (children.has(id)) walk(id);
+    else {
+      seen.add(id);
+      out.push({ kind: "row", id, group, depth: 0, kids: 0, open: true });
+    }
+  }
+  // Parent cycles have no root. Include each track once even in that case.
+  for (const id of ids) if (!seen.has(id)) walk(id);
+}
 
 type Mode = "move" | "start" | "end";
 interface Drag {
   id: string;
+  index: number;
   mode: Mode;
   x0: number;
   delta: number;
@@ -79,7 +135,8 @@ export default function TimelineView(props: ViewProps) {
   return <TimelineInner {...props} dp={dp} dateProps={dateProps} />;
 }
 
-function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow, updateView, dp, dateProps }: ViewProps & { dp: Property; dateProps: Property[] }) {
+function TimelineInner({ db, view, result, rowById, tableRowIds, timelineMeta, loadTableRows, openRow, setCells, createRow, updateView, dp, dateProps }: ViewProps & { dp: Property; dateProps: Property[] }) {
+  const compact = useContext(DbShellContext)?.compact;
   const zoom: Zoom = (ZOOMS as readonly string[]).includes(view.timelineZoom) ? (view.timelineZoom as Zoom) : "week";
   const px = PX[zoom];
   const today = todayNum();
@@ -89,14 +146,17 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
   const subProp = view.showSubItems ? db.subParentProp : "";
   const blockedProp = view.showDeps ? db.blockedByProp : "";
   const scroller = useRef<HTMLDivElement>(null);
+  const footerScroller = useRef<HTMLDivElement>(null);
+  const marker = useId();
   const [closedRows, setClosedRows] = useState<Set<string>>(new Set());
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
   const [setting, setSetting] = useState<string | null>(null);
   const [showFoot, setShowFoot] = useState(true);
+  const [known, setKnown] = useState<KnownTracks>();
 
   /* ----- dates of rows ----- */
-  const bounds = (row: DbRow): Bounds | null => {
+  const bounds = useCallback((row: DbRow): Bounds | null => {
     const a = spanOf(row.values[dp.id]);
     if (!a) return null;
     let e = a.end;
@@ -105,96 +165,120 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
       if (b) e = b.end;
     }
     return { s: a.start, e: Math.max(e, a.start) };
-  };
+  }, [dp.id, endProp?.id]);
 
-  const { dated, unscheduled } = useMemo(() => {
+  const allRows = tableRowIds ? undefined : result.rows;
+  const ids = useMemo(() => tableRowIds ?? allRows?.map((r) => r.id) ?? [], [tableRowIds, allRows]);
+  const windowIds = useMemo(() => tableRowIds ? new Set(tableRowIds) : null, [tableRowIds]);
+  const snapshotParents = tableRowIds && subProp ? timelineMeta?.subParents : undefined;
+  const snapshotLinks = useMemo(() => snapshotParents ? new Map(Object.entries(snapshotParents)) : undefined, [snapshotParents]);
+  const { dated, unscheduled, parents, extent } = useMemo(() => {
     const dated = new Map<string, Bounds>();
-    const unscheduled: DbRow[] = [];
-    for (const r of result.rows) {
-      const a = spanOf(r.values[dp.id]);
-      if (!a) {
-        unscheduled.push(r);
-        continue;
+    const unscheduled: string[] = [];
+    const parents = new Map<string, readonly string[]>();
+    const extent = { s: today, e: today };
+    for (const row of result.rows) {
+      if (windowIds && !windowIds.has(row.id)) continue;
+      const b = bounds(row);
+      if (b) {
+        dated.set(row.id, b);
+        extent.s = Math.min(extent.s, b.s);
+        extent.e = Math.max(extent.e, b.e);
+      } else if (!timelineMeta) {
+        unscheduled.push(row.id);
       }
-      let e = a.end;
-      if (endProp) {
-        const b = spanOf(r.values[endProp.id]);
-        if (b) e = b.end;
-      }
-      dated.set(r.id, { s: a.start, e: Math.max(e, a.start) });
+      const links = subProp && !snapshotLinks ? row.values[subProp] : null;
+      if (Array.isArray(links) && links.length) parents.set(row.id, links as string[]);
     }
-    return { dated, unscheduled };
-  }, [result.rows, dp.id, endProp]);
+    return { dated, unscheduled, parents, extent };
+  }, [result.rows, windowIds, bounds, subProp, snapshotLinks, today, timelineMeta]);
+  const unscheduledIds = timelineMeta?.unscheduledIds ?? unscheduled;
+
+  const scope = JSON.stringify([db.id, view.id, dp.id, endProp?.id, subProp]);
+  const knowledge = known?.scope === scope ? known : undefined;
+  // Without snapshot links, keep observed parent links when the shell evicts row values.
+  useEffect(() => {
+    if (!windowIds || !subProp || snapshotLinks) return;
+    setKnown((previous) => {
+      const prior = previous?.scope === scope ? previous : undefined;
+      const oldLinks = prior?.parents ?? noParents;
+      let nextLinks: Map<string, readonly string[]> | undefined;
+      for (const row of result.rows) {
+        if (!windowIds.has(row.id)) continue;
+        const before = oldLinks.get(row.id);
+        const after = parents.get(row.id);
+        if ((!before && !after) || (before && after && before.length === after.length && before.every((id, i) => id === after[i]))) continue;
+        nextLinks ??= new Map(oldLinks);
+        if (after) nextLinks.set(row.id, after);
+        else nextLinks.delete(row.id);
+      }
+      if (!nextLinks) return previous;
+      return { scope, parents: nextLinks };
+    });
+  }, [windowIds, result.rows, scope, subProp, parents, snapshotLinks]);
 
   /* ----- the lines on the left ----- */
+  const parentLinks = tableRowIds ? snapshotLinks ?? knowledge?.parents ?? noParents : parents;
   const lines: Line[] = useMemo(() => {
-    const build = (ids: string[]): Line[] => {
-      const set = new Set(ids);
-      const kids = new Map<string, string[]>();
-      const roots: string[] = [];
-      for (const id of ids) {
-        const row = rowById.get(id);
-        const parents = subProp && row ? (Array.isArray(row.values[subProp]) ? (row.values[subProp] as string[]) : []) : [];
-        const parent = parents.find((p) => set.has(p) && p !== id);
-        if (parent) kids.set(parent, [...(kids.get(parent) ?? []), id]);
-        else roots.push(id);
-      }
-      const out: Line[] = [];
-      const seen = new Set<string>();
-      const walk = (id: string, depth: number) => {
-        if (seen.has(id)) return;
-        seen.add(id);
-        const row = rowById.get(id);
-        if (!row) return;
-        const k = kids.get(id) ?? [];
-        const open = !closedRows.has(id);
-        out.push({ kind: "row", row, depth, kids: k.length, open });
-        if (open) k.forEach((c) => walk(c, depth + 1));
-        else hide(k);
-      };
-      // The sub-items of a collapsed row stay hidden (they count as seen).
-      const hide = (list: string[]) =>
-        list.forEach((c) => {
-          if (seen.has(c)) return;
-          seen.add(c);
-          hide(kids.get(c) ?? []);
-        });
-      roots.forEach((r) => walk(r, 0));
-      // Rows in a parent loop are never reached from a root: show them at the top level.
-      ids.forEach((i) => walk(i, 0));
-      return out;
-    };
+    const out: Line[] = [];
     if (result.groups && view.group) {
-      const out: Line[] = [];
+      const collapsed = new Set(view.group.collapsed);
       for (const g of result.groups) {
-        const closed = view.group.collapsed.includes(g.key);
+        const closed = collapsed.has(g.key);
         out.push({ kind: "group", key: g.key, g, closed });
-        if (!closed) out.push(...build(g.rows));
+        if (!closed) trackLines(g.rows, parentLinks, closedRows, out, g.key);
       }
-      return out;
+    } else {
+      trackLines(ids, parentLinks, closedRows, out);
     }
-    return build(result.rows.map((r) => r.id));
-  }, [result.groups, result.rows, view.group, rowById, subProp, closedRows]);
-
-  /* ----- the time axis ----- */
-  const range = useMemo(() => {
-    let lo = today;
-    let hi = today;
-    dated.forEach((b) => {
-      lo = Math.min(lo, b.s);
-      hi = Math.max(hi, b.e);
+    return out;
+  }, [result.groups, ids, view.group, parentLinks, closedRows]);
+  const noRows = !ids.length;
+  const lineIndex = useMemo(() => {
+    const byId = new Map<string, number>();
+    lines.forEach((line, index) => {
+      if (line.kind === "row") byId.set(line.id, index);
     });
-    const start = weekStart(lo - PAD[zoom]);
-    let end = hi + PAD[zoom];
-    const minDays = Math.ceil(1100 / PX[zoom]);
-    if (end - start < minDays) end = start + minDays;
-    return { start, end };
-  }, [dated, today, zoom]);
-  const total = Math.ceil((range.end - range.start + 1) * px);
-  const x = (day: number) => (day - range.start) * px;
-  const ticks = useMemo(() => axis(zoom, range.start, range.end), [zoom, range.start, range.end]);
+    return byId;
+  }, [lines]);
+  const source = drag ? lines[drag.index] : undefined;
+  const pinnedIndex = drag ? (source?.kind === "row" && source.id === drag.id ? drag.index : lineIndex.get(drag.id)) : undefined;
+  const rangeExtractor = useCallback((range: Range) => {
+    const indices = defaultRangeExtractor(range);
+    if (pinnedIndex !== undefined && !indices.includes(pinnedIndex)) indices.push(pinnedIndex);
+    return indices;
+  }, [pinnedIndex]);
+  const tracks = useVirtualizer({
+    count: lines.length,
+    getScrollElement: () => scroller.current,
+    estimateSize: () => ROW_H,
+    overscan: OVERSCAN,
+    rangeExtractor,
+  });
+  const virtualTracks = tracks.getVirtualItems();
+  const requestedIds = virtualTracks.flatMap(({ index }) => {
+    const line = lines[index];
+    return line?.kind === "row" ? [line.id] : [];
+  });
+  const settingIndex = setting ? unscheduledIds.indexOf(setting) : -1;
+  const footerRange = useCallback((range: Range) => {
+    const indices = defaultRangeExtractor(range);
+    if (settingIndex >= 0 && !indices.includes(settingIndex)) indices.push(settingIndex);
+    return indices;
+  }, [settingIndex]);
+  const footerKey = useCallback((index: number) => unscheduledIds[index], [unscheduledIds]);
+  const footer = useVirtualizer({
+    count: showFoot ? unscheduledIds.length : 0,
+    getScrollElement: () => footerScroller.current,
+    getItemKey: footerKey,
+    estimateSize: () => ROW_H,
+    overscan: 2,
+    rangeExtractor: footerRange,
+  });
+  const footerItems = footer.getVirtualItems();
+  for (const { index } of footerItems) requestedIds.push(unscheduledIds[index]);
+  useViewRows(loadTableRows, requestedIds);
 
-  /* ----- positions while dragging ----- */
   const live = (id: string): Bounds | null => {
     const b = dated.get(id);
     if (!b) return null;
@@ -204,6 +288,44 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
     return { s: b.s, e: Math.max(b.e + drag.delta, b.s) };
   };
 
+  /* ----- the time axis ----- */
+  const preview = drag && live(drag.id);
+  const lo = Math.min(timelineMeta?.minDay ?? today, extent.s, preview?.s ?? today);
+  const hi = Math.max(timelineMeta?.maxDay ?? today, extent.e, preview?.e ?? today);
+  const range = useMemo(() => {
+    const start = weekStart(lo - PAD[zoom]);
+    let end = hi + PAD[zoom];
+    const minDays = Math.ceil(1100 / PX[zoom]);
+    if (end - start < minDays) end = start + minDays;
+    return { start, end };
+  }, [lo, hi, zoom]);
+  const total = Math.ceil((range.end - range.start + 1) * px);
+  const x = (day: number) => (day - range.start) * px;
+  const [scroll, setScroll] = useState({ left: 0, width: 0 });
+  const syncHorizontal = useCallback(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const left = el.scrollLeft;
+    const width = el.clientWidth;
+    setScroll((prior) => prior.left === left && prior.width === width ? prior : { left, width });
+  }, []);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const observer = new ResizeObserver(syncHorizontal);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [noRows, syncHorizontal]);
+  const visibleWidth = Math.max(scroll.width - LEFT_W, 1);
+  const over = Math.max(visibleWidth, 720);
+  const x0 = Math.max(0, scroll.left - over);
+  const x1 = Math.min(total, scroll.left + visibleWidth + over);
+  const fromDay = range.start + Math.floor(x0 / px);
+  const toDay = Math.min(range.end, range.start + Math.floor(x1 / px));
+  const ticks = useMemo(() => axis(zoom, range.start, range.end, fromDay, toDay), [zoom, range.start, range.end, fromDay, toDay]);
+  const intersects = (left: number, right: number) => right >= x0 && left <= x1;
+
+  /* ----- positions while dragging ----- */
   const commit = (id: string, mode: Mode, delta: number) => {
     const row = rowById.get(id);
     const b = row && bounds(row);
@@ -231,7 +353,8 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
     if (e.button !== 0) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
-    const d = { id, mode, x0: e.clientX, delta: 0, moved: false };
+    const index = Number(e.currentTarget.closest<HTMLElement>("[data-track-index]")?.dataset.trackIndex);
+    const d = { id, index, mode, x0: e.clientX, delta: 0, moved: false };
     dragRef.current = d;
     setDrag(d);
   };
@@ -267,52 +390,58 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
   };
 
   /* ----- scrolling to today ----- */
-  const scrollToToday = (smooth = false) => {
+  const scrollToToday = useCallback((smooth = false) => {
     const el = scroller.current;
     if (!el) return;
-    const target = Math.max(0, LEFT_W + x(today) - el.clientWidth / 3);
+    const target = Math.max(0, LEFT_W + (today - range.start) * px - el.clientWidth / 3);
     el.scrollTo({ left: target, behavior: smooth ? "smooth" : "auto" });
-  };
-  useEffect(() => {
-    scrollToToday();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zoom, range.start]);
+  }, [px, range.start, today]);
+  const anchor = useRef<{ start: number; zoom: Zoom } | undefined>(undefined);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    const previous = anchor.current;
+    if (!el) {
+      anchor.current = undefined;
+      return;
+    }
+    if (!previous || previous.zoom !== zoom) scrollToToday();
+    else if (previous.start !== range.start) el.scrollLeft += (previous.start - range.start) * px;
+    anchor.current = { start: range.start, zoom };
+    syncHorizontal();
+  }, [noRows, px, range.start, scrollToToday, syncHorizontal, zoom]);
 
   /* ----- dependency arrows ----- */
-  const lineIndex = useMemo(() => {
-    const m = new Map<string, number>();
-    lines.forEach((l, i) => l.kind === "row" && m.set(l.row.id, i));
-    return m;
-  }, [lines]);
-  const arrows = useMemo(() => {
-    if (!blockedProp) return [];
-    const out: { id: string; d: string }[] = [];
-    for (const l of lines) {
-      if (l.kind !== "row") continue;
-      const v = l.row.values[blockedProp];
-      if (!Array.isArray(v)) continue;
-      const to = live(l.row.id);
-      const yi = lineIndex.get(l.row.id);
-      if (!to || yi === undefined) continue;
-      for (const by of v as string[]) {
+  const bodyH = tracks.getTotalSize();
+  const minY = Math.max(0, (tracks.scrollOffset ?? 0) - OVERSCAN * ROW_H);
+  const maxY = Math.min(bodyH, (tracks.scrollOffset ?? 0) + (tracks.scrollRect?.height ?? 0) + OVERSCAN * ROW_H);
+  const arrows: { id: string; d: string }[] = [];
+  if (blockedProp) {
+    const visible = new Map<string, number>();
+    for (const { index, start } of virtualTracks) {
+      const l = lines[index];
+      if (l?.kind === "row" && start + ROW_H >= minY && start < maxY) visible.set(l.id, start + ROW_H / 2);
+    }
+    for (const [id, y2] of visible) {
+      const dependencies = rowById.get(id)?.values[blockedProp];
+      const to = live(id);
+      if (!Array.isArray(dependencies) || !to) continue;
+      for (const by of dependencies as string[]) {
+        const y1 = visible.get(by);
+        if (y1 === undefined) continue;
         const from = live(by);
-        const yj = lineIndex.get(by);
-        if (!from || yj === undefined) continue;
-        const x1 = x(from.e + 1);
-        const x2 = x(to.s);
-        const y1 = yj * ROW_H + ROW_H / 2;
-        const y2 = yi * ROW_H + ROW_H / 2;
+        if (!from) continue;
+        const fromX = x(from.e + 1);
+        const toX = x(to.s);
+        if (!intersects(Math.min(fromX, toX) - 10, Math.max(fromX, toX) + 8)) continue;
         const dir = y2 >= y1 ? 1 : -1;
         const path =
-          x2 >= x1 + 16
-            ? `M${x1},${y1} H${x1 + 8} V${y2} H${x2 - 1}`
-            : `M${x1},${y1} H${x1 + 8} V${y1 + (dir * ROW_H) / 2} H${x2 - 10} V${y2} H${x2 - 1}`;
-        out.push({ id: `${by}>${l.row.id}`, d: path });
+          toX >= fromX + 16
+            ? `M${fromX},${y1} H${fromX + 8} V${y2} H${toX - 1}`
+            : `M${fromX},${y1} H${fromX + 8} V${y1 + (dir * ROW_H) / 2} H${toX - 10} V${y2} H${toX - 1}`;
+        arrows.push({ id: `${by}>${id}`, d: path });
       }
     }
-    return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, blockedProp, drag, range.start, px, dated, lineIndex]);
+  }
 
   /* ----- creating and setting dates ----- */
   const newRow = () => void createRow({ [dp.id]: { start: isoDay(today) } });
@@ -331,15 +460,12 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
   };
 
   const setGroupClosed = (key: string, closed: boolean) => {
-    const p = setCollapsed(view as View, key, closed);
+    const p = setCollapsed(view, key, closed);
     if (p) updateView(p);
   };
 
-  const bodyH = lines.length * ROW_H;
-  const noRows = !result.rows.length;
-
   return (
-    <div className="flex h-full min-h-0 flex-col" role="region" aria-label="Timeline" dir="ltr">
+    <div className={cn("flex h-full min-h-0 flex-col", compact && "max-h-[520px]")} role="region" aria-label="Timeline" dir="ltr">
       <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pb-2 pt-1">
         <div className="flex rounded-lg border border-line p-0.5" role="group" aria-label="Zoom">
           {ZOOMS.map((z) => (
@@ -366,7 +492,7 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
           <button type="button" onClick={newRow} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[0.8rem] text-accent-fg"><Plus size={14} />New</button>
         </EmptyState>
       ) : (
-        <div ref={scroller} className="relative min-h-0 flex-1 overflow-auto border-y border-line" data-scroller>
+        <div ref={scroller} onScroll={syncHorizontal} className="relative min-h-0 flex-1 overflow-auto border-y border-line [overflow-anchor:none]" data-scroller>
           <div className="relative" style={{ width: LEFT_W + total }}>
             {/* header */}
             <div className="sticky top-0 z-30 flex bg-bg" style={{ height: HEAD_H }}>
@@ -375,12 +501,12 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
               </div>
               <div className="relative border-b border-line" style={{ width: total }}>
                 {ticks.top.map((t) => (
-                  <div key={t.key} className="absolute top-0 flex h-[26px] items-center overflow-hidden border-s border-line px-2 text-[0.72rem] font-medium text-muted" style={{ left: x(t.from), width: (t.to - t.from + 1) * px }}>
+                  <div key={t.key} data-timeline-tick={t.key} className="absolute top-0 flex h-[26px] items-center overflow-hidden border-s border-line px-2 text-[0.72rem] font-medium text-muted" style={{ left: x(t.from), width: (t.to - t.from + 1) * px }}>
                     <span className="sticky left-[252px] whitespace-nowrap">{t.label}</span>
                   </div>
                 ))}
                 {ticks.bottom.map((t) => (
-                  <div key={t.key} className={cn("absolute flex h-[26px] items-center overflow-hidden border-s border-line px-1 text-[0.7rem] text-faint", t.weekend && "bg-surface")} style={{ top: 26, left: x(t.from), width: (t.to - t.from + 1) * px }}>
+                  <div key={t.key} data-timeline-tick={t.key} className={cn("absolute flex h-[26px] items-center overflow-hidden border-s border-line px-1 text-[0.7rem] text-faint", t.weekend && "bg-surface")} style={{ top: 26, left: x(t.from), width: (t.to - t.from + 1) * px }}>
                     <span className="truncate">{t.label}</span>
                   </div>
                 ))}
@@ -394,76 +520,84 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
             <div className="relative" style={{ height: bodyH }}>
               <div className="pointer-events-none absolute top-0" style={{ left: LEFT_W, width: total, height: bodyH }} aria-hidden>
                 {ticks.bottom.map((t) => (
-                  <div key={t.key} className={cn("absolute inset-y-0 border-s border-line/60", t.weekend && "bg-surface/70")} style={{ left: x(t.from), width: (t.to - t.from + 1) * px }} />
+                  <div key={t.key} data-timeline-gridline={t.key} className={cn("absolute inset-y-0 border-s border-line/60", t.weekend && "bg-surface/70")} style={{ left: x(t.from), width: (t.to - t.from + 1) * px }} />
                 ))}
                 <div className="absolute inset-y-0 z-[5] w-px bg-accent" style={{ left: x(today) + px / 2 }} data-today-line />
               </div>
 
-              {lines.map((l) => (
-                <div key={l.kind === "group" ? "g:" + l.key : l.row.id} className="relative flex" style={{ height: ROW_H }} data-line={l.kind === "row" ? l.row.id : undefined}>
-                  <div className="sticky left-0 z-20 flex shrink-0 items-center border-b border-e border-line bg-bg" style={{ width: LEFT_W }}>
-                    {l.kind === "group" ? (
-                      <button type="button" aria-expanded={!l.closed} onClick={() => setGroupClosed(l.key, !l.closed)} className="flex h-full w-full items-center gap-1.5 px-2 text-start hover:bg-surface">
-                        {l.closed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-                        <GroupChip g={l.g} />
-                        <span className="text-xs tabular-nums text-faint">{l.g.count}</span>
-                      </button>
-                    ) : (
-                      <div className="flex h-full min-w-0 flex-1 items-center" style={{ paddingInlineStart: 6 + l.depth * 16 }}>
-                        {l.kids ? (
-                          <button
-                            type="button"
-                            aria-label={l.open ? "Collapse sub-items" : "Expand sub-items"}
-                            aria-expanded={l.open}
-                            onClick={() =>
-                              setClosedRows((s) => {
-                                const n = new Set(s);
-                                if (n.has(l.row.id)) n.delete(l.row.id);
-                                else n.add(l.row.id);
-                                return n;
-                              })
-                            }
-                            className="grid h-5 w-5 shrink-0 place-items-center rounded text-faint hover:bg-surface-2 hover:text-fg"
-                          >
-                            {l.open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                          </button>
-                        ) : (
-                          <span className="w-5 shrink-0" />
-                        )}
-                        <button type="button" onClick={() => openRow(l.row.id)} className="min-w-0 flex-1 rounded px-1 py-1 text-start text-[0.82rem] hover:bg-surface-2" data-title-of={l.row.id}>
-                          <RowTitle row={l.row} />
+              {virtualTracks.map(({ index, start }) => {
+                const l = lines[index];
+                if (!l) return null;
+                const row = l.kind === "row" ? rowById.get(l.id) : undefined;
+                const b = row ? live(row.id) : null;
+                const dragging = !!row && drag?.id === row.id;
+                const showBar = b && (dragging || intersects(x(b.s), Math.max(x(b.e + 1), x(b.s) + 8)));
+                return (
+                  <div key={l.kind === "group" ? `g:${l.key}` : `r:${l.group}:${l.id}`} className="absolute inset-x-0 flex" style={{ top: start, height: ROW_H }} data-track-index={index} data-line={l.kind === "row" ? l.id : undefined}>
+                    <div className="sticky left-0 z-20 flex shrink-0 items-center border-b border-e border-line bg-bg" style={{ width: LEFT_W }}>
+                      {l.kind === "group" ? (
+                        <button type="button" aria-expanded={!l.closed} onClick={() => setGroupClosed(l.key, !l.closed)} className="flex h-full w-full items-center gap-1.5 px-2 text-start hover:bg-surface">
+                          {l.closed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                          <GroupChip g={l.g} />
+                          <span data-count className="text-xs tabular-nums text-faint">{l.g.count}</span>
                         </button>
-                      </div>
-                    )}
+                      ) : row ? (
+                        <div className="flex h-full min-w-0 flex-1 items-center" style={{ paddingInlineStart: 6 + Math.min(l.depth, 11) * 16 }}>
+                          {l.kids ? (
+                            <button
+                              type="button"
+                              aria-label={l.open ? "Collapse sub-items" : "Expand sub-items"}
+                              aria-expanded={l.open}
+                              onClick={() =>
+                                setClosedRows((s) => {
+                                  const n = new Set(s);
+                                  if (n.has(l.id)) n.delete(l.id);
+                                  else n.add(l.id);
+                                  return n;
+                                })
+                              }
+                              className="grid h-5 w-5 shrink-0 place-items-center rounded text-faint hover:bg-surface-2 hover:text-fg"
+                            >
+                              {l.open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                            </button>
+                          ) : (
+                            <span className="w-5 shrink-0" />
+                          )}
+                          <button type="button" onClick={() => openRow(row.id)} className="min-w-0 flex-1 rounded px-1 py-1 text-start text-[0.82rem] hover:bg-surface-2" data-title-of={row.id}>
+                            <RowTitle row={row} />
+                          </button>
+                        </div>
+                      ) : <span aria-hidden className="ms-8 h-2 w-24 rounded bg-surface-2" />}
+                    </div>
+                    <div className={cn("relative border-b border-line/70", l.kind === "group" && "bg-surface/60")} style={{ width: total }}>
+                      {row && showBar ? (
+                        <BarFor
+                          row={row}
+                          b={b}
+                          x={x}
+                          px={px}
+                          color={rowColor(row, cp)}
+                          dragging={dragging}
+                          begin={begin}
+                          track={track}
+                          finish={finish}
+                          keys={keys}
+                        />
+                      ) : null}
+                    </div>
                   </div>
-                  <div className={cn("relative border-b border-line/70", l.kind === "group" && "bg-surface/60")} style={{ width: total }}>
-                    {l.kind === "row" ? (
-                      <BarFor
-                        row={l.row}
-                        b={live(l.row.id)}
-                        x={x}
-                        px={px}
-                        color={rowColor(l.row, cp)}
-                        dragging={drag?.id === l.row.id}
-                        begin={begin}
-                        track={track}
-                        finish={finish}
-                        keys={keys}
-                      />
-                    ) : null}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {arrows.length ? (
-                <svg className="pointer-events-none absolute top-0 z-10 text-muted" style={{ left: LEFT_W }} width={total} height={bodyH} aria-hidden data-deps={arrows.length}>
+                <svg className="pointer-events-none absolute z-10 text-muted" style={{ left: LEFT_W + x0, top: minY }} width={x1 - x0} height={maxY - minY} viewBox={`${x0} ${minY} ${x1 - x0} ${maxY - minY}`} aria-hidden data-deps={arrows.length}>
                   <defs>
-                    <marker id="dep-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                    <marker id={marker} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
                       <path d="M0,0.5 L6.5,3.5 L0,6.5 z" fill="currentColor" />
                     </marker>
                   </defs>
                   {arrows.map((a) => (
-                    <path key={a.id} d={a.d} fill="none" stroke="currentColor" strokeWidth="1.3" markerEnd="url(#dep-arrow)" data-dep={a.id} />
+                    <path key={a.id} d={a.d} fill="none" stroke="currentColor" strokeWidth="1.3" markerEnd={`url(#${marker})`} data-dep={a.id} />
                   ))}
                 </svg>
               ) : null}
@@ -472,29 +606,41 @@ function TimelineInner({ db, view, result, rowById, openRow, setCells, createRow
         </div>
       )}
 
-      {unscheduled.length ? (
+      {unscheduledIds.length ? (
         <div className="shrink-0 px-4 py-2" data-unscheduled-box>
           <button type="button" aria-expanded={showFoot} onClick={() => setShowFoot((v) => !v)} className="flex items-center gap-1.5 text-[0.8rem] font-medium text-muted hover:text-fg">
             {showFoot ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             No dates
-            <span className="text-xs font-normal tabular-nums text-faint">{unscheduled.length}</span>
+            <span className="text-xs font-normal tabular-nums text-faint">{unscheduledIds.length}</span>
           </button>
           {showFoot ? (
-            <div className="mt-1.5 flex max-h-36 flex-col gap-0.5 overflow-y-auto">
-              {unscheduled.map((r) => (
-                <div key={r.id} className="flex items-center gap-2 rounded-lg px-1 py-0.5 hover:bg-surface" data-unscheduled={r.id}>
-                  <button type="button" onClick={() => openRow(r.id)} className="min-w-0 flex-1 rounded px-1 py-1 text-start text-[0.82rem]">
-                    <RowTitle row={r} />
-                  </button>
-                  {setting === r.id ? (
-                    <DatesEditor today={isoDay(today)} onSave={(s, e) => saveDates(r, s, e)} onCancel={() => setSetting(null)} />
-                  ) : (
-                    <button type="button" onClick={() => setSetting(r.id)} className="h-7 shrink-0 rounded-lg border border-line px-2.5 text-[0.78rem] text-muted hover:bg-surface-2 hover:text-fg">
-                      Set dates
-                    </button>
-                  )}
-                </div>
-              ))}
+            <div ref={footerScroller} className="mt-1.5 max-h-36 overflow-y-auto">
+              <div className="relative" style={{ height: footer.getTotalSize() }}>
+                {footerItems.map(({ key, index, start }) => {
+                  const id = unscheduledIds[index];
+                  const r = rowById.get(id);
+                  return (
+                    <div key={key} className="absolute inset-x-0 flex items-center gap-2 rounded-lg px-1 py-0.5 hover:bg-surface" style={{ top: start, height: ROW_H }} data-unscheduled={id}>
+                      {r ? (
+                        <>
+                          <button type="button" onClick={() => openRow(r.id)} className="min-w-0 flex-1 rounded px-1 py-1 text-start text-[0.82rem]">
+                            <RowTitle row={r} />
+                          </button>
+                          {setting === r.id ? (
+                            <DatesEditor today={isoDay(today)} onSave={(s, e) => saveDates(r, s, e)} onCancel={() => setSetting(null)} />
+                          ) : (
+                            <button type="button" onClick={() => setSetting(r.id)} className="h-7 shrink-0 rounded-lg border border-line px-2.5 text-[0.78rem] text-muted hover:bg-surface-2 hover:text-fg">
+                              Set dates
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <span aria-hidden className="ms-2 h-2 w-24 rounded bg-surface-2" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
         </div>
@@ -613,46 +759,48 @@ interface Tick {
   weekend?: boolean;
 }
 
-function axis(zoom: Zoom, start: number, end: number): { top: Tick[]; bottom: Tick[] } {
+function axis(zoom: Zoom, start: number, end: number, first: number, last: number): { top: Tick[]; bottom: Tick[] } {
   const top: Tick[] = [];
   const bottom: Tick[] = [];
+  const firstYear = ymdOf(first).y;
+  const lastYear = ymdOf(last).y;
   const monthLabel = (d: number) => fmt({ month: "long", year: "numeric" }).format(dateAt(d));
   const eachMonth = (cb: (from: number, to: number, y: number, m: number) => void) => {
-    const s = ymdOf(start);
+    const s = ymdOf(first);
     for (let y = s.y, m = s.m; ; m++) {
       if (m > 12) {
         m = 1;
         y++;
       }
       const from = dayNum(y, m, 1);
-      if (from > end) break;
+      if (from > last) break;
       cb(Math.max(from, start), Math.min(dayNum(y, m + 1, 0), end), y, m);
     }
   };
   if (zoom === "day" || zoom === "week") {
     eachMonth((from, to) => top.push({ key: `m${from}`, label: monthLabel(from), from, to }));
     if (zoom === "day") {
-      for (let d = start; d <= end; d++) {
+      for (let d = first; d <= last; d++) {
         const wd = (((d + 3) % 7) + 7) % 7;
         bottom.push({ key: `d${d}`, label: `${ymdOf(d).d} ${fmt({ weekday: "narrow" }).format(dateAt(d))}`, from: d, to: d, weekend: wd >= 5 });
       }
     } else {
-      for (let w = start; w <= end; w += 7) bottom.push({ key: `w${w}`, label: shortDate(w), from: w, to: Math.min(w + 6, end) });
+      for (let w = weekStart(first); w <= last; w += 7) bottom.push({ key: `w${w}`, label: shortDate(w), from: w, to: Math.min(w + 6, end) });
     }
   } else if (zoom === "month") {
-    for (let y = ymdOf(start).y; y <= ymdOf(end).y; y++) top.push({ key: `y${y}`, label: String(y), from: Math.max(dayNum(y, 1, 1), start), to: Math.min(dayNum(y, 12, 31), end) });
+    for (let y = firstYear; y <= lastYear; y++) top.push({ key: `y${y}`, label: String(y), from: Math.max(dayNum(y, 1, 1), start), to: Math.min(dayNum(y, 12, 31), end) });
     eachMonth((from, to) => bottom.push({ key: `m${from}`, label: fmt({ month: "short" }).format(dateAt(from)), from, to }));
   } else if (zoom === "quarter") {
-    for (let y = ymdOf(start).y; y <= ymdOf(end).y; y++) {
+    for (let y = firstYear; y <= lastYear; y++) {
       top.push({ key: `y${y}`, label: String(y), from: Math.max(dayNum(y, 1, 1), start), to: Math.min(dayNum(y, 12, 31), end) });
       for (let q = 0; q < 4; q++) {
         const from = dayNum(y, q * 3 + 1, 1);
         const to = dayNum(y, q * 3 + 4, 0);
-        if (to >= start && from <= end) bottom.push({ key: `q${y}${q}`, label: `Q${q + 1}`, from: Math.max(from, start), to: Math.min(to, end) });
+        if (to >= first && from <= last) bottom.push({ key: `q${y}${q}`, label: `Q${q + 1}`, from: Math.max(from, start), to: Math.min(to, end) });
       }
     }
   } else {
-    for (let y = ymdOf(start).y; y <= ymdOf(end).y; y++) bottom.push({ key: `y${y}`, label: String(y), from: Math.max(dayNum(y, 1, 1), start), to: Math.min(dayNum(y, 12, 31), end) });
+    for (let y = firstYear; y <= lastYear; y++) bottom.push({ key: `y${y}`, label: String(y), from: Math.max(dayNum(y, 1, 1), start), to: Math.min(dayNum(y, 12, 31), end) });
   }
   return { top, bottom };
 }

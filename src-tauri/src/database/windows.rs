@@ -1,13 +1,13 @@
 //! Session-owned snapshots for the table IPC. The cache has no storage path.
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use zeroize::Zeroize;
 
 use super::engine::{Ctx, GroupOut, RowOut, ViewResult};
-use super::types::{Database, PropKind, View, MAX_ROWS_PER_DATABASE};
+use super::types::{Database, PropKind, View, ViewKind, MAX_ROWS_PER_DATABASE};
 use crate::model::{new_id, Item};
 
 const MAX_CACHED_VIEWS: usize = 8;
@@ -100,6 +100,16 @@ impl QueryCache {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TimelineWindowMeta {
+    pub min_day: Option<i64>,
+    pub max_day: Option<i64>,
+    pub unscheduled_ids: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sub_parents: Option<BTreeMap<String, Vec<String>>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ViewWindow {
     pub row_ids: Vec<String>,
     pub total: usize,
@@ -110,6 +120,8 @@ pub struct ViewWindow {
     pub generation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub matching_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeline: Option<TimelineWindowMeta>,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -142,7 +154,56 @@ impl CachedView {
                 .filter(|row| row_matches(db, row, &find))
                 .map(|row| row.id.clone())
                 .collect()),
+            timeline: None,
         }
+    }
+
+    pub fn metadata_for_view(&self, db: &Database, view: &View, find: &str) -> ViewWindow {
+        let mut window = self.metadata(db, find);
+        if view.kind == ViewKind::Timeline {
+            if let Some(dp) = db.prop(&view.date_prop).filter(|p| p.kind == PropKind::Date) {
+                let end_prop = (!view.end_prop.is_empty() && view.end_prop != dp.id)
+                    .then(|| db.prop(&view.end_prop).filter(|p| p.kind == PropKind::Date))
+                    .flatten();
+                let find = trim_js_whitespace(find).to_lowercase();
+                let sub_prop = (view.show_sub_items && !db.sub_parent_prop.is_empty()).then_some(db.sub_parent_prop.as_str());
+                let mut sub_parents = sub_prop.map(|_| BTreeMap::new());
+                let mut min_day: Option<i64> = None;
+                let mut max_day: Option<i64> = None;
+                let mut unscheduled_ids = Vec::new();
+                for row in &self.result.rows {
+                    if !find.is_empty() && !row_matches(db, row, &find) {
+                        continue;
+                    }
+                    if let (Some(prop_id), Some(map)) = (sub_prop, sub_parents.as_mut()) {
+                        if let Some(arr) = row.values.get(prop_id).and_then(Value::as_array) {
+                            let ids: Vec<String> = arr.iter()
+                                .filter_map(Value::as_str)
+                                .filter(|id| *id != row.id)
+                                .map(str::to_owned)
+                                .collect();
+                            if !ids.is_empty() {
+                                map.insert(row.id.clone(), ids);
+                            }
+                        }
+                    }
+                    let Some((start, mut end)) = row.values.get(&dp.id).and_then(timeline_span) else {
+                        unscheduled_ids.push(row.id.clone());
+                        continue;
+                    };
+                    if let Some(ep) = end_prop {
+                        if let Some((_, b_end)) = row.values.get(&ep.id).and_then(timeline_span) {
+                            end = b_end;
+                        }
+                    }
+                    let end = end.max(start);
+                    min_day = Some(min_day.map_or(start, |m| m.min(start)));
+                    max_day = Some(max_day.map_or(end, |m| m.max(end)));
+                }
+                window.timeline = Some(TimelineWindowMeta { min_day, max_day, unscheduled_ids, sub_parents });
+            }
+        }
+        window
     }
 
     pub fn rows(&self, ranges: &[RowRange]) -> Vec<RowOut> {
@@ -197,6 +258,19 @@ impl Drop for QueryCache {
     fn drop(&mut self) {
         self.zeroize();
     }
+}
+
+fn parse_timeline_day(s: &str) -> Option<i64> {
+    super::value::parse_date(s).map(|d| d.start.div_euclid(super::value::MINUTES_PER_DAY))
+}
+
+fn timeline_span(v: &Value) -> Option<(i64, i64)> {
+    let o = v.as_object()?;
+    let start = o.get("start").and_then(Value::as_str).and_then(parse_timeline_day)?;
+    let end = o.get("end").and_then(Value::as_str).and_then(parse_timeline_day)
+        .filter(|&e| e >= start)
+        .unwrap_or(start);
+    Some((start, end))
 }
 
 // Same fields as the table toolbar's cellText search, including both a select
@@ -360,5 +434,98 @@ mod tests {
         assert!(cache.get("db1", "v1", &token).is_none());
         cache.zeroize();
         assert_eq!(cache.revision, 0);
+    }
+
+    #[test]
+    fn timeline_metadata_covers_entire_view_bounds_and_unscheduled_rows() {
+        let mut db = sample_db("db-tl", "v-tl");
+        db.props.push(Property { id: "due".into(), name: "Due".into(), kind: PropKind::Date, ..Property::default() });
+        db.props.push(Property { id: "end".into(), name: "End".into(), kind: PropKind::Date, ..Property::default() });
+        let tl_view = View {
+            id: "v-tl".into(),
+            name: "Timeline".into(),
+            kind: ViewKind::Timeline,
+            date_prop: "due".into(),
+            end_prop: "end".into(),
+            ..View::default()
+        };
+        db.views = vec![tl_view.clone()];
+        let mut items = vec![Item::Database(db.clone())];
+        let mut r0 = Row::new("r0".into(), "db-tl", "Alpha".into(), 100);
+        r0.order = 0;
+        r0.cells = r#"{"due":{"start":"2026-01-01"}}"#.into();
+        let mut r1 = Row::new("r1".into(), "db-tl", "Future".into(), 100);
+        r1.order = 1;
+        r1.cells = r#"{"due":{"start":"2026-01-10"},"end":{"start":"2099-12-31"}}"#.into();
+        let mut r2 = Row::new("r2".into(), "db-tl", "Tail undated".into(), 100);
+        r2.order = 2;
+        items.extend([Item::Row(r0), Item::Row(r1), Item::Row(r2)]);
+
+        let mut cache = QueryCache::default();
+        let entry = cache.query(items.iter(), &db, "v-tl", tl_view.clone(), (1000, 0));
+        let meta = entry.metadata_for_view(&db, &tl_view, "");
+        let tl = meta.timeline.expect("timeline metadata");
+        assert_eq!(tl.min_day, parse_timeline_day("2026-01-01"));
+        assert_eq!(tl.max_day, parse_timeline_day("2099-12-31"));
+        assert_eq!(tl.unscheduled_ids, vec!["r2".to_string()]);
+
+        let filtered = entry.metadata_for_view(&db, &tl_view, "undated");
+        let tl_filtered = filtered.timeline.expect("filtered timeline metadata");
+        assert_eq!((tl_filtered.min_day, tl_filtered.max_day), (None, None));
+        assert_eq!(tl_filtered.unscheduled_ids, vec!["r2".to_string()]);
+    }
+
+    #[test]
+    fn timeline_metadata_includes_sub_parents_across_dated_and_unscheduled_rows() {
+        let mut db = sample_db("db-sub", "v-sub");
+        db.props.push(Property { id: "due".into(), name: "Due".into(), kind: PropKind::Date, ..Property::default() });
+        db.props.push(Property {
+            id: "parent".into(),
+            name: "Parent".into(),
+            kind: PropKind::Relation,
+            relation_db: "db-sub".into(),
+            ..Property::default()
+        });
+        db.sub_parent_prop = "parent".into();
+        let tl_off = View {
+            id: "v-sub".into(),
+            name: "Timeline".into(),
+            kind: ViewKind::Timeline,
+            date_prop: "due".into(),
+            show_sub_items: false,
+            ..View::default()
+        };
+        let tl_on = View { show_sub_items: true, ..tl_off.clone() };
+        db.views = vec![tl_on.clone()];
+
+        let mut items = vec![Item::Database(db.clone())];
+        let mut r0 = Row::new("r0".into(), "db-sub", "Parent Row".into(), 100);
+        r0.order = 0;
+        r0.cells = r#"{"due":{"start":"2026-01-01"},"parent":["r0"]}"#.into();
+        let mut r1 = Row::new("r1".into(), "db-sub", "Dated Child".into(), 100);
+        r1.order = 1;
+        r1.cells = r#"{"due":{"start":"2026-01-05"},"parent":["r0"]}"#.into();
+        let mut r2 = Row::new("r2".into(), "db-sub", "Unscheduled Child".into(), 100);
+        r2.order = 2;
+        r2.cells = r#"{"parent":["r0"]}"#.into();
+        items.extend([Item::Row(r0), Item::Row(r1), Item::Row(r2)]);
+
+        let mut cache = QueryCache::default();
+        let entry = cache.query(items.iter(), &db, "v-sub", tl_on.clone(), (1000, 0));
+
+        let meta_off = entry.metadata_for_view(&db, &tl_off, "");
+        assert!(meta_off.timeline.expect("timeline metadata").sub_parents.is_none());
+
+        let meta_on = entry.metadata_for_view(&db, &tl_on, "");
+        let tl_meta = meta_on.timeline.expect("timeline metadata");
+        let parents = tl_meta.sub_parents.expect("sub_parents map");
+        assert!(!parents.contains_key("r0"), "self-links should be excluded");
+        assert_eq!(parents.get("r1"), Some(&vec!["r0".to_string()]));
+        assert_eq!(parents.get("r2"), Some(&vec!["r0".to_string()]));
+
+        let filtered = entry.metadata_for_view(&db, &tl_on, "Dated");
+        let filtered_parents = filtered.timeline.expect("filtered timeline").sub_parents.expect("filtered sub_parents");
+        assert_eq!(filtered_parents.len(), 1);
+        assert_eq!(filtered_parents.get("r1"), Some(&vec!["r0".to_string()]));
     }
 }

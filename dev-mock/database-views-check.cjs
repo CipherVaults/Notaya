@@ -373,7 +373,29 @@ tests.timeline = async (b) => {
 
   // Many rows, empty, dark + RTL.
   p = await open(b, 'view=timeline&data=many&theme=sunrise-dark&rtl=1', { width: 1400, height: 800 });
-  truthy('timeline: 200+ rows render', (await p.locator('[data-bar]').count()) > 200);
+  const manyBars = p.locator('[data-bar]');
+  const manyScroller = p.locator('[data-scroller]');
+  const visitedBars = new Set();
+  const collectBars = async () => {
+    const ids = await manyBars.evaluateAll((bars) => bars.map((bar) => bar.getAttribute('data-bar')));
+    for (const id of ids) visitedBars.add(id);
+    return ids.length;
+  };
+  const firstBarCount = await collectBars();
+  truthy('timeline: the initial bar window is bounded', firstBarCount > 0 && firstBarCount < 100);
+  const height = await manyScroller.evaluate((el) => el.clientHeight);
+  let tail = false;
+  for (let step = 1; height > 0 && step <= 40; step++) {
+    const atEnd = await manyScroller.evaluate((el, offset) => {
+      el.scrollTop = offset;
+      return el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    }, step * Math.floor(height / 2));
+    await p.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const rendered = await collectBars();
+    if (rendered <= 0 || rendered >= 100) break;
+    if (atEnd) { tail = true; break; }
+  }
+  truthy('timeline: bounded windows visit 200+ distinct bars from top to bottom', tail && visitedBars.size > 200);
   await shot(p, 'timeline-dark-rtl');
   await p.close();
   p = await open(b, 'view=timeline&data=empty');
