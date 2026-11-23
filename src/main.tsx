@@ -16,23 +16,40 @@ startupMark("bootstrapAtMs");
 // Before anything is drawn: errors of this window go to the local error log (a file on this computer).
 installErrorLog();
 
-// In the shipped app, block browser shortcuts that make no sense here
-// (reload, print, view source, find, dev tools) and the default context menu.
-if (import.meta.env.PROD) {
+// Keep browser controls out of the desktop windows and production builds.
+if (import.meta.env.PROD || "__TAURI_INTERNALS__" in window) {
   document.addEventListener("contextmenu", (e) => {
-    const t = e.target as HTMLElement;
-    if (!t.closest("input, textarea, [contenteditable='true']")) e.preventDefault();
+    const target = e.target instanceof Element ? e.target : e.target instanceof Node ? e.target.parentElement : null;
+    const editable = target?.closest("[contenteditable]");
+    if (!target?.closest("input, textarea") && !(editable instanceof HTMLElement && editable.isContentEditable)) {
+      e.preventDefault();
+    }
   });
-  document.addEventListener("keydown", (e) => {
+  window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     const blocked =
+      k === "f3" ||
       k === "f5" ||
       k === "f7" ||
-      k === "f12" ||
-      (e.ctrlKey && ["r", "p", "u", "g", "j"].includes(k)) ||
-      (e.ctrlKey && e.shiftKey && ["i", "j", "c"].includes(k));
+      (import.meta.env.PROD && k === "f12") ||
+      (e.ctrlKey && !e.altKey && (
+        ["g", "h", "j", "o", "p", "r", "s", "u", "+", "=", "-", "_", "0"].includes(k) ||
+        (e.shiftKey && ["i", "c"].includes(k))
+      ));
     if (blocked) e.preventDefault();
+  }, { capture: true });
+  // Note/row Find and the shell run first. Auxiliary windows and the lock screen have no shell.
+  window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && !e.altKey && e.key.toLowerCase() === "f") e.preventDefault();
   });
+  window.addEventListener("wheel", (e) => {
+    if (e.ctrlKey) e.preventDefault();
+  }, { capture: true, passive: false });
+  const blockMiddleClick = (e: MouseEvent) => {
+    if (e.button === 1) e.preventDefault();
+  };
+  window.addEventListener("mousedown", blockMiddleClick, { capture: true });
+  window.addEventListener("auxclick", blockMiddleClick, { capture: true });
 }
 
 const label = getCurrentWebviewWindow().label;

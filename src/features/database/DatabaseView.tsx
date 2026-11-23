@@ -81,6 +81,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   const [tick, setTick] = useState(0);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
   const [peek, setPeek] = useState<{ id: string; mode: "side" | "center" } | null>(null);
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const [propMenu, setPropMenu] = useState<string | null>(null);
@@ -238,6 +239,29 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   }, [relatedTitles, relationKey, rowById, rowWindow, view?.kind, windowed]);
   const dbRef = useRef(db);
   dbRef.current = db;
+
+  const openSearch = useCallback(() => {
+    setSearchOpen(true);
+    searchInput.current?.focus();
+  }, []);
+  const findRows = useCallback((e: KeyboardEvent | React.KeyboardEvent) => {
+    if (e.defaultPrevented || !e.ctrlKey || e.altKey || e.key.toLowerCase() !== "f") return;
+    e.preventDefault();
+    openSearch();
+  }, [openSearch]);
+  useEffect(() => {
+    if (compact || !view) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target !== document.body) return;
+      const app = useApp.getState();
+      if (app.view === "notes" && !app.showTrash && app.activeKind === "database" && app.activePageId === databaseId) {
+        findRows(e);
+      }
+    };
+    // A full-page database also owns Find when focus is on the page background.
+    document.documentElement.addEventListener("keydown", onKey);
+    return () => document.documentElement.removeEventListener("keydown", onKey);
+  }, [compact, databaseId, findRows, view]);
 
   // Undo and redo of this database live as long as one of its views is open.
   useEffect(() => retainUndo(databaseId), [databaseId]);
@@ -714,6 +738,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
         <span className="relative">
           <Search size={13} className="pointer-events-none absolute start-2 top-1/2 -translate-y-1/2 text-faint" />
           <input
+            ref={searchInput}
             autoFocus
             value={search}
             dir="auto"
@@ -731,7 +756,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
           />
         </span>
       ) : (
-        <button type="button" className={ghostBtn} aria-label="Search rows" onClick={() => setSearchOpen(true)}>
+        <button type="button" className={ghostBtn} aria-label="Search rows" onClick={openSearch}>
           <Search size={14} />
         </button>
       )}
@@ -788,7 +813,17 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
 
   return (
     <DbShellContext.Provider value={shell}>
-      <div className={cn("relative flex min-h-0 flex-col", compact ? "rounded-lg border border-line" : "h-full")} data-database={db.id} onKeyDown={(e) => handleUndoKey(databaseId, e)}>
+      <div
+        className={cn("relative flex min-h-0 flex-col", compact ? "rounded-lg border border-line" : "h-full")}
+        data-database={db.id}
+        data-database-view
+        onKeyDownCapture={(e) => {
+          if (e.target instanceof Element && e.target.closest("[data-note-editor], [data-database-view]") === e.currentTarget) {
+            findRows(e);
+          }
+        }}
+        onKeyDown={(e) => handleUndoKey(databaseId, e)}
+      >
         {!compact && (
           <div className="shrink-0 px-6 pb-1 pt-8 sm:px-10">
             <div className="flex items-start gap-3">

@@ -171,6 +171,12 @@ body,
   height: 100%;
 }
 
+html,
+body {
+  overscroll-behavior: none;
+  user-select: none;
+}
+
 html {
   font-size: var(--app-font-size);
 }
@@ -182,7 +188,6 @@ body {
   font-family: var(--app-font);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
-  user-select: none;
   cursor: default;
 }
 
@@ -199,10 +204,28 @@ html[data-window="calc"] body {
 
 input,
 textarea,
+:is([contenteditable]:not([contenteditable="false"]), .ProseMirror, .selectable, .db-cell, pre) {
+  user-select: text;
+}
+
+input,
+textarea,
 [contenteditable="true"],
 .selectable {
-  user-select: text;
   cursor: auto;
+}
+
+button,
+[role="toolbar"],
+[role="tablist"],
+[role="menu"] {
+  user-select: none;
+}
+
+img,
+a[href]:not([draggable="true"]),
+button:not([draggable="true"]) {
+  -webkit-user-drag: none;
 }
 
 ::selection {

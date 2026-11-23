@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 149 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Polish the 1.6 desktop candidate](#session-149) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
 | 147 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Reviewed main integration](#session-147) |
 | 146 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Source and continuity checkpoints](#session-146) |
@@ -182,6 +183,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-149"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Polish the 1.6 desktop candidate
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Codex executed the Step 1 brief. One worker implemented Note Find in its assigned files.
+
+**Models, Effort, Roles and Provenance:** The served model variants and effort, token counts, and quota readings were unavailable. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc-polish).
+
+## 1. Time
+
+Initial branch readback at 12:49:17 UTC on 2026-11-23 from the system clock. Owner-message timestamp unavailable.
+
+## 2. Session Goal
+
+Complete Step 1 from `94f48841eacab0c2e61fd4d52b651eb1a9e9f63a` on `AE0101/v1-6-rc`. Deliver desktop polish, 1.6.0 metadata, regression checks and the local verification receipt.
+
+## 3. Actions Taken
+
+Read the prior RC receipt and local Tauri/Wry bindings. Added shared settings, routed Find, updated selection and drag styles, and aligned the package versions. Ran the verification from an isolated scratch tree.
+
+## 4. Key Insights
+
+The database already has row Find. Notes needed an in-editor Find control. Tauri's locked builder turns off zoom, pinch and autofill. Wry defaults to swipe navigation off. Browser accelerator keys and password autosave need the versioned WebView2 interfaces.
+
+## 5. Decisions Made
+
+Kept the editable WebView2 context menus available and filtered chrome in the frontend. Kept the existing dependency graph and used the locked Windows COM layouts for the missing settings.
+
+## 6. Difficulties / Friction
+
+Vite's shared optimization cache caused the first database views check to fail. N3 initially loaded React twice through differently cased Windows paths. The initial standalone probe needed the application's Windows Common Controls manifest.
+
+## 7. Adjustments Made
+
+Reran database views with an isolated Vite cache and N3 using the canonical path spelling. Relinked the probe with the application's manifest. The application source and regression criteria stayed fixed during those retries.
+
+## 8. Mistakes / Risks
+
+The initial Git status refreshed the designated worktree's index under the protected sibling before its Git directory was established. Later inspections used optional locks disabled. The protected sibling's checked-out files were untouched.
+
+## 9. Current Position
+
+The desktop polish and version alignment are ready for separate review. The Gaming-PC receipt records the tested source, complete counts and designated branch readback. The bridge manifest was already at 1.6.0.
+
+## 10. Next Steps
+
+Use the [resume note](handoff/2026-11-23-v1-6-rc-polish-resume-note.md) and the receipt to review the exact candidate. Keep publication for Step 3 as instructed.
+
+## 11. Open Questions
+
+Applying a commit to the linked checkout requires resolving the shared Git metadata boundary. The packaged release and manual editing-menu interaction still need their own observation if included in later review.
+
+## 12. Session Outcome
+
+Produced Step 1 and recorded its scoped test evidence. Independent review and owner acceptance remain open.
+
+## 13. Confidence Level
+
+The receipt establishes exact version and fixture integrity, mock keyboard routing, and real WebView2 settings readback. The hidden probe did not exercise the packaged app or native context menu actions.
+
+---
 
 <a id="session-148"></a>
 

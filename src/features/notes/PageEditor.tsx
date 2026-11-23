@@ -11,6 +11,7 @@ import { findPageMeta, useApp } from "@/store/app";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "@/components/ui";
 import BlockHandle from "./editor/BlockHandle";
 import BubbleToolbar from "./editor/BubbleToolbar";
+import NoteFind, { clearNoteFind, NoteFindExtension } from "./editor/NoteFind";
 import Ribbon from "./editor/Ribbon";
 import InternalLinkHost from "./editor/InternalLinkHost";
 import SlashMenu, { type SlashController } from "./editor/SlashMenu";
@@ -27,6 +28,15 @@ import RowChildPages from "./RowChildPages";
 import { loadRow, saveRowAsTemplate } from "@/features/database/rowOps";
 
 type SaveState = "saved" | "saving" | "error";
+
+function isFindShortcut(e: KeyboardEvent) {
+  return !e.defaultPrevented && e.ctrlKey && !e.altKey && e.key.toLowerCase() === "f";
+}
+
+function isActiveNote(id: string) {
+  const { view, showTrash, activePageId, activeKind } = useApp.getState();
+  return view === "notes" && !showTrash && activePageId === id && activeKind !== "database";
+}
 
 function updatePageMeta(meta: PageMeta) {
   const { tree, setTree } = useApp.getState();
@@ -68,6 +78,9 @@ export default function PageEditor({ pageId, embedded = false, onOpenChild }: {
 function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: boolean; onOpenChild?: (id: string) => void }) {
   const confirm = useConfirm();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const findInput = useRef<HTMLInputElement>(null);
+  const focusBeforeFind = useRef<HTMLElement | null>(null);
   const [title, setTitle] = useState(page.title);
   const [icon, setIcon] = useState(page.icon ?? "");
   const [cover, setCover] = useState(page.cover ?? "");
@@ -150,7 +163,7 @@ function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: b
   }, [save, page.id]);
 
   const extensions = useMemo(
-    () => pageExtensions({ onState: setSlash, onKey: (e) => slashController.current.onKey(e) }),
+    () => [...pageExtensions({ onState: setSlash, onKey: (e) => slashController.current.onKey(e) }), NoteFindExtension],
     [],
   );
 
@@ -166,6 +179,28 @@ function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: b
   });
   editorRef.current = editor;
 
+  const openFind = useCallback(() => {
+    if (findInput.current) {
+      findInput.current.focus();
+      findInput.current.select();
+    } else {
+      const focused = document.activeElement;
+      focusBeforeFind.current = focused instanceof HTMLElement && focused !== document.body ? focused : null;
+      setFindOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!editor || embedded) return;
+    // A click in the note's empty space can leave focus on the document body.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target !== document.body || !isFindShortcut(e) || !isActiveNote(page.id)) return;
+      e.preventDefault();
+      openFind();
+    };
+    document.documentElement.addEventListener("keydown", onKey);
+    return () => document.documentElement.removeEventListener("keydown", onKey);
+  }, [editor, embedded, openFind, page.id]);
 
   useEffect(() => {
     const watcher = watchItemChanges(page.id, () => revRef.current,
@@ -280,7 +315,12 @@ function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: b
   if (!editor) return null;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-note-editor onKeyDownCapture={(e) => {
+      if (!isFindShortcut(e.nativeEvent) || (!embedded && !isActiveNote(page.id))) return;
+      if (!(e.target instanceof Element) || e.target.closest("[data-note-editor], [data-database-view]") !== e.currentTarget) return;
+      e.preventDefault();
+      openFind();
+    }}>
       <div className="flex h-11 shrink-0 items-center gap-3 px-4">
         <nav aria-label="Breadcrumb" className={cn("flex min-w-0 items-center gap-1 text-[0.8rem] text-muted", embedded && "hidden")}>
           {notebook && (
@@ -389,6 +429,12 @@ function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: b
       </div>
 
       {!readOnly && !embedded && <Ribbon editor={editor} />}
+      {findOpen && <NoteFind editor={editor} inputRef={findInput} onClose={() => {
+        clearNoteFind(editor);
+        setFindOpen(false);
+        const focused = focusBeforeFind.current;
+        (focused?.isConnected ? focused : editor.view.dom).focus({ preventScroll: true });
+      }} />}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PageCover cover={cover} readOnly={readOnly} onChange={(c) => setLook(icon, c)} />

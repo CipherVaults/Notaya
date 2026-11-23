@@ -1,5 +1,11 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261123-rc-polish"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+Codex root implemented the native window, shortcut and version changes and ran the isolated verification. One Codex worker implemented Note Find. The running session did not expose confirmed model variants, reasoning effort, attributable tokens or quota readings. [RC polish session](../sessions.md#session-149).
+
 <a id="codex-usage-20261116-block87"></a>
 
 ## Usage block87 — 2026-11-16 UTC — Ahmed (AE0101) — Gaming-PC

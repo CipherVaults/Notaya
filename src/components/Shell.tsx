@@ -43,6 +43,9 @@ export default function Shell() {
       if (k === "k") {
         e.preventDefault();
         setPaletteOpen(true);
+      } else if (k === "f" && !e.defaultPrevented) {
+        e.preventDefault();
+        setPaletteOpen(true);
       } else if (k === "l") {
         e.preventDefault();
         if (securityOn) api.lockVault();
@@ -57,8 +60,8 @@ export default function Shell() {
         setView(SHORTCUTS[k]);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [setPaletteOpen, setView, setSidebarOpen, securityOn]);
 
   if (!ready) {

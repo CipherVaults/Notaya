@@ -2438,7 +2438,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "notaya-app"
-version = "1.5.1"
+version = "1.6.0"
 dependencies = [
  "argon2",
  "chacha20poly1305",

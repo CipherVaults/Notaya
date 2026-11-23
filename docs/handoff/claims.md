@@ -1,5 +1,7 @@
 # Claim board
 
+**Local RC claim, 2026-11-23T12:49:17Z (system UTC), Ahmed (AE0101), Gaming-PC.** Step 1 native desktop polish on `AE0101/v1-6-rc` from `94f48841eacab0c2e61fd4d52b651eb1a9e9f63a`. Scope includes the three WebView2 window builders, shortcut routing, desktop interaction styles, version metadata, regression checks and this handoff. Ahmed authorized the local commit and held publication for Step 3 independent review. [Step 1 resume note](2026-11-23-v1-6-rc-polish-resume-note.md).
+
 <a id="core-q1-focus-loss-20261116"></a>
 
 **Current bounded core claim — 2026-11-16T11:17:10.1398697+00:00 / 2026-11-16 13:17:10 +02:00 Cairo; Ahmed (AE0101), Gaming-PC:** Root owns the narrow TableView focus-restoration/regression line after independently observed six-phase/first-redo failureEC2A. Source proposal work is confined to CONTROL; active/p6c-evidence remains unchanged at d9, all old evidence retained. Apply only after bounded proposal/source review, then focused before/after checks and exact final-source qualification; no blind full rerun. Root alone updates active/main PBS/Notion. Existing ordinary-defect authority applies; no original/history/private/frozen area or broader redesign is included. [EX80](../execution/2026-11-12-codex-installed-data-and-empty-home-qualification.md#core-q1-focus-loss-20261116) owns the measured/inferred distinction and closure.
