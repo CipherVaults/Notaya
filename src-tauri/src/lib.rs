@@ -259,6 +259,7 @@ pub fn run() {
             notes::delete_section,
             notes::create_page,
             notes::get_page,
+            notes::get_page_link_target,
             notes::save_page,
             notes::set_page_favorite,
             notes::set_page_look,

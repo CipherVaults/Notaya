@@ -3,6 +3,7 @@
 import { Dialog } from "radix-ui";
 import { Maximize2, X } from "lucide-react";
 import PageEditor from "@/features/notes/PageEditor";
+import { useApp } from "@/store/app";
 
 interface Props {
   rowId: string;
@@ -12,6 +13,10 @@ interface Props {
 }
 
 export default function RowPeek({ rowId, mode, onClose, onOpenPage }: Props) {
+  const openChild = (id: string) => {
+    onClose();
+    useApp.getState().openPage(id);
+  };
   const bar = (
     <div className="flex h-9 shrink-0 items-center justify-between border-b border-line px-2">
       <button type="button" onClick={onOpenPage} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-fg">
@@ -32,7 +37,7 @@ export default function RowPeek({ rowId, mode, onClose, onOpenPage }: Props) {
       >
         {bar}
         <div className="min-h-0 flex-1">
-          <PageEditor pageId={rowId} embedded />
+          <PageEditor pageId={rowId} embedded onOpenChild={openChild} />
         </div>
       </aside>
     );
@@ -48,7 +53,7 @@ export default function RowPeek({ rowId, mode, onClose, onOpenPage }: Props) {
           <Dialog.Title className="sr-only">Row</Dialog.Title>
           {bar}
           <div className="min-h-0 flex-1">
-            <PageEditor pageId={rowId} embedded />
+            <PageEditor pageId={rowId} embedded onOpenChild={openChild} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

@@ -6,6 +6,8 @@ pub mod store;
 pub mod history;
 pub mod activity;
 mod anchor;
+mod import_pictures;
+pub(crate) use import_pictures::ImportPictures;
 #[cfg(test)]
 mod security_tests;
 
@@ -45,10 +47,6 @@ pub struct Session {
     /// True once anything changed since the last hourly backup of an open vault. It is kept
     /// apart from `dirty` so an hourly copy never stands in for the backup made at lock or quit.
     pub hourly_due: bool,
-    /// Pictures an import has stored but not yet saved in a page. `collect_garbage` leaves them
-    /// alone, so a cleanup that runs while an import is working cannot take them away. Held in
-    /// memory only: after a lock or a crash they are ordinary unused pictures.
-    held: std::collections::HashSet<String>,
     pub revs: HashMap<String, u64>,
     pending: std::collections::BTreeMap<String, (String, String)>,
     pub coordination: Coordination,
@@ -91,7 +89,7 @@ impl Session {
     /// cleanup. The session mutex remains held until commit and event enqueue.
     pub(crate) fn atomic_action<T>(&mut self, safety_backup: bool, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let snapshot = (self.items.clone(), self.dirty, self.hourly_due,
-            self.held.clone(), self.revs.clone(), self.pending.clone(), self.coordination.clone(),
+            self.revs.clone(), self.pending.clone(), self.coordination.clone(),
             self.actor.clone(), self.ai_writers.clone(), self.replacement.clone(),
             self.history_index.clone(), self.change_set.clone(), self.request_ai.clone(),
             self.action_name, self.activity_head.clone(), self.anchor.clone(), self.person_bursts.clone(),
@@ -117,7 +115,7 @@ impl Session {
             other => other,
         };
         self.store.rollback_action();
-        (self.items, self.dirty, self.hourly_due, self.held, self.revs, self.pending,
+        (self.items, self.dirty, self.hourly_due, self.revs, self.pending,
             self.coordination, self.actor, self.ai_writers, self.replacement,
             self.history_index, self.change_set, self.request_ai, self.action_name,
             self.activity_head, self.anchor, self.person_bursts, self.journal_maintenance_at,
@@ -156,7 +154,7 @@ impl Session {
             open: false,
             dirty: true,
             hourly_due: true,
-            held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+            revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
             history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
@@ -176,7 +174,7 @@ impl Session {
             open: true,
             dirty: true,
             hourly_due: true,
-            held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+            revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
             history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
@@ -210,7 +208,7 @@ impl Session {
             open,
             dirty: true,
             hourly_due: true,
-            held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+            revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
             history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false,
         };
         session.put(Item::Settings(Settings::default()))?;
@@ -247,7 +245,7 @@ impl Session {
             items.insert(item.id().to_string(), item);
         }
         store.ensure_journal_tables()?;
-        let mut session = Session { native_session_id: crypto::random_bytes(), format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, held: Default::default(), revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
+        let mut session = Session { native_session_id: crypto::random_bytes(), format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
             history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
         session.load_history()?;
         session.load_activity_head()?;
@@ -311,7 +309,19 @@ impl Session {
     }
 
     /// Stores several items atomically: either all are saved or none.
-    pub fn put_many(&mut self, mut items: Vec<Item>) -> Result<()> {
+    pub fn put_many(&mut self, items: Vec<Item>) -> Result<()> {
+        self.put_many_checked(items, None, |_, _| Ok(()), |_| Ok(()))
+    }
+
+    /// Reports sealed items. The last checkpoint precedes the backup and any journal or
+    /// record writes. An import's pictures join its records in the same transaction.
+    pub(crate) fn put_many_checked(
+        &mut self,
+        mut items: Vec<Item>,
+        mut pictures: Option<ImportPictures>,
+        mut checkpoint: impl FnMut(usize, usize) -> Result<()>,
+        before_write: impl FnOnce(&Session) -> Result<()>,
+    ) -> Result<()> {
         for item in &mut items {
             if let Item::Settings(settings) = item { settings.journals_anchored = true; }
         }
@@ -349,10 +359,21 @@ impl Session {
                 items.push(Item::Settings(settings));
             }
         }
-        let sealed = items.iter().map(|i| self.seal_item(i)).collect::<Result<Vec<_>>>()?;
+        let total = items.len();
+        checkpoint(0, total)?;
+        let mut sealed = Vec::with_capacity(total);
+        for (index, item) in items.iter().enumerate() {
+            sealed.push(self.seal_item(item)?);
+            checkpoint(index + 1, total)?;
+        }
+        checkpoint(total + 1, total)?;
+        before_write(self)?;
         self.maintain_journals()?;
         let journal = self.prepare_journal(&actor, &items, &[])?;
         let purged = self.store.transaction(|s| {
+            if let Some(pictures) = &mut pictures {
+                pictures.write_to(s)?;
+            }
             for (id, data) in &sealed {
                 s.put(Table::Records, id, data)?;
             }
@@ -651,17 +672,20 @@ impl Session {
     }
 
     fn put_blob(&mut self, mime: &str, bytes: &[u8]) -> Result<String> {
-        let id_hex = crate::model::new_id();
-        let id = parse_id(&id_hex)?;
+        let id = crypto::random_bytes();
+        let sealed = self.seal_blob(&id, mime, bytes);
+        self.store.put(Table::Attachments, &id, &sealed)?;
+        self.changed();
+        Ok(hex::encode(id))
+    }
+
+    fn seal_blob(&self, id: &RowId, mime: &str, bytes: &[u8]) -> Vec<u8> {
         let mut payload = Zeroizing::new(Vec::with_capacity(1 + mime.len() + bytes.len()));
         payload.push(mime.len() as u8);
         payload.extend_from_slice(mime.as_bytes());
         payload.extend_from_slice(bytes);
         let padded = crypto::pad(&payload);
-        let sealed = crypto::seal(&self.dek, &aad(self.format, &self.vault_id, Table::Attachments, &id), &padded);
-        self.store.put(Table::Attachments, &id, &sealed)?;
-        self.changed();
-        Ok(id_hex)
+        crypto::seal(&self.dek, &aad(self.format, &self.vault_id, Table::Attachments, id), &padded)
     }
 
     pub fn get_attachment(&self, id_hex: &str) -> Result<(String, Vec<u8>)> {
@@ -684,40 +708,6 @@ impl Session {
             self.get_attachment(&hex::encode(id))?;
         }
         self.verify_journals()?;
-        Ok(())
-    }
-
-    /// Keeps a stored picture safe from `collect_garbage` until [`Session::release_attachments`].
-    pub fn hold_attachment(&mut self, id: &str) {
-        self.held.insert(id.to_string());
-    }
-
-    /// True when every one of these pictures is still held by this session. A lock (which ends
-    /// the session) loses them, which tells an import that the vault was locked in between.
-    pub fn holds(&self, ids: &[String]) -> bool {
-        ids.iter().all(|id| self.held.contains(id))
-    }
-
-    /// Ends the protection of [`Session::hold_attachment`] (the pictures are now in a saved page,
-    /// or were deleted).
-    pub fn release_attachments(&mut self, ids: &[String]) {
-        for id in ids {
-            self.held.remove(id);
-        }
-    }
-
-    /// Deletes the given attachments (by id) in one transaction. An import that failed after
-    /// storing its pictures uses it to take back exactly the pictures it stored.
-    pub fn delete_attachments(&mut self, ids: &[String]) -> Result<()> {
-        let rows = ids.iter().map(|id| parse_id(id)).collect::<Result<Vec<_>>>()?;
-        self.store.transaction(|s| {
-            for row in &rows {
-                s.delete(Table::Attachments, row)?;
-            }
-            Ok(())
-        })?;
-        self.release_attachments(ids);
-        self.changed();
         Ok(())
     }
 
@@ -773,7 +763,7 @@ impl Session {
         let mut removed = 0;
         for id in self.store.ids(Table::Attachments)? {
             let hex_id = hex::encode(id);
-            if !referenced.contains(&hex_id) && !self.held.contains(&hex_id) && !undo_attachments.contains(&hex_id) {
+            if !referenced.contains(&hex_id) && !undo_attachments.contains(&hex_id) {
                 self.store.delete(Table::Attachments, &id)?;
                 removed += 1;
             }

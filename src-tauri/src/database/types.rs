@@ -34,6 +34,7 @@ pub const MAX_FILTER_CONDS: usize = 100;
 pub const MAX_SORTS: usize = 10;
 /// The id of the title property of every database (its value is the row page's title).
 pub const TITLE_PROP: &str = "title";
+pub(crate) const DEFAULT_TITLE_PROP_NAME: &str = "Name";
 /// Files and media stored in a row: at most this many bytes each (owner, 2026-11-03: 50 MB; 2026-11-04: 2 GB, which one stored record cannot hold, so 900 MB).
 pub const MAX_FILE_BYTES: usize = 900 * 1024 * 1024;
 
@@ -453,7 +454,7 @@ impl Database {
             order: 0,
             favorite: false,
             locked: false,
-            props: vec![Property { id: TITLE_PROP.into(), name: "Name".into(), kind: PropKind::Title, ..Property::default() }],
+            props: vec![Property { id: TITLE_PROP.into(), name: DEFAULT_TITLE_PROP_NAME.into(), kind: PropKind::Title, ..Property::default() }],
             views: Vec::new(),
             templates: Vec::new(),
             default_template: String::new(),

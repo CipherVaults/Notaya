@@ -19,13 +19,14 @@ fn table_paths(p: &plan::Plan) -> Vec<String> {
     p.csv_paths.clone()
 }
 
-fn finish(vfs: &Vfs, p: &mut plan::Plan, s: &Session) -> Vec<Item> {
+fn finish(vfs: &Vfs, p: &mut plan::Plan) -> Vec<Item> {
     let ctl = Control::standard();
-    let (tables, _, _) = notion_db::read_tables(vfs, &table_paths(p));
-    let rows = notion_db::prepare_pages(&tables, &mut p.pages);
-    let (mut items, _) = p.items(&ctl, &[], 1, 0).unwrap();
-    let made = notion_db::import_databases(&tables, &rows, &items, &p.csv_section_ids(&items), &p.database_header_ids(), s, 1, &|_| Ok(())).unwrap();
-    super::drop_row_pages(&mut items, &made.removed_pages, &p.generated_page_ids());
+    let (tables, _, _) = notion_db::read_tables(vfs, &table_paths(p), &ctl).unwrap();
+    let rows = notion_db::prepare_pages(&tables, p, &ctl).unwrap();
+    let mut made = notion_db::import_databases(&tables, &rows, p, 1, &ctl).unwrap();
+    let (mut items, _) = p.items(&ctl, &[], 1, 0, &made.row_targets).unwrap();
+    let gone = made.move_bodies(&mut items, &ctl).unwrap();
+    super::drop_row_pages(&mut items, &gone, &p.generated_page_ids());
     items.extend(made.items);
     items
 }
@@ -42,7 +43,7 @@ fn n1_csv_only_source_reaches_database_import() {
     let v = fixture(vec![(format!("Table {TABLE}_all.csv"), b"Name,Status\nCard,Done\n".to_vec())]);
     assert!(plan::build(&v, &Control::standard(), None, 1).is_ok(), "CSV-only sources need a container plan");
     let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    let items = finish(&v, &mut p, &empty_session());
+    let items = finish(&v, &mut p);
     assert_eq!(items.iter().filter(|i| matches!(i, Item::Notebook(_))).count(), 1);
     assert_eq!(items.iter().filter(|i| matches!(i, Item::Section(_))).count(), 1);
     assert_eq!(items.iter().filter(|i| matches!(i, Item::Database(_))).count(), 1);
@@ -57,7 +58,7 @@ fn n1_database_discovery_does_not_depend_on_capped_skip_report() {
     files.push((format!("zTable {TABLE}_all.csv"), b"Name\nCard\n".to_vec()));
     let v = fixture(files);
     let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    let items = finish(&v, &mut p, &empty_session());
+    let items = finish(&v, &mut p);
     assert_eq!(items.iter().filter(|i| matches!(i, Item::Database(_))).count(), 1);
 }
 
@@ -69,7 +70,7 @@ fn n1_database_without_row_documents_stays_in_source_section() {
         (format!("Section B/Table {TABLE}_all.csv"), b"Name\nCard\n".to_vec()),
     ]);
     let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    let items = finish(&v, &mut p, &empty_session());
+    let items = finish(&v, &mut p);
     let wanted = items.iter().find_map(|i| if let Item::Section(s) = i { (s.name == "Section B").then_some(&s.id) } else { None }).unwrap();
     assert!(items.iter().any(|i| matches!(i, Item::Database(d) if &d.section_id == wanted)));
 }
@@ -81,7 +82,7 @@ fn n2_csv_only_section_is_kept_beside_an_unrelated_document_section() {
         (format!("Section B/Tables/Table {TABLE}_all.csv"), b"Name\nCard\n".to_vec()),
     ]);
     let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    let items = finish(&v, &mut p, &empty_session());
+    let items = finish(&v, &mut p);
     let section = items.iter().find_map(|i| if let Item::Section(s) = i { (s.name == "Section B").then_some(&s.id) } else { None }).unwrap();
     assert!(items.iter().any(|i| matches!(i, Item::Database(d) if &d.section_id == section)));
     assert_eq!(items.iter().filter(|i| matches!(i, Item::Page(_))).count(), 1, "CSV folders create no empty placeholders");
@@ -98,27 +99,198 @@ fn n1_title_only_source_home_survives_row_cleanup() {
     let home_id = p.pages.iter().find(|p| p.title == "Home").unwrap().id.clone();
     let generated = p.generated_page_ids();
     assert!(!generated.contains(&home_id));
-    let items = finish(&v, &mut p, &empty_session());
+    let items = finish(&v, &mut p);
     assert!(items.iter().any(|i| matches!(i, Item::Page(p) if p.id == home_id)));
     assert!(!items.iter().any(|i| generated.contains(i.id())), "empty generated row containers are still cleaned up");
 }
 
 #[test]
-#[ignore = "N3: canonical row identity/body, links and children (A53 item 2)"]
 fn n1_linked_row_has_one_body_and_links_target_the_row() {
+    check_canonical_row_import(6);
+}
+
+#[test]
+fn n3_canonical_row_navigation_works_at_3001_and_5000_pages() {
+    check_canonical_row_import(3_001);
+    check_canonical_row_import(crate::importers::MAX_PAGES);
+}
+
+#[test]
+fn n3_same_named_databases_fold_only_rows_with_a_unique_owner() {
     let v = fixture(vec![
-        ("Home.md".into(), format!("# Home\n\n[Card](Card%20{CARD}.md)\n").into_bytes()),
-        (format!("Card {CARD}.md"), b"# Card\n\nStatus: Done\n\nBody\n".to_vec()),
-        (format!("Table {TABLE}_all.csv"), b"Name,Status\nCard,Done\n".to_vec()),
+        (format!("Table {TABLE}_all.csv"), b"Name,Status\nCard,Ready\nOnly A,Ready\n".to_vec()),
+        (format!("Table {HUB}_all.csv"), b"Name,Status\nCard,Ready\nOnly B,Ready\n".to_vec()),
+        (format!("Table {TABLE}/Card {CARD}.md"), b"# Card\n\nStatus: Ready\n\nBody for A".to_vec()),
+        (format!("Table {TABLE}/Card {CARD}/A child.md"), b"# A child\n\nA child body".to_vec()),
+        (format!("Table {HUB}/Card.md"), b"# Card\n\nStatus: Ready\n\nBody for B".to_vec()),
+        (format!("Table {HUB}/Card/B child.md"), b"# B child\n\nB child body".to_vec()),
+        ("Table/Card.md".into(), b"# Card\n\nStatus: Ready\n\nUnresolved folder body".to_vec()),
+        ("Table/Card/Unresolved child.md".into(), b"# Unresolved child\n\nUnresolved child body".to_vec()),
+        (format!("Table {CARD}/Card.md"), b"# Card\n\nStatus: Ready\n\nUnknown database ID body".to_vec()),
+        ("Card.md".into(), b"# Card\n\nStatus: Ready\n\nUnresolved flat body".to_vec()),
+        ("Home.md".into(), format!("# Home\n\n\u{2192} [A](Table%20{TABLE}/Card%20{CARD}.md)\n\n\u{2192} [B](Table%20{HUB}/Card.md)\n\n\u{2192} [Unresolved](Table/Card.md)").into_bytes()),
     ]);
     let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    let items = finish(&v, &mut p, &empty_session());
-    assert_eq!(items.iter().filter(|i| matches!(i, Item::Row(_))).count(), 1);
-    assert_eq!(items.iter().filter(|i| matches!(i, Item::Page(p) if p.title == "Card")).count(), 0);
-    let row = items.iter().find_map(|i| if let Item::Row(r) = i { Some(r) } else { None }).unwrap();
-    let home = items.iter().find_map(|i| if let Item::Page(p) = i { (p.title == "Home").then_some(p) } else { None }).unwrap();
-    assert!(row.text.contains("Body"));
-    assert!(home.content.contains(&row.id), "navigation should address the canonical row");
+    let items = finish(&v, &mut p);
+    let database = |marker| items.iter().find_map(|item| match item {
+        Item::Row(r) if r.title == marker => Some(&r.db),
+        _ => None,
+    }).unwrap();
+    let row = |db| items.iter().find_map(|item| match item {
+        Item::Row(r) if r.title == "Card" && &r.db == db => Some(r),
+        _ => None,
+    }).unwrap();
+    let page = |text: &str| items.iter().find_map(|item| match item {
+        Item::Page(p) if p.text.contains(text) => Some(p),
+        _ => None,
+    }).unwrap();
+    let a = row(database("Only A"));
+    let b = row(database("Only B"));
+    assert_ne!(a.db, b.db);
+    assert!(a.text.contains("Body for A") && !a.text.contains("Body for B"));
+    assert!(b.text.contains("Body for B") && !b.text.contains("Body for A"));
+    assert_eq!(page("A child body").parent, a.id);
+    assert_eq!(page("B child body").parent, b.id);
+    let unresolved = page("Unresolved folder body");
+    assert_eq!(page("Unresolved child body").parent, unresolved.id);
+    assert_eq!(page("Unresolved flat body").title, "Card");
+    assert_eq!(page("Unknown database ID body").title, "Card");
+    let home = items.iter().find_map(|item| match item {
+        Item::Page(p) if p.title == "Home" => Some(p),
+        _ => None,
+    }).unwrap();
+    for id in [&a.id, &b.id, &unresolved.id] {
+        assert!(home.content.contains(&format!("\"pageId\":\"{id}\"")));
+    }
+}
+
+#[test]
+fn n3_flat_row_stays_ambiguous_when_same_named_databases_order_columns_differently() {
+    let v = fixture(vec![
+        (format!("Table {TABLE}_all.csv"), b"Name,Status\nCard,Ready\n".to_vec()),
+        (format!("Table {HUB}_all.csv"), b"Status,Name\nReady,Card\nReady,Unique\n".to_vec()),
+        ("Card.md".into(), b"# Card\n\nStatus: Ready\n\nAmbiguous body".to_vec()),
+        ("Card/Child.md".into(), b"# Child\n\nChild body".to_vec()),
+        ("Unique.md".into(), b"# Unique\n\nStatus: Ready\n\nUnique body".to_vec()),
+    ]);
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let items = finish(&v, &mut p);
+    let cards: Vec<_> = items.iter().filter_map(|item| match item {
+        Item::Row(r) if r.title == "Card" => Some(r),
+        _ => None,
+    }).collect();
+    assert_eq!(cards.len(), 2);
+    assert_ne!(cards[0].db, cards[1].db);
+    assert!(cards.iter().all(|row| !row.text.contains("Ambiguous body")));
+
+    let card = items.iter().find_map(|item| match item {
+        Item::Page(p) if p.title == "Card" => Some(p),
+        _ => None,
+    }).expect("the ambiguous flat page stays a page");
+    assert!(card.text.contains("Ambiguous body"));
+    assert!(items.iter().any(|item| matches!(item, Item::Page(p) if p.title == "Child" && p.parent == card.id)));
+    assert!(items.iter().any(|item| matches!(item, Item::Row(r) if r.title == "Unique" && r.text.contains("Unique body"))));
+    assert!(!items.iter().any(|item| matches!(item, Item::Page(p) if p.title == "Unique")));
+}
+
+fn check_canonical_row_import(documents: usize) {
+    let mut files = vec![
+        ("Home.md".into(), format!("# Home\n\n[Card](Card%20{CARD}.md)\n\nOpen [the HTML copy](Card%20{CARD}.html).\n\n<details>\n<summary>Nested link</summary>\n\n\u{2192} [Card](Card%20{CARD}.md)\n\n</details>").into_bytes()),
+        (format!("Card {CARD}.md"), b"# Card\n\nStatus: Done\n\nBody".to_vec()),
+        (format!("Card {CARD}.html"), format!("<title>Card</title><p>Status: Done</p><p>Body! See <a href=\"Card%20{CARD}.md\">this card</a>.</p>").into_bytes()),
+        (format!("Card {CARD}/Child.md"), format!("# Child\n\nStatus: A note\n\nBack to [Card](../Card%20{CARD}.md).").into_bytes()),
+        (format!("Card {CARD}/Child/Grandchild.md"), b"# Grandchild\n\nGrandchild body".to_vec()),
+        ("Sibling.md".into(), b"# Sibling\n\nStatus: Ready\n\nSibling body".to_vec()),
+        ("Sibling/Sibling child.md".into(), b"# Sibling child\n\nIndependent child".to_vec()),
+        (format!("Table {TABLE}_all.csv"), b"Name,Status\nCard,Done\nSibling,Ready\nChild,Ready\n".to_vec()),
+    ];
+    for n in 6..documents {
+        files.push((format!("Card {CARD}/Child/Descendant {n}.md"), b"Another note".to_vec()));
+    }
+    let v = fixture(files);
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    assert_eq!(p.pages.len(), documents, "the HTML twin is one source document");
+    let source_id = p.pages.iter().find(|page| page.title == "Card").unwrap().id.clone();
+    let items = finish(&v, &mut p);
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Row(_))).count(), 3);
+    assert_eq!(items.iter().filter(|i| matches!(i, Item::Page(_))).count(), documents - 2);
+    assert!(items.iter().all(|i| i.id() != source_id));
+    let page = |title| items.iter().find_map(|item| match item {
+        Item::Page(p) if p.title == title => Some(p),
+        _ => None,
+    }).unwrap();
+    let row = |title| items.iter().find_map(|item| match item {
+        Item::Row(r) if r.title == title => Some(r),
+        _ => None,
+    }).unwrap();
+    let card = row("Card");
+    assert!(card.text.contains("Body!") && !card.text.contains("Status:"));
+    let home = page("Home");
+    let href = format!("\"href\":\"notaya:page/{}\"", card.id);
+    assert!(home.content.contains(&format!("\"pageId\":\"{}\"", card.id)));
+    assert!(home.content.contains(&href), "the HTML alias points to the same canonical row");
+    let home_doc: serde_json::Value = serde_json::from_str(&home.content).unwrap();
+    let toggle = home_doc["content"].as_array().unwrap().iter().find(|b| b["type"] == "toggle").unwrap();
+    assert!(toggle["content"].as_array().unwrap().iter().any(|b| b["type"] == "pageLink" && b["attrs"]["pageId"] == card.id));
+    assert!(card.content.contains(&href), "links inside a moved body use canonical IDs too");
+    let child = page("Child");
+    let grandchild = page("Grandchild");
+    assert_eq!(child.parent, card.id);
+    assert!(child.text.contains("Status: A note") && !row("Child").text.contains("A note"));
+    assert_eq!(grandchild.parent, child.id);
+    assert!(child.content.contains(&href));
+    assert!(items.iter().all(|item| match item {
+        Item::Page(p) => !p.content.contains(&child.id),
+        Item::Row(r) => !r.content.contains(&child.id),
+        _ => true,
+    }), "the folder-owned child has no authored inbound link");
+    let sibling = row("Sibling");
+    let sibling_child = page("Sibling child");
+    assert_eq!(sibling_child.parent, sibling.id);
+    assert!(sibling.text.contains("Sibling body"));
+    let card_id = card.id.clone();
+    let child_id = child.id.clone();
+    let sibling_id = sibling.id.clone();
+    let sibling_child_id = sibling_child.id.clone();
+    let home_id = home.id.clone();
+    let expected: HashSet<_> = std::iter::once(card_id.clone()).chain(items.iter().filter_map(|item| match item {
+        Item::Page(p) if p.parent == card.id || p.parent == child.id => Some(p.id.clone()),
+        _ => None,
+    })).collect();
+    assert_eq!(expected.len(), documents - 3);
+    let mut session = empty_session();
+    session.put_many(items).unwrap();
+    let target = |session: &Session, id: &str| {
+        serde_json::to_value(crate::commands::notes::page_link_target(session, id)).unwrap()
+    };
+    assert_eq!(target(&session, &card_id)["isRow"], true);
+    assert_eq!(target(&session, &card_id)["title"], "Card");
+    assert_eq!(target(&session, &child_id)["isRow"], false);
+    assert_eq!(target(&session, &child_id)["title"], "Child");
+    let tree = |s: &Session| {
+        serde_json::to_value(crate::commands::notes::list_notes_core(s, &crate::actions::Actor::Person).unwrap()).unwrap()
+    };
+    let metadata = tree(&session);
+    assert_eq!(metadata["pages"].as_array().unwrap()[0]["id"], home_id);
+    assert_eq!(metadata["pages"].as_array().unwrap().len(), 1);
+    let row_pages = metadata["rowPages"].as_array().unwrap();
+    assert_eq!(row_pages.len(), documents - 3);
+    let direct: Vec<_> = row_pages.iter().filter(|p| p["parent"] == card_id).collect();
+    assert_eq!(direct.len(), 1);
+    assert_eq!(direct[0]["id"], child_id);
+    crate::commands::database::trash_rows(&mut session, std::slice::from_ref(&card_id)).unwrap();
+    assert!(target(&session, &card_id).is_null() && target(&session, &child_id).is_null());
+    assert_eq!(target(&session, &sibling_id)["title"], "Sibling");
+    let after = tree(&session);
+    assert_eq!(after["rowPages"].as_array().unwrap().len(), 1);
+    assert_eq!(after["rowPages"][0]["id"], sibling_child_id);
+    let trashed = session.items().filter_map(|item| match item {
+        Item::Page(p) if p.trashed_at.is_some() => Some(p.id.clone()),
+        Item::Row(r) if r.trashed_at.is_some() => Some(r.id.clone()),
+        _ => None,
+    }).collect::<HashSet<_>>();
+    assert_eq!(trashed, expected);
+    assert_eq!(session.items().filter(|item| matches!(item, Item::Row(_) | Item::Page(_))).count(), documents + 1);
 }
 
 #[test]
@@ -198,7 +370,7 @@ fn n1_same_named_csv_views_with_different_ids_report_ambiguity() {
         (a.clone(), b"Name,Status\nCard,Done\n".to_vec()),
         (b.clone(), b"Name,Status,Detail\nCard,Done,Body\n".to_vec()),
     ]);
-    let (_, _, notes) = notion_db::read_tables(&v, &[a, b]);
+    let (_, _, notes) = notion_db::read_tables(&v, &[a, b], &Control::standard()).unwrap();
     // Reporting ambiguity avoids silently merging two genuinely distinct databases.
     assert!(!notes.is_empty());
 }
@@ -217,7 +389,7 @@ fn n2_database_wrappers_keep_only_useful_sanitized_content() {
         ]);
         let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
         assert_eq!(p.pages.len(), usize::from(wanted));
-        let items = finish(&v, &mut p, &empty_session());
+        let items = finish(&v, &mut p);
         for page in items.iter().filter_map(|i| if let Item::Page(p) = i { Some(p) } else { None }) {
             assert!(!page.text.contains("View row") && !page.text.contains("bad()"));
             assert!(page.text.contains("Dashboard body") || page.text.contains("Useful table"));
@@ -235,7 +407,7 @@ fn n2_html_markdown_csv_wrapper_is_one_page_with_navigation() {
         (format!("Card {CARD}.md"), b"# Card\n\nCard body\n".to_vec()),
     ]);
     let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    let items = finish(&v, &mut p, &empty_session());
+    let items = finish(&v, &mut p);
     assert_eq!(items.iter().filter(|i| matches!(i, Item::Page(p) if p.title == "Home")).count(), 1);
     let card = items.iter().find_map(|i| if let Item::Page(p) = i { (p.title == "Card").then_some(p) } else { None }).unwrap();
     let home = items.iter().find_map(|i| if let Item::Page(p) = i { (p.title == "Home").then_some(p) } else { None }).unwrap();
@@ -270,7 +442,7 @@ fn n2c_empty_html_source_home_keeps_children_while_empty_view_creates_nothing() 
             assert!(p.pages.is_empty(), "an empty view without source-home structure creates no page");
             None
         };
-        let items = finish(&v, &mut p, &empty_session());
+        let items = finish(&v, &mut p);
         assert_eq!(items.iter().filter(|i| matches!(i, Item::Database(_))).count(), 1);
         assert_eq!(items.iter().filter(|i| matches!(i, Item::Row(_))).count(), 1);
         assert_eq!(items.iter().filter(|i| matches!(i, Item::Section(_))).count(), 1);
@@ -389,7 +561,7 @@ fn n2_plain_wrapper_text_is_saved_in_the_database_description_without_a_duplicat
     std::fs::create_dir_all(&root).unwrap();
     let path = root.join("vault.nota");
     let mut session = Session::create_open(&path).unwrap();
-    let items = finish(&v, &mut p, &session);
+    let items = finish(&v, &mut p);
     let db = items.iter().find_map(|i| if let Item::Database(d) = i { Some(d) } else { None }).unwrap();
     assert_eq!(db.description, "Read these invented instructions first.");
     assert!(!items.iter().any(|i| matches!(i, Item::Page(_))));
@@ -419,7 +591,7 @@ fn n2_wrapper_navigation_formatting_children_and_multiline_text_stay_on_pages() 
         if let Some(link) = extra { files.push(("Guide.md".into(), format!("# Guide\n\n{link}").into_bytes())); }
         let v = fixture(files);
         let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-        let items = finish(&v, &mut p, &empty_session());
+        let items = finish(&v, &mut p);
         let home = items.iter().find_map(|i| if let Item::Page(p) = i { (p.title == "Home").then_some(p) } else { None }).expect("a page preserves the richer content or incoming navigation");
         assert!(!home.text.is_empty());
         assert!(items.iter().any(|i| matches!(i, Item::Database(d) if d.description.is_empty())));
@@ -437,7 +609,7 @@ fn n2_a_failed_or_ambiguous_database_keeps_its_plain_wrapper_page() {
         files.extend(csvs);
         let v = fixture(files);
         let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-        let items = finish(&v, &mut p, &empty_session());
+        let items = finish(&v, &mut p);
         assert!(items.iter().any(|i| matches!(i, Item::Page(p) if p.title == "Home" && p.text == "Preserve this invented header.")));
         assert!(items.iter().all(|i| !matches!(i, Item::Database(d) if !d.description.is_empty())));
     }
@@ -447,7 +619,7 @@ fn n2_a_failed_or_ambiguous_database_keeps_its_plain_wrapper_page() {
 fn n2_conflicting_csv_names_warn_once_and_never_merge_by_name() {
     let paths = vec![format!("Table {TABLE}.csv"), format!("Table {TABLE}_all.csv"), format!("Table {HUB}.csv"), format!("Table {CARD}.csv")];
     let v = fixture(paths.iter().map(|p| (p.clone(), b"Name\nCard\n".to_vec())).collect());
-    let (tables, covered, notes) = notion_db::read_tables(&v, &paths);
+    let (tables, covered, notes) = notion_db::read_tables(&v, &paths, &Control::standard()).unwrap();
     assert_eq!(tables.len(), 3, "only the same-id plain/all pair is combined");
     assert_eq!(covered.len(), 4);
     assert_eq!(notes.iter().filter(|n| n.contains("ambiguous")).count(), 1);
@@ -542,20 +714,25 @@ fn n1_private_count_probe() {
         let source_count = docs.len();
         let top: HashSet<_> = p.pages.iter().filter(|p| p.parent.is_none() && !p.key.starts_with("dir:")).map(|p| p.id.clone()).collect();
         let urls = p.store_images(&v, &ctl, &mut |_,_| Ok(crate::model::new_id())).expect("image stage failed");
-        let (tables, _, notes) = notion_db::read_tables(&v, &table_paths(&p));
+        let (tables, _, notes) = notion_db::read_tables(&v, &table_paths(&p), &ctl).expect("CSV stage failed");
+        let shallow_depth = v.paths().filter(|p| p.ends_with(".md") || p.ends_with(".html")).map(|p| p.matches('/').count()).min();
+        let shallow: HashSet<_> = v.paths().filter(|p| (p.ends_with(".md") || p.ends_with(".html")) && Some(p.matches('/').count()) == shallow_depth).cloned().collect();
+        let vfs_refused = v.refused.len();
+        drop(v);
         let csv_rows: usize = tables.iter().map(|t| t.table.rows.len()).sum();
-        let row_pages = notion_db::prepare_pages(&tables, &mut p.pages);
-        let row_ids: HashSet<_> = row_pages.iter().map(|r| r.page_id.clone()).collect();
+        let row_pages = notion_db::prepare_pages(&tables, &p, &ctl).expect("row matching failed");
+        let row_ids: HashSet<_> = row_pages.iter().map(|r| p.pages[r.page].id.clone()).collect();
         let source_row_ids: HashSet<_> = row_ids.intersection(&docs).cloned().collect();
-        let (mut items, summary) = p.items(&ctl, &urls, 1, 0).expect("render failed");
         assert!(home.is_absolute() && !home.starts_with(env!("CARGO_MANIFEST_DIR")));
         std::fs::create_dir(&home).expect("home must be new");
-        let session = Session::create_open(&home.join("empty-probe.nota")).expect("empty vault unavailable");
-        let made = notion_db::import_databases(&tables, &row_pages, &items, &p.csv_section_ids(&items), &p.database_header_ids(), &session, 1, &|_| Ok(())).expect("database stage failed");
-        let moved = made.removed_pages.len();
-        super::drop_row_pages(&mut items, &made.removed_pages, &p.generated_page_ids());
-        let source_docs_removed = docs.iter().filter(|id| !made.removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
-        let top_removed = top.iter().filter(|id| !made.removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
+        let _session = Session::create_open(&home.join("empty-probe.nota")).expect("empty vault unavailable");
+        let mut made = notion_db::import_databases(&tables, &row_pages, &mut p, 1, &ctl).expect("database stage failed");
+        let (mut items, summary) = p.items(&ctl, &urls, 1, 0, &made.row_targets).expect("render failed");
+        let removed_pages = made.move_bodies(&mut items, &ctl).expect("move failed");
+        let moved = removed_pages.len();
+        super::drop_row_pages(&mut items, &removed_pages, &p.generated_page_ids());
+        let source_docs_removed = docs.iter().filter(|id| !removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
+        let top_removed = top.iter().filter(|id| !removed_pages.contains(*id) && !items.iter().any(|i| i.id() == *id)).count();
         items.extend(made.items);
         let pages: Vec<_> = items.iter().filter_map(|i| if let Item::Page(p) = i {Some(p)} else {None}).collect();
         let retained_row_pages = pages.iter().filter(|p| row_ids.contains(&p.id)).count();
@@ -563,7 +740,7 @@ fn n1_private_count_probe() {
         let source_paired_titles = pages.iter().filter(|p| docs.contains(&p.id) && items.iter().any(|i| matches!(i, Item::Row(r) if r.title.trim().to_lowercase() == p.title.trim().to_lowercase()))).count();
         let mut duplicates = BTreeMap::<String, HashSet<String>>::new();
         for item in &items { if let Item::Row(r) = item { duplicates.entry(r.title.trim().to_lowercase()).or_default().insert(r.db.clone()); } }
-        let mut d = json!({"planned_pages":planned,"generated_folder_pages":generated,"notebooks":items.iter().filter(|i| matches!(i,Item::Notebook(_))).count(),"sections":summary.sections,"pages":pages.len(),"databases":items.iter().filter(|i| matches!(i,Item::Database(_))).count(),"rows":items.iter().filter(|i| matches!(i,Item::Row(_))).count(),"root_pages":pages.iter().filter(|p| p.parent.is_empty()).count(),"loose_section_pages":pages.iter().filter(|pg| p.sections.iter().position(|s| s==plan::LOOSE_SECTION).is_some_and(|s| pg.section_id==items.iter().filter_map(|i| if let Item::Section(s)=i{Some(&s.id)}else{None}).nth(s).cloned().unwrap_or_default())).count(),"row_candidates":row_pages.len(),"row_pages_moved":moved,"row_pages_retained":retained_row_pages,"page_row_title_pairs":paired_titles,"source_docs_pruned":source_docs_removed,"root_source_docs_pruned":top_removed,"tables_read":tables.len(),"csv_rows":csv_rows,"table_notes":notes.len(),"images":summary.images,"skip_before":skipped,"skip_after_images":summary.skipped.len(),"vfs_refused":v.refused.len(),"vfs_extensions":extensions,"ms":start.elapsed().as_millis()});
+        let mut d = json!({"planned_pages":planned,"generated_folder_pages":generated,"notebooks":items.iter().filter(|i| matches!(i,Item::Notebook(_))).count(),"sections":summary.sections,"pages":pages.len(),"databases":items.iter().filter(|i| matches!(i,Item::Database(_))).count(),"rows":items.iter().filter(|i| matches!(i,Item::Row(_))).count(),"root_pages":pages.iter().filter(|p| p.parent.is_empty()).count(),"loose_section_pages":pages.iter().filter(|pg| p.sections.iter().position(|s| s==plan::LOOSE_SECTION).is_some_and(|s| pg.section_id==items.iter().filter_map(|i| if let Item::Section(s)=i{Some(&s.id)}else{None}).nth(s).cloned().unwrap_or_default())).count(),"row_candidates":row_pages.len(),"row_pages_moved":moved,"row_pages_retained":retained_row_pages,"page_row_title_pairs":paired_titles,"source_docs_pruned":source_docs_removed,"root_source_docs_pruned":top_removed,"tables_read":tables.len(),"csv_rows":csv_rows,"table_notes":notes.len(),"images":summary.images,"skip_before":skipped,"skip_after_images":summary.skipped.len(),"vfs_refused":vfs_refused,"vfs_extensions":extensions,"ms":start.elapsed().as_millis()});
         d["row_titles_in_multiple_databases"] = json!(duplicates.values().filter(|s| s.len() > 1).count());
         d["retained_row_roots"] = json!(pages.iter().filter(|p| row_ids.contains(&p.id) && p.parent.is_empty()).count());
         d["source_documents_planned"] = json!(source_count);
@@ -575,8 +752,6 @@ fn n1_private_count_probe() {
         d["final_skipped_count"] = json!(summary.skipped.iter().filter(|x| !tables.iter().any(|t| t.paths.contains(&x.item))).count());
         d["columns_min"] = json!(tables.iter().map(|t| t.table.header.len()).min().unwrap_or(0));
         d["columns_max"] = json!(tables.iter().map(|t| t.table.header.len()).max().unwrap_or(0));
-        let shallow_depth = v.paths().filter(|p| p.ends_with(".md") || p.ends_with(".html")).map(|p| p.matches('/').count()).min();
-        let shallow: HashSet<_> = v.paths().filter(|p| (p.ends_with(".md") || p.ends_with(".html")) && Some(p.matches('/').count()) == shallow_depth).cloned().collect();
         d["shallow_source_documents"] = json!(shallow.len());
         d["shallow_source_documents_planned"] = json!(p.pages.iter().filter(|p| shallow.contains(&p.key)).count());
         d["shallow_source_documents_survived"] = json!(p.pages.iter().filter(|p| shallow.contains(&p.key) && pages.iter().any(|q| q.id == p.id)).count());

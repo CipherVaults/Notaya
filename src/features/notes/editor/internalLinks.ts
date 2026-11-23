@@ -12,7 +12,8 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { toast } from "sonner";
-import { useApp } from "@/store/app";
+import { api } from "@/lib/ipc";
+import { findPageMeta, useApp } from "@/store/app";
 
 const PREFIX = "notaya:page/";
 const HREF = /^notaya:page\/([A-Za-z0-9_-]+)(?:#(.*))?$/;
@@ -65,17 +66,32 @@ export function newAnchor(): string {
 
 /** The page a link points to, or undefined when it is gone, in the trash, or was never imported. */
 export function livePage(pageId: string) {
-  return useApp.getState().tree.pages.find((p) => p.id === pageId && p.trashedAt === null);
+  const page = findPageMeta(useApp.getState().tree, pageId);
+  return page?.trashedAt === null ? page : undefined;
 }
 
-/** Goes to a page, and to its notebook and section in the sidebar (it may be elsewhere). */
-export function goToPage(pageId: string) {
-  const page = livePage(pageId);
-  if (!page) return;
+/** Rows and their child pages live outside the sidebar tree. */
+export function lookupPageLink(pageId: string) {
+  return api.getPageLinkTarget(pageId).catch(() => null);
+}
+
+let navigation = 0;
+
+/** Goes to the linked page or row and selects its notebook and section. */
+export async function goToPage(pageId: string, target?: InternalTarget) {
+  const request = ++navigation;
+  const origin = useApp.getState().activePageId;
+  const page = livePage(pageId) ?? await lookupPageLink(pageId);
   const s = useApp.getState();
-  const section = s.tree.sections.find((x) => x.id === page.sectionId);
-  if (section) useApp.setState({ activeNotebookId: section.notebookId, activeSectionId: section.id });
-  s.openPage(pageId);
+  if (request !== navigation || s.activePageId !== origin || !s.status?.unlocked) return;
+  const section = s.tree.sections.find((x) => x.id === page?.sectionId);
+  if (!page || !section) {
+    toast.error("Page not found");
+    return;
+  }
+  pending = target ? { pageId, target } : null;
+  if ("isRow" in page && page.isRow) s.openRow(pageId, section.id);
+  else s.openPage(pageId, section.id);
 }
 
 /* ---------- finding a heading ---------- */
@@ -143,17 +159,16 @@ export function consumePendingJump(editor: Editor, pageId: string) {
 /** Opens the page an internal link points at (and its heading). Shows "Page not found" when it is gone. */
 export function followInternalLink(href: string, editor: Editor | null) {
   const target = parseInternalHref(href);
-  if (!target || !livePage(target.pageId)) {
+  if (!target) {
     toast.error("Page not found");
     return;
   }
-  const active = useApp.getState().activePageId;
-  if (target.pageId === active && editor) {
+  const { activePageId, showTrash } = useApp.getState();
+  if (target.pageId === activePageId && editor && !showTrash) {
     jumpInEditor(editor, target);
     return;
   }
-  pending = { pageId: target.pageId, target };
-  goToPage(target.pageId);
+  void goToPage(target.pageId, target);
 }
 
 /* ---------- asking the editor to open the picker ---------- */
@@ -237,7 +252,7 @@ export const InternalLinks = Extension.create({
               const target = parseInternalHref(String(mark.attrs.href));
               if (!target) return;
               const page = livePage(target.pageId);
-              const title = page ? `Open ${page.title || "Untitled"}${target.anchor || target.text ? " (section)" : ""}` : "Page not found";
+              const title = page ? `Open ${page.title || "Untitled"}${target.anchor || target.text ? " (section)" : ""}` : "Open linked page";
               decos.push(Decoration.inline(pos, pos + node.nodeSize, { class: "internal-link", title }));
             });
             cachedDoc = state.doc;

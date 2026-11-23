@@ -36,7 +36,7 @@ import { api, errorText } from "@/lib/ipc";
 import type { DatabaseMeta } from "@/lib/database-types";
 import type { NotesTree, PageMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useApp } from "@/store/app";
+import { applySectionBin, useApp } from "@/store/app";
 import { Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, useConfirm } from "./ui";
 import NotebookDialog, { type NotebookDraft } from "@/features/notes/NotebookDialog";
 import { openExport } from "@/features/notes/ExportDialog";
@@ -96,7 +96,7 @@ function siblingKeys(key: string): string[] {
 function useDeleteWithConfirm() {
   const confirm = useConfirm();
   const setTree = useApp((s) => s.setTree);
-  return async (o: { rowKey: string; title: string; body: string; confirm: string; name: string; del: () => Promise<NotesTree> }) => {
+  return async (o: { rowKey: string; title: string; body: string; confirm: string; name: string; del: () => Promise<NotesTree>; onDeleted?: (tree: NotesTree) => void }) => {
     const near = siblingKeys(o.rowKey);
     const tree = rowByKey(o.rowKey)?.closest<HTMLElement>('[role="tree"]') ?? null;
     // Wait a moment so the dialog has closed and the tree has redrawn before looking for the row.
@@ -112,7 +112,7 @@ function useDeleteWithConfirm() {
       return false;
     }
     try {
-      setTree(await o.del());
+      (o.onDeleted ?? setTree)(await o.del());
       refocus([o.rowKey, ...near]);
       return true;
     } catch (e) {
@@ -933,18 +933,15 @@ function SectionBlock({
               <MenuItem
                 danger
                 icon={<Trash2 size={14} />}
-                onSelect={async () => {
-                  const ok = await deleteWithConfirm({
-                    rowKey,
-                    title: `Move to bin "${section.name}"?`,
-                    body: `${contents(tree, [section.id], false)} ${DELETE_NOTE}`,
-                    confirm: "Move to bin",
-                    name: section.name,
-                    del: () => api.deleteSection(section.id),
-                  });
-                  const st = useApp.getState();
-                  if (ok && st.activePageId && !st.tree.pages.some((p) => p.id === st.activePageId)) st.openPage(null);
-                }}
+                onSelect={() => deleteWithConfirm({
+                  rowKey,
+                  title: `Move to bin "${section.name}"?`,
+                  body: `${contents(tree, [section.id], false)} ${DELETE_NOTE}`,
+                  confirm: "Move to bin",
+                  name: section.name,
+                  del: () => api.deleteSection(section.id),
+                  onDeleted: applySectionBin,
+                })}
               >
                 Move to bin
               </MenuItem>

@@ -51,7 +51,7 @@ struct Style {
 
 fn xml_of(a: &Archive, name: &str, budget: &Counter<u64>) -> Option<String> {
     let i = a.find(name)?;
-    a.read(i, MAX_XML, budget).ok().map(|b| super::decode_text(&b))
+    a.read(i, MAX_XML, budget).ok().map(|b| super::decode_text(&b).into_owned())
 }
 
 fn styles(xml: &str) -> HashMap<String, Style> {
@@ -877,7 +877,7 @@ pub(crate) mod tests {
                 ("word/styles.xml", STYLES.as_bytes()),
                 ("word/numbering.xml", NUMBERING.as_bytes()),
                 ("word/_rels/document.xml.rels", RELS.as_bytes()),
-                ("word/media/image1.png", b"\x89PNG\r\n\x1a\nimage"),
+                ("word/media/image1.png", &crate::export::image::tests::PILLOW_RGBA),
                 ("word/media/image2.emf", b"\x01\0\0\0emf"),
                 ("docProps/core.xml", b"<cp:coreProperties><dc:title>Old core title</dc:title></cp:coreProperties>"),
             ],

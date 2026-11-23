@@ -16,6 +16,7 @@ pub mod plan;
 pub mod source;
 pub mod zip;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -48,17 +49,54 @@ pub enum Stop {
     TimedOut,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ImportPhase {
+    ReadingSource,
+    Planning,
+    Pictures,
+    ReadingDatabases,
+    MatchingRows,
+    FoldingDatabases,
+    Rendering,
+    ResolvingLinks,
+    Saving,
+    Committing,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+pub struct ImportProgress {
+    pub phase: ImportPhase,
+    pub done: usize,
+    pub total: usize,
+}
+
 /// A deadline plus a cancel flag, checked inside every long loop of every converter. The
 /// checks are cheap (one atomic load; the clock is read only every few calls).
 pub struct Control {
     deadline: Instant,
     cancel: Arc<AtomicBool>,
     ticks: AtomicU32,
+    progress: Option<Box<dyn Fn(ImportProgress) + Send + Sync>>,
 }
 
 impl Control {
     pub fn new(limit: Duration, cancel: Arc<AtomicBool>) -> Control {
-        Control { deadline: Instant::now() + limit, cancel, ticks: AtomicU32::new(0) }
+        Control { deadline: Instant::now() + limit, cancel, ticks: AtomicU32::new(0), progress: None }
+    }
+
+    pub fn with_progress(mut self, observer: impl Fn(ImportProgress) + Send + Sync + 'static) -> Self {
+        self.progress = Some(Box::new(observer));
+        self
+    }
+
+    /// Publish at most one update per percentage point, plus the start and end of each phase.
+    pub fn progress(&self, phase: ImportPhase, done: usize, total: usize) {
+        if let Some(observer) = &self.progress {
+            if done == 0 || done == total || done * 100 / total != (done - 1) * 100 / total {
+                observer(ImportProgress { phase, done, total });
+            }
+        }
     }
 
     /// No cancel button and the normal time limit (tests).
@@ -70,13 +108,13 @@ impl Control {
     /// A control that is already past its deadline (tests).
     #[cfg(test)]
     pub fn expired() -> Control {
-        Control { deadline: Instant::now(), cancel: Arc::new(AtomicBool::new(false)), ticks: AtomicU32::new(0) }
+        Self::with_deadline(Instant::now())
     }
 
     /// A control with a given deadline (tests).
     #[cfg(test)]
     pub fn with_deadline(deadline: Instant) -> Control {
-        Control { deadline, cancel: Arc::new(AtomicBool::new(false)), ticks: AtomicU32::new(0) }
+        Control { deadline, ..Self::standard() }
     }
 
     /// Why the import must stop now, if it must. Reads the clock only on every 64th call,
@@ -395,24 +433,24 @@ pub fn strip_notion_id(s: &str) -> String {
 }
 
 /// Text from file bytes: UTF-8 (BOM removed), or UTF-16 with a BOM.
-pub fn decode_text(bytes: &[u8]) -> String {
+pub fn decode_text(bytes: &[u8]) -> Cow<'_, str> {
     if let Some(rest) = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
-        return String::from_utf8_lossy(rest).into_owned();
+        return String::from_utf8_lossy(rest);
     }
     let utf16 = |le: bool, b: &[u8]| {
         let units: Vec<u16> = b.chunks_exact(2).map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) }).collect();
         String::from_utf16_lossy(&units)
     };
     if let Some(rest) = bytes.strip_prefix(&[0xFF, 0xFE]) {
-        return utf16(true, rest);
+        return Cow::Owned(utf16(true, rest));
     }
     if let Some(rest) = bytes.strip_prefix(&[0xFE, 0xFF]) {
-        return utf16(false, rest);
+        return Cow::Owned(utf16(false, rest));
     }
     match std::str::from_utf8(bytes) {
-        Ok(s) => s.to_string(),
+        Ok(s) => Cow::Borrowed(s),
         // Not UTF-8: read it as Windows-1252, the usual alternative for old files.
-        Err(_) => bytes.iter().map(|&b| pdf::win_ansi(b)).collect(),
+        Err(_) => Cow::Owned(bytes.iter().map(|&b| pdf::win_ansi(b)).collect()),
     }
 }
 

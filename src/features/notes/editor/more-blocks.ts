@@ -4,7 +4,7 @@
 import { Mark, Node, mergeAttributes } from "@tiptap/react";
 import { NodeSelection, Plugin } from "@tiptap/pm/state";
 import { useApp } from "@/store/app";
-import { goToPage, livePage } from "./internalLinks";
+import { goToPage, livePage, lookupPageLink } from "./internalLinks";
 import { iconText } from "@/lib/pageLook";
 
 declare module "@tiptap/core" {
@@ -81,7 +81,7 @@ export const PageLink = Node.create({
             const sel = view.state.selection;
             if (!(sel instanceof NodeSelection) || sel.node.type.name !== "pageLink") return false;
             event.preventDefault();
-            goToPage(sel.node.attrs.pageId as string);
+            void goToPage(sel.node.attrs.pageId as string);
             return true;
           },
         },
@@ -103,16 +103,32 @@ export const PageLink = Node.create({
       title.dir = "auto";
       dom.append(icon, title);
 
+      let lookup: { id: string; tree: ReturnType<typeof useApp.getState>["tree"] } | undefined;
+      const draw = (page: { icon: string; title: string } | null, loading = false) => {
+        icon.textContent = iconText(page?.icon) || "📄";
+        title.textContent = page ? page.title || "Untitled" : loading ? "Linked page" : "Page not found";
+        dom.dataset.missing = page || loading ? "false" : "true";
+      };
       const paint = () => {
         const page = livePage(pageId);
-        icon.textContent = iconText(page?.icon) || "📄";
-        title.textContent = page ? page.title || "Untitled" : "Page not found";
-        dom.dataset.missing = page ? "false" : "true";
+        const { tree, status } = useApp.getState();
+        if (page || !pageId || !status?.unlocked) {
+          lookup = undefined;
+          draw(page ?? null);
+          return;
+        }
+        if (lookup?.id === pageId && lookup.tree === tree) return;
+        const request = { id: pageId, tree };
+        lookup = request;
+        draw(null, true);
+        void lookupPageLink(pageId).then((target) => {
+          if (lookup === request) draw(target);
+        });
       };
       paint();
       const unsubscribe = useApp.subscribe(paint);
 
-      dom.addEventListener("click", () => goToPage(pageId));
+      dom.addEventListener("click", () => void goToPage(pageId));
 
       return {
         dom,
@@ -122,7 +138,10 @@ export const PageLink = Node.create({
           paint();
           return true;
         },
-        destroy: unsubscribe,
+        destroy() {
+          lookup = undefined;
+          unsubscribe();
+        },
         ignoreMutation: () => true,
       };
     };

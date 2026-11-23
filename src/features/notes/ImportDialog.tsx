@@ -3,6 +3,7 @@
 // opens the file dialog, reads and converts the files, and saves everything in one step.
 
 import { useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -30,12 +31,28 @@ const CARRIES = [
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+const PHASE_LABELS = {
+  readingSource: "Reading the selected files",
+  planning: "Preparing pages",
+  pictures: "Storing pictures",
+  readingDatabases: "Reading database files",
+  matchingRows: "Matching pages to database rows",
+  foldingDatabases: "Building databases and relations",
+  rendering: "Rendering pages and row bodies",
+  resolvingLinks: "Updating links to skipped pages",
+  saving: "Preparing items to save",
+  committing: "Saving the import",
+};
+
+type ImportProgress = { phase: keyof typeof PHASE_LABELS; done: number; total: number };
+
 export default function ImportDialog() {
   const open = useApp((s) => s.importOpen);
   const setOpen = useApp((s) => s.setImportOpen);
   const [source, setSource] = useState<ImportSource>("files");
   const [busy, setBusy] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [result, setResult] = useState<NotesImportSummary | null>(null);
   const cancelRequested = useRef(false);
 
@@ -50,7 +67,14 @@ export default function ImportDialog() {
   const run = async () => {
     if (busy) return;
     setBusy(true);
+    setProgress(null);
+    let unlisten: (() => void) | undefined;
     try {
+      unlisten = await listen<ImportProgress>("notes-import-progress", ({ payload }) => setProgress(payload), { target: "main" });
+      if (cancelRequested.current) {
+        toast.message("Import cancelled. Nothing was added.");
+        return;
+      }
       const done = await api.importNotes(source);
       if (!done) {
         // The file dialog was cancelled, or the Cancel button stopped the import (nothing was added).
@@ -65,16 +89,17 @@ export default function ImportDialog() {
     } catch (e) {
       toast.error(errorText(e));
     } finally {
+      unlisten?.();
       setBusy(false);
       setCancelling(false);
+      setProgress(null);
       cancelRequested.current = false;
     }
   };
 
-  // Asks the backend to stop. It finishes what it is doing within moments, takes back anything it
-  // stored, and answers the import call with "nothing".
+  // Before the save begins, the backend can discard its staged import and return no result.
   const cancel = async () => {
-    if (!busy || cancelRequested.current) return;
+    if (!busy || cancelRequested.current || progress?.phase === "committing") return;
     cancelRequested.current = true;
     setCancelling(true);
     try {
@@ -167,9 +192,15 @@ export default function ImportDialog() {
             <span>Everything is read on this computer. Nothing is sent over the internet, and pictures on the web stay links. The pages go into one new notebook; your existing notes are not changed.</span>
           </div>
 
+          {busy && progress && (
+            <div className="flex items-center justify-between gap-2 text-sm text-muted">
+              <span role="status">{PHASE_LABELS[progress.phase]}</span>
+              {progress.total > 0 && <span className="tabular-nums">{progress.done} / {progress.total}</span>}
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-1">
             {busy ? (
-              <Button type="button" variant="ghost" onClick={cancel} disabled={cancelling}>
+              <Button type="button" variant="ghost" onClick={cancel} disabled={cancelling || progress?.phase === "committing"}>
                 {cancelling ? "Cancelling…" : "Cancel import"}
               </Button>
             ) : (

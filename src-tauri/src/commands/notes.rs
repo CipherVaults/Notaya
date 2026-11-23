@@ -21,6 +21,7 @@ pub struct NotesTree {
     notebooks: Vec<Notebook>,
     sections: Vec<Section>,
     pages: Vec<PageMeta>,
+    row_pages: Vec<PageMeta>,
     databases: Vec<dbc::DatabaseMeta>,
 }
 
@@ -54,20 +55,27 @@ fn tree(s: &Session) -> NotesTree {
     let mut notebooks = Vec::new();
     let mut sections = Vec::new();
     let mut pages = Vec::new();
+    let mut row_pages = Vec::new();
     for item in s.items() {
         match item {
             Item::Notebook(n) if !s.in_bin(&n.id) => notebooks.push(n.clone()),
             Item::Section(x) if !s.in_bin(&x.id) => sections.push(x.clone()),
             // Keep directly binned page metadata for the existing read-only preview.
             // The rendered tree/Home filter trashedAt; live children of binned containers stay hidden.
-            Item::Page(p) if !hidden.contains(&p.id) && (!s.in_bin(&p.id) || p.trashed_at.is_some()) => pages.push(PageMeta::from(p)),
+            Item::Page(p) if hidden.contains(p.id.as_str()) => {
+                if !s.in_bin(&p.id) {
+                    row_pages.push(PageMeta::from(p));
+                }
+            }
+            Item::Page(p) if !s.in_bin(&p.id) || p.trashed_at.is_some() => pages.push(PageMeta::from(p)),
             _ => {}
         }
     }
     notebooks.sort_by_key(|n| (n.order, n.created));
     sections.sort_by_key(|x| (x.order, x.created));
     pages.sort_by_key(|p| (p.order, p.created));
-    NotesTree { notebooks, sections, pages, databases: dbc::meta_list(s) }
+    row_pages.sort_by_key(|p| (p.order, p.created));
+    NotesTree { notebooks, sections, pages, row_pages, databases: dbc::meta_list(s) }
 }
 
 fn next_order(orders: impl Iterator<Item = i64>) -> i64 {
@@ -364,6 +372,42 @@ pub(crate) fn get_page_core(s: &Session, _actor: &Actor, id: String) -> Result<P
         Some(Item::Row(r)) => Ok(row_as_page(s, r)),
         _ => page(s, &id),
     }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageLinkTarget {
+    section_id: String,
+    title: String,
+    icon: String,
+    is_row: bool,
+}
+
+/// Rows and their pages are omitted from the sidebar. Resolve their link labels without
+/// reading the body into the editor or listing every row in the sidebar response.
+pub(crate) fn page_link_target(s: &Session, id: &str) -> Option<PageLinkTarget> {
+    if s.in_bin(id) {
+        return None;
+    }
+    let (section_id, title, icon, is_row) = match s.get(id)? {
+        Item::Page(p) => (&p.section_id, &p.title, &p.icon, false),
+        Item::Row(r) => match s.get(&r.db)? {
+            Item::Database(db) => (&db.section_id, &r.title, &r.icon, true),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    Some(PageLinkTarget {
+        section_id: section_id.clone(),
+        title: title.clone(),
+        icon: icon.clone(),
+        is_row,
+    })
+}
+
+#[tauri::command]
+pub fn get_page_link_target(state: State<'_, AppState>, id: String) -> Result<Option<PageLinkTarget>> {
+    state.with(|s| Ok(page_link_target(s, &id)))
 }
 
 

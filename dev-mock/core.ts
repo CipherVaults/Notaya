@@ -53,6 +53,7 @@ const savedPages = new Map<string, { title?: string; content?: string; text?: st
 // Pictures added with add_attachment (cover and icon uploads): id -> blob URL, so the mock can show what was picked.
 const pictures = new Map<string, string>();
 const tree = {
+  rowPages: [],
   notebooks: [
     { id: "n1", name: "Personal", color: "#a3a3a3", icon: "📓", order: 0, created: ago(900), updated: ago(5) },
     { id: "n2", name: "Work", color: "#737373", icon: "💼", order: 1, created: ago(800), updated: ago(50) },
@@ -294,6 +295,10 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
       // A page the mock has no cover for gets the dusk gradient (the editor checks lean on it); ?cover=none turns it off.
       const cover = params.get("cover") === "none" ? "" : meta?.cover ?? "gradient:dusk";
       return ok({ ...meta, content: JSON.stringify(params.get("rtl") ? rtlBody : pageBody), text: "This week", icon: meta.icon ?? "", cover, ...(saved ?? {}) });
+    }
+    case "get_page_link_target": {
+      const page = liveTree().pages.find((p) => p.id === args.id && p.trashedAt === null);
+      return ok(page ? { sectionId: page.sectionId, title: page.title, icon: page.icon, isRow: false } : null);
     }
     case "create_subpage":
       return ok({ ...tree.pages[0], id: "p" + Math.floor(Math.random() * 1e6), parent: args.parentId, title: args.title, content: "", text: "", cover: "" });
@@ -547,8 +552,8 @@ function mockInBin(id: string): boolean {
   return false;
 }
 function liveTree() {
-  if (params.get("nb") === "none") return { notebooks: [], sections: [], pages: [], databases: [] };
-  return { notebooks: tree.notebooks.filter((x) => !mockInBin(x.id)), sections: tree.sections.filter((x) => !mockInBin(x.id)), pages: tree.pages.filter((x) => !mockInBin(x.id) || x.trashedAt != null), databases: databaseMetas().filter((x) => !mockInBin(x.id) || x.trashedAt != null) };
+  if (params.get("nb") === "none") return { notebooks: [], sections: [], pages: [], rowPages: [], databases: [] };
+  return { notebooks: tree.notebooks.filter((x) => !mockInBin(x.id)), sections: tree.sections.filter((x) => !mockInBin(x.id)), pages: tree.pages.filter((x) => !mockInBin(x.id) || x.trashedAt != null), rowPages: tree.rowPages, databases: databaseMetas().filter((x) => !mockInBin(x.id) || x.trashedAt != null) };
 }
 function mockBin() {
   return mockItems().filter((x) => binTimes.has(String(x.id)) || x.trashedAt != null).map((x) => ({ id: String(x.id), kind: String(x.kind), title: String(x.name ?? x.title ?? x.text ?? ""), icon: String(x.icon ?? ""), trashedAt: binTimes.get(String(x.id)) ?? x.trashedAt, parentInBin: mockInBin(parentId(String(x.id))) }));
