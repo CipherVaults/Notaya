@@ -5,11 +5,17 @@
 
 use std::cmp::Ordering;
 
+#[path = "number.rs"]
+mod number;
+pub use number::Number;
+pub(super) use number::{Binary, Charge, LogBase};
+pub(super) use number::with_budget;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Val {
     Null,
     Bool(bool),
-    Num(f64),
+    Num(Number),
     Str(String),
     Date(DateVal),
     List(Vec<Val>),
@@ -224,33 +230,14 @@ pub fn format_pattern(minutes: i64, pat: &str) -> String {
 
 // ---- numbers ----
 
-/// Rounds like a person expects: 0.1+0.2 shows 0.3. Keeps at most 12 significant digits.
-pub fn tidy(n: f64) -> f64 {
-    if !n.is_finite() {
-        return n;
-    }
-    let r = format!("{:.12e}", n).parse::<f64>().unwrap_or(n);
-    if r == 0.0 {
-        0.0
-    } else {
-        r
-    }
-}
-
 pub fn num_str(n: f64) -> String {
-    let n = tidy(n);
     if n.is_nan() {
         return "NaN".into();
     }
     if n.is_infinite() {
         return if n > 0.0 { "∞".into() } else { "-∞".into() };
     }
-    if n == n.trunc() && n.abs() < 1e15 {
-        format!("{}", n as i64)
-    } else {
-        let s = format!("{n}");
-        s
-    }
+    Number::from_float(n).and_then(|n| n.significant_text()).expect("finite exact number")
 }
 
 fn group_digits(int_part: &str) -> String {
@@ -274,12 +261,7 @@ fn group_digits(int_part: &str) -> String {
     }
 }
 
-pub fn format_number(n: f64, format: &str) -> String {
-    format_number_with(n, format, num_str)
-}
-
-/// Stored numbers in the table search follow the frontend's Math.round and
-/// Number-to-string rules. Computed text already comes from format_number.
+/// Legacy table Find spelling, including JavaScript's scientific notation.
 pub(super) fn format_table_number(n: f64, format: &str) -> String {
     format_number_with(n, format, |n| {
         let scaled = n * 1e9;
@@ -302,15 +284,6 @@ pub(super) fn format_table_number(n: f64, format: &str) -> String {
 
 fn format_number_with(n: f64, format: &str, text: impl Fn(f64) -> String) -> String {
     let base = text(n);
-    let with_commas = |s: &str| -> String {
-        if s.contains('e') || s.contains('E') {
-            return s.to_owned();
-        }
-        match s.split_once('.') {
-            Some((i, f)) => format!("{}.{f}", group_digits(i)),
-            None => group_digits(s),
-        }
-    };
     let money = |sym: &str| format!("{}{}", if n < 0.0 { "-" } else { "" }, format!("{sym}{}", with_commas(&text(n.abs()))));
     match format {
         "numberWithCommas" => with_commas(&base),
@@ -327,6 +300,52 @@ fn format_number_with(n: f64, format: &str, text: impl Fn(f64) -> String) -> Str
     }
 }
 
+pub fn currency_symbol(format: &str) -> Option<&'static str> {
+    Some(match format {
+        "dollar" => "$",
+        "euro" => "€",
+        "pound" => "£",
+        "yen" => "¥",
+        "rupee" => "₹",
+        "won" => "₩",
+        "yuan" => "CN¥",
+        "rial" => "﷼",
+        _ => return None,
+    })
+}
+
+pub const CURRENCY_PLACES: u32 = 2;
+
+fn with_commas(s: &str) -> String {
+    if s.contains(['e', 'E']) {
+        return s.to_owned();
+    }
+    match s.split_once('.') {
+        Some((i, f)) => format!("{}.{f}", group_digits(i)),
+        None => group_digits(s),
+    }
+}
+
+/// The rounded decimal and its formatted currency text.
+pub fn currency_amount(n: &Number, format: &str) -> Result<Option<(String, String)>, String> {
+    let Some(symbol) = currency_symbol(format) else { return Ok(None) };
+    let fixed = n.fixed(CURRENCY_PLACES)?;
+    let (sign, magnitude) = fixed.strip_prefix('-').map_or(("", fixed.as_str()), |m| ("-", m));
+    let text = format!("{sign}{symbol}{}", with_commas(magnitude));
+    Ok(Some((fixed, text)))
+}
+
+pub fn format_number(n: &Number, format: &str) -> Result<String, String> {
+    if let Some((_, text)) = currency_amount(n, format)? {
+        return Ok(text);
+    }
+    Ok(match format {
+        "numberWithCommas" => with_commas(&n.significant_text()?),
+        "percent" => format!("{}%", n.mul(&Number::integer(100))?.significant_text()?),
+        _ => n.significant_text()?,
+    })
+}
+
 // ---- Val helpers ----
 
 impl Val {
@@ -339,37 +358,50 @@ impl Val {
         }
     }
 
-    pub fn as_num(&self) -> Option<f64> {
-        match self {
-            Val::Num(n) => Some(*n),
-            Val::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
-            Val::Str(s) => s.trim().parse::<f64>().ok().filter(|n| n.is_finite()),
-            Val::Date(d) => Some(d.start as f64),
-            _ => None,
-        }
+    pub fn integer(n: impl Into<number::BigInt>) -> Self {
+        Self::Num(Number::integer(n))
+    }
+
+    pub fn from_float(n: f64) -> Result<Self, String> {
+        Number::from_float(n).map(Self::Num)
     }
 
     pub fn as_bool(&self) -> bool {
         match self {
             Val::Null => false,
             Val::Bool(b) => *b,
-            Val::Num(n) => *n != 0.0,
+            Val::Num(n) => !n.is_zero(),
             Val::Str(s) => !s.is_empty(),
             Val::Date(_) => true,
             Val::List(l) => !l.is_empty(),
         }
     }
 
+    pub(super) fn bool_checked(&self, charge: &mut Charge<'_>) -> Result<bool, String> {
+        match self {
+            Val::Num(n) if !n.is_exact() => Ok(!n.cmp_checked(&Number::integer(0), charge)?.is_eq()),
+            other => Ok(other.as_bool()),
+        }
+    }
+
     /// Text as a person reads it (lists joined with ", ").
     pub fn text(&self) -> String {
-        match self {
+        self.try_text().unwrap_or_else(|e| format!("\u{26a0} {e}"))
+    }
+
+    pub(crate) fn try_text(&self) -> Result<String, String> {
+        with_budget(|charge| self.text_checked(charge))
+    }
+
+    pub(super) fn text_checked(&self, charge: &mut Charge<'_>) -> Result<String, String> {
+        Ok(match self {
             Val::Null => String::new(),
             Val::Bool(b) => if *b { "true" } else { "false" }.into(),
-            Val::Num(n) => num_str(*n),
+            Val::Num(n) => n.significant_checked(charge)?,
             Val::Str(s) => s.clone(),
             Val::Date(d) => format_date(d, "full"),
-            Val::List(l) => l.iter().map(|v| v.text()).collect::<Vec<_>>().join(", "),
-        }
+            Val::List(l) => l.iter().map(|v| v.text_checked(charge)).collect::<Result<Vec<_>, _>>()?.join(", "),
+        })
     }
 
     pub fn type_name(&self) -> &'static str {
@@ -400,7 +432,7 @@ pub fn compare(a: &Val, b: &Val) -> Ordering {
         (Val::Null, _) => Ordering::Greater,
         (_, Val::Null) => Ordering::Less,
         (Val::Bool(x), Val::Bool(y)) => x.cmp(y),
-        (Val::Num(x), Val::Num(y)) => x.partial_cmp(y).unwrap_or(Ordering::Equal),
+        (Val::Num(x), Val::Num(y)) => x.cmp(y),
         (Val::Date(x), Val::Date(y)) => x.start.cmp(&y.start),
         (Val::Str(x), Val::Str(y)) => natural_cmp(x, y),
         (Val::List(x), Val::List(y)) => {
@@ -414,6 +446,42 @@ pub fn compare(a: &Val, b: &Val) -> Ordering {
         }
         _ => rank(a).cmp(&rank(b)),
     }
+}
+
+pub(super) fn compare_checked(a: &Val, b: &Val, charge: &mut Charge<'_>) -> Result<Ordering, String> {
+    Ok(match (a, b) {
+        (Val::Num(a), Val::Num(b)) => a.cmp_checked(b, charge)?,
+        (Val::List(a), Val::List(b)) => {
+            for (left, right) in a.iter().zip(b) {
+                let side = compare_checked(left, right, charge)?;
+                if !side.is_eq() {
+                    return Ok(side);
+                }
+            }
+            a.len().cmp(&b.len())
+        }
+        _ => compare(a, b),
+    })
+}
+
+pub(super) fn same_checked(a: &Val, b: &Val, charge: &mut Charge<'_>) -> Result<bool, String> {
+    Ok(match (a, b) {
+        (Val::Num(a), Val::Num(b)) => a.cmp_checked(b, charge)?.is_eq(),
+        (Val::List(a), Val::List(b)) if a.len() == b.len() => {
+            for (left, right) in a.iter().zip(b) {
+                // List equality uses exact text and date values.
+                let equal = match (left, right) {
+                    (Val::Num(_), Val::Num(_)) | (Val::List(_), Val::List(_)) => same_checked(left, right, charge)?,
+                    _ => left == right,
+                };
+                if !equal {
+                    return Ok(false);
+                }
+            }
+            true
+        }
+        _ => same(a, b),
+    })
 }
 
 /// Case-insensitive comparison where digit runs compare as numbers ("item 2" < "item 10").
@@ -455,7 +523,6 @@ pub fn natural_cmp(a: &str, b: &str) -> Ordering {
 pub fn same(a: &Val, b: &Val) -> bool {
     match (a, b) {
         (Val::Str(x), Val::Str(y)) => x.to_lowercase() == y.to_lowercase(),
-        (Val::Num(x), Val::Num(y)) => tidy(*x) == tidy(*y),
         (Val::Date(x), Val::Date(y)) => x.start == y.start,
         (x, y) => x == y,
     }
@@ -470,61 +537,180 @@ pub const CALCS: &[&str] = &[
     "showOriginal", "showUnique",
 ];
 
-pub fn calc(name: &str, vals: &[Val]) -> Val {
-    let n = vals.len() as f64;
-    let nums = || -> Vec<f64> {
-        let mut out = Vec::new();
-        for v in vals {
-            match v {
-                Val::List(l) => out.extend(l.iter().filter_map(|x| x.as_num())),
-                Val::Num(x) => out.push(*x),
-                Val::Str(s) => {
-                    if let Some(x) = Val::Str(s.clone()).as_num() {
-                        out.push(x)
-                    }
-                }
-                Val::Bool(_) | Val::Date(_) | Val::Null => {}
+pub fn is_numeric_calc(name: &str) -> bool {
+    matches!(name, "sum" | "avg" | "median" | "min" | "max" | "range")
+}
+
+pub fn calc_numbers(name: &str, nums: Vec<Number>) -> Result<Val, String> {
+    if nums.iter().all(Number::is_exact) {
+        calc_numbers_with(name, nums, |_| Ok(()))
+    } else {
+        with_budget(|charge| calc_numbers_with(name, nums, charge))
+    }
+}
+
+pub(super) fn calc_numbers_with(
+    name: &str,
+    mut nums: Vec<Number>,
+    mut charge: impl FnMut(usize) -> Result<(), String>,
+) -> Result<Val, String> {
+    let result = match name {
+        "sum" | "avg" => {
+            if name == "avg" && nums.is_empty() {
+                return Ok(Val::Null);
+            }
+            let sum = nums.iter().try_fold(Number::integer(0), |sum, n| {
+                charge(sum.arithmetic_work("+", n))?;
+                sum.binary_checked(Binary::Add, n, &mut charge)
+            })?;
+            if name == "avg" {
+                let count = Number::integer(nums.len());
+                charge(sum.arithmetic_work("/", &count))?;
+                sum.binary_checked(Binary::Div, &count, &mut charge)?
+            } else { sum }
+        }
+        _ if nums.is_empty() => return Ok(Val::Null),
+        "median" => {
+            if nums.iter().all(Number::is_exact) {
+                let largest_pair = nums.iter().map(|n| n.arithmetic_work("<", n)).max().unwrap_or(0);
+                let passes = 2 * nums.len().ilog2() as usize + 1;
+                charge(largest_pair.saturating_mul(nums.len()).saturating_mul(passes))?;
+                nums.sort_unstable();
+            } else {
+                sort_checked(&mut nums, &mut |a, b| a.cmp_checked(b, &mut charge))?;
+            }
+            let m = nums.len() / 2;
+            if nums.len() % 2 == 1 {
+                nums.swap_remove(m)
+            } else {
+                charge(nums[m - 1].arithmetic_work("+", &nums[m]))?;
+                let total = nums[m - 1].binary_checked(Binary::Add, &nums[m], &mut charge)?;
+                let two = Number::integer(2);
+                charge(total.arithmetic_work("/", &two))?;
+                total.binary_checked(Binary::Div, &two, &mut charge)?
             }
         }
-        out
+        "min" | "max" | "range" => {
+            let extremum = |largest, charge: &mut Charge<'_>| -> Result<&Number, String> {
+                nums.iter().skip(1).try_fold(&nums[0], |best, next| {
+                    let side = next.cmp_checked(best, charge)?;
+                    Ok(if (largest && side.is_gt()) || (!largest && side.is_lt()) { next } else { best })
+                })
+            };
+            match name {
+                "min" => extremum(false, &mut charge)?.clone(),
+                "max" => extremum(true, &mut charge)?.clone(),
+                _ => {
+                    let hi = extremum(true, &mut charge)?;
+                    let lo = extremum(false, &mut charge)?;
+                    charge(hi.arithmetic_work("-", lo))?;
+                    hi.binary_checked(Binary::Sub, lo, &mut charge)?
+                }
+            }
+        }
+        _ => return Ok(Val::Null),
     };
-    let pct = |count: f64| if n == 0.0 { Val::Num(0.0) } else { Val::Num(count / n) };
-    match name {
-        "countAll" | "count" => Val::Num(n),
-        "countValues" | "countNotEmpty" => Val::Num(vals.iter().filter(|v| !v.is_empty()).count() as f64),
-        "countEmpty" => Val::Num(vals.iter().filter(|v| v.is_empty()).count() as f64),
-        "percentEmpty" => pct(vals.iter().filter(|v| v.is_empty()).count() as f64),
-        "percentNotEmpty" => pct(vals.iter().filter(|v| !v.is_empty()).count() as f64),
-        "countUnique" => {
-            let mut seen: Vec<Val> = Vec::new();
-            for v in vals {
-                let items: Vec<&Val> = match v {
-                    Val::List(l) => l.iter().collect(),
-                    other => vec![other],
+    Ok(Val::Num(result))
+}
+
+/// Fallible stable merge sort. The caller can discard the working list on error.
+pub(super) fn sort_checked<T: Clone>(
+    items: &mut [T], cmp: &mut impl FnMut(&T, &T) -> Result<Ordering, String>,
+) -> Result<(), String> {
+    fn merge<T: Clone>(
+        items: &mut [T], scratch: &mut [T], cmp: &mut impl FnMut(&T, &T) -> Result<Ordering, String>,
+    ) -> Result<(), String> {
+        if items.len() < 2 {
+            return Ok(());
+        }
+        let mid = items.len() / 2;
+        let (left, right) = items.split_at_mut(mid);
+        let (left_scratch, right_scratch) = scratch.split_at_mut(mid);
+        merge(left, left_scratch, cmp)?;
+        merge(right, right_scratch, cmp)?;
+        let mut a = left.iter().peekable();
+        let mut b = right.iter().peekable();
+        for out in scratch.iter_mut() {
+            let take_left = match (a.peek(), b.peek()) {
+                (Some(left), Some(right)) => cmp(left, right)?.is_le(),
+                (_, None) => true,
+                (None, Some(_)) => false,
+            };
+            out.clone_from(if take_left { a.next() } else { b.next() }.expect("one remaining item"));
+        }
+        items.clone_from_slice(scratch);
+        Ok(())
+    }
+    let mut scratch = items.to_vec();
+    merge(items, &mut scratch, cmp)
+}
+
+fn collect_numbers(v: &Val, nested: bool, out: &mut Vec<Number>) -> Result<(), String> {
+    match v {
+        Val::List(items) => {
+            for item in items { collect_numbers(item, true, out)?; }
+        }
+        Val::Num(n) => out.push(n.clone()),
+        Val::Str(s) => out.extend(Number::parse(s)?),
+        Val::Bool(b) if nested => out.push(Number::integer(u8::from(*b))),
+        Val::Date(d) if nested => out.push(Number::integer(d.start)),
+        _ => {}
+    }
+    Ok(())
+}
+
+pub(super) fn distinct(name: &str, vals: &[Val], charge: &mut Charge<'_>) -> Result<Val, String> {
+    fn has_interval(value: &Val) -> bool {
+        match value {
+            Val::Num(n) => !n.is_exact(),
+            Val::List(l) => l.iter().any(has_interval),
+            _ => false,
+        }
+    }
+
+    let mut seen = Vec::<(&Val, bool)>::new();
+    for value in vals {
+        let items = if let Val::List(items) = value { items } else { std::slice::from_ref(value) };
+        'items: for item in items.iter().filter(|v| !v.is_empty()) {
+            let ambiguous = has_interval(item);
+            for &(previous, approximate) in &seen {
+                let equal = if approximate || ambiguous {
+                    same_checked(previous, item, charge)?
+                } else {
+                    same(previous, item)
                 };
-                for it in items {
-                    if !it.is_empty() && !seen.iter().any(|s| same(s, it)) {
-                        seen.push(it.clone());
-                    }
+                if equal {
+                    continue 'items;
                 }
             }
-            Val::Num(seen.len() as f64)
+            seen.push((item, ambiguous));
         }
-        "showUnique" => {
-            let mut seen: Vec<Val> = Vec::new();
-            for v in vals {
-                let items: Vec<&Val> = match v {
-                    Val::List(l) => l.iter().collect(),
-                    other => vec![other],
-                };
-                for it in items {
-                    if !it.is_empty() && !seen.iter().any(|s| same(s, it)) {
-                        seen.push(it.clone());
-                    }
-                }
-            }
-            Val::List(seen)
-        }
+    }
+    Ok(if name == "countUnique" {
+        Val::integer(seen.len())
+    } else {
+        Val::List(seen.into_iter().map(|(v, _)| v.clone()).collect())
+    })
+}
+
+pub fn calc(name: &str, vals: &[Val]) -> Result<Val, String> {
+    if is_numeric_calc(name) {
+        let mut nums = Vec::new();
+        for v in vals { collect_numbers(v, false, &mut nums)?; }
+        return calc_numbers(name, nums);
+    }
+    let n = vals.len();
+    let pct = |count: usize| -> Result<Val, String> {
+        if n == 0 { return Ok(Val::integer(0)); }
+        Number::integer(count).div(&Number::integer(n)).map(Val::Num)
+    };
+    Ok(match name {
+        "countAll" | "count" => Val::integer(n),
+        "countValues" | "countNotEmpty" => Val::integer(vals.iter().filter(|v| !v.is_empty()).count()),
+        "countEmpty" => Val::integer(vals.iter().filter(|v| v.is_empty()).count()),
+        "percentEmpty" => pct(vals.iter().filter(|v| v.is_empty()).count())?,
+        "percentNotEmpty" => pct(vals.iter().filter(|v| !v.is_empty()).count())?,
+        "countUnique" | "showUnique" => with_budget(|charge| distinct(name, vals, charge))?,
         "showOriginal" => {
             let mut out = Vec::new();
             for v in vals {
@@ -536,36 +722,6 @@ pub fn calc(name: &str, vals: &[Val]) -> Val {
             }
             Val::List(out)
         }
-        "sum" => Val::Num(tidy(nums().iter().sum())),
-        "avg" => {
-            let x = nums();
-            if x.is_empty() {
-                Val::Null
-            } else {
-                Val::Num(tidy(x.iter().sum::<f64>() / x.len() as f64))
-            }
-        }
-        "median" => {
-            let mut x = nums();
-            if x.is_empty() {
-                return Val::Null;
-            }
-            x.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
-            let m = x.len() / 2;
-            Val::Num(if x.len() % 2 == 1 { x[m] } else { (x[m - 1] + x[m]) / 2.0 })
-        }
-        "min" => nums().into_iter().fold(None, |a: Option<f64>, b| Some(a.map_or(b, |a| a.min(b)))).map_or(Val::Null, Val::Num),
-        "max" => nums().into_iter().fold(None, |a: Option<f64>, b| Some(a.map_or(b, |a| a.max(b)))).map_or(Val::Null, Val::Num),
-        "range" => {
-            let x = nums();
-            if x.is_empty() {
-                Val::Null
-            } else {
-                let lo = x.iter().cloned().fold(f64::INFINITY, f64::min);
-                let hi = x.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-                Val::Num(tidy(hi - lo))
-            }
-        }
         "earliest" | "latest" | "dateRange" => {
             let mut dates: Vec<DateVal> = Vec::new();
             for v in vals {
@@ -576,7 +732,7 @@ pub fn calc(name: &str, vals: &[Val]) -> Val {
                 }
             }
             if dates.is_empty() {
-                return Val::Null;
+                return Ok(Val::Null);
             }
             let lo = dates.iter().map(|d| d.start).min().unwrap();
             let hi = dates.iter().map(|d| d.end.unwrap_or(d.start)).max().unwrap();
@@ -584,25 +740,36 @@ pub fn calc(name: &str, vals: &[Val]) -> Val {
             match name {
                 "earliest" => Val::Date(DateVal { start: lo, end: None, has_time: t }),
                 "latest" => Val::Date(DateVal { start: hi, end: None, has_time: t }),
-                _ => Val::Num(((hi - lo) / MINUTES_PER_DAY) as f64),
+                _ => Val::integer((hi - lo) / MINUTES_PER_DAY),
             }
         }
-        "checked" => Val::Num(vals.iter().filter(|v| matches!(v, Val::Bool(true))).count() as f64),
-        "unchecked" => Val::Num(vals.iter().filter(|v| matches!(v, Val::Bool(false) | Val::Null)).count() as f64),
-        "percentChecked" => pct(vals.iter().filter(|v| matches!(v, Val::Bool(true))).count() as f64),
-        "percentUnchecked" => pct(vals.iter().filter(|v| matches!(v, Val::Bool(false) | Val::Null)).count() as f64),
+        "checked" => Val::integer(vals.iter().filter(|v| matches!(v, Val::Bool(true))).count()),
+        "unchecked" => Val::integer(vals.iter().filter(|v| matches!(v, Val::Bool(false) | Val::Null)).count()),
+        "percentChecked" => pct(vals.iter().filter(|v| matches!(v, Val::Bool(true))).count())?,
+        "percentUnchecked" => pct(vals.iter().filter(|v| matches!(v, Val::Bool(false) | Val::Null)).count())?,
         _ => Val::Null,
+    })
+}
+
+pub fn calc_property_display(name: &str, value: &Val, prop: &super::types::Property) -> Result<String, String> {
+    match value {
+        Val::Num(n) if is_numeric_calc(name) => format_number(n, &prop.number_format),
+        _ => calc_display_checked(name, value),
     }
 }
 
 /// How a calculation result is shown ("percent*" as a percentage, "dateRange" in days).
 pub fn calc_display(name: &str, v: &Val) -> String {
-    match (name, v) {
-        ("percentEmpty" | "percentNotEmpty" | "percentChecked" | "percentUnchecked", Val::Num(x)) => format!("{}%", num_str((x * 1000.0).round() / 10.0)),
-        ("dateRange", Val::Num(x)) => format!("{} days", num_str(*x)),
+    calc_display_checked(name, v).unwrap_or_else(|e| format!("\u{26a0} {e}"))
+}
+
+fn calc_display_checked(name: &str, v: &Val) -> Result<String, String> {
+    Ok(match (name, v) {
+        ("percentEmpty" | "percentNotEmpty" | "percentChecked" | "percentUnchecked", Val::Num(x)) => format!("{}%", num_str((x.try_as_f64()? * 1000.0).round() / 10.0)),
+        ("dateRange", Val::Num(x)) => format!("{} days", x.significant_text()?),
         (_, Val::Date(d)) => format_date(d, "full"),
-        (_, other) => other.text(),
-    }
+        (_, other) => other.try_text()?,
+    })
 }
 
 #[cfg(test)]
@@ -655,9 +822,9 @@ mod tests {
     fn numbers_format_like_notion() {
         assert_eq!(num_str(0.1 + 0.2), "0.3");
         assert_eq!(num_str(3.0), "3");
-        assert_eq!(format_number(1234567.5, "numberWithCommas"), "1,234,567.5");
-        assert_eq!(format_number(0.256, "percent"), "25.6%");
-        assert_eq!(format_number(-1234.0, "dollar"), "-$1,234");
+        assert_eq!(format_number(&Number::decimal("1234567.5").unwrap(), "numberWithCommas").unwrap(), "1,234,567.5");
+        assert_eq!(format_number(&Number::decimal("0.256").unwrap(), "percent").unwrap(), "25.6%");
+        assert_eq!(format_number(&Number::decimal("-1234.0").unwrap(), "dollar").unwrap(), "-$1,234");
     }
 
     #[test]
@@ -692,34 +859,34 @@ mod tests {
 
     #[test]
     fn values_order_empty_last_and_numbers_naturally() {
-        assert_eq!(compare(&Val::Null, &Val::Num(1.0)), Ordering::Greater);
+        assert_eq!(compare(&Val::Null, &Val::integer(1)), Ordering::Greater);
         assert_eq!(compare(&Val::Str("item 2".into()), &Val::Str("Item 10".into())), Ordering::Less);
-        assert_eq!(compare(&Val::Num(2.0), &Val::Num(10.0)), Ordering::Less);
+        assert_eq!(compare(&Val::integer(2), &Val::integer(10)), Ordering::Less);
         assert!(same(&Val::Str("A".into()), &Val::Str("a".into())));
     }
 
     #[test]
     fn calculations() {
-        let v = vec![Val::Num(1.0), Val::Num(2.0), Val::Num(6.0), Val::Null];
-        assert_eq!(calc("sum", &v), Val::Num(9.0));
-        assert_eq!(calc("avg", &v), Val::Num(3.0));
-        assert_eq!(calc("median", &v), Val::Num(2.0));
-        assert_eq!(calc("min", &v), Val::Num(1.0));
-        assert_eq!(calc("max", &v), Val::Num(6.0));
-        assert_eq!(calc("range", &v), Val::Num(5.0));
-        assert_eq!(calc("countAll", &v), Val::Num(4.0));
-        assert_eq!(calc("countValues", &v), Val::Num(3.0));
-        assert_eq!(calc("countEmpty", &v), Val::Num(1.0));
-        assert_eq!(calc("percentNotEmpty", &v), Val::Num(0.75));
-        assert_eq!(calc_display("percentNotEmpty", &Val::Num(0.75)), "75%");
+        let v = vec![Val::integer(1), Val::integer(2), Val::integer(6), Val::Null];
+        assert_eq!(calc("sum", &v).unwrap(), Val::integer(9));
+        assert_eq!(calc("avg", &v).unwrap(), Val::integer(3));
+        assert_eq!(calc("median", &v).unwrap(), Val::integer(2));
+        assert_eq!(calc("min", &v).unwrap(), Val::integer(1));
+        assert_eq!(calc("max", &v).unwrap(), Val::integer(6));
+        assert_eq!(calc("range", &v).unwrap(), Val::integer(5));
+        assert_eq!(calc("countAll", &v).unwrap(), Val::integer(4));
+        assert_eq!(calc("countValues", &v).unwrap(), Val::integer(3));
+        assert_eq!(calc("countEmpty", &v).unwrap(), Val::integer(1));
+        assert_eq!(calc("percentNotEmpty", &v).unwrap(), Val::Num(Number::decimal("0.75").unwrap()));
+        assert_eq!(calc_display("percentNotEmpty", &Val::Num(Number::decimal("0.75").unwrap())), "75%");
         let b = vec![Val::Bool(true), Val::Bool(false), Val::Bool(true)];
-        assert_eq!(calc("checked", &b), Val::Num(2.0));
-        assert_eq!(calc("unchecked", &b), Val::Num(1.0));
+        assert_eq!(calc("checked", &b).unwrap(), Val::integer(2));
+        assert_eq!(calc("unchecked", &b).unwrap(), Val::integer(1));
         let t = vec![Val::Str("a".into()), Val::Str("A".into()), Val::Str("b".into())];
-        assert_eq!(calc("countUnique", &t), Val::Num(2.0));
+        assert_eq!(calc("countUnique", &t).unwrap(), Val::integer(2));
         let d = vec![Val::Date(parse_date("2026-01-01").unwrap()), Val::Date(parse_date("2026-01-11").unwrap())];
-        assert_eq!(calc("dateRange", &d), Val::Num(10.0));
-        assert_eq!(calc("earliest", &d), Val::Date(parse_date("2026-01-01").unwrap()));
-        assert_eq!(calc("median", &[Val::Num(1.0), Val::Num(3.0)]), Val::Num(2.0));
+        assert_eq!(calc("dateRange", &d).unwrap(), Val::integer(10));
+        assert_eq!(calc("earliest", &d).unwrap(), Val::Date(parse_date("2026-01-01").unwrap()));
+        assert_eq!(calc("median", &[Val::integer(1), Val::integer(3)]).unwrap(), Val::integer(2));
     }
 }

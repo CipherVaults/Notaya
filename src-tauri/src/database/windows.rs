@@ -288,7 +288,13 @@ fn row_matches(db: &Database, row: &RowOut, find: &str) -> bool {
                 && p.option(s).is_some_and(|option| has(&option.name)),
             Value::Bool(b) => has(if *b { "Yes" } else { "No" }),
             Value::Number(n) => n.as_f64().is_some_and(|n| {
-                has(&super::value::format_table_number(n, &p.number_format))
+                let exact = row.number_text.get(&p.id);
+                if exact.is_some_and(|text| has(text)) {
+                    return true;
+                }
+                let legacy = super::value::format_table_number(n, &p.number_format);
+                (exact.is_none() || p.number_format == "numberWithCommas" && legacy.contains('e'))
+                    && has(&legacy)
             }),
             Value::Object(o) if o.contains_key("t") => o.get("text").and_then(Value::as_str).is_some_and(has),
             _ => false,
@@ -414,11 +420,13 @@ mod tests {
             updated: 200,
             favorite: true,
             values: serde_json::from_str(r#"{"p":"sensitive cell"}"#).unwrap(),
+            number_text: BTreeMap::from([("p".into(), "$123.45".into())]),
+            number_input: BTreeMap::from([("p".into(), "123.4500".into())]),
         };
         row.zeroize();
         assert!(row.id.is_empty() && row.title.is_empty() && row.icon.is_empty());
         assert_eq!((row.number, row.created, row.updated, row.favorite), (0, 0, 0, false));
-        assert!(row.values.is_empty());
+        assert!(row.values.is_empty() && row.number_text.is_empty() && row.number_input.is_empty());
 
         let mut cache = QueryCache::default();
         let db = sample_db("db1", "v1");

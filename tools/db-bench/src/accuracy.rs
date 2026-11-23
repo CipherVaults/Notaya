@@ -93,6 +93,8 @@ fn reference_row(i: usize) -> RowOut {
     RowOut {
         id: format!("r{i}"), title: format!("Row {i}"), icon: String::new(), number: 0,
         created: i as i64, updated: i as i64, favorite: false,
+        number_text: [("amount".into(), (i % 13).to_string())].into(),
+        number_input: [("amount".into(), (i % 13).to_string())].into(),
         values: json!({
             "amount": i % 13,
             "category": (i % 2).to_string(),

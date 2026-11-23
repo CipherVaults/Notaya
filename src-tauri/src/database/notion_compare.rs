@@ -123,7 +123,7 @@ fn ours(prop: &str, row: usize) -> Result<Val, String> {
 
 fn num(v: Result<Val, String>) -> f64 {
     match v {
-        Ok(Val::Num(n)) => n,
+        Ok(Val::Num(n)) => n.try_as_f64().expect("certified number"),
         other => panic!("not a number: {other:?}"),
     }
 }

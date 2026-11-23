@@ -736,20 +736,20 @@ fn images(s: &Session, doc: &Value) -> Result<()> {
 }
 
 fn formula_test(q: &Value) -> Result<Value> {
-    use crate::database::{engine::val_json, formula, value::Val};
-    fn val(v: &Value) -> Val {
-        match v {
-            Value::Number(n) => Val::Num(n.as_f64().unwrap_or(0.)),
+    use crate::database::{engine::val_json, formula, value::{Number, Val}};
+    fn val(v: &Value) -> std::result::Result<Val, String> {
+        Ok(match v {
+            Value::Number(n) => Val::Num(Number::decimal(&n.to_string())?),
             Value::Bool(b) => Val::Bool(*b),
             Value::String(s) => Val::Str(s.clone()),
-            Value::Array(a) => Val::List(a.iter().map(val).collect()),
+            Value::Array(a) => Val::List(a.iter().map(val).collect::<std::result::Result<_, _>>()?),
             _ => Val::Null,
-        }
+        })
     }
     struct Env<'a>(&'a Value);
     impl formula::Env for Env<'_> {
         fn prop(&self, name: &str) -> std::result::Result<Val, String> {
-            Ok(val(&self.0[name]))
+            val(&self.0[name])
         }
         fn row_id(&self) -> String {
             String::new()
@@ -769,7 +769,7 @@ fn formula_test(q: &Value) -> Result<Value> {
     rows.iter()
         .map(|r| {
             formula::eval(&expression, &Env(r))
-                .map(|v| val_json(&v))
+                .and_then(|v| val_json(&v))
                 .map_err(|_| invalid())
         })
         .collect::<Result<Vec<_>>>()
@@ -965,7 +965,7 @@ fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, appr
             }
             "db.row.get"=>{let row=db::row(s,&id)?;let d=db::database(s,&row.db)?;value(context(s).row_out_pub(&d,&row))}
             "db.row_titles"=>out!(db::row_titles_core(s,&a,ids(q,"ids")?)),
-            "db.chart.data"=>{let d=db::database(s,&text(q,"databaseId"))?;let v=d.view(&text(q,"viewId")).ok_or(Error::NotFound)?;value(crate::database::chart::chart_data(&context(s),&d,v))}
+            "db.chart.data"=>{let d=db::database(s,&text(q,"databaseId"))?;let v=d.view(&text(q,"viewId")).ok_or(Error::NotFound)?;value(crate::database::chart::chart_data(&context(s),&d,v).map_err(|_| invalid())?)}
             "db.reminders.due"=>value(db::due_reminders(&context(s),&Default::default())),
             "db.file.list"=>{let row=db::row(s,&text(q,"rowId"))?;let cells:Value=serde_json::from_str(&row.cells).map_err(|_|invalid())?;
                 Ok(json!(cells[&text(q,"propId")].as_array().map(|files| files.iter().map(|f|json!({"name":f["name"],"size":f["size"]})).collect::<Vec<_>>()).unwrap_or_default()))}
@@ -2434,7 +2434,7 @@ mod tests {
                 });
                 notes::save_page_core(s, &Actor::Person, page.clone(), "Visible".into(), blocks.to_string(), "link".into())?;
                 let hdb_rec = db::database(s, &hdb.database.id)?;
-                Ok((hp, hdb_rec.id.clone(), hrow.row.id, vdb.id.clone(), fpid, cpid, rpid))
+                Ok((hp, hdb_rec.id.clone(), hrow.row.id.clone(), vdb.id.clone(), fpid, cpid, rpid))
             })
             .unwrap();
 

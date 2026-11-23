@@ -196,15 +196,22 @@ export function blankView(kind: ViewKind, name: string, db?: Database): View {
 
 const groupDigits = (s: string) => s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 export function numStr(n: number): string {
-  return String(Math.round(n * 1e9) / 1e9);
+  return Number.isFinite(n) ? String(Number(n.toPrecision(12))) : "Error: Non-finite number";
 }
+const currencyDigits = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
 export function formatNumber(n: number, format: string): string {
+  if (!Number.isFinite(n)) return numStr(n);
   const base = numStr(n);
   const withCommas = (s: string) => {
+    if (/[eE]/.test(s)) return s;
     const [i, f] = s.split(".");
     return groupDigits(i) + (f ? "." + f : "");
   };
-  const money = (sym: string) => `${n < 0 ? "-" : ""}${sym}${withCommas(numStr(Math.abs(n)))}`;
+  const money = (symbol: string) => {
+    const amount = currencyDigits.format(Math.abs(n));
+    return `${n < 0 && amount !== "0" ? "-" : ""}${symbol}${amount}`;
+  };
   switch (format) {
     case "numberWithCommas": return withCommas(base);
     case "percent": return numStr(n * 100) + "%";
@@ -302,11 +309,11 @@ export function isComputedValue(v: unknown): v is { t: string; v: unknown; text:
 }
 
 /** Text of a cell for tooltips and plain lists. */
-export function cellText(p: Property, v: unknown): string {
+export function cellText(p: Property, v: unknown, numberText?: string): string {
   if (v == null) return "";
   if (isComputedValue(v)) return String(v.text);
   if (typeof v === "string") return v;
-  if (typeof v === "number") return formatNumber(v, p.numberFormat);
+  if (typeof v === "number") return numberText ?? formatNumber(v, p.numberFormat);
   if (typeof v === "boolean") return v ? "Yes" : "No";
   return "";
 }
@@ -316,7 +323,11 @@ export function rowMatchesFind(props: Property[], row: DbRow, query: string): bo
   return has(row.title) || props.some((p) => {
     if (p.kind === "title") return false;
     const value = row.values[p.id];
-    if (has(cellText(p, value))) return true;
+    if (has(cellText(p, value, row.numberText?.[p.id]))) return true;
+    if (typeof value === "number" && p.numberFormat === "numberWithCommas") {
+      const legacy = String(Math.round(value * 1e9) / 1e9);
+      if (legacy.includes("e") && has(legacy)) return true;
+    }
     const name = (p.kind === "select" || p.kind === "status") && p.options.find((o) => o.id === value)?.name;
     return typeof name === "string" && has(name);
   });

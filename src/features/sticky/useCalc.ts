@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { api } from "@/lib/ipc";
 import type { CalcEntry } from "@/lib/types";
-import { CalcError, dependsOnAngleUnit, evaluate, formatNumber, negateExpr } from "./calc";
+import { CalcError, dependsOnAngleUnit, evaluate, formatNumber, negateExpr, type CalcOptions } from "./calc";
 
 /**
  * The state and actions of a calculator window. The display and "Ans" belong to this window; the history
@@ -10,7 +10,7 @@ import { CalcError, dependsOnAngleUnit, evaluate, formatNumber, negateExpr } fro
  */
 export function useCalc(degrees: boolean) {
   const [expr, setExpr] = useState("");
-  const [ans, setAns] = useState(0);
+  const [ans, setAns] = useState<CalcOptions["ans"]>(0);
   const [history, setHistory] = useState<CalcEntry[]>([]);
 
   // Load the shared history, and reload it whenever any calculator window changes it.
@@ -32,7 +32,7 @@ export function useCalc(degrees: boolean) {
   const preview = useMemo(() => {
     if (!expr.trim()) return null;
     try {
-      return formatNumber(evaluate(expr, { degrees, ans }));
+      return formatNumber(evaluate(expr, { degrees, ans, exact: true }));
     } catch {
       return null;
     }
@@ -86,7 +86,7 @@ export function useCalc(degrees: boolean) {
   const equals = () => {
     if (!expr.trim()) return;
     try {
-      const value = evaluate(expr, { degrees, ans });
+      const value = evaluate(expr, { degrees, ans, exact: true });
       const text = formatNumber(value);
       lastExpr.current = expr.trim();
       api.addCalcEntry(expr.trim(), text).then(setHistory).catch(() => {});

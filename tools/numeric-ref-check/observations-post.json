@@ -1,0 +1,5166 @@
+{
+  "commit": "cbf0193fabe77d04cdd84f40e2560f8dd643c333",
+  "tree": "c67a85e52d1bcd71e66e6b20b3699595085445e2",
+  "working_tree_sha256": "bf323284c20b3ed8b12784a307070a8460350afd780702e8be77bddce8fa092b",
+  "control": null,
+  "passed": 336,
+  "failed": 0,
+  "results": [
+    {
+      "id": "editor-below-half-cent",
+      "target": "ui.editor",
+      "expected": {
+        "value": "999999999999.98",
+        "token": "999999999999.98499"
+      },
+      "observed": {
+        "id": "editor-below-half-cent",
+        "target": "ui.editor",
+        "token": "999999999999.98499"
+      },
+      "failures": []
+    },
+    {
+      "id": "editor-non-finite",
+      "target": "ui.editor",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "editor-non-finite",
+        "target": "ui.editor",
+        "error": "Enter a finite decimal number."
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-cancellation",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "plain-cancellation",
+        "target": "sticky.evaluate",
+        "raw": "1",
+        "exact": "1/1",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "sticky-percentage",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "220"
+      },
+      "observed": {
+        "id": "sticky-percentage",
+        "target": "sticky.evaluate",
+        "raw": "220",
+        "exact": "220/1",
+        "text": "220"
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-division",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0.333333333333"
+      },
+      "observed": {
+        "id": "plain-division",
+        "target": "sticky.evaluate",
+        "raw": "0.3333333333333333",
+        "exact": "1/3",
+        "text": "0.333333333333"
+      },
+      "failures": []
+    },
+    {
+      "id": "small-scientific",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789123e-10"
+      },
+      "observed": {
+        "id": "small-scientific",
+        "target": "sticky.evaluate",
+        "raw": "1.23456789123e-10",
+        "exact": "123456789123/1000000000000000000000",
+        "text": "1.23456789123e-10"
+      },
+      "failures": []
+    },
+    {
+      "id": "large-scientific",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789123e16"
+      },
+      "observed": {
+        "id": "large-scientific",
+        "target": "sticky.evaluate",
+        "raw": "12345678912300000",
+        "exact": "12345678912300000/1",
+        "text": "1.23456789123e16"
+      },
+      "failures": []
+    },
+    {
+      "id": "scientific-below-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1e100"
+      },
+      "observed": {
+        "id": "scientific-below-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.000000000005e+100",
+        "exact": "10000000000049999999999900000000000000000000000000000000000000000000000000000000000000000000000000000/1",
+        "text": "1e100"
+      },
+      "failures": []
+    },
+    {
+      "id": "tiny-sine-degrees",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.74532925199e-15"
+      },
+      "observed": {
+        "id": "tiny-sine-degrees",
+        "target": "sticky.evaluate",
+        "raw": "1.7453292519943295e-15",
+        "exact": "3490658503988659/2000000000000000000000000000000",
+        "text": "1.74532925199e-15"
+      },
+      "failures": []
+    },
+    {
+      "id": "divide-by-zero",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "division-by-zero"
+      },
+      "observed": {
+        "id": "divide-by-zero",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Can't divide by zero"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "sqrt-negative",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-underflow-negative",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "sqrt-underflow-negative",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "ln-underflow-negative",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "ln-underflow-negative",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-rounded-integer-exponent",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "pow-rounded-integer-exponent",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-tiny-square-root",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1e-200"
+      },
+      "observed": {
+        "id": "pow-tiny-square-root",
+        "target": "sticky.evaluate",
+        "raw": "1e-200",
+        "exact": "1/100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "text": "1e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-scale-reduced-small",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "2e-200"
+      },
+      "observed": {
+        "id": "pow-scale-reduced-small",
+        "target": "sticky.evaluate",
+        "raw": "2e-200",
+        "exact": "1/50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "text": "2e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-scale-reduced-large",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "5e199"
+      },
+      "observed": {
+        "id": "pow-scale-reduced-large",
+        "target": "sticky.evaluate",
+        "raw": "5e+199",
+        "exact": "50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000/1",
+        "text": "5e199"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-below-binary64-max",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.79769313486e308"
+      },
+      "observed": {
+        "id": "pow-below-binary64-max",
+        "target": "sticky.evaluate",
+        "raw": "1.7976931348622798e+308",
+        "text": "1.79769313486e308"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-above-binary64-max",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "pow-above-binary64-max",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-below-display-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1e-200"
+      },
+      "observed": {
+        "id": "pow-below-display-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.000000000005e-200",
+        "text": "1e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-above-display-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.00000000001e200"
+      },
+      "observed": {
+        "id": "pow-above-display-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.0000000000050001e+200",
+        "text": "1.00000000001e200"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-below-binary64-range",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1e-350"
+      },
+      "observed": {
+        "id": "sqrt-below-binary64-range",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "exact": "1/100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "text": "1e-350"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-exact-max-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "pow-exact-max-overflow",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "fourth-root-just-above-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789013e-200"
+      },
+      "observed": {
+        "id": "fourth-root-just-above-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.234567890125e-200",
+        "text": "1.23456789013e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "fifth-root-exact-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789013e-200"
+      },
+      "observed": {
+        "id": "fifth-root-exact-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.234567890125e-200",
+        "exact": "9876543121/800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "text": "1.23456789013e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-just-above-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789013e-350"
+      },
+      "observed": {
+        "id": "sqrt-just-above-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "1.23456789013e-350"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-finite-max",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.79769313486e308"
+      },
+      "observed": {
+        "id": "pow-65-over-2-finite-max",
+        "target": "sticky.evaluate",
+        "raw": "1.7976931348623157e+308",
+        "text": "1.79769313486e308"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "pow-65-over-2-overflow",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-above-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "pow-65-over-2-above-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.234567890125",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-exact-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "65th-root-exact-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.234567890125",
+        "exact": "9876543121/8000000000",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-just-above-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "65th-root-just-above-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.234567890125",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-just-below-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789012"
+      },
+      "observed": {
+        "id": "65th-root-just-below-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.234567890125",
+        "text": "1.23456789012"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-midpoint-comparison-over-budget",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "id": "pow-midpoint-comparison-over-budget",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Numeric precision is out of range"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-finite-max-comparison-over-budget",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "id": "pow-finite-max-comparison-over-budget",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Numeric precision is out of range"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-budget-sized-exponent-certified-outside-midpoint",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "pow-budget-sized-exponent-certified-outside-midpoint",
+        "target": "sticky.evaluate",
+        "raw": "1.234567890125",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-strict-above",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "2.47032822921e-324",
+        "binary64_bits": "0000000000000001"
+      },
+      "observed": {
+        "id": "pow-subnormal-strict-above",
+        "target": "sticky.evaluate",
+        "raw": "5e-324",
+        "text": "2.47032822921e-324"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-tie",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "pow-subnormal-tie",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "exact": "0/1",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-strict-below",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "pow-subnormal-strict-below",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "exact": "0/1",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "negative-pow-subnormal-strict-above",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-2.47032822921e-324",
+        "binary64_bits": "8000000000000001"
+      },
+      "observed": {
+        "id": "negative-pow-subnormal-strict-above",
+        "target": "sticky.evaluate",
+        "raw": "-5e-324",
+        "text": "-2.47032822921e-324"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cancellation",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "4.05000003645e-101"
+      },
+      "observed": {
+        "id": "sqrt-cancellation",
+        "target": "sticky.evaluate",
+        "raw": "4.0500000364482186e-101",
+        "text": "4.05000003645e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cancellation-negative",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-4.05000003645e-101"
+      },
+      "observed": {
+        "id": "sqrt-cancellation-negative",
+        "target": "sticky.evaluate",
+        "raw": "-4.0500000364482186e-101",
+        "text": "-4.05000003645e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-strict-above",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "sqrt-cent-strict-above",
+        "target": "sticky.evaluate",
+        "raw": "0.01",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-tie",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "sqrt-cent-tie",
+        "target": "sticky.evaluate",
+        "raw": "0.01",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-strict-below",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "sqrt-cent-strict-below",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative-cent-strict-away",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "sqrt-negative-cent-strict-away",
+        "target": "sticky.evaluate",
+        "raw": "-0.01",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "compound-sqrt-cent-strict-above",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "compound-sqrt-cent-strict-above",
+        "target": "sticky.evaluate",
+        "raw": "0.01",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "compound-sqrt-cent-strict-below",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "compound-sqrt-cent-strict-below",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "unresolved-interval-cancellation",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "id": "unresolved-interval-cancellation",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Numeric precision is out of range"
+      },
+      "failures": []
+    },
+    {
+      "id": "unresolved-interval-cent",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "id": "unresolved-interval-cent",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Numeric precision is out of range"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-above",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000001"
+      },
+      "observed": {
+        "id": "sqrt-binary64-midpoint-above",
+        "target": "sticky.evaluate",
+        "raw": "1.0000000000000002",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-tie",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000000"
+      },
+      "observed": {
+        "id": "sqrt-binary64-midpoint-tie",
+        "target": "sticky.evaluate",
+        "raw": "1",
+        "exact": "9007199254740993/9007199254740992",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-below",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000000"
+      },
+      "observed": {
+        "id": "sqrt-binary64-midpoint-below",
+        "target": "sticky.evaluate",
+        "raw": "1",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-square-root",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0.1"
+      },
+      "observed": {
+        "id": "exact-square-root",
+        "target": "sticky.evaluate",
+        "raw": "0.1",
+        "exact": "1/10",
+        "text": "0.1"
+      },
+      "failures": []
+    },
+    {
+      "id": "exp-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "exp-overflow",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "ln-zero",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "ln-zero",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "masked-exp-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "masked-exp-overflow",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "masked-product-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "masked-product-overflow",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "ans-nan",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "ans-nan",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "format-nan",
+      "target": "sticky.format",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "format-nan",
+        "target": "sticky.format",
+        "format_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "ans-positive-infinity",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "ans-positive-infinity",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "format-positive-infinity",
+      "target": "sticky.format",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "format-positive-infinity",
+        "target": "sticky.format",
+        "format_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "ans-negative-infinity",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "ans-negative-infinity",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "format-negative-infinity",
+      "target": "sticky.format",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "format-negative-infinity",
+        "target": "sticky.format",
+        "format_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "binary64-max-chart-axis",
+      "target": "ui.axis",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "binary64-max-chart-axis",
+        "target": "ui.axis",
+        "ticks": [
+          "-1.7976931348623157e+308",
+          "-1.0786158809173895e+308",
+          "-3.59538626972463e+307",
+          "3.59538626972463e+307",
+          "1.0786158809173895e+308",
+          "1.7976931348623157e+308"
+        ],
+        "positions": [
+          "0",
+          "0.19999999999999998",
+          "0.4000000000000001",
+          "0.6",
+          "0.8",
+          "1"
+        ]
+      },
+      "failures": []
+    },
+    {
+      "id": "binary64-max-tick-ceiling",
+      "target": "ui.axis",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "binary64-max-tick-ceiling",
+        "target": "ui.axis",
+        "ticks": [
+          "0",
+          "3.5953862697246315e+307",
+          "7.190772539449263e+307",
+          "1.0786158809173893e+308",
+          "1.4381545078898526e+308",
+          "1.7976931348623157e+308"
+        ],
+        "positions": [
+          "0",
+          "0.2",
+          "0.4",
+          "0.6",
+          "0.8",
+          "1"
+        ]
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-sqrt-near-one",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "5e-101"
+      },
+      "observed": {
+        "id": "transcendental-ln-sqrt-near-one",
+        "target": "sticky.evaluate",
+        "raw": "5e-101",
+        "text": "5e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-sqrt-below-one",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-5e-101"
+      },
+      "observed": {
+        "id": "transcendental-ln-sqrt-below-one",
+        "target": "sticky.evaluate",
+        "raw": "-5e-101",
+        "text": "-5e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-cancellation",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1e-100"
+      },
+      "observed": {
+        "id": "transcendental-exp-cancellation",
+        "target": "sticky.evaluate",
+        "raw": "1e-100",
+        "text": "1e-100"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-negative-cancellation",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-1e-100"
+      },
+      "observed": {
+        "id": "transcendental-exp-negative-cancellation",
+        "target": "sticky.evaluate",
+        "raw": "-1e-100",
+        "text": "-1e-100"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-below-grid",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1e-1000",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "transcendental-exp-below-grid",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "text": "1e-1000"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-one",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "transcendental-ln-one",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "exact": "0/1",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-zero",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "transcendental-exp-zero",
+        "target": "sticky.evaluate",
+        "raw": "1",
+        "exact": "1/1",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-one",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "2.71828182846",
+        "binary64_bits": "4005bf0a8b145769"
+      },
+      "observed": {
+        "id": "transcendental-exp-one",
+        "target": "sticky.evaluate",
+        "raw": "2.718281828459045",
+        "text": "2.71828182846"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-huge-negative",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "transcendental-exp-huge-negative",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "exact": "0/1",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-subnormal",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "2.82235073047e-324",
+        "binary64_bits": "0000000000000001"
+      },
+      "observed": {
+        "id": "transcendental-exp-subnormal",
+        "target": "sticky.evaluate",
+        "raw": "5e-324",
+        "text": "2.82235073047e-324"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-underflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "transcendental-exp-underflow",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "exact": "0/1",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-exact-reciprocal",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-10"
+      },
+      "observed": {
+        "id": "transcendental-log2-exact-reciprocal",
+        "target": "sticky.evaluate",
+        "raw": "-10",
+        "exact": "-10/1",
+        "text": "-10"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-exact-reciprocal",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-1000"
+      },
+      "observed": {
+        "id": "transcendental-log10-exact-reciprocal",
+        "target": "sticky.evaluate",
+        "raw": "-1000",
+        "exact": "-1000/1",
+        "text": "-1000"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-near-one",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "7.21347520444e-101"
+      },
+      "observed": {
+        "id": "transcendental-log2-near-one",
+        "target": "sticky.evaluate",
+        "raw": "7.213475204444817e-101",
+        "text": "7.21347520444e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-near-one",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "2.17147240952e-101"
+      },
+      "observed": {
+        "id": "transcendental-log10-near-one",
+        "target": "sticky.evaluate",
+        "raw": "2.171472409516259e-101",
+        "text": "2.17147240952e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log-alias",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "2.17147240952e-101"
+      },
+      "observed": {
+        "id": "transcendental-log-alias",
+        "target": "sticky.evaluate",
+        "raw": "2.171472409516259e-101",
+        "text": "2.17147240952e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-exact-negative-rational",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "transcendental-cbrt-exact-negative-rational",
+        "target": "sticky.evaluate",
+        "raw": "0",
+        "exact": "0/1",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-irrational-negative",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "-1.25992104989"
+      },
+      "observed": {
+        "id": "transcendental-cbrt-irrational-negative",
+        "target": "sticky.evaluate",
+        "raw": "-1.2599210498948732",
+        "text": "-1.25992104989"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-refinement",
+      "target": "sticky.evaluate",
+      "expected": {
+        "value": "1.66666666667e-101"
+      },
+      "observed": {
+        "id": "transcendental-cbrt-refinement",
+        "target": "sticky.evaluate",
+        "raw": "1.6666666666666668e-101",
+        "text": "1.66666666667e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-domain-after-refinement",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "transcendental-ln-domain-after-refinement",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-domain",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "transcendental-log2-domain",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-domain",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "id": "transcendental-log10-domain",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-finite-limit-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "transcendental-exp-finite-limit-overflow",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-negative-result-overflow",
+      "target": "sticky.evaluate",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "transcendental-exp-negative-result-overflow",
+        "target": "sticky.evaluate",
+        "evaluate_error": "Too large"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-projection-meter",
+      "target": "sticky.exact-meter",
+      "expected": {
+        "charges": [
+          1411200,
+          89888,
+          352800
+        ]
+      },
+      "observed": {
+        "id": "exact-projection-meter",
+        "target": "sticky.exact-meter",
+        "charges": [
+          1411200,
+          89888,
+          352800
+        ],
+        "rejected": [
+          true,
+          true,
+          true
+        ]
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-below-positive",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "cent-below-positive",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-below-positive",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0",
+          "v": "0.0"
+        },
+        "id": "cent-below-positive",
+        "raw": "0.004999",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-below-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "cent-below-negative",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-below-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0",
+          "v": "0.0"
+        },
+        "id": "cent-below-negative",
+        "raw": "-0.004999",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-at-positive",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "cent-at-positive",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-at-positive",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "cent-at-positive",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-at-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "cent-at-negative",
+        "raw": "-0.01",
+        "target": "rust.formula",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-at-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.01",
+          "v": "-0.01"
+        },
+        "id": "cent-at-negative",
+        "raw": "-0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-above-positive",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "cent-above-positive",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-above-positive",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "cent-above-positive",
+        "raw": "0.005001",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-above-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "cent-above-negative",
+        "raw": "-0.01",
+        "target": "rust.formula",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "cent-above-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.01",
+          "v": "-0.01"
+        },
+        "id": "cent-above-negative",
+        "raw": "-0.005001",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sub-cent-sum",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "sub-cent-sum",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "sub-cent-sum",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "sub-cent-sum",
+        "raw": "0.008",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "division-percentage",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.07"
+      },
+      "observed": {
+        "id": "division-percentage",
+        "raw": "0.07",
+        "target": "rust.formula",
+        "text": "$0.07"
+      },
+      "failures": []
+    },
+    {
+      "id": "division-percentage",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.07"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.07",
+          "v": "0.07"
+        },
+        "id": "division-percentage",
+        "raw": "0.07285714285714286",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "division-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "division-cancellation",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "division-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "division-cancellation",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "currency-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "currency-cancellation",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "currency-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "currency-cancellation",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "near-trillion",
+      "target": "rust.formula",
+      "expected": {
+        "value": "999999999999.99"
+      },
+      "observed": {
+        "id": "near-trillion",
+        "raw": "999999999999.99",
+        "target": "rust.formula",
+        "text": "$999,999,999,999.99"
+      },
+      "failures": []
+    },
+    {
+      "id": "near-trillion",
+      "target": "rust.computed",
+      "expected": {
+        "value": "999999999999.99"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$999,999,999,999.99",
+          "v": "999999999999.99"
+        },
+        "id": "near-trillion",
+        "raw": "999999999999.9851",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "editor-below-half-cent",
+      "target": "rust.formula",
+      "expected": {
+        "value": "999999999999.98",
+        "token": "999999999999.98499"
+      },
+      "observed": {
+        "id": "editor-below-half-cent",
+        "raw": "999999999999.98",
+        "target": "rust.formula",
+        "text": "$999,999,999,999.98"
+      },
+      "failures": []
+    },
+    {
+      "id": "editor-below-half-cent",
+      "target": "rust.computed",
+      "expected": {
+        "value": "999999999999.98",
+        "token": "999999999999.98499"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$999,999,999,999.98",
+          "v": "999999999999.98"
+        },
+        "id": "editor-below-half-cent",
+        "raw": "999999999999.985",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "plain-cancellation",
+        "raw": "1",
+        "target": "rust.formula",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1",
+          "v": "1.0"
+        },
+        "id": "plain-cancellation",
+        "raw": "1",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-division",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.333333333333"
+      },
+      "observed": {
+        "id": "plain-division",
+        "raw": "0.3333333333333333",
+        "target": "rust.formula",
+        "text": "0.333333333333"
+      },
+      "failures": []
+    },
+    {
+      "id": "plain-division",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.333333333333"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0.333333333333",
+          "v": "0.3333333333333333"
+        },
+        "id": "plain-division",
+        "raw": "0.3333333333333333",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "small-scientific",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789123e-10"
+      },
+      "observed": {
+        "id": "small-scientific",
+        "raw": "0.000000000123456789123",
+        "target": "rust.formula",
+        "text": "1.23456789123e-10"
+      },
+      "failures": []
+    },
+    {
+      "id": "small-scientific",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789123e-10"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789123e-10",
+          "v": "1.23456789123E-10"
+        },
+        "id": "small-scientific",
+        "raw": "0.000000000123456789123",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "large-scientific",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789123e16"
+      },
+      "observed": {
+        "id": "large-scientific",
+        "raw": "12345678912300000",
+        "target": "rust.formula",
+        "text": "1.23456789123e16"
+      },
+      "failures": []
+    },
+    {
+      "id": "large-scientific",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789123e16"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789123e16",
+          "v": "1.23456789123E+16"
+        },
+        "id": "large-scientific",
+        "raw": "12345678912300000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "scientific-below-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1e100"
+      },
+      "observed": {
+        "id": "scientific-below-midpoint",
+        "raw": "10000000000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.formula",
+        "text": "1e100"
+      },
+      "failures": []
+    },
+    {
+      "id": "scientific-below-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1e100"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1e100",
+          "v": "1.000000000005E+100"
+        },
+        "id": "scientific-below-midpoint",
+        "raw": "10000000000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "divide-by-zero",
+      "target": "rust.formula",
+      "expected": {
+        "error": "division-by-zero"
+      },
+      "observed": {
+        "error": "Division by zero",
+        "id": "divide-by-zero",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "divide-by-zero",
+      "target": "rust.computed",
+      "expected": {
+        "error": "division-by-zero"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Division by zero",
+          "v": null
+        },
+        "id": "divide-by-zero",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "sqrt-negative",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "sqrt-negative",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-underflow-negative",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "sqrt-underflow-negative",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-underflow-negative",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "sqrt-underflow-negative",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "ln-underflow-negative",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "ln-underflow-negative",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "ln-underflow-negative",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "ln-underflow-negative",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-rounded-integer-exponent",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "pow-rounded-integer-exponent",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-rounded-integer-exponent",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "pow-rounded-integer-exponent",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-tiny-square-root",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1e-200"
+      },
+      "observed": {
+        "id": "pow-tiny-square-root",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        "target": "rust.formula",
+        "text": "1e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-tiny-square-root",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1e-200"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1e-200",
+          "v": "1E-200"
+        },
+        "id": "pow-tiny-square-root",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-scale-reduced-small",
+      "target": "rust.formula",
+      "expected": {
+        "value": "2e-200"
+      },
+      "observed": {
+        "id": "pow-scale-reduced-small",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "target": "rust.formula",
+        "text": "2e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-scale-reduced-small",
+      "target": "rust.computed",
+      "expected": {
+        "value": "2e-200"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "2e-200",
+          "v": "2E-200"
+        },
+        "id": "pow-scale-reduced-small",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-scale-reduced-large",
+      "target": "rust.formula",
+      "expected": {
+        "value": "5e199"
+      },
+      "observed": {
+        "id": "pow-scale-reduced-large",
+        "raw": "50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.formula",
+        "text": "5e199"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-scale-reduced-large",
+      "target": "rust.computed",
+      "expected": {
+        "value": "5e199"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "5e199",
+          "v": "5E+199"
+        },
+        "id": "pow-scale-reduced-large",
+        "raw": "50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-below-binary64-max",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.79769313486e308"
+      },
+      "observed": {
+        "id": "pow-below-binary64-max",
+        "raw": "179769313486227980000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.formula",
+        "text": "1.79769313486e308"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-below-binary64-max",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.79769313486e308"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.79769313486e308",
+          "v": "1.7976931348622798E+308"
+        },
+        "id": "pow-below-binary64-max",
+        "raw": "179769313486227980000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-above-binary64-max",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "pow-above-binary64-max",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-above-binary64-max",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "pow-above-binary64-max",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-below-display-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1e-200"
+      },
+      "observed": {
+        "id": "pow-below-display-midpoint",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000005",
+        "target": "rust.formula",
+        "text": "1e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-below-display-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1e-200"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1e-200",
+          "v": "1.000000000005E-200"
+        },
+        "id": "pow-below-display-midpoint",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-above-display-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.00000000001e200"
+      },
+      "observed": {
+        "id": "pow-above-display-midpoint",
+        "raw": "100000000000500010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.formula",
+        "text": "1.00000000001e200"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-above-display-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.00000000001e200"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.00000000001e200",
+          "v": "1.0000000000050001E+200"
+        },
+        "id": "pow-above-display-midpoint",
+        "raw": "100000000000500010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-below-binary64-range",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1e-350"
+      },
+      "observed": {
+        "id": "sqrt-below-binary64-range",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "1e-350"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-below-binary64-range",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1e-350"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1e-350",
+          "v": "0.0"
+        },
+        "id": "sqrt-below-binary64-range",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-exact-max-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "pow-exact-max-overflow",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-exact-max-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "pow-exact-max-overflow",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "fourth-root-just-above-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789013e-200"
+      },
+      "observed": {
+        "id": "fourth-root-just-above-midpoint",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001234567890125",
+        "target": "rust.formula",
+        "text": "1.23456789013e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "fourth-root-just-above-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789013e-200"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789013e-200",
+          "v": "1.234567890125E-200"
+        },
+        "id": "fourth-root-just-above-midpoint",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001234567890125",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "fifth-root-exact-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789013e-200"
+      },
+      "observed": {
+        "id": "fifth-root-exact-midpoint",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001234567890125",
+        "target": "rust.formula",
+        "text": "1.23456789013e-200"
+      },
+      "failures": []
+    },
+    {
+      "id": "fifth-root-exact-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789013e-200"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789013e-200",
+          "v": "1.234567890125E-200"
+        },
+        "id": "fifth-root-exact-midpoint",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001234567890125",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-just-above-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789013e-350"
+      },
+      "observed": {
+        "id": "sqrt-just-above-midpoint",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "1.23456789013e-350"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-just-above-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789013e-350"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789013e-350",
+          "v": "0.0"
+        },
+        "id": "sqrt-just-above-midpoint",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-finite-max",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.79769313486e308"
+      },
+      "observed": {
+        "id": "pow-65-over-2-finite-max",
+        "raw": "179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.formula",
+        "text": "1.79769313486e308"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-finite-max",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.79769313486e308"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.79769313486e308",
+          "v": "1.7976931348623157E+308"
+        },
+        "id": "pow-65-over-2-finite-max",
+        "raw": "179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "pow-65-over-2-overflow",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "pow-65-over-2-overflow",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-above-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "pow-65-over-2-above-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.formula",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-65-over-2-above-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789013",
+          "v": "1.234567890125"
+        },
+        "id": "pow-65-over-2-above-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-exact-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "65th-root-exact-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.formula",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-exact-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789013",
+          "v": "1.234567890125"
+        },
+        "id": "65th-root-exact-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-just-above-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "65th-root-just-above-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.formula",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-just-above-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789013",
+          "v": "1.234567890125"
+        },
+        "id": "65th-root-just-above-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-just-below-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789012"
+      },
+      "observed": {
+        "id": "65th-root-just-below-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.formula",
+        "text": "1.23456789012"
+      },
+      "failures": []
+    },
+    {
+      "id": "65th-root-just-below-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789012"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789012",
+          "v": "1.234567890125"
+        },
+        "id": "65th-root-just-below-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-midpoint-comparison-over-budget",
+      "target": "rust.formula",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "error": "The formula exceeds its arithmetic work budget",
+        "id": "pow-midpoint-comparison-over-budget",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-midpoint-comparison-over-budget",
+      "target": "rust.computed",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 The formula exceeds its arithmetic work budget",
+          "v": null
+        },
+        "id": "pow-midpoint-comparison-over-budget",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-finite-max-comparison-over-budget",
+      "target": "rust.formula",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "error": "The formula exceeds its arithmetic work budget",
+        "id": "pow-finite-max-comparison-over-budget",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-finite-max-comparison-over-budget",
+      "target": "rust.computed",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 The formula exceeds its arithmetic work budget",
+          "v": null
+        },
+        "id": "pow-finite-max-comparison-over-budget",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-budget-sized-exponent-certified-outside-midpoint",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "id": "pow-budget-sized-exponent-certified-outside-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.formula",
+        "text": "1.23456789013"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-budget-sized-exponent-certified-outside-midpoint",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.23456789013"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.23456789013",
+          "v": "1.234567890125"
+        },
+        "id": "pow-budget-sized-exponent-certified-outside-midpoint",
+        "raw": "1.234567890125",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-strict-above",
+      "target": "rust.formula",
+      "expected": {
+        "value": "2.47032822921e-324",
+        "binary64_bits": "0000000000000001"
+      },
+      "observed": {
+        "id": "pow-subnormal-strict-above",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.formula",
+        "text": "2.47032822921e-324"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-strict-above",
+      "target": "rust.computed",
+      "expected": {
+        "value": "2.47032822921e-324",
+        "binary64_bits": "0000000000000001"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "2.47032822921e-324",
+          "v": "5E-324"
+        },
+        "id": "pow-subnormal-strict-above",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-tie",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "pow-subnormal-tie",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-tie",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "pow-subnormal-tie",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-strict-below",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "pow-subnormal-strict-below",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "pow-subnormal-strict-below",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "pow-subnormal-strict-below",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "negative-pow-subnormal-strict-above",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-2.47032822921e-324",
+        "binary64_bits": "8000000000000001"
+      },
+      "observed": {
+        "id": "negative-pow-subnormal-strict-above",
+        "raw": "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.formula",
+        "text": "-2.47032822921e-324"
+      },
+      "failures": []
+    },
+    {
+      "id": "negative-pow-subnormal-strict-above",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-2.47032822921e-324",
+        "binary64_bits": "8000000000000001"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-2.47032822921e-324",
+          "v": "-5E-324"
+        },
+        "id": "negative-pow-subnormal-strict-above",
+        "raw": "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "4.05000003645e-101"
+      },
+      "observed": {
+        "id": "sqrt-cancellation",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040500000364482186",
+        "target": "rust.formula",
+        "text": "4.05000003645e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "4.05000003645e-101"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "4.05000003645e-101",
+          "v": "4.0500000364482186E-101"
+        },
+        "id": "sqrt-cancellation",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040500000364482186",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cancellation-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-4.05000003645e-101"
+      },
+      "observed": {
+        "id": "sqrt-cancellation-negative",
+        "raw": "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040500000364482186",
+        "target": "rust.formula",
+        "text": "-4.05000003645e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cancellation-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-4.05000003645e-101"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-4.05000003645e-101",
+          "v": "-4.0500000364482186E-101"
+        },
+        "id": "sqrt-cancellation-negative",
+        "raw": "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040500000364482186",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-strict-above",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "sqrt-cent-strict-above",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-strict-above",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "sqrt-cent-strict-above",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-tie",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "sqrt-cent-tie",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-tie",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "sqrt-cent-tie",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-strict-below",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "sqrt-cent-strict-below",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-cent-strict-below",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0",
+          "v": "0.0"
+        },
+        "id": "sqrt-cent-strict-below",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative-cent-strict-away",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "sqrt-negative-cent-strict-away",
+        "raw": "-0.01",
+        "target": "rust.formula",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-negative-cent-strict-away",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.01",
+          "v": "-0.01"
+        },
+        "id": "sqrt-negative-cent-strict-away",
+        "raw": "-0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "compound-sqrt-cent-strict-above",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "compound-sqrt-cent-strict-above",
+        "raw": "0.01",
+        "target": "rust.formula",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "compound-sqrt-cent-strict-above",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "compound-sqrt-cent-strict-above",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "compound-sqrt-cent-strict-below",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "compound-sqrt-cent-strict-below",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "compound-sqrt-cent-strict-below",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0",
+          "v": "0.0"
+        },
+        "id": "compound-sqrt-cent-strict-below",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "unresolved-interval-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "error": "The formula exceeds its arithmetic work budget",
+        "id": "unresolved-interval-cancellation",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "unresolved-interval-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 The formula exceeds its arithmetic work budget",
+          "v": null
+        },
+        "id": "unresolved-interval-cancellation",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "unresolved-interval-cent",
+      "target": "rust.formula",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "error": "The formula exceeds its arithmetic work budget",
+        "id": "unresolved-interval-cent",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "unresolved-interval-cent",
+      "target": "rust.computed",
+      "expected": {
+        "error": "boundary-budget"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 The formula exceeds its arithmetic work budget",
+          "v": null
+        },
+        "id": "unresolved-interval-cent",
+        "raw": "0.005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-above",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000001"
+      },
+      "observed": {
+        "id": "sqrt-binary64-midpoint-above",
+        "raw": "1.0000000000000002",
+        "target": "rust.formula",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-above",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000001"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1",
+          "v": "1.0000000000000002"
+        },
+        "id": "sqrt-binary64-midpoint-above",
+        "raw": "1.0000000000000002",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-tie",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000000"
+      },
+      "observed": {
+        "id": "sqrt-binary64-midpoint-tie",
+        "raw": "1",
+        "target": "rust.formula",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-tie",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1",
+          "v": "1.0"
+        },
+        "id": "sqrt-binary64-midpoint-tie",
+        "raw": "1",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-below",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000000"
+      },
+      "observed": {
+        "id": "sqrt-binary64-midpoint-below",
+        "raw": "1",
+        "target": "rust.formula",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "sqrt-binary64-midpoint-below",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1",
+        "binary64_bits": "3ff0000000000000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1",
+          "v": "1.0"
+        },
+        "id": "sqrt-binary64-midpoint-below",
+        "raw": "1",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-square-root",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0.1"
+      },
+      "observed": {
+        "id": "exact-square-root",
+        "raw": "0.1",
+        "target": "rust.formula",
+        "text": "0.1"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-square-root",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0.1"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0.1",
+          "v": "0.1"
+        },
+        "id": "exact-square-root",
+        "raw": "0.1",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "repeated-wide-products",
+      "target": "rust.formula-budget",
+      "expected": {
+        "error": "work-budget"
+      },
+      "observed": {
+        "error": "The formula exceeds its arithmetic work budget",
+        "id": "repeated-wide-products",
+        "target": "rust.formula-budget"
+      },
+      "failures": []
+    },
+    {
+      "id": "exp-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "exp-overflow",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "exp-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "exp-overflow",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "ln-zero",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "ln-zero",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "ln-zero",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "ln-zero",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "masked-exp-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "masked-exp-overflow",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "masked-exp-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "masked-exp-overflow",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "masked-product-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "masked-product-overflow",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "masked-product-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "masked-product-overflow",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-computed-list",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "nested-computed-list",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "direct-nan",
+      "target": "rust.formula",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "error": "toNumber: Not a real number",
+        "id": "direct-nan",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "direct-nan",
+      "target": "rust.computed",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 toNumber: Not a real number",
+          "v": null
+        },
+        "id": "direct-nan",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 toNumber: Not a real number",
+          "v": null
+        },
+        "id": "nested-nan",
+        "raw": null,
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-nan",
+        "target": "rust.view-footer",
+        "text": "\u26a0 toNumber: Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-nan",
+        "target": "rust.group-footer",
+        "text": "\u26a0 toNumber: Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-nan",
+        "target": "rust.subgroup-footer",
+        "text": "\u26a0 toNumber: Not a real number"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-nan",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "error": "toNumber: Not a real number",
+        "id": "nested-nan",
+        "target": "rust.chart-total"
+      },
+      "failures": []
+    },
+    {
+      "id": "direct-positive-infinity",
+      "target": "rust.formula",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "error": "toNumber: Numeric overflow",
+        "id": "direct-positive-infinity",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "direct-positive-infinity",
+      "target": "rust.computed",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 toNumber: Numeric overflow",
+          "v": null
+        },
+        "id": "direct-positive-infinity",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 toNumber: Numeric overflow",
+          "v": null
+        },
+        "id": "nested-positive-infinity",
+        "raw": null,
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-positive-infinity",
+        "target": "rust.view-footer",
+        "text": "\u26a0 toNumber: Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-positive-infinity",
+        "target": "rust.group-footer",
+        "text": "\u26a0 toNumber: Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-positive-infinity",
+        "target": "rust.subgroup-footer",
+        "text": "\u26a0 toNumber: Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-positive-infinity",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "error": "toNumber: Numeric overflow",
+        "id": "nested-positive-infinity",
+        "target": "rust.chart-total"
+      },
+      "failures": []
+    },
+    {
+      "id": "direct-negative-infinity",
+      "target": "rust.formula",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "error": "toNumber: Numeric overflow",
+        "id": "direct-negative-infinity",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "direct-negative-infinity",
+      "target": "rust.computed",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 toNumber: Numeric overflow",
+          "v": null
+        },
+        "id": "direct-negative-infinity",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 toNumber: Numeric overflow",
+          "v": null
+        },
+        "id": "nested-negative-infinity",
+        "raw": null,
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-negative-infinity",
+        "target": "rust.view-footer",
+        "text": "\u26a0 toNumber: Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-negative-infinity",
+        "target": "rust.group-footer",
+        "text": "\u26a0 toNumber: Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "id": "nested-negative-infinity",
+        "target": "rust.subgroup-footer",
+        "text": "\u26a0 toNumber: Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "nested-negative-infinity",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "non-finite"
+      },
+      "observed": {
+        "error": "toNumber: Numeric overflow",
+        "id": "nested-negative-infinity",
+        "target": "rust.chart-total"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "aggregate-sub-cent",
+        "raw": "0.008",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "target": "rust.view-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "target": "rust.group-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "target": "rust.subgroup-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-sub-cent",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-sub-cent",
+        "raw": "0.008",
+        "target": "rust.chart-total",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "grouped-donut-sub-cent",
+      "target": "rust.donut-slice",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "grouped-donut-sub-cent",
+        "points": [
+          "$0",
+          "$0"
+        ],
+        "raw": "0.008",
+        "target": "rust.donut-slice",
+        "text": "$0.01",
+        "total": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "aggregate-even-median",
+        "raw": "0.005",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "target": "rust.view-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "target": "rust.group-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "target": "rust.subgroup-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-median",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-median",
+        "raw": "0.005",
+        "target": "rust.chart-total",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-$0.01",
+          "v": "-0.01"
+        },
+        "id": "aggregate-even-average",
+        "raw": "-0.005",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "target": "rust.view-footer",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "target": "rust.group-footer",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "target": "rust.subgroup-footer",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-even-average",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "-0.01"
+      },
+      "observed": {
+        "id": "aggregate-even-average",
+        "raw": "-0.005",
+        "target": "rust.chart-total",
+        "text": "-$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "3",
+          "v": "3.0"
+        },
+        "id": "aggregate-plain-median",
+        "raw": "3",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "target": "rust.view-footer",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "target": "rust.group-footer",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "target": "rust.subgroup-footer",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-median",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "3"
+      },
+      "observed": {
+        "id": "aggregate-plain-median",
+        "raw": "3",
+        "target": "rust.chart-total",
+        "text": "3"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.66666666667",
+          "v": "1.6666666666666667"
+        },
+        "id": "aggregate-plain-average",
+        "raw": "1.6666666666666667",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "target": "rust.view-footer",
+        "text": "1.66666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "target": "rust.group-footer",
+        "text": "1.66666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "target": "rust.subgroup-footer",
+        "text": "1.66666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-plain-average",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "1.66666666667"
+      },
+      "observed": {
+        "id": "aggregate-plain-average",
+        "raw": "1.6666666666666667",
+        "target": "rust.chart-total",
+        "text": "1.66666666667"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0.01",
+          "v": "0.01"
+        },
+        "id": "aggregate-currency-cancellation",
+        "raw": "0.005",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "target": "rust.view-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "target": "rust.group-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "target": "rust.subgroup-footer",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-currency-cancellation",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0.01"
+      },
+      "observed": {
+        "id": "aggregate-currency-cancellation",
+        "raw": "0.005",
+        "target": "rust.chart-total",
+        "text": "$0.01"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.rollup",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "$0",
+          "v": "0.0"
+        },
+        "id": "aggregate-below-cent-cancellation",
+        "raw": "0.004999",
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.view-footer",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "target": "rust.view-footer",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.group-footer",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "target": "rust.group-footer",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "target": "rust.subgroup-footer",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-below-cent-cancellation",
+      "target": "rust.chart-total",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "aggregate-below-cent-cancellation",
+        "raw": "0.004999",
+        "target": "rust.chart-total",
+        "text": "$0"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.rollup",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "aggregate-average-overflow",
+        "raw": null,
+        "target": "rust.rollup"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.view-footer",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "aggregate-average-overflow",
+        "target": "rust.view-footer",
+        "text": "\u26a0 Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.group-footer",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "aggregate-average-overflow",
+        "target": "rust.group-footer",
+        "text": "\u26a0 Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.subgroup-footer",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "id": "aggregate-average-overflow",
+        "target": "rust.subgroup-footer",
+        "text": "\u26a0 Numeric overflow"
+      },
+      "failures": []
+    },
+    {
+      "id": "aggregate-average-overflow",
+      "target": "rust.chart-total",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "aggregate-average-overflow",
+        "target": "rust.chart-total"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-sqrt-near-one",
+      "target": "rust.formula",
+      "expected": {
+        "value": "5e-101"
+      },
+      "observed": {
+        "id": "transcendental-ln-sqrt-near-one",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.formula",
+        "text": "5e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-sqrt-near-one",
+      "target": "rust.computed",
+      "expected": {
+        "value": "5e-101"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "5e-101",
+          "v": "5E-101"
+        },
+        "id": "transcendental-ln-sqrt-near-one",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-sqrt-below-one",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-5e-101"
+      },
+      "observed": {
+        "id": "transcendental-ln-sqrt-below-one",
+        "raw": "-0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.formula",
+        "text": "-5e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-sqrt-below-one",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-5e-101"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-5e-101",
+          "v": "-5E-101"
+        },
+        "id": "transcendental-ln-sqrt-below-one",
+        "raw": "-0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1e-100"
+      },
+      "observed": {
+        "id": "transcendental-exp-cancellation",
+        "raw": "0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        "target": "rust.formula",
+        "text": "1e-100"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1e-100"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1e-100",
+          "v": "1E-100"
+        },
+        "id": "transcendental-exp-cancellation",
+        "raw": "0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-negative-cancellation",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-1e-100"
+      },
+      "observed": {
+        "id": "transcendental-exp-negative-cancellation",
+        "raw": "-0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        "target": "rust.formula",
+        "text": "-1e-100"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-negative-cancellation",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-1e-100"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-1e-100",
+          "v": "-1E-100"
+        },
+        "id": "transcendental-exp-negative-cancellation",
+        "raw": "-0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-below-grid",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1e-1000",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "transcendental-exp-below-grid",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "1e-1000"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-below-grid",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1e-1000",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1e-1000",
+          "v": "0.0"
+        },
+        "id": "transcendental-exp-below-grid",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-one",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "transcendental-ln-one",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-one",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "transcendental-ln-one",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-zero",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "id": "transcendental-exp-zero",
+        "raw": "1",
+        "target": "rust.formula",
+        "text": "1"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-zero",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1",
+          "v": "1.0"
+        },
+        "id": "transcendental-exp-zero",
+        "raw": "1",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-one",
+      "target": "rust.formula",
+      "expected": {
+        "value": "2.71828182846",
+        "binary64_bits": "4005bf0a8b145769"
+      },
+      "observed": {
+        "id": "transcendental-exp-one",
+        "raw": "2.718281828459045",
+        "target": "rust.formula",
+        "text": "2.71828182846"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-one",
+      "target": "rust.computed",
+      "expected": {
+        "value": "2.71828182846",
+        "binary64_bits": "4005bf0a8b145769"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "2.71828182846",
+          "v": "2.718281828459045"
+        },
+        "id": "transcendental-exp-one",
+        "raw": "2.718281828459045",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-huge-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "transcendental-exp-huge-negative",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-huge-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "transcendental-exp-huge-negative",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-subnormal",
+      "target": "rust.formula",
+      "expected": {
+        "value": "2.82235073047e-324",
+        "binary64_bits": "0000000000000001"
+      },
+      "observed": {
+        "id": "transcendental-exp-subnormal",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.formula",
+        "text": "2.82235073047e-324"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-subnormal",
+      "target": "rust.computed",
+      "expected": {
+        "value": "2.82235073047e-324",
+        "binary64_bits": "0000000000000001"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "2.82235073047e-324",
+          "v": "5E-324"
+        },
+        "id": "transcendental-exp-subnormal",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-underflow",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "id": "transcendental-exp-underflow",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-underflow",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0",
+        "binary64_bits": "0000000000000000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "transcendental-exp-underflow",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-exact-reciprocal",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-10"
+      },
+      "observed": {
+        "id": "transcendental-log2-exact-reciprocal",
+        "raw": "-10",
+        "target": "rust.formula",
+        "text": "-10"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-exact-reciprocal",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-10"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-10",
+          "v": "-10.0"
+        },
+        "id": "transcendental-log2-exact-reciprocal",
+        "raw": "-10",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-exact-reciprocal",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-1000"
+      },
+      "observed": {
+        "id": "transcendental-log10-exact-reciprocal",
+        "raw": "-1000",
+        "target": "rust.formula",
+        "text": "-1000"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-exact-reciprocal",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-1000"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-1000",
+          "v": "-1000.0"
+        },
+        "id": "transcendental-log10-exact-reciprocal",
+        "raw": "-1000",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-near-one",
+      "target": "rust.formula",
+      "expected": {
+        "value": "7.21347520444e-101"
+      },
+      "observed": {
+        "id": "transcendental-log2-near-one",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007213475204444817",
+        "target": "rust.formula",
+        "text": "7.21347520444e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-near-one",
+      "target": "rust.computed",
+      "expected": {
+        "value": "7.21347520444e-101"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "7.21347520444e-101",
+          "v": "7.213475204444817E-101"
+        },
+        "id": "transcendental-log2-near-one",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007213475204444817",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-near-one",
+      "target": "rust.formula",
+      "expected": {
+        "value": "2.17147240952e-101"
+      },
+      "observed": {
+        "id": "transcendental-log10-near-one",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002171472409516259",
+        "target": "rust.formula",
+        "text": "2.17147240952e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-near-one",
+      "target": "rust.computed",
+      "expected": {
+        "value": "2.17147240952e-101"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "2.17147240952e-101",
+          "v": "2.171472409516259E-101"
+        },
+        "id": "transcendental-log10-near-one",
+        "raw": "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002171472409516259",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-exact-negative-rational",
+      "target": "rust.formula",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "id": "transcendental-cbrt-exact-negative-rational",
+        "raw": "0",
+        "target": "rust.formula",
+        "text": "0"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-exact-negative-rational",
+      "target": "rust.computed",
+      "expected": {
+        "value": "0"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "0",
+          "v": "0.0"
+        },
+        "id": "transcendental-cbrt-exact-negative-rational",
+        "raw": "0",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-irrational-negative",
+      "target": "rust.formula",
+      "expected": {
+        "value": "-1.25992104989"
+      },
+      "observed": {
+        "id": "transcendental-cbrt-irrational-negative",
+        "raw": "-1.2599210498948732",
+        "target": "rust.formula",
+        "text": "-1.25992104989"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-irrational-negative",
+      "target": "rust.computed",
+      "expected": {
+        "value": "-1.25992104989"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "-1.25992104989",
+          "v": "-1.2599210498948732"
+        },
+        "id": "transcendental-cbrt-irrational-negative",
+        "raw": "-1.2599210498948732",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-refinement",
+      "target": "rust.formula",
+      "expected": {
+        "value": "1.66666666667e-101"
+      },
+      "observed": {
+        "id": "transcendental-cbrt-refinement",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016666666666666668",
+        "target": "rust.formula",
+        "text": "1.66666666667e-101"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-cbrt-refinement",
+      "target": "rust.computed",
+      "expected": {
+        "value": "1.66666666667e-101"
+      },
+      "observed": {
+        "computed": {
+          "t": "number",
+          "text": "1.66666666667e-101",
+          "v": "1.6666666666666668E-101"
+        },
+        "id": "transcendental-cbrt-refinement",
+        "raw": "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016666666666666668",
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-domain-after-refinement",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "transcendental-ln-domain-after-refinement",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-ln-domain-after-refinement",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "transcendental-ln-domain-after-refinement",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-domain",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "transcendental-log2-domain",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log2-domain",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "transcendental-log2-domain",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-domain",
+      "target": "rust.formula",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "error": "Not a real number",
+        "id": "transcendental-log10-domain",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-log10-domain",
+      "target": "rust.computed",
+      "expected": {
+        "error": "domain"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Not a real number",
+          "v": null
+        },
+        "id": "transcendental-log10-domain",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-finite-limit-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "transcendental-exp-finite-limit-overflow",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-finite-limit-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "transcendental-exp-finite-limit-overflow",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-negative-result-overflow",
+      "target": "rust.formula",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "error": "Numeric overflow",
+        "id": "transcendental-exp-negative-result-overflow",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "transcendental-exp-negative-result-overflow",
+      "target": "rust.computed",
+      "expected": {
+        "error": "overflow"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 Numeric overflow",
+          "v": null
+        },
+        "id": "transcendental-exp-negative-result-overflow",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-projection-meter",
+      "target": "rust.exact-meter",
+      "expected": {
+        "charges": [
+          1411200,
+          89888,
+          352800
+        ]
+      },
+      "observed": {
+        "charges": [
+          1411200,
+          89888,
+          352800
+        ],
+        "id": "exact-projection-meter",
+        "rejected": [
+          true,
+          true,
+          true
+        ],
+        "target": "rust.exact-meter"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-format-budget-implicit",
+      "target": "rust.formula",
+      "expected": {
+        "error": "work-budget"
+      },
+      "observed": {
+        "error": "The formula exceeds its arithmetic work budget",
+        "id": "exact-format-budget-implicit",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-format-budget-implicit",
+      "target": "rust.computed",
+      "expected": {
+        "error": "work-budget"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 The formula exceeds its arithmetic work budget",
+          "v": null
+        },
+        "id": "exact-format-budget-implicit",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-format-budget-explicit",
+      "target": "rust.formula",
+      "expected": {
+        "error": "work-budget"
+      },
+      "observed": {
+        "error": "The formula exceeds its arithmetic work budget",
+        "id": "exact-format-budget-explicit",
+        "target": "rust.formula"
+      },
+      "failures": []
+    },
+    {
+      "id": "exact-format-budget-explicit",
+      "target": "rust.computed",
+      "expected": {
+        "error": "work-budget"
+      },
+      "observed": {
+        "computed": {
+          "t": "error",
+          "text": "\u26a0 The formula exceeds its arithmetic work budget",
+          "v": null
+        },
+        "id": "exact-format-budget-explicit",
+        "raw": null,
+        "target": "rust.computed"
+      },
+      "failures": []
+    },
+    {
+      "id": "overlapping-interval-view-sort",
+      "target": "rust.view-sort",
+      "expected": {
+        "order": [
+          1,
+          0
+        ]
+      },
+      "observed": {
+        "id": "overlapping-interval-view-sort",
+        "order": [
+          1,
+          0
+        ],
+        "target": "rust.view-sort"
+      },
+      "failures": []
+    }
+  ]
+}

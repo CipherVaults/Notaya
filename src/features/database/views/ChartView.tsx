@@ -9,6 +9,7 @@ import type { ViewProps } from "../viewTypes";
 import { cn } from "@/lib/utils";
 import { isComputedKind } from "../model";
 import ChartDrill, { type Drill } from "./ChartDrill";
+import { axisFraction, niceTicks } from "./chartScale";
 import { EmptyState, HUES, PropSelect, propOf } from "./shared";
 
 const KINDS = [
@@ -299,24 +300,13 @@ function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] 
   return [ref, w];
 }
 
-/** Tick values that end on round numbers. */
-export function niceTicks(min: number, max: number, count = 5, integers = false): number[] {
-  if (!(max > min)) {
-    max = min + 1;
-  }
-  const raw = (max - min) / count;
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-  const norm = raw / mag;
-  let step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 && !integers ? 2.5 : norm <= 5 ? 5 : 10) * mag;
-  if (integers) step = Math.max(1, step);
-  const lo = Math.floor(min / step) * step;
-  const hi = Math.ceil(max / step) * step;
-  const out: number[] = [];
-  for (let v = lo; v <= hi + step / 2; v += step) out.push(Math.round(v / step) * step);
-  return out;
-}
-
-const compact = (n: number) => (Math.abs(n) >= 10000 ? new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n) : new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n));
+const compact = (n: number) => {
+  const magnitude = Math.abs(n);
+  if (magnitude >= 1e21 || (magnitude > 0 && magnitude < 0.01)) return n.toExponential(1);
+  return new Intl.NumberFormat(undefined, magnitude >= 10000
+    ? { notation: "compact", maximumFractionDigits: 1 }
+    : { maximumFractionDigits: 2 }).format(n);
+};
 const cut = (s: string, n: number) => (s.length > n ? s.slice(0, Math.max(1, n - 1)) + "…" : s);
 
 function Chart({ data, cfg, db, table, dim, open }: { data: ChartData; cfg: ChartConfig; db: Database; table: boolean; dim: boolean; open: (p: ChartPick) => void }) {
@@ -432,12 +422,15 @@ function Bars({ data, cfg, width, summary, show, hide, open }: Draw) {
   const n = data.labels.length;
   const k = data.series.length;
   const hasNeg = data.series.some((s) => s.points.some((p) => p.value < 0));
-  const stacked = cfg.stacked && k > 1 && !hasNeg;
   const maxLabel = Math.max(...data.labels.map((l) => (l || "No value").length), 1);
-  const stackSums = data.labels.map((_, i) => data.series.reduce((a, s) => a + Math.max(0, s.points[i]?.value ?? 0), 0));
+  const stackSums = cfg.stacked && k > 1 && !hasNeg
+    ? data.labels.map((_, i) => data.series.reduce((a, s) => a + (s.points[i]?.value ?? 0), 0))
+    : [];
+  // If a stack has no finite endpoint, every point can still be drawn as a separate bar.
+  const stacked = stackSums.length > 0 && stackSums.every(Number.isFinite);
   const all = data.series.flatMap((s) => s.points.map((p) => p.value));
-  const hi = stacked ? Math.max(...stackSums, 0) : Math.max(...all, 0);
-  const lo = stacked ? 0 : Math.min(...all, 0);
+  const hi = (stacked ? stackSums : all).reduce((a, b) => Math.max(a, b), 0);
+  const lo = stacked ? 0 : all.reduce((a, b) => Math.min(a, b), 0);
   const ticks = niceTicks(lo, hi, 5, all.every(Number.isInteger) && (!stacked || stackSums.every(Number.isInteger)));
   const vmin = ticks[0];
   const vmax = ticks[ticks.length - 1];
@@ -453,8 +446,8 @@ function Bars({ data, cfg, width, summary, show, hide, open }: Draw) {
   const bottom = horizontal ? 28 : rotate ? Math.min(90, maxLabel * 5 + 20) : 30;
   const height = horizontal ? m.t + n * rowH + bottom : 320;
   const innerH = horizontal ? n * rowH : height - m.t - bottom;
-  const vx = (v: number) => m.l + ((v - vmin) / (vmax - vmin || 1)) * innerW;
-  const vy = (v: number) => m.t + innerH - ((v - vmin) / (vmax - vmin || 1)) * innerH;
+  const vx = (v: number) => m.l + axisFraction(v, vmin, vmax) * innerW;
+  const vy = (v: number) => m.t + innerH - axisFraction(v, vmin, vmax) * innerH;
   const groupW = band * 0.72;
   const barW = stacked ? Math.min(groupW, 56) : Math.min(groupW / k, 44);
   const bars: ReactNode[] = [];
@@ -469,7 +462,7 @@ function Bars({ data, cfg, width, summary, show, hide, open }: Draw) {
       const color = k === 1 && p.color ? paint(p.color, li) : seriesColor(s, si, cfg);
       const off = stacked ? 0 : (si - (k - 1) / 2) * barW;
       const base = stacked ? acc : 0;
-      const top = stacked ? acc + Math.max(0, v) : v;
+      const top = stacked ? acc + v : v;
       if (stacked) acc = top;
       const a = Math.min(vy(base), vy(top));
       const hgt = Math.max(Math.abs(vy(top) - vy(base)), v === 0 ? 0 : 1.5);
@@ -556,7 +549,9 @@ function Bars({ data, cfg, width, summary, show, hide, open }: Draw) {
 function Lines({ data, cfg, width, summary, show, hide, open }: Draw) {
   const n = data.labels.length;
   const all = data.series.flatMap((s) => s.points.map((p) => p.value));
-  const ticks = niceTicks(Math.min(...all, 0), Math.max(...all, 0), 5, all.every(Number.isInteger));
+  const lo = all.reduce((a, b) => Math.min(a, b), 0);
+  const hi = all.reduce((a, b) => Math.max(a, b), 0);
+  const ticks = niceTicks(lo, hi, 5, all.every(Number.isInteger));
   const vmin = ticks[0];
   const vmax = ticks[ticks.length - 1];
   const tickW = Math.max(...ticks.map((t) => compact(t).length)) * 6.5 + 12;
@@ -569,7 +564,7 @@ function Lines({ data, cfg, width, summary, show, hide, open }: Draw) {
   const height = 320;
   const innerH = height - m.t - bottom;
   const px = (i: number) => (n > 1 ? m.l + step * i : m.l + innerW / 2);
-  const py = (v: number) => m.t + innerH - ((v - vmin) / (vmax - vmin || 1)) * innerH;
+  const py = (v: number) => m.t + innerH - axisFraction(v, vmin, vmax) * innerH;
   const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(innerW / (rotate ? 22 : Math.min(110, maxLabel * 6.5 + 14))))));
   return (
     <div>
@@ -629,12 +624,19 @@ function Lines({ data, cfg, width, summary, show, hide, open }: Draw) {
 function Donut({ data, cfg, width, summary, show, hide, open }: Draw) {
   const slices = useMemo(() => {
     if (data.series.length > 1) {
-      return data.series.map((s, i) => ({ label: s.name, value: s.points.reduce((a, p) => a + Math.max(0, p.value), 0), text: String(Math.round(s.points.reduce((a, p) => a + Math.max(0, p.value), 0) * 100) / 100), color: seriesColor(s, i, cfg) }));
+      return data.series.map((s, i) => ({
+        label: s.name,
+        value: s.donutSlice?.value ?? 0,
+        text: s.donutSlice?.text ?? "0",
+        color: seriesColor(s, i, cfg),
+      }));
     }
     const s = data.series[0];
     return (s?.points ?? []).map((p, i) => ({ label: p.label, value: Math.max(0, p.value), text: p.text, color: paint(p.color, i) }));
   }, [data, cfg]);
-  const sum = slices.reduce((a, s) => a + s.value, 0) || 1;
+  const largest = slices.reduce((max, s) => Math.max(max, s.value), 0) || 1;
+  const sum = slices.reduce((a, s) => a + s.value / largest, 0) || 1;
+  const fraction = (value: number) => (value / largest) / sum;
   // One series: a slice is a label. Several series: a slice is a series (all its labels).
   const pickOfSlice = (i: number): ChartPick => (data.series.length > 1 ? { si: i } : { li: i });
   const wide = width >= 520;
@@ -649,7 +651,7 @@ function Donut({ data, cfg, width, summary, show, hide, open }: Draw) {
         <title>{summary}</title>
         <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
           {slices.map((s, i) => {
-            const len = (s.value / sum) * circ;
+            const len = fraction(s.value) * circ;
             const el = (
               <circle
                 key={i}
@@ -666,7 +668,7 @@ function Donut({ data, cfg, width, summary, show, hide, open }: Draw) {
                 role="button"
                 tabIndex={0}
                 aria-label={`${s.label || "No value"}: ${s.text}. Click to view data`}
-                onMouseMove={(e) => show(e, s.label, [{ color: s.color, name: `${Math.round((s.value / sum) * 1000) / 10}%`, text: s.text }])}
+                onMouseMove={(e) => show(e, s.label, [{ color: s.color, name: `${Math.round(fraction(s.value) * 1000) / 10}%`, text: s.text }])}
                 onMouseLeave={hide}
                 onClick={() => (hide(), open(pickOfSlice(i)))}
                 onKeyDown={clickKeys(() => open(pickOfSlice(i)))}
@@ -686,7 +688,7 @@ function Donut({ data, cfg, width, summary, show, hide, open }: Draw) {
               <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
               <span dir="auto" className="min-w-0 truncate">{s.label || "No value"}</span>
               <span className="ms-auto ps-3 tabular-nums text-muted">{s.text}</span>
-              <span className="w-11 text-end tabular-nums text-faint">{Math.round((s.value / sum) * 100)}%</span>
+              <span className="w-11 text-end tabular-nums text-faint">{Math.round(fraction(s.value) * 100)}%</span>
             </button>
           </li>
         ))}

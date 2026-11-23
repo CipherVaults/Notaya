@@ -3,10 +3,10 @@
 
 use crate::actions::Actor;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{json, value::{to_raw_value, RawValue}, Map, Value};
 use tauri::State;
 
 use super::automation;
@@ -150,7 +150,7 @@ fn text_cell(v: &Value, max: usize) -> Option<Value> {
 
 /// Checks one cell value against its property and returns the cleaned value (None = empty).
 /// Err for a value of the wrong shape.
-pub fn clean_cell(s: &Session, db: &Database, prop: &Property, v: &Value) -> Result<Option<Value>> {
+fn clean_cell(s: &Session, db: &Database, prop: &Property, v: &Value) -> Result<Option<Value>> {
     if v.is_null() {
         return Ok(None);
     }
@@ -159,18 +159,7 @@ pub fn clean_cell(s: &Session, db: &Database, prop: &Property, v: &Value) -> Res
         PropKind::Title => return Err(Error::invalid("The title is set with the row's name.")),
         PropKind::Text => text_cell(v, MAX_CELL_TEXT),
         PropKind::Url | PropKind::Email | PropKind::Phone => text_cell(v, 2000),
-        PropKind::Number => match v {
-            Value::Number(n) => {
-                let f = n.as_f64().ok_or_else(bad)?;
-                if !f.is_finite() {
-                    return Err(bad());
-                }
-                Some(json!(f))
-            }
-            Value::String(t) if t.trim().is_empty() => None,
-            Value::String(t) => Some(json!(t.trim().parse::<f64>().ok().filter(|f| f.is_finite()).ok_or_else(bad)?)),
-            _ => return Err(bad()),
-        },
+        PropKind::Number => return Err(bad()), // Numeric cells are validated as decimal tokens.
         PropKind::Select | PropKind::Status => match v {
             Value::String(id) if prop.option(id).is_some() => Some(v.clone()),
             Value::String(id) if id.is_empty() => None,
@@ -301,15 +290,12 @@ pub(crate) fn clean_template_cells(s: &Session, db: &Database, raw: &str) -> Res
     if raw.trim().is_empty() {
         return Ok(String::new());
     }
-    let Value::Object(map) = serde_json::from_str::<Value>(raw)
-        .map_err(|_| Error::invalid("Template cells must be a JSON object."))?
-    else {
-        return Err(Error::invalid("Template cells must be a JSON object."));
-    };
-    let mut cleaned = Map::new();
+    let map: RawCells = serde_json::from_str(raw)
+        .map_err(|_| Error::invalid("Template cells must be a JSON object."))?;
+    let mut cleaned = RawCells::new();
     for (k, v) in map {
-        let p = db.prop(&k).ok_or(Error::NotFound)?.clone();
-        if let Some(val) = clean_cell(s, db, &p, &v)? {
+        let p = db.prop(&k).ok_or(Error::NotFound)?;
+        if let Some(val) = clean_raw_cell(s, db, p, &v)? {
             cleaned.insert(k, val);
         }
     }
@@ -320,17 +306,66 @@ pub(crate) fn clean_template_cells(s: &Session, db: &Database, raw: &str) -> Res
     }
 }
 
-pub(crate) fn parse_cells(r: &Row) -> Map<String, Value> {
-    serde_json::from_str::<Value>(&r.cells).ok().and_then(|v| if let Value::Object(m) = v { Some(m) } else { None }).unwrap_or_default()
+type RawCells = BTreeMap<String, Box<RawValue>>;
+
+fn raw_cells(r: &Row) -> RawCells {
+    serde_json::from_str(&r.cells).unwrap_or_default()
 }
 
-pub(crate) fn write_cells(r: &mut Row, m: &Map<String, Value>) -> Result<()> {
-    let text = serde_json::to_string(m).map_err(|e| Error::Other(e.to_string()))?;
+fn cell_values(cells: &RawCells) -> Map<String, Value> {
+    cells.iter().filter_map(|(id, raw)| serde_json::from_str(raw.get()).ok().map(|v| (id.clone(), v))).collect()
+}
+
+pub(crate) fn parse_cells(r: &Row) -> Map<String, Value> {
+    cell_values(&raw_cells(r))
+}
+
+fn raw_json(v: &Value) -> Result<Box<RawValue>> {
+    to_raw_value(v).map_err(|e| Error::Other(e.to_string()))
+}
+
+fn write_raw_cells(r: &mut Row, cells: &RawCells) -> Result<()> {
+    let text = serde_json::to_string(cells).map_err(|e| Error::Other(e.to_string()))?;
     if text.len() > 20_000_000 {
         return Err(Error::invalid("This row holds too much data."));
     }
     r.cells = text;
     Ok(())
+}
+
+pub(crate) fn write_cells(r: &mut Row, m: &Map<String, Value>) -> Result<()> {
+    let mut raw = raw_cells(r);
+    let old = cell_values(&raw);
+    raw.retain(|key, _| !old.contains_key(key) || m.contains_key(key));
+    for (key, value) in m {
+        if old.get(key) != Some(value) {
+            raw.insert(key.clone(), raw_json(value)?);
+        }
+    }
+    write_raw_cells(r, &raw)
+}
+
+fn clean_raw_cell(s: &Session, db: &Database, prop: &Property, v: &RawValue) -> Result<Option<Box<RawValue>>> {
+    let invalid = || Error::invalid(format!("That value does not fit the property \"{}\".", prop.name));
+    let raw = v.get();
+    if prop.kind != PropKind::Number {
+        let value = serde_json::from_str(raw).map_err(|_| invalid())?;
+        return clean_cell(s, db, prop, &value)?.as_ref().map(raw_json).transpose();
+    }
+    if raw == "null" {
+        return Ok(None);
+    }
+    if raw.starts_with('"') {
+        let text: String = serde_json::from_str(raw).map_err(|_| invalid())?;
+        let text = text.trim();
+        if text.is_empty() {
+            return Ok(None);
+        }
+        let token = value::Number::json_decimal(text).map_err(|_| invalid())?;
+        return RawValue::from_string(token).map(Some).map_err(|_| invalid());
+    }
+    value::Number::decimal(raw).map_err(|_| invalid())?;
+    Ok(Some(v.to_owned()))
 }
 
 // ---------------------------------------------------------------- starter databases
@@ -777,7 +812,7 @@ pub(crate) fn create_row_core(
     s.run_as(_actor, |s| {
     limit("Title", &title, 300)?;
     let given = parse_given(&cells)?;
-    let id = add_row_inner(s, &database_id, title, &given, &template_id)?;
+    let id = add_row_with_tokens(s, &database_id, title, &given, &template_id)?;
     let mut run = automation::Run::default();
     automation::fire(s, &mut run, &id, &automation::Event::Added, 0);
     automation::finish(s, run);
@@ -786,18 +821,23 @@ pub(crate) fn create_row_core(
 }
 
 
-fn parse_given(cells: &str) -> Result<Map<String, Value>> {
+fn parse_given(cells: &str) -> Result<RawCells> {
     if cells.trim().is_empty() {
-        return Ok(Map::new());
+        return Ok(RawCells::new());
     }
-    match serde_json::from_str::<Value>(cells) {
-        Ok(Value::Object(g)) => Ok(g),
-        _ => Err(Error::invalid("Those cell values are not valid.")),
-    }
+    serde_json::from_str(cells).map_err(|_| Error::invalid("Those cell values are not valid."))
+}
+
+fn raw_patch(given: &Map<String, Value>) -> Result<RawCells> {
+    given.iter().map(|(key, value)| Ok((key.clone(), raw_json(value)?))).collect()
 }
 
 /// Makes and saves a row (no automations run here). Returns its id.
 pub(crate) fn add_row_inner(s: &mut Session, database_id: &str, title: String, given: &Map<String, Value>, template_id: &str) -> Result<String> {
+    add_row_with_tokens(s, database_id, title, &raw_patch(given)?, template_id)
+}
+
+fn add_row_with_tokens(s: &mut Session, database_id: &str, title: String, given: &RawCells, template_id: &str) -> Result<String> {
     let mut db = database(s, database_id)?;
     let mut r = new_row(s, &mut db, title)?;
     let tid = match template_id {
@@ -809,10 +849,10 @@ pub(crate) fn add_row_inner(s: &mut Session, database_id: &str, title: String, g
         apply_template(&mut r, t);
         r.cells = clean_template_cells(s, &db, &r.cells)?;
     }
-    let mut m = parse_cells(&r);
+    let mut m = raw_cells(&r);
     for (k, v) in given {
         let p = db.prop(k).ok_or(Error::NotFound)?.clone();
-        match clean_cell(s, &db, &p, v)? {
+        match clean_raw_cell(s, &db, &p, v)? {
             Some(c) => {
                 m.insert(k.clone(), c);
             }
@@ -821,9 +861,9 @@ pub(crate) fn add_row_inner(s: &mut Session, database_id: &str, title: String, g
             }
         }
     }
-    write_cells(&mut r, &m)?;
+    write_raw_cells(&mut r, &m)?;
     let id = r.id.clone();
-    let mut items = relation_sync_diff(s, &id, None, &m, &db)?;
+    let mut items = relation_sync_diff(s, &id, None, &cell_values(&m), &db)?;
     items.push(Item::Row(r));
     items.push(Item::Database(db));
     s.put_many(items)?;
@@ -859,7 +899,7 @@ pub(crate) fn set_cells_core(
         limit("Title", t, 300)?;
     }
     let given = parse_given(&patch)?;
-    let changed = change_row(s, &row_id, title, &given)?;
+    let changed = change_row_with_tokens(s, &row_id, title, &given)?;
     if !changed.is_empty() {
         let mut run = automation::Run::default();
         automation::fire(s, &mut run, &row_id, &automation::Event::Changed(&changed), 0);
@@ -873,13 +913,33 @@ pub(crate) fn set_cells_core(
 /// Changes cells (and the title) of a row and saves it (no automations run here).
 /// Returns the ids of the properties whose value changed ("title" for the title).
 pub(crate) fn change_row(s: &mut Session, row_id: &str, title: Option<String>, given: &Map<String, Value>) -> Result<Vec<String>> {
+    change_row_with_tokens(s, row_id, title, &raw_patch(given)?)
+}
+
+fn change_row_with_tokens(s: &mut Session, row_id: &str, title: Option<String>, given: &RawCells) -> Result<Vec<String>> {
     let mut r = row(s, row_id)?;
     let db = database(s, &r.db)?;
-    let old = parse_cells(&r);
-    let mut m = old.clone();
+    let mut m = raw_cells(&r);
+    let old = cell_values(&m);
+    let mut changed = Vec::new();
     for (k, v) in given {
         let p = db.prop(k).ok_or(Error::NotFound)?.clone();
-        match clean_cell(s, &db, &p, v)? {
+        let cleaned = clean_raw_cell(s, &db, &p, v)?;
+        let before = m.get(k).map(|v| v.get());
+        let after = cleaned.as_deref().map(RawValue::get);
+        if before != after {
+            let same = match (before, after) {
+                (Some(a), Some(b)) if p.kind == PropKind::Number => {
+                    value::Number::decimal(a).ok().is_some_and(|n| Ok(n) == value::Number::decimal(b))
+                }
+                (Some(a), Some(b)) => serde_json::from_str::<Value>(a).ok().is_some_and(|v| Some(v) == serde_json::from_str(b).ok()),
+                _ => false,
+            };
+            if !same {
+                changed.push(k.clone());
+            }
+        }
+        match cleaned {
             Some(c) => {
                 m.insert(k.clone(), c);
             }
@@ -888,8 +948,7 @@ pub(crate) fn change_row(s: &mut Session, row_id: &str, title: Option<String>, g
             }
         }
     }
-    let mut changed: Vec<String> = given.keys().filter(|k| old.get(*k) != m.get(*k)).cloned().collect();
-    write_cells(&mut r, &m)?;
+    write_raw_cells(&mut r, &m)?;
     if let Some(t) = title {
         if t != r.title {
             changed.push(TITLE_PROP.to_string());
@@ -897,7 +956,7 @@ pub(crate) fn change_row(s: &mut Session, row_id: &str, title: Option<String>, g
         r.title = t;
     }
     r.updated = now_ms();
-    let mut items = relation_sync_diff(s, row_id, Some(&old), &m, &db)?;
+    let mut items = relation_sync_diff(s, row_id, Some(&old), &cell_values(&m), &db)?;
     items.push(Item::Row(r));
     s.put_many(items)?;
     changed.sort();
@@ -947,12 +1006,12 @@ pub(crate) fn duplicate_row_core(s: &mut Session, _actor: &Actor, row_id: String
     r.text = src.text.clone();
     r.icon = src.icon.clone();
     r.cover = src.cover.clone();
-    let mut m = parse_cells(&src);
+    let mut m = raw_cells(&src);
     // Computed and unique-looking things are not copied; relations are, with their other side updated.
     m.retain(|k, _| db.prop(k).map_or(false, |p| !p.kind.is_computed() && p.kind != PropKind::Id));
-    write_cells(&mut r, &m)?;
+    write_raw_cells(&mut r, &m)?;
     let id = r.id.clone();
-    let mut items = relation_sync_diff(s, &id, None, &m, &db)?;
+    let mut items = relation_sync_diff(s, &id, None, &cell_values(&m), &db)?;
     items.push(Item::Row(r));
     items.push(Item::Database(db));
     s.put_many(items)?;
@@ -1373,7 +1432,7 @@ pub(crate) fn chart_data_core(
     let view = tmp.views.iter().find(|x| x.id == view.id).cloned().ok_or(Error::NotFound)?;
     let ctx = ctx_of(s);
     let dbref = ctx.dbs.get(db.id.as_str()).copied().unwrap_or(&db);
-    Ok(crate::database::chart::chart_data(&ctx, dbref, &view))
+    crate::database::chart::chart_data(&ctx, dbref, &view).map_err(Error::invalid)
 }
 
 
@@ -1728,15 +1787,78 @@ mod tests {
         let mut s = temp_vault();
         let db = make_db(&mut s, "C");
         let qty = db.prop("n").unwrap().clone();
-        assert_eq!(clean_cell(&s, &db, &qty, &json!("4.5")).unwrap(), Some(json!(4.5)));
-        assert!(clean_cell(&s, &db, &qty, &json!("abc")).is_err());
-        assert_eq!(clean_cell(&s, &db, &qty, &json!("")).unwrap(), None);
+        assert_eq!(clean_raw_cell(&s, &db, &qty, &raw_json(&json!("4.5")).unwrap()).unwrap().unwrap().get(), "4.5");
+        assert!(clean_raw_cell(&s, &db, &qty, &raw_json(&json!("abc")).unwrap()).is_err());
+        assert!(clean_raw_cell(&s, &db, &qty, &raw_json(&json!("")).unwrap()).unwrap().is_none());
         let files = db.prop("f").unwrap().clone();
         assert!(clean_cell(&s, &db, &files, &json!([{"id": "../../etc"}])).is_err(), "only vault ids");
         let ok = clean_cell(&s, &db, &files, &json!([{"id": "a".repeat(32), "name": "..\\x<y>.pdf", "mime": "text/html"}])).unwrap().unwrap();
         assert_eq!(ok[0]["name"], "..xy.pdf");
         let title = db.props[0].clone();
         assert!(clean_cell(&s, &db, &title, &json!("x")).is_err());
+    }
+
+    #[test]
+    fn exact_cell_edit_create_and_reserialize_preserve_the_decimal() {
+        let mut s = temp_vault();
+        let mut db = make_db(&mut s, "Exact cells");
+        db.props.iter_mut().find(|p| p.id == "n").unwrap().number_format = "dollar".into();
+        db.props.push(Property { id: "memo".into(), name: "Memo".into(), kind: PropKind::Text, ..Property::default() });
+        s.put(Item::Database(db.clone())).unwrap();
+        const AMOUNT: &str = "999999999999.98499";
+        let template = format!(r#"{{"n":{AMOUNT}}}"#);
+        assert_eq!(clean_template_cells(&s, &db, &template).unwrap(), template);
+        let created = create_row_core(&mut s, &Actor::Person, db.id.clone(), "Raw decimal".into(),
+            format!(r#"{{"n":{AMOUNT}}}"#), "-".into()).unwrap();
+        let id = created.row.id.clone();
+        assert_eq!(created.row.number_input["n"], AMOUNT);
+        let edited = set_cells_core(&mut s, &Actor::Person, id.clone(), None,
+            format!(r#"{{"n":"{AMOUNT}"}}"#)).unwrap();
+        assert_eq!(edited.row.number_text["n"], "$999,999,999,999.98");
+        let edited = set_cells_core(&mut s, &Actor::Person, id.clone(), None,
+            r#"{"memo":"another column"}"#.into()).unwrap();
+        assert_eq!(edited.row.number_input["n"], AMOUNT);
+        let stored = row(&s, &id).unwrap();
+        assert_eq!(raw_cells(&stored)["n"].get(), AMOUNT);
+        assert!(set_cells_core(&mut s, &Actor::Person, id.clone(), None, r#"{"n":"Infinity"}"#.into()).is_err());
+        assert_eq!(row(&s, &id).unwrap().cells, stored.cells);
+    }
+
+    #[test]
+    fn csv_and_standalone_exports_format_exact_currency_and_propagate_errors() {
+        let mut s = temp_vault();
+        let mut db = make_db(&mut s, "Money");
+        db.props.iter_mut().find(|p| p.id == "n").unwrap().number_format = "dollar".into();
+        let id = add_row(&mut s, &mut db, "Money", r#"{"n":999999999999.98499}"#);
+        for spreadsheet in [true, false] {
+            let lines = export_lines(&s, &db.id, None, spreadsheet).unwrap();
+            assert_eq!(lines[1][1], "$999,999,999,999.98");
+            if spreadsheet {
+                let csv = crate::database::csv::write(&lines);
+                assert!(String::from_utf8(csv).unwrap().contains("\"$999,999,999,999.98\""));
+            } else {
+                let doc = crate::commands::database_io::table_doc(lines, "Money");
+                assert!(crate::export::html::render(&doc).unwrap().contains("$999,999,999,999.98"));
+            }
+        }
+        db.props.push(Property { id: "failing".into(), name: "Failing".into(), kind: PropKind::Formula, formula: "sqrt(-1e-400)".into(), ..Property::default() });
+        s.put(Item::Database(db.clone())).unwrap();
+        for spreadsheet in [true, false] {
+            let error = export_lines(&s, &db.id, None, spreadsheet).unwrap_err().to_string();
+            assert!(error.contains("Failing") && error.contains("Not a real number"), "{error}");
+        }
+        db.props.extend([
+            Property { id: "link".into(), name: "Link".into(), kind: PropKind::Relation, relation_db: db.id.clone(), ..Default::default() },
+            Property { id: "rollup".into(), name: "Rollup".into(), kind: PropKind::Rollup, rollup_relation: "link".into(), rollup_prop: "failing".into(), rollup_calc: "sum".into(), ..Default::default() },
+        ]);
+        let view_id = db.views[0].id.clone();
+        db.views[0].columns.push(Column { prop: "failing".into(), visible: false, width: 0 });
+        s.put(Item::Database(db.clone())).unwrap();
+        set_cells_core(&mut s, &Actor::Person, id.clone(), None, json!({"link": [id]}).to_string()).unwrap();
+        for spreadsheet in [true, false] {
+            let error = export_lines(&s, &db.id, Some(&view_id), spreadsheet).unwrap_err().to_string();
+            assert!(error.contains("Rollup") && error.contains("Not a real number"), "{error}");
+        }
     }
 
     #[test]

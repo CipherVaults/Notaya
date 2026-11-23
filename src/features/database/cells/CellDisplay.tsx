@@ -48,8 +48,9 @@ function Ring({ value, max }: { value: number; max: number }) {
   );
 }
 
-export function NumberValue({ prop, value }: { prop: Property; value: number }) {
-  const text = formatNumber(value, prop.numberFormat);
+export function NumberValue({ prop, value, text = formatNumber(value, prop.numberFormat) }: {
+  prop: Property; value: number; text?: string;
+}) {
   if (prop.numberDisplay === "bar" || prop.numberDisplay === "ring") {
     const max = prop.numberMax > 0 ? prop.numberMax : 100;
     return (
@@ -181,7 +182,7 @@ export default function CellDisplay({ prop, value, row, wrap }: Props) {
     case "text":
       return <span dir="auto" className={trunc}>{String(value)}</span>;
     case "number":
-      return typeof value === "number" ? <NumberValue prop={prop} value={value} /> : null;
+      return typeof value === "number" ? <NumberValue prop={prop} value={value} text={row?.numberText?.[prop.id]} /> : null;
     case "select": {
       const o = prop.options.find((x) => x.id === value);
       return o ? <OptionChip option={o} /> : null;
@@ -255,7 +256,7 @@ function ComputedValue({ prop, cell, wrap }: { prop: Property; cell: { t: string
   if (cell.t === "null" || (cell.text === "" && cell.t !== "bool")) return null;
   if (cell.t === "bool") return <CheckBox checked={cell.v === true} />;
   if (cell.t === "number" && typeof cell.v === "number" && (prop.numberDisplay === "bar" || prop.numberDisplay === "ring")) {
-    return <NumberValue prop={prop} value={cell.v} />;
+    return <NumberValue prop={prop} value={cell.v} text={cell.text} />;
   }
   if (cell.t === "list" && Array.isArray(cell.v) && prop.kind !== "formula" && prop.kind !== "rollup") {
     return <span dir="auto" className={trunc}>{cell.text}</span>;

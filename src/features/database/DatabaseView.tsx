@@ -284,6 +284,8 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
                 if (x.id !== rowId) return x;
                 const values = { ...x.values };
                 for (const [k, v] of Object.entries(patch)) {
+                  // Wait for the exact display and editor token from the save response.
+                  if (dbRef.current?.props.some((p) => p.id === k && p.kind === "number")) continue;
                   if (v === null) delete values[k];
                   else values[k] = v;
                 }
@@ -315,7 +317,7 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
       const row = resultRef.current?.rows.find((x) => x.id === rowId);
       if (row) {
         const prev: Record<string, unknown> = {};
-        for (const k of Object.keys(patch)) prev[k] = row.values[k] ?? null;
+        for (const k of Object.keys(patch)) prev[k] = row.numberInput?.[k] ?? row.values[k] ?? null;
         if (Object.keys(patch).some((k) => !same(patch[k], prev[k]))) {
           const names = Object.keys(patch).map((k) => dbRef.current?.props.find((p) => p.id === k)?.name ?? "a value");
           const clear = Object.values(patch).every((v) => v == null);
