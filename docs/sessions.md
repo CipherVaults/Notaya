@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 196 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Qualify the v1.6 Windows release candidate](#session-196) |
 | 195 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Verify eight v1.6 tracks for integration](#session-195) |
 | 194 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native W195 restore interruption and complete Wave 1 audits](#session-194) |
 | 193 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify restore rollback and prepare successor handoff](#session-193) |
@@ -227,6 +228,92 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-196"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Qualify the v1.6 Windows release candidate
+
+**Who and where.** Ahmed's side (`AE0101`), Gaming-PC. Antigravity coordinated the v1.6 work. Local Codex executors implemented the desktop polish and fixes, independent Codex CLI reviewers audited each revision, and the Step 3 executor rebuilt the packages and recorded Windows QA. The records editor reconciled the receipts with Git and the staged package bytes. **Models, Effort, Roles and Provenance.** Ahmed reported `gpt-6.2-sol`, `xhigh` and `fast` for the five read-only polish audits. The report headers establish their reviewed revisions and verdicts. Exact serving settings for the implementation and native QA, active time, tokens and quota readings were unavailable. [Coordination authority](plan/approval-and-amendments.md#a57-antigravity-coordination-20261122) · [Session 195](#session-195).
+
+## 1. Time
+
+2026-11-23 UTC. The integration audit records 10:45–10:58 UTC. The native package QA receipt records 15:21:34–15:50:49 UTC. These are recorded work windows. The exact timestamp of Ahmed's Session 196 records assignment was unavailable.
+
+## 2. Session Goal
+
+Bring the eight reviewed v1.6 tracks into one release candidate, check Windows desktop polish and qualify the rebuilt RC1 packages against disposable homes. Ahmed's follow-up assignment authorized a local two-file continuity commit on `codex/native-import-export-20261122`, starting from `a624a7e57c71b152c5cea985f80dbad4b781b353`. The records task ends with the local commit and a handback to the coordinator.
+
+## 3. Actions Taken
+
+1. **Integrate the reviewed tracks.** The `CipherVaults/Notaya` branch `AE0101/v1-6-rc` brought together Security Areas 3 and 4, A44/G3, N3, Q1, P7, P8 and A57 at `94f48841eacab0c2e61fd4d52b651eb1a9e9f63a` (tree `09eed3ffc8b99285a61ad82642cdd4141689cebf`). The integration review passed. This records pass confirmed all eight pinned tips are ancestors of that commit.
+2. **Polish and review the Windows desktop.** The branch aligned version metadata at `1.6.0` and added `dev-mock/native-polish-check.cjs`. The polish series touched `src-tauri/src/ui.rs`, `src/main.tsx`, `src/components/Shell.tsx`, `src/features/database/RowPeek.tsx`, `src/features/notes/PageEditor.tsx`, `src/features/notes/editor/NoteFind.tsx`, `src/features/notes/editor/BlockHandle.tsx` and `src/styles/app.css`, among other editor and database files. The first four independent audits reported `# BLOCKED` on `0536631`, `3111706`, `70061b4` and `bc4ac5e`. The fifth reported `# PASS` on `42223a6e13dbd80b76c84e24119d2fb4f0f7348d` (commit tree `cfac457cac45df9ad74c6e06b68a0d2199351f19`). It confirmed that Escape closes an open editor menu before Find, and then closes the containing row peek on a subsequent press. The three frozen `golden/*.jsonl` fixtures and `formulas.json` are byte-identical to `cbf0193f`. The npm and app Cargo lockfile diffs contain three local version-field edits and leave external dependencies unchanged.
+3. **Read back the regression evidence.** The Fix 4 receipt binds checks to tested product tree `409f5943ff88d174c4dd114526b7504235bd2141`, which the audit reconstructed from the final commit with the baseline records. It reports `184/184` polish checks in each of dev, desktop-dev and production Chromium mock modes, 906 Windows Rust library tests passed (0 failed, 7 ignored), DB UI `68/68`, views `117/117`, Q1 candidate `33/33`, N3 `4/4` and Sticky interval `25/25`. TypeScript, the frontend and production mock builds, and the offline npm audit passed. Windows MSVC Clippy completed with 186 warnings. The numeric reference `366/366` and Calculator `86/86` carry forward from the integration audit on `94f4884` and the earlier desktop polish receipt (`v1-6-rc-polish-summary.txt`, source committed as `0536631`). Fix 4 did not rerun those two full suites.
+4. **Rebuild and identify the packages.** The Step 3 receipt records an offline release rebuild from `42223a6e13dbd80b76c84e24119d2fb4f0f7348d`. The records editor rehashed all four `Notaya-V1.6.0-RC1` artifacts and matched `hashes.txt`. The ten ZIP file entries independently matched the staged portable files by SHA-256.
+
+   | Artifact | Bytes | Version readback | SHA-256 |
+   |---|---:|---|---|
+   | `Notaya.exe` | 17,703,424 | Win32 `1.6.0` | `C1E43F5B5CB8EEC68FA1F460F6FD41A37148C6768B6448F1398DD970AB88002F` |
+   | `notaya-bridge.exe` | 421,888 | Cargo and stdio `1.6.0`. Win32 PE version fields are blank as before, since the bridge has no `.rc` resource script. | `AD65FDA2833F655455D195084F4E02910FF0480AFE9D04A399887B2B71DC35CA` |
+   | `Notaya-V1.6.0-portable.zip` | 9,888,638 | Package `1.6.0` | `E76DAAD1B902BAA85B785C5386CBF8E8FFCF69062F24E941DA44A9E74D5354D6` |
+   | `Notaya-V1.6.0-setup.exe` | 8,193,516 | Win32 `1.6.0` | `370BDF67C5D7E7D210FF455D404B8286BE1C04D2CCF7BF72E2CE40D843531897` |
+
+5. **Run the bundled suite and portable restart.** The extracted portable app preserved the disposable vault, note, database, row and Sticky after Quit and restart. Captured logs had zero panic signatures and the portable test interval had zero Windows Application Error, WER or AppHang events. The bundled suite passed `startup-ready` (`18/18`), `startup-probe` (`5/5`), `bridge-stdio`, `run-lockflow` (13 checks), `run-restoreflow` (12), `run-optionalsecurity` (47), and `run-tray` (12). The first two were browser-free Node checks. The native `startup-normal`, `startup-minimized`, `startup-delay` and `startup-held` cases each passed with exit `0`.
+6. **Observe first-navigation WebView2 and feature behavior.** `Ctrl+F` opened Command Palette on Home, Note Find in the editor and Row Find with focus inside the database view, with no Edge Find. `Ctrl+U`, `Ctrl+Shift+S` and `Ctrl+Shift+H` formatted text. `Ctrl+Shift+L` aligned the paragraph left and `Ctrl+L` locked the disposable vault. `F3`, `F5`, `F12`, `Ctrl+P`, `Ctrl+R`, `Ctrl+J` and `Ctrl+O` brought up no browser UI or reload. Right-click on non-editable chrome was suppressed and the editable text menu remained available. Sticky and Calculator opened in separate native windows, with no observed zoom change or link status bar. A44 passed the one-time safety copy and v2 compatibility check using a synthetic v1.5.1 vault. The N3 recheck passed canonical parent-row and folder-owned child navigation, including Back, Forward and trash/restore. A57 passed numeric sorting, exact Sum and Calculator decimal checks on the native app.
+7. **Measure P7/P8 at 100,000 rows in native Windows WebView2.** The native CSV import built the synthetic fixture and all five saved views survived restart. The reported open and switch timings end at the expected mounted rows plus two animation frames.
+
+   | View | Cold open or view switch | Tail jump |
+   |---|---:|---:|
+   | Table (cold database open) | 4.59 s | 96.7 ms |
+   | List | 2.96 s | 90.5 ms |
+   | Gallery | 2.96 s | 103.1 ms |
+   | Board | 3.17 s | 91.8 ms in the 95,001-row Doing column on recheck |
+   | Timeline | 2.92 s | 101 ms |
+
+   Timeline day-scale horizontal scroll took 35.8 ms on recheck. Find took 311.7 ms and the fresh Filter recheck took 566.4 ms. The loaded Table idle sample was 1,269 MiB working set and 1,203 MiB private bytes for the app and owned WebView2 processes. Sampled peaks were 1,596 MiB working set at the Board switch and 1,584 MiB private bytes at the List switch. These are measurements from this machine and fixture.
+
+## 4. Key Insights
+
+The package hashes bind the native observations to one concrete RC build. The integration review, Chromium mock checks and exact-executable checks each cover different parts of the release candidate. At 100,000 rows the tail jumps took about a tenth of a second after the views mounted. The initial view draw took several seconds and heavy shutdown exceeded the runner's initial waits.
+
+## 5. Decisions Made
+
+Ahmed authorized this records update and local commit for the two named files. The coordinator owns the records push and its remote verification. Ahmed retains private-data verification, A47, the `main` merge, version acceptance and release publication. [Standing scope and acceptance authority](plan/approval-and-amendments.md#a57-antigravity-coordination-20261122).
+
+## 6. Difficulties / Friction
+
+The first N3 navigation assertion matched a same-named CSV row before the canonical editor mounted. In the first scale run the Board probe targeted the smaller Todo column, the Timeline scroll did not change visible ticks at the initial scale, and the first Filter input reused the Find title. Initial Quit waits expired in the seed, timing and supplemental scale runs. Follow-up observation recorded exit `0` for each app process. The original nonzero harness exits remain in the local receipt.
+
+## 7. Adjustments Made
+
+The N3 recheck used the same imported vault and waited for both the canonical parent body and owned-child action. The scale supplement selected the Doing column, switched Timeline to day scale and tested Filter with a distinct title. The Git commit object and Fix 4 receipt corrected the tree reference in the handback. Audit #5 corroborated the commit tree `cfac457cac45df9ad74c6e06b68a0d2199351f19`.
+
+## 8. Mistakes / Risks Noted
+
+`run-installed` was not run because either home override bypasses the default installed location. Installer execution, Windows sign-in and RunKey behavior were not exercised. The 100,000-row timings are single-machine observations and memory peaks are sampled. The portable crash readback covered captured logs and Windows events. Audit #5 verified the Fix 4 receipt and reconstructed tree. The scratch regression logs were unavailable at the recorded location, so their hashes remain unverified by the reviewer.
+
+## 9. Current Position
+
+RC1 is built locally from the independently reviewed commit. The four hashes and ten ZIP members match, and the named native observations are recorded. The records update reached the local handoff on `codex/native-import-export-20261122`. Private-data verification, A47, `main` integration, Ahmed's acceptance and release publication are pending. [Current status](STATUS.md#v16-session-196-native-rc1-20261123).
+
+## 10. Next Steps
+
+1. The coordinator pushes the local records commit and compares the remote branch SHA with the local commit via `git ls-remote` and `gh api`.
+2. Ahmed completes or directs the private-data verification and A47 sweep for the pinned candidate, retaining private material locally.
+3. Ahmed decides on the `main` merge, v1.6 acceptance and publication.
+
+## 11. Open Questions
+
+Ahmed's disposition of the outstanding qualification and release gates remains open. Installed-path behavior on the exact setup package has no execution evidence in this checkpoint.
+
+## 12. Recommended Next Step
+
+Give the coordinator the local records commit SHA for remote verification. Use the pinned candidate and artifact hashes above for Ahmed's remaining checks.
+
+## 13. Session Type
+
+Release-candidate qualification checkpoint and records handoff. The local evidence is `codex-v1-6-rc-native-review-5.md`, `v1-6-rc-polish-fix4-summary.txt`, `hashes.txt` and `v1-6-rc-native-qa-summary.txt`. Fixtures, raw logs and screenshots stay on Gaming-PC.
+
+---
 
 <a id="session-195"></a>
 

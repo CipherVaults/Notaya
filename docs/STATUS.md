@@ -1,6 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="v16-session-196-native-rc1-20261123"></a>
+
+## v1.6 checkpoint: RC1 built and named Windows checks completed
+
+**2026-11-23, Ahmed's side (AE0101), Gaming-PC.** All eight reviewed v1.6 tracks came together at `94f48841eacab0c2e61fd4d52b651eb1a9e9f63a` on `AE0101/v1-6-rc` in `CipherVaults/Notaya`. After four rounds of desktop polish fixes, the fifth independent audit reported `# PASS` on `42223a6e13dbd80b76c84e24119d2fb4f0f7348d` (tree `cfac457cac45df9ad74c6e06b68a0d2199351f19`). The Fix 4 receipt records `184/184` checks in each of three Chromium mock modes and 906 passing Windows Rust library tests. [Session 196](sessions.md#session-196).
+
+**Native candidate.** The four rebuilt RC1 artifacts match the local manifest. The portable ZIP matched all ten staged files and preserved the disposable vault, note, database, row and Sticky across restart. The named Windows startup, lock, restore, optional-security, tray and bridge checks passed, along with first-navigation WebView2 polish and the scoped A44, N3 and A57 cases. The synthetic 100,000-row P7/P8 trial measured all five views, Find and Filter. Follow-up waits recorded exit `0` after the initial Quit timeouts. The installer was verified on disk. Installer execution and `run-installed` were not run. [Artifact hashes, timings and limits](sessions.md#session-196).
+
+**Continuation.** The coordinator takes the local records commit, pushes it and verifies its exact SHA with `git ls-remote` and `gh api`. Private-data verification, the A47 sweep, the `main` merge, v1.6 acceptance and release publication remain with Ahmed. All fixtures and raw evidence stay on Gaming-PC.
+
 <a id="v16-session-195-integration-checkpoint-20261123"></a>
 
 ## v1.6 checkpoint: eight reviewed tracks ready for integration
