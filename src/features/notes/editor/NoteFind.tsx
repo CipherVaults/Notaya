@@ -89,7 +89,7 @@ const button = "rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled
 export default function NoteFind({ editor, inputRef, onClose }: {
   editor: Editor;
   inputRef: Ref<HTMLInputElement>;
-  onClose: () => void;
+  onClose: (restoreFocus: boolean) => void;
 }) {
   const findBarRef = useRef<HTMLDivElement>(null);
   const { query, count, index } = useEditorState({ editor, selector: ({ editor }) => {
@@ -107,16 +107,22 @@ export default function NoteFind({ editor, inputRef, onClose }: {
       if (e.key !== "Escape" || e.isComposing || !(e.target instanceof Element)) return;
       const target = e.target;
       const bar = findBarRef.current;
-      if (!bar || (!bar.contains(target) && !editor.view.dom.contains(target))) return;
+      if (!bar) return;
+      const owner = bar.closest("[data-note-editor]");
+      if (!owner || !owner.contains(target)) return;
       const scope = '[data-note-editor], [data-database-view], [role="dialog"]';
-      if (target.closest(scope) !== bar.closest(scope)) return;
+      if (target.closest(scope) !== owner) return;
+      // A side peek can sit inside a database. Only property fields inside this note take priority.
+      const database = target.closest("[data-database]");
+      if (database && owner.contains(database) && target.closest("input, textarea, select")) return;
+      if (target.closest('[role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]')) return;
       e.preventDefault();
       e.stopPropagation();
-      onClose();
+      onClose(bar.contains(target));
     };
     window.addEventListener("keydown", onEscape, { capture: true });
     return () => window.removeEventListener("keydown", onEscape, { capture: true });
-  }, [editor, onClose]);
+  }, [onClose]);
 
   return (
     <div ref={findBarRef} role="search" aria-label="Note find" className="flex shrink-0 items-center justify-end gap-1 border-b border-line px-3 py-1.5">
@@ -143,7 +149,7 @@ export default function NoteFind({ editor, inputRef, onClose }: {
         onClick={() => changeFind(editor, { step: -1 })}><ChevronUp size={15} /></button>
       <button type="button" className={button} aria-label="Next match" title="Next match" disabled={!count}
         onClick={() => changeFind(editor, { step: 1 })}><ChevronDown size={15} /></button>
-      <button type="button" className={button} aria-label="Close find" title="Close find" onClick={onClose}><X size={15} /></button>
+      <button type="button" className={button} aria-label="Close find" title="Close find" onClick={() => onClose(true)}><X size={15} /></button>
     </div>
   );
 }

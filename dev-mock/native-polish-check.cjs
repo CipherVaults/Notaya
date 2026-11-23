@@ -262,20 +262,42 @@ async function rowPeekFindChecks(page) {
     await peek.waitFor({ state: "hidden" });
     checks.check(`${peekMode} Escape from a body paragraph closes the row`, !(await peek.isVisible()));
 
-    for (const focus of ["Find input", "row editor"]) {
+    const titleInput = peek.getByPlaceholder("Untitled", { exact: true });
+    for (const [focus, target] of [["Find input", find], ["row editor", editor], ["row title", titleInput]]) {
       await openRow();
       await editor.press("Control+f");
       await find.waitFor();
-      await (focus === "row editor" ? editor : find).focus();
+      if (target === titleInput) {
+        await titleInput.click();
+      } else {
+        await target.focus();
+      }
       await page.keyboard.press("Escape");
       await find.waitFor({ state: "hidden" });
       const staysOpen = await peek.isVisible();
       checks.check(`${peekMode} first Escape from ${focus} closes only Find`, staysOpen);
+      if (target === titleInput) {
+        checks.check(`${peekMode} closing Find keeps focus on the title`,
+          staysOpen && await titleInput.evaluate((el) => el === document.activeElement));
+      }
       if (staysOpen) {
         await page.keyboard.press("Escape");
         await peek.waitFor({ state: "hidden" });
         checks.check(`${peekMode} second Escape after ${focus} closes the row`, !(await peek.isVisible()));
       }
+    }
+
+    if (role === "complementary") {
+      await openRow();
+      await editor.press("Control+f");
+      await find.waitFor();
+      await value.click();
+      await input.fill("999");
+      await page.keyboard.press("Escape");
+      await input.waitFor({ state: "hidden" });
+      checks.check("Side peek inline Escape with Find open keeps the row open", await peek.isVisible());
+      checks.check("Side peek inline Escape with Find open preserves the saved estimate", await value.isVisible());
+      checks.check("Side peek inline Escape leaves Find open", await find.isVisible());
     }
   }
 }

@@ -1,5 +1,7 @@
 # Claim board
 
+**Local RC audit #3 claim, local handoff, 2026-11-23T14:34:53.3888908Z (system UTC), Ahmed (AE0101), Gaming-PC.** Ahmed's 2026-11-23T14:33:35.767Z instruction covers Finding 1 and its regression on `AE0101/v1-6-rc` from `70061b4df52043587ca87069b9f258d74acefa44`. The isolated write area covers Note Find, PageEditor, the mock regression and these handoff records. The endpoint is the local commit, verified bundle and designated checkout sync. Publication stays held. [RC audit #3 resume note](2026-11-23-v1-6-rc-polish-fix3-resume-note.md).
+
 **Local RC audit #2 claim, local handoff, 2026-11-23T14:07:51Z (system UTC), Ahmed (AE0101), Gaming-PC.** Ahmed authorized three desktop polish fixes and regression coverage from `3111706e4368bc46a0d6d9f8b829f6a09b483ced` on `AE0101/v1-6-rc`. Scope is the isolated scratch checkout, the local receipt and bundle, and a fast-forward of the designated RC checkout. Owner-message timestamp unavailable. Publication is held. [RC audit #2 resume note](2026-11-23-v1-6-rc-polish-fix2-resume-note.md).
 
 **Local RC audit-fix claim, 2026-11-23T13:44:19Z (system UTC), Ahmed (AE0101), Gaming-PC.** Ahmed authorized the two keyboard fixes and browser regressions from `0536631f733d801ad77f5e5ee10cab2dd543a124`. Work is confined to the isolated scratch checkout, the verification receipt and bundle, and the source/test sync to the named RC worktree. Owner-message timestamp unavailable. Local handoff and follow-up are in the [RC keyboard fixes resume note](2026-11-23-v1-6-rc-polish-fix-resume-note.md).

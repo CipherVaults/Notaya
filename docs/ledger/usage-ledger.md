@@ -1,5 +1,11 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261123-rc-polish-fix3"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+Codex recorded the turn configuration as gpt-6.2-sol at xhigh. First available weekly usage was 73% at 2026-11-23T14:33:41.744Z. The 2026-11-23T14:43:15.601Z checkpoint was 73% weekly used, with 4,964,408 input tokens, 4,829,312 cached input tokens and 29,526 output tokens. The five-hour reading was unavailable. [Session 152](../sessions.md#session-152).
+
 <a id="codex-usage-20261123-rc-polish-fix2"></a>
 
 ## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC

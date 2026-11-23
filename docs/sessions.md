@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 152 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix Find Escape from row titles](#session-152) |
 | 151 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC audit #2 findings](#session-151) |
 | 150 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC keyboard regressions](#session-150) |
 | 149 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Polish the 1.6 desktop candidate](#session-149) |
@@ -185,6 +186,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-152"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Fix Find Escape from row titles
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. One Codex session implemented and tested the fix.
+
+**Models, Effort, Roles and Provenance:** The turn configuration recorded `gpt-6.2-sol` at `xhigh`. Audit #3 independently reviewed the predecessor. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc-polish-fix3).
+
+## 1. Time
+
+The transcript records Ahmed's instruction at 2026-11-23T14:33:35.767Z. The local claim was recorded at 2026-11-23T14:34:53.3888908Z from the system clock.
+
+## 2. Session Goal
+
+Fix Audit #3 Finding 1 from `70061b4df52043587ca87069b9f258d74acefa44` on `AE0101/v1-6-rc`. Verify in scratch, then return the local commit, receipt and replayed bundle with the designated checkout synchronized.
+
+## 3. Actions Taken
+
+Added a browser regression for title focus in side and centered peeks and for an inline Estimate draft with Find open. Ran the new test against the audited source before changing the editor.
+
+## 4. Key Insights
+
+The title sits outside ProseMirror. A side peek also sits within the outer database wrapper, so the form-field guard needs to identify database controls inside the note editor.
+
+## 5. Decisions Made
+
+Use the note editor as Find's Escape boundary. Keep focus on the current editor control when Escape originates outside the Find bar. Restore the previous focus when the Find bar closes itself.
+
+## 6. Difficulties / Friction
+
+The first candidate treated the side peek title and Find inputs as database controls because the outer table is a database ancestor. The first candidate's Chromium runs captured both misses.
+
+## 7. Adjustments Made
+
+Require the database ancestor to be inside the note editor. Preserve popup and nested-editor Escape handling.
+
+## 8. Mistakes / Risks
+
+The early failed runs are retained with the passing runs. The browser tests exercise the mock UI. Packaged WebView2 still needs its own verification.
+
+## 9. Current Position
+
+The branch's local handoff is described in the [resume note](handoff/2026-11-23-v1-6-rc-polish-fix3-resume-note.md). The verification receipt records exact source and bundle hashes.
+
+## 10. Next Steps
+
+Use the local bundle and receipt for independent review and packaged Windows verification. Publication awaits Ahmed's direction.
+
+## 11. Open Questions
+
+Independent review of the fix and owner acceptance are pending.
+
+## 12. Session Outcome
+
+Escape from either row title closes Find first, holds title focus and closes the peek on the next press. Escape during the side peek's property edit cancels the draft while Find and the peek stay open.
+
+## 13. Confidence Level
+
+The Chromium runs passed the focused workflows in all three modes. The receipt binds the isolated checks and protected-path comparison to the product source.
+
+---
 
 <a id="session-151"></a>
 

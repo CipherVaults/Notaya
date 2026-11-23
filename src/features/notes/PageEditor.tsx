@@ -458,11 +458,14 @@ function LoadedEditor({ page, embedded, onOpenChild, onBodyEscape }: {
       </div>
 
       {!readOnly && !embedded && <Ribbon editor={editor} />}
-      {findOpen && <NoteFind editor={editor} inputRef={findInput} onClose={() => {
+      {findOpen && <NoteFind editor={editor} inputRef={findInput} onClose={(restoreFocus) => {
         clearNoteFind(editor);
         setFindOpen(false);
         const focused = focusBeforeFind.current;
-        (focused?.isConnected ? focused : editor.view.dom).focus({ preventScroll: true });
+        focusBeforeFind.current = null;
+        if (restoreFocus) {
+          (focused?.isConnected ? focused : editor.view.dom).focus({ preventScroll: true });
+        }
       }} />}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
