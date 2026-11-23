@@ -16,12 +16,53 @@ const HANDSHAKE_LIMIT: usize = 8;
 const AUTHENTICATED_LIMIT: usize = 4;
 const IO_DEADLINE: Duration = Duration::from_secs(5);
 
+pub(crate) fn valid_client_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 256
+        && !name.chars().any(|c| {
+            c.is_control()
+                || matches!(
+                    c,
+                    '\u{2028}'
+                        | '\u{2029}'
+                        | '\u{061C}'
+                        | '\u{200E}'..='\u{200F}'
+                        | '\u{202A}'..='\u{202E}'
+                        | '\u{2066}'..='\u{2069}'
+                )
+        })
+}
+
+#[derive(Default)]
+struct FailureCooldown {
+    state: std::sync::Mutex<(u32, Option<Instant>)>,
+}
+impl FailureCooldown {
+    fn check(&self, now: Instant) -> bool {
+        let guard = self.state.lock().unwrap();
+        guard.1.is_none_or(|until| now >= until)
+    }
+    fn record_failure(&self, now: Instant) {
+        let mut guard = self.state.lock().unwrap();
+        guard.0 = guard.0.saturating_add(1);
+        if guard.0 >= 3 {
+            let secs = (1u64 << (guard.0 - 3).min(5)).min(30);
+            guard.1 = Some(now + Duration::from_secs(secs));
+        }
+    }
+    fn reset(&self) {
+        *self.state.lock().unwrap() = (0, None);
+    }
+}
+
 /// Separate budgets: waiting for a person never occupies an authenticated slot.
 #[derive(Default)]
 struct Slots {
     handshake: Arc<AtomicUsize>,
     authenticated: Arc<AtomicUsize>,
     pairing: Arc<AtomicUsize>,
+    auth_cooldown: Arc<FailureCooldown>,
+    pair_cooldown: Arc<FailureCooldown>,
 }
 struct Slot(Arc<AtomicUsize>);
 impl Slot {
@@ -430,62 +471,77 @@ mod native {
                     .as_ref()
                     .is_some_and(|(_, at)| at.elapsed() > Duration::from_millis(250))
             {
-                let (name, _) = client.take().unwrap();
-                // Only one pending pairing approval, distinct from handshakes.
-                let Some(slot) = Slot::take(&slots.pairing, 1) else { break; };
-                _pairing_slot = Some(slot);
-                handshake = None;
-                busy.store(true, Ordering::SeqCst);
-                let pairing = pairing.clone();
-                let busy = busy.clone();
-                let tx = tx.clone();
-                let stop = cancelled.clone();
-                let app = app.clone();
-                let authenticated_counter = slots.authenticated.clone();
-                let approved_slot = approved_slot.clone();
-                std::thread::spawn(move || {
-                    let state = app.state::<crate::state::AppState>();
-                    let allowed = state.ai.confirms.request(
-                        "pairing",
-                        serde_json::json!({"client":name}),
-                        crate::actions::Confirm::Ask,
-                        |v| state.ai.emit("ai-pairing", v),
-                        || {
-                            stop.load(Ordering::SeqCst)
-                                || state.ai.epoch.load(Ordering::SeqCst) != epoch
-                        },
-                    );
-                    if allowed {
-                        let (p, token) = super::super::pairing::create(name);
-                        let saved = with_authenticated_slot(&authenticated_counter, ||
-                            super::super::pairing::persist(&state, p.clone(), epoch, || stop.load(Ordering::SeqCst)));
-                        if let Ok(((), slot)) = saved {
-                            *approved_slot.lock().unwrap() = Some(slot);
-                            *pairing.lock().unwrap() = Some(p.clone());
-                            let _ = tx.try_send(ServerMessage::PairingResult {
-                                pairing_id: p.id,
-                                token: token.to_string(),
-                            });
-                            let _ = tx.try_send(ServerMessage::Welcome {
-                                notaya_version: env!("CARGO_PKG_VERSION").into(),
-                                level: p.level,
-                                locked: false,
-                            });
+                if !slots.pair_cooldown.check(Instant::now()) {
+                    output.push_back(encoded(&error(None, "rate_limited")).unwrap());
+                    closing = true;
+                    closing_at = Some(Instant::now());
+                    client = None;
+                } else {
+                    let (name, _) = client.take().unwrap();
+                    // Only one pending pairing approval, distinct from handshakes.
+                    let Some(slot) = Slot::take(&slots.pairing, 1) else { break; };
+                    _pairing_slot = Some(slot);
+                    handshake = None;
+                    busy.store(true, Ordering::SeqCst);
+                    let pairing = pairing.clone();
+                    let busy = busy.clone();
+                    let tx = tx.clone();
+                    let stop = cancelled.clone();
+                    let app = app.clone();
+                    let authenticated_counter = slots.authenticated.clone();
+                    let pair_cooldown = slots.pair_cooldown.clone();
+                    let approved_slot = approved_slot.clone();
+                    std::thread::spawn(move || {
+                        let state = app.state::<crate::state::AppState>();
+                        state
+                            .ai
+                            .emit("ai-connection", serde_json::json!({"client":name}));
+                        let allowed = state.ai.confirms.request(
+                            "pairing",
+                            serde_json::json!({"client":name}),
+                            crate::actions::Confirm::Ask,
+                            |v| state.ai.emit("ai-pairing", v),
+                            || {
+                                stop.load(Ordering::SeqCst)
+                                    || state.ai.epoch.load(Ordering::SeqCst) != epoch
+                            },
+                        );
+                        if allowed {
+                            let (p, mut token) = super::super::pairing::create(name);
+                            let saved = with_authenticated_slot(&authenticated_counter, ||
+                                super::super::pairing::persist(&state, p.clone(), epoch, || stop.load(Ordering::SeqCst)));
+                            if let Ok(((), slot)) = saved {
+                                pair_cooldown.reset();
+                                *approved_slot.lock().unwrap() = Some(slot);
+                                *pairing.lock().unwrap() = Some(p.clone());
+                                let _ = tx.try_send(ServerMessage::PairingResult {
+                                    pairing_id: p.id,
+                                    token: token.to_string(),
+                                });
+                                let _ = tx.try_send(ServerMessage::Welcome {
+                                    notaya_version: env!("CARGO_PKG_VERSION").into(),
+                                    level: p.level,
+                                    locked: false,
+                                });
+                            } else {
+                                pair_cooldown.record_failure(Instant::now());
+                                let _ = tx.try_send(error(None, "pairing_refused"));
+                            }
+                            token.zeroize();
                         } else {
+                            pair_cooldown.record_failure(Instant::now());
                             let _ = tx.try_send(error(None, "pairing_refused"));
                         }
-                    } else {
-                        let _ = tx.try_send(error(None, "pairing_refused"));
-                    }
-                    busy.store(false, Ordering::SeqCst);
-                });
+                        busy.store(false, Ordering::SeqCst);
+                    });
+                }
             }
             if (handshake.is_some() && started.elapsed() >= IO_DEADLINE)
                 || (started.elapsed() > Duration::from_secs(300) && pairing.lock().unwrap().is_none()) {
                 break;
             }
             if !closing {
-                while let Ok(message) = rx.try_recv() {
+                while let Ok(mut message) = rx.try_recv() {
                     let completed = match &message {
                         ServerMessage::Result { id, .. } | ServerMessage::Error { id: Some(id), .. } => active_id == Some(*id),
                         _ => false,
@@ -502,7 +558,11 @@ mod native {
                         closing_at = Some(Instant::now());
                         _pairing_slot = None;
                     }
-                    let bytes = match encoded(&message) {
+                    let encoded_res = encoded(&message);
+                    if let ServerMessage::PairingResult { token, .. } = &mut message {
+                        token.zeroize();
+                    }
+                    let bytes = match encoded_res {
                         Ok(bytes) => bytes,
                         Err(_) => {
                             let id = match message {
@@ -595,9 +655,7 @@ mod native {
                         } => {
                             if greeted
                                 || bridge_version.len() > 128
-                                || client_name.is_empty()
-                                || client_name.len() > 256
-                                || client_name.chars().any(char::is_control)
+                                || !valid_client_name(&client_name)
                             {
                                 break;
                             }
@@ -611,11 +669,7 @@ mod native {
                                 })
                                 .unwrap(),
                             );
-                            // Pairing starts only if no auth arrives; the bridge sends auth for an existing token.
-                            // Store the label until the post-welcome handshake has been observed.
-                            state
-                                .ai
-                                .emit("ai-connection", serde_json::json!({"client":client_name}));
+                            // Pairing starts only if no auth arrives; do not emit UI connection events pre-auth.
                             client = Some((client_name, Instant::now()));
                         }
                         ClientMessage::Auth {
@@ -630,6 +684,13 @@ mod native {
                                 break;
                             }
                             client = None;
+                            if !slots.auth_cooldown.check(Instant::now()) {
+                                token.zeroize();
+                                output.push_back(encoded(&error(None, "rate_limited")).unwrap());
+                                closing = true;
+                                closing_at = Some(Instant::now());
+                                continue;
+                            }
                             let found = state
                                 .with(|s| {
                                     Ok(super::super::pairing::authenticate(
@@ -642,6 +703,10 @@ mod native {
                                 .flatten();
                             token.zeroize();
                             if let Some(p) = found {
+                                slots.auth_cooldown.reset();
+                                state
+                                    .ai
+                                    .emit("ai-connection", serde_json::json!({"client":p.name}));
                                 let _ = state.with_mut(|s| {
                                     let mut settings = s.settings();
                                     if let Some(pairing) = settings
@@ -664,6 +729,7 @@ mod native {
                                 );
                                 *pairing.lock().unwrap() = Some(p);
                             } else {
+                                slots.auth_cooldown.record_failure(Instant::now());
                                 output.push_back(encoded(&error(None, "not_paired")).unwrap());
                                 closing = true;
                                 closing_at = Some(Instant::now());
@@ -819,5 +885,33 @@ mod tests {
             assert!(rate.take());
         }
         assert!(!rate.take());
+    }
+    #[test]
+    fn client_name_validation_rejects_bidi_and_separators() {
+        assert!(valid_client_name("Claude Desktop"));
+        for bad in [
+            "",
+            "bad\u{202E}name",
+            "bad\u{2066}name",
+            "bad\u{2028}line",
+            "bad\u{0007}ctrl",
+        ] {
+            assert!(!valid_client_name(bad), "expected rejection for {bad:?}");
+        }
+    }
+    #[test]
+    fn failure_cooldown_triggers_after_three_failures_and_resets() {
+        let cd = FailureCooldown::default();
+        let t0 = Instant::now();
+        assert!(cd.check(t0));
+        cd.record_failure(t0);
+        cd.record_failure(t0);
+        assert!(cd.check(t0));
+        cd.record_failure(t0);
+        assert!(!cd.check(t0));
+        assert!(!cd.check(t0 + Duration::from_millis(900)));
+        assert!(cd.check(t0 + Duration::from_secs(1)));
+        cd.reset();
+        assert!(cd.check(t0));
     }
 }

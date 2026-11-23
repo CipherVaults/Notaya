@@ -165,8 +165,11 @@ fn bridge_core_smoke_pair_read_confirm_refuse_person_editing_and_ordered_deliver
     }}));
     bridge.input(json!({"jsonrpc":"2.0","method":"notifications/initialized"}));
     let saved = pipe::load_pairing(&state.paths.data, "C5 smoke").unwrap().unwrap();
+    let saved_id = saved.pairing_id.clone();
     assert!(!state.with(|s| Ok(serde_json::to_string(&s.settings().ai).unwrap())).unwrap().contains(&saved.token));
-    bridge.pipe.send(&pipe::ClientMessage::Auth { pairing_id: saved.pairing_id.clone(), token: saved.token }).unwrap();
+    let mut auth = saved.into_auth_message();
+    bridge.pipe.send(&auth).unwrap();
+    auth.wipe_secret();
     for message in bridge.pipe.poll().unwrap() { bridge.mcp.server(message); }
     println!("CHECKPOINT: fake-pipe pairing, hash-only app storage and saved-token authentication done");
 
@@ -229,6 +232,6 @@ fn bridge_core_smoke_pair_read_confirm_refuse_person_editing_and_ordered_deliver
     drop(state.take_session()); // flushes the read summary and invalidates old deliveries
     let reopened = Session::unlock_open(&state.paths.vault).unwrap();
     assert!(reopened.in_bin(&page), "edit survived reopening the throwaway vault");
-    assert!(pairing::authenticate(&reopened.settings().ai, &saved.pairing_id, &pipe::load_pairing(&state.paths.data, "C5 smoke").unwrap().unwrap().token).is_some());
+    assert!(pairing::authenticate(&reopened.settings().ai, &saved_id, &pipe::load_pairing(&state.paths.data, "C5 smoke").unwrap().unwrap().token).is_some());
     println!("CHECKPOINT: durable edit and pairing after reopen done");
 }

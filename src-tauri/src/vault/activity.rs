@@ -857,6 +857,22 @@ impl Session {
         Ok(UndoSummary { restored, skipped })
     }
 
+    /// Returns all surviving item IDs referenced in the given change set without
+    /// applying the UI's 500-entry list clamp.
+    pub(crate) fn activity_change_set_targets(&self, change_set: &str) -> Result<Vec<String>> {
+        self.activity_verify()?;
+        let entries = self.entries()?;
+        let mut out = Vec::new();
+        for e in entries.iter().filter(|e| e.meta.change_set == change_set) {
+            for item in &e.meta.items {
+                if self.get(&item.id).is_some() {
+                    out.push(item.id.clone());
+                }
+            }
+        }
+        Ok(out)
+    }
+
     pub(crate) fn activity_undo_plan(&self, actor: &Actor, change_set: &str) -> Result<(Vec<Item>, usize)> {
         self.activity_verify()?;
         let entries = self.entries()?;

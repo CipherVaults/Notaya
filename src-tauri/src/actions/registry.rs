@@ -1035,10 +1035,10 @@ pub static ACTIONS: &[ActionSpec] = &[
     ),
     action!(
         "db.automation.list",
-        Edit,
-        AskIfBig,
+        Look,
+        None,
         Previous,
-        r#"{"type":"object","properties":{"databaseId":{"type":"string"},"id":{"type":"string"},"automation":{"type":"object"}},"required":["databaseId"],"additionalProperties":false}"#,
+        r#"{"type":"object","properties":{"databaseId":{"type":"string"}},"required":["databaseId"],"additionalProperties":false}"#,
         "Db automation list",
         "Table2",
         ["save_database"]
@@ -1238,7 +1238,7 @@ pub static ACTIONS: &[ActionSpec] = &[
         Full,
         None,
         Previous,
-        r#"{"type":"object","properties":{"theme":{"type":"string"},"accent":{"type":"string"},"font":{"type":"string"},"editorWidth":{"type":"string"},"fontSize":{"type":"integer","minimum":12,"maximum":22},"backdrop":{"type":"string"},"unlockBackground":{"type":"string"},"density":{"type":"string"},"stickyDefaultColor":{"type":"string"},"closeToTray":{"type":"boolean"}},"required":[],"additionalProperties":false}"#,
+        r#"{"type":"object","properties":{"theme":{"type":"string"},"accent":{"type":"string"},"font":{"type":"string"},"editorWidth":{"type":"string"},"fontSize":{"type":"integer","minimum":12,"maximum":22},"backdrop":{"type":"string"},"density":{"type":"string"},"stickyDefaultColor":{"type":"string"}},"required":[],"additionalProperties":false}"#,
         "Settings set",
         "Settings",
         ["save_settings"]

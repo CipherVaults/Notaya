@@ -279,20 +279,12 @@ pub fn prepare(s: &Session, pairing: &Pairing, name: &str, mut params: Value) ->
         }
     }
     if name == "activity.undo" {
-        let (restore, _) = s.activity_undo_plan(&actor(p), &text(&params, "changeSetId"))?;
+        let change_set = text(&params, "changeSetId");
+        let (restore, _) = s.activity_undo_plan(&actor(p), &change_set)?;
         targets.extend(s.ai_write_targets(&actor(p), &restore)?);
-        // Discover every affected item before checking hidden notebooks, locks and leases.
-        for e in s
-            .activity_list(None, None, 100_000)?
-            .iter()
-            .filter(|e| e.change_set == text(&params, "changeSetId"))
-        {
-            for item in &e.items {
-                if s.get(&item.id).is_some() {
-                    targets.insert(item.id.clone());
-                }
-            }
-        }
+        // Discover every affected item without the UI list's 500-entry clamp
+        // before checking hidden notebooks, locks and leases.
+        targets.extend(s.activity_change_set_targets(&change_set)?);
     }
     let revision_targets = targets.clone();
     let writes = spec.level != Required::Look
@@ -398,6 +390,11 @@ pub fn prepare(s: &Session, pairing: &Pairing, name: &str, mut params: Value) ->
             for key in ["cells", "patch", "value", "template", "automation"] {
                 referenced(s, &params[key], &mut targets);
             }
+            if let Some(raw_cells) = params["template"]["cells"].as_str() {
+                if let Ok(parsed) = serde_json::from_str::<Value>(raw_cells) {
+                    referenced(s, &parsed, &mut targets);
+                }
+            }
         }
         if targets.iter().any(|id| hidden(s, id)) {
             return Err(Error::NotFound);
@@ -454,6 +451,13 @@ pub fn prepare(s: &Session, pairing: &Pairing, name: &str, mut params: Value) ->
     for key in ["cells", "patch", "value", "template", "automation"] {
         if references(s, &params[key]) {
             return Err(Error::NotFound);
+        }
+    }
+    if let Some(raw_cells) = params["template"]["cells"].as_str() {
+        if let Ok(parsed) = serde_json::from_str::<Value>(raw_cells) {
+            if references(s, &parsed) {
+                return Err(Error::NotFound);
+            }
         }
     }
     let mut count = targets.len().max(1);
@@ -550,6 +554,96 @@ fn look_settings(s: &Session) -> Value {
     let x = s.settings();
     json!({"theme":x.theme,"accent":x.accent,"font":x.font,"fontSize":x.font_size,
         "editorWidth":x.editor_width,"density":x.density,"backdrop":x.backdrop,"stickyDefaultColor":x.sticky_default_color})
+}
+fn valid_setting_value(key: &str, v: &Value) -> bool {
+    let Some(s) = v.as_str() else {
+        return key == "fontSize"
+            && v.as_i64().is_some_and(|n| (12..=22).contains(&n));
+    };
+    match key {
+        "theme" => matches!(
+            s,
+            "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system"
+                | "dark"
+                | "light"
+        ),
+        "accent" => {
+            s == "mono"
+                || (s.starts_with('#')
+                    && s.len() == 7
+                    && s[1..].bytes().all(|b| b.is_ascii_hexdigit()))
+        }
+        "font" => matches!(s, "inter" | "system" | "serif" | "mono"),
+        "editorWidth" => matches!(s, "narrow" | "normal" | "wide" | "full"),
+        "density" => matches!(s, "comfortable" | "compact"),
+        "backdrop" => matches!(s, "mica" | "acrylic" | "none"),
+        "stickyDefaultColor" => matches!(
+            s,
+            "yellow" | "pink" | "green" | "blue" | "purple" | "orange" | "gray" | "charcoal"
+        ),
+        _ => false,
+    }
+}
+fn redact_hidden_href(s: &Session, href: &str) -> bool {
+    let trimmed = href.trim();
+    if let Some(id) = crate::export::doc::internal_page_id(trimmed) {
+        return hidden(s, id);
+    }
+    for prefix in ["notaya://db/", "notaya:db/"] {
+        if let Some(rest) = trimmed.strip_prefix(prefix) {
+            let id = rest.split(['#', '/', '?']).next().unwrap_or("");
+            if !id.is_empty() && hidden(s, id) {
+                return true;
+            }
+        }
+    }
+    false
+}
+/// Remove hidden-notebook target UUIDs from TipTap block JSON returned to AI readers.
+fn redact_hidden_blocks(s: &Session, v: &mut Value) {
+    match v {
+        Value::Array(items) => {
+            for item in items {
+                redact_hidden_blocks(s, item);
+            }
+        }
+        Value::Object(obj) => {
+            let kind = obj.get("type").and_then(Value::as_str).map(str::to_owned);
+            if let Some(kind) = kind.as_deref() {
+                if kind == "pageLink" {
+                    if let Some(attrs) = obj.get_mut("attrs").and_then(Value::as_object_mut) {
+                        if attrs.get("pageId").and_then(Value::as_str).is_some_and(|id| hidden(s, id)) {
+                            attrs.insert("pageId".into(), json!(""));
+                            attrs.remove("title");
+                        }
+                    }
+                } else if kind == "databaseBlock" {
+                    if let Some(attrs) = obj.get_mut("attrs").and_then(Value::as_object_mut) {
+                        let hidden_db = attrs
+                            .get("databaseId")
+                            .and_then(Value::as_str)
+                            .is_some_and(|id| hidden(s, id));
+                        if hidden_db {
+                            attrs.insert("databaseId".into(), json!(""));
+                            attrs.insert("viewId".into(), json!(""));
+                            attrs.remove("title");
+                            attrs.remove("rows");
+                        }
+                    }
+                } else if kind == "link" {
+                    if let Some(attrs) = obj.get_mut("attrs").and_then(Value::as_object_mut) {
+                        if attrs.get("href").and_then(Value::as_str).is_some_and(|href| redact_hidden_href(s, href)) {
+                            attrs.insert("href".into(), json!(""));
+                        }
+                    }
+                }
+            }
+            for child in obj.values_mut() {
+                redact_hidden_blocks(s, child);
+            }
+        }
+        _ => {}
+    }
 }
 fn markdown(s: &Session, page: &crate::model::Page) -> Result<String> {
     use crate::export::{ExportDoc, Part};
@@ -690,9 +784,11 @@ fn definition(s: &mut Session, a: &Actor, name: &str, q: &Value) -> Result<Value
         "db.automation.list" => return value(&d.automations),
         "db.template.create" | "db.template.update" => {
             let mut t: Template = get(q, "template")?;
-            // Template page bodies go through the same block validator as page.write.
+            // Template page bodies and cells go through the same validators as pages and rows.
             let content = blocks::parse(&t.content)?;
             images(s, &content)?;
+            t.text = blocks::plain_text(&content);
+            t.cells = db::clean_template_cells(s, &d, &t.cells)?;
             if name.ends_with("create") {
                 t.id = crate::model::new_id();
                 d.templates.push(t);
@@ -704,6 +800,7 @@ fn definition(s: &mut Session, a: &Actor, name: &str, q: &Value) -> Result<Value
                     .ok_or(Error::NotFound)?;
                 *old = t;
             }
+            d.sanitize()?;
         }
         "db.template.trash" => {
             d.templates.retain(|t| t.id != id);
@@ -854,7 +951,8 @@ fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, appr
                 let may_migrate = p.level != rules::Level::Look && s.get(&id).is_some_and(|item|
                     s.ai_write_targets(&a,std::slice::from_ref(item)).is_ok());
                 let page=if may_migrate {blocks::read(s,&a,&id)?} else {notes::get_page_core(s,&a,id.clone())?};
-                let content=blocks::parse(&page.content)?;
+                let mut content=blocks::parse(&page.content)?;
+                redact_hidden_blocks(s, &mut content);
                 if name=="page.outline" {fn headings(v:&Value,out:&mut Vec<Value>){if v["type"]=="heading"{out.push(v.clone());}if let Some(c)=v["content"].as_array(){for v in c{headings(v,out);}}}let mut h=vec![];headings(&content,&mut h);return Ok(json!(h));}
                 if name=="block.list"{return Ok(content["content"].clone());}
                 Ok(json!({"id":page.id,"title":page.title,"format":q["format"].as_str().unwrap_or("markdown"),
@@ -958,7 +1056,12 @@ fn execute_inner(s: &mut Session, p: &Pairing, r: &Prepared, paths: &Paths, appr
             "calc.add"=>out!(calculator::add_calc_entry_core(s,&a,text(q,"expr"),text(q,"result"))),
             "calc.clear"=>out!(calculator::clear_calc_history_core(s,&a)),
             "settings.set"=>{let mut settings=value(s.settings())?;let o=settings.as_object_mut().ok_or_else(invalid)?;
-                for (k,v) in q.as_object().ok_or_else(invalid)? {if !look_settings(s).as_object().unwrap().contains_key(k){return Err(invalid());}o.insert(k.clone(),v.clone());}
+                for (k,v) in q.as_object().ok_or_else(invalid)? {
+                    if !look_settings(s).as_object().unwrap().contains_key(k) || !valid_setting_value(k, v) {
+                        return Err(invalid());
+                    }
+                    o.insert(k.clone(),v.clone());
+                }
                 commands::vault::save_settings_core(s,&a,serde_json::from_value(settings).map_err(|_|invalid())?)?;Ok(look_settings(s))}
             // Block operations are implemented by C4's schema-checked pure functions.
             "page.append"|"page.insert"|"page.replace_block"|"page.delete_blocks"|"page.move_blocks"|
@@ -1135,7 +1238,7 @@ pub fn call(
             return Err(code("stopped"));
         }
         let again = prepare(s, p, name, r.params.clone())?;
-        if again.revs != r.revs {
+        if again.revs != r.revs || again.targets != r.targets || again.confirm != r.confirm {
             return Err(code("item_changed"));
         }
         let current = s
@@ -2241,5 +2344,158 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[test]
+    fn template_cells_fields_and_hidden_refs_are_validated_and_redacted() {
+        let (state, mut p, section, page) = fixture();
+        p.level = rules::Level::Full;
+        // Hidden notebook & visible/hidden databases + props.
+        let (hidden_page, hidden_db, hidden_row, vis_db, file_prop, calc_prop, rel_prop) = state
+            .with_mut(|s| {
+                let _ = notes::create_notebook_core(
+                    s,
+                    &Actor::Person,
+                    "Private".into(),
+                    String::new(),
+                    String::new(),
+                )?;
+                let hid_nb = s.items().find_map(|i| match i { Item::Notebook(n) if n.name == "Private" => Some(n.id.clone()), _ => None }).unwrap();
+                let hid_sec = s.items().find_map(|i| match i { Item::Section(x) if x.notebook_id == hid_nb => Some(x.id.clone()), _ => None }).unwrap();
+                let hp = notes::create_page_core(s, &Actor::Person, hid_sec.clone(), "Secret Page".into())?.id.clone();
+                let hdb = db::create_database_core(
+                    s,
+                    &Actor::Person,
+                    &state.paths,
+                    hid_sec,
+                    String::new(),
+                    false,
+                    "Secret DB".into(),
+                    String::new(),
+                )?;
+                let hrow = db::create_row_core(
+                    s,
+                    &Actor::Person,
+                    hdb.database.id.clone(),
+                    "secret row".into(),
+                    "{}".into(),
+                    String::new(),
+                )?;
+                let mut settings = s.settings();
+                settings.ai.hidden_notebooks.push(hid_nb);
+                s.put(Item::Settings(settings))?;
+                let mut vdb = db::create_database_core(
+                    s,
+                    &Actor::Person,
+                    &state.paths,
+                    section.clone(),
+                    String::new(),
+                    false,
+                    "Visible DB".into(),
+                    String::new(),
+                )?;
+                let fpid = crate::model::new_id();
+                let cpid = crate::model::new_id();
+                let rpid = crate::model::new_id();
+                vdb.database.props.push(crate::database::types::Property {
+                    id: fpid.clone(),
+                    name: "Files".into(),
+                    kind: crate::database::types::PropKind::Files,
+                    ..Default::default()
+                });
+                vdb.database.props.push(crate::database::types::Property {
+                    id: cpid.clone(),
+                    name: "Formula".into(),
+                    kind: crate::database::types::PropKind::Formula,
+                    formula: "1+1".into(),
+                    ..Default::default()
+                });
+                vdb.database.props.push(crate::database::types::Property {
+                    id: rpid.clone(),
+                    name: "Rel".into(),
+                    kind: crate::database::types::PropKind::Relation,
+                    relation_db: hdb.database.id.clone(),
+                    ..Default::default()
+                });
+                let vdb_json = serde_json::to_string(&vdb.database).map_err(|_| invalid())?;
+                let vdb = db::save_database_core(s, &Actor::Person, vdb_json)?;
+                // Seed visible page with hidden references to test LOW-1 block redaction.
+                let blocks = json!({
+                    "type": "doc",
+                    "content": [
+                        { "type": "pageLink", "attrs": { "pageId": hp } },
+                        { "type": "databaseBlock", "attrs": { "databaseId": hdb.database.id, "viewId": hdb.database.views[0].id } },
+                        { "type": "paragraph", "content": [{
+                            "type": "text",
+                            "text": "link",
+                            "marks": [{ "type": "link", "attrs": { "href": format!("notaya:page/{hp}") } }]
+                        }] }
+                    ]
+                });
+                notes::save_page_core(s, &Actor::Person, page.clone(), "Visible".into(), blocks.to_string(), "link".into())?;
+                let hdb_rec = db::database(s, &hdb.database.id)?;
+                Ok((hp, hdb_rec.id.clone(), hrow.row.id, vdb.id.clone(), fpid, cpid, rpid))
+            })
+            .unwrap();
+
+        let empty_doc = json!({"type":"doc","content":[{"type":"paragraph"}]}).to_string();
+        // MEDIUM-1 negative cases for db.template.create:
+        for bad in [
+            json!({"id":"t","name":"T","cells":"not-json","content":empty_doc}),
+            json!({"id":"t","name":"T","cells":json!({file_prop:[{"id":"not-hex","name":"../x.exe"}]}).to_string(),"content":empty_doc}),
+            json!({"id":"t","name":"T","cells":json!({calc_prop:42}).to_string(),"content":empty_doc}),
+            json!({"id":"t","name":"T","cells":json!({rel_prop:[hidden_row]}).to_string(),"content":empty_doc}),
+            json!({"id":"t","name":"T","icon":"x".repeat(41),"content":empty_doc}),
+            json!({"id":"t","name":"T","repeat":"hourly","content":empty_doc}),
+        ] {
+            assert!(
+                call(&state, &p, "db.template.create", json!({"databaseId":vis_db,"template":bad}), false, || false, || {}).is_err()
+            );
+        }
+
+        // LOW-1: page.get (blocks), block.list, page.outline must redact hidden page/db IDs.
+        for (action, params) in [
+            ("page.get", json!({"id":page,"format":"blocks"})),
+            ("block.list", json!({"id":page})),
+            ("page.outline", json!({"id":page})),
+        ] {
+            let out = call(&state, &p, action, params, false, || false, || {}).unwrap();
+            let text = out.to_string();
+            assert!(!text.contains(&hidden_page), "{action} leaked hidden pageId");
+            assert!(!text.contains(&hidden_db), "{action} leaked hidden databaseId");
+        }
+
+        // LOW-5: invalid settings.set values rejected; db.automation.list succeeds at Look even on >20 rows.
+        for bad_settings in [
+            json!({"accent":"red;url(https://evil)"}),
+            json!({"backdrop":"glass"}),
+            json!({"stickyDefaultColor":"neon"}),
+        ] {
+            assert!(call(&state, &p, "settings.set", bad_settings, false, || false, || {}).is_err());
+        }
+        state.with_mut(|s| {
+            for i in 0..25 {
+                db::create_row_core(s, &Actor::Person, vis_db.clone(), format!("r{i}"), "{}".into(), String::new())?;
+            }
+            Ok(())
+        }).unwrap();
+        let mut look_p = p.clone();
+        look_p.level = rules::Level::Look;
+        assert!(call(&state, &look_p, "db.automation.list", json!({"databaseId":vis_db}), false, || false, || {}).is_ok());
+
+        // LOW-4: activity.undo prepare discovers targets beyond the 500-entry UI list clamp.
+        let created_out = call(&state, &p, "page.create", json!({"sectionId":section,"title":"cs"}), false, || false, || {}).unwrap();
+        let created_id = created_out["id"].as_str().unwrap().to_string();
+        let cs_id = state.with(|s| Ok(s.activity_list(None, None, 10)?.into_iter().next().unwrap().change_set.clone())).unwrap();
+        state.with_mut(|s| {
+            let mut settings = s.settings();
+            for i in 0..510 {
+                settings.theme = if i % 2 == 0 { "paper".into() } else { "white".into() };
+                commands::vault::save_settings_core(s, &Actor::Person, settings.clone())?;
+            }
+            Ok(())
+        }).unwrap();
+        let pre = state.with(|s| prepare(s, &p, "activity.undo", json!({"changeSetId":cs_id}))).unwrap();
+        assert!(pre.targets.contains(&created_id), "activity.undo must include item beyond 500-entry list clamp");
     }
 }

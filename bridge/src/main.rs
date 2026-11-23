@@ -128,11 +128,10 @@ fn connect(
     .map_err(|_| ())?;
     let paired = pairing.is_some();
     if let Some(pairing) = pairing {
-        pipe.send(&ClientMessage::Auth {
-            pairing_id: pairing.pairing_id,
-            token: pairing.token,
-        })
-        .map_err(|_| ())?;
+        let mut auth = pairing.into_auth_message();
+        let sent = pipe.send(&auth);
+        auth.wipe_secret();
+        sent.map_err(|_| ())?;
     }
     Ok((Box::new(pipe), data, paired))
 }
