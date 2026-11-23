@@ -916,3 +916,259 @@ fn template_purge_in_a_mixed_save_keeps_new_history_and_undo_files() {
     assert_eq!(s.collect_garbage().unwrap(), 0);
     s.activity_verify().unwrap();
 }
+
+
+#[test]
+fn purge_rolls_back_relation_cleanup_and_history_if_attachment_deletion_fails() {
+    use crate::database::types::{PropKind, Property};
+    let (mut s, path, password) = fixture();
+    let doomed_id = new_id();
+    let live_id = new_id();
+    let live_row_id = new_id();
+    let file = s.put_file("application/octet-stream", b"rollback fixture").unwrap();
+    let mut doomed = Database::new(doomed_id.clone(), String::new(), "Doomed".into(), 1);
+    doomed.trashed_at = Some(1);
+    let doomed_row_id = new_id();
+    let mut doomed_row = Row::new(doomed_row_id.clone(), &doomed_id, "Doomed row".into(), 1);
+    doomed_row.cells = serde_json::json!({"file": [{"id": file}]}).to_string();
+    let mut live = Database::new(live_id.clone(), String::new(), "Alive".into(), 1);
+    live.props.push(Property {
+        id: "rel".into(),
+        name: "Related".into(),
+        kind: PropKind::Relation,
+        relation_db: doomed_id.clone(),
+        ..Property::default()
+    });
+    let mut live_row = Row::new(live_row_id.clone(), &live_id, "Alive row".into(), 1);
+    live_row.cells = serde_json::json!({"rel": [&doomed_row_id]}).to_string();
+    s.put_many(vec![Item::Database(doomed), Item::Row(doomed_row), Item::Database(live), Item::Row(live_row)]).unwrap();
+    s.drain_changes();
+
+    let trigger = Connection::open(&path).unwrap();
+    trigger.execute_batch(
+        "CREATE TRIGGER fail_purge BEFORE DELETE ON attachments
+         BEGIN SELECT RAISE(ABORT, 'synthetic attachment failure'); END;",
+    ).unwrap();
+    let tables = [Table::Records, Table::History, Table::Activity, Table::Anchor, Table::Attachments];
+    let before = tables.map(|table| s.store.all(table).unwrap());
+    assert!(crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, doomed_id.clone()).is_err());
+    assert!(s.drain_changes().is_none());
+    assert_eq!(tables.map(|table| s.store.all(table).unwrap()), before);
+    assert!(s.history_list(&doomed_row_id).is_ok());
+    assert!(s.get_attachment(&file).is_ok());
+    assert!(matches!(s.get(&live_id), Some(Item::Database(db)) if db.prop("rel").is_some()));
+    assert!(matches!(s.get(&live_row_id), Some(Item::Row(row)) if row.cells.contains(&doomed_row_id)));
+
+    trigger.execute_batch("DROP TRIGGER fail_purge").unwrap();
+    drop(trigger);
+    crate::commands::notes::test_delete_page_core(&mut s, &Actor::Person, doomed_id).unwrap();
+    drop(s);
+    let s = Session::unlock(&path, &password, None).unwrap();
+    assert!(s.get(&doomed_row_id).is_none());
+    assert!(s.get_attachment(&file).is_err());
+    assert!(matches!(s.get(&live_id), Some(Item::Database(db)) if db.prop("rel").is_none()));
+    assert!(matches!(s.get(&live_row_id), Some(Item::Row(row)) if row.cells == "{}"));
+    s.activity_verify().unwrap();
+}
+
+
+#[test]
+#[ignore = "large vault benchmark and optional native fixture"]
+fn wave1_purge_stress_and_fixture() {
+    use crate::{
+        commands::notes,
+        database::types::{PropKind, Property},
+        native_confirm::{self, Delete},
+        portable::Paths,
+    };
+    use serde_json::json;
+    use std::{fs, time::Instant};
+
+    const ROWS: usize = 6500;
+    const DBS: usize = 13;
+    const PAGES: usize = 70;
+    const TITLE: &str = "Wave 1 stress notebook";
+    const KEEP_TITLE: &str = "Wave 1 surviving notebook";
+    let temp = std::env::temp_dir().canonicalize().unwrap();
+    let working = temp.join(format!("purge-stress-{}", new_id()));
+    fs::create_dir(&working).unwrap();
+    let seed_root = match std::env::var_os("NOTAYA_WAVE1_FIXTURE") {
+        Some(path) => {
+            let path = PathBuf::from(path);
+            let parent = path.parent().unwrap().canonicalize().unwrap();
+            assert!(path.is_absolute() && parent.starts_with(&temp), "fixture must be in scratch");
+            let output = parent.join(path.file_name().unwrap());
+            fs::create_dir(&output).expect("fixture output must be new");
+            output
+        }
+        None => working.join("fixture"),
+    };
+    let seed = Paths::at(&seed_root);
+    seed.ensure_dirs().unwrap();
+
+    let seed_started = Instant::now();
+    let mut s = Session::create_open(&seed.vault).unwrap();
+    let mut settings = s.settings();
+    settings.theme = "black".into();
+    s.put(Item::Settings(settings)).unwrap();
+
+    let now = now_ms();
+    let doomed_id = new_id();
+    let doomed_section = new_id();
+    let keep_id = new_id();
+    let keep_section = new_id();
+    let mut records: Vec<Item> = Vec::new();
+    for (id, section, name, order) in [(&doomed_id, &doomed_section, TITLE, 1), (&keep_id, &keep_section, KEEP_TITLE, 0)] {
+        records.push(serde_json::from_value(json!({
+            "kind": "notebook", "id": id, "name": name, "color": "#888888",
+            "icon": "", "order": order, "created": now, "updated": now,
+        })).unwrap());
+        records.push(serde_json::from_value(json!({
+            "kind": "section", "id": section, "notebookId": id, "name": "Fixture",
+            "color": "#888888", "order": 0, "created": now, "updated": now,
+        })).unwrap());
+    }
+    let keep_page_id = new_id();
+    let make_page = |id: &str, section: &str, index: usize, parent: &str| {
+        let title = format!("Synthetic page {index}");
+        json!({
+            "kind": "page", "id": id, "sectionId": section, "parent": parent,
+            "title": title, "text": title, "order": index, "favorite": false,
+            "content": json!({"type": "doc", "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": title}]}
+            ]}).to_string(),
+            "created": now, "updated": now,
+        })
+    };
+    records.push(serde_json::from_value(make_page(&keep_page_id, &keep_section, 0, "")).unwrap());
+    s.put_many(records).unwrap();
+    let shared = s.put_file("application/octet-stream", b"shared fixture").unwrap();
+    let exclusive = s.put_attachment("image/png", b"exclusive fixture").unwrap();
+    let history_only = s.put_attachment("image/png", b"history fixture").unwrap();
+    let mut survivor_db = Database::new(new_id(), keep_section.clone(), "Survivor table".into(), now);
+    let survivor_db_id = survivor_db.id.clone();
+    let survivor_row_id = new_id();
+    let mut survivor_row = Row::new(survivor_row_id.clone(), &survivor_db_id, "Surviving row".into(), now);
+    let mut doomed_files = vec![exclusive.clone(), history_only.clone()];
+    let mut nested_rows = Vec::new();
+
+    for db_index in 0..DBS {
+        let db = Database::new(new_id(), doomed_section.clone(), format!("Synthetic table {db_index}"), now);
+        if db_index == 0 {
+            survivor_db.props.push(Property {
+                id: "doomed-relation".into(), name: "Related table".into(), kind: PropKind::Relation,
+                relation_db: db.id.clone(), ..Property::default()
+            });
+        }
+        let mut records = Vec::with_capacity(ROWS / DBS + 1);
+        for i in 0..ROWS / DBS {
+            let mut row = Row::new(new_id(), &db.id, format!("Synthetic row {db_index}-{i}"), now);
+            row.order = i as i64;
+            if i % 53 == 0 {
+                row.trashed_at = Some(now);
+            }
+            if i % 29 == 0 {
+                let file = s.put_file("application/octet-stream", b"synthetic database attachment").unwrap();
+                row.cells = json!({"file": [{"id": file}, {"id": shared}]}).to_string();
+                doomed_files.push(file);
+            }
+            if i == 1 {
+                nested_rows.push(row.id.clone());
+                if db_index == 0 {
+                    survivor_row.cells = json!({"file": [{"id": shared}], "doomed-relation": [row.id]}).to_string();
+                }
+            }
+            records.push(Item::Row(row));
+        }
+        records.push(Item::Database(db));
+        s.put_many(records).unwrap();
+    }
+    s.put_many(vec![Item::Database(survivor_db), Item::Row(survivor_row)]).unwrap();
+
+    let first_page_id = new_id();
+    let pages = (0..PAGES).map(|i| {
+        let id = if i == 0 { first_page_id.clone() } else { new_id() };
+        let parent = if i % 3 == 0 { nested_rows[i % DBS].as_str() } else { "" };
+        let mut page = make_page(&id, &doomed_section, i, parent);
+        if i % 7 == 1 {
+            page["trashedAt"] = json!(now);
+        }
+        if i == 0 {
+            page["cover"] = json!(format!("http://clatt.localhost/{history_only}"));
+        }
+        if i == 1 {
+            page["cover"] = json!(format!("http://clatt.localhost/{exclusive}"));
+        }
+        serde_json::from_value::<Item>(page).unwrap()
+    }).collect();
+    s.put_many(pages).unwrap();
+
+    let mut ai_edits = Vec::new();
+    for id in &nested_rows {
+        let Item::Row(mut row) = s.get(id).unwrap().clone() else { unreachable!() };
+        row.text = "Synthetic AI change".into();
+        ai_edits.push(Item::Row(row));
+    }
+    let Item::Page(mut first_page) = s.get(&first_page_id).unwrap().clone() else { unreachable!() };
+    first_page.cover.clear();
+    ai_edits.push(Item::Page(first_page));
+    s.run_as(&ai(), |s| s.put_many(ai_edits)).unwrap();
+    s.activity_verify().unwrap();
+
+    let doomed = s.subtree_ids(&[doomed_id.clone()]);
+    let total = ROWS + DBS + PAGES + 2;
+    assert_eq!(doomed.len(), total);
+    let counts = |s: &Session| json!({
+        "records": s.store.ids(Table::Records).unwrap().len(),
+        "history": s.store.ids(Table::History).unwrap().len(),
+        "activity": s.store.ids(Table::Activity).unwrap().len(),
+        "attachments": s.store.ids(Table::Attachments).unwrap().len(),
+        "undoBodies": s.store.ids(Table::Anchor).unwrap().iter().filter(|row| row[0] == 3).count(),
+    });
+    let before = counts(&s);
+    let expected_after = json!({
+        "records": 6, "history": 4, "activity": before["activity"].as_u64().unwrap() + 2,
+        "attachments": 1, "undoBodies": 0,
+    });
+    fs::write(seed_root.join("notaya-wave1-fixture.json"), serde_json::to_vec_pretty(&json!({
+        "notebookId": doomed_id, "notebookTitle": TITLE, "totalItems": total,
+        "survivorNotebookId": keep_id, "survivorNotebookTitle": KEEP_TITLE,
+        "survivorPageId": keep_page_id, "survivingAttachmentId": shared,
+        "before": before, "expectedAfter": expected_after,
+    })).unwrap()).unwrap();
+    drop(s);
+    println!("Wave 1 seed: {total} doomed items, {PAGES} pages, {DBS} databases, {ROWS} rows, {} ms; persisted {before:?}",
+        seed_started.elapsed().as_secs_f64() * 1000.0);
+
+
+    for (mode, request) in [("delete-for-good", Delete::One(doomed_id.clone())), ("empty-bin", Delete::Empty)] {
+        let paths = Paths::at(&working.join(mode));
+        paths.ensure_dirs().unwrap();
+        fs::copy(&seed.vault, &paths.vault).unwrap();
+        let mut s = Session::unlock_open(&paths.vault).unwrap();
+        let start = Instant::now();
+        notes::delete_notebook_core(&mut s, &Actor::Person, &paths, doomed_id.clone()).unwrap();
+        let trash_ms = start.elapsed().as_secs_f64() * 1000.0;
+        assert!(doomed_files.iter().all(|id| s.get_attachment(id).is_ok()));
+        let start = Instant::now();
+        let mut approval = native_confirm::test_delete(&s, request.clone());
+        let approval_ms = start.elapsed().as_secs_f64() * 1000.0;
+        let start = Instant::now();
+        notes::delete_selected_core(&mut s, &Actor::Person, request, &mut approval).unwrap();
+        let purge_ms = start.elapsed().as_secs_f64() * 1000.0;
+        assert!(doomed.iter().all(|id| s.get(id).is_none()));
+        drop(s);
+
+        let reopened = Session::unlock_open(&paths.vault).unwrap();
+        assert!(doomed.iter().all(|id| reopened.get(id).is_none() && reopened.history_list(id).is_err()));
+        assert_eq!(counts(&reopened), expected_after);
+        assert!(doomed_files.iter().all(|id| reopened.get_attachment(id).is_err()));
+        assert_eq!(reopened.history_list(&keep_page_id).unwrap().len(), 1);
+        assert_eq!(reopened.get_attachment(&shared).unwrap().1, b"shared fixture");
+        assert!(matches!(reopened.get(&survivor_db_id), Some(Item::Database(db)) if db.prop("doomed-relation").is_none()));
+        assert!(matches!(reopened.get(&survivor_row_id), Some(Item::Row(row)) if !row.cells.contains("doomed-relation")));
+        assert_eq!(reopened.activity_list(None, None, 1).unwrap()[0].counts["deleted"], total as u64);
+        reopened.activity_verify().unwrap();
+        println!("Wave 1 {mode}: trash {trash_ms:.3} ms, stage approval {approval_ms:.3} ms, purge {purge_ms:.3} ms; persistent cleanup verified");
+    }
+}

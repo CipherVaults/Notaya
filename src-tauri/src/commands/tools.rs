@@ -9,7 +9,7 @@ use crate::generator::{self, Strength};
 use crate::model::Item;
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn password_strength(password: String, hints: Vec<String>) -> Strength {
     password_strength_person(password, hints)
 }
@@ -21,7 +21,7 @@ fn password_strength_person(password: String, hints: Vec<String>) -> Strength {
 }
 
 /// Opens a web link from a note in the default browser. Only http(s) links.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn open_url(app: AppHandle, url: String) -> Result<()> {
     open_url_person(app, url)
 }
@@ -65,7 +65,7 @@ fn snippet(text: &str, needle: &str) -> String {
 
 /// Searches notes, notebooks and sticky notes in memory. The index is never
 /// written to disk.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn search(state: State<'_, AppState>, query: String) -> Result<Vec<SearchHit>> {
     search_person(&state, query)
 }

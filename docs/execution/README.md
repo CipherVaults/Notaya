@@ -1,5 +1,7 @@
 # Cipherleaf: execution index
 
+**2026-11-23, local RC4 Wave 1** — [Execution summary](2026-11-23-v1-6-rc4-wave1.md) records the editor, confirmation, deletion, and close changes and their isolated checks.
+
 **Verified source recovery — 2026-11-16T09:18:04.7171869+00:00 / 2026-11-16 11:18:04 +02:00 Cairo:** [EX80 closure](2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-closure-20261116) records private drafts133/132, independent source/store recoveries, restored Main91b8aa4 helper22/npm/frontend/Rust check passes, retained failure/warnings and exact PC-only exclusions. The closing record-only tip needs its final remote readback; application/source trees stay at the tested snapshot. Full146/usage85 retain the at-cut history plus dated closure.
 
 **Current source continuity — 2026-11-16T08:51:36.1289600+00:00 / 2026-11-16 10:51:36 +02:00 Cairo:** [EX80](2026-11-12-codex-installed-data-and-empty-home-qualification.md#source-continuity-checkpoints-20261116) records exact reviewed source commits, P6c private102497 publication/Root recovery, Main PBS/handoff preparation and selected restored studies/working references. [146](../sessions.md#session-146)/[usage85](../ledger/usage-ledger.md#codex-usage-20261116-block85). Main publication/clean restored build still pending at this cut; frozen/raw/history exclusions and feature hold remain explicit.

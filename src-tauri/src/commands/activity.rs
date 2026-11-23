@@ -25,7 +25,7 @@ pub(crate) fn undo_core(s: &mut Session, actor: &Actor, change_set: &str) -> Res
     s.activity_undo(actor, change_set)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn activity_list(
     state: State<'_, AppState>,
     who: Option<String>,
@@ -42,16 +42,16 @@ pub fn activity_list(
         )
     })
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn activity_verify(state: State<'_, AppState>) -> Result<()> {
     state.with(|s| verify_core(s, &Actor::Person))
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn activity_undo(state: State<'_, AppState>, change_set: String) -> Result<UndoSummary> {
     state.with_mut(|s| undo_core(s, &Actor::Person, &change_set))
 }
 // Window only. There is deliberately no corresponding pipe action/core.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn activity_clear(state: State<'_, AppState>, confirmation: String) -> Result<()> {
     state.with_mut(|s| s.clear_activity(&Actor::Person, &confirmation))
 }

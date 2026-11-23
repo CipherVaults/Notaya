@@ -30,11 +30,11 @@ pub(crate) fn restore_core(
     s.history_restore(actor, page_id, version_id)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn history_list(state: State<'_, AppState>, page_id: String) -> Result<Vec<VersionMeta>> {
     state.with(|s| list_core(s, &Actor::Person, &page_id))
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn history_get(
     state: State<'_, AppState>,
     page_id: String,
@@ -42,7 +42,7 @@ pub fn history_get(
 ) -> Result<VersionBody> {
     state.with(|s| get_core(s, &Actor::Person, &page_id, &version_id))
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn history_restore(
     state: State<'_, AppState>,
     page_id: String,
@@ -50,7 +50,7 @@ pub fn history_restore(
 ) -> Result<()> {
     state.with_mut(|s| restore_core(s, &Actor::Person, &page_id, &version_id))
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn history_snapshot(state: State<'_, AppState>, page_id: String) -> Result<()> {
     state.with_mut(|s| s.snapshot_page(&page_id))
 }

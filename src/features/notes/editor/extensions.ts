@@ -19,6 +19,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import { common, createLowlight } from "lowlight";
 import { Extension, type Editor } from "@tiptap/react";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { api, errorText } from "@/lib/ipc";
@@ -107,6 +108,46 @@ const pageLinkConfig = {
   isAllowedUri: (url: string, ctx: { defaultValidate: (url: string) => boolean }) => isInternalHref(url) || ctx.defaultValidate(url),
 };
 
+// Resolve the caret against the state being drawn. TipTap's incremental
+// descendant placeholder cache can otherwise retain hints from prior selections.
+const CaretPlaceholder = Placeholder.extend({
+  addProseMirrorPlugins() {
+    const { editor, options } = this;
+    return [new Plugin({
+      props: {
+        decorations({ doc, selection }) {
+          if (!editor.isEditable) return null;
+          const first = doc.firstChild;
+          const emptyDocument = doc.childCount === 1 && first?.type.name === "paragraph" && first.content.size === 0;
+          const { $head, empty } = selection;
+          if (!emptyDocument && (!empty || $head.depth === 0)) return null;
+          const node = emptyDocument ? first : $head.parent;
+          if (!node?.isTextblock || node.content.size > 0) return null;
+          const pos = emptyDocument ? 0 : $head.before();
+          const text = typeof options.placeholder === "function"
+            ? options.placeholder({ editor, node, pos, hasAnchor: true })
+            : options.placeholder;
+          if (!text) return null;
+          return DecorationSet.create(doc, [Decoration.node(pos, pos + node.nodeSize, {
+            class: `is-empty${emptyDocument ? " is-editor-empty" : ""}`,
+            "data-placeholder": text,
+          })]);
+        },
+      },
+    })];
+  },
+});
+
+function editorPlaceholder(text: string, headings = false) {
+  return CaretPlaceholder.configure({
+    placeholder: ({ node }) => {
+      if (node.type.name === "paragraph") return text;
+      if (headings && node.type.name === "heading") return `Heading ${node.attrs.level}`;
+      return "";
+    },
+  });
+}
+
 /** Full editor for notebook pages: block types, the "/" menu and pictures. */
 export function pageExtensions(slash: SlashOptions) {
   return [
@@ -134,14 +175,7 @@ export function pageExtensions(slash: SlashOptions) {
     MathInline,
     MermaidBlock,
     DatabaseBlock,
-    Placeholder.configure({
-      showOnlyCurrent: true,
-      includeChildren: true,
-      placeholder: ({ node }) => {
-        if (node.type.name === "heading") return `Heading ${node.attrs.level}`;
-        return "Press / to insert something, or just start typing";
-      },
-    }),
+    editorPlaceholder("Press / to insert something, or just start typing", true),
     CodeBlockLowlight.configure({ lowlight }),
     TextAlign.configure({ types: ["heading", "paragraph"] }),
     Direction,
@@ -158,7 +192,7 @@ export function stickyExtensions() {
     TaskItem.configure({ nested: true }),
     Image.configure({ allowBase64: false }),
     Direction,
-    Placeholder.configure({ placeholder: "Write something…" }),
+    editorPlaceholder("Write something…"),
   ];
 }
 

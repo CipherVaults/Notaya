@@ -100,7 +100,7 @@ pub fn meta_list(s: &Session) -> Vec<DatabaseMeta> {
 }
 
 /// Ids of the pages inside a row (its sub-pages at any depth).
-fn row_subpages<'a>(s: &'a Session, roots: impl IntoIterator<Item = &'a str>) -> Vec<&'a str> {
+pub(super) fn row_subpages<'a>(s: &'a Session, roots: impl IntoIterator<Item = &'a str>) -> Vec<&'a str> {
     let mut frontier: Vec<_> = roots.into_iter().collect();
     if frontier.is_empty() {
         return Vec::new();
@@ -455,7 +455,7 @@ pub(crate) fn first_database_backup_core(s: &Session, _actor: &Actor, paths: &cr
 
 pub(crate) const FIRST_DATABASE_NOTICE: &str = "Notaya made a backup copy first. After this, an older Notaya (V1.4.0 or earlier) cannot open this vault.";
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_database(state: State<'_, AppState>, section_id: String, parent: String, inline: bool, title: String, starter_kind: String) -> Result<DatabaseFull> {
     create_database_person(&state, section_id, parent, inline, title, starter_kind)
 }
@@ -518,7 +518,7 @@ pub(crate) fn create_database_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_database(state: State<'_, AppState>, id: String) -> Result<crate::changes::Revisioned<Database>> {
     state.with_mut(|s| { let db = get_database_core(s, &Actor::Person, id.clone())?; Ok(s.revisioned(&id, db)) })
 }
@@ -593,7 +593,7 @@ fn apply_template(r: &mut Row, t: &Template) {
 /// Saves the schema, views and templates. Relation properties asked for with `relationBack: "+"`
 /// get their other side made here; removed properties are cleaned out of the rows and out of
 /// other databases that point at them.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn save_database(state: State<'_, AppState>, database_json: String, base_rev: Option<u64>) -> Result<crate::changes::Revisioned<Database>> {
     if database_json.len() > 30_000_000 { return Err(Error::invalid("This database definition is too large.")); }
     let incoming: Database = serde_json::from_str(&database_json).map_err(|_| Error::invalid("That database definition is not valid."))?;
@@ -767,7 +767,7 @@ pub(crate) fn row_result(s: &Session, id: &str) -> Result<RowResult> {
 }
 
 /// One row with its cell values, unchanged.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_row(state: State<'_, AppState>, row_id: String) -> Result<RowResult> {
     get_row_person(&state, row_id)
 }
@@ -783,7 +783,7 @@ pub(crate) fn get_row_core(s: &Session, _actor: &Actor, row_id: String) -> Resul
 
 /// Adds a row. `cells` is a JSON object (property id -> value) checked like `set_cells`;
 /// `template_id` starts from a template (or "" for the database's default template, "-" for none).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_row(state: State<'_, AppState>, database_id: String, title: String, cells: String, template_id: String) -> Result<RowResult> {
     create_row_person(&state, database_id, title, cells, template_id)
 }
@@ -873,7 +873,7 @@ fn add_row_with_tokens(s: &mut Session, database_id: &str, title: String, given:
 use crate::database::relations::relation_sync_diff;
 
 /// Changes cells (and the title) of one row. `patch` is a JSON object: property id -> new value (null clears).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_cells(state: State<'_, AppState>, row_id: String, title: Option<String>, patch: String) -> Result<RowResult> {
     set_cells_person(&state, row_id, title, patch)
 }
@@ -964,7 +964,7 @@ fn change_row_with_tokens(s: &mut Session, row_id: &str, title: Option<String>, 
 }
 
 /// Presses a button property: runs its actions on the row.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn press_button(state: State<'_, AppState>, row_id: String, prop_id: String) -> Result<RowResult> {
     press_button_person(&state, row_id, prop_id)
 }
@@ -988,7 +988,7 @@ pub(crate) fn press_button_core(s: &mut Session, _actor: &Actor, row_id: String,
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn duplicate_row(state: State<'_, AppState>, row_id: String) -> Result<RowResult> {
     duplicate_row_person(&state, row_id)
 }
@@ -1024,7 +1024,7 @@ pub(crate) fn duplicate_row_core(s: &mut Session, _actor: &Actor, row_id: String
 
 
 /// Puts the rows in the given order (ids of rows of one database).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn reorder_rows(state: State<'_, AppState>, ids: Vec<String>) -> Result<()> {
     reorder_rows_person(&state, ids)
 }
@@ -1055,7 +1055,7 @@ pub struct RowHit {
     pub icon: String,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn search_rows(state: State<'_, AppState>, database_id: String, query: String, limit_n: usize) -> Result<Vec<RowHit>> {
     search_rows_person(&state, database_id, query, limit_n)
 }
@@ -1088,7 +1088,7 @@ pub(crate) fn search_rows_core(
 
 
 /// A lighter listing than `query_view`: every row's id and title (relation labels in the UI).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn row_titles(state: State<'_, AppState>, ids: Vec<String>) -> Result<Vec<RowHit>> {
     row_titles_person(&state, ids)
 }
@@ -1134,7 +1134,7 @@ pub fn trash_rows(s: &mut Session, ids: &[String]) -> Result<()> {
     s.put_many(changed)
 }
 
-pub fn restore_rows(s: &mut Session, ids: &[String]) -> Result<()> {
+pub(super) fn restore_row_items(s: &Session, ids: &[String]) -> Result<Vec<Item>> {
     let mut changed = Vec::new();
     for id in ids {
         let mut r = row(s, id)?;
@@ -1148,56 +1148,7 @@ pub fn restore_rows(s: &mut Session, ids: &[String]) -> Result<()> {
             changed.push(Item::Page(p));
         }
     }
-    s.put_many(changed)
-}
-
-/// Deletes rows for good, with their sub-pages; links to them in other rows are removed.
-pub fn delete_rows(s: &mut Session, ids: &[String]) -> Result<()> {
-    let doomed: HashSet<String> = ids.iter().cloned().collect();
-    for id in ids {
-        row(s, id)?;
-    }
-    let mut remove = ids.to_vec();
-    remove.extend(row_subpages(s, ids.iter().map(String::as_str)).into_iter().map(str::to_owned));
-    // Cut the links out of other rows.
-    let relation_props: HashMap<String, Vec<String>> = s
-        .items()
-        .filter_map(|i| if let Item::Database(d) = i { Some((d.id.clone(), d.props.iter().filter(|p| p.kind == PropKind::Relation).map(|p| p.id.clone()).collect())) } else { None })
-        .collect();
-    let mut changed = Vec::new();
-    for it in s.items() {
-        if let Item::Row(r) = it {
-            if doomed.contains(&r.id) {
-                continue;
-            }
-            let Some(props) = relation_props.get(&r.db) else { continue };
-            if props.is_empty() || !doomed.iter().any(|d| r.cells.contains(d.as_str())) {
-                continue;
-            }
-            let mut r = r.clone();
-            let mut m = parse_cells(&r);
-            let mut touched = false;
-            for pid in props {
-                if let Some(Value::Array(a)) = m.get(pid).cloned() {
-                    let kept: Vec<Value> = a.into_iter().filter(|x| x.as_str().map_or(true, |id| !doomed.contains(id))).collect();
-                    touched = true;
-                    if kept.is_empty() {
-                        m.remove(pid);
-                    } else {
-                        m.insert(pid.clone(), Value::Array(kept));
-                    }
-                }
-            }
-            if touched {
-                write_cells(&mut r, &m)?;
-                changed.push(Item::Row(r));
-            }
-        }
-    }
-    s.put_many(changed)?;
-    s.remove_many(&remove)?;
-    s.collect_garbage()?;
-    Ok(())
+    Ok(changed)
 }
 
 pub fn trash_database(s: &mut Session, id: &str) -> Result<()> {
@@ -1209,56 +1160,86 @@ pub fn trash_database(s: &mut Session, id: &str) -> Result<()> {
     s.put(Item::Database(d))
 }
 
-pub fn restore_database(s: &mut Session, id: &str) -> Result<()> {
+pub(super) fn restore_database_item(s: &Session, id: &str) -> Result<Item> {
     let mut d = database(s, id)?;
     d.trashed_at = None;
     // If its page or section is still in the trash it returns to the top of its section.
     if !d.parent.is_empty() && matches!(s.get(&d.parent), Some(Item::Page(p)) if p.trashed_at.is_some()) {
         d.parent = String::new();
     }
-    s.put(Item::Database(d))
+    Ok(Item::Database(d))
 }
 
-/// Deletes a database and all its rows. Other databases lose the relations that pointed at it
-/// (and the rollups on those relations).
-pub fn delete_database(s: &mut Session, id: &str) -> Result<()> {
-    database(s, id)?;
-    let rows: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.db == id { Some(r.id.clone()) } else { None } } else { None }).collect();
+/// Remove references in surviving databases and rows before deleting the
+/// whole approved set. Gather both changes in one scan per item kind and
+/// commit them with the deletion, not in per-database transactions.
+pub(super) fn purge_items(s: &mut Session, ids: &[String]) -> Result<()> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let doomed: HashSet<_> = ids.iter().map(String::as_str).collect();
+    let doomed_rows: HashSet<_> = ids.iter().filter(|id| matches!(s.get(id), Some(Item::Row(_))))
+        .map(String::as_str).collect();
     let mut changed = Vec::new();
-    let others: Vec<Database> = s.items().filter_map(|i| if let Item::Database(d) = i { if d.id != id { Some(d.clone()) } else { None } } else { None }).collect();
-    for mut d in others {
-        let dead: Vec<String> = d.props.iter().filter(|p| p.kind == PropKind::Relation && p.relation_db == id).map(|p| p.id.clone()).collect();
-        if dead.is_empty() {
+    let mut relation_props = HashMap::new();
+    for item in s.items() {
+        let Item::Database(db) = item else { continue; };
+        if doomed.contains(db.id.as_str()) {
             continue;
         }
-        d.props.retain(|p| !dead.contains(&p.id) && !(p.kind == PropKind::Rollup && dead.contains(&p.rollup_relation)));
-        let keep: HashSet<String> = d.props.iter().map(|p| p.id.clone()).collect();
-        for v in &mut d.views {
-            v.columns.retain(|c| keep.contains(&c.prop));
+        let (removed, remaining): (Vec<_>, Vec<_>) = db.props.iter()
+            .filter(|p| p.kind == PropKind::Relation)
+            .partition(|p| doomed.contains(p.relation_db.as_str()));
+        let removed: HashSet<_> = removed.into_iter().map(|p| p.id.as_str()).collect();
+        if !removed.is_empty() {
+            let mut db = db.clone();
+            db.props.retain(|p| !removed.contains(p.id.as_str())
+                && !(p.kind == PropKind::Rollup && removed.contains(p.rollup_relation.as_str())));
+            let keep: HashSet<_> = db.props.iter().map(|p| p.id.as_str()).collect();
+            for view in &mut db.views {
+                view.columns.retain(|col| keep.contains(col.prop.as_str()));
+            }
+            changed.push(Item::Database(db));
         }
-        let drows: Vec<String> = s.items().filter_map(|i| if let Item::Row(r) = i { if r.db == d.id { Some(r.id.clone()) } else { None } } else { None }).collect();
-        for rid in drows {
-            let mut r = row(s, &rid)?;
-            let mut m = parse_cells(&r);
-            let before = m.len();
-            m.retain(|k, _| !dead.contains(k));
-            if m.len() != before {
-                write_cells(&mut r, &m)?;
-                changed.push(Item::Row(r));
+        if !removed.is_empty() || (!remaining.is_empty() && !doomed_rows.is_empty()) {
+            relation_props.insert(db.id.as_str(), (removed, remaining));
+        }
+    }
+
+    for item in s.items() {
+        let Item::Row(row) = item else { continue; };
+        if doomed_rows.contains(row.id.as_str()) {
+            continue;
+        }
+        let Some((removed, remaining)) = relation_props.get(row.db.as_str()) else { continue; };
+        let mut cells = raw_cells(row);
+        let before = cells.len();
+        cells.retain(|key, _| !removed.contains(key.as_str()));
+        let mut changed_cells = before != cells.len();
+        for prop in remaining {
+            let Some(raw) = cells.get(prop.id.as_str()) else { continue; };
+            let Ok(mut values) = serde_json::from_str::<Vec<Value>>(raw.get()) else { continue; };
+            let before = values.len();
+            values.retain(|v| !v.as_str().is_some_and(|id| doomed_rows.contains(id)));
+            if values.len() != before {
+                changed_cells = true;
+                if values.is_empty() {
+                    cells.remove(prop.id.as_str());
+                } else {
+                    cells.insert(prop.id.clone(), raw_json(&Value::Array(values))?);
+                }
             }
         }
-        changed.push(Item::Database(d));
+        if changed_cells {
+            let mut row = row.clone();
+            write_raw_cells(&mut row, &cells)?;
+            changed.push(Item::Row(row));
+        }
     }
-    s.put_many(changed)?;
-    let mut remove: Vec<_> = row_subpages(s, rows.iter().map(String::as_str)).into_iter().map(str::to_owned).collect();
-    remove.extend(rows);
-    remove.push(id.to_string());
-    s.remove_many(&remove)?;
-    s.collect_garbage()?;
-    Ok(())
+    s.purge_many(ids, changed)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_database_look(state: State<'_, AppState>, id: String, title: String, icon: String, favorite: bool, locked: bool) -> Result<DatabaseMeta> {
     set_database_look_person(&state, id, title, icon, favorite, locked)
 }
@@ -1301,7 +1282,7 @@ pub(crate) fn set_database_look_core(
 
 
 /// Moves a database to another section (rows stay with it).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn move_database(state: State<'_, AppState>, id: String, section_id: String) -> Result<()> {
     move_database_person(&state, id, section_id)
 }
@@ -1325,7 +1306,7 @@ pub(crate) fn move_database_core(s: &mut Session, _actor: &Actor, id: String, se
 
 
 /// Turns sub-items on: a "Parent item" and a "Sub-items" relation, both pointing at this database.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn enable_sub_items(state: State<'_, AppState>, id: String) -> Result<Database> {
     enable_sub_items_person(&state, id)
 }
@@ -1364,7 +1345,7 @@ pub(crate) fn enable_sub_items_core(s: &mut Session, _actor: &Actor, id: String)
 
 
 /// Turns dependencies on: "Blocked by" and "Blocking" relations, both pointing at this database.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn enable_dependencies(state: State<'_, AppState>, id: String) -> Result<Database> {
     enable_dependencies_person(&state, id)
 }
@@ -1402,7 +1383,7 @@ pub(crate) fn enable_dependencies_core(s: &mut Session, _actor: &Actor, id: Stri
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn chart_data(state: State<'_, AppState>, request: QueryRequest) -> Result<crate::database::chart::ChartData> {
     chart_data_person(&state, request)
 }
@@ -1495,7 +1476,7 @@ static SHOWN_REMINDERS: std::sync::Mutex<Option<HashSet<String>>> = std::sync::M
 /// The reminders that are due now and were not reported before in this run, and the messages of
 /// automations. The UI shows each one inside Notaya (title only); turning reminders off is a setting
 /// of the UI. Date automations whose time has come run first.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn due_reminders_now(state: State<'_, AppState>) -> Result<Vec<Reminder>> {
     due_reminders_now_person(&state)
 }
@@ -1672,7 +1653,8 @@ mod tests {
         let only = s.put_file("application/octet-stream", b"only").unwrap();
         let a = add_row(&mut s, &mut db, "A", &format!("{{\"f\":[{{\"id\":\"{shared}\",\"name\":\"s.pdf\"}},{{\"id\":\"{only}\",\"name\":\"o.pdf\"}}]}}"));
         let _b = add_row(&mut s, &mut db, "B", &format!("{{\"f\":[{{\"id\":\"{shared}\",\"name\":\"s.pdf\"}}]}}"));
-        delete_rows(&mut s, &[a.clone()]).unwrap();
+        let doomed = s.subtree_ids(&[a.clone()]);
+        purge_items(&mut s, &doomed).unwrap();
         assert!(s.get(&a).is_none());
         assert!(s.get_attachment(&shared).is_ok(), "row B still uses it");
         assert!(s.get_attachment(&only).is_err(), "nothing uses it any more");
@@ -1685,7 +1667,8 @@ mod tests {
         let a = add_row(&mut s, &mut db, "A", "{}");
         trash_rows(&mut s, &[a.clone()]).unwrap();
         assert!(row(&s, &a).unwrap().trashed_at.is_some());
-        restore_rows(&mut s, &[a.clone()]).unwrap();
+        let restoring = restore_row_items(&s, &[a.clone()]).unwrap();
+        s.put_many(restoring).unwrap();
         assert!(row(&s, &a).unwrap().trashed_at.is_none());
         let count = meta_list(&s).into_iter().find(|m| m.id == db.id).unwrap().rows;
         assert_eq!(count, 1);
@@ -1723,7 +1706,8 @@ mod tests {
         a.props.push(Property { id: "roll".into(), name: "Sum".into(), kind: PropKind::Rollup, rollup_relation: "rel".into(), rollup_prop: "n".into(), rollup_calc: "sum".into(), ..Property::default() });
         s.put(Item::Database(a.clone())).unwrap();
         let ra = add_row(&mut s, &mut a, "ra", "{\"rel\":[\"x\"],\"n\":3}");
-        delete_database(&mut s, &b.id).unwrap();
+        let doomed = s.subtree_ids(&[b.id.clone()]);
+        purge_items(&mut s, &doomed).unwrap();
         assert!(s.get(&b.id).is_none());
         let a2 = database(&s, &a.id).unwrap();
         assert!(a2.prop("rel").is_none() && a2.prop("roll").is_none());

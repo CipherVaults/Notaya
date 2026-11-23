@@ -37,6 +37,7 @@ impl Runtime {
     }
     pub fn invalidate(&self) {
         self.epoch.fetch_add(1, Ordering::SeqCst);
+        self.native.cancel(None);
         self.confirms.cancel_all();
     }
     // Counts only: never retain a page, query, title or note body in the runtime.

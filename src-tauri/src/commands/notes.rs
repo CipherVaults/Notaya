@@ -3,7 +3,7 @@ use serde::Serialize;
 use tauri::ipc::{InvokeBody, Request};
 use tauri::State;
 use tauri::{AppHandle, Manager};
-use crate::native_confirm::{self, Approval, Delete, Deletion};
+use crate::native_confirm::{self, Approval, Delete};
 
 use super::database as dbc;
 use super::{check_color, limit, notebook, page, section};
@@ -82,7 +82,7 @@ fn next_order(orders: impl Iterator<Item = i64>) -> i64 {
     orders.max().map_or(0, |m| m + 1)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_notes(state: State<'_, AppState>) -> Result<NotesTree> {
     list_notes_person(&state)
 }
@@ -96,7 +96,7 @@ pub(crate) fn list_notes_core(s: &Session, _actor: &Actor) -> Result<NotesTree> 
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_notebook(state: State<'_, AppState>, name: String, color: String, icon: String) -> Result<NotesTree> {
     create_notebook_person(&state, name, color, icon)
 }
@@ -141,7 +141,7 @@ pub(crate) fn create_notebook_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn update_notebook(state: State<'_, AppState>, id: String, name: String, color: String, icon: String) -> Result<NotesTree> {
     update_notebook_person(&state, id, name, color, icon)
 }
@@ -214,7 +214,7 @@ pub(crate) fn delete_notebook_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_section(state: State<'_, AppState>, notebook_id: String, name: String, color: String) -> Result<NotesTree> {
     create_section_person(&state, notebook_id, name, color)
 }
@@ -256,7 +256,7 @@ pub(crate) fn create_section_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn update_section(state: State<'_, AppState>, id: String, name: String, color: String) -> Result<NotesTree> {
     update_section_person(&state, id, name, color)
 }
@@ -317,7 +317,7 @@ pub(crate) fn delete_section_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_page(state: State<'_, AppState>, section_id: String, title: String) -> Result<Page> {
     create_page_person(&state, section_id, title)
 }
@@ -358,7 +358,7 @@ pub(crate) fn create_page_core(s: &mut Session, _actor: &Actor, section_id: Stri
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_page(state: State<'_, AppState>, id: String) -> Result<crate::changes::Revisioned<Page>> {
     state.with(|s| { let p = get_page_core(s, &Actor::Person, id.clone())?; Ok(s.revisioned(&id, p)) })
 }
@@ -405,13 +405,13 @@ pub(crate) fn page_link_target(s: &Session, id: &str) -> Option<PageLinkTarget> 
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_page_link_target(state: State<'_, AppState>, id: String) -> Result<Option<PageLinkTarget>> {
     state.with(|s| Ok(page_link_target(s, &id)))
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn save_page(state: State<'_, AppState>, id: String, title: String, content: String, text: String, base_rev: Option<u64>) -> Result<crate::changes::Revisioned<PageMeta>> {
     state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
         let meta = save_page_core(s, &Actor::Person, id.clone(), title, content, text)?;
@@ -463,22 +463,10 @@ pub(crate) fn save_page_core(
 
 
 /// The page itself plus every page nested inside it, at any depth.
-fn with_descendants(s: &crate::vault::Session, id: &str) -> Vec<String> {
-    let mut out = vec![id.to_string()];
-    let mut i = 0;
-    while i < out.len() {
-        let current = out[i].clone();
-        for item in s.items() {
-            if let Item::Page(p) = item {
-                if p.parent == current && !out.contains(&p.id) {
-                    out.push(p.id.clone());
-                }
-            }
-        }
-        i += 1;
-    }
-    out
+fn with_descendants(s: &Session, id: &str) -> Vec<String> {
+    std::iter::once(id).chain(dbc::row_subpages(s, [id])).map(str::to_owned).collect()
 }
+
 
 /// Creates a page inside another page. It lives in the same section.
 fn add_subpage(s: &mut Session, parent_id: &str, title: String) -> Result<Page> {
@@ -511,7 +499,7 @@ fn add_subpage(s: &mut Session, parent_id: &str, title: String) -> Result<Page> 
     Ok(p)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_subpage(state: State<'_, AppState>, parent_id: String, title: String) -> Result<Page> {
     create_subpage_person(&state, parent_id, title)
 }
@@ -529,7 +517,7 @@ pub(crate) fn create_subpage_core(s: &mut Session, _actor: &Actor, parent_id: St
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_page_favorite(state: State<'_, AppState>, id: String, favorite: bool) -> Result<NotesTree> {
     set_page_favorite_person(&state, id, favorite)
 }
@@ -582,7 +570,7 @@ fn move_subtree(s: &mut Session, id: &str, section_id: &str) -> Result<()> {
     s.put_many(changed)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn move_page(state: State<'_, AppState>, id: String, section_id: String) -> Result<NotesTree> {
     move_page_person(&state, id, section_id)
 }
@@ -609,7 +597,7 @@ pub(crate) fn move_page_core(s: &mut Session, _actor: &Actor, id: String, sectio
 
 
 /// Sets the display order of notebooks, sections or pages to the order given.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn reorder(state: State<'_, AppState>, ids: Vec<String>) -> Result<NotesTree> {
     reorder_person(&state, ids)
 }
@@ -670,7 +658,7 @@ fn trash_subtree(s: &mut Session, id: &str) -> Result<()> {
 }
 
 /// Brings a page back with the pages inside it. If its parent is still in the trash, it returns to the top of its section.
-fn restore_subtree(s: &mut Session, id: &str) -> Result<()> {
+fn restore_subtree(s: &Session, id: &str) -> Result<Vec<Item>> {
     let first = page(s, id)?;
     let parent_trashed = !first.parent.is_empty() && matches!(s.get(&first.parent), Some(Item::Page(pp)) if pp.trashed_at.is_some());
     let mut changed = vec![];
@@ -682,10 +670,10 @@ fn restore_subtree(s: &mut Session, id: &str) -> Result<()> {
         }
         changed.push(Item::Page(p));
     }
-    s.put_many(changed)
+    Ok(changed)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn trash_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     trash_page_person(&state, id)
 }
@@ -706,7 +694,7 @@ pub(crate) fn trash_page_core(s: &mut Session, _actor: &Actor, id: String) -> Re
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn restore_page(state: State<'_, AppState>, id: String) -> Result<NotesTree> {
     restore_page_person(&state, id)
 }
@@ -716,18 +704,7 @@ fn restore_page_person(state: &AppState, id: String) -> Result<NotesTree> {
 }
 
 pub(crate) fn restore_page_core(s: &mut Session, _actor: &Actor, id: String) -> Result<NotesTree> {
-    s.run_as(_actor, |s| {
-    restore_parents(s, &id, false)?;
-    match s.get(&id) {
-        Some(Item::Notebook(n)) => { let mut n = n.clone(); n.trashed_at = None; s.put(Item::Notebook(n))?; },
-        Some(Item::Section(x)) => { let mut x = x.clone(); x.trashed_at = None; s.put(Item::Section(x))?; },
-        Some(Item::Sticky(x)) => { let mut x = x.clone(); x.trashed_at = None; x.open = false; s.put(Item::Sticky(x))?; },
-        Some(Item::Row(_)) => dbc::restore_rows(s, &[id.clone()])?,
-        Some(Item::Database(_)) => dbc::restore_database(s, &id)?,
-        _ => restore_subtree(s, &id)?,
-    }
-    Ok(tree(s))
-    })
+    restore_bin_item_core(s, _actor, id, false)
 }
 
 
@@ -748,11 +725,7 @@ fn delete_page_person(state: &AppState, id: String) -> Result<NotesTree> {
 }
 
 pub(crate) fn delete_page_core(s: &mut Session, _actor: &Actor, id: String, approval: &mut Approval) -> Result<NotesTree> {
-    let mut permit = approval.delete(s, Delete::One(id.clone()))?;
-    s.run_as(_actor, |s| {
-    delete_bin_tree(s, &id, &mut permit)?;
-    Ok(tree(s))
-    })
+    delete_selected_core(s, _actor, Delete::One(id), approval)
 }
 
 #[cfg(test)]
@@ -789,15 +762,10 @@ pub(crate) fn empty_trash_core(s: &mut Session, _actor: &Actor, approval: &mut A
 }
 
 pub(crate) fn delete_selected_core(s: &mut Session, _actor: &Actor, request: Delete, approval: &mut Approval) -> Result<NotesTree> {
-    let roots: Vec<String> = match &request {
-        Delete::Empty => s.items().filter(|i| Session::own_trash(i).is_some()).map(|i| i.id().into()).collect(),
-        Delete::Selected(ids) => ids.clone(),
-        Delete::One(id) => vec![id.clone()],
-    };
-    let mut permit = approval.delete(s, request)?;
+    let ids = approval.delete(s, request)?.into_ids();
     s.run_as(_actor, |s| {
-    for id in roots { if s.get(&id).is_some() { delete_bin_tree(s, &id, &mut permit)?; } }
-    Ok(tree(s))
+        dbc::purge_items(s, &ids)?;
+        Ok(tree(s))
     })
 }
 
@@ -952,7 +920,7 @@ fn apply_page_look(s: &mut Session, id: &str, icon: String, cover: String) -> Re
     Ok(meta)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_page_look(state: State<'_, AppState>, id: String, icon: String, cover: String) -> Result<PageMeta> {
     set_page_look_person(&state, id, icon, cover)
 }
@@ -1030,7 +998,8 @@ mod subpage_tests {
         // Trashing the top page trashes everything inside it; restoring the child alone moves it out.
         trash_subtree(&mut s, &top.id).unwrap();
         assert!(get(&s, &grandchild.id).trashed_at.is_some());
-        restore_subtree(&mut s, &child.id).unwrap();
+        let restored = restore_subtree(&s, &child.id).unwrap();
+        s.put_many(restored).unwrap();
         assert!(get(&s, &child.id).trashed_at.is_none());
         assert!(get(&s, &grandchild.id).trashed_at.is_none());
         assert_eq!(get(&s, &child.id).parent, "");
@@ -1463,7 +1432,7 @@ pub struct BinEntry {
     id: String, kind: String, title: String, icon: String, trashed_at: i64, parent_in_bin: bool,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_bin(state: State<'_, AppState>) -> Result<Vec<BinEntry>> {
     state.with(|s| list_bin_core(s, &Actor::Person))
 }
@@ -1488,7 +1457,7 @@ pub(crate) fn list_bin_core(s: &Session, _actor: &Actor) -> Result<Vec<BinEntry>
     Ok(out)
 }
 
-fn restore_parents(s: &mut Session, id: &str, allowed: bool) -> Result<()> {
+fn restore_parents(s: &Session, id: &str, allowed: bool) -> Result<Vec<Item>> {
     let mut parents = Vec::new();
     let mut current = s.get(id).and_then(Session::parent_of).map(String::from);
     let mut seen = std::collections::HashSet::new();
@@ -1507,40 +1476,43 @@ fn restore_parents(s: &mut Session, id: &str, allowed: bool) -> Result<()> {
         }
         current = Session::parent_of(item).map(String::from);
     }
-    if !parents.is_empty() { s.put_many(parents)?; }
-    Ok(())
+    Ok(parents)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn restore_bin_item(state: State<'_, AppState>, id: String, restore_containers: bool) -> Result<NotesTree> {
     state.with_mut(|s| restore_bin_item_core(s, &Actor::Person, id, restore_containers))
 }
 
 pub(crate) fn restore_bin_item_core(s: &mut Session, actor: &Actor, id: String, restore_containers: bool) -> Result<NotesTree> {
     s.run_as(actor, |s| {
-        s.get(&id).ok_or(Error::NotFound)?;
         s.check_write(actor, &id, None)?;
-        restore_parents(s, &id, restore_containers)?;
-        restore_page_core(s, actor, id)
+        let mut restored = restore_parents(s, &id, restore_containers)?;
+        match s.get(&id).ok_or(Error::NotFound)? {
+            Item::Notebook(n) => {
+                let mut n = n.clone();
+                n.trashed_at = None;
+                restored.push(Item::Notebook(n));
+            }
+            Item::Section(section) => {
+                let mut section = section.clone();
+                section.trashed_at = None;
+                restored.push(Item::Section(section));
+            }
+            Item::Sticky(sticky) => {
+                let mut sticky = sticky.clone();
+                sticky.trashed_at = None;
+                sticky.open = false;
+                restored.push(Item::Sticky(sticky));
+            }
+            Item::Row(_) => restored.extend(dbc::restore_row_items(s, &[id])?),
+            Item::Database(_) => restored.push(dbc::restore_database_item(s, &id)?),
+            Item::Page(_) => restored.extend(restore_subtree(s, &id)?),
+            Item::Settings(_) => return Err(Error::NotFound),
+        }
+        s.put_many(restored)?;
+        Ok(tree(s))
     })
-}
-
-fn delete_bin_tree(s: &mut Session, id: &str, permit: &mut Deletion) -> Result<()> {
-    let item = s.get(id).ok_or(Error::NotFound)?;
-    if !matches!(item, Item::Notebook(_) | Item::Section(_) | Item::Page(_) |
-        Item::Database(_) | Item::Row(_) | Item::Sticky(_)) || !s.in_bin(id) {
-        return Err(Error::invalid("Only items in the bin can be permanently deleted."));
-    }
-    let doomed: Vec<String> = s.items().filter(|i| s.is_within(i.id(), id)).map(|i| i.id().into()).collect();
-    permit.consume(&doomed)?;
-    let dbs: Vec<String> = doomed.iter().filter(|id| matches!(s.get(id), Some(Item::Database(_)))).cloned().collect();
-    for db in dbs { if s.get(&db).is_some() { dbc::delete_database(s, &db)?; } }
-    let rows: Vec<String> = doomed.iter().filter(|id| matches!(s.get(id), Some(Item::Row(_)))).cloned().collect();
-    if !rows.is_empty() { dbc::delete_rows(s, &rows)?; }
-    let remaining: Vec<_> = doomed.into_iter().filter(|id| s.get(id).is_some()).collect();
-    s.remove_many(&remaining)?;
-    s.collect_garbage()?;
-    Ok(())
 }
 
 #[cfg(test)]
@@ -1611,17 +1583,21 @@ mod native_delete_tests {
         let state=fixture();trash_page_person(&state,PAGE.into()).unwrap();
         state.with_mut(|s| {
             crate::commands::stickies::delete_sticky_core(s,&Actor::Person,STICKY.into())?;
-            let mut approval=native_confirm::test_delete(s,Delete::One(PAGE.into()));
-            let mut permit=approval.delete(s,Delete::One(PAGE.into()))?;
-            let before=serde_json::to_value(s.get(STICKY).unwrap()).unwrap();
-            assert!(delete_bin_tree(s,STICKY,&mut permit).is_err());
-            assert_eq!(serde_json::to_value(s.get(STICKY).unwrap()).unwrap(),before);
-            let original=s.get(PAGE).unwrap().clone();
-            delete_bin_tree(s,PAGE,&mut permit)?;
-            s.put(original)?; // Simulate reusing the old answer for the same id.
-            assert!(delete_bin_tree(s,PAGE,&mut permit).is_err());
-            assert!(delete_page_core(s,&Actor::Person,PAGE.into(),&mut approval).is_err());
+            let mut approval = native_confirm::test_delete(s, Delete::One(PAGE.into()));
+            let sticky = serde_json::to_value(s.get(STICKY).unwrap()).unwrap();
+            let original = s.get(PAGE).unwrap().clone();
+            delete_page_core(s, &Actor::Person, PAGE.into(), &mut approval)?;
+            assert!(s.get(PAGE).is_none());
+            assert_eq!(serde_json::to_value(s.get(STICKY).unwrap()).unwrap(), sticky);
+
+            s.put(original)?; // Recreating the id does not revive an old answer.
+            assert!(delete_page_core(s, &Actor::Person, PAGE.into(), &mut approval).is_err());
             assert!(s.get(PAGE).is_some());
+
+            let mut approval = native_confirm::test_delete(s, Delete::One(PAGE.into()));
+            assert!(delete_page_core(s, &Actor::Person, STICKY.into(), &mut approval).is_err());
+            assert!(s.get(STICKY).is_some());
+            assert!(delete_page_core(s, &Actor::Person, PAGE.into(), &mut approval).is_err());
             Ok(())
         }).unwrap();
     }

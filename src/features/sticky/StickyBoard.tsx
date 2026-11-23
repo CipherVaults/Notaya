@@ -61,21 +61,16 @@ export default function StickyBoard() {
     if (ids.length === 0) return;
     const one = ids.length === 1;
     const ok = await confirm({
-      title: one ? "Delete this sticky note?" : `Delete ${ids.length} sticky notes?`,
-      body: one ? "It will be permanently removed." : "They will be permanently removed.",
-      confirm: "Delete",
+      title: one ? "Move this sticky note to the bin?" : `Move ${ids.length.toLocaleString()} sticky notes to the bin?`,
+      body: one ? "You can restore it from Trash." : "You can restore them from Trash.",
+      confirm: "Move to bin",
       danger: true,
+      busyLabel: "Moving to bin…",
+      onConfirm: () => api.deleteStickies(ids),
     });
     // The dialog drops focus to the page body as it closes; put it back afterwards so Escape still works.
     setTimeout(() => boardRef.current?.focus(), 0);
-    if (!ok) return;
-    try {
-      await api.deleteStickies(ids);
-      stopSelecting();
-    } catch (e) {
-      toast.error(errorText(e));
-    }
-    refresh().catch(() => {});
+    if (ok) stopSelecting();
   };
 
   // Notes are edited in their own windows; refresh when this view gains focus.
@@ -243,14 +238,17 @@ export default function StickyBoard() {
                     <button
                       onClick={async (e) => {
                         e.stopPropagation();
-                        const ok = await confirm({ title: "Delete this sticky note?", body: "It will be permanently removed.", confirm: "Delete", danger: true });
-                        if (ok) {
-                          await api.deleteSticky(s.id);
-                          refresh();
-                        }
+                        await confirm({
+                          title: "Move this sticky note to the bin?",
+                          body: "You can restore it from Trash.",
+                          confirm: "Move to bin",
+                          danger: true,
+                          busyLabel: "Moving to bin…",
+                          onConfirm: () => api.deleteSticky(s.id),
+                        });
                       }}
                       className="rounded p-0.5 hover:bg-black/10"
-                      aria-label="Delete"
+                      aria-label="Move to bin"
                     >
                       <Trash2 size={13} />
                     </button>

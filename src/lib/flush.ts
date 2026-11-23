@@ -34,6 +34,7 @@ export function trackSave<T>(p: Promise<T>): Promise<T> {
  * Always settles within about two seconds.
  */
 export async function flushAll(): Promise<void> {
+  if (fns.size === 0 && tracked.size === 0) return;
   const work = (async () => {
     await Promise.allSettled([...fns].map((fn) => Promise.resolve().then(fn)));
     await Promise.allSettled([...tracked]);

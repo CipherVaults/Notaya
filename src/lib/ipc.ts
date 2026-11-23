@@ -197,10 +197,7 @@ export const api = {
       throw error;
     }
   },
-  quitApp: async () => {
-    await flushAll();
-    return invoke<void>("quit_app");
-  },
+  quitApp: () => invoke<void>("quit_app"),
   openDataFolder: () => invoke<void>("open_data_folder"),
   // The error log (a text file in the logs folder): where it is, and open that folder in Explorer
   logInfo: () => invoke<LogInfo>("log_info"),

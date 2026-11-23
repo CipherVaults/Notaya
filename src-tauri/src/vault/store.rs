@@ -162,6 +162,16 @@ impl Store {
         Ok(())
     }
 
+    pub(super) fn delete_many(&self, table: Table, ids: &[RowId]) -> Result<()> {
+        if !ids.is_empty() {
+            let mut stmt = self.conn.prepare(&format!("DELETE FROM {} WHERE id = ?1", table.name()))?;
+            for id in ids {
+                stmt.execute(params![&id[..]])?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn all(&self, table: Table) -> Result<Vec<(RowId, Vec<u8>)>> {
         let mut stmt = self.conn.prepare(&format!("SELECT id, data FROM {}", table.name()))?;
         let rows = stmt.query_map([], |r| Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, Vec<u8>>(1)?)))?;

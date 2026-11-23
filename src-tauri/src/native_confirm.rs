@@ -1,22 +1,55 @@
-//! Rust-only, single-use approvals. Neither prompts nor approvals cross IPC.
+//! Rust-owned, single-use approvals. Only the isolated confirmation window receives a prompt.
 use crate::{
     error::{Error, Result},
     model::Item,
     state::AppState,
     vault::Session,
 };
-use std::sync::{atomic::Ordering, Arc, Mutex};
-use tauri::{AppHandle, Manager};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use std::sync::{atomic::Ordering, mpsc, Arc, Mutex};
+use std::time::Duration;
+use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+
+pub(crate) const WINDOW_PREFIX: &str = "confirmation-";
+const ROUTE: &str = "confirmation.html";
+const ANSWER_TIMEOUT: Duration = Duration::from_secs(120);
+
+#[derive(Clone, serde::Serialize)]
+pub(crate) struct Appearance {
+    theme: String,
+    accent: String,
+}
+
+impl From<crate::model::Settings> for Appearance {
+    fn from(settings: crate::model::Settings) -> Self {
+        Self { theme: settings.theme, accent: settings.accent }
+    }
+}
 
 pub(crate) const CANCELLED: &str = "cancelled";
 pub(crate) fn cancelled() -> Error {
     Error::invalid(CANCELLED)
 }
 
+#[derive(Clone, serde::Serialize)]
 pub(crate) struct NativePrompt {
     pub title: &'static str,
     pub body: String,
+    action: &'static str,
+    danger: bool,
+    notice: bool,
+    appearance: Option<Appearance>,
+    #[serde(skip)]
+    epoch: Option<u64>,
+}
+
+impl NativePrompt {
+    fn question(title: &'static str, body: String, action: &'static str, danger: bool) -> Self {
+        Self { title, body, action, danger, notice: false, appearance: None, epoch: None }
+    }
+
+    pub(crate) fn backup_failure(body: String, appearance: Option<Appearance>) -> Self {
+        Self { title: "Notaya could not make a backup", body, action: "OK", danger: false, notice: true, appearance, epoch: None }
+    }
 }
 pub(crate) trait NativeApprover: Send + Sync {
     fn ask(&self, prompt: NativePrompt) -> bool;
@@ -27,24 +60,95 @@ impl NativeApprover for Deny {
         false
     }
 }
-struct WindowsApprover(AppHandle);
-impl NativeApprover for WindowsApprover {
-    fn ask(&self, prompt: NativePrompt) -> bool {
-        let Some(main) = self.0.get_webview_window("main") else {
-            return false;
-        };
+struct PendingPrompt {
+    label: String,
+    prompt: NativePrompt,
+    answer: mpsc::Sender<bool>,
+    shown: bool,
+}
+
+struct WindowApprover(AppHandle);
+impl WindowApprover {
+    fn build(&self, label: &str, title: &str) -> tauri::Result<WebviewWindow> {
+        let state = self.0.state::<AppState>();
+        let main = self.0.get_webview_window("main").ok_or(tauri::Error::WindowNotFound)?;
+        let remote = tauri::is_dev().then(|| self.0.config().build.dev_url.as_ref())
+            .flatten().map(|url| url.origin());
+        let protect = state.with(|s| Ok(s.protects_capture())).unwrap_or(true);
+        let builder = WebviewWindowBuilder::new(&self.0, label, WebviewUrl::App(ROUTE.into()))
+            .title(title)
+            .inner_size(520., 380.)
+            .resizable(false)
+            .minimizable(false)
+            .maximizable(false)
+            .center()
+            .decorations(false)
+            .shadow(true)
+            .skip_taskbar(true)
+            .data_directory(state.paths.webview.clone())
+            .incognito(true)
+            .use_https_scheme(true)
+            .content_protected(protect)
+            .zoom_hotkeys_enabled(false)
+            .general_autofill_enabled(false)
+            .devtools(false)
+            .visible(false)
+            .on_navigation(move |url| {
+                let trusted = if let Some(origin) = &remote {
+                    &url.origin() == origin
+                } else {
+                    matches!((url.scheme(), url.host_str()), ("https", Some("tauri.localhost")) | ("tauri", Some("localhost")))
+                };
+                trusted && url.path() == "/confirmation.html" && url.query().is_none()
+            })
+            .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
         #[cfg(windows)]
-        if main.hwnd().is_err() {
+        let builder = builder.owner(&main)?;
+        #[cfg(not(windows))]
+        let builder = builder.parent(&main)?;
+        builder.build()
+    }
+}
+
+impl NativeApprover for WindowApprover {
+    fn ask(&self, mut prompt: NativePrompt) -> bool {
+        let state = self.0.state::<AppState>();
+        let approvals = &state.ai.native;
+        let Some(main) = self.0.get_webview_window("main") else { return false };
+        if prompt.appearance.is_none() {
+            prompt.appearance = state.with(|s| Ok(s.settings().into())).ok();
+        }
+        if prompt.epoch.is_some() && (prompt.appearance.is_none() || state.is_quitting()) {
             return false;
         }
-        self.0
-            .dialog()
-            .message(prompt.body)
-            .title(prompt.title)
-            .parent(&main)
-            .kind(MessageDialogKind::Warning)
-            .buttons(MessageDialogButtons::OkCancel)
-            .blocking_show()
+        let label = format!("{WINDOW_PREFIX}{}", crate::model::new_id());
+        let title = prompt.title;
+        let (answer, receive) = mpsc::channel();
+        {
+            let mut pending = approvals.pending.lock().unwrap();
+            if prompt.epoch.is_some_and(|expected| expected != epoch(&state)) {
+                return false;
+            }
+            *pending = Some(PendingPrompt { label: label.clone(), prompt, answer, shown: false });
+        }
+        let was_enabled = main.is_enabled().unwrap_or(true);
+        if was_enabled && main.set_enabled(false).is_err() {
+            approvals.cancel(Some(&label));
+            return false;
+        }
+        let window = self.build(&label, title);
+        let approved = window.is_ok() && receive.recv_timeout(ANSWER_TIMEOUT).unwrap_or(false);
+        approvals.cancel(Some(&label));
+        if let Ok(window) = window {
+            let _ = window.destroy();
+        }
+        if was_enabled {
+            let _ = main.set_enabled(true);
+            if !state.tray_hidden() {
+                let _ = main.set_focus();
+            }
+        }
+        approved
     }
 }
 
@@ -52,33 +156,125 @@ pub(crate) struct Approvals {
     approver: Mutex<Arc<dyn NativeApprover>>,
     // Fail closed on overlapping prompts; never hold the vault mutex here.
     asking: Mutex<()>,
+    pending: Mutex<Option<PendingPrompt>>,
 }
 impl Default for Approvals {
     fn default() -> Self {
         Self {
             approver: Mutex::new(Arc::new(Deny)),
             asking: Mutex::new(()),
+            pending: Mutex::new(None),
         }
     }
 }
 impl Approvals {
     pub(crate) fn bind(&self, app: AppHandle) {
-        *self.approver.lock().unwrap() = Arc::new(WindowsApprover(app));
+        *self.approver.lock().unwrap() = Arc::new(WindowApprover(app));
     }
     pub(crate) fn ask(&self, target: Target) -> Result<Approval> {
-        let _gate = self.asking.try_lock().map_err(|_| cancelled())?;
-        let approver = self.approver.lock().unwrap().clone();
-        if !approver.ask(target.prompt()) {
+        let mut prompt = target.prompt();
+        prompt.epoch = Some(target.epoch);
+        if !self.ask_prompt(prompt) {
             return Err(cancelled());
         }
         Ok(Approval {
             target: Some(target),
         })
     }
+    fn ask_prompt(&self, prompt: NativePrompt) -> bool {
+        let Ok(_gate) = self.asking.try_lock() else { return false };
+        let approver = self.approver.lock().unwrap().clone();
+        approver.ask(prompt)
+    }
+
+    pub(crate) fn show_notice(&self, prompt: NativePrompt) {
+        let _gate = self.asking.lock().unwrap();
+        let approver = self.approver.lock().unwrap().clone();
+        approver.ask(prompt);
+    }
+
+    pub(crate) fn cancel(&self, label: Option<&str>) {
+        let mut pending = self.pending.lock().unwrap();
+        if pending.as_ref().is_some_and(|request| label.is_none_or(|label| request.label == label)) {
+            if let Some(request) = pending.take() {
+                let _ = request.answer.send(false);
+            }
+        }
+    }
+
+    fn answer(&self, label: &str, allow: bool, epoch: u64) -> Result<()> {
+        let mut pending = self.pending.lock().unwrap();
+        if !pending.as_ref().is_some_and(|request| {
+            request.label == label && (!allow || (request.shown && request.prompt.epoch.is_none_or(|expected| expected == epoch)))
+        }) {
+            return Err(cancelled());
+        }
+        let request = pending.take().ok_or_else(cancelled)?;
+        request.answer.send(allow).map_err(|_| cancelled())
+    }
+
+    fn with_pending<T>(&self, label: &str, epoch: u64, run: impl FnOnce(&mut PendingPrompt) -> T) -> Result<T> {
+        let mut pending = self.pending.lock().unwrap();
+        let request = pending.as_mut().filter(|request| {
+            request.label == label && request.prompt.epoch.is_none_or(|expected| expected == epoch)
+        }).ok_or_else(cancelled)?;
+        Ok(run(request))
+    }
+
     #[cfg(test)]
     pub(crate) fn inject(&self, approver: impl NativeApprover + 'static) {
         *self.approver.lock().unwrap() = Arc::new(approver);
     }
+}
+
+/// Application commands are otherwise available to every local WebView by default.
+pub(crate) fn scope_commands(
+    application: impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static,
+) -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
+    move |invoke| {
+        let confirmation_window = invoke.message.webview_ref().label().starts_with(WINDOW_PREFIX);
+        let confirmation_command = matches!(
+            invoke.message.command(),
+            "confirmation_prompt" | "confirmation_ready" | "confirmation_answer"
+        );
+        if confirmation_window != confirmation_command {
+            invoke.resolver.reject(CANCELLED);
+            return true;
+        }
+        application(invoke)
+    }
+}
+
+// Tauri supplies the sender identity. A label string submitted in the IPC body never authorizes anything.
+#[tauri::command]
+pub(crate) fn confirmation_prompt(window: WebviewWindow, state: State<'_, AppState>) -> Result<NativePrompt> {
+    state.ai.native.with_pending(window.label(), epoch(&state), |request| request.prompt.clone())
+}
+
+#[tauri::command]
+pub(crate) fn confirmation_ready(window: WebviewWindow, state: State<'_, AppState>) -> Result<()> {
+    state.ai.native.with_pending(window.label(), epoch(&state), |request| request.shown = true)?;
+    window.show().and_then(|_| window.set_focus()).map_err(|_| {
+        state.ai.native.cancel(Some(window.label()));
+        cancelled()
+    })
+}
+
+#[tauri::command]
+pub(crate) fn confirmation_answer(window: WebviewWindow, state: State<'_, AppState>, allow: bool) -> Result<()> {
+    state.ai.native.answer(window.label(), allow, epoch(&state))
+}
+
+fn grouped_count(count: usize) -> String {
+    let digits = count.to_string();
+    let mut grouped = String::with_capacity(digits.len() + digits.len() / 3);
+    for (index, digit) in digits.bytes().enumerate() {
+        if index > 0 && (digits.len() - index) % 3 == 0 {
+            grouped.push(',');
+        }
+        grouped.push(char::from(digit));
+    }
+    grouped
 }
 
 /// Strip control and bidi formatting characters which could disguise a target.
@@ -133,32 +329,36 @@ impl Target {
     fn prompt(&self) -> NativePrompt {
         match &self.kind {
             Kind::Delete { request, items, titles } => {
-                let title = if matches!(request, Delete::One(_)) {
-                    "Notaya — Delete for good?"
+                let (title, action) = if matches!(request, Delete::One(_)) {
+                    ("Delete for good?", "Delete for good")
                 } else {
-                    "Notaya — Empty the bin?"
+                    ("Empty the bin?", "Empty the bin")
                 };
                 let mut body = format!(
                     "Permanently delete {} {} and their history? This cannot be undone.",
-                    items.len(), if items.len() == 1 { "item" } else { "items" }
+                    grouped_count(items.len()), if items.len() == 1 { "item" } else { "items" }
                 );
                 for title in titles {
                     body.push_str(&format!("\n• {title}"));
                 }
                 if items.len() > titles.len() {
                     let more = items.len() - titles.len();
-                    body.push_str(&format!("\n…and {more} more {}.", if more == 1 { "item" } else { "items" }));
+                    body.push_str(&format!("\n…and {} more {}.", grouped_count(more), if more == 1 { "item" } else { "items" }));
                 }
-                NativePrompt { title, body }
+                NativePrompt::question(title, body, action, true)
             }
-            Kind::Enable { .. } => NativePrompt {
-                title: "Notaya — Turn on AI access?",
-                body: "Turn on AI access? Paired AIs will be able to connect to your notes with the access you give them.".into(),
-            },
-            Kind::Pair { client, .. } => NativePrompt {
-                title: "Notaya — Connect an AI?",
-                body: format!("Allow “{}” to connect to Notaya? It starts at Look and can read notebooks you have not hidden. Allow only a connection you started yourself.", label(client)),
-            },
+            Kind::Enable { .. } => NativePrompt::question(
+                "Turn on AI access?",
+                "Paired AIs will be able to connect to your notes with the access you give them.".into(),
+                "Turn on AI access",
+                false,
+            ),
+            Kind::Pair { client, .. } => NativePrompt::question(
+                "Connect an AI?",
+                format!("Allow “{}” to connect to Notaya? It starts at Look and can read notebooks you have not hidden. Allow only a connection you started yourself.", label(client)),
+                "Allow connection",
+                false,
+            ),
         }
     }
 }
@@ -190,12 +390,12 @@ pub(crate) fn delete_target(s: &Session, epoch: u64, request: Delete) -> Result<
             ));
         }
     }
-    let mut items: Vec<_> = s
-        .items()
-        .filter(|i| roots.iter().any(|root| s.is_within(i.id(), root)))
-        .map(|i| (i.id().to_owned(), s.rev(i.id())))
+    let items: Vec<_> = s.subtree_ids(&roots).into_iter()
+        .map(|id| {
+            let rev = s.rev(&id);
+            (id, rev)
+        })
         .collect();
-    items.sort();
     let titles = items
         .iter()
         .take(5)
@@ -286,17 +486,11 @@ impl Approval {
     }
 }
 pub(crate) struct Deletion {
-    ids: std::collections::BTreeSet<String>,
+    ids: Vec<String>,
 }
 impl Deletion {
-    pub(crate) fn consume(&mut self, ids: &[String]) -> Result<()> {
-        if !ids.iter().all(|id| self.ids.contains(id)) {
-            return Err(cancelled());
-        }
-        for id in ids {
-            self.ids.remove(id);
-        }
-        Ok(())
+    pub(crate) fn into_ids(self) -> Vec<String> {
+        self.ids
     }
 }
 pub(crate) fn epoch(state: &AppState) -> u64 {
@@ -364,8 +558,49 @@ mod tests {
     use super::*;
     use test_support::*;
     #[test]
+    fn theme_prompt_answer_is_scoped_to_the_shown_window_and_can_be_used_once() {
+        let approvals = Approvals::default();
+        let (answer, receive) = mpsc::channel();
+        let mut prompt = NativePrompt::question("Delete for good?", "Test item".into(), "Delete", true);
+        prompt.epoch = Some(0);
+        *approvals.pending.lock().unwrap() = Some(PendingPrompt {
+            label: "confirmation-window".into(),
+            prompt,
+            answer,
+            shown: false,
+        });
+        assert!(approvals.with_pending("main", 0, |_| ()).is_err());
+        assert!(approvals.answer("main", true, 0).is_err());
+        assert!(approvals.answer("confirmation-window", true, 0).is_err());
+        assert!(approvals.with_pending("confirmation-window", 1, |_| ()).is_err());
+        approvals.with_pending("confirmation-window", 0, |request| request.shown = true).unwrap();
+        assert!(approvals.answer("confirmation-window", true, 1).is_err());
+        approvals.answer("confirmation-window", true, 0).unwrap();
+        assert!(receive.recv().unwrap());
+        assert!(approvals.answer("confirmation-window", true, 0).is_err());
+    }
+
+    #[test]
+    fn cancelling_the_window_discards_its_prompt_and_denies_approval() {
+        let approvals = Approvals::default();
+        let (answer, receive) = mpsc::channel();
+        *approvals.pending.lock().unwrap() = Some(PendingPrompt {
+            label: "confirmation-window".into(),
+            prompt: NativePrompt::question("Delete for good?", "Test item".into(), "Delete", true),
+            answer,
+            shown: true,
+        });
+        approvals.cancel(Some("confirmation-stale"));
+        assert!(receive.try_recv().is_err());
+        approvals.cancel(Some("confirmation-window"));
+        assert!(!receive.recv().unwrap());
+        assert!(approvals.answer("confirmation-window", true, 0).is_err());
+    }
+
+    #[test]
     fn prompt_labels_are_bounded_and_cannot_inject_lines_or_bidi_controls() {
         assert_eq!(label("a\r\nb\t\u{202e}c"), "abc");
+        assert_eq!(grouped_count(6257), "6,257");
         assert_eq!(label(&"x".repeat(500)).chars().count(), 80);
         let state = fixture();
         state

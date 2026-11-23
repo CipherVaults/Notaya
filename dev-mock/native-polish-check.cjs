@@ -480,6 +480,134 @@ async function rowPeekFindChecks(page) {
   }
 }
 
+async function placeholderChecks(page) {
+  for (const [name, query, selector, hint] of [
+    ["Page", "?db=1&s=secure", ".ProseMirror", "Press / to insert something, or just start typing"],
+    ["Sticky", "?label=sticky-k1", ".sticky-editor .ProseMirror", "Write something…"],
+  ]) {
+    await open(page, query);
+    if (name === "Page") await openNote(page);
+    const editor = page.locator(selector);
+    const paragraphs = editor.locator(":scope > p");
+    const visibleHints = () => paragraphs.evaluateAll((nodes, expectedHint) => nodes.flatMap((node, index) => {
+      const content = getComputedStyle(node, "::before").content;
+      return content === JSON.stringify(expectedHint) ? [index] : [];
+    }), hint);
+    await editor.evaluate((el) => {
+      el.editor.commands.setContent({ type: "doc", content: [{ type: "paragraph" }] }, { emitUpdate: false });
+      el.blur();
+    });
+    checks.equal(`${name} sole empty paragraph shows an unfocused hint`, (await visibleHints()).join(","), "0");
+
+    await editor.evaluate((el, center) => {
+      el.editor.commands.setContent({ type: "doc", content: [
+        { type: "paragraph" },
+        { type: "paragraph", attrs: center ? { textAlign: "center" } : {}, content: [{ type: "text", text: "Centered text" }] },
+        { type: "paragraph" },
+        { type: "paragraph" },
+      ] }, { emitUpdate: false });
+    }, name === "Page");
+    checks.equal(`${name} unfocused blank lines stay empty`, (await visibleHints()).length, 0);
+    async function clickParagraph(index) {
+      await paragraphs.nth(index).click();
+      // ProseMirror reads the native selection asynchronously after a pointer event.
+      await page.waitForFunction(({ selector, index }) => {
+        const tiptap = document.querySelector(selector)?.editor;
+        const selection = tiptap?.state.selection;
+        return tiptap?.isFocused && selection?.empty && selection.$head.index(0) === index;
+      }, { selector, index });
+    }
+    for (const index of [2, 3, 0, 1]) {
+      await clickParagraph(index);
+      checks.equal(`${name} hint follows only the active blank paragraph ${index + 1}`, (await visibleHints()).join(","), index === 1 ? "" : String(index));
+    }
+    await clickParagraph(3);
+    await editor.locator(':scope > p:nth-child(4).is-empty[data-placeholder]').waitFor();
+    await editor.press("Enter");
+    await editor.locator(':scope > p:nth-child(5).is-empty[data-placeholder]').waitFor();
+    checks.equal(`${name} adding a blank paragraph moves the hint`, (await visibleHints()).join(","), "4");
+    await editor.evaluate((el) => el.blur());
+    checks.equal(`${name} blur removes the hint from an existing note`, (await visibleHints()).length, 0);
+  }
+}
+
+async function themedDeleteChecks(page) {
+  const extraDialog = (dialog) => {
+    checks.check("No browser-native confirmation opens", false, dialog.message());
+    void dialog.dismiss();
+  };
+  const black = (dialog) => dialog.evaluate((el) => {
+    const token = document.createElement("span");
+    token.style.backgroundColor = "var(--elevated)";
+    el.append(token);
+    try {
+      return document.documentElement.dataset.theme === "black"
+        && getComputedStyle(el).backgroundColor === getComputedStyle(token).backgroundColor;
+    } finally { token.remove(); }
+  });
+  const release = () => page.evaluate(() => window.dispatchEvent(new Event("notaya-test-release-bin-action")));
+  async function requestNotebookBin() {
+    const row = page.locator('[data-rowkey="nb:n1"]');
+    await row.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Move to bin", exact: true }).click();
+    const dialog = page.getByRole("alertdialog", { name: 'Move to bin "Personal"?' });
+    await dialog.waitFor();
+    return { row, dialog, move: dialog.getByRole("button", { name: "Move to bin", exact: true }) };
+  }
+  page.on("dialog", extraDialog);
+  try {
+    await open(page, "?db=1&theme=black&holdBinCommand=delete_notebook");
+    const { row, dialog, move } = await requestNotebookBin();
+    checks.check("Notebook move-to-bin confirmation uses the black theme", await black(dialog));
+    await move.click();
+    await dialog.getByRole("status").filter({ hasText: "Moving to bin" }).waitFor();
+    await page.keyboard.press("Escape");
+    checks.check("A notebook move keeps the busy dialog open and disables repeat actions",
+      await dialog.isVisible() && await dialog.getAttribute("aria-busy") === "true"
+      && await move.isDisabled() && await row.getAttribute("aria-busy") === "true");
+    await release();
+    await row.waitFor({ state: "detached" });
+    await dialog.waitFor({ state: "hidden" });
+
+    for (const [command, label, pending] of [
+      ["delete_page", "Delete for good", "Deleting…"],
+      ["empty_trash", "Empty the bin", "Emptying the bin…"],
+    ]) {
+      await open(page, `?db=1&theme=black&holdBinCommand=${command}`);
+      await (await requestNotebookBin()).move.click();
+      await page.locator('[data-rowkey="nb:n1"]').waitFor({ state: "detached" });
+      await page.getByRole("button", { name: /^Trash/ }).click();
+      const notebooks = page.locator("section").filter({ has: page.getByRole("heading", { name: "Notebooks", exact: true }) });
+      const deletingOne = command === "delete_page";
+      const actions = deletingOne ? notebooks : page;
+      await actions.getByRole("button", { name: label, exact: true }).click();
+      const working = actions.getByRole("button", { name: pending, exact: true });
+      await working.waitFor();
+      checks.check(`${label} disables itself and the other bin actions while pending`,
+        await working.isDisabled() && await notebooks.getByRole("button", { name: "Restore", exact: true }).isDisabled());
+      await release();
+      if (deletingOne) await notebooks.waitFor({ state: "detached" });
+      else await page.getByText("Trash is empty.", { exact: true }).waitFor();
+      checks.equal(`${label} invokes the command once`, await page.evaluate((cmd) =>
+        window.__inv.filter(([invoked]) => invoked === cmd).length, command), 1);
+    }
+
+    for (const [variant, label, allow] of [["single", "Delete for good", false], ["empty", "Empty the bin", true]]) {
+      await open(page, `/confirmation.html?label=confirmation-fixture&confirmation=${variant}`);
+      const confirm = page.getByRole("dialog", { name: `${label}?` });
+      await confirm.waitFor();
+      checks.check(`${label} renders the grouped count in a black themed dialog`,
+        await black(confirm) && await confirm.getByText("Permanently delete 6,257 items and their history? This cannot be undone.", { exact: true }).isVisible());
+      await confirm.getByRole("button", { name: allow ? label : "Cancel", exact: true }).click();
+      await page.waitForFunction((answer) => document.documentElement.dataset.testConfirmationAnswer === answer,
+        allow ? "allow" : "cancel");
+      checks.check(`${label} sends the ${allow ? "affirmative" : "cancel"} answer to its approval command`, true);
+    }
+  } finally {
+    page.off("dialog", extraDialog);
+  }
+}
+
 async function browserChecks(page) {
   await open(page, "?s=lock");
   const password = page.getByLabel("Master password", { exact: true });
@@ -557,6 +685,8 @@ async function browserChecks(page) {
     await startupFailureCheck(page);
     await startupStalledRetryCheck(page);
     await editorShortcutChecks(page);
+    await placeholderChecks(page);
+    await themedDeleteChecks(page);
     await rowPeekFindChecks(page);
     await findChecks(page);
     await popupFindEscapeChecks(page, page.getByRole("main"), async () => {

@@ -122,6 +122,9 @@ pub(super) struct Journal {
     pub(super) anchor: super::anchor::Update,
 }
 impl Journal {
+    pub(super) fn history_additions(&self) -> impl Iterator<Item = super::anchor::Delta> + '_ {
+        self.snapshots.iter().map(|snapshot| super::anchor::addition(&snapshot.meta))
+    }
     pub(super) fn picture_ids(&self) -> impl Iterator<Item = &String> {
         self.snapshots.iter().flat_map(|snapshot| &snapshot.meta.picture_ids)
     }
@@ -530,15 +533,16 @@ impl Session {
     /// Called INSIDE the same transaction as the permanent deletion. Removes
     /// both new indirect bodies and legacy inline values, then re-links the
     /// affected suffix. Titles/actors/times/actions and row ids are retained.
-    pub(super) fn purge_undo_in_store(&self, head: &Head, ids: &[String], templates: &BTreeMap<String, HashSet<String>>) -> Result<Head> {
+    pub(super) fn purge_undo_in_store(&self, head: &Head, ids: &HashSet<&str>, templates: &BTreeMap<String, HashSet<String>>) -> Result<Head> {
         let mut entries = vec![];
         self.walk_entries_at(head, |e| { entries.push(e.clone()); Ok(true) })?;
         entries.reverse();
         let mut previous_hash = head.base_hash.clone();
+        let mut bodies = Vec::new();
         for entry in &mut entries {
             let old_hash = entry.hash.clone();
             for previous in &mut entry.undo {
-                let mut purge = ids.contains(&previous.id);
+                let mut purge = ids.contains(previous.id.as_str());
                 if let Some(removed) = templates.get(&previous.id) {
                     if let Some(body) = self.previous_body(previous)? {
                         let item: Item = serde_json::from_str(&body).map_err(|_| Error::Corrupt)?;
@@ -546,7 +550,7 @@ impl Session {
                     }
                 }
                 if purge {
-                    if let Some(body) = &previous.body { self.store.delete(Table::Anchor, &super::parse_id(body)?)?; }
+                    if let Some(body) = &previous.body { bodies.push(super::parse_id(body)?); }
                     previous.before.zeroize();
                     previous.body = None;
                     previous.body_hash = None;
@@ -564,6 +568,7 @@ impl Session {
                 self.store.put(Table::Activity, &id, &self.seal_json(Table::Activity, &id, entry)?)?;
             }
         }
+        self.store.delete_many(Table::Anchor, &bodies)?;
         let mut next = head.clone();
         next.last_hash = previous_hash;
         self.store.put(Table::Activity, &HEAD, &self.seal_json(Table::Activity, &HEAD, &next)?)?;

@@ -9,7 +9,7 @@ use crate::model::{new_id, now_ms, Item, Sticky};
 use crate::state::AppState;
 use crate::ui;
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_stickies(state: State<'_, AppState>) -> Result<Vec<Sticky>> {
     list_stickies_person(&state)
 }
@@ -62,7 +62,7 @@ pub(crate) fn create_sticky_core(s: &mut Session, _actor: &Actor, open: bool) ->
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_sticky(state: State<'_, AppState>, id: String) -> Result<crate::changes::Revisioned<Sticky>> {
     state.with(|s| { let st = sticky(s, &id)?; Ok(s.revisioned(&id, st)) })
 }
@@ -72,7 +72,7 @@ pub(crate) fn get_sticky_core(s: &Session, _actor: &Actor, id: String) -> Result
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn save_sticky(state: State<'_, AppState>, id: String, content: String, text: String, base_rev: Option<u64>) -> Result<u64> {
     state.with_mut(|s| s.person_save(&id.clone(), base_rev, |s| {
         save_sticky_core(s, &Actor::Person, id.clone(), content, text)?;
@@ -101,7 +101,7 @@ pub(crate) fn save_sticky_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_sticky_style(app: AppHandle, state: State<'_, AppState>, id: String, color: String, on_top: bool) -> Result<Sticky> {
     let color = check_color(&color)?;
     let st = set_sticky_style_person(&state, id.clone(), color, on_top)?;
@@ -130,7 +130,7 @@ pub(crate) fn set_sticky_style_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_sticky_geometry(state: State<'_, AppState>, id: String, x: f64, y: f64, w: f64, h: f64) -> Result<()> {
     set_sticky_geometry_person(&state, id, x, y, w, h)
 }
@@ -177,7 +177,7 @@ pub(crate) fn open_sticky_core(s: &mut Session, _actor: &Actor, id: String) -> R
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn close_sticky(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<()> {
     close_sticky_person(&state, id.clone())?;
     ui::close_sticky(&app, &id);

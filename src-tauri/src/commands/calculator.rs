@@ -33,7 +33,7 @@ pub(crate) fn open_calculator_core(s: &Session, _actor: &Actor) -> Result<bool> 
     Ok(s.protects_capture())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn calc_history(state: State<'_, AppState>) -> Result<Vec<CalcEntry>> {
     calc_history_person(&state)
 }
@@ -43,7 +43,7 @@ pub(crate) fn calc_history_core(s: &Session, _actor: &Actor) -> Result<Vec<CalcE
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn add_calc_entry(app: AppHandle, state: State<'_, AppState>, expr: String, result: String) -> Result<Vec<CalcEntry>> {
     limit("The calculation", &expr, 1_000)?;
     limit("The result", &result, 1_000)?;
@@ -71,7 +71,7 @@ pub(crate) fn add_calc_entry_core(
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn clear_calc_history(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     clear_calc_history_person(&state)?;
     let _ = app.emit(CHANGED, ());

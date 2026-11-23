@@ -524,7 +524,7 @@ fn backup_now_person(app: AppHandle, state: State<'_, AppState>) -> Result<Optio
     Ok(Some(path.display().to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
     get_settings_person(&state)
 }
@@ -543,7 +543,7 @@ pub(crate) fn get_settings_core(s: &Session, _actor: &Actor) -> Result<Settings>
     Ok(settings)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> Result<Settings> {
     let protect = save_settings_person(&state, settings)?;
     ui::set_capture_protection(&app, protect);
@@ -572,7 +572,7 @@ pub(crate) fn save_settings_core(s: &mut Session, _actor: &Actor, settings: Sett
 }
 
 /// Saves only the last location in the unlocked vault, without overwriting other settings.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_last_place(state: State<'_, AppState>, last_place: Option<LastPlace>) -> Result<()> {
     set_last_place_person(&state, last_place)
 }
@@ -674,7 +674,7 @@ fn window_ready_person(window: WebviewWindow, state: State<'_, AppState>) {
     state.mark_ready(window.label());
     // Hidden in the tray (by the close button, or started hidden by Windows): a reload after a
     // lock must not bring the window back; opening it from the tray does.
-    if window.label() == "main" && state.tray_hidden() {
+    if window.label() == "main" && (state.tray_hidden() || state.is_quitting()) {
         return;
     }
     let _ = window.show();
@@ -708,7 +708,7 @@ pub fn acknowledge_notice(state: State<'_, AppState>, id: String) {
     state.acknowledge_notice(&id);
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn open_data_folder(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     open_data_folder_person(app, state)
 }
@@ -754,7 +754,7 @@ fn open_data_folder_person(app: AppHandle, state: State<'_, AppState>) -> Result
 
 
 /// The window identity comes from Tauri, never from an action parameter.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn editing(window: WebviewWindow, state: State<'_, AppState>, id: String, active: bool) -> Result<()> {
     state.with_mut(|s| {
         if s.get(&id).is_none() { return Err(Error::NotFound); }

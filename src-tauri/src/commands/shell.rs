@@ -34,7 +34,7 @@ fn current_exe() -> Result<std::path::PathBuf> {
     std::env::current_exe().map_err(Error::from)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_shell_prefs(state: State<'_, AppState>) -> Result<ShellPrefs> {
     get_shell_prefs_person(state)
 }
@@ -55,7 +55,7 @@ fn get_shell_prefs_person(state: State<'_, AppState>) -> Result<ShellPrefs> {
 
 /// Saves the switches and updates (or removes) the start-up entry to match. If Windows refuses
 /// the entry, the error says so and the file is not changed.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_shell_prefs(state: State<'_, AppState>, prefs: ShellPrefsInput) -> Result<ShellPrefs> {
     set_shell_prefs_person(state, prefs)
 }

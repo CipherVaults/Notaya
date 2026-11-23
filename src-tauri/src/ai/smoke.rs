@@ -196,7 +196,8 @@ fn bridge_core_smoke_pair_read_confirm_refuse_person_editing_and_ordered_deliver
     error_is(&bridge.call(4, "page.trash", json!({"id":page})), "person_editing");
     assert_eq!(confirms.load(Ordering::SeqCst), 1, "lease refusal precedes confirmation");
     assert_eq!(state.with(|s| Ok(s.rev(&page))).unwrap(), before);
-    state.unmark_ready("smoke-person"); // closing the synthetic editor releases its lease
+    state.unmark_ready("smoke-person");
+    state.forget_window("smoke-person"); // closing the synthetic editor releases its lease
     println!("CHECKPOINT: person-editing refusal before confirmation done");
 
     // Exercise the merge seam: an AI write survives a sink panic, is delivered

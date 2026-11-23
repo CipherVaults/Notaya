@@ -12,7 +12,7 @@ pub(crate) use import_pictures::ImportPictures;
 #[cfg(test)]
 mod security_tests;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use zeroize::Zeroizing;
@@ -85,6 +85,19 @@ fn aad(format: Format, vault_id: &[u8; 16], table: Table, id: &RowId) -> Vec<u8>
 pub fn parse_id(id: &str) -> Result<RowId> {
     let bytes = hex::decode(id).map_err(|_| Error::NotFound)?;
     bytes.try_into().map_err(|_| Error::NotFound)
+}
+
+/// Keep even a bare attachment id in a content field. Scanning hex runs
+/// once avoids searching every surviving note body once per attachment.
+fn keep_attachment_refs(unreferenced: &mut HashSet<String>, text: &str) {
+    if unreferenced.is_empty() {
+        return;
+    }
+    for run in text.split(|c: char| !c.is_ascii_hexdigit()).filter(|run| run.len() >= 32) {
+        for start in 0..=run.len() - 32 {
+            unreferenced.remove(&run[start..start + 32]);
+        }
+    }
 }
 
 impl Session {
@@ -440,7 +453,7 @@ impl Session {
             }
             journal.write(s)?;
             if removed_templates.is_empty() { return Ok(None); }
-            let head = self.purge_undo_in_store(journal.head(&self.activity_head), &[], &removed_templates)?;
+            let head = self.purge_undo_in_store(journal.head(&self.activity_head), &HashSet::new(), &removed_templates)?;
             let anchor = self.refresh_anchor_head(journal.anchor.next.clone(), &head, s)?;
             // Template removal has no delete_bin_tree caller to collect files.
             // Use the prospective items and just-written snapshots/undo here,
@@ -448,7 +461,7 @@ impl Session {
             let replaced: std::collections::HashSet<_> = items.iter().map(Item::id).collect();
             self.collect_garbage_for(
                 self.items.values().filter(|item| !replaced.contains(item.id())).chain(items.iter()),
-                &head, journal.picture_ids(), &[],
+                &head, journal.picture_ids(), &HashSet::new(),
             )?;
             Ok(Some((head, anchor)))
         })?;
@@ -463,56 +476,90 @@ impl Session {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn remove_many(&mut self, ids: &[String]) -> Result<()> {
-        if ids.is_empty() { return Ok(()); }
-        let mut seen = std::collections::HashSet::new();
-        let unique: Vec<_> = ids.iter().filter(|id| seen.insert(id.as_str())).cloned().collect();
-        let ids = unique.as_slice();
+        self.purge_many(ids, Vec::new())
+    }
+
+    /// Permanently delete items and publish any surviving relation edits as
+    /// one durable write. The history, activity and encrypted attachments share
+    /// that write, so a failed purge cannot leave partially removed data.
+    pub(crate) fn purge_many(&mut self, ids: &[String], mut updates: Vec<Item>) -> Result<()> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let mut removed = HashSet::new();
+        let ids: Vec<_> = ids.iter().filter(|id| removed.insert(id.as_str())).cloned().collect();
         self.activity_verify()?;
         let actor = self.actor.clone().unwrap_or(Actor::Person);
-        for id in ids { self.check_write(&actor, id, None)?; }
+        self.ai_write_targets(&actor, &updates)?;
+        for item in &updates {
+            self.check_write(&actor, item.id(), None)?;
+            if let Some(parent) = Self::parent_of(item) {
+                self.coordination.check(&actor, |other| self.is_within(parent, other))?;
+            }
+        }
+        for id in &ids {
+            self.check_write(&actor, id, None)?;
+        }
+
         let mut settings = self.settings();
         let before = settings.replaced_edits.len();
-        settings.replaced_edits.retain(|e| !ids.contains(&e.id));
+        settings.replaced_edits.retain(|e| !removed.contains(e.id.as_str()));
         let settings = (before != settings.replaced_edits.len()).then_some(Item::Settings(settings));
         let sealed_settings = settings.as_ref().map(|i| self.seal_item(i)).transpose()?;
+        let sealed_updates = updates.iter().map(|item| self.seal_item(item)).collect::<Result<Vec<_>>>()?;
         let rows = ids.iter().map(|id| parse_id(id)).collect::<Result<Vec<_>>>()?;
-        let mut journal = self.prepare_journal(&actor, &[], ids)?;
-        let versions: Vec<_> = ids.iter().filter_map(|id| self.history_index.get(id)).flatten().map(|m| m.version_id.clone()).collect();
-        journal.anchor = self.prepare_anchor(journal.head(&self.activity_head), versions.iter().map(|id| (id.clone(), None)).collect())?;
+        let versions: Vec<_> = ids.iter().filter_map(|id| self.history_index.get(id)).flatten()
+            .map(|m| (m.version_id.clone(), None)).collect();
+        let mut history_rows = Vec::with_capacity(2 * versions.len());
+        for (id, _) in &versions {
+            history_rows.push(parse_id(id)?);
+            history_rows.push(history::body_id(id)?);
+        }
+        let mut journal = self.prepare_journal(&actor, &updates, &ids)?;
+        journal.anchor = self.prepare_anchor(
+            journal.head(&self.activity_head),
+            journal.history_additions().chain(versions).collect(),
+        )?;
+        updates.extend(settings);
+        let replaced: HashSet<_> = updates.iter().map(Item::id).collect();
         let (head, anchor) = self.store.transaction(|s| {
-            if let Some((id, bytes)) = &sealed_settings { s.put(Table::Records, id, bytes)?; }
-            for row in &rows {
-                s.delete(Table::Records, row)?;
+            if let Some((id, bytes)) = &sealed_settings {
+                s.put(Table::Records, id, bytes)?;
             }
-            for id in &versions {
-                s.delete(Table::History, &parse_id(id)?)?;
-                s.delete(Table::History, &history::body_id(id)?)?;
+            for (id, bytes) in &sealed_updates {
+                s.put(Table::Records, id, bytes)?;
             }
+            s.delete_many(Table::Records, &rows)?;
+            s.delete_many(Table::History, &history_rows)?;
             journal.write(s)?;
-            let head = self.purge_undo_in_store(journal.head(&self.activity_head), ids, &Default::default())?;
+            let head = self.purge_undo_in_store(journal.head(&self.activity_head), &removed, &Default::default())?;
             let anchor = self.refresh_anchor_head(journal.anchor.next.clone(), &head, s)?;
-            // Purge orphaned files before committing deletion, using the new
-            // items/settings and excluding the history just removed on disk.
             self.collect_garbage_for(
-                self.items.values().filter(|item| !ids.iter().any(|id| id == item.id())
-                    && !(settings.is_some() && item.id() == SETTINGS_ID)).chain(settings.iter()),
-                &head, std::iter::empty(), ids,
+                self.items.values()
+                    .filter(|item| !removed.contains(item.id()) && !replaced.contains(item.id()))
+                    .chain(updates.iter()),
+                &head, journal.picture_ids(), &removed,
             )?;
             Ok((head, anchor))
         })?;
+
         self.accept_journal(journal);
         self.activity_head = head;
         self.anchor = anchor;
-        for id in ids {
+        self.clear_query_cache();
+        for id in &ids {
             self.history_index.remove(id);
-            if let Some(item) = self.items.get(id).cloned() { self.record_change(&item, &actor); }
-            self.items.remove(id);
+            if let Some(item) = self.items.remove(id) {
+                self.note_change(&item, &actor);
+            }
+            self.person_bursts.remove(id);
             self.ai_writers.remove(id);
         }
-        if let Some(settings) = settings {
-            self.record_change(&settings, &actor);
-            self.items.insert(settings.id().into(), settings);
+        for item in updates {
+            self.note_change(&item, &actor);
+            self.items.insert(item.id().into(), item);
         }
         self.changed();
         Ok(())
@@ -594,6 +641,29 @@ impl Session {
             current = self.get(id).and_then(Self::parent_of);
         }
         false
+    }
+
+    /// Includes the roots and all their descendants exactly once, even if
+    /// several bin entries overlap or a damaged tree contains a cycle.
+    pub(crate) fn subtree_ids(&self, roots: &[String]) -> Vec<String> {
+        let mut children: HashMap<&str, Vec<&str>> = HashMap::new();
+        for item in self.items() {
+            if let Some(parent) = Self::parent_of(item) {
+                children.entry(parent).or_default().push(item.id());
+            }
+        }
+        let mut pending: Vec<_> = roots.iter().filter_map(|id| self.get(id)).map(Item::id).collect();
+        let mut found = HashSet::new();
+        while let Some(id) = pending.pop() {
+            if found.insert(id) {
+                if let Some(child_ids) = children.get(id) {
+                    pending.extend(child_ids);
+                }
+            }
+        }
+        let mut ids: Vec<_> = found.into_iter().map(str::to_owned).collect();
+        ids.sort_unstable();
+        ids
     }
 
     pub fn own_trash(item: &Item) -> Option<i64> {
@@ -687,6 +757,10 @@ impl Session {
         // Use the vault-wide write boundary. Relations can span several
         // databases, and item-map changes can reorder rows tied on manual order.
         self.clear_query_cache();
+        self.note_change(item, actor);
+    }
+
+    fn note_change(&mut self, item: &Item, actor: &Actor) {
         let id = item.id().to_string();
         *self.revs.entry(id.clone()).or_default() += 1;
         let kind = match item { Item::Notebook(_) => "notebook", Item::Section(_) => "section",
@@ -781,7 +855,11 @@ impl Session {
 
     /// Deletes attachments no page or sticky note refers to any more.
     pub fn collect_garbage(&mut self) -> Result<usize> {
-        let removed = self.collect_garbage_for(self.items.values(), &self.activity_head, std::iter::empty(), &[])?;
+        let removed = self.store.transaction(|_| {
+            self.collect_garbage_for(
+                self.items.values(), &self.activity_head, std::iter::empty(), &HashSet::new(),
+            )
+        })?;
         if removed > 0 {
             self.changed();
         }
@@ -793,50 +871,56 @@ impl Session {
         items: impl Iterator<Item = &'a Item>,
         head: &activity::Head,
         extra_pictures: impl Iterator<Item = &'a String>,
-        removed: &[String],
+        removed: &HashSet<&str>,
     ) -> Result<usize> {
-        let mut referenced = String::new();
-        let undo_attachments = self.undo_attachment_ids(head)?;
-        for id in self.history_index.iter().filter(|(page, _)| !removed.contains(page))
-            .flat_map(|(_, versions)| versions).flat_map(|meta| &meta.picture_ids).chain(extra_pictures) {
-            referenced.push_str(id);
+        let mut unreferenced: HashSet<_> = self.store.ids(Table::Attachments)?
+            .into_iter().map(hex::encode).collect();
+        if unreferenced.is_empty() {
+            return Ok(0);
+        }
+        for id in self.history_index.iter().filter(|(page, _)| !removed.contains(page.as_str()))
+            .flat_map(|(_, versions)| versions).flat_map(|meta| &meta.picture_ids).chain(extra_pictures)
+        {
+            unreferenced.remove(id);
         }
         for item in items {
+            if unreferenced.is_empty() {
+                return Ok(0);
+            }
             match item {
                 Item::Page(p) => {
-                    referenced.push_str(&p.content);
-                    referenced.push_str(&p.cover);
-                    referenced.push_str(&p.icon);
+                    keep_attachment_refs(&mut unreferenced, &p.content);
+                    keep_attachment_refs(&mut unreferenced, &p.cover);
+                    keep_attachment_refs(&mut unreferenced, &p.icon);
                 }
-                Item::Sticky(s) => referenced.push_str(&s.content),
-                // Database rows keep pictures in their body and cover, and files in their cells;
-                // templates keep a body too (A35).
+                Item::Sticky(s) => keep_attachment_refs(&mut unreferenced, &s.content),
                 Item::Row(r) => {
-                    referenced.push_str(&r.content);
-                    referenced.push_str(&r.cover);
-                    referenced.push_str(&r.cells);
+                    keep_attachment_refs(&mut unreferenced, &r.content);
+                    keep_attachment_refs(&mut unreferenced, &r.cover);
+                    keep_attachment_refs(&mut unreferenced, &r.cells);
                 }
                 Item::Database(d) => {
                     for t in &d.templates {
-                        referenced.push_str(&t.content);
-                        referenced.push_str(&t.cells);
+                        keep_attachment_refs(&mut unreferenced, &t.content);
+                        keep_attachment_refs(&mut unreferenced, &t.cells);
                     }
                 }
                 Item::Settings(settings) => {
-                    for edit in &settings.replaced_edits { referenced.push_str(&edit.previous); }
+                    for edit in &settings.replaced_edits {
+                        keep_attachment_refs(&mut unreferenced, &edit.previous);
+                    }
                 }
                 _ => {}
             }
         }
-        let mut removed = 0;
-        for id in self.store.ids(Table::Attachments)? {
-            let hex_id = hex::encode(id);
-            if !referenced.contains(&hex_id) && !undo_attachments.contains(&hex_id) {
-                self.store.delete(Table::Attachments, &id)?;
-                removed += 1;
+        if !unreferenced.is_empty() {
+            for id in self.undo_attachment_ids(head)? {
+                unreferenced.remove(&id);
             }
         }
-        Ok(removed)
+        let rows: Vec<_> = unreferenced.iter().map(|id| parse_id(id)).collect::<Result<_>>()?;
+        self.store.delete_many(Table::Attachments, &rows)?;
+        Ok(rows.len())
     }
 
     /// Changes the master password and/or keyfile.

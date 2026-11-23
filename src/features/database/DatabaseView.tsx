@@ -611,15 +611,17 @@ export default function DatabaseView({ databaseId, viewId: viewIdProp, onViewCha
   };
   const trashDatabase = async () => {
     if (!db) return;
-    const ok = await confirm({ title: `Move "${db.title || "Untitled"}" to the trash?`, body: "Its rows go with it. You can restore it from the trash.", confirm: "Move to trash", danger: true });
+    const ok = await confirm({
+      title: `Move "${db.title || "Untitled"}" to the trash?`,
+      body: "Its rows go with it. You can restore it from the trash.",
+      confirm: "Move to trash",
+      danger: true,
+      busyLabel: "Moving to trash…",
+      onConfirm: async () => setTree(await api.trashPage(db.id)),
+    });
     if (!ok) return;
-    try {
-      setTree(await api.trashPage(db.id));
-      if (useApp.getState().activePageId === db.id) useApp.getState().openPage(null);
-      toast("Database moved to trash", { action: { label: "Undo", onClick: async () => setTree(await api.restorePage(db.id)) } });
-    } catch (e) {
-      toast.error(errorText(e));
-    }
+    if (useApp.getState().activePageId === db.id) useApp.getState().openPage(null);
+    toast("Database moved to trash", { action: { label: "Undo", onClick: async () => setTree(await api.restorePage(db.id)) } });
   };
 
   // ----- shell context

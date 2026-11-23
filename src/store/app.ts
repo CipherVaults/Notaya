@@ -36,6 +36,7 @@ interface AppState {
   view: View;
   tree: NotesTree;
   bin: BinEntry[];
+  binAction: string | null;
   stickies: Sticky[];
   activeNotebookId: string | null;
   activeSectionId: string | null;
@@ -63,6 +64,7 @@ interface AppState {
   setSettings: (s: Settings) => void;
   setTree: (t: NotesTree) => void;
   setStickies: (s: Sticky[]) => void;
+  runBinAction: (key: string, run: () => Promise<void>) => Promise<boolean>;
   openNotebook: (id: string | null) => void;
   openSection: (id: string | null) => void;
   /** Opens a page, or a database when the id is one (looked up in the tree). */
@@ -115,6 +117,7 @@ export const useApp = create<AppState>((set, get) => ({
   view: "notes",
   tree: EMPTY_TREE,
   bin: [],
+  binAction: null,
   stickies: [],
   activeNotebookId: null,
   activeSectionId: null,
@@ -162,6 +165,17 @@ export const useApp = create<AppState>((set, get) => ({
   setSettings: (settings) => set({ settings }),
   setTree: (tree) => set({ tree }),
   setStickies: (stickies) => set({ stickies }),
+  runBinAction: async (key, run) => {
+    if (get().binAction !== null) return false;
+    set({ binAction: key });
+    try {
+      await run();
+      await refreshing;
+      return true;
+    } finally {
+      set({ binAction: null });
+    }
+  },
 
   openNotebook: (id) => {
     const first = get().tree.sections.find((s) => s.notebookId === id)?.id ?? null;
@@ -298,14 +312,13 @@ export async function restoreLastPlace(place: LastPlace | null | undefined, tree
 
 // Coalesce a batch signal into one refresh; serialize overlapping signals so old
 // reads cannot replace a newer tree. The editors decide independently whether to reload.
-let refreshing = false;
+let refreshing: Promise<void> | null = null;
 let refreshAgain = false;
 onItemsChanged((change) => {
   if (!change.tree || !useApp.getState().status?.unlocked) return;
   refreshAgain = true;
   if (refreshing) return;
-  refreshing = true;
-  void (async () => {
+  refreshing = (async () => {
     try {
       while (refreshAgain) {
         refreshAgain = false;
@@ -323,6 +336,6 @@ onItemsChanged((change) => {
         if (current.activeNotebookId && !current.tree.notebooks.some((n) => n.id === current.activeNotebookId)) current.openNotebook(null);
       }
     } catch { /* A lock can overtake a refresh; the unlock loads a fresh tree. */ }
-    finally { refreshing = false; }
+    finally { refreshing = null; }
   })();
 });

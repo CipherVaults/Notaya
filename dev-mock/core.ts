@@ -21,6 +21,10 @@ const heldVaultStatus = params.has("holdVaultStatus")
       window.addEventListener("notaya-test-release-vault-status", () => resolve(), { once: true });
     })
   : undefined;
+const heldBinCommand = params.get("holdBinCommand");
+const heldBinAction = heldBinCommand && new Promise<void>((resolve) => {
+  window.addEventListener("notaya-test-release-bin-action", () => resolve(), { once: true });
+});
 let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
@@ -162,6 +166,7 @@ type Args = Record<string, unknown>;
 async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: { headers?: Record<string, string> }): Promise<T> {
   await new Promise((r) => setTimeout(r, 30));
   const ok = (v: unknown) => v as T;
+  if (cmd === heldBinCommand) await heldBinAction;
   if ((cmd === "query_view" || cmd === "view_rows") && !unlocked) throw "The vault is locked.";
   if (cmd.startsWith("ai_")) return ok(aiCommand(cmd, args));
   if (!["list_notes", "search", "list_bin", "restore_bin_item", "restore_page", "delete_page", "empty_trash"].includes(cmd)) {
@@ -175,6 +180,20 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
     ) as T;
   }
   switch (cmd) {
+    case "confirmation_prompt": {
+      const emptyBin = params.get("confirmation") === "empty";
+      return ok({
+        title: emptyBin ? "Empty the bin?" : "Delete for good?",
+        action: emptyBin ? "Empty the bin" : "Delete for good",
+        body: "Permanently delete 6,257 items and their history? This cannot be undone.",
+        danger: true,
+        appearance: { theme: "black", accent: "mono" },
+      });
+    }
+    case "confirmation_ready": return ok(null);
+    case "confirmation_answer":
+      document.documentElement.dataset.testConfirmationAnswer = args.allow === true ? "allow" : "cancel";
+      return ok(null);
     case "vault_status":
       if (initialVaultStatusRejections > 0) {
         initialVaultStatusRejections--;

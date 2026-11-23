@@ -95,28 +95,35 @@ pub fn run() {
         .manage(state::AppState::new(paths.clone()))
         // Serves decrypted images to the editor at http://clatt.localhost/<id>,
         // only while the vault is unlocked. Nothing is written to disk.
-        .register_uri_scheme_protocol("clatt", |ctx, request| {
-            let state = ctx.app_handle().state::<state::AppState>();
+        .register_asynchronous_uri_scheme_protocol("clatt", |ctx, request, responder| {
+            if ctx.webview_label().starts_with(native_confirm::WINDOW_PREFIX) {
+                responder.respond(http::Response::builder().status(404).body(Vec::new()).unwrap());
+                return;
+            }
+            let app = ctx.app_handle().clone();
             let id = request.uri().path().trim_start_matches('/').to_string();
-            let response = match state.with(|s| s.get_attachment(&id)) {
-                // Only pictures are shown with their own type. A file attached to a database row is
-                // sent as plain data and as a download, so it can never run as a page or a script.
-                Ok((mime, bytes)) => {
-                    let picture = matches!(mime.as_str(), "image/png" | "image/jpeg" | "image/gif" | "image/webp");
-                    let mut b = http::Response::builder()
-                        .status(200)
-                        .header("Content-Type", if picture { mime.as_str() } else { "application/octet-stream" })
-                        .header("Cache-Control", "no-store")
-                        .header("X-Content-Type-Options", "nosniff")
-                        .header("Content-Security-Policy", "default-src 'none'; sandbox");
-                    if !picture {
-                        b = b.header("Content-Disposition", "attachment");
+            tauri::async_runtime::spawn_blocking(move || {
+                let state = app.state::<state::AppState>();
+                let response = match state.with(|s| s.get_attachment(&id)) {
+                    // Only pictures are shown with their own type. A file attached to a database row is
+                    // sent as plain data and as a download, so it can never run as a page or a script.
+                    Ok((mime, bytes)) => {
+                        let picture = matches!(mime.as_str(), "image/png" | "image/jpeg" | "image/gif" | "image/webp");
+                        let mut b = http::Response::builder()
+                            .status(200)
+                            .header("Content-Type", if picture { mime.as_str() } else { "application/octet-stream" })
+                            .header("Cache-Control", "no-store")
+                            .header("X-Content-Type-Options", "nosniff")
+                            .header("Content-Security-Policy", "default-src 'none'; sandbox");
+                        if !picture {
+                            b = b.header("Content-Disposition", "attachment");
+                        }
+                        b.body(bytes)
                     }
-                    b.body(bytes)
-                }
-                Err(_) => http::Response::builder().status(404).body(Vec::new()),
-            };
-            response.unwrap_or_else(|_| http::Response::new(Vec::new()))
+                    Err(_) => http::Response::builder().status(404).body(Vec::new()),
+                };
+                responder.respond(response.unwrap_or_else(|_| http::Response::new(Vec::new())));
+            });
         })
         .setup(move |app| {
             let _ = APP.set(app.handle().clone());
@@ -169,7 +176,19 @@ pub fn run() {
             // when "close to tray" is off or there is no tray icon.
             if let tauri::WindowEvent::Destroyed = event {
                 // A closed window can't answer a flush request any more.
-                window.app_handle().state::<state::AppState>().unmark_ready(window.label());
+                let state = window.app_handle().state::<state::AppState>();
+                if window.label().starts_with(native_confirm::WINDOW_PREFIX) {
+                    state.ai.native.cancel(Some(window.label()));
+                } else {
+                    state.unmark_ready(window.label());
+                    if window.label() != "main" {
+                        let app = window.app_handle().clone();
+                        let label = window.label().to_owned();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            app.state::<state::AppState>().forget_window(&label);
+                        });
+                    }
+                }
             }
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -184,12 +203,7 @@ pub fn run() {
                             let mut guard = ClosingGuard { exiting: false };
                             let state = app.state::<state::AppState>();
                             if state.tray_ready() && shell::load_prefs(&state.paths).close_to_tray {
-                                let failure = state::hide_to_tray(&app);
-                                // The close button works again before the message box is shown (it waits for a click).
-                                drop(guard);
-                                if let Some(text) = failure {
-                                    state::show_backup_failure(&app, &text);
-                                }
+                                state::hide_to_tray(&app);
                             } else {
                                 guard.exiting = state::quit(&app);
                             }
@@ -198,7 +212,10 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![
+        .invoke_handler(native_confirm::scope_commands(tauri::generate_handler![
+            native_confirm::confirmation_prompt,
+            native_confirm::confirmation_ready,
+            native_confirm::confirmation_answer,
             commands::ai::ai_get_status,
             commands::ai::ai_set_enabled,
             commands::ai::ai_set_level,
@@ -323,7 +340,7 @@ pub fn run() {
             search_history::add_search_term,
             search_history::remove_search_term,
             search_history::clear_search_history,
-        ])
+        ]))
         .build(tauri::generate_context!())
         .unwrap_or_else(|e| {
             // No window and no console to tell the owner: leave without a crash report.

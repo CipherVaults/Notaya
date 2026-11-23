@@ -1,5 +1,11 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261123-rc4-wave1"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+Codex coordinated Wave 1 with separate frontend, deletion and shutdown lanes. Model, effort, token totals and before/after quota readings were unavailable. [Session 157](../sessions.md#session-157).
+
 <a id="codex-usage-20261123-rc3-stalled-retry"></a>
 
 ## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC

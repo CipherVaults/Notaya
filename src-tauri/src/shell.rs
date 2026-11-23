@@ -108,7 +108,11 @@ pub fn started_minimized() -> bool {
 
 /// Brings the main window to the front (from the tray, or from a second start).
 pub fn show_main(app: &AppHandle) {
-    app.state::<state::AppState>().set_tray_hidden(false);
+    let state = app.state::<state::AppState>();
+    if state.is_quitting() {
+        return;
+    }
+    state.set_tray_hidden(false);
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
         let _ = w.show();

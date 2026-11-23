@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { AlertDialog, Dialog as RDialog, DropdownMenu, Slider as RSlider, Switch as RSwitch, Tooltip } from "radix-ui";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { errorText } from "@/lib/ipc";
 
 /* ---------- Button ---------- */
 
@@ -232,6 +233,7 @@ export function Modal({
   description,
   children,
   width = 460,
+  busy = false,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -240,13 +242,15 @@ export function Modal({
   description?: string;
   children: React.ReactNode;
   width?: number;
+  busy?: boolean;
 }) {
   return (
-    <RDialog.Root open={open} onOpenChange={onOpenChange}>
+    <RDialog.Root open={open} onOpenChange={(value) => !busy && onOpenChange(value)}>
       <RDialog.Portal>
         <RDialog.Overlay className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" />
         <RDialog.Content
           onCloseAutoFocus={onCloseAutoFocus}
+          aria-busy={busy || undefined}
           style={{ width }}
           className="fixed left-1/2 top-1/2 z-50 max-h-[85vh] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-line bg-elevated p-6 shadow-float outline-none"
         >
@@ -260,7 +264,7 @@ export function Modal({
               )}
             </div>
             <RDialog.Close asChild>
-              <button className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-fg" aria-label="Close">
+              <button className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-45" aria-label="Close" disabled={busy}>
                 <X size={16} />
               </button>
             </RDialog.Close>
@@ -279,37 +283,77 @@ interface ConfirmOptions {
   body: string;
   confirm?: string;
   danger?: boolean;
+  onConfirm?: () => Promise<void>;
+  busyLabel?: string;
 }
 
+type Confirmation = ConfirmOptions & { resolve: (v: boolean) => void };
 const ConfirmContext = React.createContext<(o: ConfirmOptions) => Promise<boolean>>(async () => false);
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = React.useState<(ConfirmOptions & { resolve: (v: boolean) => void }) | null>(null);
-  const ask = React.useCallback(
-    (o: ConfirmOptions) => new Promise<boolean>((resolve) => setState({ ...o, resolve })),
-    [],
-  );
-  const close = (v: boolean) => {
-    state?.resolve(v);
+  const pending = React.useRef<Confirmation | null>(null);
+  const running = React.useRef(false);
+  const [state, setState] = React.useState<Confirmation | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const ask = React.useCallback((o: ConfirmOptions) => new Promise<boolean>((resolve) => {
+    if (pending.current) {
+      resolve(false);
+      return;
+    }
+    pending.current = { ...o, resolve };
+    setError(null);
+    setState(pending.current);
+  }), []);
+  const close = (accepted: boolean) => {
+    const request = pending.current;
+    pending.current = null;
     setState(null);
+    request?.resolve(accepted);
+  };
+  const accept = async () => {
+    const request = pending.current;
+    if (!request || running.current) return;
+    if (!request.onConfirm) {
+      close(true);
+      return;
+    }
+    running.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await request.onConfirm();
+      close(true);
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      running.current = false;
+      setBusy(false);
+    }
   };
   return (
     <ConfirmContext.Provider value={ask}>
       {children}
-      <AlertDialog.Root open={!!state} onOpenChange={(o) => !o && close(false)}>
+      <AlertDialog.Root open={!!state} onOpenChange={(o) => !o && !running.current && close(false)}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="fixed inset-0 z-[60] bg-black/45 backdrop-blur-sm" />
-          <AlertDialog.Content className="fixed left-1/2 top-1/2 z-[60] w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-elevated p-6 shadow-float">
+          <AlertDialog.Content aria-busy={busy || undefined} className="fixed left-1/2 top-1/2 z-[60] w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-elevated p-6 shadow-float">
             <AlertDialog.Title className="text-lg font-semibold">{state?.title}</AlertDialog.Title>
-            <AlertDialog.Description className="mt-2 text-sm leading-relaxed text-muted">
+            <AlertDialog.Description className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted">
               {state?.body}
             </AlertDialog.Description>
-            <div className="mt-6 flex justify-end gap-2">
+            {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+            <div className="mt-6 flex items-center justify-end gap-2">
+              {busy && <span role="status" className="mr-auto text-sm text-muted">{state?.busyLabel ?? "Working…"}</span>}
               <AlertDialog.Cancel asChild>
-                <Button variant="ghost">Cancel</Button>
+                <Button variant="ghost" disabled={busy}>Cancel</Button>
               </AlertDialog.Cancel>
               <AlertDialog.Action asChild>
-                <Button variant={state?.danger ? "danger" : "primary"} onClick={() => close(true)}>
+                <Button variant={state?.danger ? "danger" : "primary"} disabled={busy} onClick={(e) => {
+                  e.preventDefault();
+                  void accept();
+                }}>
+                  {busy && <Loader2 size={15} className="animate-spin" aria-hidden="true" />}
                   {state?.confirm ?? "Confirm"}
                 </Button>
               </AlertDialog.Action>

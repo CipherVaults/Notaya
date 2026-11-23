@@ -39,7 +39,7 @@ pub(crate) fn update(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn ai_get_status(window: WebviewWindow, state: State<'_, AppState>) -> Result<Value> {
     main_window(&window)?;
     state.with(|s| {
@@ -82,7 +82,7 @@ pub(crate) fn ai_set_enabled_core(state: &AppState, enabled: bool, confirmation:
     state.ai.invalidate();
     Ok(())
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn ai_set_level(
     window: WebviewWindow,
     state: State<'_, AppState>,
@@ -102,7 +102,7 @@ pub fn ai_set_level(
         Ok(())
     })
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn ai_remove_pairing(
     window: WebviewWindow,
     state: State<'_, AppState>,
@@ -114,7 +114,7 @@ pub fn ai_remove_pairing(
         Ok(())
     })
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn ai_set_hidden(
     window: WebviewWindow,
     state: State<'_, AppState>,
@@ -136,7 +136,7 @@ pub fn ai_set_hidden(
         Ok(())
     })
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn ai_set_big_change(
     window: WebviewWindow,
     state: State<'_, AppState>,
@@ -155,7 +155,7 @@ pub fn ai_set_big_change(
         Ok(())
     })
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn ai_pause(window: WebviewWindow, state: State<'_, AppState>) -> Result<()> {
     main_window(&window)?;
     update(&state, "ai_pause", |a| {
@@ -163,7 +163,7 @@ pub fn ai_pause(window: WebviewWindow, state: State<'_, AppState>) -> Result<()>
         Ok(())
     })
 }
-#[tauri::command]
+#[tauri::command(async)]
 pub fn ai_resume(window: WebviewWindow, state: State<'_, AppState>) -> Result<()> {
     main_window(&window)?;
     update(&state, "ai_resume", |a| {

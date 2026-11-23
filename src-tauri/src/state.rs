@@ -207,8 +207,8 @@ impl AppState {
         self.quitting.load(Ordering::SeqCst)
     }
 
-    fn set_quitting(&self, on: bool) {
-        self.quitting.store(on, Ordering::SeqCst);
+    fn begin_quit(&self) -> bool {
+        !self.quitting.swap(true, Ordering::SeqCst)
     }
 
     /// Repeated reports of a pending notice share its place in the queue.
@@ -253,11 +253,19 @@ impl AppState {
 
     /// Forgets a window that no longer exists, so a lock doesn't wait for it.
     pub fn unmark_ready(&self, label: &str) {
-        if let Some(s) = guard(&self.session).as_mut() { s.coordination.forget_window(label); }
         guard(&self.ready).remove(label);
         let mut f = guard(&self.flush);
         if f.pending.remove(label) {
             self.flush_cv.notify_all();
+        }
+    }
+
+    /// This may wait behind an off-thread vault operation. Window events call it on a worker.
+    pub fn forget_window(&self, label: &str) {
+        if let Some(session) = guard(&self.session).as_mut() {
+            if !guard(&self.ready).contains(label) {
+                session.coordination.forget_window(label);
+            }
         }
     }
 
@@ -307,10 +315,11 @@ impl AppState {
     }
 
     pub fn take_session(&self) -> Option<Session> {
+        let mut session = guard(&self.session);
+        // Invalidate while owning this session. No new prompt can bind the new epoch to it.
         self.ai.invalidate();
         // Messages of automations hold row titles: they do not outlive the unlocked session.
         crate::commands::automation::clear_notices();
-        let mut session = guard(&self.session);
         if let Some(s) = session.as_mut() {
             self.ai.flush_reads(s, None);
             s.clear_query_cache();
@@ -448,16 +457,17 @@ pub fn request_flush(app: &AppHandle, timeout: Duration) {
     if !state.is_unlocked() {
         return; // another lock already finished while we waited for the gate
     }
-    let expected: HashSet<String> = {
+    let round = {
         let open = app.webview_windows();
         let mut ready = guard(&state.ready);
         ready.retain(|label| open.contains_key(label));
-        ready.clone()
+        if ready.is_empty() {
+            return;
+        }
+        // Destruction either removes the label before this snapshot or drops
+        // it from this round in unmark_ready.
+        guard(&state.flush).begin(ready.clone())
     };
-    if expected.is_empty() {
-        return;
-    }
-    let round = guard(&state.flush).begin(expected);
     let _ = app.emit("vault-locking", round);
     let deadline = Instant::now() + timeout;
     let mut f = guard(&state.flush);
@@ -478,11 +488,20 @@ pub fn request_flush(app: &AppHandle, timeout: Duration) {
     f.finish();
 }
 
-/// Whether a lock tells the UI with `vault-locked`. A restore finishes first and
-/// the UI reloads itself, so it must not reload in the middle of the restore.
-fn emits_vault_locked(reason: &str, was_open: bool) -> bool {
-    // A quit of a vault with security off needs no reload: there is no lock screen to show.
-    reason != "restore" && !(reason == "quit" && was_open)
+/// Restore reloads the UI after the file swap. Quit is ending the UI session.
+fn emits_vault_locked(reason: &str) -> bool {
+    !matches!(reason, "restore" | "quit")
+}
+
+fn hide_main(app: &AppHandle, state: &AppState, quit: bool) -> bool {
+    if !quit && !state.tray_hidden() {
+        return false;
+    }
+    let hidden = app.get_webview_window("main").is_none_or(|window| window.hide().is_ok());
+    if !hidden && !quit {
+        state.set_tray_hidden(false);
+    }
+    hidden
 }
 
 /// Asks every window to write its pending edits, then waits (up to the usual lock time). Used before
@@ -511,24 +530,26 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
     // An import in progress stops at once: it must not go on reading and converting files for
     // minutes after the notes were locked (it ends as a failure and adds nothing).
     crate::commands::import_notes::cancel_running();
-    if reason != "drive-removed" && state.is_unlocked() {
+    if reason != "drive-removed" {
         request_flush(app, FLUSH_TIMEOUT);
     }
     let session = state.take_session();
-    let was_open = session.as_ref().is_some_and(|s| s.is_open());
     if session.is_some() {
         crate::logging::locked_event(reason);
     }
-    // The UI comes first: close stickies, reset the windows.
+    // Protect the locked screen and hide while a checked backup is made. A
+    // clean, open vault can exit directly after flushing.
+    let hide_for_quit = reason == "quit" && session.as_ref().is_some_and(|s| s.dirty || !s.is_open());
+    let hidden = (reason == "tray" || hide_for_quit) && hide_main(app, &state, reason == "quit");
     ui::close_stickies(app);
     ui::close_calculators(app);
-    if emits_vault_locked(reason, was_open) {
+    if emits_vault_locked(reason) || (hide_for_quit && !hidden) {
         let _ = app.emit("vault-locked", reason.to_string());
     }
     // Slow parts after that.
     let made = session.as_ref().filter(|s| s.dirty).map(|s| backup::make_backup(&state.paths, s));
     let backup_failure = if let Some(Err(e)) = made {
-        if matches!(reason, "quit" | "tray") {
+        if reason == "quit" {
             close_backup_failure(app, &state, &e)
         } else {
             report_backup_failure(app, &state, &e);
@@ -547,89 +568,56 @@ pub fn lock(app: &AppHandle, reason: &str) -> Option<String> {
 pub fn quit(app: &AppHandle) -> bool {
     use std::panic::{catch_unwind, AssertUnwindSafe};
     let state = app.state::<AppState>();
-    // While quitting, nothing may reopen a vault that has security off.
-    state.set_quitting(true);
+    // Repeated window, app-menu and tray quit requests share this shutdown.
+    if !state.begin_quit() {
+        return true;
+    }
+    let appearance = state.with(|s| Ok(s.settings().into())).ok();
     // Whatever fails or panics here, the exit must still happen.
     let backup_failure = catch_unwind(AssertUnwindSafe(|| lock(app, "quit"))).ok().flatten();
-    // A failed backup at quit would go unseen (the window is destroyed right away), so say it
-    // in a message box first. Not when the vault file is gone (the drive was removed): the
-    // notice then is about the drive, and nothing may hold up the exit.
     if let Some(text) = backup_failure.filter(|_| state.paths.vault.exists()) {
-        let _ = catch_unwind(AssertUnwindSafe(|| show_backup_failure(app, &text)));
+        let prompt = crate::native_confirm::NativePrompt::backup_failure(text, appearance);
+        let _ = catch_unwind(AssertUnwindSafe(|| state.ai.native.show_notice(prompt)));
     }
     app.exit(0);
     true
 }
 
-/// The close button with "close to tray" on: the window goes away but Notaya keeps running.
-/// With a master password the vault locks first (every window saves, sticky notes and
-/// calculators close, the lock screen is shown, the backup is made), so the notes are not left
-/// open in the tray. With security off nothing is locked, but the windows still save their pending
-/// edits and a backup is made if anything changed (a vault with security off otherwise gets its
-/// ordinary backup only at quit, which may now be rare). Only then is the main window hidden. A
-/// failed backup is returned for the caller to tell in a message box (the window is hidden, so a toast would
-/// go unseen).
-///
-/// Waits for the windows, so call it only from a thread other than the main one.
-pub fn hide_to_tray(app: &AppHandle) -> Option<String> {
-    use std::panic::{catch_unwind, AssertUnwindSafe};
+/// Hide the main window once pending edits have been saved. A protected vault locks and
+/// closes its other windows too. Finish any due backup on this worker after the window hides.
+pub fn hide_to_tray(app: &AppHandle) {
     let state = app.state::<AppState>();
-    // Set first, under the gate: the lock below reloads the window and its "ready" must not show
-    // it again, and an unlock still running must not store its session after this decision.
+    // Set before locking so a reload or an in-flight unlock cannot reopen the hidden vault.
     let protected = {
         let _gate = guard(&state.tray_gate);
         state.set_tray_hidden(true);
         state.with(|s| Ok(!s.is_open())).unwrap_or(false)
     };
-    let backup_failure = catch_unwind(AssertUnwindSafe(|| {
+    let _ = catch_unwind(AssertUnwindSafe(|| {
         if protected {
-            lock(app, "tray")
+            lock(app, "tray");
         } else {
             request_flush(app, FLUSH_TIMEOUT);
-            backup_open_vault(app, &state)
+            hide_main(app, &state, false);
+            backup_open_vault(app, &state);
         }
-    }))
-    .ok()
-    .flatten();
-    // Hide only if nobody opened the window meanwhile (the tray's Open, or a second start). If hiding
-    // fails, the window stays and the flag is cleared, so it is not left half hidden.
-    if state.tray_hidden() {
-        if let Some(w) = app.get_webview_window("main") {
-            if w.hide().is_err() {
-                state.set_tray_hidden(false);
-            }
-        }
-    }
-    backup_failure.filter(|_| state.paths.vault.exists())
+    }));
 }
 
-/// The ordinary backup of an open vault (security off) when something changed since the last
-/// one, as a lock or quit would make it. Returns the failure notice if it failed.
-fn backup_open_vault(app: &AppHandle, state: &AppState) -> Option<String> {
+/// Keep the ordinary end-of-session backup behavior for changed open vaults.
+fn backup_open_vault(app: &AppHandle, state: &AppState) {
     let result = state.with_mut(|s| {
-        if !s.dirty {
-            return Ok(());
+        if s.dirty {
+            backup::make_backup(&state.paths, s)?;
+            s.dirty = false;
         }
-        backup::make_backup(&state.paths, s)?;
-        s.dirty = false;
         Ok(())
     });
-    match result {
-        Err(Error::Locked) | Ok(()) => None,
-        Err(e) => close_backup_failure(app, state, &e),
+    if let Err(error) = result {
+        if !matches!(error, Error::Locked) {
+            report_backup_failure(app, state, &error);
+        }
     }
-}
-
-/// A native message box that waits until it is closed. Call it from a thread other than the
-/// main one (as `quit` is).
-pub(crate) fn show_backup_failure(app: &AppHandle, text: &str) {
-    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
-    let _ = app
-        .dialog()
-        .message(text.to_string())
-        .title("Notaya could not make a backup")
-        .kind(MessageDialogKind::Warning)
-        .blocking_show();
 }
 
 /// Tells the owner that an automatic backup could not be made (the release exe has no
@@ -820,15 +808,12 @@ mod tests {
     }
 
     #[test]
-    fn only_a_restore_lock_skips_the_vault_locked_event() {
-        for reason in ["manual", "idle", "sleep", "screen-locked", "minimized", "drive-removed", "quit", "tray"] {
-            assert!(emits_vault_locked(reason, false), "{reason}");
+    fn restore_and_quit_skip_the_vault_locked_event() {
+        for reason in ["manual", "idle", "sleep", "screen-locked", "minimized", "drive-removed", "tray"] {
+            assert!(emits_vault_locked(reason), "{reason}");
         }
-        assert!(!emits_vault_locked("restore", false));
-        assert!(!emits_vault_locked("restore", true));
-        // Quitting a vault with security off needs no reload; every other lock does.
-        assert!(!emits_vault_locked("quit", true));
-        assert!(emits_vault_locked("idle", true));
+        assert!(!emits_vault_locked("restore"));
+        assert!(!emits_vault_locked("quit"));
     }
 
     #[test]

@@ -4,6 +4,14 @@ This record states what Cipherleaf protects, where its trust boundaries are, wha
 
 A dependency scan, a plaintext search or a passing test can support one specific claim. None of them shows on its own that the app is secure.
 
+## RC4 Wave 1: themed approval windows (2026-11-23)
+
+Ahmed (AE0101) authorized the confirmation and responsiveness changes for the local RC4 candidate. This implementation supersedes the Windows message-dialog mechanism in A51 below.
+
+- **Approval window.** Rust creates and owns a separate local WebView for permanent deletion, enabling AI access, or approving an AI pairing. It is part of the Notaya app and uses Notaya's selected theme. The window has a fresh label, private WebView storage, and a dedicated local entry. The packaged Windows approval window uses a separate HTTPS app origin with its local HTTPS IPC endpoint. Navigation and new-window requests are restricted. The usual app windows have no capability to create or script it. The approval window can call only `confirmation_prompt`, `confirmation_ready`, and `confirmation_answer`, and it cannot request vault attachments. File pickers and startup failure alerts still use the OS.
+- **Answer and target.** Rust compares the Tauri-provided caller identity to the pending window label. An answer from the main or any other window is rejected, even if it supplies the correct label. A positive answer requires a shown approval window and consumes the pending request. Cancel, destruction, timeout and vault session closure deny approval. The Rust operation still checks the approved vault session, target IDs and revisions, AI epoch and applicable settings or pairing request before applying the answer. A dialog payload carries only the display text, appearance and button labels. The Rust approval value stays in process and can be used once.
+- **Limits and evidence.** This boundary separates approval from app-window script execution. Both WebViews ship in the same app binary and use WebView2. It does not protect against a compromised approval renderer, Notaya binary, Windows or same-user native automation. Rust regressions cover an unauthorized label, an answer before readiness, an answer replay and cancellation. Native WebView behavior must be checked on the exact candidate in addition to those tests.
+
 ## A51: native approvals and local keyfiles (2026-11-09, S-FIX2)
 
 **Authority:** Ahmed (`AE0101`), 2026-11-09 08:22:33 UTC, A51. Produced on `GAMING-PC`; integration, independent review and person acceptance are separate. The older record below is preserved. This section describes the new boundaries for these routes; it does not strengthen unrelated historical claims.

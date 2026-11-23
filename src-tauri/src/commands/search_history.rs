@@ -11,7 +11,7 @@ use crate::model::{Item, SEARCH_HISTORY_MAX, SEARCH_TERM_MAX};
 use crate::state::AppState;
 use tauri::State;
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn search_history(state: State<'_, AppState>) -> Result<Vec<String>> {
     search_history_person(&state)
 }
@@ -21,7 +21,7 @@ pub(crate) fn search_history_core(s: &Session, _actor: &Actor) -> Result<Vec<Str
 }
 
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn add_search_term(state: State<'_, AppState>, term: String) -> Result<Vec<String>> {
     add_search_term_person(&state, term)
 }
@@ -31,7 +31,7 @@ pub(crate) fn add_search_term_core(s: &mut Session, _actor: &Actor, term: String
     change_core(s, |h| push_term(h, &term))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn remove_search_term(state: State<'_, AppState>, term: String) -> Result<Vec<String>> {
     remove_search_term_person(&state, term)
 }
@@ -44,7 +44,7 @@ pub(crate) fn remove_search_term_core(s: &mut Session, _actor: &Actor, term: Str
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn clear_search_history(state: State<'_, AppState>) -> Result<()> {
     clear_search_history_person(&state)
 }

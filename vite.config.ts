@@ -38,6 +38,12 @@ export default defineConfig(() => ({
   },
 
   build: {
+    rolldownOptions: {
+      input: {
+        index: fileURLToPath(new URL("./index.html", import.meta.url)),
+        confirmation: fileURLToPath(new URL("./confirmation.html", import.meta.url)),
+      },
+    },
     // WebView2 is Chromium-based and always current.
     target: "chrome120",
     // No source maps in the shipped app.

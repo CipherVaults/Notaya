@@ -32,13 +32,13 @@ impl FrontendError {
 }
 
 /// Where the log is, how big it is and when the last entry was written.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn log_info(state: State<'_, AppState>) -> LogInfo {
     logging::info(&state.paths)
 }
 
 /// Opens the logs folder in Explorer. The path is never taken from the UI.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn open_log_folder(app: AppHandle, state: State<'_, AppState>) -> Result<()> {
     open_log_folder_person(app, state)
 }

@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 157 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix RC4 deletion and close](#session-157) |
 | 156 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Recover a stalled startup retry](#session-156) |
 | 155 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Distinguish waiting from a startup error](#session-155) |
 | 154 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Show progress while the large-vault upgrade runs](#session-154) |
@@ -190,6 +191,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-157"></a>
+
+# ?? Session: 2026-11-23 UTC ? Ahmed (AE0101) ? Gaming-PC ? Fix RC4 deletion and close
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Codex coordinated the local run, with separate frontend, deletion, and shutdown lanes.
+
+**Models, Effort, Roles and Provenance:** Codex authored and ran the tests. The deletion and shutdown authors reviewed each other's changes. Exact model, effort, token and quota readings were unavailable to the run. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc4-wave1).
+
+## 1. Time
+
+The scratch claim was recorded at 2026-11-23T21:52:07.8734720Z (system UTC). Ahmed's message timestamp was unavailable.
+
+## 2. Session Goal
+
+Fix the reported RC3 editor, confirmation, permanent deletion and exit issues from `9e8c88734bd4dea4ffc9d55d477d3e4baa4d616f`. Deliver the tested local RC4 Wave 1 checkpoint without publishing it.
+
+## 3. Actions Taken
+
+Changed the active-paragraph placeholder, provided themed confirmation and busy feedback, batched purge and restore writes, moved session-locking work off the event loop, and revised close sequencing. Exercised a synthetic vault in the Rust core and the packaged WebView2 application.
+
+## 4. Key Insights
+
+Purge walked overlapping subtrees and repeated journal and attachment scans within each batch. A UI command attempting to take the session lock could also block behind an off-thread mutation. A checked safety copy has its own cost when moving a notebook to the bin.
+
+## 5. Decisions Made
+
+Keep visually themed privileged approvals in a dedicated renderer. Preserve the Rust-owned target, revision and session checks. Use fresh copies of one fixture for matched native measurements.
+
+## 6. Difficulties / Friction
+
+The first native setup expected a notebook tree in an empty vault. The first paired debug build also attempted to link over a running unit test executable.
+
+## 7. Adjustments Made
+
+Waited for the Trash control on the empty screen, checked the native close against an owned window and process, and kept the failed attempts with their logs.
+
+## 8. Mistakes / Risks
+
+The protected baseline diff already contains application-version metadata and a golden test module change. Those pre-existing differences were carried forward. The synthetic fixture exercises volume, shape and cleanup, with small generated attachment bodies.
+
+## 9. Current Position
+
+The [execution summary](execution/2026-11-23-v1-6-rc4-wave1.md) records all passing and outstanding checks. The [resume note](handoff/2026-11-23-v1-6-rc4-wave1-resume-note.md) limits the handoff to Wave 1.
+
+## 10. Next Steps
+
+Review the local checkpoint and native evidence. Further publication or acceptance requires Ahmed's direction.
+
+## 11. Open Questions
+
+Owner acceptance and the partner PR security review remain pending at this local checkpoint.
+
+## 12. Session Outcome
+
+See the execution summary for the exact browser, Rust and native outcomes and the local receipt for the bound commit and bundle.
+
+## 13. Confidence Level
+
+The tests distinguish frontend mock behavior, encrypted vault consistency after reopening, and sampled Windows responsiveness. Timing is specific to the synthetic fixture and the Gaming-PC runs.
+
+---
 
 <a id="session-156"></a>
 

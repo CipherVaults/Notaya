@@ -31,7 +31,7 @@ pub struct RestoreResult {
 
 /// The automatic backups (`data/backups/vault-*.nota`), newest first. Works
 /// while locked: it reads only file names, times and sizes.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_backups(state: State<'_, AppState>) -> Result<Vec<BackupInfo>> {
     list_backups_person(&state)
 }

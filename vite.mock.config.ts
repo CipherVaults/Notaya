@@ -19,4 +19,12 @@ export default defineConfig({
     },
   },
   server: { port: 1421, strictPort: true, host: "127.0.0.1" },
+  build: {
+    rolldownOptions: {
+      input: {
+        index: p("./index.html"),
+        confirmation: p("./confirmation.html"),
+      },
+    },
+  },
 });

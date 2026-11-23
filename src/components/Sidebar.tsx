@@ -18,6 +18,7 @@ import {
   FilePlus2,
   FileText,
   Home,
+  Loader2,
   ArrowDown,
   ArrowUp,
   MoreHorizontal,
@@ -51,10 +52,27 @@ const NewDatabaseContext = createContext<(target: NewDatabaseTarget) => void>(()
 const listedDatabases = (tree: NotesTree) =>
   tree.databases.filter((d) => d.trashedAt === null && !d.inline).sort((a, b) => a.order - b.order);
 
+function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const id = key(item);
+    const existing = groups.get(id);
+    if (existing) existing.push(item);
+    else groups.set(id, [item]);
+  }
+  return groups;
+}
+
+type Branches = {
+  pageChildren: Map<string, PageMeta[]>;
+  databaseChildren: Map<string, DatabaseMeta[]>;
+  activeAncestors: Set<string>;
+};
+
 /** Runs a tree-changing command and reports whether it worked (a failure is shown as a toast). */
 type Run = (fn: () => Promise<NotesTree | null>) => Promise<boolean>;
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
 
 /** What deleting the given sections would remove, counted from the loaded tree. */
 function contents(tree: NotesTree, sectionIds: string[], withSections: boolean): string {
@@ -96,7 +114,7 @@ function siblingKeys(key: string): string[] {
 function useDeleteWithConfirm() {
   const confirm = useConfirm();
   const setTree = useApp((s) => s.setTree);
-  return async (o: { rowKey: string; title: string; body: string; confirm: string; name: string; del: () => Promise<NotesTree>; onDeleted?: (tree: NotesTree) => void }) => {
+  return async (o: { rowKey: string; title: string; body: string; confirm: string; del: () => Promise<NotesTree>; onDeleted?: (tree: NotesTree) => void }) => {
     const near = siblingKeys(o.rowKey);
     const tree = rowByKey(o.rowKey)?.closest<HTMLElement>('[role="tree"]') ?? null;
     // Wait a moment so the dialog has closed and the tree has redrawn before looking for the row.
@@ -107,19 +125,18 @@ function useDeleteWithConfirm() {
           (tree?.isConnected ? tree : document).querySelector<HTMLElement>('[role="treeitem"][tabindex="0"], [role="treeitem"]');
         row?.focus();
       }, 120);
-    if (!(await confirm({ title: o.title, body: o.body, confirm: o.confirm, danger: true }))) {
-      refocus([o.rowKey]);
-      return false;
-    }
-    try {
-      (o.onDeleted ?? setTree)(await o.del());
-      refocus([o.rowKey, ...near]);
-      return true;
-    } catch (e) {
-      toast.error(`"${o.name}" was not deleted. ${errorText(e)}`, { duration: 12000 });
-      refocus([o.rowKey]);
-      return false;
-    }
+    if (useApp.getState().binAction !== null) return false;
+    const ok = await confirm({
+      title: o.title, body: o.body, confirm: o.confirm, danger: true, busyLabel: "Moving to bin…",
+      onConfirm: async () => {
+        const ran = await useApp.getState().runBinAction(o.rowKey, async () => {
+          (o.onDeleted ?? setTree)(await o.del());
+        });
+        if (!ran) throw new Error("Wait for the current bin action to finish.");
+      },
+    });
+    refocus(ok ? [o.rowKey, ...near] : [o.rowKey]);
+    return ok;
   };
 }
 
@@ -236,6 +253,26 @@ export default function Sidebar() {
 
   const favorites = useMemo(() => tree.pages.filter((p) => p.favorite && p.trashedAt === null), [tree.pages]);
   const favoriteDbs = useMemo(() => tree.databases.filter((d) => d.favorite && d.trashedAt === null), [tree.databases]);
+  const indexed = useMemo(() => {
+    const pages = tree.pages.filter((p) => p.trashedAt === null);
+    const databases = listedDatabases(tree);
+    const pageById = new Map(pages.map((page) => [page.id, page]));
+    return {
+      sectionsByNotebook: groupBy(tree.sections, (s) => s.notebookId),
+      pagesBySection: groupBy(pages, (p) => p.sectionId),
+      databasesBySection: groupBy(databases, (d) => d.sectionId),
+      pageChildren: groupBy(pages.filter((p) => pageById.get(p.parent)?.sectionId === p.sectionId), (p) => p.parent),
+      databaseChildren: groupBy(databases.filter((d) => d.parent), (d) => d.parent),
+      parents: new Map([...pages, ...databases].map((item) => [item.id, item.parent])),
+    };
+  }, [tree]);
+  const branches = useMemo<Branches>(() => {
+    const activeAncestors = new Set<string>();
+    for (let id = activePageId && indexed.parents.get(activePageId); id && !activeAncestors.has(id); id = indexed.parents.get(id)) {
+      activeAncestors.add(id);
+    }
+    return { pageChildren: indexed.pageChildren, databaseChildren: indexed.databaseChildren, activeAncestors };
+  }, [activePageId, indexed]);
   const trashed = useApp((s) => s.bin.length);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -313,7 +350,8 @@ export default function Sidebar() {
           <Tree label="Notebooks">
             {tree.notebooks.map((nb, nbIndex) => {
               const open = openIds.has(nb.id);
-              const sections = tree.sections.filter((s) => s.notebookId === nb.id);
+              const sections = indexed.sectionsByNotebook.get(nb.id) ?? [];
+              const sectionIds = sections.map((s) => s.id);
               const addSection = () => run(() => api.createSection(nb.id, "New section", "")).then(() => toggle(nb.id, true));
               return (
                 <div key={nb.id}>
@@ -361,9 +399,8 @@ export default function Sidebar() {
                             const ok = await deleteWithConfirm({
                               rowKey: `nb:${nb.id}`,
                               title: `Move to bin "${nb.name}"?`,
-                              body: `${contents(tree, sections.map((s) => s.id), true)} ${DELETE_NOTE}`,
+                              body: `${contents(tree, sectionIds, true)} ${DELETE_NOTE}`,
                               confirm: "Move to bin",
-                              name: nb.name,
                               del: () => api.deleteNotebook(nb.id),
                             });
                             if (ok) useApp.getState().openNotebook(useApp.getState().tree.notebooks[0]?.id ?? null);
@@ -383,18 +420,20 @@ export default function Sidebar() {
                           collisionDetection={closestCenter}
                           onDragEnd={(e: DragEndEvent) => {
                             if (!e.over || e.active.id === e.over.id) return;
-                            const ids = sections.map((s) => s.id);
-                            if (!ids.includes(String(e.active.id))) return;
-                            run(() => api.reorder(arrayMove(ids, ids.indexOf(String(e.active.id)), ids.indexOf(String(e.over!.id)))));
+                            if (!sectionIds.includes(String(e.active.id))) return;
+                            run(() => api.reorder(arrayMove(sectionIds, sectionIds.indexOf(String(e.active.id)), sectionIds.indexOf(String(e.over!.id)))));
                           }}
                         >
-                          <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                          <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
                             {sections.map((s, i) => (
                               <SectionBlock
                                 key={s.id}
                                 section={s}
                                 pos={{ i, n: sections.length }}
-                                siblings={sections.map((x) => x.id)}
+                                siblings={sectionIds}
+                                pages={indexed.pagesBySection.get(s.id) ?? []}
+                                databases={indexed.databasesBySection.get(s.id) ?? []}
+                                branches={branches}
                                 tree={tree}
                                 open={openIds.has(s.id)}
                                 onToggle={(force) => toggle(s.id, force)}
@@ -674,10 +713,11 @@ function Row({
   const ref = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const expandable = onToggle !== undefined;
+  const busy = useApp((s) => s.binAction === rowKey);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
-    if ((e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) && menu) {
+    if ((e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) && menu && !busy) {
       e.preventDefault();
       setMenuOpen(true);
       return;
@@ -734,6 +774,7 @@ function Row({
       aria-expanded={expandable ? !!open : undefined}
       aria-selected={active}
       aria-current={active ? "page" : undefined}
+      aria-busy={busy || undefined}
       data-rowkey={rowKey}
       tabIndex={tabKey === rowKey ? 0 : -1}
       onFocus={(e) => {
@@ -766,10 +807,11 @@ function Row({
       )}
       <span className="grid shrink-0 place-items-center">{icon}</span>
       <span dir="auto" className="min-w-0 flex-1 truncate">{label}</span>
+      {busy && <Loader2 size={14} className="shrink-0 animate-spin text-muted" aria-hidden="true" />}
       <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-focus-visible/row:opacity-100 group-hover/row:opacity-100">
         {menu && (
           <Menu
-            open={menuOpen}
+            open={menuOpen && !busy}
             onOpenChange={(o) => {
               setMenuOpen(o);
               if (!o) {
@@ -784,7 +826,7 @@ function Row({
             }}
           >
             <MenuTrigger asChild>
-              <RowButton label={menuLabel ?? "Options"}>
+              <RowButton label={menuLabel ?? "Options"} disabled={busy}>
                 <MoreHorizontal size={14} />
               </RowButton>
             </MenuTrigger>
@@ -792,7 +834,7 @@ function Row({
           </Menu>
         )}
         {quick && (
-          <RowButton label={quick.label} onClick={quick.onClick}>
+          <RowButton label={quick.label} onClick={quick.onClick} disabled={busy}>
             <Plus size={14} />
           </RowButton>
         )}
@@ -825,6 +867,9 @@ function SectionBlock({
   section,
   pos,
   siblings,
+  pages,
+  databases,
+  branches,
   tree,
   open,
   onToggle,
@@ -836,6 +881,9 @@ function SectionBlock({
   section: NotesTree["sections"][number];
   pos: Pos;
   siblings: string[];
+  pages: PageMeta[];
+  databases: DatabaseMeta[];
+  branches: Branches;
   tree: NotesTree;
   open: boolean;
   onToggle: (force?: boolean) => void;
@@ -847,10 +895,9 @@ function SectionBlock({
   const deleteWithConfirm = useDeleteWithConfirm();
   const newDatabase = useContext(NewDatabaseContext);
   const [renaming, setRenaming] = useState(false);
-  const pages = tree.pages.filter((p) => p.sectionId === section.id && p.trashedAt === null);
   const known = new Set(pages.map((p) => p.id));
   const roots = pages.filter((p) => !p.parent || !known.has(p.parent));
-  const dbsHere = listedDatabases(tree).filter((d) => d.sectionId === section.id && (!d.parent || !known.has(d.parent)));
+  const dbsHere = databases.filter((d) => !d.parent || !known.has(d.parent));
   const rowKey = `sec:${section.id}`;
   // Only the section's own row starts a drag, so dragging its pages doesn't move the section.
   const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
@@ -938,7 +985,6 @@ function SectionBlock({
                   title: `Move to bin "${section.name}"?`,
                   body: `${contents(tree, [section.id], false)} ${DELETE_NOTE}`,
                   confirm: "Move to bin",
-                  name: section.name,
                   del: () => api.deleteSection(section.id),
                   onDeleted: applySectionBin,
                 })}
@@ -953,7 +999,7 @@ function SectionBlock({
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden">
-            <SiblingItems roots={roots} databases={dbsHere} depth={2} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
+            <SiblingItems roots={roots} databases={dbsHere} depth={2} branches={branches} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
             {pages.length === 0 && dbsHere.length === 0 && (
               <Row rowKey={`add:${section.id}`} depth={2} pos={{ i: 0, n: 1 }} onClick={onNewPage} icon={<Plus size={14} className="text-faint" />} label="Add a page" active={false} muted />
             )}
@@ -965,11 +1011,11 @@ function SectionBlock({
 }
 
 /** Pages and databases share one order, within their section or parent page only. */
-function SiblingItems({ roots, databases, depth, pages, tree, activePageId, run, sensors }: {
+function SiblingItems({ roots, databases, depth, branches, tree, activePageId, run, sensors }: {
   roots: PageMeta[];
   databases: DatabaseMeta[];
   depth: number;
-  pages: PageMeta[];
+  branches: Branches;
   tree: NotesTree;
   activePageId: string | null;
   run: Run;
@@ -996,7 +1042,7 @@ function SiblingItems({ roots, databases, depth, pages, tree, activePageId, run,
         {items.map((item, i) => (
           <SortableRow key={item.id} id={item.id}>
             {item.page ? (
-              <PageBranch page={item.page} depth={depth} pos={{ i, n: items.length }} siblings={ids} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
+              <PageBranch page={item.page} depth={depth} pos={{ i, n: items.length }} siblings={ids} branches={branches} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />
             ) : item.db ? (
               <DatabaseItem rowKey={`db:${item.id}`} db={item.db} depth={depth} pos={{ i, n: items.length }} siblings={ids} active={item.id === activePageId} run={run} tree={tree} />
             ) : null}
@@ -1013,7 +1059,7 @@ function PageBranch({
   depth,
   pos,
   siblings,
-  pages,
+  branches,
   tree,
   activePageId,
   run,
@@ -1023,23 +1069,20 @@ function PageBranch({
   depth: number;
   pos: Pos;
   siblings: string[];
-  pages: PageMeta[];
+  branches: Branches;
   tree: NotesTree;
   activePageId: string | null;
   run: Run;
   sensors: ReturnType<typeof useSensors>;
 }) {
-  const kids = pages.filter((p) => p.parent === page.id);
+  const kids = branches.pageChildren.get(page.id) ?? [];
+  const kidDbs = branches.databaseChildren.get(page.id) ?? [];
   const newDatabase = useContext(NewDatabaseContext);
-  const kidDbs = listedDatabases(tree).filter((d) => d.parent === page.id);
-  const containsActive = (id: string): boolean =>
-    pages.some((p) => p.parent === id && (p.id === activePageId || containsActive(p.id))) ||
-    listedDatabases(tree).some((d) => d.parent === id && d.id === activePageId);
-  const [open, setOpen] = useState(() => containsActive(page.id));
+  const containsActive = branches.activeAncestors.has(page.id);
+  const [open, setOpen] = useState(containsActive);
   useEffect(() => {
-    if (activePageId && containsActive(page.id)) setOpen(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePageId]);
+    if (containsActive) setOpen(true);
+  }, [activePageId, containsActive]);
   return (
     <>
       <PageItem
@@ -1070,7 +1113,7 @@ function PageBranch({
           }
         }}
       />
-      {open && <SiblingItems roots={kids} databases={kidDbs} depth={depth + 1} pages={pages} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />}
+      {open && <SiblingItems roots={kids} databases={kidDbs} depth={depth + 1} branches={branches} tree={tree} activePageId={activePageId} run={run} sensors={sensors} />}
     </>
   );
 }
@@ -1290,41 +1333,46 @@ function DatabaseItem({
 /** The same Trash screen, grouped by the six kinds that can be restored. */
 export function TrashView() {
   const entries = useApp((s) => s.bin);
+  const binAction = useApp((s) => s.binAction);
   const confirm = useConfirm();
-  const run = async (fn: () => Promise<NotesTree | null>) => {
+  const run = async (key: string, fn: () => Promise<NotesTree | null>) => {
     try {
-      const tree = await fn();
-      if (!tree) return;
-      useApp.getState().setTree(tree);
-      const [bin, stickies] = await Promise.all([api.listBin(), api.listStickies()]);
-      useApp.setState({ bin, stickies });
-    } catch (e) { if (e !== "cancelled") toast.error(errorText(e)); }
+      await useApp.getState().runBinAction(key, async () => {
+        await fn();
+        // The mutation's tree signal refreshes the bin, note tree and stickies together.
+      });
+    } catch (e) {
+      if (e !== "cancelled") toast.error(errorText(e));
+    }
   };
   const groups = [["notebook", "Notebooks"], ["section", "Sections"], ["page", "Pages"], ["database", "Databases"], ["row", "Rows"], ["sticky", "Sticky notes"]] as const;
   return <div className="h-full overflow-y-auto">
     <div className="mx-auto px-10 pb-16 pt-14" style={{ maxWidth: "calc(var(--editor-width) + 80px)" }}>
       <div className="flex items-end justify-between">
         <div><h1 className="text-[2rem] font-bold tracking-tight">Trash</h1><p className="mt-1 text-muted">Items you move to the bin wait here until you restore or delete them for good.</p></div>
-        {entries.length > 0 && <BinButton variant="outline" onClick={async () => {
-          if (await confirm({ title: "Empty the bin?", body: "All binned items and their contents will be deleted for good.", confirm: "Empty the bin", danger: true })) await run(() => api.emptyTrash());
-        }}><Trash2 size={15} /> Empty the bin</BinButton>}
+        {entries.length > 0 && <BinButton variant="outline" disabled={binAction !== null} onClick={() => run("empty-bin", api.emptyTrash)}>
+          {binAction === "empty-bin" ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <Trash2 size={15} />}
+          {binAction === "empty-bin" ? "Emptying the bin…" : "Empty the bin"}
+        </BinButton>}
       </div>
       {entries.length === 0 && <p className="py-16 text-center text-sm text-faint">Trash is empty.</p>}
       {groups.map(([kind, title]) => {
         const items = entries.filter((e) => e.kind === kind);
         if (!items.length) return null;
         return <section key={kind} className="mt-8"><h2 className="mb-2 text-sm font-semibold">{title}</h2>
-          <div className="divide-y divide-line rounded-xl border border-line">{items.map((item) => <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+          <div className="divide-y divide-line rounded-xl border border-line">{items.map((item) => <div key={item.id} aria-busy={binAction === `restore:${item.id}` || binAction === `purge:${item.id}` || undefined} className="flex items-center gap-3 px-4 py-3">
             <span className="w-6 text-center text-lg"><PageIcon icon={item.icon} size={18} fallback={<FileText size={17} className="mx-auto text-faint" />} /></span>
-            {item.kind === "page" || item.kind === "database" ? <button className="min-w-0 flex-1 text-left" onClick={() => item.kind === "database" ? useApp.getState().openDatabase(item.id) : useApp.getState().openPage(item.id)}>
+            {item.kind === "page" || item.kind === "database" ? <button className="min-w-0 flex-1 text-left" disabled={binAction !== null} onClick={() => item.kind === "database" ? useApp.getState().openDatabase(item.id) : useApp.getState().openPage(item.id)}>
               <div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div>
             </button> : <div className="min-w-0 flex-1"><div dir="auto" className="truncate text-sm font-medium">{item.title || "Untitled"}</div><div className="text-xs text-faint">Moved to bin {timeAgo(item.trashedAt)}</div></div>}
-            <BinButton variant="ghost" size="sm" onClick={async () => {
-              await run(() => restoreFromBin(item.id, confirm));
-            }}><RotateCcw size={14} /> Restore</BinButton>
-            <BinButton variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={async () => {
-              if (await confirm({ title: "Delete for good?", body: "This item and its contents will be deleted for good.", confirm: "Delete for good", danger: true })) await run(() => api.deletePage(item.id));
-            }}><Trash2 size={14} /> Delete for good</BinButton>
+            <BinButton variant="ghost" size="sm" disabled={binAction !== null} onClick={() => run(`restore:${item.id}`, () => restoreFromBin(item.id, confirm))}>
+              {binAction === `restore:${item.id}` ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <RotateCcw size={14} />}
+              {binAction === `restore:${item.id}` ? "Restoring…" : "Restore"}
+            </BinButton>
+            <BinButton variant="ghost" size="sm" className="text-danger hover:text-danger" disabled={binAction !== null} onClick={() => run(`purge:${item.id}`, () => api.deletePage(item.id))}>
+              {binAction === `purge:${item.id}` ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Trash2 size={14} />}
+              {binAction === `purge:${item.id}` ? "Deleting…" : "Delete for good"}
+            </BinButton>
           </div>)}</div>
         </section>;
       })}

@@ -390,7 +390,8 @@ function StartOverDialog({
   return (
     <Modal
       open={open}
-      onOpenChange={(o) => !busy && onOpenChange(o)}
+      onOpenChange={onOpenChange}
+      busy={busy}
       title="Start over with new notes"
       description="For when this vault won't open and you want to begin again."
       width={500}
@@ -415,6 +416,7 @@ function StartOverDialog({
           <span className="text-xs font-medium text-faint">Type START OVER to confirm</span>
           <input
             value={typed}
+            disabled={busy}
             onChange={(e) => setTyped(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && startOver()}
             className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-fg outline-none focus:border-accent focus:ring-4 focus:ring-accent-soft"
