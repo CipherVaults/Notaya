@@ -19,16 +19,16 @@
 //! (`http://clatt.localhost/<id>`), and a page cover the same way.
 
 use std::cell::Cell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use serde::Serialize;
 
 use super::doc::{self, Block, ImageOut, Inline};
 use super::source::Vfs;
-use super::{clean_title, decode_text, docx, html, markdown, pdf, sniff, strip_notion_id, Control, Ctx, ImgSrc, Images, Skipped, Stop};
+use super::{clean_title, decode_text, docx, html, markdown, notion_source_id, pdf, sniff, strip_notion_id, Control, Ctx, ImgSrc, Images, Skipped, Stop, NOTION_ID_TARGET};
 use super::{ImportPhase, MAX_BINARY_FILE, MAX_IMAGE, MAX_PAGES, MAX_TEXT_FILE};
 use crate::export::Layout;
-use crate::model::{new_id, Item, Notebook, Page, Section};
+use crate::model::{new_id, Item, Notebook, Page, Section, SourceTag};
 
 /// What the person is told when they cancel.
 pub const CANCELLED: &str = "The import was cancelled. Nothing was added.";
@@ -48,6 +48,8 @@ const MAX_TOTAL_BYTES: usize = 2 * 1024 * 1024 * 1024;
 /// Names the vault accepts.
 const MAX_NAME: usize = 120;
 const MAX_TITLE: usize = 300;
+// Notion can truncate a folder title to 50 characters while retaining more in its page file.
+const NOTION_FOLDER_TITLE: usize = 50;
 
 pub const LOOSE_SECTION: &str = "Imported pages";
 const NOTEBOOK_COLOR: &str = "#6366f1";
@@ -123,19 +125,12 @@ fn match_name(name: &str) -> String {
     doc::collapse_ws(&strip_notion_id(name)).to_lowercase()
 }
 
-/// The 32-character id Notion puts at the end of a file name in every export (`Page 0123…cdef.md`, also
-/// `Table 0123…cdef_all.csv`). `None` for a name without one.
-fn notion_file_id(name: &str) -> Option<String> {
-    let base = name.rsplit('/').next().unwrap_or(name);
-    let stem = base.rsplit_once('.').map_or(base, |(s, _)| s);
-    let stem = stem.strip_suffix("_all").unwrap_or(stem);
-    let chars: Vec<char> = stem.chars().collect();
-    if chars.len() < 32 {
-        return None;
-    }
-    let id: String = chars[chars.len() - 32..].iter().collect();
-    let separated = chars.len() == 32 || chars[chars.len() - 33] == ' ';
-    (separated && id.chars().all(|c| c.is_ascii_hexdigit())).then(|| id.to_ascii_lowercase())
+fn truncated_folder_name(stem: &str) -> Option<String> {
+    notion_source_id(stem)?;
+    let full = strip_notion_id(stem);
+    let mut chars = full.chars();
+    let prefix: String = chars.by_ref().take(NOTION_FOLDER_TITLE).collect();
+    chars.next().map(|_| match_name(&prefix))
 }
 
 /// The lines of a paragraph (a line break or a newline ends a line).
@@ -241,34 +236,177 @@ thread_local! {
 fn idless_folder(name: &str) -> bool {
     #[cfg(test)]
     FOLDER_NAME_CHECKS.with(|checks| checks.set(checks.get() + 1));
-    strip_notion_id(name) == name
+    notion_source_id(name).is_none()
 }
 
 /// One index per parent folder: clean names are never matched across parents.
 struct SiblingFolders<'a> {
     exact: HashMap<String, Vec<&'a String>>,
+    ids: HashMap<String, Vec<&'a String>>,
     clean: HashMap<String, Vec<&'a String>>,
+    truncated: HashMap<String, Vec<&'a String>>,
     idless_clean: HashSet<String>,
 }
 
 impl<'a> SiblingFolders<'a> {
     fn new(d: &'a Dir) -> Self {
         let mut exact: HashMap<String, Vec<&String>> = HashMap::new();
+        let mut ids: HashMap<String, Vec<&String>> = HashMap::new();
         let mut clean: HashMap<String, Vec<&String>> = HashMap::new();
+        let mut truncated: HashMap<String, Vec<&String>> = HashMap::new();
         let mut idless_clean = HashSet::new();
         for k in d.dirs.keys() {
             exact.entry(k.to_lowercase()).or_default().push(k);
+            if let Some(id) = notion_source_id(k) {
+                ids.entry(id).or_default().push(k);
+            }
             let name = match_name(k);
             if idless_folder(k) {
                 idless_clean.insert(name.clone());
+                if k.chars().count() == NOTION_FOLDER_TITLE {
+                    truncated.entry(name.clone()).or_default().push(k);
+                }
             }
             clean.entry(name).or_default().push(k);
         }
-        Self { exact, clean, idless_clean }
+        Self { exact, ids, clean, truncated, idless_clean }
     }
 
     fn has_idless(&self, clean: &str) -> bool {
         self.idless_clean.contains(clean)
+    }
+}
+
+fn path_parts(path: &str) -> (&str, &str) {
+    path.rsplit_once('/').unwrap_or(("", path))
+}
+
+fn join_path(dir: &str, name: &str) -> String {
+    if dir.is_empty() { name.to_string() } else { format!("{dir}/{name}") }
+}
+
+/// Overlay a pair of exports without changing how files and relative links are read. A
+/// folder proved to belong to either copy follows the one retained page into the tree.
+#[derive(Default)]
+struct SourcePlacement<'a> {
+    owners: HashMap<String, &'a str>,
+    html_locations: HashMap<&'a str, &'a str>,
+    envelope: Option<(&'a str, &'a str)>,
+}
+
+impl<'a> SourcePlacement<'a> {
+    fn new(tree: &'a Dir, twins: &'a HashMap<String, String>, vfs: &Vfs) -> Self {
+        let aliases: HashMap<&str, &str> = twins.iter().map(|(md, html)| (html.as_str(), md.as_str())).collect();
+        let mut placement = Self::default();
+        placement.index_folders(tree, "", &aliases);
+
+        let envelope = |path: &'a str| {
+            let (top, _) = path.split_once('/')?;
+            notion_source_id(top).map(|_| top)
+        };
+        if let Some((md, html)) = twins.iter().next() {
+            if let (Some(md_root), Some(html_root)) = (envelope(md), envelope(html)) {
+                // The ZIPs have opposite formats and each puts every shared page below
+                // one root. An isolated pair in a mixed ZIP or folder cannot establish this.
+                if tree.dirs.len() == 2 && md_root != html_root
+                    && !placement.owners.contains_key(md_root) && !placement.owners.contains_key(html_root)
+                    && twins.iter().all(|(md, html)| {
+                        envelope(md) == Some(md_root) && envelope(html) == Some(html_root)
+                            && vfs.markdown_zip_preferred(md) && vfs.html_zip_source(html)
+                    })
+                {
+                    placement.envelope = Some((html_root, md_root));
+                }
+            }
+        }
+
+        // If Markdown flattened a page, a real containing page in the HTML source
+        // is positive containment evidence. A title or navigation link alone never is.
+        for (md, html) in twins {
+            if !placement.has_source_parent(md) && placement.has_source_parent(html) {
+                placement.html_locations.insert(md, html);
+            }
+        }
+        placement
+    }
+
+    fn index_folders(&mut self, tree: &'a Dir, prefix: &str, aliases: &HashMap<&'a str, &'a str>) {
+        type Owners<'a> = HashMap<String, HashSet<&'a str>>;
+        let mut exact = Owners::new();
+        let mut ids = Owners::new();
+        let mut clean = Owners::new();
+        let mut truncated = Owners::new();
+        for (name, path) in &tree.files {
+            if kind_of(name).is_none() {
+                continue;
+            }
+            let canonical = aliases.get(path.as_str()).copied().unwrap_or(path);
+            let stem = stem_of(name);
+            exact.entry(stem.to_lowercase()).or_default().insert(canonical);
+            if let Some(id) = notion_source_id(stem) {
+                ids.entry(id).or_default().insert(canonical);
+            }
+            clean.entry(match_name(stem)).or_default().insert(canonical);
+            if let Some(prefix) = truncated_folder_name(stem) {
+                truncated.entry(prefix).or_default().insert(canonical);
+            }
+        }
+        for (name, child) in &tree.dirs {
+            let path = join_path(prefix, name);
+            let id = notion_source_id(name);
+            let owners = exact.get(&name.to_lowercase()).or_else(|| {
+                if let Some(id) = id {
+                    ids.get(&id)
+                } else {
+                    let key = match_name(name);
+                    clean.get(&key).or_else(|| {
+                        (name.chars().count() == NOTION_FOLDER_TITLE).then(|| truncated.get(&key)).flatten()
+                    })
+                }
+            });
+            if let Some(owner) = owners.filter(|owners| owners.len() == 1).and_then(|owners| owners.iter().next()) {
+                self.owners.insert(path.clone(), owner);
+            }
+            self.index_folders(child, &path, aliases);
+        }
+    }
+
+    fn has_source_parent(&self, path: &str) -> bool {
+        let (mut dir, _) = path_parts(path);
+        while !dir.is_empty() {
+            if self.owners.contains_key(dir) {
+                return true;
+            }
+            dir = path_parts(dir).0;
+        }
+        false
+    }
+
+    fn directory(&self, path: &str, depth: usize) -> Option<String> {
+        if path.is_empty() {
+            return Some(String::new());
+        }
+        // Conflicting parent choices across exports can cycle. Keep physical placement
+        // if they do, under the same depth bound already used for source folders.
+        if depth >= MAX_FOLDERS {
+            return None;
+        }
+        if let Some((_, md)) = self.envelope.filter(|(html, _)| *html == path) {
+            return Some(md.to_string());
+        }
+        if let Some(owner) = self.owners.get(path).copied() {
+            let source = self.html_locations.get(owner).copied().unwrap_or(owner);
+            let parent = self.directory(path_parts(source).0, depth + 1)?;
+            return Some(join_path(&parent, stem_of(path_parts(owner).1)));
+        }
+        let (parent, name) = path_parts(path);
+        Some(join_path(&self.directory(parent, depth + 1)?, name))
+    }
+
+    fn file(&self, path: &str) -> String {
+        let source = self.html_locations.get(path).copied().unwrap_or(path);
+        let dir = path_parts(source).0;
+        self.directory(dir, 0).map_or_else(|| path.to_string(), |dir| join_path(&dir, path_parts(path).1))
     }
 }
 
@@ -287,6 +425,10 @@ pub struct Plan {
     pub csv_paths: Vec<String>,
     /// The section of each CSV in the source tree, including CSVs with no row documents.
     pub csv_sections: HashMap<String, usize>,
+    /// The nearest source page that contains each CSV file (if any).
+    pub csv_parents: HashMap<String, usize>,
+    /// Physical paths stay the keys for reads and links. Only hierarchy uses these placements.
+    placements: HashMap<String, String>,
     pub images: Images,
     pub skipped: Vec<Skipped>,
     pub notes: Vec<String>,
@@ -333,6 +475,7 @@ struct Builder<'a> {
     /// Markdown file -> the HTML file of the same page (same Notion id) whose text and formatting it takes.
     twins: HashMap<String, String>,
     csv_sections: HashMap<String, usize>,
+    csv_parents: HashMap<String, usize>,
     arrangement_notes: Vec<String>,
     database_html: HashSet<String>,
     empty_database_pages: usize,
@@ -341,25 +484,42 @@ struct Builder<'a> {
     merged: usize,
 }
 
+struct HtmlTwin {
+    title: Option<String>,
+    blocks: Vec<Block>,
+    icon: String,
+    cover: Option<usize>,
+    cover_look: String,
+}
+
 impl Builder<'_> {
-    /// The body of an HTML twin: its blocks (without the title), its icon and cover. `None` when it cannot be used.
-    fn html_twin(&mut self, h_path: &str) -> Option<(Vec<Block>, String, Option<usize>, String)> {
+    /// A title-only copy can supply page appearance, but cannot replace a body.
+    fn html_twin(&mut self, h_path: &str) -> Option<HtmlTwin> {
         let vfs = self.vfs;
-        let bytes = vfs.read(h_path, MAX_TEXT_FILE).ok()?;
+        let bytes = match vfs.read(h_path, MAX_TEXT_FILE) {
+            Ok(bytes) => bytes,
+            Err(reason) => {
+                self.skip(h_path, reason);
+                return None;
+            }
+        };
         let dir = h_path.rsplit_once('/').map_or("", |(d, _)| d).to_string();
-        let (mut blocks, icon, cover, cover_look) = {
+        let d = {
             let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images: &mut self.images, problems: &mut self.skipped, name: h_path.to_string() };
             let text = decode_text(&bytes);
-            let d = if self.database_html.contains(h_path) { html::parse_database_document(&text, &mut ctx) } else { html::parse_document(&text, &mut ctx) };
-            (d.blocks, d.icon.unwrap_or_default(), d.cover, d.cover_look.unwrap_or_default())
+            if self.database_html.contains(h_path) { html::parse_database_document(&text, &mut ctx) } else { html::parse_document(&text, &mut ctx) }
         };
-        if doc::is_empty(&blocks) {
-            return None;
-        }
-        if matches!(blocks.first(), Some(Block::Heading(1, _))) {
-            blocks.remove(0);
-        }
-        Some((blocks, icon, cover, cover_look))
+        let mut blocks = d.blocks;
+        let has_title = d.title.is_some() || matches!(blocks.first(), Some(Block::Heading(1, _)));
+        let title = take_title(d.title, &mut blocks, path_parts(h_path).1);
+        doc::page_link_rows(&mut blocks);
+        Some(HtmlTwin {
+            title: has_title.then_some(title),
+            blocks,
+            icon: d.icon.unwrap_or_default(),
+            cover: d.cover,
+            cover_look: d.cover_look.unwrap_or_default(),
+        })
     }
 
     fn skip(&mut self, item: impl Into<String>, reason: impl Into<String>) {
@@ -378,26 +538,54 @@ impl Builder<'_> {
         files.sort_by(|a, b| natural_cmp(&a.0, &b.0));
         // Only sibling names are candidates. Group once so ambiguous names never pick a first match.
         let mut exact_files: HashMap<String, usize> = HashMap::new();
+        let mut id_files: HashMap<String, usize> = HashMap::new();
         let mut clean_files: HashMap<String, usize> = HashMap::new();
+        let mut truncated_files: HashMap<String, usize> = HashMap::new();
         for (name, _) in &files {
             if kind_of(name).is_some() {
                 *exact_files.entry(stem_of(name).to_lowercase()).or_default() += 1;
-                *clean_files.entry(match_name(stem_of(name))).or_default() += 1;
+                if let Some(id) = notion_source_id(name) {
+                    *id_files.entry(id).or_default() += 1;
+                }
+                let stem = stem_of(name);
+                *clean_files.entry(match_name(stem)).or_default() += 1;
+                if let Some(prefix) = truncated_folder_name(stem) {
+                    *truncated_files.entry(prefix).or_default() += 1;
+                }
             }
         }
         let folders = SiblingFolders::new(d);
         let mut warned = HashSet::new();
         for (name, path) in files {
             if extension(&name) == "csv" {
+                let mut source_parent = parent;
+                while let Some(index) = source_parent {
+                    if !self.pages[index].generated {
+                        self.csv_parents.insert(path.clone(), index);
+                        break;
+                    }
+                    source_parent = self.pages[index].parent;
+                }
                 self.csv_sections.insert(path, section);
                 continue;
             }
             let stem = stem_of(&name);
             let exact = stem.to_lowercase();
             let clean = match_name(stem);
+            let id = notion_source_id(&name);
+            let id_matches = id.as_ref().and_then(|id| folders.ids.get(id)).map(Vec::as_slice);
+            let same_id_files = id.as_ref().and_then(|id| id_files.get(id)).copied().unwrap_or(0);
             let dirs = folders.clean.get(&clean).map(Vec::as_slice).unwrap_or(&[]);
+            let prefix = truncated_folder_name(stem);
+            let truncated = prefix.as_ref().and_then(|prefix| {
+                if clean_files.contains_key(prefix) {
+                    return None;
+                }
+                let matches = folders.truncated.get(prefix)?;
+                Some((matches.as_slice(), truncated_files[prefix]))
+            });
             // A possible source home must remain a page so its folder can keep its parent.
-            let has_folder = !dirs.is_empty();
+            let has_folder = !dirs.is_empty() || id_matches.is_some() || truncated.is_some();
             if self.stopped.is_some() {
                 break;
             }
@@ -408,16 +596,23 @@ impl Builder<'_> {
             self.documents_done += 1;
             self.ctl.progress(ImportPhase::Planning, self.documents_done, self.documents_total);
             let Some(index) = document else { continue };
-            let dropped_id = strip_notion_id(stem) != stem && folders.has_idless(&clean);
+            let dropped_id = id.is_some() && folders.has_idless(&clean);
             let exact_matches = folders.exact.get(&exact).map(Vec::as_slice);
             let ambiguous_exact = exact_matches.is_some_and(|dirs| dirs.len() != 1 || exact_files[&exact] != 1);
+            let ambiguous_id = exact_matches.is_none() && id_matches.is_some_and(|dirs| dirs.len() != 1 || same_id_files != 1);
             let ambiguous_clean = dropped_id && (clean_files[&clean] != 1 || dirs.len() != 1);
-            if (ambiguous_exact || ambiguous_clean) && warned.insert(clean.clone()) {
+            let ambiguous_truncation = truncated.is_some_and(|(dirs, docs)| dirs.len() != 1 || docs != 1);
+            if (ambiguous_exact || ambiguous_id || ambiguous_clean || ambiguous_truncation) && warned.insert(clean.clone()) {
                 self.arrangement_notes.push(format!("The folder match for \"{}\" is ambiguous in its source folder; those pages were left in their original arrangement.", file_title(&name)));
             }
             let key = match exact_matches {
                 Some([key]) if exact_files[&exact] == 1 => Some(*key),
+                None if id_matches.is_some() => match id_matches {
+                    Some([key]) if !ambiguous_id => Some(*key),
+                    _ => None,
+                },
                 _ if dropped_id && clean_files[&clean] == 1 && dirs.len() == 1 => Some(dirs[0]),
+                None if !dropped_id => match truncated { Some(([key], 1)) => Some(*key), _ => None },
                 _ => None,
             };
             let sub = key.filter(|k| !used.contains(*k)).and_then(|k| d.dirs.get_key_value(k));
@@ -479,11 +674,17 @@ impl Builder<'_> {
         }
         let vfs = self.vfs;
         let limit = if matches!(kind, Kind::Docx | Kind::Pdf) { MAX_BINARY_FILE } else { MAX_TEXT_FILE };
-        let bytes = match vfs.read(path, limit) {
+        let primary = vfs.read(path, limit);
+        let twin = self.twins.get(path).cloned().and_then(|h| self.html_twin(&h));
+        let missing_primary = primary.is_err();
+        let bytes = match primary {
             Ok(b) => b,
             Err(e) => {
                 self.skip(path, e);
-                return None;
+                if twin.is_none() {
+                    return None;
+                }
+                Vec::new()
             }
         };
         let dir = path.rsplit_once('/').map_or("", |(d, _)| d).to_string();
@@ -494,11 +695,11 @@ impl Builder<'_> {
         let mut database_header = false;
         let mut blocks;
         // The same page exported as HTML too: its text and formatting are used (colors, highlights, fonts).
-        let twin = if kind == Kind::Markdown { self.twins.get(path).cloned().and_then(|h| self.html_twin(&h)) } else { None };
+        let use_html_body = twin.as_ref().is_some_and(|twin| missing_primary || !doc::is_empty(&twin.blocks));
         {
             let mut scratch_images = Images::default();
             let mut scratch_problems: Vec<Skipped> = Vec::new();
-            let (images, problems) = if twin.is_some() { (&mut scratch_images, &mut scratch_problems) } else { (&mut self.images, &mut self.skipped) };
+            let (images, problems) = if use_html_body { (&mut scratch_images, &mut scratch_problems) } else { (&mut self.images, &mut self.skipped) };
             let mut ctx = Ctx { vfs, ctl: self.ctl, dir, images, problems, name: path.to_string() };
             match kind {
                 Kind::Markdown => {
@@ -560,25 +761,29 @@ impl Builder<'_> {
         }
         // "→ Title" rows that link to another document (Notaya's own export) are page links again.
         doc::page_link_rows(&mut blocks);
-        let title = take_title(declared, &mut blocks, name);
-        if let Some((mut html_blocks, html_icon, html_cover, html_cover_look)) = twin {
-            // The Markdown page keeps the property lines of a row (`Status: Done`), which the database import reads;
-            // the HTML page has them as a table. The rest of the page comes from the HTML.
-            if matches!(html_blocks.first(), Some(Block::Table(rows)) if is_properties_table(rows)) {
-                if let Some(Block::Paragraph(inl)) = blocks.first().filter(|b| matches!(b, Block::Paragraph(i) if is_property_paragraph(i))) {
-                    let lead = Block::Paragraph(inl.clone());
-                    html_blocks[0] = lead;
+        let mut title = take_title(declared, &mut blocks, name);
+        if let Some(twin) = twin {
+            if let Some(html_title) = twin.title {
+                title = html_title;
+            }
+            if use_html_body {
+                let mut html_blocks = twin.blocks;
+                // Keep the Markdown properties used to match a row when there is a corresponding HTML table.
+                if matches!(html_blocks.first(), Some(Block::Table(rows)) if is_properties_table(rows)) {
+                    if let Some(lead) = blocks.first().filter(|b| matches!(b, Block::Paragraph(i) if is_property_paragraph(i))) {
+                        html_blocks[0] = lead.clone();
+                    }
                 }
+                blocks = html_blocks;
+                self.merged += 1;
             }
-            blocks = html_blocks;
             if icon.is_empty() {
-                icon = html_icon;
+                icon = twin.icon;
             }
-            cover = cover.or(html_cover);
+            cover = cover.or(twin.cover);
             if cover_look.is_empty() {
-                cover_look = html_cover_look;
+                cover_look = twin.cover_look;
             }
-            self.merged += 1;
         }
         let database_wrapper = self.database_html.contains(path) || self.twins.get(path).is_some_and(|h| self.database_html.contains(h));
         if database_wrapper {
@@ -738,8 +943,11 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     let mut csv_ids: HashSet<String> = HashSet::new();
     for p in &paths {
         check(ctl)?;
+        if p.split('/').count() > MAX_FOLDERS {
+            continue;
+        }
         let name = p.rsplit('/').next().unwrap_or(p);
-        let Some(id) = notion_file_id(name) else { continue };
+        let Some(id) = notion_source_id(name) else { continue };
         match kind_of(name) {
             Some(Kind::Markdown) => md_ids.entry(id).or_default().push(p),
             Some(Kind::Html) => html_ids.entry(id).or_default().push(p),
@@ -764,6 +972,31 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
         }
     }
     let aliases: Vec<(String, String)> = twins.iter().map(|(m, h)| (h.clone(), m.clone())).collect();
+    let mut placements = HashMap::new();
+    if !twins.is_empty() && layout.is_none() {
+        let mut physical = Dir::default();
+        for path in &paths {
+            check(ctl)?;
+            let name = path_parts(path).1;
+            if kind_of(name).is_some() || extension(name) == "csv" {
+                let parts: Vec<_> = path.split('/').collect();
+                if parts.len() <= MAX_FOLDERS {
+                    physical.insert(&parts, path);
+                }
+            }
+        }
+        let placement = SourcePlacement::new(&physical, &twins, vfs);
+        for path in &paths {
+            check(ctl)?;
+            let name = path_parts(path).1;
+            if kind_of(name).is_some() || extension(name) == "csv" {
+                let logical = placement.file(path);
+                if logical != **path {
+                    placements.insert((*path).clone(), logical);
+                }
+            }
+        }
+    }
     for path in paths {
         check(ctl)?;
         if hidden_html.contains(path) {
@@ -779,8 +1012,9 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
                 note_skip(&mut skipped, path.clone(), "The list of links that Notion adds to an HTML export (the pages themselves are imported).".into());
             }
             Some(kind) => {
-                let parts: Vec<&str> = path.split('/').collect();
-                if parts.len() > MAX_FOLDERS {
+                let logical = placements.get(path).unwrap_or(path);
+                let parts: Vec<&str> = logical.split('/').collect();
+                if parts.len() > MAX_FOLDERS || path.split('/').count() > MAX_FOLDERS {
                     note_skip(&mut skipped, path.clone(), "Folders nested too deeply.".into());
                     continue;
                 }
@@ -790,23 +1024,20 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
                         "This import has more than {MAX_PAGES} pages. Import it in smaller parts (for example one top-level folder at a time)."
                     ));
                 }
-                if kind == Kind::Markdown && strip_notion_id(stem_of(name)) != stem_of(name) {
+                if kind == Kind::Markdown && notion_source_id(name).is_some() {
                     notion_markdown = true;
                 }
                 root.insert(&parts, path);
             }
             None if extension(name) == "csv" => {
-                let parts: Vec<&str> = path.split('/').collect();
-                if parts.len() > MAX_FOLDERS {
+                let logical = placements.get(path).unwrap_or(path);
+                let parts: Vec<&str> = logical.split('/').collect();
+                if parts.len() > MAX_FOLDERS || path.split('/').count() > MAX_FOLDERS {
                     note_skip(&mut skipped, path.clone(), "Folders nested too deeply.".into());
                     continue;
                 }
                 csv_paths.push(path.clone());
                 root.insert(&parts, path);
-                // Pending database work is not an omission, including beyond the report cap.
-                if skipped.len() < MAX_LISTED {
-                    skipped.push(Skipped { item: path.clone(), reason: "A Notion database view, waiting for the database import step.".into() });
-                }
             }
             None if is_picture_name(name) => {} // pictures are taken where a page uses them
             None => note_skip(&mut skipped, path.clone(), "This kind of file is not imported.".into()),
@@ -825,7 +1056,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
     let folder_name = |n: &str| -> String { clean_title(n, false).chars().take(MAX_NAME).collect() };
 
     ctl.progress(ImportPhase::Planning, 0, docs);
-    let mut b = Builder { vfs, ctl, pages: Vec::new(), database_headers: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, documents_done: 0, documents_total: docs, pdfs: 0, twins, csv_sections: HashMap::new(), arrangement_notes: Vec::new(), database_html, empty_database_pages: 0, kept_database_pages: 0, merged: 0 };
+    let mut b = Builder { vfs, ctl, pages: Vec::new(), database_headers: Vec::new(), images: Images::default(), skipped, unlisted, stopped: None, documents_done: 0, documents_total: docs, pdfs: 0, twins, csv_sections: HashMap::new(), csv_parents: HashMap::new(), arrangement_notes: Vec::new(), database_html, empty_database_pages: 0, kept_database_pages: 0, merged: 0 };
     let mut sections: Vec<String> = Vec::new();
     let mut section_notebook: Vec<usize> = Vec::new();
     // Notebooks named after folders (the notebooks layout); otherwise one, named below.
@@ -949,7 +1180,7 @@ pub fn build(vfs: &Vfs, ctl: &Control, name_hint: Option<&str>, now_ms: i64) -> 
         notes.push(format!("{} more items were not imported than the list shows.", b.unlisted));
     }
     let section_ids = sections.iter().map(|_| new_id()).collect();
-    Ok(Plan { notebooks, sections, section_ids, section_notebook, pages: b.pages, database_headers: b.database_headers, csv_paths, csv_sections: b.csv_sections, images: b.images, skipped: b.skipped, notes, aliases })
+    Ok(Plan { notebooks, sections, section_ids, section_notebook, pages: b.pages, database_headers: b.database_headers, csv_paths, csv_sections: b.csv_sections, csv_parents: b.csv_parents, placements, images: b.images, skipped: b.skipped, notes, aliases })
 }
 
 /// `Err` with the message for the person when the import was cancelled or ran out of time.
@@ -967,10 +1198,15 @@ pub fn picture_url(id: &str) -> String {
 }
 
 impl Plan {
+    /// A logical location for sibling ownership. Reads always use the physical key.
+    pub fn source_placement<'a>(&'a self, path: &'a str) -> &'a str {
+        self.placements.get(path).map_or(path, String::as_str)
+    }
+
     /// Only a shared source id can connect a header to a CSV, never its display title.
     pub fn database_header_ids(&self) -> HashMap<String, String> {
-        let headers: HashMap<String, &str> = self.database_headers.iter().filter_map(|p| notion_file_id(&p.key).map(|id| (id, p.id.as_str()))).collect();
-        self.csv_paths.iter().filter_map(|p| notion_file_id(p).and_then(|id| headers.get(&id)).map(|id| (p.clone(), (*id).to_string()))).collect()
+        let headers: HashMap<String, &str> = self.database_headers.iter().filter_map(|p| notion_source_id(&p.key).map(|id| (id, p.id.as_str()))).collect();
+        self.csv_paths.iter().filter_map(|p| notion_source_id(p).and_then(|id| headers.get(&id)).map(|id| (p.clone(), (*id).to_string()))).collect()
     }
 
     pub fn generated_page_ids(&self) -> HashSet<String> {
@@ -1042,6 +1278,14 @@ impl Plan {
         };
         let mut dropped: HashSet<usize> = HashSet::new();
         let mut rendered: Vec<Option<doc::Rendered>> = (0..pages.len()).map(|_| None).collect();
+        let mut unresolved_notion = HashSet::new();
+        // Keep ambiguity even if rendering subsequently drops one of the candidates.
+        let mut notion_ids = HashMap::new();
+        for p in pages.iter().filter(|p| !p.generated) {
+            if let Some(id) = notion_source_id(&p.key) {
+                notion_ids.entry(id).and_modify(|key| *key = None).or_insert(Some(p.key.as_str()));
+            }
+        }
         let mut cut_rows = 0usize;
         ctl.progress(ImportPhase::Rendering, 0, pages.len());
         for pass in 0..3 {
@@ -1072,10 +1316,22 @@ impl Plan {
                 check(ctl)?;
                 if !dropped.contains(&i) && (pass == 0 || !body.is_empty()) {
                     let needs_retry = Cell::new(false);
-                    let page_id = |key: &str| ids.get(key).map(|(id, may_drop)| {
-                        needs_retry.set(needs_retry.get() || *may_drop);
-                        (*id).to_string()
-                    });
+                    let missing = std::cell::RefCell::new(BTreeSet::new());
+                    let page_id = |key: &str| {
+                        let target = if let Some(source_id) = key.strip_prefix(NOTION_ID_TARGET) {
+                            let target = notion_ids.get(source_id).copied().flatten().and_then(|key| ids.get(key).copied());
+                            if target.is_none() && missing.borrow().len() < MAX_LISTED {
+                                missing.borrow_mut().insert(source_id.to_string());
+                            }
+                            target
+                        } else {
+                            ids.get(key).copied()
+                        };
+                        target.map(|(id, may_drop)| {
+                            needs_retry.set(needs_retry.get() || may_drop);
+                            id.to_string()
+                        })
+                    };
                     rendered[i] = match doc::render_limited(body, &image_out, &page_id, doc::MAX_RENDER_BYTES) {
                         Ok(r) if r.content.len() <= MAX_PAGE_BYTES && r.text.len() <= MAX_PAGE_BYTES => Some(r),
                         _ => {
@@ -1083,6 +1339,10 @@ impl Plan {
                             None
                         }
                     };
+                    if rendered[i].is_some() && unresolved_notion.len() < MAX_LISTED {
+                        let remaining = MAX_LISTED - unresolved_notion.len();
+                        unresolved_notion.extend(missing.into_inner().into_iter().take(remaining).map(|id| (i, id)));
+                    }
                     // Keep decoded blocks only for pages whose links might need another pass.
                     if rendered[i].is_none() || !needs_retry.get() || pass == 2 {
                         *body = Vec::new();
@@ -1106,6 +1366,16 @@ impl Plan {
         }
         drop(blocks);
         check(ctl)?;
+        let mut unresolved_notion: Vec<_> = unresolved_notion.into_iter().collect();
+        unresolved_notion.sort_unstable();
+        for (i, id) in unresolved_notion {
+            if self.skipped.len() >= MAX_LISTED {
+                break;
+            }
+            if !dropped.contains(&i) {
+                self.skipped.push(Skipped { item: format!("Link to Notion page {id} ({})", pages[i].key), reason: "The linked page was missing or its source ID was ambiguous.".into() });
+            }
+        }
         for i in &dropped {
             if self.skipped.len() < MAX_LISTED {
                 self.skipped.push(Skipped { item: pages[*i].title.clone(), reason: "The page is too large to store (over 20 MB of text), so it was not imported.".into() });
@@ -1159,8 +1429,13 @@ impl Plan {
             effective_sections.push(section);
             let Some(r) = rendered[i].take() else { continue };
             kept += 1;
+            let source = if !p.generated && matches!(kind_of(&p.key), Some(Kind::Markdown | Kind::Html)) {
+                notion_source_id(&p.key).map(|id| SourceTag { app: "notion".into(), id })
+            } else {
+                None
+            };
             items.push(Item::Page(Page {
-                source: None,
+                source,
                 id: p.id.clone(),
                 section_id: section_ids[section].clone(),
                 title: p.title.clone(),
@@ -1266,7 +1541,7 @@ mod tests {
         assert_eq!(plan.notebooks, ["Notion import"], "a generic ZIP name is not used");
         assert_eq!(plan.sections, [LOOSE_SECTION]);
         assert_eq!(plan.pages.len(), 2);
-        assert!(plan.skipped.iter().any(|s| s.item.ends_with(".csv") && s.reason.contains("database")));
+        assert!(plan.csv_paths.iter().any(|s| s.ends_with(".csv")));
         assert!(plan.skipped.iter().any(|s| s.item == "index.html"));
         let (items, summary) = finish(&mut plan, &v);
         assert_eq!((summary.sections, summary.pages, summary.images), (1, 2, 3));
@@ -1396,6 +1671,173 @@ mod tests {
         assert!(one.contains("a missing one"), "the text stays");
         let omissions: Vec<_> = summary.skipped.iter().map(|item| item.item.as_str()).collect();
         assert_eq!(omissions, ["Link to Nope.md (One.md)"]);
+    }
+
+    #[test]
+    fn renamed_home_folder_with_the_same_notion_id_still_contains_its_children() {
+        const DASHED: &str = "01234567-89ab-cdef-0123-456789abcdef";
+        for extension in ["html", "md"] {
+            let home = match extension {
+                "html" => b"<h1>Home</h1><p>Only the home has this body.</p>".as_slice(),
+                _ => b"# Home\n\nOnly the home has this body.".as_slice(),
+            };
+            let source = format!("Longer Home Name_{DASHED}.{extension}");
+            let child = format!("Short Name {ID}/Child.md");
+            let v = vfs(&[(&source, home), (&child, b"# Child\n\nOnly the child has this body.")]);
+            let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+            let (items, summary) = finish(&mut plan, &v);
+            let home = page(&items, "Home");
+            assert_eq!(summary.pages, 2);
+            assert_eq!(page(&items, "Child").parent, home.id);
+            assert!(home.text.contains("Only the home has this body."));
+        }
+    }
+
+    #[test]
+    fn a_unique_fifty_character_notion_folder_keeps_its_long_home() {
+        let prefix = "م".repeat(NOTION_FOLDER_TITLE);
+        let home = format!("{prefix} continued {ID}.md");
+        let child = format!("{prefix}/Child.md");
+        let v = vfs(&[(&home, b"# Home\n\nHome body"), (&child, b"# Child\n\nChild body")]);
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let (items, _) = finish(&mut plan, &v);
+        assert_eq!(page(&items, "Child").parent, page(&items, "Home").id);
+
+        let other = format!("{prefix} ambiguous {}.md", "2".repeat(32));
+        let v = vfs(&[(&home, b"# Home"), (&other, b"# Other"), (&child, b"# Child")]);
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let (items, summary) = finish(&mut plan, &v);
+        assert!(page(&items, "Child").parent.is_empty(), "the ambiguous top folder stays a section");
+        assert!(summary.notes.iter().any(|note| note.contains("ambiguous")));
+    }
+
+    #[test]
+    fn combined_homes_preserve_the_only_body_and_both_sources_child_paths() {
+        let html_root = format!("Export HTML {}", "1".repeat(32));
+        let md_root = format!("Export Markdown {}", "2".repeat(32));
+        let child_id = "3".repeat(32);
+        let markdown_home = format!("{md_root}/Short Name {ID}.md");
+        let html_home = format!("{html_root}/Home {ID}.html");
+        let markdown_child = format!("{md_root}/Short Name/Markdown Child {child_id}.md");
+        let html_child = format!("{html_root}/Home/HTML Child.html");
+        let html_markdown_child = format!("{html_root}/Home/Long Child Filename {child_id}.html");
+        let html_root_page = format!("{html_root}/Loose Page.html");
+        let csv = format!("{md_root}/Short Name/Example {}_all.csv", "4".repeat(32));
+        let fixture_dir = std::env::temp_dir().join(format!("notaya-combined-{}", new_id()));
+        let md_zip = fixture_dir.join("markdown.zip");
+        let html_zip = fixture_dir.join("html.zip");
+        std::fs::create_dir(&fixture_dir).unwrap();
+        std::fs::write(&md_zip, zip::build(&[
+            (&markdown_home, b"# Home\n\nHome text only in Markdown."),
+            (&markdown_child, b"# Markdown Child\n\nChild Markdown body."),
+            (&csv, b"Name\nExample row\n"),
+        ], true)).unwrap();
+        std::fs::write(&html_zip, zip::build(&[
+            (&html_home, b"<h1>Home</h1>"),
+            (&html_markdown_child, b"<h1>Markdown Child</h1><p>Styled child body.</p>"),
+            (&html_child, b"<h1>HTML Child</h1><p>Child only in HTML.</p>"),
+            (&html_root_page, b"<h1>Loose Page</h1>"),
+        ], true)).unwrap();
+        let v = Vfs::from_files(&[md_zip.clone(), html_zip.clone()]).unwrap();
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let home_index = plan.pages.iter().position(|page| page.title == "Home").unwrap();
+        assert_eq!(plan.csv_parents.get(&csv), Some(&home_index));
+        assert!(plan.source_placement(&html_child).starts_with(&format!("{md_root}/Short Name {ID}/")));
+        assert_eq!(plan.source_placement(&html_root_page), format!("{md_root}/Loose Page.html"));
+        let (items, summary) = finish(&mut plan, &v);
+        drop(v);
+        std::fs::remove_file(md_zip).unwrap();
+        std::fs::remove_file(html_zip).unwrap();
+        std::fs::remove_dir(fixture_dir).unwrap();
+        let home = page(&items, "Home");
+        assert_eq!(summary.pages, 4);
+        assert_eq!(summary.sections, 1);
+        assert!(home.text.contains("Home text only in Markdown."));
+        assert_eq!(home.source.as_ref(), Some(&SourceTag { app: "notion".into(), id: ID.into() }));
+        assert_eq!(page(&items, "HTML Child").parent, home.id);
+        assert!(page(&items, "HTML Child").source.is_none());
+        let child = page(&items, "Markdown Child");
+        assert_eq!(child.parent, home.id);
+        assert!(child.text.contains("Styled child body."));
+    }
+
+    #[test]
+    fn a_mixed_archive_keeps_two_roots_when_only_their_documents_match() {
+        let html_root = format!("First {}", "1".repeat(32));
+        let md_root = format!("Second {}", "2".repeat(32));
+        let md = format!("{md_root}/Example {ID}.md");
+        let html = format!("{html_root}/Example {ID}.html");
+        let untouched = format!("{html_root}/Other.html");
+        let v = vfs(&[(&md, b"# Example"), (&html, b"<h1>Example</h1>"), (&untouched, b"<h1>Other</h1>")]);
+        let plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        assert_eq!(plan.source_placement(&untouched), untouched);
+        assert_eq!(plan.sections, ["First", "Second"]);
+        assert_eq!(plan.aliases, [(html, md)]);
+    }
+
+    #[test]
+    fn a_document_beyond_the_depth_limit_does_not_hide_its_shallower_copy() {
+        let too_deep = vec!["d"; MAX_FOLDERS].join("/");
+        let html = format!("Home {ID}.html");
+        let md = format!("Home {ID}.md");
+        let deep_html = format!("{too_deep}/{html}");
+        let deep_md = format!("{too_deep}/{md}");
+        for (html, md, kept, skipped) in [(&html, &deep_md, &html, &deep_md), (&deep_html, &md, &md, &deep_html)] {
+            let v = vfs(&[(html, b"<h1>Home</h1><p>HTML body</p>"), (md, b"# Home\n\nMarkdown body")]);
+            let plan = build(&v, &Control::standard(), None, NOW).unwrap();
+            assert!(plan.aliases.is_empty());
+            assert_eq!(plan.pages.len(), 1);
+            assert_eq!(&plan.pages[0].key, kept);
+            assert!(plan.skipped.iter().any(|entry| &entry.item == skipped && entry.reason.contains("nested too deeply")));
+        }
+    }
+
+    #[test]
+    fn an_unreadable_markdown_twin_does_not_drop_its_html_home() {
+        let md = format!("Home {ID}.md");
+        let html = format!("Home {ID}.html");
+        let child = format!("Home {ID}/Child.md");
+        let mut archive = zip::build(&[
+            (&md, b"# Home\n\nMarkdown copy"),
+            (&html, b"<h1>Home</h1><p>Readable HTML home.</p>"),
+            (&child, b"# Child"),
+        ], false);
+        archive[30 + md.len()] ^= 1; // corrupt the body but preserve its central-directory entry
+        let v = Vfs::from_zip_bytes(archive).unwrap();
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let (items, summary) = finish(&mut plan, &v);
+        let home = page(&items, "Home");
+        assert!(home.text.contains("Readable HTML home."));
+        assert_eq!(page(&items, "Child").parent, home.id);
+        assert!(summary.skipped.iter().any(|skipped| skipped.item == md && skipped.reason.contains("checksum")));
+    }
+
+    #[test]
+    fn notion_protocol_and_renamed_relative_links_resolve_once_without_guessing() {
+        let ambiguous = "a".repeat(32);
+        let html = format!("<h1>Home</h1><figure class=\"link-to-page\"><a href=\"notion://www.notion.so/{ID}\">Target block</a></figure><p><a href=\"Renamed%20{ID}.html#anchor\">Relative link</a></p><p><a href=\"notion://{ambiguous}\">Ambiguous link</a></p>");
+        let ar = "<h1>مثال</h1><p dir=\"rtl\">123</p><p>محتوى تجريبي</p>";
+        let name = format!("Arabic {ID}.html");
+        let ambiguous_a = format!("A {ambiguous}.html");
+        let ambiguous_b = format!("B {ambiguous}.html");
+        let md = format!("# Markdown\n\n[Target](notion://{ID})");
+        let v = vfs(&[
+            ("Home.html", html.as_bytes()), (&name, ar.as_bytes()),
+            (&ambiguous_a, b"<h1>A</h1>"), (&ambiguous_b, b"<h1>B</h1>"),
+            ("Links.md", md.as_bytes()),
+        ]);
+        let mut plan = build(&v, &Control::standard(), None, NOW).unwrap();
+        let (items, summary) = finish(&mut plan, &v);
+        let target = page(&items, "مثال");
+        assert!(target.text.contains("محتوى تجريبي"));
+        assert!(target.content.contains("\"dir\":\"rtl\""));
+        let home = page(&items, "Home");
+        assert!(home.content.contains(&format!("\"pageId\":\"{}\"", target.id)));
+        assert!(home.content.contains(&format!("notaya:page/{}", target.id)));
+        assert!(home.text.contains("Ambiguous link"));
+        assert!(!home.content.contains("notion://"));
+        assert!(page(&items, "Markdown").content.contains(&format!("\"pageId\":\"{}\"", target.id)));
+        assert_eq!(summary.skipped.iter().filter(|s| s.reason.contains("source ID was ambiguous")).count(), 1);
     }
 
     #[test]
@@ -1639,7 +2081,7 @@ mod tests {
         let files: Vec<(&str, &[u8])> = names.iter().map(|n| (n.as_str(), b"x" as &[u8])).collect();
         let v = vfs(&files);
         let e = build(&v, &Control::standard(), None, NOW).err().unwrap();
-        assert!(e.contains("more than 5000 pages"), "{e}");
+        assert!(e.contains(&format!("more than {MAX_PAGES} pages")), "{e}");
         // Folders nested too deeply are left out, not followed.
         let deep = vec!["d"; MAX_FOLDERS + 2].join("/") + "/x.md";
         let v = vfs(&[(deep.as_str(), b"x"), ("ok.md", b"y")]);

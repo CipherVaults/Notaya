@@ -8,10 +8,14 @@
 //! nothing is ever extracted to disk). Encrypted entries and methods other than stored and
 //! deflate are refused with a reason.
 
+use std::borrow::Cow;
 use std::cell::Cell;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
+use std::sync::{Arc, Mutex};
 
 pub const MAX_ENTRIES: usize = 50_000;
-/// Largest single entry, as declared and as inflated.
+/// Largest single payload entry, as declared and as inflated.
 pub const MAX_ENTRY: u64 = 2 * 1024 * 1024 * 1024;
 /// Deflated entries above this size must not be compressed more than `MAX_RATIO` to 1;
 /// sub-megabyte entries (256 KiB–1 MiB) also enforce `MAX_SMALL_RATIO` to 1, and a single
@@ -21,6 +25,7 @@ const SMALL_RATIO_FLOOR: u64 = 256 * 1024;
 const MAX_RATIO: u64 = 100;
 const MAX_SMALL_RATIO: u64 = 100;
 const MAX_ARCHIVE_UNPACKED: u64 = 4 * 1024 * 1024 * 1024;
+const MAX_CENTRAL_DIRECTORY: u64 = 64 * 1024 * 1024;
 
 pub struct Entry {
     /// Cleaned path, `/` separated, no empty, `.` or `..` parts.
@@ -33,10 +38,75 @@ pub struct Entry {
 }
 
 pub struct Archive {
-    data: Vec<u8>,
+    source: Source,
+    directory_offset: u64,
+    pub(super) directory_size: u64,
     pub entries: Vec<Entry>,
     /// Entries that were refused, with the reason.
     pub rejected: Vec<(String, String)>,
+}
+
+enum Backing {
+    Memory(Vec<u8>),
+    Disk(Mutex<File>),
+}
+
+/// A checked byte range in a picked archive. Stored parts can share the original handle.
+struct Source {
+    backing: Arc<Backing>,
+    offset: u64,
+    len: u64,
+}
+
+impl Source {
+    fn subrange(&self, offset: u64, len: u64) -> Option<Self> {
+        if offset.checked_add(len)? > self.len {
+            return None;
+        }
+        Some(Self { backing: self.backing.clone(), offset: self.offset.checked_add(offset)?, len })
+    }
+
+    fn read_exact(&self, offset: u64, bytes: &mut [u8]) -> Option<()> {
+        if offset.checked_add(bytes.len() as u64)? > self.len {
+            return None;
+        }
+        let start = self.offset.checked_add(offset)?;
+        match self.backing.as_ref() {
+            Backing::Memory(data) => {
+                let start = usize::try_from(start).ok()?;
+                bytes.copy_from_slice(data.get(start..start.checked_add(bytes.len())?)?);
+            }
+            Backing::Disk(file) => {
+                let mut file = file.lock().ok()?;
+                file.seek(SeekFrom::Start(start)).ok()?;
+                file.read_exact(bytes).ok()?;
+            }
+        }
+        Some(())
+    }
+
+    fn read(&self, offset: u64, len: u64) -> Option<Vec<u8>> {
+        if offset.checked_add(len)? > self.len {
+            return None;
+        }
+        let len = usize::try_from(len).ok()?;
+        let mut bytes = Vec::new();
+        bytes.try_reserve_exact(len).ok()?;
+        bytes.resize(len, 0);
+        self.read_exact(offset, &mut bytes)?;
+        Some(bytes)
+    }
+
+    fn bytes(&self) -> Option<Cow<'_, [u8]>> {
+        match self.backing.as_ref() {
+            Backing::Memory(data) => {
+                let start = usize::try_from(self.offset).ok()?;
+                let end = usize::try_from(self.offset.checked_add(self.len)?).ok()?;
+                data.get(start..end).map(Cow::Borrowed)
+            }
+            Backing::Disk(_) => self.read(0, self.len).map(Cow::Owned),
+        }
+    }
 }
 
 fn u16_at(b: &[u8], at: usize) -> Option<u16> {
@@ -52,6 +122,24 @@ fn u64_at(b: &[u8], at: usize) -> Option<u64> {
 }
 
 const NOT_ZIP: &str = "This is not a ZIP file, or it is damaged.";
+const SPLIT_ZIP: &str = "ZIP files split over several disks are not supported.";
+const DAMAGED_ENTRY: &str = "Damaged entry.";
+
+/// Notion wraps exports as `Part-N.zip` or `Export-…-Part-N.zip`.
+pub(super) fn is_export_part(path: &str) -> bool {
+    let name = path.rsplit('/').next().unwrap_or(path);
+    let Some((stem, extension)) = name.rsplit_once('.') else { return false };
+    if !extension.eq_ignore_ascii_case("zip") {
+        return false;
+    }
+    let stem = stem.to_ascii_lowercase();
+    let Some(number) = stem.strip_prefix("part-").or_else(|| {
+        stem.strip_prefix("export-").and_then(|rest| {
+            rest.strip_prefix("part-").or_else(|| rest.rsplit_once("-part-").map(|(_, n)| n))
+        })
+    }) else { return false };
+    number.parse::<u32>().is_ok_and(|n| n > 0) && number.bytes().all(|b| b.is_ascii_digit())
+}
 
 /// Cleans an entry name. `None` if it must be refused.
 pub fn clean_name(raw: &str) -> Option<String> {
@@ -72,49 +160,83 @@ pub fn clean_name(raw: &str) -> Option<String> {
 
 impl Archive {
     pub fn open(data: Vec<u8>) -> Result<Archive, String> {
-        let b = &data;
-        if b.len() < 22 {
+        let len = data.len() as u64;
+        Self::open_source(Source { backing: Arc::new(Backing::Memory(data)), offset: 0, len })
+    }
+
+    pub(super) fn open_file(file: File, len: u64) -> Result<Archive, String> {
+        Self::open_source(Source { backing: Arc::new(Backing::Disk(Mutex::new(file))), offset: 0, len })
+    }
+
+    fn open_source(source: Source) -> Result<Archive, String> {
+        if source.len < 22 {
             return Err(NOT_ZIP.into());
         }
         // End of central directory: the last 22 bytes plus at most a 64 KiB comment.
-        let lowest = b.len().saturating_sub(22 + 65_535);
-        let eocd = (lowest..=b.len() - 22)
+        let tail_len = source.len.min(22 + 65_535);
+        let tail_offset = source.len - tail_len;
+        let tail = source.read(tail_offset, tail_len).ok_or(NOT_ZIP)?;
+        let eocd = (0..=tail.len() - 22)
             .rev()
-            .find(|&i| u32_at(b, i) == Some(0x0605_4b50))
+            .find(|&i| {
+                u32_at(&tail, i) == Some(0x0605_4b50)
+                    && u16_at(&tail, i + 20).is_some_and(|len| i + 22 + usize::from(len) == tail.len())
+            })
             .ok_or(NOT_ZIP)?;
-        if u16_at(b, eocd + 4) != Some(0) || u16_at(b, eocd + 6) != Some(0) {
-            return Err("ZIP files split over several parts are not supported.".into());
+        let end = &tail[eocd..];
+        if u16_at(end, 4) != Some(0) || u16_at(end, 6) != Some(0) {
+            return Err(SPLIT_ZIP.into());
         }
-        let mut count = u64::from(u16_at(b, eocd + 10).ok_or(NOT_ZIP)?);
-        let mut cd_size = u64::from(u32_at(b, eocd + 12).ok_or(NOT_ZIP)?);
-        let mut cd_offset = u64::from(u32_at(b, eocd + 16).ok_or(NOT_ZIP)?);
+        let mut count = u64::from(u16_at(end, 10).ok_or(NOT_ZIP)?);
+        let mut cd_size = u64::from(u32_at(end, 12).ok_or(NOT_ZIP)?);
+        let mut cd_offset = u64::from(u32_at(end, 16).ok_or(NOT_ZIP)?);
+        let mut directory_limit = tail_offset + eocd as u64;
         if count == 0xFFFF || cd_size == 0xFFFF_FFFF || cd_offset == 0xFFFF_FFFF {
             // ZIP64: the locator sits right before the end record.
-            let loc = eocd.checked_sub(20).ok_or(NOT_ZIP)?;
-            if u32_at(b, loc) != Some(0x0706_4b50) {
+            let locator_offset = directory_limit.checked_sub(20).ok_or(NOT_ZIP)?;
+            let mut locator = [0; 20];
+            source.read_exact(locator_offset, &mut locator).ok_or(NOT_ZIP)?;
+            if u32_at(&locator, 0) != Some(0x0706_4b50) {
                 return Err(NOT_ZIP.into());
             }
-            let rec = usize::try_from(u64_at(b, loc + 8).ok_or(NOT_ZIP)?).map_err(|_| NOT_ZIP)?;
-            if u32_at(b, rec) != Some(0x0606_4b50) {
+            if u32_at(&locator, 4) != Some(0) || u32_at(&locator, 16) != Some(1) {
+                return Err(SPLIT_ZIP.into());
+            }
+            let record_offset = u64_at(&locator, 8).ok_or(NOT_ZIP)?;
+            let mut record = [0; 56];
+            source.read_exact(record_offset, &mut record).ok_or(NOT_ZIP)?;
+            let record_len = u64_at(&record, 4).ok_or(NOT_ZIP)?;
+            if u32_at(&record, 0) != Some(0x0606_4b50)
+                || record_len < 44
+                || record_offset.checked_add(12).and_then(|at| at.checked_add(record_len)) != Some(locator_offset)
+            {
                 return Err(NOT_ZIP.into());
             }
-            let at64 = |extra: usize| rec.checked_add(extra).and_then(|p| u64_at(b, p)).ok_or(NOT_ZIP);
-            count = at64(32)?;
-            cd_size = at64(40)?;
-            cd_offset = at64(48)?;
+            count = u64_at(&record, 32).ok_or(NOT_ZIP)?;
+            if u32_at(&record, 16) != Some(0) || u32_at(&record, 20) != Some(0) || u64_at(&record, 24) != Some(count) {
+                return Err(SPLIT_ZIP.into());
+            }
+            cd_size = u64_at(&record, 40).ok_or(NOT_ZIP)?;
+            cd_offset = u64_at(&record, 48).ok_or(NOT_ZIP)?;
+            directory_limit = record_offset;
+        } else if u16_at(end, 8).map(u64::from) != Some(count) {
+            return Err(SPLIT_ZIP.into());
         }
         if count > MAX_ENTRIES as u64 {
             return Err(format!("This ZIP file has more than {MAX_ENTRIES} entries."));
         }
-        let start = usize::try_from(cd_offset).map_err(|_| NOT_ZIP)?;
-        let end = start.checked_add(usize::try_from(cd_size).map_err(|_| NOT_ZIP)?).ok_or(NOT_ZIP)?;
-        if end > b.len() {
+        if cd_size > MAX_CENTRAL_DIRECTORY {
+            return Err("The ZIP file's directory is larger than 64 MB.".into());
+        }
+        if cd_offset.checked_add(cd_size).ok_or(NOT_ZIP)? > directory_limit {
             return Err(NOT_ZIP.into());
         }
+        let directory = source.read(cd_offset, cd_size).ok_or(NOT_ZIP)?;
+        let b = directory.as_slice();
         let mut entries = Vec::new();
         let mut rejected = Vec::new();
         let mut declared_total: u64 = 0;
-        let mut at = start;
+        let mut at = 0;
         for _ in 0..count {
             if u32_at(b, at) != Some(0x0201_4b50) {
                 return Err(NOT_ZIP.into());
@@ -149,21 +271,24 @@ impl Archive {
                 }
                 e += 4 + len;
             }
-            at = extra_at.saturating_add(extra_len).saturating_add(comment_len);
+            at = extra_at.checked_add(extra_len).and_then(|p| p.checked_add(comment_len)).ok_or(NOT_ZIP)?;
+            if at > b.len() {
+                return Err(NOT_ZIP.into());
+            }
 
-            let raw = String::from_utf8(name_bytes.to_vec()).unwrap_or_else(|_| String::from_utf8_lossy(name_bytes).into_owned());
+            let raw = String::from_utf8_lossy(name_bytes);
             if raw.ends_with('/') || raw.ends_with('\\') {
                 continue; // a folder
             }
             let Some(name) = clean_name(&raw) else {
-                rejected.push((raw, "Unsafe name in the ZIP file (refused).".into()));
+                rejected.push((raw.into_owned(), "Unsafe name in the ZIP file (refused).".into()));
                 continue;
             };
             let reason = if flags & 1 != 0 {
                 Some("Encrypted entries are not supported.")
             } else if method != 0 && method != 8 {
                 Some("This compression method is not supported.")
-            } else if size > MAX_ENTRY {
+            } else if size > MAX_ENTRY && !(method == 0 && is_export_part(&name) && size <= MAX_ARCHIVE_UNPACKED) {
                 Some("Too large.")
             } else if method == 8
                 && ((size > RATIO_FLOOR && size / comp_size.max(1) > MAX_RATIO)
@@ -184,7 +309,7 @@ impl Archive {
             declared_total = declared_total.saturating_add(size);
             entries.push(Entry { name, method, crc, comp_size, size, local_offset });
         }
-        Ok(Archive { data, entries, rejected })
+        Ok(Archive { source, directory_offset: cd_offset, directory_size: cd_size, entries, rejected })
     }
 
     /// Finds an entry by its cleaned name.
@@ -202,22 +327,19 @@ impl Archive {
         if e.size > budget.get() {
             return Err("The import is too large in total (more than 4 GB of content).".into());
         }
-        let b = &self.data;
-        let lo = usize::try_from(e.local_offset).map_err(|_| "Damaged entry.")?;
-        if u32_at(b, lo) != Some(0x0403_4b50) {
-            return Err("Damaged entry.".into());
+        // Valid compressed data can be slightly larger than its output. Bound the allocation
+        // independently of the output limit in case the directory declares an absurd input size.
+        if e.comp_size > e.size.saturating_add(e.size / 8).saturating_add(64 * 1024) {
+            return Err("Damaged entry (invalid compressed size).".into());
         }
-        let name_len = usize::from(lo.checked_add(26).and_then(|p| u16_at(b, p)).ok_or("Damaged entry.")?);
-        let extra_len = usize::from(lo.checked_add(28).and_then(|p| u16_at(b, p)).ok_or("Damaged entry.")?);
-        let start = lo.checked_add(30 + name_len + extra_len).ok_or("Damaged entry.")?;
-        let len = usize::try_from(e.comp_size).map_err(|_| "Damaged entry.")?;
-        let raw = b.get(start..start.checked_add(len).ok_or("Damaged entry.")?).ok_or("Damaged entry.")?;
+        let source = self.entry_source(e)?;
         let out = if e.method == 0 {
-            raw.to_vec()
+            source.read(0, source.len).ok_or(DAMAGED_ENTRY)?
         } else {
             // The declared size is the limit, so a lying header cannot inflate further.
             let limit = usize::try_from(e.size).map_err(|_| "Too large.")?;
-            crate::export::deflate::inflate_raw(raw, limit).map_err(|_| "Damaged or oversized entry.".to_string())?
+            let raw = source.bytes().ok_or(DAMAGED_ENTRY)?;
+            crate::export::deflate::inflate_raw(&raw, limit).map_err(|_| "Damaged or oversized entry.".to_string())?
         };
         if out.len() as u64 != e.size {
             return Err("Damaged entry (wrong size).".into());
@@ -228,10 +350,59 @@ impl Archive {
         budget.set(budget.get() - e.size);
         Ok(out)
     }
+
+    fn entry_source(&self, entry: &Entry) -> Result<Source, String> {
+        let mut header = [0; 30];
+        self.source.read_exact(entry.local_offset, &mut header).ok_or(DAMAGED_ENTRY)?;
+        if u32_at(&header, 0) != Some(0x0403_4b50)
+            || u16_at(&header, 6).is_some_and(|flags| flags & 1 != 0)
+            || u16_at(&header, 8) != Some(entry.method)
+        {
+            return Err(DAMAGED_ENTRY.into());
+        }
+        let name_len = u64::from(u16_at(&header, 26).ok_or(DAMAGED_ENTRY)?);
+        let extra_len = u64::from(u16_at(&header, 28).ok_or(DAMAGED_ENTRY)?);
+        let start = entry.local_offset.checked_add(30 + name_len + extra_len).ok_or(DAMAGED_ENTRY)?;
+        if start.checked_add(entry.comp_size).ok_or(DAMAGED_ENTRY)? > self.directory_offset {
+            return Err(DAMAGED_ENTRY.into());
+        }
+        self.source.subrange(start, entry.comp_size).ok_or_else(|| DAMAGED_ENTRY.into())
+    }
+
+    /// Containers do not spend the payload budget. Stored wrappers share their parent's backing,
+    /// and the caller separately bounds all wrapper I/O and the memory held by deflated wrappers.
+    pub(super) fn open_part(&self, index: usize, max_in_memory: u64) -> Result<(Archive, u64), String> {
+        let e = self.entries.get(index).ok_or("Missing entry.")?;
+        if e.method != 0 {
+            if e.size > max_in_memory {
+                return Err("Compressed export parts exceed the memory allowance; choose the part ZIPs directly.".into());
+            }
+            let bytes = self.read(index, max_in_memory, &Cell::new(max_in_memory))?;
+            return Ok((Self::open(bytes)?, e.size));
+        }
+        let source = self.entry_source(e)?;
+        let mut chunk = vec![0; 64 * 1024];
+        let mut offset = 0;
+        let mut crc = u32::MAX;
+        while offset < source.len {
+            let n = (source.len - offset).min(chunk.len() as u64) as usize;
+            source.read_exact(offset, &mut chunk[..n]).ok_or(DAMAGED_ENTRY)?;
+            crc = update_crc32(crc, &chunk[..n]);
+            offset += n as u64;
+        }
+        if !crc != e.crc {
+            return Err("Damaged entry (checksum mismatch).".into());
+        }
+        Ok((Self::open_source(source)?, 0))
+    }
 }
 
 /// CRC-32 (IEEE), as used by ZIP.
 pub fn crc32(data: &[u8]) -> u32 {
+    !update_crc32(u32::MAX, data)
+}
+
+fn update_crc32(mut crc: u32, data: &[u8]) -> u32 {
     static TABLE: std::sync::OnceLock<[u32; 256]> = std::sync::OnceLock::new();
     let table = TABLE.get_or_init(|| {
         let mut t = [0u32; 256];
@@ -244,11 +415,10 @@ pub fn crc32(data: &[u8]) -> u32 {
         }
         t
     });
-    let mut c = 0xFFFF_FFFFu32;
     for &byte in data {
-        c = table[((c ^ u32::from(byte)) & 0xFF) as usize] ^ (c >> 8);
+        crc = table[((crc ^ u32::from(byte)) & 0xFF) as usize] ^ (crc >> 8);
     }
-    c ^ 0xFFFF_FFFF
+    crc
 }
 
 /// Builds a ZIP in memory (tests only). `deflate`: compress with the exporter.
@@ -321,6 +491,51 @@ mod tests {
             assert_eq!(budget.get(), 996, "the budget is spent");
             assert_eq!(a.read(a.find("c.txt").unwrap(), 5, &budget).unwrap_err(), "Too large.");
         }
+    }
+
+    #[test]
+    fn file_backed_stored_parts_share_the_archive_range_and_check_crc() {
+        let inner = build(&[("Page.md", b"# Example")], true);
+        let mut outer = build(&[("Export-Part-1.zip", &inner)], false);
+        let path = std::env::temp_dir().join(format!("notaya-zip-{}.zip", crate::model::new_id()));
+        std::fs::write(&path, &outer).unwrap();
+        let archive = Archive::open_file(File::open(&path).unwrap(), outer.len() as u64).unwrap();
+        let (part, memory) = archive.open_part(0, 0).unwrap();
+        assert_eq!(memory, 0);
+        assert!(Arc::ptr_eq(&archive.source.backing, &part.source.backing));
+        assert_eq!(part.read(0, 100, &Cell::new(100)).unwrap(), b"# Example");
+        drop((archive, part));
+        std::fs::remove_file(path).unwrap();
+
+        let start = 30 + "Export-Part-1.zip".len();
+        outer[start] ^= 0xff;
+        let archive = Archive::open(outer).unwrap();
+        assert!(archive.open_part(0, 0).err().unwrap().contains("checksum"));
+    }
+
+    #[test]
+    fn zip64_directory_records_are_read_from_their_declared_offsets() {
+        let mut zip = build(&[("Page.md", b"# Example")], true);
+        let end = zip.len() - 22;
+        let mut legacy = zip.split_off(end);
+        let cd_size = u32_at(&legacy, 12).unwrap();
+        let cd_offset = u32_at(&legacy, 16).unwrap();
+        legacy[16..20].copy_from_slice(&u32::MAX.to_le_bytes());
+        zip.extend_from_slice(&0x0606_4b50u32.to_le_bytes());
+        zip.extend_from_slice(&44u64.to_le_bytes());
+        zip.extend_from_slice(&[45, 0, 45, 0]);
+        zip.extend_from_slice(&[0; 8]);
+        zip.extend_from_slice(&1u64.to_le_bytes());
+        zip.extend_from_slice(&1u64.to_le_bytes());
+        zip.extend_from_slice(&u64::from(cd_size).to_le_bytes());
+        zip.extend_from_slice(&u64::from(cd_offset).to_le_bytes());
+        zip.extend_from_slice(&0x0706_4b50u32.to_le_bytes());
+        zip.extend_from_slice(&0u32.to_le_bytes());
+        zip.extend_from_slice(&(end as u64).to_le_bytes());
+        zip.extend_from_slice(&1u32.to_le_bytes());
+        zip.extend_from_slice(&legacy);
+        let archive = Archive::open(zip).unwrap();
+        assert_eq!(archive.read(0, 100, &Cell::new(100)).unwrap(), b"# Example");
     }
 
     #[test]

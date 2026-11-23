@@ -798,7 +798,7 @@ impl Conv<'_, '_> {
                     }
                     doc::collapse_ws(&s)
                 };
-                let path = a.attr("href").and_then(|h| super::resolve_rel(&self.ctx.dir, h)).and_then(|p| self.ctx.vfs.find(&p));
+                let path = a.attr("href").and_then(|h| self.ctx.page_target(h, true));
                 match path {
                     Some(p) => out.block(Block::PageLink(p, label)),
                     None => out.block(Block::Paragraph(vec![doc::t(label)])),
@@ -932,7 +932,7 @@ pub(crate) mod tests {
 <p id="b" class="">Backgrounds: <mark class="highlight-gray_background">g</mark> <mark class="highlight-brown_background">b</mark> <mark class="highlight-orange_background">o</mark> <mark class="highlight-yellow_background">y</mark> <mark class="highlight-green_background">gr</mark> <mark class="highlight-blue_background">bl</mark> <mark class="highlight-purple_background">pu</mark> <mark class="highlight-pink_background">pi</mark> <mark class="highlight-red_background">r</mark></p>
 <p id="c" class="block-color-blue_background">A whole blue block</p>
 <h2 id="d" class="block-color-red">Red heading</h2>
-<p><strong>bold</strong> <em>italic</em> <span style="border-bottom:0.05em solid">under</span> <del>gone</del> <code>code</code> <a href="https://notion.so">link</a> <a href="Other%20page%200123456789abcdef0123456789abcdef.html">internal</a></p>
+<p><strong>bold</strong> <em>italic</em> <span style="border-bottom:0.05em solid">under</span> <del>gone</del> <code>code</code> <a href="https://notion.so">link</a> <a href="Other%20page.html">internal</a></p>
 <figure class="block-color-yellow_background callout" style="white-space:pre-wrap;display:flex" id="e"><div style="font-size:1.5em"><span class="icon">⚠️</span></div><div style="width:100%">Watch out</div></figure>
 <ul id="f" class="toggle"><li><details open=""><summary>More</summary><p>Hidden part</p></details></li></ul>
 <ul id="g" class="to-do-list"><li><div class="checkbox checkbox-on"></div> <span class="to-do-children-checked">Done</span></li><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Open</span></li></ul>
@@ -998,7 +998,7 @@ x++;</code></pre>
         assert_eq!(d.cover, Some(0));
         assert_eq!(images.list.len(), 2);
         assert_eq!(problems.len(), 1, "{problems:?}");
-        assert_eq!(problems[0].item, "Link to Other page 0123456789abcdef0123456789abcdef.html (test)");
+        assert_eq!(problems[0].item, "Link to Other page.html (test)");
         assert_eq!(problems[0].reason, "The linked page file was not found in this import.");
         let v = json(&d.blocks);
         let s = v.to_string();

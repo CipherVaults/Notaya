@@ -15,13 +15,9 @@ fn fixture(files: Vec<(String, Vec<u8>)>) -> Vfs {
     Vfs::from_zip_bytes(zip::build(&refs, false)).unwrap()
 }
 
-fn table_paths(p: &plan::Plan) -> Vec<String> {
-    p.csv_paths.clone()
-}
-
 fn finish(vfs: &Vfs, p: &mut plan::Plan) -> Vec<Item> {
     let ctl = Control::standard();
-    let (tables, _, _) = notion_db::read_tables(vfs, &table_paths(p), &ctl).unwrap();
+    let (tables, _, _) = notion_db::read_tables(vfs, p, &ctl).unwrap();
     let rows = notion_db::prepare_pages(&tables, p, &ctl).unwrap();
     let mut made = notion_db::import_databases(&tables, &rows, p, 1, &ctl).unwrap();
     let (mut items, _) = p.items(&ctl, &[], 1, 0, &made.row_targets).unwrap();
@@ -101,7 +97,101 @@ fn n1_title_only_source_home_survives_row_cleanup() {
     assert!(!generated.contains(&home_id));
     let items = finish(&v, &mut p);
     assert!(items.iter().any(|i| matches!(i, Item::Page(p) if p.id == home_id)));
+    assert!(items.iter().any(|i| matches!(i, Item::Database(db) if db.parent == home_id)));
     assert!(!items.iter().any(|i| generated.contains(i.id())), "empty generated row containers are still cleaned up");
+}
+
+#[test]
+fn combined_zip_keeps_one_database_and_uses_markdown_csv_values() {
+    let root = std::env::temp_dir().join(format!("notaya-combined-{}", crate::model::new_id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let html = root.join("one.zip");
+    let markdown = root.join("two.zip");
+    let html_csv = format!("Export A/Collection {TABLE}_all.csv");
+    let md_csv = format!("Export B/Collection {TABLE}_all.csv");
+    let html_home = format!("Export A/Overview {HUB}.html");
+    let md_home = format!("Export B/Overview {HUB}.md");
+    std::fs::write(&html, zip::build(&[
+        (&html_home, b"<h1>Overview</h1><p>Rich body</p>"),
+        (&html_csv, b"Name\nHTML value\n"),
+    ], true)).unwrap();
+    std::fs::write(&markdown, zip::build(&[
+        (&md_home, b"# Overview\n\nPlain body"),
+        (&md_csv, b"Name\nCSV value\n"),
+    ], true)).unwrap();
+    for paths in [[html.clone(), markdown.clone()], [markdown, html]] {
+        let v = Vfs::from_files(&paths).unwrap();
+        let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+        let items = finish(&v, &mut p);
+        assert_eq!(items.iter().filter(|item| matches!(item, Item::Database(_))).count(), 1);
+        assert_eq!(items.iter().filter(|item| matches!(item, Item::Row(_))).count(), 1);
+        assert!(items.iter().any(|item| matches!(item, Item::Row(row) if row.title == "CSV value")));
+        assert!(items.iter().any(|item| matches!(item, Item::Page(page) if page.text.contains("Rich body"))));
+    }
+
+    let html = root.join("one.zip");
+    let markdown = root.join("two.zip");
+    std::fs::write(&markdown, zip::build(&[
+        (&md_home, b"# Overview"),
+        (&md_csv, b"Name\n\"unclosed"),
+    ], true)).unwrap();
+    let v = Vfs::from_files(&[html, markdown.clone()]).unwrap();
+    let ctl = Control::standard();
+    let plan = plan::build(&v, &ctl, None, 1).unwrap();
+    let (tables, _, notes) = notion_db::read_tables(&v, &plan, &ctl).unwrap();
+    assert_eq!(tables.len(), 1);
+    assert_eq!(tables[0].table.rows, [["HTML value"]]);
+    assert!(notes.iter().any(|note| note.contains("HTML export's CSV was used")));
+
+    let csv_only = root.join("three.zip");
+    let other_csv = format!("Export C/Collection {TABLE}_all.csv");
+    std::fs::write(&csv_only, zip::build(&[(&other_csv, b"Name\nCSV-only value\n")], true)).unwrap();
+    std::fs::write(&markdown, zip::build(&[
+        (&md_home, b"# Overview"),
+        (&md_csv, b"Name\nCSV value\n"),
+    ], true)).unwrap();
+    let v = Vfs::from_files(&[csv_only, markdown]).unwrap();
+    let plan = plan::build(&v, &ctl, None, 1).unwrap();
+    let (tables, _, _) = notion_db::read_tables(&v, &plan, &ctl).unwrap();
+    assert_eq!(tables.len(), 2, "a CSV-only archive does not establish an HTML counterpart");
+}
+
+#[test]
+fn idless_csv_copies_pair_only_when_logical_path_and_bytes_agree() {
+    let root = std::env::temp_dir().join(format!("notaya-idless-csv-{}", crate::model::new_id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let html = root.join("one.zip");
+    let markdown = root.join("two.zip");
+    std::fs::write(&html, zip::build(&[
+        (&format!("Export A {TABLE}/Overview {HUB}.html"), b"<h1>Overview</h1><p>Body</p>"),
+        (&format!("Export A {TABLE}/Items.csv"), b"Name\nSame\n"),
+        (&format!("Export A {TABLE}/Different.csv"), b"Name\nHTML only\n"),
+    ], true)).unwrap();
+    std::fs::write(&markdown, zip::build(&[
+        (&format!("Export B {CARD}/Overview {HUB}.md"), b"# Overview\n\nBody"),
+        (&format!("Export B {CARD}/Items.csv"), b"Name\nSame\n"),
+        (&format!("Export B {CARD}/Different.csv"), b"Name\nMarkdown only\n"),
+    ], true)).unwrap();
+    let v = Vfs::from_files(&[html, markdown]).unwrap();
+    let ctl = Control::standard();
+    let plan = plan::build(&v, &ctl, None, 1).unwrap();
+    let (tables, _, _) = notion_db::read_tables(&v, &plan, &ctl).unwrap();
+    assert_eq!(tables.iter().filter(|t| t.title == "Items" && t.paths.len() == 2).count(), 1);
+    assert_eq!(tables.iter().filter(|t| t.title == "Different" && t.paths.len() == 1).count(), 2);
+}
+
+#[test]
+fn ambiguous_rows_keep_the_source_body_and_unicode_matches_canonical_spelling() {
+    let v = fixture(vec![
+        (format!("Collection {TABLE}_all.csv"), "Name\nRepeat\nRepeat\nCaf\u{e9} \u{645}\u{631}\u{62d}\u{628}\u{627}\n".as_bytes().to_vec()),
+        (format!("Collection {TABLE}/Repeat {CARD}.md"), b"# Repeat\n\nStandalone body".to_vec()),
+        (format!("Collection {TABLE}/International {HUB}.md"), "# Cafe\u{301} \u{645}\u{631}\u{62d}\u{628}\u{627}\n\nInternational body".as_bytes().to_vec()),
+    ]);
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let items = finish(&v, &mut p);
+    assert!(items.iter().any(|item| matches!(item, Item::Page(page) if page.title == "Repeat" && page.text.contains("Standalone body"))));
+    assert_eq!(items.iter().filter(|item| matches!(item, Item::Row(row) if row.title == "Repeat" && row.text.is_empty())).count(), 2);
+    assert_eq!(items.iter().filter(|item| matches!(item, Item::Row(row) if row.text.contains("International body"))).count(), 1);
 }
 
 #[test]
@@ -110,7 +200,7 @@ fn n1_linked_row_has_one_body_and_links_target_the_row() {
 }
 
 #[test]
-fn n3_canonical_row_navigation_works_at_3001_and_5000_pages() {
+fn n3_canonical_row_navigation_works_at_3001_and_the_import_limit() {
     check_canonical_row_import(3_001);
     check_canonical_row_import(crate::importers::MAX_PAGES);
 }
@@ -353,12 +443,18 @@ fn n2_clean_name_matches_are_local_to_the_same_parent() {
 fn n1_source_home_in_html_is_not_discarded_because_csv_shares_id() {
     // Mandatory A53 item 5: preserve useful body outside the CSV-backed view table.
     let v = fixture(vec![
-        (format!("Home {HUB}.html"), b"<html><title>Home</title><body><p>Dashboard body</p></body></html>".to_vec()),
-        (format!("Home {HUB}.csv"), b"Name\nCard\n".to_vec()),
+        (format!("Home #1 {HUB}.html"), b"<html><title>Home</title><body><p>Status: Draft</p></body></html>".to_vec()),
+        (format!("Home #1 {HUB}.csv"), b"Name,Status\nHome,Draft\n".to_vec()),
         (format!("Card {CARD}.html"), b"<html><title>Card</title><body><p>Body</p></body></html>".to_vec()),
     ]);
-    let p = plan::build(&v, &Control::standard(), None, 1).unwrap();
-    assert!(p.pages.iter().any(|p| p.title == "Home"));
+    let mut p = plan::build(&v, &Control::standard(), None, 1).unwrap();
+    let items = finish(&v, &mut p);
+    let home = items.iter().find_map(|i| match i {
+        Item::Page(p) if p.title == "Home" && p.text == "Status: Draft" => Some(p),
+        _ => None,
+    }).expect("HTML home and its text survive");
+    assert!(items.iter().any(|i| matches!(i, Item::Database(db) if db.parent == home.id && db.section_id == home.section_id && db.source.as_ref().is_some_and(|s| s.id == HUB))));
+    assert!(items.iter().any(|i| matches!(i, Item::Row(row) if row.title == "Home" && row.text.is_empty())));
 }
 
 #[test]
@@ -370,7 +466,9 @@ fn n1_same_named_csv_views_with_different_ids_report_ambiguity() {
         (a.clone(), b"Name,Status\nCard,Done\n".to_vec()),
         (b.clone(), b"Name,Status,Detail\nCard,Done,Body\n".to_vec()),
     ]);
-    let (_, _, notes) = notion_db::read_tables(&v, &[a, b], &Control::standard()).unwrap();
+    let ctl = Control::standard();
+    let p = plan::build(&v, &ctl, None, 1).unwrap();
+    let (_, _, notes) = notion_db::read_tables(&v, &p, &ctl).unwrap();
     // Reporting ambiguity avoids silently merging two genuinely distinct databases.
     assert!(!notes.is_empty());
 }
@@ -619,7 +717,9 @@ fn n2_a_failed_or_ambiguous_database_keeps_its_plain_wrapper_page() {
 fn n2_conflicting_csv_names_warn_once_and_never_merge_by_name() {
     let paths = vec![format!("Table {TABLE}.csv"), format!("Table {TABLE}_all.csv"), format!("Table {HUB}.csv"), format!("Table {CARD}.csv")];
     let v = fixture(paths.iter().map(|p| (p.clone(), b"Name\nCard\n".to_vec())).collect());
-    let (tables, covered, notes) = notion_db::read_tables(&v, &paths, &Control::standard()).unwrap();
+    let ctl = Control::standard();
+    let p = plan::build(&v, &ctl, None, 1).unwrap();
+    let (tables, covered, notes) = notion_db::read_tables(&v, &p, &ctl).unwrap();
     assert_eq!(tables.len(), 3, "only the same-id plain/all pair is combined");
     assert_eq!(covered.len(), 4);
     assert_eq!(notes.iter().filter(|n| n.contains("ambiguous")).count(), 1);
@@ -669,7 +769,7 @@ fn n2_failed_csv_beyond_the_skip_cap_is_still_reported() {
 }
 
 fn error_kind(e: &str) -> &'static str {
-    if e.contains("more than 5000 pages") { "page_limit" }
+    if e.contains(&format!("more than {} pages", crate::importers::MAX_PAGES)) { "page_limit" }
     else if e.contains("No pages were found") { "no_documents" }
     else if e.contains("too long") { "time_limit" }
     else if e.contains("larger than 2 GB") { "zip_limit" }
@@ -714,7 +814,7 @@ fn n1_private_count_probe() {
         let source_count = docs.len();
         let top: HashSet<_> = p.pages.iter().filter(|p| p.parent.is_none() && !p.key.starts_with("dir:")).map(|p| p.id.clone()).collect();
         let urls = p.store_images(&v, &ctl, &mut |_,_| Ok(crate::model::new_id())).expect("image stage failed");
-        let (tables, _, notes) = notion_db::read_tables(&v, &table_paths(&p), &ctl).expect("CSV stage failed");
+        let (tables, _, notes) = notion_db::read_tables(&v, &p, &ctl).expect("CSV stage failed");
         let shallow_depth = v.paths().filter(|p| p.ends_with(".md") || p.ends_with(".html")).map(|p| p.matches('/').count()).min();
         let shallow: HashSet<_> = v.paths().filter(|p| (p.ends_with(".md") || p.ends_with(".html")) && Some(p.matches('/').count()) == shallow_depth).cloned().collect();
         let vfs_refused = v.refused.len();

@@ -7,16 +7,16 @@
 //! again after resolving the real path), so a document cannot point the import at any other
 //! file or at a network share. Pictures are never read from Notaya's own data folder.
 //!
-//! One budget covers the whole import: the ZIP files that were picked (they are held in memory,
-//! at most [`MAX_ZIP_FILE`] together) and everything read or inflated afterwards, by every
-//! converter (Word and PDF included), at most [`MAX_TOTAL`].
+//! The picked ZIPs are read on demand from open files. Payloads share one [`MAX_TOTAL`]
+//! budget, including what the Word and PDF converters inflate. Notion part wrappers have
+//! separate limits on file I/O and retained memory.
 
 use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use super::zip::Archive;
+use super::zip::{Archive, is_export_part};
 #[cfg(test)]
 use super::zip;
 
@@ -27,12 +27,20 @@ const MAX_WALK: usize = 50_000;
 const MAX_DEPTH: usize = 24;
 const MAX_ARCHIVES: usize = 64;
 const MAX_REFUSED: usize = 10_000;
-/// Largest ZIP file read into memory.
-pub const MAX_ZIP_FILE: u64 = 2 * 1024 * 1024 * 1024;
+const MAX_PICKED_ZIP_BYTES: u64 = 16 * 1024 * 1024 * 1024;
+const MAX_NESTED_ZIP_BYTES: u64 = 8 * 1024 * 1024 * 1024;
+const MAX_NESTED_ZIP_MEMORY: u64 = 128 * 1024 * 1024;
+const MAX_MOUNTED_DIRECTORY_BYTES: u64 = 128 * 1024 * 1024;
 
 enum Origin {
     Disk(PathBuf),
-    Zip(usize, usize),
+    Zip(usize, usize, Option<ExportFormat>),
+}
+
+#[derive(Clone, Copy)]
+enum ExportFormat {
+    Html,
+    Markdown,
 }
 
 pub struct Vfs {
@@ -42,8 +50,11 @@ pub struct Vfs {
     lazy_root: Option<PathBuf>,
     archives: Vec<Archive>,
     budget: Cell<u64>,
-    /// Bytes of the picked ZIP files held in memory so far.
-    zip_total: u64,
+    picked_zip_bytes: u64,
+    nested_zip_bytes: u64,
+    nested_zip_memory: u64,
+    /// Central directory bytes across picked and nested ZIPs, including rejected entries.
+    mounted_directory_bytes: u64,
     /// Total archive entries inspected across mounted ZIPs (prevents hidden/nested bypasses).
     mounted_entries: usize,
     /// Notaya's data folder (canonical): nothing inside it is read as a picture.
@@ -61,9 +72,58 @@ fn is_hidden(name: &str) -> bool {
     name.starts_with('.') || name == "__MACOSX" || name.eq_ignore_ascii_case("thumbs.db") || name.eq_ignore_ascii_case("desktop.ini")
 }
 
+fn split_name(path: &str) -> (&str, &str) {
+    path.rsplit_once('/').unwrap_or(("", path))
+}
+
+fn extension(path: &str) -> &str {
+    split_name(path).1.rsplit_once('.').map_or("", |(_, ext)| ext)
+}
+
+fn export_format(archive: &Archive) -> Option<ExportFormat> {
+    let mut html = 0;
+    let mut markdown = 0;
+    for entry in &archive.entries {
+        if entry.name.split('/').any(is_hidden) {
+            continue;
+        }
+        let ext = extension(&entry.name);
+        if ["md", "markdown", "mdown"].iter().any(|kind| ext.eq_ignore_ascii_case(kind)) {
+            markdown += 1;
+        } else if ["html", "htm", "xhtml"].iter().any(|kind| ext.eq_ignore_ascii_case(kind))
+            && !split_name(&entry.name).1.eq_ignore_ascii_case("index.html")
+        {
+            html += 1;
+        }
+    }
+    match markdown.cmp(&html) {
+        std::cmp::Ordering::Greater => Some(ExportFormat::Markdown),
+        std::cmp::Ordering::Less => Some(ExportFormat::Html),
+        std::cmp::Ordering::Equal => None,
+    }
+}
+
+/// A wrapper's parts are siblings. An index page from the exporter may accompany them, but
+/// a direct export with its own documents treats nested ZIP files as ordinary attachments.
+fn wrapper_folder(archive: &Archive) -> Option<&str> {
+    let visible = || archive.entries.iter().filter(|e| !e.name.split('/').any(is_hidden));
+    let mut folders = visible().filter(|e| is_export_part(&e.name)).map(|e| split_name(&e.name).0);
+    let folder = folders.next()?;
+    if !folders.all(|f| f == folder) || visible().any(|e| {
+        let (dir, name) = split_name(&e.name);
+        let ext = extension(name);
+        ["html", "htm", "xhtml", "md", "markdown", "mdown", "txt", "text", "docx", "pdf", "csv"]
+            .iter().any(|kind| ext.eq_ignore_ascii_case(kind))
+            && !(dir == folder && name.eq_ignore_ascii_case("index.html"))
+    }) {
+        return None;
+    }
+    Some(folder)
+}
+
 impl Vfs {
     fn empty() -> Vfs {
-        Vfs { files: BTreeMap::new(), lower: HashMap::new(), lazy_root: None, archives: Vec::new(), budget: Cell::new(MAX_TOTAL), zip_total: 0, mounted_entries: 0, protected: None, refused: Vec::new() }
+        Vfs { files: BTreeMap::new(), lower: HashMap::new(), lazy_root: None, archives: Vec::new(), budget: Cell::new(MAX_TOTAL), picked_zip_bytes: 0, nested_zip_bytes: 0, nested_zip_memory: 0, mounted_directory_bytes: 0, mounted_entries: 0, protected: None, refused: Vec::new() }
     }
 
     fn push_refused(&mut self, name: String, reason: String) {
@@ -73,7 +133,13 @@ impl Vfs {
     }
 
     fn add(&mut self, path: String, origin: Origin) {
-        if self.files.contains_key(&path) {
+        if let Some(current) = self.files.get_mut(&path) {
+            if extension(&path).eq_ignore_ascii_case("csv")
+                && matches!(current, Origin::Zip(_, _, Some(ExportFormat::Html)))
+                && matches!(origin, Origin::Zip(_, _, Some(ExportFormat::Markdown)))
+            {
+                *current = origin;
+            }
             return;
         }
         self.lower.entry(path.to_lowercase()).or_insert_with(|| path.clone());
@@ -81,7 +147,7 @@ impl Vfs {
     }
 
     /// Files picked in the dialog, in any mix: documents (all from one folder) and ZIP files
-    /// (for example Notion exports; ZIP files inside them are opened one level deep). Pictures a
+    /// (for example Notion exports; part wrappers are opened one level deep). Pictures a
     /// picked document uses are read from its folder and below, on demand.
     pub fn from_files(paths: &[PathBuf]) -> Result<Vfs, String> {
         let mut v = Vfs::empty();
@@ -114,21 +180,13 @@ impl Vfs {
     }
 
     fn mount_zip_file(&mut self, p: &Path) -> Result<(), String> {
-        let room = MAX_ZIP_FILE.saturating_sub(self.zip_total);
-        let data = read_plain_bounded(p, room, "The ZIP files chosen are larger than 2 GB together.", self.protected.as_deref())?;
-        self.charge_zip(data.len() as u64)?;
-        self.mount(Archive::open(data)?, true)
-    }
-
-    /// Makes room for `len` more bytes of ZIP file in memory. Refused beyond 2 GB together: many
-    /// picked ZIP files must not add up to more than one big one.
-    fn charge_zip(&mut self, len: u64) -> Result<(), String> {
-        let total = self.zip_total.saturating_add(len);
-        if total > MAX_ZIP_FILE {
-            return Err("The ZIP files you chose are larger than 2 GB together. Import them in smaller parts.".into());
+        if self.archives.len() >= MAX_ARCHIVES {
+            return Err(format!("More than {MAX_ARCHIVES} ZIP archives. Import them in smaller parts."));
         }
-        self.zip_total = total;
-        Ok(())
+        let room = MAX_PICKED_ZIP_BYTES.saturating_sub(self.picked_zip_bytes);
+        let (file, len) = open_plain_bounded(p, room, "The ZIP files chosen are larger than 16 GB together.", self.protected.as_deref())?;
+        self.picked_zip_bytes += len;
+        self.mount(Archive::open_file(file, len)?, true)
     }
 
     /// What may still be read or inflated in this import. Word and PDF converters draw from it
@@ -194,53 +252,69 @@ impl Vfs {
         Ok(v)
     }
 
-    fn mount(&mut self, archive: Archive, nested_ok: bool) -> Result<(), String> {
+    fn mount(&mut self, mut archive: Archive, nested_ok: bool) -> Result<(), String> {
         if self.archives.len() >= MAX_ARCHIVES {
             self.push_refused("archive.zip".into(), format!("More than {MAX_ARCHIVES} ZIP archives (not opened)."));
             return Ok(());
         }
+        if archive.directory_size > MAX_MOUNTED_DIRECTORY_BYTES - self.mounted_directory_bytes {
+            return Err("The ZIP directories exceed 128 MB together. Import the ZIPs in smaller groups.".into());
+        }
+        self.mounted_directory_bytes += archive.directory_size;
         let idx = self.archives.len();
+        let wrapper = nested_ok.then(|| wrapper_folder(&archive)).flatten().map(str::to_owned);
+        let format = export_format(&archive);
         let mut inner = Vec::new();
-        for (name, reason) in &archive.rejected {
-            self.push_refused(name.clone(), reason.clone());
+        for (name, reason) in std::mem::take(&mut archive.rejected) {
+            self.push_refused(name, reason);
+        }
+        let remaining = MAX_WALK - self.mounted_entries;
+        let overflow = format!("More than {MAX_WALK} files across the chosen archives.");
+        if archive.entries.len() > remaining {
+            for entry in archive.entries.drain(remaining..) {
+                self.push_refused(entry.name, overflow.clone());
+            }
+            archive.entries.shrink_to_fit();
         }
         for (i, e) in archive.entries.iter().enumerate() {
             self.mounted_entries += 1;
-            if self.mounted_entries > MAX_WALK || self.files.len() >= MAX_WALK {
-                self.push_refused(e.name.clone(), format!("More than {MAX_WALK} files across the chosen archives."));
+            if self.files.len() >= MAX_WALK {
+                self.push_refused(e.name.clone(), overflow.clone());
                 continue;
             }
             if e.name.split('/').any(is_hidden) {
                 continue;
             }
-            if is_zip_name(&e.name) {
-                if nested_ok {
-                    inner.push(i);
-                } else {
-                    self.push_refused(e.name.clone(), "A ZIP file inside a ZIP file inside a ZIP file (not opened).".into());
-                }
+            if is_export_part(&e.name) && wrapper.as_deref() == Some(split_name(&e.name).0) {
+                inner.push(i);
                 continue;
             }
-            self.add(e.name.clone(), Origin::Zip(idx, i));
-        }
-        let mut nested = Vec::new();
-        for i in inner {
-            if self.mounted_entries >= MAX_WALK || self.files.len() >= MAX_WALK || self.archives.len() + nested.len() + 1 >= MAX_ARCHIVES {
-                self.push_refused(archive.entries[i].name.clone(), "Archive limit reached across chosen archives.".into());
+            if is_export_part(&e.name) && !nested_ok {
+                self.push_refused(e.name.clone(), "A ZIP file inside a ZIP file inside a ZIP file (not opened).".into());
                 continue;
             }
-            let room = MAX_ZIP_FILE.saturating_sub(self.zip_total);
-            match archive.read(i, room, &self.budget) {
-                Ok(bytes) => match self.charge_zip(bytes.len() as u64).and_then(|_| Archive::open(bytes)) {
-                    Ok(a) => nested.push(a),
-                    Err(e) => self.push_refused(archive.entries[i].name.clone(), e),
-                },
-                Err(e) => self.push_refused(archive.entries[i].name.clone(), e),
-            }
+            self.add(e.name.clone(), Origin::Zip(idx, i, format));
         }
         self.archives.push(archive);
-        for a in nested {
-            self.mount(a, false)?;
+        for i in inner {
+            let entry = &self.archives[idx].entries[i];
+            if self.mounted_entries >= MAX_WALK || self.files.len() >= MAX_WALK || self.archives.len() >= MAX_ARCHIVES {
+                self.push_refused(entry.name.clone(), "Archive limit reached across chosen archives.".into());
+                continue;
+            }
+            if entry.size > MAX_NESTED_ZIP_BYTES - self.nested_zip_bytes {
+                self.push_refused(entry.name.clone(), "The export parts exceed 8 GB together; choose smaller groups of part ZIPs.".into());
+                continue;
+            }
+            self.nested_zip_bytes += entry.size;
+            let memory = MAX_NESTED_ZIP_MEMORY - self.nested_zip_memory;
+            match self.archives[idx].open_part(i, memory) {
+                Ok((part, memory_used)) => match self.mount(part, false) {
+                    Ok(()) => self.nested_zip_memory += memory_used,
+                    Err(e) => self.push_refused(self.archives[idx].entries[i].name.clone(), e),
+                },
+                Err(e) => self.push_refused(self.archives[idx].entries[i].name.clone(), e),
+            }
         }
         Ok(())
     }
@@ -252,6 +326,15 @@ impl Vfs {
 
     pub fn paths(&self) -> impl Iterator<Item = &String> {
         self.files.keys()
+    }
+
+    /// CSVs from the Markdown & CSV export take precedence when both Notion formats are picked.
+    pub fn markdown_zip_preferred(&self, path: &str) -> bool {
+        matches!(self.files.get(path), Some(Origin::Zip(_, _, Some(ExportFormat::Markdown))))
+    }
+
+    pub fn html_zip_source(&self, path: &str) -> bool {
+        matches!(self.files.get(path), Some(Origin::Zip(_, _, Some(ExportFormat::Html))))
     }
 
     /// The stored path for `path` (exact, then ignoring case), or a picture found next to
@@ -297,7 +380,7 @@ impl Vfs {
         };
         match self.files.get(path) {
             Some(Origin::Disk(p)) => disk(p),
-            Some(Origin::Zip(a, i)) => self.archives[*a].read(*i, max, &self.budget).map_err(|e| {
+            Some(Origin::Zip(a, i, _)) => self.archives[*a].read(*i, max, &self.budget).map_err(|e| {
                 if e == "Too large." { format!("Too large (the limit is {} MB).", max / (1024 * 1024)) } else { e }
             }),
             None => match self.lazy_path(path) {
@@ -321,6 +404,16 @@ fn is_reparse_point(_meta: &std::fs::Metadata) -> bool {
 
 /// Reads a plain disk file (never a symlink/junction or anything under `protected`) up to `max` bytes.
 fn read_plain_bounded(p: &Path, max: u64, too_large_err: &str, protected: Option<&Path>) -> Result<Vec<u8>, String> {
+    let (file, _) = open_plain_bounded(p, max, too_large_err, protected)?;
+    let mut data = Vec::new();
+    file.take(max.saturating_add(1)).read_to_end(&mut data).map_err(|e| format!("Could not be read ({e})."))?;
+    if data.len() as u64 > max {
+        return Err(too_large_err.into());
+    }
+    Ok(data)
+}
+
+fn open_plain_bounded(p: &Path, max: u64, too_large_err: &str, protected: Option<&Path>) -> Result<(std::fs::File, u64), String> {
     let meta = std::fs::symlink_metadata(p).map_err(|e| format!("Could not be read ({e})."))?;
     if !meta.is_file() || meta.file_type().is_symlink() || is_reparse_point(&meta) {
         return Err("A link or junction (not followed).".into());
@@ -356,12 +449,7 @@ fn read_plain_bounded(p: &Path, max: u64, too_large_err: &str, protected: Option
     if fmeta.len() != meta.len() || fmeta.len() > max {
         return Err(too_large_err.into());
     }
-    let mut data = Vec::new();
-    file.take(max.saturating_add(1)).read_to_end(&mut data).map_err(|e| format!("Could not be read ({e})."))?;
-    if data.len() as u64 > max {
-        return Err(too_large_err.into());
-    }
-    Ok(data)
+    Ok((file, fmeta.len()))
 }
 
 #[cfg(test)]
@@ -408,12 +496,28 @@ mod tests {
     #[test]
     fn nested_zips_are_opened_one_level() {
         let deepest = zip::build(&[("x.md", b"x")], false);
-        let part = zip::build(&[("Page 0123456789abcdef0123456789abcdef.md", b"# Page"), ("deeper.zip", &deepest)], true);
-        let outer = zip::build(&[("Export-Part-1.zip", &part)], false);
+        let part = zip::build(&[("Page 0123456789abcdef0123456789abcdef.md", b"# Page"), ("Part-3.zip", &deepest)], true);
+        let outer = zip::build(&[("Wrapper/Export-Part-1.zip", &part), ("Wrapper/Export-Part-2.zip", &zip::build(&[("Second.md", b"# Second")], false))], false);
         let v = Vfs::from_zip_bytes(outer).unwrap();
         let paths: Vec<&String> = v.paths().collect();
-        assert_eq!(paths, ["Page 0123456789abcdef0123456789abcdef.md"]);
-        assert!(v.refused.iter().any(|(n, _)| n == "deeper.zip"));
+        assert_eq!(paths, ["Page 0123456789abcdef0123456789abcdef.md", "Second.md"]);
+        assert!(v.refused.iter().any(|(n, _)| n == "Part-3.zip"));
+    }
+
+    #[test]
+    fn zip_attachments_are_not_opened_as_notions_parts() {
+        let embedded = zip::build(&[("Unrelated.md", b"# Unrelated")], false);
+        for page in ["Page.html", "Page.XHTML", "Page.mdown", "Page.text"] {
+            let direct = zip::build(&[(page, b"Example content"), ("Page/Part-1.zip", &embedded)], false);
+            let v = Vfs::from_zip_bytes(direct).unwrap();
+            assert!(v.find("Unrelated.md").is_none(), "{page}");
+            assert!(v.find("Page/Part-1.zip").is_some(), "{page}");
+        }
+
+        let wrapped = zip::build(&[("My-Files-Part-1.zip", &embedded), ("archive.zip", &embedded)], true);
+        let v = Vfs::from_zip_bytes(wrapped).unwrap();
+        assert!(v.find("Unrelated.md").is_none());
+        assert!(v.find("archive.zip").is_some());
     }
 
     #[test]
@@ -442,42 +546,65 @@ mod tests {
     }
 
     #[test]
-    fn picked_zip_files_share_one_memory_allowance() {
-        let mut v = Vfs::empty();
-        v.zip_total = MAX_ZIP_FILE - 10;
-        assert!(v.charge_zip(11).unwrap_err().contains("larger than 2 GB together"));
-        assert!(v.charge_zip(10).is_ok());
-        assert!(v.charge_zip(1).is_err());
-        // Two real picks each count.
+    fn picked_zip_files_share_a_file_size_allowance_without_spending_the_payload_budget() {
         let d = temp();
-        let z = zip::build(&[("a.md", b"hello")], false);
-        std::fs::write(d.join("one.zip"), &z).unwrap();
-        std::fs::write(d.join("two.zip"), &z).unwrap();
-        let v = Vfs::from_files(&[d.join("one.zip"), d.join("two.zip")]).unwrap();
-        assert_eq!(v.zip_total, 2 * z.len() as u64);
-        assert!(v.budget().get() <= MAX_TOTAL);
+        let z = zip::build(&[("a.md", b"hello")], true);
+        let path = d.join("one.zip");
+        std::fs::write(&path, &z).unwrap();
+        let mut v = Vfs::empty();
+        v.picked_zip_bytes = MAX_PICKED_ZIP_BYTES - 2 * z.len() as u64;
+        v.mount_zip_file(&path).unwrap();
+        v.mount_zip_file(&path).unwrap();
+        assert_eq!(v.picked_zip_bytes, MAX_PICKED_ZIP_BYTES);
+        assert!(v.mount_zip_file(&path).unwrap_err().contains("larger than 16 GB together"));
+        assert_eq!(v.budget().get(), MAX_TOTAL);
+        assert_eq!(v.read("a.md", 100).unwrap(), b"hello");
+        assert_eq!(v.budget().get(), MAX_TOTAL - 5);
     }
 
     #[test]
-    fn nested_zip_charges_zip_total_and_caps_global_entries() {
-        // Nested archive is counted against `zip_total` so nested ZIPs cannot bypass MAX_ZIP_FILE.
+    fn exact_csv_collision_prefers_markdown_export_in_either_pick_order() {
+        let d = temp();
+        let html = d.join("a.zip");
+        let md = d.join("b.zip");
+        let ambiguous = d.join("c.zip");
+        std::fs::write(&html, zip::build(&[("Page.html", b"<h1>Page</h1>"), ("Table.csv", b"Title\nFrom HTML")], false)).unwrap();
+        std::fs::write(&md, zip::build(&[("Page.markdown", b"# Page"), ("index.html", b"index"), ("Table.csv", b"Title\nFrom Markdown")], true)).unwrap();
+        std::fs::write(&ambiguous, zip::build(&[("Other.csv", b"Title\nExample")], false)).unwrap();
+        for picks in [[html.clone(), md.clone(), ambiguous.clone()], [md.clone(), html.clone(), ambiguous]] {
+            let v = Vfs::from_files(&picks).unwrap();
+            assert!(v.markdown_zip_preferred("Table.csv"));
+            assert!(!v.markdown_zip_preferred("Other.csv"));
+            assert_eq!(v.read("Table.csv", 100).unwrap(), b"Title\nFrom Markdown");
+        }
+    }
+
+    #[test]
+    fn nested_parts_have_separate_byte_and_memory_limits_and_share_the_entry_limit() {
         let inner = zip::build(&[("inner.md", b"# Hello from inside nested zip")], true);
         let outer = zip::build(&[("part-1.zip", &inner)], false);
         let mut v = Vfs::empty();
-        let before = outer.len() as u64;
-        v.charge_zip(before).unwrap();
         v.mount(Archive::open(outer).unwrap(), true).unwrap();
-        assert_eq!(v.zip_total, before + inner.len() as u64);
+        assert_eq!(v.nested_zip_bytes, inner.len() as u64);
+        assert_eq!(v.nested_zip_memory, 0);
+        assert_eq!(v.budget().get(), MAX_TOTAL);
         assert_eq!(v.find("inner.md").as_deref(), Some("inner.md"));
 
-        // Pushing `zip_total` near MAX_ZIP_FILE refuses mounting an oversized nested archive.
         let inner2 = zip::build(&[("too-big.md", b"exceeds remaining zip_total budget")], false);
         let outer2 = zip::build(&[("part-2.zip", &inner2)], false);
         let mut v2 = Vfs::empty();
-        v2.zip_total = MAX_ZIP_FILE - 4;
+        v2.nested_zip_bytes = MAX_NESTED_ZIP_BYTES - 4;
         v2.mount(Archive::open(outer2).unwrap(), true).unwrap();
         assert_eq!(v2.find("too-big.md"), None);
         assert!(v2.refused.iter().any(|(n, _)| n == "part-2.zip"));
+
+        let outer3 = zip::build(&[("Export-Part-1.zip", &inner)], true);
+        let mut v = Vfs::from_zip_bytes(outer3.clone()).unwrap();
+        assert_eq!(v.nested_zip_memory, inner.len() as u64);
+        assert_eq!(v.read("inner.md", 100).unwrap(), b"# Hello from inside nested zip");
+        v.nested_zip_memory = MAX_NESTED_ZIP_MEMORY;
+        v.mount(Archive::open(outer3).unwrap(), true).unwrap();
+        assert!(v.refused.iter().any(|(n, reason)| n == "Export-Part-1.zip" && reason.contains("memory allowance")));
 
         // Global MAX_WALK cap holds across multiple mounted archives (entries beyond MAX_WALK refused).
         let mut v3 = Vfs::empty();
@@ -487,6 +614,27 @@ mod tests {
         assert_eq!(v3.find("kept.md").as_deref(), Some("kept.md"));
         assert_eq!(v3.find("overflow.md"), None);
         assert!(v3.refused.iter().any(|(n, _)| n == "overflow.md"));
+        assert_eq!(v3.archives[0].entries.len(), 1, "unmounted entry metadata is released");
+    }
+
+    #[test]
+    fn picked_and_nested_archives_share_the_directory_limit() {
+        let zip = zip::build(&[("Kept.md", b"yes"), ("../Refused.md", b"no")], false);
+        let archive = Archive::open(zip.clone()).unwrap();
+        let mut v = Vfs::empty();
+        v.mounted_directory_bytes = MAX_MOUNTED_DIRECTORY_BYTES - archive.directory_size;
+        v.mount(archive, true).unwrap();
+        assert_eq!(v.mounted_directory_bytes, MAX_MOUNTED_DIRECTORY_BYTES);
+        assert!(v.archives[0].rejected.is_empty(), "refusals are retained only by the VFS");
+        assert!(v.refused.iter().any(|(name, _)| name == "../Refused.md"));
+        assert!(v.mount(Archive::open(zip.clone()).unwrap(), true).unwrap_err().contains("directories exceed"));
+
+        let outer = Archive::open(zip::build(&[("Part-1.zip", &zip)], false)).unwrap();
+        let mut v = Vfs::empty();
+        v.mounted_directory_bytes = MAX_MOUNTED_DIRECTORY_BYTES - outer.directory_size;
+        v.mount(outer, true).unwrap();
+        assert!(v.find("Kept.md").is_none());
+        assert!(v.refused.iter().any(|(name, reason)| name == "Part-1.zip" && reason.contains("directories exceed")));
     }
 
     #[test]

@@ -393,7 +393,10 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
       for (const item of mockBin()) removeMockTree(item.id);
       return ok(liveTree());
     }
-    case "list_stickies": return ok(stickies.filter((s) => !mockInBin(s.id)));
+    case "list_stickies": {
+      const items = mockIndex();
+      return ok(stickies.filter((s) => !mockInBin(s.id, items)));
+    }
     case "get_sticky": {
       const sticky = stickies.find((s) => s.id === args.id); if (!sticky) throw "That item no longer exists.";
       return ok({ ...sticky, trashedAt: binTimes.get(sticky.id) ?? null });
@@ -500,20 +503,55 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
       if (params.get("importCancel") === "1") return ok(null);
       const n = tree.notebooks.length + 1;
       const nb = { id: `n${n + 10}`, name: "Notion import", color: "#6366f1", icon: "📓", order: n, created: ago(0), updated: ago(0) };
+      const scale = params.has("importScale");
       const secs = [
         { id: `s${n + 20}`, notebookId: nb.id, name: "Imported pages", color: "", order: 0, created: ago(0), updated: ago(0) },
-        { id: `s${n + 21}`, notebookId: nb.id, name: "Recipes", color: "", order: 1, created: ago(0), updated: ago(0) },
+        { id: `s${n + 21}`, notebookId: nb.id, name: scale ? "Bulk pages" : "Recipes", color: "", order: 1, created: ago(0), updated: ago(0) },
       ];
       const mk = (id: string, sectionId: string, title: string, order: number, parent = "", icon = "") => ({
         id, sectionId, title, preview: "Imported from Notion.", words: 40, order, favorite: false, parent, icon, trashedAt: null, created: ago(0), updated: ago(0),
       });
       tree.notebooks.push(nb);
       tree.sections.push(...secs);
-      tree.pages.push(
+      const added = [
         mk(`p${n + 30}`, secs[0].id, "Project plan", 0, "", "🚀"),
         mk(`p${n + 31}`, secs[0].id, "Sub page", 1, `p${n + 30}`),
         mk(`p${n + 32}`, secs[1].id, "Pancakes", 0, "", "🥞"),
-      );
+      ];
+      if (scale) {
+        const [home, child] = added;
+        home.title = "صفحة البداية";
+        home.preview = "هذا نص تجريبي في صفحة البداية.";
+        child.title = "صفحة فرعية";
+        child.preview = "هذا نص تجريبي في الصفحة الفرعية.";
+        savedPages.set(home.id, { text: home.preview, content: JSON.stringify({ type: "doc", content: [
+          para(home.preview), { type: "pageLink", attrs: { pageId: child.id } },
+        ] }) });
+        savedPages.set(child.id, { text: child.preview, content: JSON.stringify({ type: "doc", content: [
+          para(child.preview, { dir: "rtl" }),
+        ] }) });
+        added.pop();
+        // Keep branches small enough to exercise real navigation without mounting thousands of DOM rows at once.
+        for (let group = 1; group <= 30; group++) {
+          const groupId = `${nb.id}-group-${group}`;
+          added.push(mk(groupId, secs[1].id, `Batch ${group}`, group));
+          for (let i = 1; i <= 100; i++) {
+            const pageNumber = (group - 1) * 100 + i;
+            added.push(mk(`${nb.id}-bulk-${pageNumber}`, secs[1].id, `Sample ${pageNumber}`, i, groupId));
+          }
+        }
+      }
+      tree.pages.push(...added);
+      if (scale) {
+        const ids = new Set(added.map((page) => page.id));
+        Object.assign(window, {
+          __notayaImportScaleReadback: () => ({
+            notebooks: tree.notebooks.filter((notebook) => notebook.id === nb.id).length,
+            sections: tree.sections.filter((section) => section.notebookId === nb.id).length,
+            pages: tree.pages.filter((page) => ids.has(page.id)).length,
+          }),
+        });
+      }
       // ?importTwo=1: a Notaya ZIP of two notebooks, which comes back as two notebooks.
       const notebooks = [{ id: nb.id, name: nb.name }];
       if (params.get("importTwo") === "1") {
@@ -529,12 +567,12 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
         notebookName: nb.name,
         notebooks,
         sections: notebooks.length > 1 ? 3 : 2,
-        pages: notebooks.length > 1 ? 4 : 3,
-        images: 2,
-        skipped: [
+        pages: added.length + notebooks.length - 1,
+        images: scale ? 0 : 2,
+        skipped: scale ? [] : [
           { item: "Picture holiday.heic (Project plan 0123abcd.html)", reason: "Not a PNG, JPEG, GIF or WebP picture." },
         ],
-        notes: ["PDF import reads text only: pictures, scanned pages and the page layout are not imported."],
+        notes: scale ? [] : ["PDF import reads text only: pictures, scanned pages and the page layout are not imported."],
       });
     }
     case "password_strength": {
@@ -550,7 +588,8 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
         ...stickies.filter((s) => s.text.toLowerCase().includes(q)).map((s) => ({ kind: "sticky", id: s.id, title: s.text, subtitle: "", snippet: s.text, score: 1 })),
         ...(databaseCommand("search", args, tree) as { id: string }[]),
       ];
-      return ok(hits.filter((hit) => !mockInBin(hit.id)));
+      const items = mockIndex();
+      return ok(hits.filter((hit) => !mockInBin(hit.id, items)));
     }
     default:
       return ok(null);
@@ -572,38 +611,43 @@ const mockItems = (): Record<string, unknown>[] => [
   ...tree.pages.map((x) => ({ ...x, kind: "page" })),
   ...stickies.map((x) => ({ ...x, kind: "sticky" })), ...coordinationItems(),
 ];
-function parentId(id: string): string {
-  const item = mockItems().find((x) => x.id === id);
+const mockIndex = () => new Map(mockItems().map((item) => [String(item.id), item]));
+type MockIndex = ReturnType<typeof mockIndex>;
+function parentId(id: string, items: MockIndex): string {
+  const item = items.get(id);
   return String(item?.notebookId ?? item?.db ?? (item?.parent || item?.sectionId) ?? "");
 }
-function mockWithin(id: string, root: string): boolean {
+function mockWithin(id: string, root: string, items: MockIndex): boolean {
   const seen = new Set<string>();
-  while (id && !seen.has(id)) { if (id === root) return true; seen.add(id); id = parentId(id); }
+  while (id && !seen.has(id)) { if (id === root) return true; seen.add(id); id = parentId(id, items); }
   return false;
 }
-function mockInBin(id: string): boolean {
+function mockInBin(id: string, items = mockIndex()): boolean {
   const seen = new Set<string>();
   while (id && !seen.has(id)) {
     seen.add(id);
-    if (binTimes.has(id) || mockItems().find((x) => x.id === id)?.trashedAt != null) return true;
-    id = parentId(id);
+    if (binTimes.has(id) || items.get(id)?.trashedAt != null) return true;
+    id = parentId(id, items);
   }
   return false;
 }
 function liveTree() {
   if (params.get("nb") === "none") return { notebooks: [], sections: [], pages: [], rowPages: [], databases: [] };
-  return { notebooks: tree.notebooks.filter((x) => !mockInBin(x.id)), sections: tree.sections.filter((x) => !mockInBin(x.id)), pages: tree.pages.filter((x) => !mockInBin(x.id) || x.trashedAt != null), rowPages: tree.rowPages, databases: databaseMetas().filter((x) => !mockInBin(x.id) || x.trashedAt != null) };
+  const items = mockIndex();
+  return { notebooks: tree.notebooks.filter((x) => !mockInBin(x.id, items)), sections: tree.sections.filter((x) => !mockInBin(x.id, items)), pages: tree.pages.filter((x) => !mockInBin(x.id, items) || x.trashedAt != null), rowPages: tree.rowPages, databases: databaseMetas().filter((x) => !mockInBin(x.id, items) || x.trashedAt != null) };
 }
 function mockBin() {
-  return mockItems().filter((x) => binTimes.has(String(x.id)) || x.trashedAt != null).map((x) => ({ id: String(x.id), kind: String(x.kind), title: String(x.name ?? x.title ?? x.text ?? ""), icon: String(x.icon ?? ""), trashedAt: binTimes.get(String(x.id)) ?? x.trashedAt, parentInBin: mockInBin(parentId(String(x.id))) }));
+  const items = mockIndex();
+  return [...items.values()].filter((x) => binTimes.has(String(x.id)) || x.trashedAt != null).map((x) => ({ id: String(x.id), kind: String(x.kind), title: String(x.name ?? x.title ?? x.text ?? ""), icon: String(x.icon ?? ""), trashedAt: binTimes.get(String(x.id)) ?? x.trashedAt, parentInBin: mockInBin(parentId(String(x.id), items), items) }));
 }
 function restoreMockItem(id: string, restoreContainers: boolean) {
-  if (!mockItems().some((item) => item.id === id)) throw "That item no longer exists.";
+  const items = mockIndex();
+  if (!items.has(id)) throw "That item no longer exists.";
   const containers: string[] = [];
   const seen = new Set<string>();
-  for (let parent = parentId(id); parent && !seen.has(parent); parent = parentId(parent)) {
+  for (let parent = parentId(id, items); parent && !seen.has(parent); parent = parentId(parent, items)) {
     seen.add(parent);
-    const item = mockItems().find((item) => item.id === parent);
+    const item = items.get(parent);
     if ((item?.kind === "notebook" || item?.kind === "section") && binTimes.has(parent)) {
       if (!restoreContainers) throw "parent_in_bin: Restore the containing items too?";
       containers.push(parent);
@@ -614,14 +658,15 @@ function restoreMockItem(id: string, restoreContainers: boolean) {
   const page = tree.pages.find((page) => page.id === id);
   if (page) {
     const parent = tree.pages.find((parent) => parent.id === page.parent);
-    const children = tree.pages.filter((child) => mockWithin(child.id, id));
+    const children = tree.pages.filter((child) => mockWithin(child.id, id, items));
     if (parent?.trashedAt != null) page.parent = "";
     for (const child of children) child.trashedAt = null;
   }
   databaseCommand("restore_page", { id }, tree);
 }
 function removeMockTree(root: string) {
-  const ids = new Set(mockItems().filter((x) => mockWithin(String(x.id), root)).map((x) => String(x.id)));
+  const items = mockIndex();
+  const ids = new Set([...items.keys()].filter((id) => mockWithin(id, root, items)));
   tree.notebooks = tree.notebooks.filter((x) => !ids.has(x.id)); tree.sections = tree.sections.filter((x) => !ids.has(x.id)); tree.pages = tree.pages.filter((x) => !ids.has(x.id));
   for (let i = stickies.length - 1; i >= 0; i--) if (ids.has(stickies[i].id)) stickies.splice(i, 1);
   removeCoordinatedItems(ids);

@@ -207,7 +207,7 @@ pub fn import_from_with<V: VaultAccess>(
         let order = vault.with(|s| Ok(next_notebook_order(s)))?;
         // The tables of a Notion export: each becomes a database (the pages importer leaves them out), and the
         // row pages are folded into the rows.
-        let (tables, _, table_notes) = notion_db::read_tables(&vfs, &plan.csv_paths, ctl)?;
+        let (tables, _, table_notes) = notion_db::read_tables(&vfs, &plan, ctl)?;
         drop(vfs);
         let had_tables = !tables.is_empty();
         let row_pages = notion_db::prepare_pages(&tables, &plan, ctl)?;
@@ -219,8 +219,6 @@ pub fn import_from_with<V: VaultAccess>(
             drop_row_pages(&mut items, &gone, &plan.generated_page_ids());
             summary.pages = items.iter().filter(|i| matches!(i, Item::Page(_))).count();
         }
-        // Pending CSV entries are replaced with final outcomes, never counted as left out.
-        summary.skipped.retain(|k| !plan.csv_paths.contains(&k.item));
         summary.notes.extend(table_notes);
         if had_tables {
             let rows = made.items.iter().filter(|i| matches!(i, Item::Row(_))).count();

@@ -34,7 +34,7 @@ pub const MAX_BINARY_FILE: u64 = 2 * 1024 * 1024 * 1024;
 /// Largest picture (the same limit as a pasted picture).
 pub const MAX_IMAGE: u64 = crate::vault::MAX_ATTACHMENT_BYTES as u64;
 /// Most pages and pictures one import may create.
-pub const MAX_PAGES: usize = 5_000;
+pub const MAX_PAGES: usize = 10_000;
 pub const MAX_IMAGES: usize = 5_000;
 /// Pictures held in memory before they are stored (Word media, data: URIs).
 const MAX_IMAGE_MEMORY: u64 = 2 * 1024 * 1024 * 1024;
@@ -217,7 +217,7 @@ pub struct Ctx<'a> {
 
 impl Ctx<'_> {
     pub fn problem(&mut self, what: impl Into<String>, reason: impl Into<String>) {
-        if self.problems.len() < 500 {
+        if self.problems.len() < plan::MAX_LISTED {
             self.problems.push(Skipped { item: format!("{} ({})", what.into(), self.name), reason: reason.into() });
         }
     }
@@ -288,30 +288,68 @@ pub fn safe_link(href: &str) -> Option<String> {
 /// file in the source) for the renderer, which turns it into an internal Notaya link once the
 /// page ids are known, or drops it when that page was not imported.
 pub const PAGE_HREF: &str = "notaya-src:";
+pub const NOTION_ID_TARGET: &str = "notion-id:";
+
+/// Notion uses an ID suffix even when it truncates or changes a filename between exports.
+pub fn notion_source_id(path: &str) -> Option<String> {
+    let name = path.rsplit('/').next()?.trim_end();
+    let stem = name.rsplit_once('.').filter(|(_, extension)| {
+        ["md", "markdown", "mdown", "html", "htm", "xhtml", "csv"].iter().any(|e| extension.eq_ignore_ascii_case(e))
+    }).map_or(name, |(stem, _)| stem);
+    let stem = stem.strip_suffix("_all").unwrap_or(stem);
+    [36usize, 32].into_iter().find_map(|len| {
+        let at = stem.len().checked_sub(len)?;
+        let head = stem.get(..at)?;
+        if !head.is_empty() && !head.ends_with([' ', '-', '_']) {
+            return None;
+        }
+        let tail = &stem[at..];
+        if !tail.bytes().enumerate().all(|(i, b)| {
+            if len == 36 && [8, 13, 18, 23].contains(&i) { b == b'-' } else { b.is_ascii_hexdigit() }
+        }) {
+            return None;
+        }
+        Some(tail.bytes().filter(|b| *b != b'-').map(|b| b.to_ascii_lowercase() as char).collect())
+    })
+}
 
 /// True when a relative link names a page document: Markdown or HTML (how Notion and Notaya's
 /// own ZIP export link their pages), Word (Notaya's own Word ZIP) or PDF (an attachment that the
 /// import turns into a page). Query and fragment are ignored.
 pub fn is_page_address(href: &str) -> bool {
     let lower = href.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
-    [".md", ".markdown", ".html", ".htm", ".docx", ".pdf"].iter().any(|ext| lower.ends_with(ext))
+    [".md", ".markdown", ".mdown", ".html", ".htm", ".xhtml", ".docx", ".pdf"].iter().any(|ext| lower.ends_with(ext))
 }
 
 impl Ctx<'_> {
     pub fn page_href(&mut self, href: &str) -> Option<String> {
-        if !is_page_address(href) {
+        self.page_target(href, true).map(|target| format!("{PAGE_HREF}{target}"))
+    }
+
+    pub fn page_target(&mut self, href: &str, report_missing: bool) -> Option<String> {
+        let href = href.trim();
+        if let Some((scheme, address)) = href.split_once("://") {
+            if !scheme.eq_ignore_ascii_case("notion") || href.len() > 2048 || href.chars().any(char::is_control) {
+                return None;
+            }
+            let path = percent_decode(address.split(['?', '#']).next()?);
+            return notion_source_id(&path).map(|id| format!("{NOTION_ID_TARGET}{id}"));
+        }
+        if !is_page_address(href) && !is_page_address(&percent_decode(href.split(['?', '#']).next()?)) {
             return None;
         }
         let path = resolve_rel(&self.dir, href)?;
-        let Some(target) = self.vfs.find(&path) else {
+        if let Some(target) = self.vfs.find(&path) {
+            return Some(target);
+        }
+        if let Some(id) = notion_source_id(&path) {
+            return Some(format!("{NOTION_ID_TARGET}{id}"));
+        }
+        if report_missing {
             let display_path: String = path.chars().take(160).collect();
-            self.problem(
-                format!("Link to {display_path}"),
-                "The linked page file was not found in this import.",
-            );
-            return None;
-        };
-        Some(format!("{PAGE_HREF}{target}"))
+            self.problem(format!("Link to {display_path}"), "The linked page file was not found in this import.");
+        }
+        None
     }
 }
 

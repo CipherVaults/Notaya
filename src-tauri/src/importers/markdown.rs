@@ -18,7 +18,7 @@ use std::collections::HashMap;
 
 use super::doc::{self, Block, Cell, Inline, Marks};
 use super::markup::{attr, decode_one, Token, Tokenizer};
-use super::{html, palette, resolve_rel, safe_link, Ctx};
+use super::{html, palette, safe_link, Ctx};
 
 const MAX_DEPTH: usize = 16;
 /// Paragraphs longer than this are taken as plain text (no inline parsing).
@@ -287,12 +287,7 @@ impl Parser<'_, '_> {
         if label.contains("](") || dest.contains(char::is_whitespace) || dest.contains(['(', ')', '<', '>']) {
             return None;
         }
-        let lower = dest.to_ascii_lowercase();
-        let lower = lower.split(['?', '#']).next().unwrap_or("");
-        if !(lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".html") || lower.ends_with(".htm")) {
-            return None;
-        }
-        let path = resolve_rel(&self.ctx.dir, dest).and_then(|p| self.ctx.vfs.find(&p))?;
+        let path = self.ctx.page_target(dest, false)?;
         Some(Block::PageLink(path, doc::collapse_ws(label)))
     }
 
