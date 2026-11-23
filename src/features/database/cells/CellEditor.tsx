@@ -160,6 +160,7 @@ function TextInput({ prop, row, value, setEditing, commit, seed, onEnd }: Editab
   return (
     <input
       ref={ref}
+      data-cell-editor
       value={text}
       dir="auto"
       aria-label={prop.name}

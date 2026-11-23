@@ -222,7 +222,7 @@ button,
   user-select: none;
 }
 
-img,
+img:not([draggable="true"]):not(.ProseMirror img),
 a[href]:not([draggable="true"]),
 button:not([draggable="true"]) {
   -webkit-user-drag: none;

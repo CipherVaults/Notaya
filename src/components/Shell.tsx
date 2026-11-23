@@ -38,7 +38,7 @@ export default function Shell() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.altKey) return;
+      if (!e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
       const k = e.key.toLowerCase();
       if (k === "k") {
         e.preventDefault();
@@ -46,7 +46,7 @@ export default function Shell() {
       } else if (k === "f" && !e.defaultPrevented) {
         e.preventDefault();
         setPaletteOpen(true);
-      } else if (k === "l") {
+      } else if (k === "l" && !e.defaultPrevented) {
         e.preventDefault();
         if (securityOn) api.lockVault();
       } else if (k === ",") {

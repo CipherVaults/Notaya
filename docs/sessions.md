@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 151 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC audit #2 findings](#session-151) |
 | 150 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC keyboard regressions](#session-150) |
 | 149 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Polish the 1.6 desktop candidate](#session-149) |
 | 148 | 2026-11-16 | Ahmed (AE0101) | Gaming-PC | [Rebind database qualification](#session-148) |
@@ -184,6 +185,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-151"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Keep the 1.6 RC editor shortcuts and dragging working
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. One Codex session implemented and tested the fixes.
+
+**Models, Effort, Roles and Provenance:** Codex recorded `gpt-6.2-sol` and `xhigh` in its turn configuration. Audit #2 independently reviewed the predecessor. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc-polish-fix2).
+
+## 1. Time
+
+The local claim was recorded at 14:07:51 UTC, from the system clock. The owner-message timestamp was unavailable.
+
+## 2. Session Goal
+
+Resolve audit #2's three blockers from `3111706e4368bc46a0d6d9f8b829f6a09b483ced`. Return the verified source, local commit and bundle, and sync the designated checkout.
+
+## 3. Actions Taken
+
+Inspected the locked editor, dialog and browser-event handlers. Fixed the Shell shortcut, peek Escape routing and image drag CSS. Extended the Chromium runner and qualified the source in an independent scratch checkout.
+
+## 4. Key Insights
+
+ProseMirror cancels Escape after its own key handlers. Radix checks Escape during document capture. Sticky notes use standard draggable images. Full-page pictures use an outer draggable block around an intentionally non-draggable image.
+
+## 5. Decisions Made
+
+Use the side peek bubble handler for regular inputs and a late editor handler for Escape in the note body. Let the active property input handle Escape in a centered peek. Keep the existing window-capture priority for Note Find.
+
+## 6. Difficulties / Friction
+
+The first regression run observed reloads while Vite watched browser temporary files. Looking for a completed lock invocation in the page also raced with the app's own reload. An early property locator was scoped twice.
+
+## 7. Adjustments Made
+
+Excluded scratch output from Vite's watcher. The lock regression observes the mock's lock-triggered main-frame reload. The row test scopes the property label to its list item, and the image test exercises the Sticky image and its separate chrome control.
+
+## 8. Mistakes / Risks
+
+An initial development assertion expected the full-page image itself to be draggable. Source inspection and the next check confirmed the existing block owns that drag. The initial attempts are retained separately.
+
+## 9. Current Position
+
+The [resume note](handoff/2026-11-23-v1-6-rc-polish-fix2-resume-note.md) and local receipt identify the patched source and review handoff.
+
+## 10. Next Steps
+
+Use the verified bundle and associated receipt for independent review. Packaged WebView2 remains a separate verification step.
+
+## 11. Open Questions
+
+Owner acceptance and packaged interaction evidence remain open. Publication is held.
+
+## 12. Session Outcome
+
+The three fixes and corresponding automated regressions form one local RC source candidate.
+
+## 13. Confidence Level
+
+Verification is scoped to the isolated checks and the audited lockfile and golden-file comparison. The local receipt supplies exact counts, retry details and hashes.
+
+---
 
 <a id="session-150"></a>
 

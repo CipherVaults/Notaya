@@ -41,7 +41,7 @@ function dispatchKey(page, key, modifiers = {}) {
 }
 
 async function open(page, query) {
-  await page.goto(new URL(query, base).href);
+  await page.goto(new URL(query, base).href, { waitUntil: "domcontentloaded" });
 }
 
 async function openNote(page) {
@@ -52,7 +52,7 @@ async function openNote(page) {
 
 async function editorShortcutChecks(page) {
   for (const [name, query, selector] of [
-    ["Page", "?db=1", ".ProseMirror"],
+    ["Page", "?db=1&s=secure", ".ProseMirror"],
     ["Sticky", "?label=sticky-k1", ".sticky-editor .ProseMirror"],
   ]) {
     await open(page, query);
@@ -78,13 +78,67 @@ async function editorShortcutChecks(page) {
     }
     if (name === "Page") {
       const block = editor.getByText(sample, { exact: true });
-      for (const [key, alignment] of [["J", "justify"], ["R", "right"]]) {
+      for (const [key, alignment] of [["J", "justify"], ["E", "center"], ["R", "right"]]) {
         await page.keyboard.press(`Control+Shift+${key}`);
         checks.equal(`Page Ctrl+Shift+${key} aligns text ${alignment}`,
           await block.evaluate((el) => el.style.textAlign), alignment);
       }
+      // The protected mock emits vault-locked after locking, and App reloads.
+      // Allow for the two-second save flush before judging that no reload occurred.
+      const reload = (timeout) => page.waitForEvent("framenavigated", {
+        predicate: (frame) => frame === page.mainFrame() && frame.url() === new URL(query, base).href,
+        timeout,
+      });
+      const shiftedLock = reload(2500).then(() => true, (error) => {
+        if (error.name !== "TimeoutError") throw error;
+        return false;
+      });
+      await page.keyboard.press("Control+Shift+L");
+      checks.equal("Page Ctrl+Shift+L aligns text left", await block.evaluate((el) => el.style.textAlign), "left");
+      const locked = await shiftedLock;
+      checks.equal("Protected page alignment leaves the vault unlocked", locked, false);
+      if (locked) {
+        await openNote(page);
+        await editor.focus();
+      }
+      const plainLock = reload(4000);
+      await page.keyboard.press("Control+l");
+      const lockedFrame = await plainLock;
+      checks.check("Plain Ctrl+L locks the protected vault", !!lockedFrame);
+    } else {
+      await stickyImageChecks(page, editor);
     }
   }
+}
+
+async function stickyImageChecks(page, editor) {
+  const src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==";
+  await editor.evaluate((el, src) => {
+    el.editor.commands.setContent({
+      type: "doc",
+      content: [{ type: "image", attrs: { src, alt: "Sticky drag fixture" } }],
+    }, { emitUpdate: false });
+  }, src);
+  const image = editor.getByAltText("Sticky drag fixture");
+  checks.check("Sticky image remains draggable",
+    await image.evaluate(async (el) => {
+      await el.decode();
+      return el.draggable && getComputedStyle(el).webkitUserDrag !== "none";
+    }));
+  const chromeDrag = await page.evaluate((src) => {
+    const image = new Image();
+    image.src = src;
+    document.body.append(image);
+    try {
+      const regular = getComputedStyle(image).webkitUserDrag;
+      image.draggable = true;
+      return { regular, explicit: getComputedStyle(image).webkitUserDrag };
+    } finally {
+      image.remove();
+    }
+  }, src);
+  checks.equal("Chrome image suppresses browser dragging", chromeDrag.regular, "none");
+  checks.check("Explicitly draggable chrome image remains draggable", chromeDrag.explicit !== "none");
 }
 
 async function findChecks(page) {
@@ -125,12 +179,12 @@ async function findChecks(page) {
     pageOverscroll: getComputedStyle(document.documentElement).overscrollBehavior,
     chromeSelection: getComputedStyle(document.body).userSelect,
     noteSelection: getComputedStyle(document.querySelector(".ProseMirror p")).userSelect,
-    imageDrag: getComputedStyle(document.querySelector(".ProseMirror img")).webkitUserDrag,
   }));
   checks.equal("Page overscroll containment", styles.pageOverscroll, "none");
   checks.equal("No text selection in chrome", styles.chromeSelection, "none");
   checks.equal("Note text stays selectable", styles.noteSelection, "text");
-  checks.equal("Images do not generate browser drag previews", styles.imageDrag, "none");
+  checks.check("Full-page note leaves dragging to the image block",
+    await editor.locator(".image-block").first().evaluate((el) => el.draggable && !el.querySelector("img").draggable));
   await editor.blur();
   checks.equal("Note owns Find when the page background has focus", await dispatchKey(page, "f", ctrl), true);
   await find.waitFor();
@@ -183,9 +237,33 @@ async function rowPeekFindChecks(page) {
     const peek = page.getByRole(role, { name: "Row" });
     const editor = peek.locator(".ProseMirror");
     const find = noteFind(peek);
-    for (const focus of ["Find input", "row editor"]) {
+    const openRow = async () => {
       await row.getByText(title, { exact: true }).hover();
       await row.getByRole("button", { name: "Open row" }).click();
+      await editor.waitFor();
+    };
+
+    await openRow();
+    const estimate = peek.getByRole("listitem").filter({ has: page.getByText("Estimate", { exact: true }) });
+    const value = estimate.getByText("1", { exact: true });
+    const input = estimate.getByRole("textbox", { name: "Estimate" });
+    await value.click();
+    await input.fill("999");
+    checks.equal(`${peekMode} inline editor holds the draft`, await input.inputValue(), "999");
+    await input.press("Escape");
+    await input.waitFor({ state: "hidden" });
+    const staysOpen = await peek.isVisible();
+    checks.check(`${peekMode} inline Escape cancels the edit and leaves the row open`, staysOpen);
+    if (!staysOpen) await openRow();
+    await value.waitFor();
+    checks.check(`${peekMode} inline Escape preserves the saved estimate`, await value.isVisible());
+    await editor.locator("p").first().click();
+    await page.keyboard.press("Escape");
+    await peek.waitFor({ state: "hidden" });
+    checks.check(`${peekMode} Escape from a body paragraph closes the row`, !(await peek.isVisible()));
+
+    for (const focus of ["Find input", "row editor"]) {
+      await openRow();
       await editor.press("Control+f");
       await find.waitFor();
       await (focus === "row editor" ? editor : find).focus();

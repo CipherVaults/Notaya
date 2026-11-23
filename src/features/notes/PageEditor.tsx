@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import { EditorContent, Extension, useEditor, type Editor } from "@tiptap/react";
+import { Plugin } from "@tiptap/pm/state";
 import { Check, ChevronRight, Download, LayoutTemplate, Loader2, MoreHorizontal, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { registerFlush, trackSave } from "@/lib/flush";
@@ -45,10 +46,11 @@ function updatePageMeta(meta: PageMeta) {
 }
 
 /** `embedded`: shown in a peek (no breadcrumb, no ribbon). Rows of a database open here too (their `parent` is the database). */
-export default function PageEditor({ pageId, embedded = false, onOpenChild }: {
+export default function PageEditor({ pageId, embedded = false, onOpenChild, onBodyEscape }: {
   pageId: string;
   embedded?: boolean;
   onOpenChild?: (id: string) => void;
+  onBodyEscape?: () => void;
 }) {
   const [page, setPage] = useState<Page | null>(null);
 
@@ -72,10 +74,15 @@ export default function PageEditor({ pageId, embedded = false, onOpenChild }: {
     );
   }
   // Remount per page so editor history never leaks between pages.
-  return <LoadedEditor key={page.id} page={page} embedded={embedded} onOpenChild={onOpenChild} />;
+  return <LoadedEditor key={page.id} page={page} embedded={embedded} onOpenChild={onOpenChild} onBodyEscape={onBodyEscape} />;
 }
 
-function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: boolean; onOpenChild?: (id: string) => void }) {
+function LoadedEditor({ page, embedded, onOpenChild, onBodyEscape }: {
+  page: Page;
+  embedded: boolean;
+  onOpenChild?: (id: string) => void;
+  onBodyEscape?: () => void;
+}) {
   const confirm = useConfirm();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
@@ -162,10 +169,32 @@ function LoadedEditor({ page, embedded, onOpenChild }: { page: Page; embedded: b
     save();
   }, [save, page.id]);
 
-  const extensions = useMemo(
-    () => [...pageExtensions({ onState: setSlash, onKey: (e) => slashController.current.onKey(e) }), NoteFindExtension],
-    [],
-  );
+  const bodyEscape = useRef(onBodyEscape);
+  useEffect(() => { bodyEscape.current = onBodyEscape; }, [onBodyEscape]);
+  const hasBodyEscape = !!onBodyEscape;
+  const extensions = useMemo(() => {
+    const extensions = [...pageExtensions({ onState: setSlash, onKey: (e) => slashController.current.onKey(e) }), NoteFindExtension];
+    if (hasBodyEscape) {
+      // Run after editor commands and before ProseMirror's default Escape cancellation.
+      extensions.push(Extension.create({
+        name: "peekBodyEscape",
+        priority: 1,
+        addProseMirrorPlugins() {
+          return [new Plugin({
+            props: {
+              handleKeyDown: (_view, e) => {
+                if (e.key !== "Escape" || e.defaultPrevented || e.isComposing || !bodyEscape.current) return false;
+                e.stopPropagation();
+                bodyEscape.current();
+                return true;
+              },
+            },
+          })];
+        },
+      }));
+    }
+    return extensions;
+  }, [hasBodyEscape]);
 
   const editor = useEditor({
     extensions,

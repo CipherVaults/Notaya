@@ -1,5 +1,11 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261123-rc-polish-fix2"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+One Codex session implemented and verified the RC audit fixes. The turn configuration recorded `gpt-6.2-sol` at `xhigh`. The first available account reading at 14:07:04.553 UTC showed 72% weekly used. The 14:15:01.234 UTC checkpoint also showed 72%, with 4,971,031 input tokens, 4,836,352 cached input tokens and 21,583 output tokens reported cumulatively for the run. No five-hour reading was exposed. The local summary records the later available reading. [Session 151](../sessions.md#session-151).
+
 <a id="codex-usage-20261123-rc-polish-fix"></a>
 
 ## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
