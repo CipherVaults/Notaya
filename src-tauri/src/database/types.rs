@@ -707,8 +707,20 @@ impl Database {
         }
         for t in &self.templates {
             check_len("A template name", &t.name, MAX_NAME)?;
-            if t.cells.len() > 200_000 || t.content.len() > 20_000_000 {
+            check_len("A template icon", &t.icon, 40)?;
+            if !matches!(t.repeat.as_str(), "" | "daily" | "weekly" | "monthly") {
+                return Err(Error::Other("A template has an unknown repeat cadence.".into()));
+            }
+            if t.cells.len() > 200_000 || t.content.len() > 20_000_000 || t.text.len() > 10_000_000 {
                 return Err(Error::Other("A template is too large.".into()));
+            }
+            if !t.cells.is_empty()
+                && !matches!(
+                    serde_json::from_str::<serde_json::Value>(&t.cells),
+                    Ok(serde_json::Value::Object(_))
+                )
+            {
+                return Err(Error::Other("Template cells must be a JSON object.".into()));
             }
         }
         if !self.default_template.is_empty() && !self.templates.iter().any(|t| t.id == self.default_template) {

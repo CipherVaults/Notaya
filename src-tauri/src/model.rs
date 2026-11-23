@@ -299,6 +299,39 @@ impl Settings {
             "sunrise" | "sunrise-dark" | "black" | "graphite" | "white" | "paper" | "system" => self.theme.clone(),
             _ => "black".into(),
         };
+        if self.accent != "mono"
+            && !(self.accent.starts_with('#')
+                && self.accent.len() == 7
+                && self.accent[1..].bytes().all(|b| b.is_ascii_hexdigit()))
+        {
+            self.accent = "mono".into();
+        }
+        self.font = match self.font.as_str() {
+            "inter" | "system" | "serif" | "mono" => self.font.clone(),
+            _ => "inter".into(),
+        };
+        self.editor_width = match self.editor_width.as_str() {
+            "narrow" | "normal" | "wide" | "full" => self.editor_width.clone(),
+            _ => "normal".into(),
+        };
+        self.density = match self.density.as_str() {
+            "comfortable" | "compact" => self.density.clone(),
+            _ => "comfortable".into(),
+        };
+        self.backdrop = match self.backdrop.as_str() {
+            "mica" | "acrylic" | "none" => self.backdrop.clone(),
+            _ => "none".into(),
+        };
+        self.unlock_background = match self.unlock_background.as_str() {
+            "aurora" | "mesh" | "midnight" | "plain" => self.unlock_background.clone(),
+            _ => "midnight".into(),
+        };
+        self.sticky_default_color = match self.sticky_default_color.as_str() {
+            "yellow" | "pink" | "green" | "blue" | "purple" | "orange" | "gray" | "charcoal" => {
+                self.sticky_default_color.clone()
+            }
+            _ => "yellow".into(),
+        };
         self.font_size = self.font_size.clamp(12, 22);
         self.idle_lock_minutes = self.idle_lock_minutes.clamp(1, 240);
         self.calc_history.truncate(CALC_HISTORY_MAX);

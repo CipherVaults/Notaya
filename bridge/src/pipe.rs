@@ -102,18 +102,30 @@ fn invalid() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, "invalid")
 }
 
+fn wipe(bytes: &mut [u8]) {
+    for b in bytes.iter_mut() {
+        // Volatile byte write prevents dead-store elimination without adding a crate (G2).
+        unsafe { std::ptr::write_volatile(b, 0) };
+    }
+    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
+}
+
 pub fn write_frame<W: Write, M: Serialize>(
     writer: &mut W,
     message: &M,
     cap: usize,
 ) -> io::Result<()> {
-    let bytes = serde_json::to_vec(&Frame::new(message)).map_err(|_| invalid())?;
-    if bytes.is_empty() || bytes.len() > cap {
-        return Err(invalid());
-    }
-    writer.write_all(&(bytes.len() as u32).to_le_bytes())?;
-    writer.write_all(&bytes)?;
-    writer.flush()
+    let mut bytes = serde_json::to_vec(&Frame::new(message)).map_err(|_| invalid())?;
+    let res = (|| {
+        if bytes.is_empty() || bytes.len() > cap {
+            return Err(invalid());
+        }
+        writer.write_all(&(bytes.len() as u32).to_le_bytes())?;
+        writer.write_all(&bytes)?;
+        writer.flush()
+    })();
+    wipe(&mut bytes);
+    res
 }
 
 pub fn read_frame<R: Read, M: DeserializeOwned>(reader: &mut R, cap: usize) -> io::Result<M> {
@@ -124,8 +136,9 @@ pub fn read_frame<R: Read, M: DeserializeOwned>(reader: &mut R, cap: usize) -> i
         return Err(invalid());
     }
     let mut bytes = vec![0; length];
-    reader.read_exact(&mut bytes)?;
-    decode(&bytes)
+    let res = reader.read_exact(&mut bytes).and_then(|()| decode(&bytes));
+    wipe(&mut bytes);
+    res
 }
 
 fn decode<M: DeserializeOwned>(bytes: &[u8]) -> io::Result<M> {
@@ -179,6 +192,30 @@ pub struct Pairing {
     pub pairing_id: String,
     pub token: String,
     pub client: String,
+}
+
+impl Drop for Pairing {
+    fn drop(&mut self) {
+        // SAFETY: String's backing buffer is overwritten with valid zero bytes (ASCII NUL).
+        unsafe { wipe(self.token.as_bytes_mut()) };
+    }
+}
+
+impl Pairing {
+    pub fn into_auth_message(mut self) -> ClientMessage {
+        ClientMessage::Auth {
+            pairing_id: std::mem::take(&mut self.pairing_id),
+            token: std::mem::take(&mut self.token),
+        }
+    }
+}
+
+impl ClientMessage {
+    pub fn wipe_secret(&mut self) {
+        if let ClientMessage::Auth { token, .. } = self {
+            unsafe { wipe(token.as_bytes_mut()) };
+        }
+    }
 }
 
 fn valid_pairing(pairing: &Pairing) -> bool {
@@ -235,10 +272,17 @@ pub fn load_pairing(data: &Path, client: &str) -> io::Result<Option<Pairing>> {
             return Err(invalid());
         }
         let mut bytes = Vec::new();
-        fs::File::open(entry.path())?
+        let read_res = fs::File::open(entry.path())?
             .take(4097)
-            .read_to_end(&mut bytes)?;
-        let pairing: Pairing = serde_json::from_slice(&bytes).map_err(|_| invalid())?;
+            .read_to_end(&mut bytes);
+        if read_res.is_err() {
+            wipe(&mut bytes);
+            read_res?;
+        }
+        let parsed: io::Result<Pairing> =
+            serde_json::from_slice(&bytes).map_err(|_| invalid());
+        wipe(&mut bytes);
+        let pairing = parsed?;
         if !valid_pairing(&pairing) || name != format!("pairing-{}.json", pairing.pairing_id) {
             return Err(invalid());
         }
@@ -757,5 +801,19 @@ mod tests {
         pairing.token = "invalid".into();
         assert!(save_pairing(&data, &pairing).is_err());
         assert_eq!(fs::read_dir(data.join("ai")).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn wire_frame_roundtrip_and_wipe_buffer() {
+        let msg = ClientMessage::Auth {
+            pairing_id: "p-1".into(),
+            token: "b".repeat(64),
+        };
+        let mut buf = Vec::new();
+        write_frame(&mut buf, &msg, MAX_REQUEST).unwrap();
+        let parsed: ClientMessage = read_frame(&mut buf.as_slice(), MAX_REQUEST).unwrap();
+        assert!(matches!(parsed, ClientMessage::Auth { .. }));
+        wipe(&mut buf);
+        assert!(buf.iter().all(|b| *b == 0));
     }
 }

@@ -302,6 +302,29 @@ pub fn clean_cell(s: &Session, db: &Database, prop: &Property, v: &Value) -> Res
     .map(|o| o.filter(|_| db.prop(&prop.id).is_some()))
 }
 
+pub(crate) fn clean_template_cells(s: &Session, db: &Database, raw: &str) -> Result<String> {
+    if raw.trim().is_empty() {
+        return Ok(String::new());
+    }
+    let Value::Object(map) = serde_json::from_str::<Value>(raw)
+        .map_err(|_| Error::invalid("Template cells must be a JSON object."))?
+    else {
+        return Err(Error::invalid("Template cells must be a JSON object."));
+    };
+    let mut cleaned = Map::new();
+    for (k, v) in map {
+        let p = db.prop(&k).ok_or(Error::NotFound)?.clone();
+        if let Some(val) = clean_cell(s, db, &p, &v)? {
+            cleaned.insert(k, val);
+        }
+    }
+    if cleaned.is_empty() {
+        Ok(String::new())
+    } else {
+        serde_json::to_string(&cleaned).map_err(|e| Error::Other(e.to_string()))
+    }
+}
+
 pub(crate) fn parse_cells(r: &Row) -> Map<String, Value> {
     serde_json::from_str::<Value>(&r.cells).ok().and_then(|v| if let Value::Object(m) = v { Some(m) } else { None }).unwrap_or_default()
 }
@@ -504,7 +527,22 @@ fn apply_repeats(s: &mut Session, db: &mut Database, now: i64) -> Result<bool> {
         }
         let mut r = new_row(s, db, if t.name.is_empty() { name_date.clone() } else { format!("{} – {}", t.name, name_date) })?;
         apply_template(&mut r, t);
-        s.put(Item::Row(r))?;
+        if !r.cells.trim().is_empty() {
+            let mut cleaned = Map::new();
+            for (k, v) in parse_cells(&r) {
+                if let Some(p) = db.prop(&k).cloned() {
+                    if let Ok(Some(val)) = clean_cell(s, db, &p, &v) {
+                        cleaned.insert(k, val);
+                    }
+                }
+            }
+            write_cells(&mut r, &cleaned)?;
+        }
+        let m = parse_cells(&r);
+        let id = r.id.clone();
+        let mut items = relation_sync_diff(s, &id, None, &m, db)?;
+        items.push(Item::Row(r));
+        s.put_many(items)?;
         db.templates[i].repeat_last = period_start;
         changed = true;
     }
@@ -696,6 +734,7 @@ pub(crate) fn add_row_inner(s: &mut Session, database_id: &str, title: String, g
     };
     if let Some(t) = db.templates.iter().find(|t| t.id == tid) {
         apply_template(&mut r, t);
+        r.cells = clean_template_cells(s, &db, &r.cells)?;
     }
     let mut m = parse_cells(&r);
     for (k, v) in given {

@@ -6,6 +6,7 @@ use std::{
     io::{self, Read, Write},
     path::Path,
 };
+use zeroize::Zeroizing;
 
 pub const WIRE_VERSION: u32 = 1;
 pub const MAX_REQUEST: usize = 8 * 1024 * 1024;
@@ -103,7 +104,7 @@ pub fn write_frame<W: Write, M: Serialize>(
     message: &M,
     cap: usize,
 ) -> io::Result<()> {
-    let bytes = serde_json::to_vec(&Frame::new(message)).map_err(|_| invalid())?;
+    let bytes = Zeroizing::new(serde_json::to_vec(&Frame::new(message)).map_err(|_| invalid())?);
     if bytes.is_empty() || bytes.len() > cap {
         return Err(invalid());
     }
@@ -119,7 +120,7 @@ pub fn read_frame<R: Read, M: DeserializeOwned>(reader: &mut R, cap: usize) -> i
     if length == 0 || length > cap {
         return Err(invalid());
     }
-    let mut bytes = vec![0; length];
+    let mut bytes = Zeroizing::new(vec![0; length]);
     reader.read_exact(&mut bytes)?;
     decode(&bytes)
 }
