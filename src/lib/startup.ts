@@ -20,41 +20,66 @@ export function scheduleWindowReady(ready: () => void): () => void {
   return () => { done = true; };
 }
 
-// Only a failure fallback: successful startup still signals after the screen
-// commits, without waiting for a timer or an animation frame.
+// The watchdog reveals the window if initialization stalls. Successful startup
+// still signals after the screen commits, without waiting for the watchdog.
 export const STARTUP_READY_TIMEOUT_MS = 5000;
 
 export function watchStartupInitialization(
   refreshStatus: () => Promise<unknown>,
   lockListeners: Promise<unknown>[],
   listenersReady: () => void,
-  failed: () => void,
+  revealFallback: () => void,
+  statusFailed: () => void,
 ): () => void {
   let active = true;
-  let finished = false;
-  const fail = () => {
-    if (!active || finished) return;
-    finished = true;
-    clearTimeout(timer);
-    failed();
+  let fallbackSent = false;
+  let initialRejected = false;
+  let statusPending = true;
+  let statusFailureReported = false;
+  const reportStatusFailure = () => {
+    if (!active || statusFailureReported) return;
+    statusFailureReported = true;
+    statusFailed();
   };
-  // One bound covers both status attempts and listener registration. A hung
-  // request cannot leave the native window hidden indefinitely.
-  const timer = setTimeout(fail, STARTUP_READY_TIMEOUT_MS);
+  const reveal = () => {
+    if (!active) return;
+    // A listener failure can reveal the window before a pending retry expires.
+    if (!initialRejected || !statusPending) clearTimeout(timer);
+    if (fallbackSent) return;
+    fallbackSent = true;
+    revealFallback();
+  };
+  // One deadline covers both status attempts and listener registration.
+  // A slow first request can still finish while the loading screen is visible.
+  const timer = setTimeout(() => {
+    if (initialRejected && statusPending) reportStatusFailure();
+    reveal();
+  }, STARTUP_READY_TIMEOUT_MS);
   const loadStatus = async () => {
     try {
       await refreshStatus();
-    } catch {
-      if (active && !finished) await refreshStatus();
+    } catch (error) {
+      initialRejected = true;
+      // Keep the automatic retry within the original readiness window.
+      if (!active || fallbackSent) throw error;
+      await refreshStatus();
     }
   };
+  const statusLoaded = loadStatus().then(
+    () => {
+      statusPending = false;
+      if (fallbackSent) clearTimeout(timer);
+    },
+    () => {
+      statusPending = false;
+      reportStatusFailure();
+      reveal();
+    },
+  );
   const registered = Promise.all(lockListeners).then(() => {
     if (active) listenersReady();
   });
-  void Promise.all([loadStatus(), registered]).then(() => {
-    finished = true;
-    clearTimeout(timer);
-  }, fail);
+  void Promise.all([statusLoaded, registered]).then(() => clearTimeout(timer), reveal);
   return () => {
     active = false;
     clearTimeout(timer);

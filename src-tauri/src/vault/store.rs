@@ -174,6 +174,34 @@ impl Store {
         Ok(out)
     }
 
+    /// Compare two sorted row streams while SQLite owns the current blob buffers.
+    pub(super) fn matching_rows(
+        &self,
+        other: &Store,
+        table: Table,
+        mut verify: impl FnMut(&RowId, &[u8]) -> Result<()>,
+    ) -> Result<bool> {
+        let sql = format!("SELECT id, data FROM {} ORDER BY id", table.name());
+        let mut source_stmt = self.conn.prepare(&sql)?;
+        let mut copy_stmt = other.conn.prepare(&sql)?;
+        let mut source = source_stmt.query([])?;
+        let mut copy = copy_stmt.query([])?;
+        loop {
+            match (source.next()?, copy.next()?) {
+                (Some(source), Some(copy)) => {
+                    let id: RowId = source.get_ref(0)?.as_blob().map_err(|_| Error::Corrupt)?.try_into().map_err(|_| Error::Corrupt)?;
+                    let sealed = source.get_ref(1)?.as_blob().map_err(|_| Error::Corrupt)?;
+                    if copy.get_ref(0)?.as_blob().map_err(|_| Error::Corrupt)? != id || copy.get_ref(1)?.as_blob().map_err(|_| Error::Corrupt)? != sealed {
+                        return Ok(false);
+                    }
+                    verify(&id, sealed)?;
+                }
+                (None, None) => return Ok(true),
+                _ => return Ok(false),
+            }
+        }
+    }
+
     pub fn ids(&self, table: Table) -> Result<Vec<RowId>> {
         let mut stmt = self.conn.prepare(&format!("SELECT id FROM {}", table.name()))?;
         let rows = stmt.query_map([], |r| r.get::<_, Vec<u8>>(0))?;

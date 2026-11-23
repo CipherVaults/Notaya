@@ -21,6 +21,9 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 156 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Recover a stalled startup retry](#session-156) |
+| 155 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Distinguish waiting from a startup error](#session-155) |
+| 154 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Show progress while the large-vault upgrade runs](#session-154) |
 | 153 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Give open editor menus the first Escape](#session-153) |
 | 152 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix Find Escape from row titles](#session-152) |
 | 151 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix the 1.6 RC audit #2 findings](#session-151) |
@@ -187,6 +190,192 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-156"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Recover a stalled startup retry
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Codex authored and ran the checks in isolated scratch.
+
+**Models, Effort, Roles and Provenance:** The author turn recorded gpt-6.2-sol at xhigh. The second audit supplied the finding. The command logs and local receipt record the verification of this follow-up. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc3-stalled-retry).
+
+## 1. Time
+
+The turn began at 2026-11-23T18:14:13.537Z. Ahmed's instruction was recorded at 2026-11-23T18:14:13.554Z in the turn transcript.
+
+## 2. Session Goal
+
+Fix the rejected-first-request and stalled-retry case from 7b4b687a4bc17e5f912bb7f5c98ab6d3868fde96. Verify the candidate and hand off a single local commit based on 0afaacf3072101b9ac46bc810abcd268dbc79e5f.
+
+## 3. Actions Taken
+
+Added the watchdog failure signal, kept the themed loader for a pending first request, and verified the retry button clears and restores the alert through a manual check. Added readiness cases and exercised both browser mock modes.
+
+## 4. Key Insights
+
+Listener registration can reveal the window early while the automatic retry is still running. The retry still needs its original deadline.
+
+## 5. Decisions Made
+
+Report the automatic startup failure once. This gives a pending manual retry control of its own error state even if the earlier request rejects late.
+
+## 6. Difficulties / Friction
+
+The first desktop-dev run reached Vite dependency bundling but timed out before the first startup assertion.
+
+## 7. Adjustments Made
+
+Warmed the development server before rerunning the same browser suite with its original timeout.
+
+## 8. Mistakes / Risks
+
+The first npm install launcher treated npm notices as an error after the install completed. The isolated replay captures the native exit code. Chromium checks use the mock backend.
+
+## 9. Current Position
+
+The RC3 follow-up and earlier startup and backup fixes are collected in one local commit. The [resume note](handoff/2026-11-23-v1-6-rc3-blackscreen-resume-note.md#stalled-automatic-retry) links the evidence to this session.
+
+## 10. Next Steps
+
+Hand the local bundle and receipt to Ahmed. Publication awaits his direction.
+
+## 11. Open Questions
+
+Independent review of the final revision, native WebView2 and owner acceptance remain pending.
+
+## 12. Session Outcome
+
+The original watcher failed two of the new readiness cases. The candidate passed all 21 readiness checks, five startup probe checks, both frontend builds, type checking, and 218 checks in each browser mock mode. The local receipt records the exact final source and checkout readback.
+
+## 13. Confidence Level
+
+The unit tests exercise the precise five-second boundary. Chromium checks exercise the visible retry flow. The diff checks bind the Rust and lockfile bytes to the input revision and scan added lines for local paths.
+
+---
+
+<a id="session-155"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Distinguish waiting from a startup error
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Codex authored and checked the change in an isolated scratch checkout. A second Codex agent reviewed the code and tests independently.
+
+**Models, Effort, Roles and Provenance:** The author turn configuration recorded gpt-6.2-sol at xhigh. The browser and command logs record the test results. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc3-audit-fix).
+
+## 1. Time
+
+Ahmed's instruction was recorded at 2026-11-23T17:46:47.971Z. The session started at 2026-11-23T17:46:47.956Z, according to the turn record.
+
+## 2. Session Goal
+
+Resolve the audit's local-path and startup UI findings from `67167674ec25026dd1b94353f54d5f4da8c2aff0`. Return the checked change, verified incremental bundle and local receipt.
+
+## 3. Actions Taken
+
+Removed the local path from the RC3 note and checked the full audit range. Separated startup status failure from early window visibility, styled the loading screen with the existing theme tokens, and added browser coverage of pending status and recovery.
+
+## 4. Key Insights
+
+The five-second watchdog can fire while a request is still running. Its signal and the eventual status rejection need independent handling.
+
+## 5. Decisions Made
+
+Kept the automatic retry within the existing readiness window. Once the status request rejects and automatic retries are exhausted, show a generic error and let the user retry the status request from the visible window.
+
+## 6. Difficulties / Friction
+
+The first browser launcher recorded both assertion totals but returned ambiguous child exit codes. Test output was preserved.
+
+## 7. Adjustments Made
+
+Repeated the suites with a launcher that captures the child exit codes. The color check also neutralizes inherited root color during the assertion, so a missing foreground utility is observable.
+
+## 8. Mistakes / Risks
+
+The first launcher treated its missing exit codes as failures. The repeat reported exit code zero for both modes. Chromium exercise uses a mock backend.
+
+## 9. Current Position
+
+The isolated frontend checks passed. The [resume note](handoff/2026-11-23-v1-6-rc3-blackscreen-resume-note.md#rc3-audit-follow-up) and local receipt preserve the handoff.
+
+## 10. Next Steps
+
+Return the local handoff to Ahmed with publication held.
+
+## 11. Open Questions
+
+Owner acceptance and native WebView2 verification of this follow-up remain pending.
+
+## 12. Session Outcome
+
+Type checking, both builds and npm audit passed. Readiness and probe checks passed 18/18 and 5/5. Desktop-dev and production mocks each passed 211/211. The independent static review found no blocking issue.
+
+## 13. Confidence Level
+
+The browser exercises all six Mono palettes and recovers from controlled status rejection through the retry button. Unit checks cover the watchdog, automatic retry, late rejection and cleanup. Protected files and Rust source were compared directly against the baseline.
+
+---
+
+<a id="session-154"></a>
+
+# 📘 Session: 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC · Show progress while the large-vault upgrade runs
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. One Codex session implemented and tested this local RC in scratch.
+
+**Models, Effort, Roles and Provenance:** The turn configuration recorded gpt-6.2-sol at xhigh. Codex authored the fix and ran the tests. [Usage](ledger/usage-ledger.md#codex-usage-20261123-rc3-blackscreen).
+
+## 1. Time
+
+Ahmed's instruction is recorded at 2026-11-23T17:16:22.243Z. This record captures the verification checkpoint at 2026-11-23T17:36:24+00:00.
+
+## 2. Session Goal
+
+Diagnose RC2 startup from 0afaacf3072101b9ac46bc810abcd268dbc79e5f, show the pending vault state, preserve the verified pre-upgrade copy, and remove orphaned write files. Return the local candidate, evidence and bundle and synchronize the designated branch.
+
+## 3. Actions Taken
+
+Read the startup, storage and native window paths. Extracted RC2 from its NSIS installer. Created a 1,202,257,920-byte open NOTA v2 fixture with pre-journal settings and schema, then measured the copy, integrity check and publication in paired runs. Implemented and exercised the loader, streaming verifier and Windows cleanup.
+
+## 4. Key Insights
+
+The readiness watchdog exposed the empty content area while the worker still owned vault startup. Exact ciphertext fetch and comparison dominated the old verification. Cached black Mica made the lack of content visible as a black body.
+
+## 5. Decisions Made
+
+Kept the existing SQLite copy and publish operations. Used a themed loading screen and paired ordered reads with borrowed blobs. The Windows cleanup checks file metadata and requests deletion on the same handle.
+
+## 6. Difficulties / Friction
+
+The first RC2 natural run reached the 45-second startup observation bound. The first candidate opened and published the copy, then the 15-second harness quit bound interrupted its separate backup on quit. An early CDP reload invalidated the software renderer probe context.
+
+## 7. Adjustments Made
+
+Preserved the original evidence. Allowed the native harness to tolerate a renderer reload and finish the shutdown backup. Repeated the natural upgrade with a fresh copy of the synthetic fixture and a seeded stale part and journal.
+
+## 8. Mistakes / Risks
+
+The first quit wait was too short for a large-vault shutdown backup. Full Rust tests and the first profile matrix shared the host. The recorded timings capture those runs and vary with load.
+
+## 9. Current Position
+
+The candidate passed the focused and full isolated checks and the native large-vault readback. The [resume note](handoff/2026-11-23-v1-6-rc3-blackscreen-resume-note.md) points to the receipt and bundle.
+
+## 10. Next Steps
+
+Independently review the local candidate before any distribution.
+
+## 11. Open Questions
+
+Owner acceptance remains pending. The observed synthetic behavior explains the reported symptom. The original profile was outside the test scope.
+
+## 12. Session Outcome
+
+The natural release opened at 12.261 s, showed notes at 12.261 s and shut down normally. Readback verified the finished backup, journal initialization and stale-file removal. The median measured verification time fell by 86.2%.
+
+## 13. Confidence Level
+
+The receipt binds the tested files, executable hash, timings, actual WebView2 result and protected Git comparison to the local bundle. The isolated override exercises the installed data layout with the portable mode flag.
+
+---
 
 <a id="session-153"></a>
 

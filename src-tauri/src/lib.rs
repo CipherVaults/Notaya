@@ -132,6 +132,7 @@ pub fn run() {
                 return Ok(());
             }
             vault::backup::clean_stale_preflight(&paths.data);
+            vault::backup::clean_stale_upgrade_parts(&paths.data);
             // Hidden from screenshots only if the vault has a master password: its lock screen
             // comes first. A vault with security off, or none yet, is never hidden (A21).
             let protect = paths.vault.exists()

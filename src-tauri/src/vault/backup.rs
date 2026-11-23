@@ -102,6 +102,69 @@ pub(crate) fn clean_stale_preflight(dir: &Path) {
     }
 }
 
+/// Run before the window starts requesting vault operations, after the instance guard.
+pub(crate) fn clean_stale_upgrade_parts(dir: &Path) {
+    let prefix = format!("{PREFIX}-");
+    for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+        let name = entry.file_name();
+        let Some(id) = name.to_str()
+            .and_then(|name| name.strip_prefix(&prefix))
+            .and_then(|name| name.strip_suffix(".part").or_else(|| name.strip_suffix(".part-journal")))
+        else {
+            continue;
+        };
+        if id.len() == 32 && id.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            if let Err(error) = remove_regular_upgrade_part(&entry.path()) {
+                eprintln!("could not clean up a pre-upgrade copy: {:?}", error.kind());
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+fn remove_regular_upgrade_part(path: &Path) -> io::Result<()> {
+    use std::os::windows::{fs::{MetadataExt, OpenOptionsExt}, io::AsRawHandle};
+    use windows::Win32::{
+        Foundation::HANDLE,
+        Storage::FileSystem::{
+            DELETE, FILE_ATTRIBUTE_REPARSE_POINT, FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS,
+            FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES, FILE_SHARE_READ, FILE_SHARE_WRITE,
+            FileDispositionInfo, SetFileInformationByHandle,
+        },
+    };
+
+    // Check and delete the same entry. Do not follow a link or allow the entry
+    // to be renamed between the type check and the delete.
+    let file = OpenOptions::new()
+        .access_mode(DELETE.0 | FILE_READ_ATTRIBUTES.0)
+        .share_mode((FILE_SHARE_READ | FILE_SHARE_WRITE).0)
+        .custom_flags((FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS).0)
+        .open(path)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT.0 != 0 {
+        return Ok(());
+    }
+
+    let disposition = FILE_DISPOSITION_INFO { DeleteFile: true };
+    // The file handle and the correctly sized disposition remain live for the call.
+    unsafe {
+        SetFileInformationByHandle(
+            HANDLE(file.as_raw_handle()),
+            FileDispositionInfo,
+            std::ptr::from_ref(&disposition).cast(),
+            std::mem::size_of_val(&disposition) as u32,
+        )
+    }.map_err(io::Error::other)
+}
+
+#[cfg(not(windows))]
+fn remove_regular_upgrade_part(path: &Path) -> io::Result<()> {
+    if fs::symlink_metadata(path)?.is_file() {
+        fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
 struct RecoveryCopy {
     dir: PathBuf,
     db: PathBuf,
@@ -253,7 +316,8 @@ pub(super) fn matches_source(
     dek: &Key,
     allow_pre_journal: bool,
 ) -> Result<bool> {
-    if copy.read_header()?.to_bytes() != header.to_bytes() {
+    let expected = header.to_bytes();
+    if source.read_header()?.to_bytes() != expected || copy.read_header()?.to_bytes() != expected {
         return Ok(false);
     }
     for table in [Table::Records, Table::Attachments]
@@ -269,21 +333,16 @@ pub(super) fn matches_source(
         if !source_present || !copy_present {
             return Ok(false);
         }
-        let ids = copy.ids(table)?;
-        if ids.len() != source.ids(table)?.len() {
-            return Ok(false);
-        }
-        for id in ids {
-            let sealed = copy.get(table, &id)?.ok_or(Error::Corrupt)?;
-            if source.get(table, &id)?.as_ref() != Some(&sealed) {
-                return Ok(false);
-            }
+        if !source.matching_rows(copy, table, |id, sealed| {
             let plain = crypto::open(
                 dek,
-                &aad(header.format, &header.vault_id, table, &id),
-                &sealed,
+                &aad(header.format, &header.vault_id, table, id),
+                sealed,
             )?;
             crypto::unpad(&plain)?;
+            Ok(())
+        })? {
+            return Ok(false);
         }
     }
     Ok(true)
@@ -437,6 +496,109 @@ mod tests {
         state.acknowledge_notice(&pending.id);
         assert_eq!(state.pending_notice(), None);
         path
+    }
+
+    #[test]
+    fn cleanup_removes_only_regular_upgrade_parts_and_journals() {
+        let paths = paths();
+        let data = &paths.data;
+        let stale = data.join(format!("{PREFIX}-{}.part", "aF".repeat(16)));
+        let orphan_journal = data.join(format!("{PREFIX}-{}.part-journal", "B".repeat(32)));
+        let removable = [&stale, &journal_path(&stale), &orphan_journal];
+        let preserved = [
+            NOTA_COPY.to_string(),
+            CLF_COPY.to_string(),
+            format!("{PREFIX}-2.nota"),
+            format!("{PREFIX}-2.clf"),
+            "vault.nota".to_string(),
+            "vault.clf".to_string(),
+            format!("{PREFIX}-{}.part", "a".repeat(31)),
+            format!("{PREFIX}-{}.part", "a".repeat(33)),
+            format!("{PREFIX}-{}.part", "g".repeat(32)),
+            format!("{PREFIX}-{}.part", "é".repeat(16)),
+            format!("{PREFIX}-{}.part-wal", "b".repeat(32)),
+            format!("{PREFIX}-{}.nota", "d".repeat(32)),
+            format!("other-{PREFIX}-{}.part-journal", "b".repeat(32)),
+        ];
+        let directory = data.join(format!("{PREFIX}-{}.part", "c".repeat(32)));
+        fs::create_dir(&directory).unwrap();
+        fs::write(directory.join("marker"), b"directory").unwrap();
+        for file in removable {
+            fs::write(file, b"abandoned copy").unwrap();
+        }
+        for name in &preserved {
+            fs::write(data.join(name), b"keep").unwrap();
+        }
+
+        clean_stale_upgrade_parts(data);
+
+        for file in removable {
+            assert!(!file.exists(), "stale part remains: {file:?}");
+        }
+        for name in &preserved {
+            assert_eq!(fs::read(data.join(name)).unwrap(), b"keep");
+        }
+        assert_eq!(fs::read(directory.join("marker")).unwrap(), b"directory");
+    }
+
+    #[test]
+    fn cleanup_skips_matching_symlinks() {
+        #[cfg(unix)]
+        use std::os::unix::fs::symlink as link;
+        #[cfg(windows)]
+        use std::os::windows::fs::symlink_file as link;
+
+        let paths = paths();
+        let target = paths.data.join("vault.nota");
+        fs::write(&target, b"vault").unwrap();
+        let candidate = paths.data.join(format!("{PREFIX}-{}.part", "d".repeat(32)));
+        if let Err(error) = link(&target, &candidate) {
+            #[cfg(windows)]
+            if error.raw_os_error() == Some(1314) {
+                eprintln!("file symlink check skipped: Windows symlink privilege unavailable");
+                return;
+            }
+            panic!("could not create test symlink: {error}");
+        }
+
+        clean_stale_upgrade_parts(&paths.data);
+
+        assert!(fs::symlink_metadata(&candidate).unwrap().is_symlink());
+        assert_eq!(fs::read(&target).unwrap(), b"vault");
+    }
+
+    #[test]
+    fn verification_rejects_different_ciphertext_ids_counts_and_table_presence() {
+        let paths = paths();
+        let before = pre_journal(&paths, Session::create_open(&paths.vault).unwrap());
+        let source = Store::open_read_only(&paths.vault).unwrap();
+        let header = source.read_header().unwrap();
+        let dek = header.unlock_open().unwrap();
+        let candidate = paths.data.join("candidate.tmp");
+        source.copy_into(&candidate).unwrap();
+        let copy = Store::open(&candidate).unwrap();
+        let matches = || matches_source(&source, &copy, &header, &dek, true).unwrap();
+        assert!(matches());
+
+        let (id, sealed) = &before.attachments[0];
+        let mut changed = sealed.clone();
+        *changed.last_mut().unwrap() ^= 1;
+        copy.put(Table::Attachments, id, &changed).unwrap();
+        assert!(!matches(), "ciphertext or tag differs");
+
+        copy.delete(Table::Attachments, id).unwrap();
+        assert!(!matches(), "copy has fewer rows");
+        let different_id = [0; 16];
+        assert_ne!(*id, different_id);
+        copy.put(Table::Attachments, &different_id, sealed).unwrap();
+        assert!(!matches(), "same row count with a different id");
+        copy.put(Table::Attachments, id, sealed).unwrap();
+        assert!(!matches(), "copy has more rows");
+
+        copy.delete(Table::Attachments, &different_id).unwrap();
+        assert!(matches());
+        copy.ensure_journal_tables().unwrap();
+        assert!(!matches(), "journal table presence differs");
     }
 
     #[test]

@@ -105,7 +105,8 @@ test("pending native backdrop cannot prevent status request or lock-listener reg
     refreshStatus: () => { refreshed++; return Promise.resolve(); },
     listen: (event) => { events.push(event); return Promise.resolve(() => {}); },
     setLockListenerReady: (value) => { listenerReady = value; },
-    setStartupFailed: () => assert.fail("successful initialization must not fail"),
+    setReadinessFallback: () => assert.fail("successful initialization needs no readiness fallback"),
+    setStartupStatusFailed: () => assert.fail("successful initialization must not report a status failure"),
     watchStartupInitialization: h.watch,
   });
   assert.equal(refreshed, 1);
@@ -117,7 +118,7 @@ test("pending native backdrop cannot prevent status request or lock-listener reg
 
 test("actual readiness effect waits for status/listener, survives cleanup, and sends once across screen changes", () => {
   const h = harness(); let ready = 0;
-  const context = vm.createContext({ startupMark() {}, hasStatus: false, lockListenerReady: false, startupFailed: false,
+  const context = vm.createContext({ startupMark() {}, hasStatus: false, lockListenerReady: false, readinessFallback: false,
     readySent: { current: false }, scheduleWindowReady: h.schedule, api: { windowReady: () => { ready++; } } });
   const body = hookBody("useLayoutEffect", "scheduleWindowReady").replace("const runHook =", "var runHook =");
   vm.runInContext(body, context); h.tick(); assert.equal(ready, 0);
@@ -140,10 +141,10 @@ function deferred() {
 function appHarness({ status = () => Promise.resolve(), listeners = {}, noticeFails = false } = {}) {
   const h = harness();
   const events = [], disposed = [];
-  let ready = 0, attempts = 0, mounted = true, layoutCleanup;
+  let ready = 0, attempts = 0, statusFailures = 0, mounted = true, layoutCleanup;
   const layoutBody = hookBody("useLayoutEffect", "scheduleWindowReady").replace("const runHook =", "var runHook =");
   const context = vm.createContext({
-    startupMark() {}, hasStatus: false, lockListenerReady: false, startupFailed: false,
+    startupMark() {}, hasStatus: false, lockListenerReady: false, readinessFallback: false, startupStatusFailed: false,
     readySent: { current: false }, scheduleWindowReady: h.schedule, watchStartupInitialization: h.watch,
     document, sessionStorage: { getItem: () => null }, toast: { error() {}, info() {} },
     api: {
@@ -166,9 +167,14 @@ function appHarness({ status = () => Promise.resolve(), listeners = {}, noticeFa
       assert.ok(mounted, "no listener state update after cleanup");
       context.lockListenerReady = value; render();
     },
-    setStartupFailed: (value) => {
+    setReadinessFallback: (value) => {
+      assert.ok(mounted, "no readiness fallback after cleanup");
+      context.readinessFallback = value; render();
+    },
+    setStartupStatusFailed: (value) => {
       assert.ok(mounted, "no failure state update after cleanup");
-      context.startupFailed = value; render();
+      statusFailures++;
+      context.startupStatusFailed = value; render();
     },
   });
   function render() {
@@ -178,7 +184,7 @@ function appHarness({ status = () => Promise.resolve(), listeners = {}, noticeFa
   render();
   const cleanup = vm.runInContext(hookBody("useEffect", "applyAppearance").replace("const runHook =", "var runHook ="), context);
   return { ...h, context, events, disposed, render,
-    ready: () => ready, attempts: () => attempts,
+    ready: () => ready, attempts: () => attempts, statusFailures: () => statusFailures,
     settle: async () => { await new Promise(setImmediate); h.tick(); await new Promise(setImmediate); },
     cleanup: () => { layoutCleanup?.(); cleanup(); mounted = false; },
   };
@@ -190,6 +196,7 @@ test("status rejects: one retry also rejects, then window_ready is sent once", a
     listeners: { "vault-locked": () => pending.promise } });
   await h.settle();
   assert.equal(h.attempts(), 2); assert.equal(h.context.hasStatus, false);
+  assert.equal(h.context.startupStatusFailed, true);
   assert.equal(h.ready(), 1); assert.equal(h.timers.size, 0);
   pending.resolve(); await h.settle(); h.advance(h.bound); h.render(); await h.settle();
   assert.equal(h.ready(), 1); h.cleanup(); await h.settle();
@@ -200,7 +207,8 @@ test("status rejects once then succeeds: readiness follows the recovered status 
   const h = appHarness({ status: (attempt) => attempt === 1 ? Promise.reject(new Error("retry")) : Promise.resolve() });
   await h.settle();
   assert.equal(h.attempts(), 2); assert.equal(h.context.hasStatus, true);
-  assert.equal(h.context.lockListenerReady, true); assert.equal(h.context.startupFailed, false);
+  assert.equal(h.context.lockListenerReady, true); assert.equal(h.context.readinessFallback, false);
+  assert.equal(h.context.startupStatusFailed, false);
   assert.equal(h.ready(), 1); assert.equal(h.timers.size, 0);
   h.advance(h.bound); h.render(); await h.settle(); assert.equal(h.ready(), 1);
   h.cleanup(); await h.settle();
@@ -211,6 +219,7 @@ test("first lock listener rejects: window_ready is sent once even while status i
     listeners: { "vault-locked": () => Promise.reject(new Error("first listener")) } });
   await h.settle();
   assert.equal(h.context.lockListenerReady, false); assert.equal(h.context.hasStatus, false);
+  assert.equal(h.context.startupStatusFailed, false);
   assert.equal(h.ready(), 1); assert.equal(h.timers.size, 0);
   h.cleanup(); await h.settle();
   assert.deepEqual(h.disposed.sort(), ["app-notice", "vault-locking"]);
@@ -242,6 +251,7 @@ test("status never resolves within the bound: window_ready is sent once at 5000 
   await h.settle(); h.advance(4999); await h.settle(); assert.equal(h.ready(), 0);
   h.advance(1); await h.settle();
   assert.equal(h.attempts(), 1); assert.equal(h.ready(), 1); assert.equal(h.timers.size, 0);
+  assert.equal(h.context.startupStatusFailed, false);
   pending.resolve(); await h.settle(); h.render(); await h.settle(); assert.equal(h.ready(), 1);
   h.cleanup(); await h.settle();
 });
@@ -269,12 +279,54 @@ test("late rejection after timeout is handled without a retry or duplicate readi
   h.advance(h.bound); await h.settle(); assert.equal(h.ready(), 1);
   status.reject(new Error("late status")); await h.settle();
   assert.equal(h.attempts(), 1); assert.equal(h.ready(), 1);
+  assert.equal(h.context.startupStatusFailed, true);
+  h.cleanup(); await h.settle();
+});
+
+test("a stalled automatic retry reports failure at 5000 ms and ignores its late rejection", async () => {
+  const retry = deferred();
+  const retried = appHarness({ status: (attempt) => attempt === 1 ? Promise.reject(new Error("first attempt")) : retry.promise });
+  await retried.settle();
+  assert.equal(retried.attempts(), 2); assert.equal(retried.ready(), 0);
+  retried.advance(4999); await retried.settle();
+  assert.equal(retried.ready(), 0); assert.equal(retried.context.startupStatusFailed, false);
+  retried.advance(1); await retried.settle();
+  assert.equal(retried.ready(), 1); assert.equal(retried.context.startupStatusFailed, true);
+  retry.reject(new Error("late retry")); await retried.settle();
+  assert.equal(retried.attempts(), 2); assert.equal(retried.ready(), 1);
+  assert.equal(retried.context.startupStatusFailed, true);
+  assert.equal(retried.statusFailures(), 1);
+  retried.cleanup(); await retried.settle();
+});
+
+test("a listener failure reveals the window but keeps the deadline for a stalled automatic retry", async () => {
+  const listener = deferred();
+  const h = appHarness({ status: (attempt) => attempt === 1
+    ? Promise.reject(new Error("initial status")) : new Promise(() => {}),
+    listeners: { "vault-locked": () => listener.promise } });
+  await h.settle(); assert.equal(h.attempts(), 2);
+  listener.reject(new Error("listener")); await h.settle();
+  assert.equal(h.ready(), 1); assert.equal(h.context.startupStatusFailed, false);
+  h.advance(h.bound); await h.settle();
+  assert.equal(h.ready(), 1); assert.equal(h.context.startupStatusFailed, true);
+  h.cleanup(); await h.settle();
+});
+
+test("a successful automatic retry stays healthy when a listener is still pending at the deadline", async () => {
+  const h = appHarness({ status: (attempt) => attempt === 1
+    ? Promise.reject(new Error("initial status")) : Promise.resolve(),
+    listeners: { "vault-locked": () => new Promise(() => {}) } });
+  await h.settle();
+  assert.equal(h.attempts(), 2); assert.equal(h.context.hasStatus, true); assert.equal(h.ready(), 0);
+  h.advance(h.bound); await h.settle();
+  assert.equal(h.ready(), 1); assert.equal(h.context.startupStatusFailed, false);
   h.cleanup(); await h.settle();
 });
 
 test("notice-listener rejection does not disrupt readiness or produce an unhandled cleanup rejection", async () => {
   const h = appHarness({ noticeFails: true });
-  await h.settle(); assert.equal(h.ready(), 1); assert.equal(h.context.startupFailed, false);
+  await h.settle(); assert.equal(h.ready(), 1); assert.equal(h.context.readinessFallback, false);
+  assert.equal(h.context.startupStatusFailed, false);
   assert.ok(h.events.includes("app-notice"));
   h.cleanup(); await h.settle();
   assert.deepEqual(h.disposed.sort(), ["vault-locked", "vault-locking"]);

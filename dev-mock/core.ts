@@ -12,6 +12,15 @@ const params = new URLSearchParams(location.search);
 const startState = params.get("s") ?? "app";
 // `?s=start&installed` shows the first screen of an installed copy (no notes, nothing to restore).
 const installedMock = params.has("installed");
+let initialVaultStatusRejections = Number(params.get("rejectInitialVaultStatus") ?? 0);
+if (params.has("rejectVaultStatus")) {
+  window.addEventListener("notaya-test-recover-vault-status", () => params.delete("rejectVaultStatus"), { once: true });
+}
+const heldVaultStatus = params.has("holdVaultStatus")
+  ? new Promise<void>((resolve) => {
+      window.addEventListener("notaya-test-release-vault-status", () => resolve(), { once: true });
+    })
+  : undefined;
 let securityOn = startState === "secure" || startState === "lock";
 let unlocked = startState === "app" || startState === "secure";
 let exists = startState !== "create" && startState !== "start";
@@ -167,6 +176,12 @@ async function invokeCore<T = unknown>(cmd: string, args: Args = {}, options?: {
   }
   switch (cmd) {
     case "vault_status":
+      if (initialVaultStatusRejections > 0) {
+        initialVaultStatusRejections--;
+        throw "Mock vault status unavailable.";
+      }
+      if (heldVaultStatus) await heldVaultStatus;
+      if (params.has("rejectVaultStatus")) throw "Mock vault status unavailable.";
       return ok({
         exists,
         unlocked,

@@ -1,5 +1,23 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261123-rc3-stalled-retry"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+The author turn recorded gpt-6.2-sol at xhigh. The weekly reading was 78% used at 2026-11-23T18:14:18.769Z and 78% used at the 2026-11-23T18:20:41.370Z checkpoint. That checkpoint recorded 2,872,191 input tokens, 2,779,136 cached input tokens and 18,025 output tokens. Five-hour quota readings were unavailable. [Session 156](../sessions.md#session-156).
+
+<a id="codex-usage-20261123-rc3-audit-fix"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+The author turn configuration recorded gpt-6.2-sol at xhigh. The first available weekly reading at 2026-11-23T17:46:53.923Z and the checkpoint at 2026-11-23T17:51:24.691Z both showed 78% used. The checkpoint recorded 1,592,600 input tokens, 1,500,672 cached input tokens and 13,475 output tokens. Five-hour readings and separately attributable review usage were unavailable. [Session 155](../sessions.md#session-155).
+
+<a id="codex-usage-20261123-rc3-blackscreen"></a>
+
+## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC
+
+The Codex turn configuration recorded gpt-6.2-sol at xhigh. The first available weekly reading was 77.0% used at 2026-11-23T17:16:29.633Z. The 2026-11-23T17:36:21.052Z checkpoint showed 77.0% weekly used with 14,287,570 input tokens, 14,065,920 cached input tokens and 58,179 output tokens. The five-hour reading was unavailable. [Session 154](../sessions.md#session-154).
+
 <a id="codex-usage-20261123-rc-polish-fix4"></a>
 
 ## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC

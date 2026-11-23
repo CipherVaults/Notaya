@@ -7,7 +7,7 @@ import { api } from "@/lib/ipc";
 import { startLastPlacePersistence, startNavHistory, startNavKeys } from "@/lib/navHistory";
 import { applyAppearance, cachedAppearance, isDark } from "@/lib/theme";
 import { useApp } from "@/store/app";
-import { ConfirmProvider, TooltipProvider } from "@/components/ui";
+import { Button, ConfirmProvider, TooltipProvider } from "@/components/ui";
 import TitleBar from "@/components/TitleBar";
 import UnlockScreen from "@/features/unlock/UnlockScreen";
 import Shell from "@/components/Shell";
@@ -20,14 +20,15 @@ export default function App() {
   const theme = useApp((s) => s.settings?.theme ?? cachedAppearance().theme);
   const hasStatus = status !== null;
   const [lockListenerReady, setLockListenerReady] = useState(false);
-  const [startupFailed, setStartupFailed] = useState(false);
+  const [readinessFallback, setReadinessFallback] = useState(false);
+  const [startupStatusFailed, setStartupStatusFailed] = useState(false);
   const readySent = useRef(false);
 
-  // Run after React commits the status screen, or the initialization failure
-  // fallback. Rust still decides visibility: --minimized stays hidden with a tray.
+  // Reveal after React commits the status screen or a startup fallback.
+  // Rust still decides visibility: --minimized stays hidden with a tray.
   useLayoutEffect(() => {
     startupMark("effectRan", true);
-    if (readySent.current || (!startupFailed && (!hasStatus || !lockListenerReady))) return;
+    if (readySent.current || (!readinessFallback && (!hasStatus || !lockListenerReady))) return;
     startupMark("screenCommittedAtMs");
     startupMark("microtaskScheduled", true);
     const cancel = scheduleWindowReady(() => {
@@ -36,7 +37,7 @@ export default function App() {
       void api.windowReady();
     });
     return () => { startupMark("readyCleanup", true); cancel(); };
-  }, [hasStatus, lockListenerReady, startupFailed]);
+  }, [hasStatus, lockListenerReady, readinessFallback]);
 
   const unlocked = status?.unlocked ?? false;
   // Back and forward (Backspace, Alt+Left/Right, the mouse buttons): only while unlocked, in memory only.
@@ -171,7 +172,8 @@ export default function App() {
         startupMark("lockListenerReadyAtMs");
         setLockListenerReady(true);
       },
-      () => setStartupFailed(true),
+      () => setReadinessFallback(true),
+      () => setStartupStatusFailed(true),
     );
     return () => {
       stopStartup();
@@ -186,12 +188,40 @@ export default function App() {
     };
   }, [refreshStatus]);
 
+  async function retryStartupStatus() {
+    if (hasStatus || !startupStatusFailed) return;
+    setStartupStatusFailed(false);
+    try {
+      await refreshStatus();
+    } catch {
+      setStartupStatusFailed(true);
+    }
+  }
+
   return (
     <TooltipProvider>
       <ConfirmProvider>
         <div className="flex h-full flex-col">
           <TitleBar />
           <div className="relative min-h-0 flex-1">
+            {status === null && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-bg p-4 text-center text-fg">
+                {startupStatusFailed ? (
+                  <>
+                    <p role="alert">Could not read the vault status.</p>
+                    <Button type="button" onClick={retryStartupStatus}>Try again</Button>
+                  </>
+                ) : (
+                  <div role="status" className="flex flex-col items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="h-7 w-7 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin"
+                    />
+                    <span>Opening your vault…</span>
+                  </div>
+                )}
+              </div>
+            )}
             <AnimatePresence mode="wait">
               {status && (
                 <motion.div

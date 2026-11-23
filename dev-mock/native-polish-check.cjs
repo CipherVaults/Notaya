@@ -50,6 +50,114 @@ async function openNote(page) {
   return note;
 }
 
+const startupLoading = (page) => page.getByRole("status").filter({ hasText: "Opening your vault…" });
+
+async function startupLoadingCheck(page) {
+  await page.addInitScript(() => {
+    const query = new URLSearchParams(location.search);
+    if (query.has("holdVaultStatus")) {
+      localStorage.setItem("notaya.appearance", JSON.stringify({ theme: query.get("theme"), accent: "mono" }));
+    }
+  });
+  const loading = startupLoading(page);
+  const label = loading.getByText("Opening your vault…", { exact: true });
+  const indicator = loading.locator('[aria-hidden="true"]');
+  for (const theme of ["black", "sunrise", "sunrise-dark", "graphite", "white", "paper"]) {
+    await open(page, `?db=1&holdVaultStatus&theme=${theme}`);
+    await page.waitForFunction((theme) => {
+      const { dataset } = document.documentElement;
+      return dataset.theme === theme && dataset.accent === "mono";
+    }, theme);
+    if (theme === "black") {
+      // Wait for the real watchdog while the mock still holds vault_status.
+      await page.waitForFunction(() => window.__inv?.some(([cmd]) => cmd === "window_ready"));
+      checks.check("Readiness fallback fires while vault status is pending",
+        await page.evaluate(() => !window.__inv.some(([cmd]) => cmd === "vault_status")));
+    }
+    await label.waitFor();
+    checks.check(`${theme} Mono shows the startup label and root`, await label.evaluate((el) => {
+      const options = { opacityProperty: true, visibilityProperty: true };
+      return el.checkVisibility(options) && el.closest("#root").checkVisibility(options);
+    }));
+    checks.check(`${theme} Mono uses the themed startup colors`, await indicator.isVisible() &&
+      await indicator.evaluate((el) => {
+        const tokens = document.createElement("span");
+        tokens.style.cssText = "color: var(--text); border-color: var(--border); outline-color: var(--accent)";
+        document.body.append(tokens);
+        // Make a missing foreground utility observable even if body has the right color.
+        const root = el.closest("#root");
+        const inheritedColor = root.style.color;
+        root.style.color = "transparent";
+        try {
+          const theme = getComputedStyle(tokens);
+          const spinner = getComputedStyle(el);
+          const ring = [spinner.borderRightColor, spinner.borderBottomColor, spinner.borderLeftColor];
+          return getComputedStyle(el.nextElementSibling).color === theme.color
+            && parseFloat(spinner.borderTopWidth) > 0
+            && spinner.borderTopColor === theme.outlineColor
+            && ring.every((color) => color === theme.borderTopColor && color !== spinner.borderTopColor);
+        } finally {
+          root.style.color = inheritedColor;
+          tokens.remove();
+        }
+      }));
+    await page.evaluate(() => window.dispatchEvent(new Event("notaya-test-release-vault-status")));
+    await page.getByRole("main").getByRole("heading", { level: 1 }).waitFor();
+    checks.equal(`${theme} Mono removes the loading screen after the vault opens`, await loading.count(), 0);
+  }
+}
+
+async function startupFailureCheck(page) {
+  await open(page, "?db=1&rejectVaultStatus");
+  const error = page.getByRole("alert").filter({ hasText: "Could not read the vault status." });
+  const retry = page.getByRole("button", { name: "Try again", exact: true });
+  await error.waitFor();
+  await page.waitForFunction(() => window.__inv?.some(([cmd]) => cmd === "window_ready"));
+  checks.check("Rejected startup shows a visible error and retry action",
+    await error.isVisible() && await retry.isVisible() && await retry.isEnabled());
+  checks.equal("Rejected startup removes the loading indicator", await startupLoading(page).count(), 0);
+  await page.evaluate(() => window.dispatchEvent(new Event("notaya-test-recover-vault-status")));
+  await retry.click();
+  await page.getByRole("main").getByRole("heading", { level: 1 }).waitFor();
+  checks.equal("Retry successfully refreshes the vault status",
+    await page.evaluate(() => window.__inv.filter(([cmd]) => cmd === "vault_status").length), 1);
+  checks.check("Retry opens the unlocked app and removes the startup fallback",
+    await page.getByRole("tree", { name: "Favorites" }).isVisible() &&
+    await error.count() === 0 && await retry.count() === 0 && await startupLoading(page).count() === 0);
+}
+
+async function startupStalledRetryCheck(page) {
+  // Dev StrictMode runs two initial effects, including one that it cleans up.
+  const initialRejections = mode === "production" ? 1 : 2;
+  await open(page, `?db=1&holdVaultStatus&rejectVaultStatus&rejectInitialVaultStatus=${initialRejections}`);
+  const loading = startupLoading(page);
+  const error = page.getByRole("alert").filter({ hasText: "Could not read the vault status." });
+  const retry = page.getByRole("button", { name: "Try again", exact: true });
+  await loading.waitFor();
+  checks.equal("Stalled automatic retry initially shows the startup loader", await retry.count(), 0);
+  await page.waitForFunction(() => window.__inv?.some(([cmd]) => cmd === "window_ready"));
+  checks.check("The watchdog shows the status error and Try again while the automatic retry is stalled",
+    await error.isVisible() && await retry.isVisible() && await retry.isEnabled());
+  checks.equal("The watchdog replaces the stalled automatic retry loader", await loading.count(), 0);
+  checks.equal("No vault status completed before the watchdog",
+    await page.evaluate(() => window.__inv.filter(([cmd]) => cmd === "vault_status").length), 0);
+
+  await retry.click();
+  await loading.waitFor();
+  checks.check("A pending manual retry clears the previous error and retry button",
+    await error.count() === 0 && await retry.count() === 0);
+  await page.evaluate(() => window.dispatchEvent(new Event("notaya-test-release-vault-status")));
+  await error.waitFor();
+  checks.check("A rejected manual retry restores the status error and retry button",
+    await retry.isVisible() && await retry.isEnabled() && await loading.count() === 0);
+
+  await page.evaluate(() => window.dispatchEvent(new Event("notaya-test-recover-vault-status")));
+  await retry.click();
+  await page.getByRole("main").getByRole("heading", { level: 1 }).waitFor();
+  checks.check("A successful manual retry after the watchdog opens the vault",
+    await error.count() === 0 && await retry.count() === 0 && await loading.count() === 0);
+}
+
 async function editorShortcutChecks(page) {
   for (const [name, query, selector] of [
     ["Page", "?db=1&s=secure", ".ProseMirror"],
@@ -445,6 +553,9 @@ async function browserChecks(page) {
       await page.addInitScript(() => { window.__TAURI_INTERNALS__ = {}; });
     }
     page.on("pageerror", (error) => checks.check("Uncaught page error", false, error.message));
+    await startupLoadingCheck(page);
+    await startupFailureCheck(page);
+    await startupStalledRetryCheck(page);
     await editorShortcutChecks(page);
     await rowPeekFindChecks(page);
     await findChecks(page);
