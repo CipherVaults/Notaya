@@ -1,6 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="v16-session-195-integration-checkpoint-20261123"></a>
+
+## v1.6 checkpoint: eight reviewed tracks ready for integration
+
+**2026-11-23, Ahmed's side (AE0101), Gaming-PC.** All eight v1.6 feature tracks passed independent non-author review and match their pushed `AE0101/*` branch tips and commit trees on `CipherVaults/Notaya` (`origin`). They are Security Area 3, A44 / G3 Safety Copy, N3 Canonical Notion Rows, Security Area 4, Q1 Table Focus Repair, P7 Windowed Views & 200k Limit, P8 Virtual Non-Table Views (stacked on P7), and A57 Exact Numeric Contract (Fix 16). [Exact revisions and check results](sessions.md#session-195).
+
+**Native baseline.** W195 verified all six launches across `control`, `sharing`, and `exit`, including same-home restart and recovery, on source `cbf0193fabe77d04cdd84f40e2560f8dd643c333`. That source and remote `main` at `0e08e5489d36fbd2db1fc3a537cdebfa66bb3ad9` share tree `c67a85e52d1bcd71e66e6b20b3699595085445e2`. The W195 result was recorded in `e6a52a02`. Vaults and raw evidence stay on Gaming-PC. [W195 execution evidence](execution/2026-10-23-restore-from-backup.md#restore-w195-native-passed-20261122).
+
+**Continuation.** Integrate the pinned feature tips into a unified v1.6 release-candidate branch and run the combined test sweep. Ahmed's native Windows candidate qualification still includes P8 WebView2/vault QA, the 100k UI timing trial, the private finance corpus, and the A47 sweep. P8's strict Clippy run reported 175 diagnostics. Ahmed retains final v1.6 acceptance and publication.
+
 <a id="restore-w195-native-passed-20261122"></a>
 
 ## W195 native restore interruption passed and Wave 1 audits complete

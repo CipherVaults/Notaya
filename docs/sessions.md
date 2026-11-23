@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 195 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Verify eight v1.6 tracks for integration](#session-195) |
 | 194 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native W195 restore interruption and complete Wave 1 audits](#session-194) |
 | 193 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify restore rollback and prepare successor handoff](#session-193) |
 | 192 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify and merge Windows Export focus fix](#session-192) |
@@ -226,6 +227,82 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-195"></a>
+
+# Session: 2026-11-23 UTC | Ahmed (AE0101) | Gaming-PC | Verify eight v1.6 tracks for integration
+
+**Who and where.** Ahmed's side (`AE0101`), Gaming-PC. This checkpoint covers Ahmed-side branches and prior Antigravity and Codex CLI work under the recorded coordination split. Mohamed's side (`AbyssWatcher2`) has its own work and decisions. **Models, effort, roles and provenance.** The standing split assigns coordination and security work to Antigravity and heavy non-security work to local Codex CLI lanes (`gpt-6.2-sol`, `xhigh`). The named reviewers and test outcomes below come from Ahmed's consolidated handback and the prior W195 record. Codex edited the PBS records and checked Git identities for this session. Per-run model, effort, timing, token and quota details for the consolidated reviews were unavailable. [Coordination authority](plan/approval-and-amendments.md#a57-antigravity-coordination-20261122) · [Session 194](#session-194).
+
+## 1. Time
+
+2026-11-23 (UTC and Cairo date verified on Gaming-PC). The exact owner-message timestamp and the feature-lane time ranges were not recorded in the supplied checkpoint.
+
+## 2. Session Goal
+
+At Ahmed's request, consolidate the eight independently reviewed v1.6 feature tracks and the W195 native baseline into the two live PBS records. Return a verified records-branch push and a local confirmation. The checkpoint starts from `e6a52a02aefaa1349e00c9be392a109fd2992f2a` on `codex/native-import-export-20261122`. Release-candidate integration is the follow-on milestone.
+
+## 3. Actions Taken
+
+Confirmed all eight pushed feature tips on `origin` (`CipherVaults/Notaya`) with `git ls-remote` and checked their commit trees against fetched Git objects. Confirmed the P7 commit is an ancestor of P8. The feature baseline is `cbf0193fabe77d04cdd84f40e2560f8dd643c333` (tree `c67a85e52d1bcd71e66e6b20b3699595085445e2`). Remote `main` at `0e08e5489d36fbd2db1fc3a537cdebfa66bb3ad9` has the same tree.
+
+**W195 Native Windows Restore Interruption.** The separate native baseline verified `6/6` launches across `control`, `sharing`, and `exit` on `cbf0193f`, including normal-binary restart and recovery. Recorded in `e6a52a02`. [Execution evidence](execution/2026-10-23-restore-from-backup.md#restore-w195-native-passed-20261122).
+
+**Eight feature tracks.** The following non-author review results and test counts apply to the named revisions. The records update reused those results.
+
+1. **Security Area 3** (`origin/AE0101/sec-area3-hardening`), commit `4e3af81b6b341c6ae8413b3cff50bfe0d0875d73`, tree `eaafd0b542b9c5de634f9f12b6e37fd3d81ca10d`. Reviewer PASS. `810` Rust lib tests passed. `tsc` and Vite exited `0`.
+2. **A44 / G3 Safety Copy** (`origin/AE0101/a44-g3-safety-copy`), commit `6f0b1bb334c04d65fd3262c79782fc993ca79f10`, tree `0374e4229c205d98fea46795a0954b6b4c3b33f6`. `codex-wave3-a44-review4.md` PASS. `820` Rust lib tests passed, with `18/18` startup-ready checks. `NOTA` stays v2.
+3. **N3 Canonical Notion Rows** (`origin/AE0101/v1-6-n3`), commit `a27a414d4fb89e9d94b2e391c3835df54e7a6be9`, tree `c352b481db949bf3f63d5ae4a47600a58f8cd4a8`. `codex-wave3-n3-review3.md` PASS. `808` Rust lib tests and `4/4` in `n3-row-navigation.test.mjs` passed. `tsc` and Vite exited `0`. W161 container exports with standalone and nested full-page databases remain deferred to v1.9.
+4. **Security Area 4** (`origin/AE0101/sec-area4-hardening`), commit `36050e34189c09278a0bb7ead6ace1a82640e436`, tree `a53b98413bd44de9cba50b7db45bd03e7f6f9be5`. Reviewer `fbeb2c89` PASS. `19` bridge and `807` app Rust lib tests passed. G2 clean.
+5. **Q1 Table Focus Repair** (`origin/AE0101/q1-table-focus`), commit `401319d621a174f6aae1d7372b024b80aaf04ace`, tree `09e28b6954ca99bb89aad6a531878ce1fe193c25`. `codex-wave3-q1-review2.md` reported `# PASS`. Headed Chrome passed `33/33` versus `20/33` on the preimage. `tsc` and Vite exited `0`.
+6. **P7 Windowed Views & 200k Limit** (`origin/AE0101/p7-windowed-views`), commit `fb618a68ce598a281c9175fa9088fc64033e1ad1`, tree `9c118f725d1e3fca36b6752fbabba5a1ef9d51ce`. Antigravity's P7 Cache Security Reviewer 2 (`32652273`) returned PASS and `codex-wave3-p7-review3.md` reported `# PASS`. Passed `813/813` Rust lib tests, `32/32` release `db-bench`, `68/68` `database-ui`, `116/116` `database-views`, `4/4` `p6-virtual`, `p6-added-row-undo`, and `p7-window-check`. `tsc`, Vite and Clippy exited `0`. G2 clean.
+7. **P8 Virtual Non-Table Views** (`origin/AE0101/p8-virtual-views`, stacked on P7), commit `72c72c4765b7e096609c956ef1cfaf4c1fe252c9`, tree `6f9ddf84ca1451b92ed908e0ca4fa9307455e891`. Antigravity's P8 Window Metadata Security Reviewer (`8c59cfe3`) returned PASS. `QueryCache` and `CachedView` fields, `Zeroize`, `Drop`, and `ViewResult` were unchanged. `TimelineWindowMeta` is ephemeral. `codex-wave3-p8-review3.md` closed all Review 2 Timeline blockers. All `6/6` Timeline sub-items passed at `scrollTop=0` on `400` and `5,000` rows, with `0` `query_view` calls during tail scroll. Also passed `68/68` `database-ui`, `117/117` `database-views`, `p7-window`, `p8-virtual`, `5/5` fresh focused `windows::tests`, `815/815` full Rust lib, `p6-virtual`, `p6-added-row-undo`, and `33/33` Q1. `tsc` and Vite exited `0`. G2 clean. Strict Clippy reported `175` diagnostics. Native WebView2/vault QA is pending.
+8. **A57 Exact Numeric Contract, Fix 16** (`origin/AE0101/a57-numeric-reference`), commit `0f6385de85337bcd927c3ff428d52e7b45de1f6f`, tree `5ef65317958992c5868c0e2256605d67e7f290a3`. `codex-wave3-a57-review16.md` reported `# PASS`. Passed `366/366` numeric reference checks (`--control good` exited `0`, `--control wrong` exited `1`), plus `288/288` and `48/48` production `Ctx::run_view` sort permutations across budget isolation, full allowance, Review 14, partial replay and 14 fixtures. Passed `861/861` Rust lib tests (8 ignored), `56/56` Sticky and `86/86` calc. `tsc` and Vite exited `0`. G2 lockfiles and `golden/*.jsonl` were byte-identical to `cbf0193f`.
+
+## 4. Key Insights
+
+W195 qualifies controlled restore interruption and restart on the shared base tree. The eight feature reviews qualify their individual revisions for integration. The combined source and exact Windows candidate need their own checks. P8 carries P7 in its ancestry, so the integration must account for that stack when bringing both changes in.
+
+## 5. Decisions Made
+
+Ahmed requested this bounded records checkpoint and authorized committing and pushing the two records on `codex/native-import-export-20261122`. The established scope keeps the A44 open-vault safety copy in v1.6 with `NOTA` v2 and keeps W161 container database export in v1.9. Ahmed retains native candidate qualification, final acceptance and publication. [Scope authority](plan/approval-and-amendments.md#a57-antigravity-coordination-20261122).
+
+## 6. Difficulties / Friction
+
+The supplied A44 tree ID omitted one digit. The fetched commit and GitHub API both returned `0374e4229c205d98fea46795a0954b6b4c3b33f6`, which is the full ID used here. The review handback did not supply exact timestamps or attributable usage for each run.
+
+## 7. Adjustments Made
+
+Preserved the earlier status and session entries and added the new status block and newest-first session entry. Recorded W195 separately from the eight feature branches. The public records use sanitized results and revision identifiers. W195 vaults and all raw evidence tied to `cbf0193f` stay on Gaming-PC.
+
+## 8. Mistakes / Risks Noted
+
+P8's strict Clippy result has 175 diagnostics and native WebView2/vault QA is pending. Headed Chrome, component checks and single-branch passes leave combined behavior, native UI and vault behavior, and final Windows package qualification open. The combined sweep did not run during this records checkpoint.
+
+## 9. Current Position
+
+At the end of Session 194, W195 and the Wave 1 audits were complete. At this checkpoint, all eight v1.6 feature tracks are committed, pushed, independently reviewed and remote-verified on their individual tips. The tracks are ready for integration. The unified candidate, its qualification, release acceptance and publication are pending. [Current status](STATUS.md#v16-session-195-integration-checkpoint-20261123).
+
+## 10. Next Steps
+
+1. Integrate the pinned tips into a unified v1.6 release-candidate branch, accounting for P8's P7 ancestry.
+2. Run the combined test sweep on the exact integrated commit.
+3. Complete Ahmed's native Windows candidate qualification, including P8 WebView2/vault QA, the 100k UI timing trial, the private finance corpus, and the A47 sweep.
+4. Present the qualified candidate to Ahmed for final v1.6 acceptance and publication.
+
+## 11. Open Questions
+
+The integrated candidate commit and its combined and native run results remain to be established. Ahmed's final v1.6 decision is pending.
+
+## 12. Recommended Next Step
+
+Prepare the unified release-candidate branch from the verified revisions and carry its exact commit and tree into the combined test sweep.
+
+## 13. Session Type
+
+Consolidated v1.6 milestone checkpoint and integration handoff.
+
+---
 
 <a id="session-194"></a>
 
