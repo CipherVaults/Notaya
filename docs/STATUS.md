@@ -1,6 +1,16 @@
 # Notaya (first named Cipherleaf): status
 
 
+<a id="v16-session-197-native-rc4-20261124"></a>
+
+## v1.6 checkpoint: RC4 finalized, independently audited and packaged
+
+**2026-11-24, Ahmed's side (AE0101), Gaming-PC.** Notaya `v1.6.0-RC4` is finalized and pushed to `origin/AE0101/v1-6-rc` in `CipherVaults/Notaya` at `1b7dd4b2eb0413e96ecc65a6f19c7e03fe1b1aaa` (tree `ebb42759096f4e46505dbe5e3ba6065bed03ee02`). RC1 `42223a6e` and RC3 `9e8c8873` are ancestors. Wave 1 improved editor hints, confirmation dialogs, batched deletion and shutdown. Wave 2 lifted the 2 GB combined Notion ZIP blocker and matched `327/327` parent home pages in a 4.82 GB paired export with 4,887 shared page IDs. Waves 3B and 3C closed the findings from the first two independent Codex CLI audits. Audit #3 reported `# PASS` on RC4. [Session 197](sessions.md#session-197).
+
+**Native candidate.** The four Windows artifacts in `Notaya-V1.6.0-RC4` on Gaming-PC match the recorded sizes and SHA-256 hashes. On the final commit the Windows Rust library suite passed 939 tests (0 failed, 8 ignored), the bridge suite passed 19 (0 failed, 2 ignored), and Clippy exited `0` with 191 warnings. The Chromium Playwright counts apply to Wave 3B. The native lockflow result was `5/5`. [Wave results, artifact hashes and verification scope](sessions.md#session-197).
+
+**Continuation.** Ahmed owns private live-vault acceptance on RC4, the interactive `Notaya-V1.6.0-setup.exe` installation and installed-app check, the `main` merge and v1.6 release publication. The live Notion MCP and export evaluation identified parity gaps that remain queued outside RC4. They cover inline and linked database views inside pages, saved-view deep links (`?v=...`), donut and chart views, compound AND/OR view filters, full formula, rollup, relation and person schema semantics, arbitrary binary attachments, SVG and PDF layout, OCR, synced blocks, per-block comments, and automatic right-to-left layout on mixed-language pages. The disposition of the [A47 sweep noted in Session 196](sessions.md#session-196) is unrecorded in this checkpoint.
+
 <a id="v16-session-196-native-rc1-20261123"></a>
 
 ## v1.6 checkpoint: RC1 built and named Windows checks completed

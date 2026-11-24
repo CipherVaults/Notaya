@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 197 | 2026-11-24 | Ahmed (AE0101) | Gaming-PC | [Finalize and audit the v1.6 RC4 Windows candidate](#session-197) |
 | 196 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Qualify the v1.6 Windows release candidate](#session-196) |
 | 195 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Verify eight v1.6 tracks for integration](#session-195) |
 | 194 | 2026-11-22 | Ahmed (AE0101) | Gaming-PC | [Verify native W195 restore interruption and complete Wave 1 audits](#session-194) |
@@ -228,6 +229,97 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-197"></a>
+
+# 📘 Session: 2026-11-24 UTC · Ahmed (AE0101) · Gaming-PC · Finalize and audit the v1.6 RC4 Windows candidate
+
+**Who and where.** Ahmed's side (`AE0101`), Gaming-PC. Independent Codex CLI reviewers audited the release-candidate revisions. Codex edited the PBS records, checked the Git identities and rehashed the four Windows artifacts. **Models, Effort, Roles and Provenance.** The audit verdicts, tests and aggregate import measurements come from Ahmed's verified handback. Exact served models, reasoning effort, active time, token counts and quota readings for the underlying runs were unavailable in the handback. [Coordination authority](plan/approval-and-amendments.md#a57-antigravity-coordination-20261122) · [Session 196](#session-196).
+
+## 1. Time
+
+2026-11-24 UTC. Git records the final RC4 commit at 00:10:39 UTC. The exact timestamp of Ahmed's Session 197 assignment and the audit and test work windows were unavailable.
+
+## 2. Session Goal
+
+Finalize the v1.6 RC4 candidate after the RC1 and RC3 checkpoints, resolve independent audit findings, and package the reviewed Windows build. Ahmed authorized recording the public-safe results in `docs/STATUS.md` and `docs/sessions.md` on `codex/native-import-export-20261122`, from `79f9a7c066f90ff62b5c8628751e01a320201e1b`. The records task ends after a privacy-reviewed commit, a push to the named records branch and verification through both Git and the GitHub API.
+
+## 3. Actions Taken
+
+1. **Wave 1 (`41cd812d`).** Limited the editor placeholder hint to the active paragraph. Replaced native Win32 popups with themed in-app and dedicated confirmation dialogs. Made trash, Delete for good, Empty the bin and notebook deletion asynchronous, batched and single-transaction operations. On a synthetic 6,585-item notebook, Delete for good took `3,020.302 ms` in Rust and `2,994.940 ms` in WebView2. Empty the bin took `3,676.009 ms` in Rust and `3,941.457 ms` in WebView2. The 677 Windows probes recorded zero freezes. Fast close and lock serialization yielded a median empty-vault quit of `33.731 ms`. Wave 3B later measured `31.439 ms` for an empty vault and `29.508 ms` for a clean 20-page vault.
+2. **Wave 2 (`cd89e79a`).** Removed the 2 GB combined Notion ZIP blocker. The importer uses file-backed subranges and a `MAX_ARCHIVE_UNPACKED` budget of 4 GiB. It matches the two export formats, HTML and Markdown & CSV, and retains the Markdown body when HTML contains only an H1. It preserves parent home pages together with databases and child pages.
+
+   The real combined Notion exports totaled `4,820,571,666` bytes (4.82 GB) and shared 4,887 page IDs across formats. The import took `162.286 s` at the IPC boundary and `163.828 s` in the UI, with `2.49 GiB` peak app working set. The resulting notebook had 3 sections, 2,471 sidebar pages (2,509 total non-row pages), 93 databases, 3,443 rows (2,621 with row bodies) and 1,582 encrypted pictures. All `327/327` parent home pages matched, with 2,100 direct-child edges and 1,436 descendant edges. Moving the full import to trash took `31.312 s`. Delete for good took `131.994 s`, with a `577/0/0` window-probe tally.
+3. **Wave 3B (`47442cfebc99`) and Wave 3C (`1b7dd4b2eb04`).** Closed all findings from the first two independent read-only Codex CLI audits.
+
+   - Importer parent selection avoids cycles. At the vault boundary, `validate_hierarchy` checks changed or new parent edges and their reachable ancestors. Reopened legacy vaults with a cycle still allow unrelated writes and cycle repair. Changes that create or enter a cycle are rejected atomically.
+   - The ZIP reader caps each deflated entry at 128 MiB. It charges the shared budget up front and keeps charges after a read fails. Stored-part CRC scans check cancellation every 64 KiB. The aggregate CRC verification covered 14,258 archive entries and checked 13,280 payloads with zero failures, using 2.88 GB of a 4 GiB budget.
+   - Multipart wrappers let CSV-only parts inherit the export format. Exact-path CSV collisions retain the HTML copy as a fallback regardless of part order, with Markdown preferred.
+   - Shutdown drains admitted writes around the window flush and before `take_session()`. Deterministic Rust concurrency regressions passed. The Wave 1 row in `docs/ledger/codex-runs.csv` aligns with the 20-column header.
+4. **Audit and identify the final source.** Independent audit #3 reported `# PASS` on `1b7dd4b2eb0413e96ecc65a6f19c7e03fe1b1aaa` (tree `ebb42759096f4e46505dbe5e3ba6065bed03ee02`). The pushed `origin/AE0101/v1-6-rc` tip matched that commit. Git confirmed the four commits in `9e8c8873..1b7dd4b2eb04` and that RC1 `42223a6e` precedes RC3 `9e8c8873`.
+5. **Read back the verification results.** The final-source results on `1b7dd4b2eb04` were recorded on Gaming-PC.
+
+   | Check | Result |
+   |---|---|
+   | `cargo test --offline --locked --lib` | 939 passed, 0 failed, 8 ignored |
+   | `cargo test --offline --locked --manifest-path bridge/Cargo.toml` | 19 passed, 0 failed, 2 ignored |
+   | `cargo clippy --offline --locked --lib` | Exit `0`, 191 warnings |
+
+   Chromium Playwright on Wave 3B passed `244/244` desktop-dev polish, `244/244` production polish, `68/68` database UI, `117/117` database views, `12/12` `notion-import-ui-check` and `30/30` startup, probe and N3 checks. Native lockflow passed `5/5`. The Wave 3C product delta was in Rust, with a CSV ledger correction and accompanying records. The Chromium counts apply to the Wave 3B revision.
+
+   The lockfiles and `src-tauri/src/database/golden/*.jsonl` are byte-identical to RC3 `9e8c8873`. Compared with `cbf0193f`, the existing npm and app Cargo lockfiles changed only in their local `1.6.0` version fields, the JSONL fixtures stayed identical, and A57 updated `golden/mod.rs` and added the numeric reference tool's lockfile.
+6. **Build and identify the Windows packages.** The four artifacts are in `Notaya-V1.6.0-RC4` on Gaming-PC. The local manifest names the final commit. The records pass matched all four sizes and independently recomputed their SHA-256 hashes.
+
+   | Artifact | Bytes | SHA-256 |
+   |---|---:|---|
+   | `Notaya-V1.6.0-setup.exe` | 8,291,613 | `04C9BCBC42DF3D64D2A11077A591B18FA7B565E533AA087A3AF38173589D2353` |
+   | `Notaya-V1.6.0-portable.zip` | 10,050,016 | `C3B5643EA749EC6E2BFFD0DBF1F8F6420DF95905CE1493CA1D5057F7EBAD9C84` |
+   | `Notaya/Notaya.exe` | 18,271,744 | `EED520B2CBB7D6992A8C8063A62AAEDBF34BCC05707851D9A2B3C1766EF61191` |
+   | `Notaya/notaya-bridge.exe` | 421,888 | `94A87617FC942F57C6BCCA2B0053D77EAF2519B7C873F76DF6573EF5BFC7F6A7` |
+
+## 4. Key Insights
+
+Paired exports can provide complementary bodies and structure. The aggregate trial confirmed parent placement and preservation of child and database relationships within the measured import. Legacy-cycle compatibility requires checking the ancestry affected by a write so an older cycle elsewhere in the vault does not prevent unrelated edits.
+
+## 5. Decisions Made
+
+Ahmed authorized the two-file records commit and a verified push on `codex/native-import-export-20261122` after privacy review. Private live-vault acceptance, the interactive setup and installed-app check, the `main` merge and public v1.6 release remain Ahmed's decisions. The known export-parity gaps stay queued outside RC4.
+
+## 6. Difficulties / Friction
+
+The prior 2 GB limit blocked large paired ZIPs. An HTML export page could contain only a heading while its Markdown counterpart held the body. The reviews also identified legacy-cycle compatibility, CSV-only wrapper classification and exact CSV path collisions as cases that needed dedicated handling.
+
+## 7. Adjustments Made
+
+Moving to file-backed ZIP subranges enabled the large import. Changed-edge hierarchy validation preserved compatibility with older vaults. CSV fallback now retains both origins independently of mount order. Shutdown waits for admitted writes before detaching the vault session.
+
+## 8. Mistakes / Risks Noted
+
+The timing and memory observations apply to the recorded runs and Gaming-PC. The Chromium results belong to Wave 3B. RC4 was never launched against the owner's live vault, and the setup package still needs an interactive installation and installed-app check.
+
+## 9. Current Position
+
+RC4 is finalized, independently audited, packaged and pushed on `AE0101/v1-6-rc`. The source identity and artifact hashes are verified. Integration into `main`, live-vault acceptance and release publication are pending. [Current status](STATUS.md#v16-session-197-native-rc4-20261124).
+
+## 10. Next Steps
+
+1. Ahmed owns the private live-vault acceptance and interactive setup checks on the pinned RC4 packages.
+2. Ahmed decides on the `main` merge and v1.6 release publication.
+3. Keep the Notion-export parity backlog outside RC4. It covers inline and linked database views within pages, saved-view deep links (`?v=...`), donut and chart views, compound AND/OR view filters, full formula, rollup, relation and person schema semantics, arbitrary binary attachments, SVG and PDF layout, OCR, synced blocks, per-block comments, and automatic right-to-left layout on mixed-language pages.
+
+## 11. Open Questions
+
+Ahmed's acceptance and release decisions are pending. The interactive setup and installed-app check and the disposition of Session 196's A47 sweep remain open in this record.
+
+## 12. Recommended Next Step
+
+Use the pinned RC4 commit and artifact hashes above for Ahmed's remaining native checks.
+
+## 13. Session Type
+
+Release-candidate finalization, independent audit and Windows packaging checkpoint. The three audit reports are `codex-v1-6-rc4-review.md`, `codex-v1-6-rc4-review-2.md` and `codex-v1-6-rc4-review-3.md`. The public record carries aggregate measurements. Raw evidence, fixtures and packages stay on Gaming-PC.
+
+---
 
 <a id="session-196"></a>
 
