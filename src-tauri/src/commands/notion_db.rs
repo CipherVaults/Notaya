@@ -199,21 +199,39 @@ pub fn read_tables(vfs: &Vfs, plan: &Plan, ctl: &Control) -> Result<(Vec<NotionT
         let title = if title.trim().is_empty() { "Imported table".to_string() } else { title };
         let parse_table = |bytes: Vec<u8>| csv::parse(&csv::decode(&bytes));
         let read_table = |path| vfs.read(path, csv::MAX_BYTES).and_then(parse_table);
-        let table = read_table(&path).or_else(|original| {
-            let exact = || vfs.read_csv_fallback(&path, csv::MAX_BYTES).map(|data| data.and_then(parse_table));
-            let relocated = || alternate.get(&key).map(|path| read_table(path));
-            let mut error = original.clone();
-            for fallback in std::iter::once_with(exact).chain(std::iter::once_with(relocated)).flatten() {
-                match fallback {
-                    Ok(table) => {
-                        notes.push(format!("The Markdown & CSV copy of \"{title}\" could not be read. The HTML export's CSV was used: {original}"));
-                        return Ok(table);
+        let table = match read_table(&path) {
+            Ok(table) => Ok(table),
+            Err(original) => {
+                let exact = vfs.read_csv_fallbacks(&path, csv::MAX_BYTES);
+                let relocated = alternate.get(&key).into_iter().flat_map(|path| {
+                    std::iter::once_with(move || (vfs.html_zip_source(path), vfs.read(path, csv::MAX_BYTES)))
+                        .chain(vfs.read_csv_fallbacks(path, csv::MAX_BYTES))
+                });
+                let mut fallbacks = exact.chain(relocated);
+                let mut last_error = None;
+                loop {
+                    check()?;
+                    let Some((html, candidate)) = fallbacks.next() else {
+                        break Err(match last_error {
+                            Some(last) => format!("{original} Other CSV copies also failed. Last error: {last}"),
+                            None => original,
+                        });
+                    };
+                    match candidate.and_then(parse_table) {
+                        Ok(table) => {
+                            let note = if vfs.markdown_zip_preferred(&path) && html {
+                                format!("The Markdown & CSV copy of \"{title}\" could not be read. The HTML export's CSV was used: {original}")
+                            } else {
+                                format!("The first CSV copy of \"{title}\" could not be read. Another CSV copy was used: {original}")
+                            };
+                            notes.push(note);
+                            break Ok(table);
+                        }
+                        Err(error) => last_error = Some(error),
                     }
-                    Err(second) => error.push_str(&format!(" The HTML export's CSV also failed: {second}")),
                 }
             }
-            Err(error)
-        });
+        };
         match table {
             Ok(table) => {
                 covered.extend(paths.iter().cloned());

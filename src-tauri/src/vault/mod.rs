@@ -41,9 +41,6 @@ pub struct Session {
     vault_id: [u8; 16],
     store: Store,
     items: HashMap<String, Item>,
-    // An opened vault may predate hierarchy validation. Check its full graph
-    // before the first write, then only consider edges changed by later writes.
-    hierarchy_validated: bool,
     // Dropped with the session. Interior mutability is serialized by AppState's
     // session mutex, alongside item reads, writes and session replacement.
     pub(crate) query_cache: std::cell::RefCell<crate::database::windows::QueryCache>,
@@ -136,7 +133,6 @@ impl Session {
         };
         self.store.rollback_action();
         self.clear_query_cache();
-        self.hierarchy_validated = false;
         (self.items, self.dirty, self.hourly_due, self.revs, self.pending,
             self.coordination, self.actor, self.ai_writers, self.replacement,
             self.history_index, self.change_set, self.request_ai, self.action_name,
@@ -173,7 +169,6 @@ impl Session {
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
-            hierarchy_validated: true,
             open: false,
             dirty: true,
             hourly_due: true,
@@ -194,7 +189,6 @@ impl Session {
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
-            hierarchy_validated: true,
             open: true,
             dirty: true,
             hourly_due: true,
@@ -229,7 +223,6 @@ impl Session {
             vault_id: header.vault_id,
             store,
             items: HashMap::new(),
-            hierarchy_validated: true,
             open,
             dirty: true,
             hourly_due: true,
@@ -327,7 +320,7 @@ impl Session {
         }
         store.ensure_journal_tables()?;
         let mut session = Session { native_session_id: crypto::random_bytes(), format: header.format, dek, vault_id: header.vault_id, store, items, open: header.open, dirty: false, hourly_due: false, revs: Default::default(), pending: Default::default(), coordination: Default::default(), actor: None, ai_writers: Default::default(), replacement: None,
-            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false, hierarchy_validated: false };
+            query_cache: Default::default(), history_index: Default::default(), change_set: None, request_ai: None, action_name: None, activity_head: Default::default(), anchor: Default::default(), person_bursts: Default::default(), journal_maintenance_at: 0, ai_action_failed: false, ai_action_notices: Vec::new(), ai_safety_backup: false };
         session.load_history()?;
         session.load_activity_head()?;
         session.load_anchor()?;
@@ -479,7 +472,6 @@ impl Session {
             self.record_change(&item, &actor);
             self.items.insert(item.id().to_string(), item);
         }
-        self.hierarchy_validated = true;
         if replacing { self.replacement = None; }
         self.changed();
         Ok(())
@@ -570,7 +562,6 @@ impl Session {
             self.note_change(&item, &actor);
             self.items.insert(item.id().into(), item);
         }
-        self.hierarchy_validated = false;
         self.changed();
         Ok(())
     }
@@ -606,13 +597,11 @@ impl Session {
             let parent = Self::parent_of(item);
             (parent != self.get(id).and_then(Self::parent_of)).then_some((id, parent))
         }).collect();
-        let existing = (!self.hierarchy_validated).then_some(self.items.keys());
-        let roots = proposed.keys().copied().chain(existing.into_iter().flatten().map(String::as_str));
 
-        // An unchanged graph cannot acquire a cycle. Every new cycle must
-        // include a changed edge, and each walk can reuse earlier walks.
+        // Check changed edges and their ancestors so unrelated cycles in older
+        // vaults do not prevent writes. Each walk can reuse earlier walks.
         let mut visited = HashMap::new();
-        for (walk, root) in roots.enumerate() {
+        for (walk, root) in proposed.keys().copied().enumerate() {
             let mut current = Some(root);
             while let Some(id) = current {
                 match visited.entry(id) {
@@ -1245,6 +1234,95 @@ mod tests {
         assert_eq!(records(&session), before);
         drop(session);
         assert_eq!(records(&Session::unlock_open(&path).unwrap()), before);
+    }
+
+    #[test]
+    fn reopened_vault_with_legacy_cycle_allows_unrelated_writes_and_repair() {
+        let path = temp_vault();
+        let mut session = Session::create_open(&path).unwrap();
+        crate::commands::notes::create_notebook_core(
+            &mut session, &Actor::Person, "Fixture notebook".into(), String::new(), String::new(),
+        ).unwrap();
+        let section_id = session.items().find_map(|item| match item {
+            Item::Section(section) => Some(section.id.clone()),
+            _ => None,
+        }).unwrap();
+        let fixture_page = |text| {
+            let Item::Page(mut page) = page(text) else { unreachable!() };
+            page.section_id.clone_from(&section_id);
+            page
+        };
+        let mut first = fixture_page("Fixture page A");
+        let mut second = fixture_page("Fixture page B");
+        let mut third = fixture_page("Fixture page C");
+        let second_id = second.id.clone();
+        let third_id = third.id.clone();
+        first.parent.clone_from(&second_id);
+        second.parent.clone_from(&third_id);
+        third.parent.clone_from(&first.id);
+
+        // Seed the records as an older version could have saved them.
+        session.store.transaction(|store| {
+            for item in [Item::Page(first.clone()), Item::Page(second), Item::Page(third)] {
+                let (id, data) = session.seal_item(&item)?;
+                store.put(Table::Records, &id, &data)?;
+            }
+            Ok(())
+        }).unwrap();
+        drop(session);
+
+        let mut session = Session::unlock_open(&path).unwrap();
+        assert_eq!(session.get(&first.id).and_then(Session::parent_of), Some(second_id.as_str()));
+        assert_eq!(session.get(&second_id).and_then(Session::parent_of), Some(third_id.as_str()));
+        assert_eq!(session.get(&third_id).and_then(Session::parent_of), Some(first.id.as_str()));
+
+        let unrelated = fixture_page("Fixture unrelated page");
+        let unrelated_id = unrelated.id.clone();
+        session.put(Item::Page(unrelated.clone())).unwrap();
+        let mut settings = session.settings();
+        settings.idle_lock_minutes += 1;
+        let idle_lock_minutes = settings.idle_lock_minutes;
+        session.put(Item::Settings(settings)).unwrap();
+
+        let mut moved_into_cycle = unrelated.clone();
+        moved_into_cycle.parent.clone_from(&first.id);
+        let mut moved_within_cycle = first.clone();
+        moved_within_cycle.parent.clone_from(&third_id);
+        let mut new_cycle_child = fixture_page("Fixture proposed child");
+        new_cycle_child.parent.clone_from(&unrelated_id);
+        let new_cycle_child_id = new_cycle_child.id.clone();
+        let mut new_cycle_parent = unrelated;
+        new_cycle_parent.parent.clone_from(&new_cycle_child_id);
+
+        let records = |s: &Session| -> HashMap<_, _> {
+            s.store.all(Table::Records).unwrap().into_iter().collect()
+        };
+        let before = records(&session);
+        let companion = Item::Page(fixture_page("Fixture companion page"));
+        for mut changes in [
+            vec![Item::Page(new_cycle_parent), Item::Page(new_cycle_child)],
+            vec![Item::Page(moved_into_cycle)],
+            vec![Item::Page(moved_within_cycle)],
+        ] {
+            changes.insert(0, companion.clone());
+            assert!(matches!(session.put_many(changes), Err(Error::Invalid(_))));
+            assert!(session.get(companion.id()).is_none());
+            assert!(session.get(&new_cycle_child_id).is_none());
+            assert_eq!(session.get(&unrelated_id).and_then(Session::parent_of), Some(section_id.as_str()));
+            assert_eq!(session.get(&first.id).and_then(Session::parent_of), Some(second_id.as_str()));
+            assert_eq!(records(&session), before);
+        }
+
+        first.parent.clear();
+        let first_id = first.id.clone();
+        session.put(Item::Page(first)).unwrap();
+        drop(session);
+
+        let session = Session::unlock_open(&path).unwrap();
+        assert_eq!(session.get(&first_id).and_then(Session::parent_of), Some(section_id.as_str()));
+        assert!(session.is_within(&second_id, &section_id));
+        assert!(matches!(session.get(&unrelated_id), Some(Item::Page(page)) if page.parent.is_empty()));
+        assert_eq!(session.settings().idle_lock_minutes, idle_lock_minutes);
     }
 
     fn sticky(text: &str) -> Item {

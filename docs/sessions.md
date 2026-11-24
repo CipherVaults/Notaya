@@ -21,6 +21,7 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 
 | # | Date (UTC) | Partner side | Machine | Topic |
 |---:|---|---|---|---|
+| 159 | 2026-11-24 | Ahmed (AE0101) | Gaming-PC | [Fix RC4 vault compatibility and CSV recovery](#session-159) |
 | 158 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix four RC4 audit findings](#session-158) |
 | 157 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Fix RC4 deletion and close](#session-157) |
 | 156 | 2026-11-23 | Ahmed (AE0101) | Gaming-PC | [Recover a stalled startup retry](#session-156) |
@@ -192,6 +193,68 @@ The three older entries below were written on 2026-10-22 (UTC), after the work, 
 **After-cut owner priority — recorded 2026-11-16T06:55:54Z:** feature development is safely paused after the closed unit/data checkpoint. Direct Git/GitHub assessment and the reviewed source/project-record checkpoint are now first; no separate publisher/configuration change or push is authorized without the separate concrete transport confirmation. No publisher/upload occurred. [Current authority](plan/approval-and-amendments.md#a57-direct-checkpoint-primary-20261116) controls; the earlier 06:48:35Z full13-section cut below remains history.
 
 
+
+<a id="session-159"></a>
+
+# 📘 Session: 2026-11-24 UTC · Ahmed (AE0101) · Gaming-PC · Fix RC4 vault compatibility and CSV recovery
+
+**Who and where:** Ahmed's side (AE0101), Gaming-PC. Codex coordinated the local fixes and verification.
+
+**Models, Effort, Roles and Provenance:** Separate workers changed vault validation, importer source selection, and importer tests. The second independent RC4 audit supplied the findings. See the [usage record](ledger/usage-ledger.md#codex-usage-20261124-rc4-wave3c).
+
+## 1. Time
+
+The claim was recorded at 2026-11-24T00:05:41Z (system UTC). The owner's message timestamp was unavailable.
+
+## 2. Session Goal
+
+Address the three Wave 3C findings on `AE0101/v1-6-rc` from `47442cfebc990a98b62416a67651fc47763709c4`. Deliver the local checkpoint, isolated Rust verification, and receipt.
+
+## 3. Actions Taken
+
+Scope vault validation to changed parent edges and their ancestors. Classify CSV-only ZIP parts from their wrapper and retain colliding CSV origins for fallback. Align the Wave 1 usage row with its header.
+
+## 4. Key Insights
+
+A graph walk from every stored item can reject writes unrelated to a legacy cycle. A ZIP part with only tabular data may depend on its siblings to identify the format.
+
+## 5. Decisions Made
+
+Keep Markdown first on an exact CSV collision. Try the retained copies in order until one parses, within the shared archive read budget.
+
+## 6. Difficulties / Friction
+
+The bridge manifest is at the repository root. The test run used that manifest from the Rust app directory.
+
+## 7. Adjustments Made
+
+Build and test in a dedicated Cargo target with throwaway fixture storage.
+
+## 8. Mistakes / Risks
+
+An initial Shell redirection treated Cargo progress on stderr as an error. The verification runner captures both streams and reports Cargo's exit code.
+
+## 9. Current Position
+
+The [execution summary](execution/2026-11-24-v1-6-rc4-wave3c.md) describes the changes. The local receipt binds the checks to the commit and tree.
+
+## 10. Next Steps
+
+Review the local candidate and verification receipt.
+
+## 11. Open Questions
+
+Owner acceptance and any partner PR review remain pending.
+
+## 12. Session Outcome
+
+The local checkpoint includes the three corrections and the synthetic vault and archive regressions.
+
+## 13. Confidence Level
+
+The receipt records the app and bridge suites, Clippy, and the scope of the committed-content scans.
+
+---
 
 <a id="session-158"></a>
 

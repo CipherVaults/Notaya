@@ -1,5 +1,11 @@
 # Notaya usage ledger: readings, newest first
 
+<a id="codex-usage-20261124-rc4-wave3c"></a>
+
+## Usage — 2026-11-24 UTC · Ahmed (AE0101) · Gaming-PC
+
+Codex coordinated three workers covering vault compatibility, CSV source selection, and importer regressions. Exact model, reasoning effort, token totals, and before and after quota readings were unavailable. [Session 159](../sessions.md#session-159).
+
 <a id="codex-usage-20261123-rc4-wave3b"></a>
 
 ## Usage — 2026-11-23 UTC · Ahmed (AE0101) · Gaming-PC

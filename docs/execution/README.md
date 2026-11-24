@@ -1,5 +1,7 @@
 # Cipherleaf: execution index
 
+**2026-11-24, local RC4 Wave 3C.** The [execution summary](2026-11-24-v1-6-rc4-wave3c.md) records the legacy hierarchy and multipart CSV fixes, ledger correction, and checks.
+
 **2026-11-23, local RC4 Wave 3B.** The [execution summary](2026-11-23-v1-6-rc4-wave3b.md) records the four audit findings, remediation, and verification scope.
 
 **2026-11-23, local RC4 Wave 1** — [Execution summary](2026-11-23-v1-6-rc4-wave1.md) records the editor, confirmation, deletion, and close changes and their isolated checks.

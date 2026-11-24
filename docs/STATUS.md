@@ -1,5 +1,9 @@
 # Notaya (first named Cipherleaf): status
 
+## Continuation — RC4 Wave 3C local checkpoint
+
+Ahmed (AE0101), Gaming-PC, 2026-11-24 UTC. Wave 3C addresses the two remaining RC4 compatibility findings and the Wave 1 ledger row. See the [execution summary](execution/2026-11-24-v1-6-rc4-wave3c.md) and [resume note](handoff/2026-11-24-v1-6-rc4-wave3c-resume-note.md). Review the local checkpoint and receipt before any publication decision.
+
 ## Continuation — RC4 Wave 3B local checkpoint
 
 Ahmed (AE0101), Gaming-PC, 2026-11-23 UTC. Wave 3B addresses the four findings from the independent RC4 audit. See the [execution summary](execution/2026-11-23-v1-6-rc4-wave3b.md) and [resume note](handoff/2026-11-23-v1-6-rc4-wave3b-resume-note.md). The checkpoint is local. Publication and owner acceptance await Ahmed's direction.

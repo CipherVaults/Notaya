@@ -12,7 +12,7 @@
 //! separate limits on file I/O and retained memory, and deflated wrappers also spend that budget.
 
 use std::cell::Cell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -46,7 +46,7 @@ enum ExportFormat {
 
 pub struct Vfs {
     files: BTreeMap<String, Origin>,
-    csv_fallbacks: HashMap<String, Origin>,
+    csv_fallbacks: HashMap<String, Vec<Origin>>,
     lower: HashMap<String, String>,
     /// Picked files: pictures are also looked up lazily below this (canonical) folder.
     lazy_root: Option<PathBuf>,
@@ -82,7 +82,7 @@ fn extension(path: &str) -> &str {
     split_name(path).1.rsplit_once('.').map_or("", |(_, ext)| ext)
 }
 
-fn export_format(archive: &Archive) -> Option<ExportFormat> {
+fn format_counts(archive: &Archive) -> (usize, usize) {
     let mut html = 0;
     let mut markdown = 0;
     for entry in &archive.entries {
@@ -98,6 +98,10 @@ fn export_format(archive: &Archive) -> Option<ExportFormat> {
             html += 1;
         }
     }
+    (markdown, html)
+}
+
+fn export_format((markdown, html): (usize, usize)) -> Option<ExportFormat> {
     match markdown.cmp(&html) {
         std::cmp::Ordering::Greater => Some(ExportFormat::Markdown),
         std::cmp::Ordering::Less => Some(ExportFormat::Html),
@@ -137,14 +141,16 @@ impl Vfs {
     fn add(&mut self, path: String, origin: Origin) {
         if let Some(current) = self.files.get_mut(&path) {
             if extension(&path).eq_ignore_ascii_case("csv") {
-                let fallback = match (&*current, &origin) {
-                    (Origin::Zip(_, _, Some(ExportFormat::Html)), Origin::Zip(_, _, Some(ExportFormat::Markdown))) => {
-                        std::mem::replace(current, origin)
-                    }
-                    (Origin::Zip(_, _, Some(ExportFormat::Markdown)), Origin::Zip(_, _, Some(ExportFormat::Html))) => origin,
-                    _ => return,
-                };
-                self.csv_fallbacks.entry(path).or_insert(fallback);
+                // A mounted ZIP entry or distinct picked file is indexed only once.
+                let fallbacks = self.csv_fallbacks.entry(path).or_default();
+                if matches!(origin, Origin::Zip(_, _, Some(ExportFormat::Markdown)))
+                    && !matches!(current, Origin::Zip(_, _, Some(ExportFormat::Markdown)))
+                {
+                    // Keep the original order of alternates when Markdown takes over.
+                    fallbacks.insert(0, std::mem::replace(current, origin));
+                } else {
+                    fallbacks.push(origin);
+                }
             }
             return;
         }
@@ -158,6 +164,7 @@ impl Vfs {
     pub fn from_files(paths: &[PathBuf], ctl: &Control) -> Result<Vfs, String> {
         let mut v = Vfs::empty();
         let mut first_doc: Option<&Path> = None;
+        let mut picked_csvs = HashSet::new();
         for p in paths {
             plan::check(ctl)?;
             let name = p.file_name().and_then(|n| n.to_str()).ok_or("A file name could not be read.")?.to_string();
@@ -176,7 +183,11 @@ impl Vfs {
             if first_doc.is_none() {
                 first_doc = p.parent();
             }
-            if v.files.contains_key(&name) {
+            if extension(&name).eq_ignore_ascii_case("csv") {
+                if !picked_csvs.insert(p) {
+                    continue;
+                }
+            } else if v.files.contains_key(&name) {
                 v.refused.push((name, "Another chosen file has the same name.".into()));
                 continue;
             }
@@ -266,48 +277,22 @@ impl Vfs {
             self.push_refused("archive.zip".into(), format!("More than {MAX_ARCHIVES} ZIP archives (not opened)."));
             return Ok(());
         }
-        if archive.directory_size > MAX_MOUNTED_DIRECTORY_BYTES - self.mounted_directory_bytes {
-            return Err("The ZIP directories exceed 128 MB together. Import the ZIPs in smaller groups.".into());
-        }
-        self.mounted_directory_bytes += archive.directory_size;
         let idx = self.archives.len();
         let wrapper = nested_ok.then(|| wrapper_folder(&archive)).flatten().map(str::to_owned);
-        let format = export_format(&archive);
-        let mut inner = Vec::new();
-        for (name, reason) in std::mem::take(&mut archive.rejected) {
-            self.push_refused(name, reason);
-        }
-        let remaining = MAX_WALK - self.mounted_entries;
-        let overflow = format!("More than {MAX_WALK} files across the chosen archives.");
-        if archive.entries.len() > remaining {
-            for entry in archive.entries.drain(remaining..) {
-                self.push_refused(entry.name, overflow.clone());
-            }
-            archive.entries.shrink_to_fit();
-        }
-        for (i, e) in archive.entries.iter().enumerate() {
-            self.mounted_entries += 1;
-            if self.files.len() >= MAX_WALK {
-                self.push_refused(e.name.clone(), overflow.clone());
-                continue;
-            }
-            if e.name.split('/').any(is_hidden) {
-                continue;
-            }
-            if is_export_part(&e.name) && wrapper.as_deref() == Some(split_name(&e.name).0) {
-                inner.push(i);
-                continue;
-            }
-            if is_export_part(&e.name) && !nested_ok {
-                self.push_refused(e.name.clone(), "A ZIP file inside a ZIP file inside a ZIP file (not opened).".into());
-                continue;
-            }
-            self.add(e.name.clone(), Origin::Zip(idx, i, format));
-        }
-        self.archives.push(archive);
+        self.prepare_archive(&mut archive)?;
+        let format = export_format(format_counts(&archive));
+        let inner = self.index_archive(archive, format, wrapper.as_deref(), nested_ok);
+
+        // Resolve the wrapper from the parts we can actually mount, while charging
+        // their entry, directory and memory allowances as each one is opened.
+        let mut parts = Vec::new();
+        let (mut markdown, mut html) = (0, 0);
         for i in inner {
+            check()?;
             let entry = &self.archives[idx].entries[i];
-            if self.mounted_entries >= MAX_WALK || self.files.len() >= MAX_WALK || self.archives.len() >= MAX_ARCHIVES {
+            if self.mounted_entries >= MAX_WALK || self.files.len() >= MAX_WALK
+                || self.archives.len() + parts.len() >= MAX_ARCHIVES
+            {
                 self.push_refused(entry.name.clone(), "Archive limit reached across chosen archives.".into());
                 continue;
             }
@@ -320,15 +305,74 @@ impl Vfs {
             let part = self.archives[idx].open_part(i, memory, &self.budget, &check);
             // A cancelled checksum stops the import instead of being listed as a bad part.
             check()?;
+            let part = part.and_then(|(mut part, memory_used)| {
+                self.prepare_archive(&mut part)?;
+                self.nested_zip_memory += memory_used;
+                Ok(part)
+            });
             match part {
-                Ok((part, memory_used)) => match self.mount(part, false, ctl) {
-                    Ok(()) => self.nested_zip_memory += memory_used,
-                    Err(e) => self.push_refused(self.archives[idx].entries[i].name.clone(), e),
-                },
+                Ok(part) => {
+                    let counts = format_counts(&part);
+                    markdown += counts.0;
+                    html += counts.1;
+                    parts.push((part, counts));
+                }
                 Err(e) => self.push_refused(self.archives[idx].entries[i].name.clone(), e),
             }
         }
+        let wrapper_format = export_format((markdown, html));
+        for (part, counts) in parts {
+            check()?;
+            // CSV-only parts have no document extension of their own to identify them.
+            let format = if counts == (0, 0) { wrapper_format } else { export_format(counts) };
+            self.index_archive(part, format, None, false);
+        }
         check()
+    }
+
+    fn prepare_archive(&mut self, archive: &mut Archive) -> Result<(), String> {
+        if archive.directory_size > MAX_MOUNTED_DIRECTORY_BYTES - self.mounted_directory_bytes {
+            return Err("The ZIP directories exceed 128 MB together. Import the ZIPs in smaller groups.".into());
+        }
+        self.mounted_directory_bytes += archive.directory_size;
+        for (name, reason) in std::mem::take(&mut archive.rejected) {
+            self.push_refused(name, reason);
+        }
+        let remaining = MAX_WALK - self.mounted_entries;
+        if archive.entries.len() > remaining {
+            let overflow = format!("More than {MAX_WALK} files across the chosen archives.");
+            for entry in archive.entries.drain(remaining..) {
+                self.push_refused(entry.name, overflow.clone());
+            }
+            archive.entries.shrink_to_fit();
+        }
+        self.mounted_entries += archive.entries.len();
+        Ok(())
+    }
+
+    fn index_archive(&mut self, archive: Archive, format: Option<ExportFormat>, wrapper: Option<&str>, nested_ok: bool) -> Vec<usize> {
+        let idx = self.archives.len();
+        let mut inner = Vec::new();
+        for (i, e) in archive.entries.iter().enumerate() {
+            if self.files.len() >= MAX_WALK {
+                self.push_refused(e.name.clone(), format!("More than {MAX_WALK} files across the chosen archives."));
+                continue;
+            }
+            if e.name.split('/').any(is_hidden) {
+                continue;
+            }
+            if is_export_part(&e.name) && wrapper == Some(split_name(&e.name).0) {
+                inner.push(i);
+                continue;
+            }
+            if is_export_part(&e.name) && !nested_ok {
+                self.push_refused(e.name.clone(), "A ZIP file inside a ZIP file inside a ZIP file (not opened).".into());
+                continue;
+            }
+            self.add(e.name.clone(), Origin::Zip(idx, i, format));
+        }
+        self.archives.push(archive);
+        inner
     }
 
     /// True when some files come out of a ZIP file.
@@ -388,9 +432,13 @@ impl Vfs {
         }
     }
 
-    /// The HTML export's copy of a CSV whose exact path is occupied by the Markdown copy.
-    pub fn read_csv_fallback(&self, path: &str, max: u64) -> Option<Result<Vec<u8>, String>> {
-        self.csv_fallbacks.get(path).map(|origin| self.read_origin(origin, max))
+    /// Other origins at the exact CSV path, read on demand in mount order.
+    /// Each result also identifies whether the origin came from the HTML export.
+    pub fn read_csv_fallbacks(&self, path: &str, max: u64) -> impl Iterator<Item = (bool, Result<Vec<u8>, String>)> + '_ {
+        self.csv_fallbacks.get(path).into_iter().flatten().map(move |origin| {
+            let html = matches!(origin, Origin::Zip(_, _, Some(ExportFormat::Html)));
+            (html, self.read_origin(origin, max))
+        })
     }
 
     fn read_origin(&self, origin: &Origin, max: u64) -> Result<Vec<u8>, String> {
@@ -601,8 +649,12 @@ mod tests {
             assert!(v.markdown_zip_preferred("Table.csv"));
             assert!(!v.markdown_zip_preferred("Other.csv"));
             assert_eq!(v.read("Table.csv", 100).unwrap(), b"Title\nFrom Markdown");
-            assert_eq!(v.read_csv_fallback("Table.csv", 100).unwrap().unwrap(), b"Title\nFrom HTML");
-            assert!(v.read_csv_fallback("Other.csv", 100).is_none());
+            let mut fallbacks = v.read_csv_fallbacks("Table.csv", 100);
+            let (html, body) = fallbacks.next().unwrap();
+            assert!(html);
+            assert_eq!(body.unwrap(), b"Title\nFrom HTML");
+            assert!(fallbacks.next().is_none());
+            assert!(v.read_csv_fallbacks("Other.csv", 100).next().is_none());
         }
     }
 

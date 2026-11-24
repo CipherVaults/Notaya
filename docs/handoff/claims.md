@@ -1,5 +1,7 @@
 # Claim board
 
+**Local RC4 Wave 3C, Ahmed (AE0101), Gaming-PC.** Ahmed authorized the three audit fixes and synthetic tests from `47442cfebc990a98b62416a67651fc47763709c4` on `AE0101/v1-6-rc`. Claim recorded 2026-11-24T00:05:41Z (system UTC). The owner-message timestamp was unavailable. The endpoint is the local commit and [verification handoff](2026-11-24-v1-6-rc4-wave3c-resume-note.md).
+
 **Local RC4 Wave 3B, Ahmed (AE0101), Gaming-PC.** Ahmed authorized the four audit fixes and isolated checks from `cd89e79aa61c5f8b8b2284912e273470cab5ca3e` on `AE0101/v1-6-rc`. The claim was recorded at 2026-11-23T23:25:39Z (system UTC). The owner's message timestamp was unavailable. Work ends at the local commit and verification receipt. [Resume note](2026-11-23-v1-6-rc4-wave3b-resume-note.md).
 
 **Local RC4 Wave 1 claim, 2026-11-23T21:52:07.8734720Z, Ahmed (AE0101), Gaming-PC.** Ahmed's direct request covers four RC3 defects and a bounded sibling sweep from `9e8c88734bd4dea4ffc9d55d477d3e4baa4d616f` on `AE0101/v1-6-rc`. Source and checks are isolated. Work stops at the local commit, verified bundle, designated checkout sync and receipt. [Resume note](2026-11-23-v1-6-rc4-wave1-resume-note.md).

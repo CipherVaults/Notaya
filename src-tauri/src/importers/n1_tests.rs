@@ -165,9 +165,7 @@ fn exact_csv_collision_imports_html_when_markdown_parse_or_checksum_fails_in_eit
     ], true);
     let bad_csv = zip::build(&[("Overview.md", b"# Overview"), (csv, b"Name\n\"unclosed")], true);
     let mut bad_crc = zip::build(&[("Overview.md", b"# Overview"), (csv, b"Name\nMarkdown value\n")], true);
-    // The last central-directory entry describes the CSV.
-    let directory_entry = bad_crc.len() - 22 - 46 - csv.len();
-    bad_crc[directory_entry + 16] ^= 0xff;
+    corrupt_last_zip_entry_checksum(&mut bad_crc, csv);
 
     for (markdown, reason) in [(bad_csv, "quoted value"), (bad_crc, "checksum mismatch")] {
         let markdown = markdown.as_slice();
@@ -182,6 +180,77 @@ fn exact_csv_collision_imports_html_when_markdown_parse_or_checksum_fails_in_eit
             assert!(summary.notes.iter().any(|note| note.contains("HTML export's CSV was used") && note.contains(reason)));
         }
     }
+}
+
+fn corrupt_last_zip_entry_checksum(archive: &mut [u8], name: &str) {
+    let directory_entry = archive.len() - 22 - 46 - name.len();
+    archive[directory_entry + 16] ^= 0xff;
+}
+
+#[test]
+fn multipart_csv_only_parts_inherit_format_and_fall_back_in_either_order() {
+    let csv = "Example table_all.csv";
+    let html_documents = zip::build(&[("Example page.html", b"<h1>Example page</h1>")], false);
+    let html_csv = zip::build(&[(csv, b"Name\nHTML example row\n")], false);
+    let html = zip::build(&[
+        ("Export/Part-1.zip", &html_csv),
+        ("Export/Part-2.zip", &html_documents),
+    ], false);
+    assert!(Vfs::from_zip_bytes(html.clone()).unwrap().html_zip_source(csv));
+
+    let markdown_documents = zip::build(&[("Example page.md", b"# Example page")], false);
+    let bad_csv = zip::build(&[(csv, b"Name\n\"unclosed")], true);
+    let mut bad_crc = zip::build(&[(csv, b"Name\nMarkdown example row\n")], true);
+    corrupt_last_zip_entry_checksum(&mut bad_crc, csv);
+    for (csv_part, reason) in [(bad_csv, "quoted value"), (bad_crc, "checksum mismatch")] {
+        let markdown = zip::build(&[
+            ("Export/Part-1.zip", &csv_part),
+            ("Export/Part-2.zip", &markdown_documents),
+        ], true);
+        assert!(Vfs::from_zip_bytes(markdown.clone()).unwrap().markdown_zip_preferred(csv));
+
+        let html = html.as_slice();
+        let markdown = markdown.as_slice();
+        for archives in [[markdown, html], [html, markdown]] {
+            let (summary, items) = persist_archive_fixtures(&archives);
+            assert_persisted_csv_row(&items, "HTML example row");
+            assert!(summary.notes.iter().any(|note| {
+                note.contains("HTML export's CSV was used") && note.contains(reason)
+            }));
+        }
+    }
+}
+
+#[test]
+fn unrecognized_exact_csv_collisions_try_all_copies_until_one_imports() {
+    let csv = "Example table_all.csv";
+    let bad_csv = zip::build(&[(csv, b"Name\n\"unclosed")], true);
+    let mut bad_crc = zip::build(&[(csv, b"Name\nUnreadable example row\n")], false);
+    corrupt_last_zip_entry_checksum(&mut bad_crc, csv);
+    let good_csv = zip::build(&[(csv, b"Name\nReadable example row\n")], false);
+
+    let bad_csv = bad_csv.as_slice();
+    let bad_crc = bad_crc.as_slice();
+    let good_csv = good_csv.as_slice();
+    for archives in [&[bad_csv, good_csv][..], &[bad_csv, bad_crc, good_csv][..]] {
+        let (summary, items) = persist_archive_fixtures(archives);
+        assert_persisted_csv_row(&items, "Readable example row");
+        assert!(summary.notes.iter().any(|note| note.contains("quoted value")));
+        assert!(!summary.notes.iter().any(|note| note.contains("HTML export")));
+    }
+}
+
+fn assert_persisted_csv_row(items: &[Item], expected: &str) {
+    let databases: Vec<_> = items.iter().filter_map(|item| match item {
+        Item::Database(database) => Some(database.id.as_str()),
+        _ => None,
+    }).collect();
+    assert_eq!(databases.len(), 1);
+    let rows: Vec<_> = items.iter().filter_map(|item| match item {
+        Item::Row(row) => Some((row.db.as_str(), row.title.as_str())),
+        _ => None,
+    }).collect();
+    assert_eq!(rows, [(databases[0], expected)]);
 }
 
 #[test]
